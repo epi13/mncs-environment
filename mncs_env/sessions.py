@@ -109,7 +109,18 @@ def resolve_environment(
         set(intent.get("protected_repositories", []))
         | set(definition.get("protected_repositories", []))
     )
-    claim_holders = claims_module.holders(backend.read_claims())
+    live_claims = claims_module.active_claims(backend.read_claims())
+    claim_holders: dict[str, list[dict[str, Any]]] = {}
+    for record in live_claims.values():
+        claim_holders.setdefault(str(record.get("repository", "")), []).append(
+            {
+                "claim_id": str(record.get("claim_id", "")),
+                "session_id": str(record.get("session_id", "")),
+                "consumer_id": str(record.get("consumer_id", "")),
+                "basis": str(record.get("basis", "")),
+                "scope": record.get("scope", {"kind": "repository"}),
+            }
+        )
     repo_names = [repo["name"] for repo in workspace_view.get("repositories", [])]
     rights = rights_module.evaluate_rights(
         workspace_repos=repo_names,
@@ -119,7 +130,7 @@ def resolve_environment(
         subject=consumer_id,
         intent=intent,
         protected_repos=protected,
-        claim_holders={repo: info["session_id"] for repo, info in claim_holders.items()},
+        claim_holders=claim_holders,
     )
     inputs = {
         "workspace_root": str(Path(workspace_root).resolve()),
@@ -367,6 +378,7 @@ class Session:
         action: str,
         target: str,
         repo_facts: dict[str, dict[str, Any]] | None = None,
+        scope: dict[str, Any] | None = None,
     ) -> dict[str, str]:
         verdict = authority_module.evaluate(
             self.snapshot.get("authority", {}),
@@ -375,6 +387,7 @@ class Session:
             session_id=self.session_id,
             claims=self.snapshot.get("claim_holders", {}),
             repo_facts=repo_facts if repo_facts is not None else self.snapshot.get("repo_facts", {}),
+            scope=scope,
         )
         if verdict["verdict"] == "deny":
             self._emit("authority.denied", "environment",
@@ -383,6 +396,13 @@ class Session:
             self._emit("authority.escalated", "environment",
                        {"action": action, "target": target, "reason": verdict["reason"]})
         return verdict
+
+    def last_activity_at(self) -> str | None:
+        """Newest event observation time, or None for a virgin session."""
+        log = self._log()
+        if not log:
+            return None
+        return str(log[-1].get("observed_at"))
 
     def _binding(self, capability: str) -> dict[str, Any]:
         for binding in self.snapshot.get("bindings", []):
@@ -448,37 +468,66 @@ class Session:
 
     # -- claims ---------------------------------------------------------------
 
+    def _refresh_holders(self) -> None:
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for record in claims_module.active_claims(self.store.read_claims()).values():
+            grouped.setdefault(str(record.get("repository", "")), []).append(
+                {
+                    "claim_id": str(record.get("claim_id", "")),
+                    "session_id": str(record.get("session_id", "")),
+                    "consumer_id": str(record.get("consumer_id", "")),
+                    "basis": str(record.get("basis", "")),
+                    "scope": record.get("scope", {"kind": "repository"}),
+                }
+            )
+        self.snapshot["claim_holders"] = grouped
+
     def acquire_claim(
         self, repository: str, *, basis: str = claims_module.BASIS_EXPLICIT,
         reason: str = "", ttl_hours: int = 24,
+        scope: dict[str, Any] | None = None,
+        checkout_facts: dict[str, Any] | None = None,
+        workspace_root: str | None = None,
     ) -> dict[str, Any]:
         record = claims_module.acquire(
             self.store, repository=repository, session_id=self.session_id,
             consumer_id=self.snapshot.get("consumer_id", "unknown"),
             basis=basis, reason=reason, ttl_hours=ttl_hours,
+            scope=scope, checkout_facts=checkout_facts,
+            workspace_root=workspace_root,
         )
-        self.snapshot["claim_holders"] = {
-            repo: info["session_id"]
-            for repo, info in claims_module.holders(self.store.read_claims()).items()
-        }
+        self._refresh_holders()
         self._emit("lease.acquired", self.snapshot.get("consumer_id", "unknown"),
-                   {"repository": repository, "basis": basis, "claim_id": record["identity"]})
+                   {"repository": repository, "basis": basis,
+                    "claim_id": record["identity"],
+                    "scope": record.get("scope", {})})
         self._save()
         return record
 
-    def release_claim(self, repository: str, reason: str = "") -> bool:
+    def release_claim(self, repository: str, reason: str = "",
+                      claim_id: str | None = None) -> bool:
         released = claims_module.release(
-            self.store, repository=repository, session_id=self.session_id, reason=reason)
-        if released is None:
+            self.store, session_id=self.session_id, reason=reason,
+            claim_id=claim_id, repository=repository or None)
+        if not released:
             return False
-        self.snapshot["claim_holders"] = {
-            repo: info["session_id"]
-            for repo, info in claims_module.holders(self.store.read_claims()).items()
-        }
+        self._refresh_holders()
         self._emit("lease.released", self.snapshot.get("consumer_id", "unknown"),
-                   {"repository": repository})
+                   {"repository": repository, "claim_id": claim_id,
+                    "released": len(released)})
         self._save()
         return True
+
+    def transfer_claim(self, claim_id: str, to_session: str,
+                       to_consumer: str, reason: str = "") -> dict[str, Any]:
+        record = claims_module.transfer(
+            self.store, claim_id=claim_id, from_session=self.session_id,
+            to_session=to_session, to_consumer=to_consumer, reason=reason)
+        self._refresh_holders()
+        self._emit("lease.transferred", self.snapshot.get("consumer_id", "unknown"),
+                   {"claim_id": claim_id, "to_session": to_session})
+        self._save()
+        return record
 
     # -- events / subscriptions ---------------------------------------------
 

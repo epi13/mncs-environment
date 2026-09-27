@@ -303,18 +303,41 @@ def cmd_claims(args: argparse.Namespace) -> int:
                 state_dir=args.state_dir, session_id=args.session, backend=args.persistence,
                 store=store,
             )
-            out({"released": session.release_claim(args.release, reason=args.reason)})
+            out({"released": session.release_claim(
+                args.release, reason=args.reason, claim_id=args.claim_id)})
+            return 0
+        if args.transfer_to:
+            session = sessions_module.Session.resume(
+                state_dir=args.state_dir, session_id=args.session, backend=args.persistence,
+                store=store,
+            )
+            if not args.claim_id:
+                return fail("transfer needs --claim-id")
+            try:
+                out(session.transfer_claim(
+                    args.claim_id, args.transfer_to, args.transfer_consumer,
+                    reason=args.reason))
+            except claims_module.ClaimConflict as error:
+                return fail(str(error), code=3)
             return 0
         if args.acquire:
             session = sessions_module.Session.resume(
                 state_dir=args.state_dir, session_id=args.session, backend=args.persistence,
                 store=store,
             )
+            scope = None
+            if args.paths or args.worktree:
+                scope = {"kind": "worktree" if args.worktree else "paths",
+                         "checkout": args.worktree, "branch": args.branch,
+                         "paths": args.paths}
+            basis = claims_module.BASIS_ADOPTION if args.adopt else args.basis
             try:
-                out(session.acquire_claim(args.acquire, basis=args.basis, reason=args.reason,
-                                          ttl_hours=args.ttl))
+                out(session.acquire_claim(args.acquire, basis=basis, reason=args.reason,
+                                          ttl_hours=args.ttl, scope=scope))
             except claims_module.ClaimConflict as error:
                 return fail(str(error), code=3)
+            except claims_module.ClaimAdoptionRequired as error:
+                return fail(f"adoption required: {error}", code=4)
             return 0
         out(store.read_claims())
         return 0
@@ -440,9 +463,21 @@ def build_parser() -> argparse.ArgumentParser:
     claims.add_argument("session")
     claims.add_argument("--acquire", default=None)
     claims.add_argument("--release", default=None)
+    claims.add_argument("--claim-id", default=None)
+    claims.add_argument("--transfer-to", default=None,
+                        help="session id receiving an explicit claim transfer")
+    claims.add_argument("--transfer-consumer", default="",
+                        help="consumer identity receiving a claim transfer")
+    claims.add_argument("--paths", nargs="*", default=None,
+                        help="repo-relative path scopes for a paths claim")
+    claims.add_argument("--worktree", default=None,
+                        help="checkout path for a worktree-scoped claim")
+    claims.add_argument("--branch", default=None)
+    claims.add_argument("--adopt", action="store_true",
+                        help="use explicit-adoption basis for dirty checkouts")
     claims.add_argument("--basis", default=claims_module.BASIS_EXPLICIT,
                         choices=(claims_module.BASIS_EXPLICIT, claims_module.BASIS_INTENT_SCOPE,
-                                 claims_module.BASIS_RECOVERY))
+                                 claims_module.BASIS_RECOVERY, claims_module.BASIS_ADOPTION))
     claims.add_argument("--reason", default="")
     claims.add_argument("--ttl", type=int, default=24)
     claims.set_defaults(func=cmd_claims)

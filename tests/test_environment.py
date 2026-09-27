@@ -182,9 +182,9 @@ class ClaimTests(unittest.TestCase):
             with self.assertRaises(claims.ClaimConflict):
                 claims.acquire(store, repository="r", session_id="b",
                                consumer_id="b", basis=claims.BASIS_EXPLICIT, reason="other")
-            self.assertEqual(claims.holders(store.read_claims())["r"]["session_id"], "a")
-            released = claims.release(store, repository="r", session_id="a")
-            self.assertIsNotNone(released)
+            self.assertEqual(claims.holders(store.read_claims())["r"][0]["session_id"], "a")
+            released = claims.release(store, session_id="a", repository="r")
+            self.assertEqual(len(released), 1)
             self.assertEqual(claims.holders(store.read_claims()), {})
             # After release a competitor may acquire.
             second = claims.acquire(store, repository="r", session_id="b",
@@ -199,7 +199,88 @@ class ClaimTests(unittest.TestCase):
                 "session_id": "b", "status": "held",
                 "expires_at": "2999-01-01T00:00:00+00:00"}
         self.assertEqual(claims.holders([stale]), {})
-        self.assertEqual(claims.holders([stale, live])["r"]["session_id"], "b")
+        self.assertEqual(claims.holders([stale, live])["r"][0]["session_id"], "b")
+
+    def test_disjoint_path_scopes_coexist(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = open_store(directory, "file")
+            first = claims.acquire(
+                store, repository="r", session_id="a", consumer_id="a",
+                basis=claims.BASIS_EXPLICIT, reason="paths-a",
+                scope={"kind": "paths", "paths": ["src/a"]})
+            second = claims.acquire(
+                store, repository="r", session_id="b", consumer_id="b",
+                basis=claims.BASIS_EXPLICIT, reason="paths-b",
+                scope={"kind": "paths", "paths": ["src/b"]})
+            self.assertNotEqual(first["claim_id"], second["claim_id"])
+            self.assertEqual(len(claims.holders(store.read_claims())["r"]), 2)
+            with self.assertRaises(claims.ClaimConflict):
+                claims.acquire(
+                    store, repository="r", session_id="c", consumer_id="c",
+                    basis=claims.BASIS_EXPLICIT, reason="overlap",
+                    scope={"kind": "paths", "paths": ["src/a/deep"]})
+
+    def test_whole_repo_conflicts_with_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = open_store(directory, "file")
+            claims.acquire(
+                store, repository="r", session_id="a", consumer_id="a",
+                basis=claims.BASIS_EXPLICIT, reason="paths",
+                scope={"kind": "paths", "paths": ["src"]})
+            with self.assertRaises(claims.ClaimConflict):
+                claims.acquire(store, repository="r", session_id="b",
+                               consumer_id="b", basis=claims.BASIS_EXPLICIT,
+                               reason="whole")
+
+    def test_dirty_checkout_requires_adoption(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = open_store(directory, "file")
+            facts = {"dirty": True, "head": "abc", "branch": "main", "foreign_signals": []}
+            with self.assertRaises(claims.ClaimAdoptionRequired):
+                claims.acquire(store, repository="r", session_id="a",
+                               consumer_id="a", basis=claims.BASIS_EXPLICIT,
+                               reason="takeover", checkout_facts=facts)
+            adopted = claims.acquire(
+                store, repository="r", session_id="a", consumer_id="a",
+                basis=claims.BASIS_ADOPTION, reason="documented takeover",
+                checkout_facts=facts)
+            self.assertEqual(adopted["provenance"]["adopted_head"], "abc")
+            self.assertTrue(adopted["provenance"]["adopted_dirty"])
+
+    def test_transfer_moves_ownership(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = open_store(directory, "file")
+            record = claims.acquire(store, repository="r", session_id="a",
+                                    consumer_id="a", basis=claims.BASIS_EXPLICIT,
+                                    reason="work")
+            moved = claims.transfer(store, claim_id=record["claim_id"],
+                                    from_session="a", to_session="b",
+                                    to_consumer="b", reason="handoff")
+            self.assertEqual(moved["basis"], claims.BASIS_TRANSFER)
+            self.assertEqual(moved["session_id"], "b")
+            live = claims.active_claims(store.read_claims())
+            self.assertEqual(live[record["claim_id"]]["session_id"], "b")
+
+    def test_liveness_derives_from_activity(self) -> None:
+        record = {"status": "held", "expires_at": "2999-01-01T00:00:00+00:00"}
+        self.assertEqual(claims.liveness(record, None), "stale")
+        self.assertEqual(
+            claims.liveness(record, claims.utcnow()), "active")
+        self.assertEqual(
+            claims.liveness({"status": "released", "expires_at": record["expires_at"]},
+                            claims.utcnow()),
+            "released")
+        self.assertEqual(
+            claims.liveness({"status": "held", "expires_at": "2000-01-01T00:00:00+00:00"},
+                            claims.utcnow()),
+            "expired")
+
+    def test_legacy_records_migrate_to_repository_scope(self) -> None:
+        legacy = {"claim_id": "claim:r", "version": 1, "repository": "r",
+                  "session_id": "a", "status": "held",
+                  "expires_at": "2999-01-01T00:00:00+00:00"}
+        live = claims.active_claims([legacy])
+        self.assertEqual(live["claim:r"]["scope"]["kind"], "repository")
 
 
 class WorkspaceTests(unittest.TestCase):
