@@ -2,20 +2,25 @@
 
 Every command reads or mutates environment-owned session state only. The
 CLI parses arguments and prints JSON; all semantics live in the package.
+Inspection commands open sessions read-only and never append events;
+only resume/accept record participation.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
-from . import leases as leases_module
+from . import claims as claims_module
 from . import pressures as pressures_module
+from . import rights as rights_module
 from . import sessions as sessions_module
 from . import workspace as workspace_module
 from .persist import read_json
+from .session_store import open_store
 
 DEFAULT_STATE_DIR = Path.home() / ".local" / "share" / "mncs-environment"
 
@@ -36,59 +41,107 @@ def load_definition(path: Path) -> dict:
     return raw
 
 
+def resolve_workspace_root(args: argparse.Namespace, definition: dict) -> str:
+    """Workspace root for a command: explicit flag wins, then the definition.
+
+    A relative ``workspace_root`` in the definition resolves against the
+    definition file's directory, so checked-in definitions stay portable
+    (no absolute paths, any cwd). An absent value means the current directory.
+    """
+    if args.workspace:
+        return args.workspace
+    declared = definition.get("workspace_root", ".")
+    if not isinstance(declared, str) or not declared:
+        return "."
+    candidate = Path(declared)
+    if candidate.is_absolute():
+        return str(candidate)
+    definition_file = getattr(args, "definition", None)
+    if definition_file is not None:
+        return os.path.normpath(Path(definition_file).resolve().parent / candidate)
+    return str(candidate)
+
+
 def cmd_resolve(args: argparse.Namespace) -> int:
     definition = load_definition(args.definition)
-    workspace_root = args.workspace or definition.get("workspace_root", ".")
-    environment = sessions_module.resolve_environment(
-        definition=definition,
-        workspace_root=workspace_root,
-        state_dir=args.state_dir,
-        consumer_id=args.consumer,
-    )
+    workspace_root = resolve_workspace_root(args, definition)
+    store = open_store(args.state_dir, args.persistence)
+    try:
+        environment = sessions_module.resolve_environment(
+            definition=definition,
+            workspace_root=workspace_root,
+            state_dir=args.state_dir,
+            consumer_id=args.consumer,
+            store=store,
+        )
+    finally:
+        close_store(store)
     out(environment)
     return 0
 
 
 def cmd_enter(args: argparse.Namespace) -> int:
     definition = load_definition(args.definition)
-    workspace_root = args.workspace or definition.get("workspace_root", ".")
-    environment = sessions_module.resolve_environment(
-        definition=definition,
-        workspace_root=workspace_root,
-        state_dir=args.state_dir,
-        consumer_id=args.consumer,
-    )
-    session = sessions_module.Session.create(
-        state_dir=args.state_dir,
-        environment=environment,
-        consumer_id=args.consumer,
-        consumer_kind=args.consumer_kind,
-    )
-    session.transition("resolving", "enter: resolving environment")
-    session.transition("ready", "environment resolved")
-    session.transition("active", f"consumer {args.consumer} entered")
-    out(session.inspect())
-    return 0
+    workspace_root = resolve_workspace_root(args, definition)
+    store = open_store(args.state_dir, args.persistence)
+    try:
+        environment = sessions_module.resolve_environment(
+            definition=definition,
+            workspace_root=workspace_root,
+            state_dir=args.state_dir,
+            consumer_id=args.consumer,
+            store=store,
+        )
+        session = sessions_module.Session.create(
+            state_dir=args.state_dir,
+            environment=environment,
+            consumer_id=args.consumer,
+            consumer_kind=args.consumer_kind,
+            backend=args.persistence,
+            store=store,
+        )
+        session = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=session.session_id,
+            backend=args.persistence, store=store,
+        )
+        session.transition("resolving", "enter: resolving environment")
+        session.transition("ready", "environment resolved")
+        session.transition("active", f"consumer {args.consumer} entered")
+        out(session.inspect())
+        return 0
+    except rights_module.RightsBlocked as error:
+        return fail(str(error))
+    finally:
+        close_store(store)
+
+
+def close_store(store) -> None:
+    close = getattr(store, "close", None)
+    if callable(close):
+        close()
 
 
 def _open(args: argparse.Namespace) -> sessions_module.Session:
     try:
-        return sessions_module.Session.resume(state_dir=args.state_dir, session_id=args.session)
+        return sessions_module.Session.open(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
     except sessions_module.LifecycleError as error:
         raise SystemExit(fail(str(error)))
 
 
 def cmd_inspect(args: argparse.Namespace) -> int:
-    try:
-        session = sessions_module.Session(args.state_dir, args.session)
-    except sessions_module.LifecycleError as error:
-        return fail(str(error))
-    out(session.inspect())
+    out(_open(args).inspect())
     return 0
 
 
 def cmd_resume(args: argparse.Namespace) -> int:
-    session = _open(args)
+    try:
+        session = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+    except sessions_module.LifecycleError as error:
+        return fail(str(error))
     if args.revalidate:
         revalidation = session.revalidate()
         session.observe_workspace(args.workspace or ".")
@@ -99,15 +152,14 @@ def cmd_resume(args: argparse.Namespace) -> int:
     if args.consumer and args.consumer != session.snapshot.get("consumer_id"):
         result["handoff_hint"] = (
             f"session belongs to {session.snapshot.get('consumer_id')}; "
-            "use handoff accept to transfer"
+            "use accept with the handoff identity to transfer"
         )
     out(result)
     return 0
 
 
 def cmd_capabilities(args: argparse.Namespace) -> int:
-    session = _open(args)
-    out(session.inspect()["bindings"])
+    out(_open(args).inspect()["bindings"])
     return 0
 
 
@@ -124,7 +176,12 @@ def cmd_authority(args: argparse.Namespace) -> int:
 
 
 def cmd_invoke(args: argparse.Namespace) -> int:
-    session = _open(args)
+    try:
+        session = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+    except sessions_module.LifecycleError as error:
+        return fail(str(error))
     try:
         result = session.invoke(
             args.capability, args.argv, cwd=args.cwd, timeout_seconds=args.timeout
@@ -132,32 +189,58 @@ def cmd_invoke(args: argparse.Namespace) -> int:
     except (sessions_module.AuthorityDenied, sessions_module.LifecycleError) as error:
         return fail(str(error), code=3)
     out(result)
-    return 0 if result["status"] == "ok" else 4
+    return 0 if result["status"] in ("ok", "pending-escalation") else 4
 
 
 def cmd_events(args: argparse.Namespace) -> int:
     session = _open(args)
     if args.subscribe:
-        out(session.subscribe(args.subscribe, source_filter=args.source))
+        # Subscribing changes cursor state: use a participating handle.
+        participant = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+        out(participant.subscribe(args.subscribe, source_filter=args.source))
         return 0
     if args.poll:
-        out(session.poll(args.poll))
+        participant = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+        out(participant.poll(args.poll))
         return 0
     if args.observe_workspace:
-        out(session.observe_workspace(args.observe_workspace))
+        participant = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+        out(participant.observe_workspace(args.observe_workspace))
+        return 0
+    if args.observe_store:
+        participant = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+        out(participant.observe_store())
         return 0
     out(session.inspect()["latest_events"])
     return 0
 
 
 def cmd_checkpoint(args: argparse.Namespace) -> int:
-    session = _open(args)
+    try:
+        session = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+    except sessions_module.LifecycleError as error:
+        return fail(str(error))
     out(session.checkpoint(progress=args.progress, remaining=args.remaining))
     return 0
 
 
 def cmd_handoff(args: argparse.Namespace) -> int:
-    session = _open(args)
+    try:
+        session = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+    except sessions_module.LifecycleError as error:
+        return fail(str(error))
     out(
         session.handoff(
             to_consumer=args.to,
@@ -170,13 +253,27 @@ def cmd_handoff(args: argparse.Namespace) -> int:
 
 
 def cmd_accept(args: argparse.Namespace) -> int:
-    session = _open(args)
-    out(session.accept_handoff(consumer_id=args.consumer, consumer_kind=args.consumer_kind))
+    try:
+        session = sessions_module.Session.open(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+    except sessions_module.LifecycleError as error:
+        return fail(str(error))
+    try:
+        out(session.accept_handoff(args.handoff, consumer_id=args.consumer,
+                                   consumer_kind=args.consumer_kind))
+    except sessions_module.LifecycleError as error:
+        return fail(str(error))
     return 0
 
 
 def cmd_complete(args: argparse.Namespace) -> int:
-    session = _open(args)
+    try:
+        session = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+    except sessions_module.LifecycleError as error:
+        return fail(str(error))
     try:
         out(session.complete(outcome=args.outcome, summary=args.summary))
     except sessions_module.LifecycleError as error:
@@ -185,7 +282,12 @@ def cmd_complete(args: argparse.Namespace) -> int:
 
 
 def cmd_fail(args: argparse.Namespace) -> int:
-    session = _open(args)
+    try:
+        session = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+    except sessions_module.LifecycleError as error:
+        return fail(str(error))
     try:
         out(session.fail(reason=args.reason))
     except sessions_module.LifecycleError as error:
@@ -193,21 +295,31 @@ def cmd_fail(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_leases(args: argparse.Namespace) -> int:
-    state = Path(args.state_dir)
-    if args.release:
-        out({"released": leases_module.release(state, repository=args.release, owner_session=args.owner)})
+def cmd_claims(args: argparse.Namespace) -> int:
+    store = open_store(args.state_dir, args.persistence)
+    try:
+        if args.release:
+            session = sessions_module.Session.resume(
+                state_dir=args.state_dir, session_id=args.session, backend=args.persistence,
+                store=store,
+            )
+            out({"released": session.release_claim(args.release, reason=args.reason)})
+            return 0
+        if args.acquire:
+            session = sessions_module.Session.resume(
+                state_dir=args.state_dir, session_id=args.session, backend=args.persistence,
+                store=store,
+            )
+            try:
+                out(session.acquire_claim(args.acquire, basis=args.basis, reason=args.reason,
+                                          ttl_hours=args.ttl))
+            except claims_module.ClaimConflict as error:
+                return fail(str(error), code=3)
+            return 0
+        out(store.read_claims())
         return 0
-    if args.acquire:
-        try:
-            out(leases_module.acquire(
-                state, repository=args.acquire, owner_session=args.owner,
-                reason=args.reason or "", ttl_hours=args.ttl))
-        except leases_module.LeaseConflict as error:
-            return fail(str(error), code=3)
-        return 0
-    out(leases_module.read_leases(state))
-    return 0
+    finally:
+        close_store(store)
 
 
 def cmd_pressures(args: argparse.Namespace) -> int:
@@ -226,9 +338,24 @@ def cmd_workspace(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_store(args: argparse.Namespace) -> int:
+    store = open_store(args.state_dir, "store")
+    try:
+        if args.verify:
+            out(store.backend.verify())
+            return 0
+        out({"generation": store.backend.generation(),
+             "commit_feed": store.backend.commit_feed().hex()})
+        return 0
+    finally:
+        close_store(store)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="mncs-env")
     parser.add_argument("--state-dir", type=Path, default=DEFAULT_STATE_DIR)
+    parser.add_argument("--persistence", choices=("store", "file"), default="store",
+                        help="store is canonical; file is the debug projection")
     sub = parser.add_subparsers(dest="command", required=True)
 
     common = argparse.ArgumentParser(add_help=False)
@@ -253,7 +380,7 @@ def build_parser() -> argparse.ArgumentParser:
         parser_.add_argument("session")
         return parser_
 
-    inspect = session_parser("inspect", "inspect session state")
+    inspect = session_parser("inspect", "inspect session state (read-only)")
     inspect.set_defaults(func=cmd_inspect)
 
     resume = session_parser("resume", "resume a session in this process")
@@ -276,11 +403,12 @@ def build_parser() -> argparse.ArgumentParser:
     invoke.add_argument("argv", nargs="*")
     invoke.set_defaults(func=cmd_invoke)
 
-    events = session_parser("events", "subscribe, poll, or observe events")
+    events = session_parser("events", "read, subscribe, poll, or observe events")
     events.add_argument("--subscribe", nargs="*", default=None)
     events.add_argument("--source", default=None)
     events.add_argument("--poll", default=None)
     events.add_argument("--observe-workspace", default=None)
+    events.add_argument("--observe-store", action="store_true")
     events.set_defaults(func=cmd_events)
 
     checkpoint = session_parser("checkpoint", "persist a checkpoint")
@@ -296,6 +424,7 @@ def build_parser() -> argparse.ArgumentParser:
     handoff.set_defaults(func=cmd_handoff)
 
     accept = session_parser("accept", "accept a handed-off session")
+    accept.add_argument("handoff", help="handoff identity to accept")
     accept.set_defaults(func=cmd_accept)
 
     complete = session_parser("complete", "complete a session")
@@ -307,13 +436,16 @@ def build_parser() -> argparse.ArgumentParser:
     fail_cmd.add_argument("--reason", required=True)
     fail_cmd.set_defaults(func=cmd_fail)
 
-    leases = sub.add_parser("leases", help="inspect or manage workspace leases")
-    leases.add_argument("--acquire", default=None)
-    leases.add_argument("--release", default=None)
-    leases.add_argument("--owner", default="local-agent")
-    leases.add_argument("--reason", default="")
-    leases.add_argument("--ttl", type=int, default=24)
-    leases.set_defaults(func=cmd_leases)
+    claims = sub.add_parser("claims", help="inspect or manage workspace claims")
+    claims.add_argument("session")
+    claims.add_argument("--acquire", default=None)
+    claims.add_argument("--release", default=None)
+    claims.add_argument("--basis", default=claims_module.BASIS_EXPLICIT,
+                        choices=(claims_module.BASIS_EXPLICIT, claims_module.BASIS_INTENT_SCOPE,
+                                 claims_module.BASIS_RECOVERY))
+    claims.add_argument("--reason", default="")
+    claims.add_argument("--ttl", type=int, default=24)
+    claims.set_defaults(func=cmd_claims)
 
     pressures = sub.add_parser("pressures", help="record or list pressures")
     pressures.add_argument("--record", type=Path, default=None)
@@ -322,6 +454,10 @@ def build_parser() -> argparse.ArgumentParser:
     workspace = sub.add_parser("workspace", help="discover workspace repositories")
     workspace.add_argument("--root", default=".")
     workspace.set_defaults(func=cmd_workspace)
+
+    store = sub.add_parser("store", help="inspect the backing store")
+    store.add_argument("--verify", action="store_true")
+    store.set_defaults(func=cmd_store)
 
     return parser
 

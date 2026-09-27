@@ -2,21 +2,27 @@
 
 Resolution composes workspace facts, discovered capabilities, authority
 projection, and event sources into one inspectable Environment record.
-Sessions persist as structured snapshots plus an append-only event log,
-so a different process or consumer resumes from state, not prose.
+Sessions persist through the session store (Store-backed canonical, file
+as debug projection) as structured snapshots plus an append-only event
+log, so a different process or consumer resumes from state, not prose.
+
+Concurrency: records are immutable under content-derived identities and
+publication uses generation CAS with bounded retries. Two processes
+appending events converge on sequence order; a lost race retries, and an
+identical re-put is idempotent.
 """
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from . import authority as authority_module
 from . import capabilities as capabilities_module
+from . import claims as claims_module
 from . import events as events_module
-from . import leases as leases_module
+from . import rights as rights_module
 from . import workspace as workspace_module
 from .identity import (
     checkpoint_id,
@@ -27,23 +33,26 @@ from .identity import (
     resolved_environment_id,
 )
 from .intent import parse as parse_intent
-from .persist import append_jsonl, read_json, read_jsonl, write_json
+from .session_store import SessionStore, SequenceTaken, open_store
 
-SESSION_SCHEMA = "mncs.environment.session/1"
+SESSION_SCHEMA = "mncs.environment.session/2"
 ENVIRONMENT_SCHEMA = "mncs.environment.resolved/1"
 CHECKPOINT_SCHEMA = "mncs.environment.checkpoint/1"
 HANDOFF_SCHEMA = "mncs.environment.handoff/1"
 
-# Allowed lifecycle transitions. Every transition records a reason; there
-# is no vague string field — an illegal transition raises LifecycleError.
+MAX_EMIT_RETRIES = 16
+
+# Allowed lifecycle transitions. Every transition records a reason; an
+# illegal transition raises LifecycleError. Completion paths below match
+# this table exactly (audited); complete()/fail() enforce the same sets.
 TRANSITIONS: dict[str, tuple[str, ...]] = {
     "defined": ("resolving", "abandoned"),
     "resolving": ("ready", "failed", "abandoned"),
     "ready": ("active", "failed", "abandoned"),
     "active": ("blocked", "waiting", "checkpointed", "handed_off", "completed", "failed", "abandoned"),
-    "blocked": ("active", "failed", "abandoned"),
-    "waiting": ("active", "failed", "abandoned"),
-    "checkpointed": ("active", "failed", "abandoned"),
+    "blocked": ("active", "failed", "abandoned", "completed"),
+    "waiting": ("active", "failed", "abandoned", "completed"),
+    "checkpointed": ("active", "failed", "abandoned", "completed"),
     "handed_off": ("active", "abandoned"),
     "completed": (),
     "failed": (),
@@ -63,8 +72,16 @@ def utcnow() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def _session_dir(state_dir: Path, session_id: str) -> Path:
-    return Path(state_dir) / "sessions" / session_id
+def _repo_facts(workspace_view: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    facts = {}
+    for repo in workspace_view.get("repositories", []):
+        signals = workspace_module.foreign_work_signals(repo)
+        facts[repo["name"]] = {
+            "clean": not repo.get("dirty", False),
+            "main_branch": repo.get("branch") in ("main", "master", None),
+            "foreign_signals": [signal["kind"] for signal in signals],
+        }
+    return facts
 
 
 def resolve_environment(
@@ -73,9 +90,11 @@ def resolve_environment(
     workspace_root: str | Path,
     state_dir: str | Path,
     consumer_id: str,
+    store: SessionStore | None = None,
+    verify_on_open: bool = True,
 ) -> dict[str, Any]:
     """Resolve a declarative environment definition into an inspectable world."""
-    state = Path(state_dir)
+    backend = store or open_store(state_dir, "store", verify_on_open=verify_on_open)
     workspace_view = workspace_module.discover_workspace(workspace_root)
     discovered = capabilities_module.discover_capabilities(workspace_root)
     bindings = [capabilities_module.probe_availability(binding) for binding in discovered]
@@ -90,12 +109,17 @@ def resolve_environment(
         set(intent.get("protected_repositories", []))
         | set(definition.get("protected_repositories", []))
     )
-    holders = leases_module.active_holders(state)
+    claim_holders = claims_module.holders(backend.read_claims())
+    repo_names = [repo["name"] for repo in workspace_view.get("repositories", [])]
+    rights = rights_module.evaluate_rights(
+        workspace_repos=repo_names,
+        records=rights_module.load_claim_records(definition, workspace_root),
+    )
     authority_context = authority_module.build_context(
         subject=consumer_id,
         intent=intent,
         protected_repos=protected,
-        lease_holders=holders,
+        claim_holders={repo: info["session_id"] for repo, info in claim_holders.items()},
     )
     inputs = {
         "workspace_root": str(Path(workspace_root).resolve()),
@@ -105,7 +129,7 @@ def resolve_environment(
         },
         "binding_ids": sorted(binding["binding_id"] for binding in bindings),
         "intent": intent["identity"],
-        "lease_holders": holders,
+        "claim_holders": claim_holders,
     }
     definition_id = environment_id(definition)
     environment = {
@@ -115,11 +139,14 @@ def resolve_environment(
         "resolved_at": utcnow(),
         "consumer_id": consumer_id,
         "workspace": workspace_view,
+        "repo_facts": _repo_facts(workspace_view),
         "bindings": bindings,
         "unavailable_capabilities": unavailable,
         "intent": intent,
         "protected_repositories": protected,
         "authority": authority_context,
+        "claim_holders": claim_holders,
+        "rights": rights,
         "event_sources": [
             {"kind": "session-log", "replay": True},
             {"kind": "adapter:git-poll", "replay": False,
@@ -131,16 +158,31 @@ def resolve_environment(
 
 
 class Session:
-    """A durable session bound to persisted snapshot + event log."""
+    """A durable session bound to a session store (snapshot + event log)."""
 
-    def __init__(self, state_dir: Path | str, session_id: str):
-        self.state_dir = Path(state_dir)
+    def __init__(self, store: SessionStore, session_id: str):
+        # Sessions always open through create/open/resume below.
+        self.store = store
         self.session_id = session_id
-        self.directory = _session_dir(self.state_dir, session_id)
-        snapshot = read_json(self.directory / "session.json")
+        snapshot = store.load_snapshot(session_id)
         if not isinstance(snapshot, dict) or snapshot.get("session_id") != session_id:
             raise LifecycleError(f"session {session_id} has no readable snapshot")
         self.snapshot = snapshot
+        self._next_seq_hint: int | None = None
+        self._log_cache: list[dict[str, Any]] | None = None
+        self._log_cache_key: Any = None
+        # Store-generation baseline for observe_store; None means this
+        # handle has not adopted yet (adopts silently on first observe).
+        self._feed_generation: int | None = None
+
+    def close(self) -> None:
+        close = getattr(self.store, "close", None)
+        if callable(close):
+            close()
+
+    @property
+    def state_dir(self) -> Path:
+        return getattr(self.store, "state_dir", Path("."))
 
     # -- construction ----------------------------------------------------
 
@@ -152,8 +194,15 @@ class Session:
         environment: dict[str, Any],
         consumer_id: str,
         consumer_kind: str = "agent",
+        backend: str = "store",
+        verify_on_open: bool = True,
+        store: SessionStore | None = None,
     ) -> "Session":
-        state = Path(state_dir)
+        store = store or open_store(state_dir, backend, verify_on_open=verify_on_open)
+        rights_module.check_enter(
+            [repo["name"] for repo in environment.get("workspace", {}).get("repositories", [])],
+            environment.get("rights", {}),
+        )
         session_id = new_session_id(environment["identity"], consumer_id)
         snapshot = {
             "schema_version": SESSION_SCHEMA,
@@ -166,6 +215,9 @@ class Session:
             "lifecycle_history": [{"state": "defined", "reason": "session created", "at": utcnow()}],
             "intent": environment.get("intent"),
             "authority": environment.get("authority"),
+            "rights": environment.get("rights", {}),
+            "repo_facts": environment.get("repo_facts", {}),
+            "claim_holders": environment.get("claim_holders", {}),
             "bindings": environment.get("bindings", []),
             "workspace_heads": {
                 repo["name"]: repo.get("head")
@@ -180,35 +232,80 @@ class Session:
             "completion": None,
             "created_at": utcnow(),
             "updated_at": utcnow(),
+            "snapshot_sequence": 0,
             "provenance": {
                 "created_by": consumer_id,
                 "definition_id": environment.get("definition_id"),
                 "resolution_inputs_digest": environment.get("resolution_inputs_digest"),
             },
         }
-        directory = _session_dir(state, session_id)
-        write_json(directory / "session.json", snapshot)
-        instance = cls(state, session_id)
+        store.save_snapshot(session_id, snapshot)
+        instance = cls(store, session_id)
         instance._emit("session.created", "environment", {"consumer_id": consumer_id})
+        instance._save()
         return instance
 
     @classmethod
-    def resume(cls, *, state_dir: Path | str, session_id: str) -> "Session":
-        instance = cls(state_dir, session_id)
+    def open(
+        cls, *, state_dir: Path | str, session_id: str, backend: str = "store",
+        verify_on_open: bool = True, store: SessionStore | None = None,
+    ) -> "Session":
+        """Read-only open: loads state without appending any event."""
+        store = store or open_store(state_dir, backend, verify_on_open=verify_on_open)
+        return cls(store, session_id)
+
+    @classmethod
+    def resume(
+        cls, *, state_dir: Path | str, session_id: str, backend: str = "store",
+        verify_on_open: bool = True, store: SessionStore | None = None,
+    ) -> "Session":
+        """Resume active participation: transitions abandoned sessions, logs resume."""
+        instance = cls.open(
+            state_dir=state_dir, session_id=session_id, backend=backend,
+            verify_on_open=verify_on_open, store=store)
         if instance.snapshot.get("lifecycle") in ("completed", "failed"):
             raise LifecycleError(f"session {session_id} is terminal and cannot resume")
+        if instance.snapshot.get("lifecycle") == "abandoned":
+            instance.transition("active", "resumed from abandoned")
         instance._emit("session.resumed", "environment",
                        {"consumer_id": instance.snapshot.get("consumer_id")})
+        instance._save()
         return instance
 
     # -- persistence helpers ----------------------------------------------
 
     def _save(self) -> None:
+        # Monotonic save sequence: every save is a new immutable Store
+        # object, so concurrent writers never collide on identity.
+        self.snapshot["snapshot_sequence"] = int(self.snapshot.get("snapshot_sequence", 0)) + 1
         self.snapshot["updated_at"] = utcnow()
-        write_json(self.directory / "session.json", self.snapshot)
+        self.store.save_snapshot(self.session_id, self.snapshot)
+        # Own write: re-baseline the store-feed observer so observe_store
+        # only ever reports activity from outside this session.
+        self._refresh_feed_baseline()
+
+    def _cache_key(self) -> Any:
+        generation = getattr(self.store, "generation", None)
+        if callable(generation):
+            try:
+                return ("store", generation())
+            except Exception:
+                return None
+        return None
 
     def _log(self) -> list[dict[str, Any]]:
-        return read_jsonl(self.directory / "events.jsonl")
+        key = self._cache_key()
+        if key is not None and key == self._log_cache_key and self._log_cache is not None:
+            return self._log_cache
+        log = self.store.read_events(self.session_id)
+        if key is not None:
+            self._log_cache = log
+            self._log_cache_key = key
+        return log
+
+    def _invalidate_log(self) -> None:
+        self._log_cache = None
+        self._log_cache_key = None
 
     def _emit(
         self,
@@ -217,17 +314,30 @@ class Session:
         payload: dict[str, Any] | None = None,
         causes: list[str] | None = None,
     ) -> dict[str, Any]:
-        sequence = len(self._log()) + 1
-        event = events_module.make(
-            session_id=self.session_id,
-            sequence=sequence,
-            event_type=event_type,
-            producer=producer,
-            payload=payload,
-            causes=causes,
-        )
-        append_jsonl(self.directory / "events.jsonl", event)
-        return event
+        last_error: Exception | None = None
+        for _ in range(MAX_EMIT_RETRIES):
+            if self._next_seq_hint is None:
+                sequences = self.store.existing_sequences(self.session_id)
+                self._next_seq_hint = (max(sequences) + 1) if sequences else 1
+            sequence = self._next_seq_hint
+            event = events_module.make(
+                session_id=self.session_id,
+                sequence=sequence,
+                event_type=event_type,
+                producer=producer,
+                payload=payload,
+                causes=causes,
+            )
+            try:
+                self.store.put_event(self.session_id, sequence, event)
+                self._invalidate_log()
+                self._next_seq_hint = sequence + 1
+                return event
+            except SequenceTaken as error:
+                last_error = error
+                self._next_seq_hint = None
+                continue
+        raise LifecycleError(f"event log unwritable after retries: {last_error}")
 
     # -- lifecycle ---------------------------------------------------------
 
@@ -251,12 +361,20 @@ class Session:
         self._save()
         return intent
 
-    def check(self, *, action: str, target: str) -> dict[str, str]:
+    def check(
+        self,
+        *,
+        action: str,
+        target: str,
+        repo_facts: dict[str, dict[str, Any]] | None = None,
+    ) -> dict[str, str]:
         verdict = authority_module.evaluate(
             self.snapshot.get("authority", {}),
             action=action,
             target=target,
             session_id=self.session_id,
+            claims=self.snapshot.get("claim_holders", {}),
+            repo_facts=repo_facts if repo_facts is not None else self.snapshot.get("repo_facts", {}),
         )
         if verdict["verdict"] == "deny":
             self._emit("authority.denied", "environment",
@@ -279,24 +397,31 @@ class Session:
         *,
         cwd: str | Path | None = None,
         timeout_seconds: int = 120,
+        env: dict[str, str] | None = None,
     ) -> dict[str, Any]:
+        """Invoke a bound capability. Deny and escalate NEVER spawn a process."""
         binding = self._binding(capability)
         if binding.get("availability", {}).get("status") != "available":
             raise AuthorityDenied(
                 f"capability {capability!r} is not available: "
                 f"{binding.get('availability', {}).get('reason')}"
             )
-        required = authority_module.required_action_for_effects(binding.get("effects", ["read"]))
         verdict = self.check(action="invoke", target=capability)
         if verdict["verdict"] == "deny":
             raise AuthorityDenied(verdict["reason"])
+        if verdict["verdict"] == "escalate":
+            return self._pending(capability, argv, "invoke", verdict["reason"])
+        required = authority_module.required_action_for_effects(binding.get("effects", ["read"]))
         if required != "read":
             effect_verdict = self.check(action=required, target=binding.get("provider", capability))
             if effect_verdict["verdict"] == "deny":
                 raise AuthorityDenied(effect_verdict["reason"])
+            if effect_verdict["verdict"] == "escalate":
+                return self._pending(capability, argv, required, effect_verdict["reason"])
         self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
                    {"capability": capability, "argv": argv})
-        result = capabilities_module.invoke(binding, argv, cwd=cwd, timeout_seconds=timeout_seconds)
+        result = capabilities_module.invoke(
+            binding, argv, cwd=cwd, timeout_seconds=timeout_seconds, env=env)
         self.snapshot.setdefault("artifacts", []).append(
             {"kind": "invocation-result", "capability": capability,
              "status": result["status"], "at": utcnow()}
@@ -306,6 +431,54 @@ class Session:
                     "returncode": result["returncode"]})
         self._save()
         return result
+
+    def _pending(self, capability: str, argv: list[str], action: str, reason: str) -> dict[str, Any]:
+        self._emit("authority.escalated", "environment",
+                   {"action": action, "target": capability, "reason": reason, "argv": argv})
+        self._save()
+        return {
+            "binding_id": None,
+            "capability": capability,
+            "status": "pending-escalation",
+            "returncode": None,
+            "stdout": "",
+            "stderr": f"escalation required, nothing executed: {reason}",
+            "truncated": False,
+        }
+
+    # -- claims ---------------------------------------------------------------
+
+    def acquire_claim(
+        self, repository: str, *, basis: str = claims_module.BASIS_EXPLICIT,
+        reason: str = "", ttl_hours: int = 24,
+    ) -> dict[str, Any]:
+        record = claims_module.acquire(
+            self.store, repository=repository, session_id=self.session_id,
+            consumer_id=self.snapshot.get("consumer_id", "unknown"),
+            basis=basis, reason=reason, ttl_hours=ttl_hours,
+        )
+        self.snapshot["claim_holders"] = {
+            repo: info["session_id"]
+            for repo, info in claims_module.holders(self.store.read_claims()).items()
+        }
+        self._emit("lease.acquired", self.snapshot.get("consumer_id", "unknown"),
+                   {"repository": repository, "basis": basis, "claim_id": record["identity"]})
+        self._save()
+        return record
+
+    def release_claim(self, repository: str, reason: str = "") -> bool:
+        released = claims_module.release(
+            self.store, repository=repository, session_id=self.session_id, reason=reason)
+        if released is None:
+            return False
+        self.snapshot["claim_holders"] = {
+            repo: info["session_id"]
+            for repo, info in claims_module.holders(self.store.read_claims()).items()
+        }
+        self._emit("lease.released", self.snapshot.get("consumer_id", "unknown"),
+                   {"repository": repository})
+        self._save()
+        return True
 
     # -- events / subscriptions ---------------------------------------------
 
@@ -352,13 +525,56 @@ class Session:
             current_heads=current,
         )
         for event in events:
-            append_jsonl(self.directory / "events.jsonl", event)
+            self._emit(event["type"], event["producer"], event["payload"])
         self.snapshot["workspace_heads"] = current
+        self.snapshot["repo_facts"] = _repo_facts(workspace_module.discover_workspace(workspace_root))
         self._save()
         return events
 
+    def _feed_generation_now(self) -> int | None:
+        generation = getattr(self.store, "generation", None)
+        if not callable(generation):
+            return None
+        try:
+            return int(generation())
+        except Exception:
+            return None
+
+    def _refresh_feed_baseline(self) -> None:
+        current = self._feed_generation_now()
+        if current is None:
+            return
+        self._feed_generation = current
+        self.snapshot["last_store_generation"] = current
+
+    def observe_store(self) -> dict[str, Any] | None:
+        """Read the Store generation: an external advance becomes an event.
+
+        Every session write re-baselines through ``_save``, so a delta
+        observed here is Store activity from outside this session by
+        construction. A fresh handle adopts the current generation
+        silently: resume already re-reads snapshot, log, and claims, so
+        nothing is lost by not reporting the downtime delta as an event.
+        """
+        current = self._feed_generation_now()
+        if current is None:
+            return None
+        if self._feed_generation is None:
+            self._feed_generation = current
+            self.snapshot["last_store_generation"] = current
+            self._save()
+            return None
+        if current == self._feed_generation:
+            return None
+        previous = self._feed_generation
+        event = self._emit("adapter.observed", "adapter:store-feed",
+                           {"generation": current, "previous": previous,
+                            "note": "store generation advanced outside this session"})
+        self._save()
+        return event
+
     def revalidate(self) -> dict[str, Any]:
-        """Re-probe bindings on resume; divergence becomes typed events, not trust."""
+        """Re-probe bindings and refresh claims; divergence becomes typed events."""
         report: dict[str, Any] = {"reprobed": 0, "changed": []}
         for binding in self.snapshot.get("bindings", []):
             before = binding.get("availability", {}).get("status")
@@ -373,6 +589,14 @@ class Session:
                     "environment",
                     {"capability": binding["capability"], "previous": before},
                 )
+        holders = claims_module.holders(self.store.read_claims())
+        if holders != self.snapshot.get("claim_holders_detailed", holders):
+            self._emit("adapter.observed", "environment",
+                       {"note": "claim holders changed", "holders": holders})
+        self.snapshot["claim_holders_detailed"] = holders
+        self.snapshot["claim_holders"] = {
+            repo: info["session_id"] for repo, info in holders.items()
+        }
         self._save()
         return report
 
@@ -396,12 +620,12 @@ class Session:
             "event_cursor": len(self._log()),
             "artifacts": list(self.snapshot.get("artifacts", [])),
             "unresolved": list(self.snapshot.get("pressures", [])),
-            "revalidate_on_resume": ["bindings", "workspace-heads", "leases"],
+            "revalidate_on_resume": ["bindings", "workspace-heads", "claims", "authority"],
             "created_at": utcnow(),
             "created_by": self.snapshot.get("consumer_id"),
         }
+        self.store.save_checkpoint(self.session_id, record)
         self.snapshot.setdefault("checkpoints", []).append(record["identity"])
-        write_json(self.directory / "checkpoints" / f"{record['identity']}.json", record)
         if self.snapshot.get("lifecycle") == "active":
             self.transition("checkpointed", f"checkpoint {sequence}")
             self.transition("active", "resumed after checkpoint")
@@ -432,8 +656,8 @@ class Session:
             "next_actions": list(next_actions or []),
             "created_at": utcnow(),
         }
+        self.store.save_handoff(self.session_id, record)
         self.snapshot.setdefault("handoffs", []).append(record["identity"])
-        write_json(self.directory / "handoffs" / f"{record['identity']}.json", record)
         if self.snapshot.get("lifecycle") == "active":
             self.transition("handed_off", f"handoff to {to_consumer}")
         self._emit("handoff.created", self.snapshot.get("consumer_id", "unknown"),
@@ -441,18 +665,38 @@ class Session:
         self._save()
         return record
 
-    def accept_handoff(self, *, consumer_id: str, consumer_kind: str = "agent") -> dict[str, Any]:
-        """A different consumer takes over: identity switches, history persists."""
+    def accept_handoff(self, handoff_id: str, *, consumer_id: str,
+                       consumer_kind: str = "agent") -> dict[str, Any]:
+        """Accept a handoff as the intended recipient, revalidating everything.
+
+        Rejects unknown handoffs, wrong recipients, and stale assumptions:
+        workspace facts, claims, capability availability, and authority are
+        recomputed and divergence is recorded before continuation.
+        """
+        record = self.store.load_handoff(self.session_id, handoff_id)
+        if record is None:
+            raise LifecycleError(f"unknown handoff {handoff_id} for session {self.session_id}")
+        if record.get("session_id") != self.session_id:
+            raise LifecycleError("handoff belongs to another session")
+        if record.get("to_consumer") != consumer_id:
+            raise LifecycleError(
+                f"handoff {handoff_id} is addressed to {record.get('to_consumer')}, "
+                f"not {consumer_id}"
+            )
         previous = self.snapshot.get("consumer_id")
         self.snapshot["consumer_id"] = consumer_id
         self.snapshot["consumer_kind"] = consumer_kind
         self.snapshot["authority"] = dict(self.snapshot.get("authority", {}))
         self.snapshot["authority"]["subject"] = consumer_id
+        divergence = self.revalidate()
         if self.snapshot.get("lifecycle") == "handed_off":
-            self.transition("active", f"accepted by {consumer_id} (was {previous})")
-        self._emit("session.resumed", consumer_id, {"previous_consumer": previous})
+            self.transition("active", f"handoff {handoff_id} accepted by {consumer_id} (was {previous})")
+        self._emit("session.resumed", consumer_id,
+                   {"previous_consumer": previous, "handoff_id": handoff_id,
+                    "revalidation": divergence})
         self._save()
-        return {"previous_consumer": previous, "consumer_id": consumer_id}
+        return {"previous_consumer": previous, "consumer_id": consumer_id,
+                "handoff_id": handoff_id, "divergence": divergence}
 
     def complete(self, *, outcome: str, summary: str = "") -> dict[str, Any]:
         if self.snapshot.get("lifecycle") not in ("active", "checkpointed", "waiting", "blocked"):
@@ -465,7 +709,9 @@ class Session:
         return self.snapshot["completion"]
 
     def fail(self, *, reason: str) -> dict[str, Any]:
-        if self.snapshot.get("lifecycle") not in ("active", "resolving", "ready", "blocked", "waiting", "checkpointed"):
+        if self.snapshot.get("lifecycle") not in (
+            "active", "resolving", "ready", "blocked", "waiting", "checkpointed"
+        ):
             raise LifecycleError("session cannot fail from its current state")
         self.transition("failed", reason)
         self._emit("session.failed", self.snapshot.get("consumer_id", "unknown"), {"reason": reason})
@@ -484,6 +730,8 @@ class Session:
             "environment_id": self.snapshot.get("environment_id"),
             "intent": self.snapshot.get("intent"),
             "authority": self.snapshot.get("authority"),
+            "rights": self.snapshot.get("rights", {}),
+            "claim_holders": self.snapshot.get("claim_holders", {}),
             "bindings": [
                 {"capability": binding.get("capability"), "provider": binding.get("provider"),
                  "availability": binding.get("availability")}

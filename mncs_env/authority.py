@@ -37,12 +37,15 @@ EFFECT_ACTIONS = {
 }
 
 
+MUTATING_ACTIONS = ("write", "mutate", "execute")
+
+
 def build_context(
     *,
     subject: str,
     intent: dict[str, Any],
     protected_repos: list[str],
-    lease_holders: dict[str, str],
+    claim_holders: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Project effective authority for a consumer from intent + workspace facts."""
     forbidden = set(intent.get("forbidden_actions", []))
@@ -54,7 +57,7 @@ def build_context(
         "writable": [repo for repo in intent.get("repositories", [])],
         "invocable": ["*"],
         "protected_repositories": sorted(set(protected_repos)),
-        "lease_holders": dict(lease_holders),
+        "claim_holders": dict(claim_holders or {}),
         "escalation_required": sorted(action for action in escalate_actions if action not in forbidden),
         "denied": sorted(forbidden),
         "grants": list(intent.get("authority_requirements", [])),
@@ -68,18 +71,31 @@ def evaluate(
     action: str,
     target: str,
     session_id: str,
+    claims: dict[str, str] | None = None,
+    repo_facts: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, str]:
-    """Return {verdict: allow|deny|escalate, reason} for one requested action."""
+    """Return {verdict: allow|deny|escalate, reason} for one requested action.
+
+    Ownership rule for mutation: naming a repository in intent is not
+    ownership. A mutating action is allowed only when the repository is
+    clean, on its main branch, shows no foreign-work signals, and sits in
+    declared writable scope — or when this session holds a live claim.
+    Anything else escalates; protected, forbidden, or foreign-claimed
+    scope denies. Escalate and deny never authorize execution.
+    """
     if action not in ACTIONS:
         return {"verdict": "deny", "reason": f"unknown action {action!r}"}
     if action in context.get("denied", []):
         return {"verdict": "deny", "reason": f"action {action} is forbidden by intent"}
     repo = target.split("/")[0] if "/" in target else target
-    holder = context.get("lease_holders", {}).get(repo)
-    if holder and holder != session_id and action in ("write", "mutate", "merge", "delete", "execute"):
+    holders = claims if claims is not None else context.get("claim_holders", {})
+    holder = holders.get(repo)
+    if holder and holder != session_id and action in (
+        "write", "mutate", "merge", "delete", "execute",
+    ):
         return {
             "verdict": "deny",
-            "reason": f"{repo} is leased to another session ({holder})",
+            "reason": f"{repo} is claimed by another session ({holder})",
         }
     if repo in context.get("protected_repositories", []) and action in (
         "write",
@@ -93,14 +109,29 @@ def evaluate(
             "verdict": "deny",
             "reason": f"{repo} is protected scope for this session",
         }
+    if action in MUTATING_ACTIONS:
+        facts = (repo_facts or {}).get(repo, {})
+        owned = holder == session_id
+        pristine = bool(
+            facts.get("clean")
+            and facts.get("main_branch")
+            and not facts.get("foreign_signals")
+            and target in context.get("writable", [])
+        )
+        if not owned and not pristine:
+            if not facts:
+                return {"verdict": "escalate",
+                        "reason": f"{repo} has no observed workspace facts; claim it first"}
+            return {"verdict": "escalate",
+                    "reason": f"{repo} is not owned scope (dirty/foreign/off-branch); claim it first"}
+        return {"verdict": "allow",
+                "reason": f"{repo} mutation by claim" if owned else f"{target} is owned clean scope"}
     if action in context.get("escalation_required", []):
         return {"verdict": "escalate", "reason": f"{action} requires escalation"}
     if action == "invoke":
         return {"verdict": "allow", "reason": "invocation permitted; effects checked per call"}
     if action in ("read", "subscribe"):
         return {"verdict": "allow", "reason": "read/subscribe permitted workspace-wide"}
-    if action == "write" and target in context.get("writable", []):
-        return {"verdict": "allow", "reason": f"{target} is in writable scope"}
     if action == "handoff":
         return {"verdict": "allow", "reason": "handoff permitted; receiving consumer revalidates"}
     return {"verdict": "escalate", "reason": f"no grant covers {action} on {target}"}
