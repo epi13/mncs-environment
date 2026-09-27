@@ -1,0 +1,18 @@
+[Unit]
+Description=MNCS environment background reconciler
+Documentation=https://github.com/epi13/mncs-environment
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# @REPO@, @STATE_DIR@, @WORKSPACE@, @INTERVAL@ are filled by install.
+ExecStart=@REPO@/scripts/mncs-env --state-dir @STATE_DIR@ reconciler --run --workspace @WORKSPACE@ --interval @INTERVAL@
+Restart=on-failure
+RestartSec=10
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=default.target

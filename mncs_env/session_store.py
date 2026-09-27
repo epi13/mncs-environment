@@ -55,6 +55,14 @@ class SessionStore:
     def read_claims(self) -> list[dict[str, Any]]:
         raise NotImplementedError
 
+    def list_sessions(self) -> list[str]:
+        """Enumerate known session ids (best-effort, backend-specific)."""
+        return []
+
+    def objects_at(self, generation: int) -> list[Any] | None:
+        """Verified object projection at one generation; None when unsupported."""
+        return None
+
 
 class FileSessionStore(SessionStore):
     """Debug/import/export projection over JSON files (not canonical)."""
@@ -103,6 +111,12 @@ class FileSessionStore(SessionStore):
         record = read_json(self._directory(session_id) / "handoffs" / f"{handoff_id}.json")
         return record if isinstance(record, dict) else None
 
+    def list_sessions(self) -> list[str]:
+        base = self.state_dir / "sessions"
+        if not base.is_dir():
+            return []
+        return sorted(path.name for path in base.iterdir() if path.is_dir())
+
     def put_claim(self, claim: dict[str, Any]) -> None:
         append_jsonl(self.state_dir / "claims.jsonl", claim)
 
@@ -126,6 +140,12 @@ class StoreSessionStore(SessionStore):
 
     def generation(self) -> int:
         return self.backend.generation()
+
+    def objects_at(self, generation: int) -> list[Any] | None:
+        objects_at = getattr(self.backend, "objects_at", None)
+        if not callable(objects_at):
+            return None
+        return list(objects_at(generation))
 
     def load_snapshot(self, session_id: str) -> dict[str, Any] | None:
         return self.backend.read_snapshot(session_id)
@@ -188,6 +208,9 @@ class StoreSessionStore(SessionStore):
 
     def read_claims(self) -> list[dict[str, Any]]:
         return self.backend.read_claims()
+
+    def list_sessions(self) -> list[str]:
+        return self.backend.list_sessions()
 
 
 def open_store(

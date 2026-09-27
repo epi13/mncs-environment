@@ -149,6 +149,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
         revalidation = {"reprobed": 0, "changed": []}
     result = session.inspect()
     result["revalidation"] = revalidation
+    result["catchup"] = session.catchup()
     if args.consumer and args.consumer != session.snapshot.get("consumer_id"):
         result["handoff_hint"] = (
             f"session belongs to {session.snapshot.get('consumer_id')}; "
@@ -221,6 +222,51 @@ def cmd_events(args: argparse.Namespace) -> int:
         return 0
     out(session.inspect()["latest_events"])
     return 0
+
+
+def cmd_brief(args: argparse.Namespace) -> int:
+    out(_open(args).brief())
+    return 0
+
+
+def cmd_updates(args: argparse.Namespace) -> int:
+    out(_open(args).updates(since=args.since))
+    return 0
+
+
+def cmd_ack(args: argparse.Namespace) -> int:
+    try:
+        session = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+    except sessions_module.LifecycleError as error:
+        return fail(str(error))
+    out(session.ack(args.index))
+    return 0
+
+
+def cmd_reconciler(args: argparse.Namespace) -> int:
+    from . import reconciler as reconciler_module
+    store = open_store(args.state_dir, args.persistence)
+    try:
+        workspace_root = (args.workspace or
+                          Path(args.state_dir).resolve().parent)
+        daemon = reconciler_module.Daemon(
+            state_dir=args.state_dir, workspace_root=workspace_root,
+            interval_seconds=args.interval)
+        if args.status:
+            out(daemon.status())
+            return 0
+        if args.run:
+            return daemon.run()
+        session, _ = reconciler_module.open_or_create_session(
+            args.state_dir, store, workspace_root)
+        report = reconciler_module.reconcile_once(
+            session, store, workspace_root)
+        out(report)
+        return 0
+    finally:
+        close_store(store)
 
 
 def cmd_checkpoint(args: argparse.Namespace) -> int:
@@ -433,6 +479,26 @@ def build_parser() -> argparse.ArgumentParser:
     events.add_argument("--observe-workspace", default=None)
     events.add_argument("--observe-store", action="store_true")
     events.set_defaults(func=cmd_events)
+
+    brief = session_parser("brief", "compact update capsule since brief cursor")
+    brief.set_defaults(func=cmd_brief)
+
+    updates = session_parser("updates", "classified event delta since an index")
+    updates.add_argument("--since", type=int, default=None)
+    updates.set_defaults(func=cmd_updates)
+
+    ack = session_parser("ack", "acknowledge the brief cursor at an event index")
+    ack.add_argument("index", type=int)
+    ack.set_defaults(func=cmd_ack)
+
+    reconciler = sub.add_parser("reconciler", help="background reconciliation service")
+    reconciler.add_argument("--workspace", default=None)
+    reconciler.add_argument("--run-once", action="store_true")
+    reconciler.add_argument("--run", action="store_true",
+                            help="run the foreground reconcile loop")
+    reconciler.add_argument("--interval", type=float, default=60.0)
+    reconciler.add_argument("--status", action="store_true")
+    reconciler.set_defaults(func=cmd_reconciler)
 
     checkpoint = session_parser("checkpoint", "persist a checkpoint")
     checkpoint.add_argument("--progress", default="")

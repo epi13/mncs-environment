@@ -404,6 +404,59 @@ class Session:
             return None
         return str(log[-1].get("observed_at"))
 
+    def _reconciler_log(self, limit: int = 100) -> list[dict[str, Any]]:
+        """Bounded tail of the reconciler session log for cross-session items."""
+        from . import reconciler as reconciler_module
+        try:
+            session_ids = self.store.list_sessions()
+        except Exception:
+            return []
+        for session_id in session_ids:
+            if session_id == self.session_id:
+                continue
+            try:
+                other = Session(self.store, session_id)
+            except Exception:
+                continue
+            if other.snapshot.get("consumer_id") == reconciler_module.RECONCILER_CONSUMER:
+                return other._log()[-limit:]
+        return []
+
+    def brief(self, *, commons_work: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Compact update capsule: relevant delta + progress, cursor untouched."""
+        from . import briefing as briefing_module
+        return briefing_module.build_capsule(
+            self, self.store, commons_work=commons_work,
+            reconciler_log=self._reconciler_log())
+
+    def catchup(self) -> dict[str, Any]:
+        """Resume-time capsule: what changed while this consumer was away."""
+        return self.brief()
+
+    def updates(self, since: int | None = None) -> dict[str, Any]:
+        """Classified event delta since an index (defaults to brief cursor)."""
+        from . import briefing as briefing_module
+        log = self._log()
+        total = len(log)
+        cursor = self.snapshot.get("brief_cursor", {})
+        index = int(cursor.get("index", 0)) if isinstance(cursor, dict) else 0
+        if since is not None:
+            index = max(0, min(int(since), total))
+        items = []
+        for event in log[index:]:
+            item = briefing_module.classify_event(event)
+            if item is not None:
+                items.append(item)
+        return {"session_id": self.session_id, "index": index, "total": total,
+                "items": items[:briefing_module.MAX_BRIEF_ITEMS],
+                "truncated": len(items) > briefing_module.MAX_BRIEF_ITEMS}
+
+    def ack(self, index: int) -> dict[str, Any]:
+        """Acknowledge the brief cursor at an event index."""
+        from . import briefing as briefing_module
+        return briefing_module.acknowledge(
+            self, index, str(self.snapshot.get("consumer_id", "unknown")))
+
     def _binding(self, capability: str) -> dict[str, Any]:
         for binding in self.snapshot.get("bindings", []):
             if binding.get("capability") == capability or binding.get("binding_id") == capability:

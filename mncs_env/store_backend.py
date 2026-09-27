@@ -245,6 +245,25 @@ class StoreBackend:
     def generation(self) -> int:
         return self._store.current_generation
 
+    def objects_at(self, generation: int) -> list[Any] | None:
+        objects_at = getattr(self._store, "objects_at", None)
+        if not callable(objects_at):
+            return None
+        return list(objects_at(generation))
+
+    def list_sessions(self) -> list[str]:
+        found: set[str] = set()
+        for item in self._store.current_objects():
+            if item.domain_schema != SCHEMA_SNAPSHOT:
+                continue
+            try:
+                identity = item.domain_identity.decode("utf-8")
+            except UnicodeDecodeError:
+                continue
+            if ":snap:" in identity:
+                found.add(identity.split(":snap:")[0])
+        return sorted(found)
+
     def commit_feed(self) -> bytes:
         return self._store.commit_feed()
 

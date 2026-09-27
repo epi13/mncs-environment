@@ -21,14 +21,17 @@ sys.path.insert(0, str(ROOT))
 
 from mncs_env import (  # noqa: E402
     authority,
+    briefing,
     capabilities,
     claims,
     cli,
     events,
     identity,
     intent,
+    reconciler,
     rights,
     sessions,
+    sources,
     workspace,
 )
 from mncs_env.session_store import open_store  # noqa: E402
@@ -749,6 +752,138 @@ class CLITests(unittest.TestCase):
         args = argparse.Namespace(workspace=None, definition=str(path))
         resolved = cli.resolve_workspace_root(args, raw)
         self.assertEqual(Path(resolved).resolve(), FAMILY.resolve())
+
+
+class SourcesTests(unittest.TestCase):
+    def test_git_source_baselines_then_reports_no_change(self) -> None:
+        source = sources.GitHeadsSource(ROOT)
+        first = source.observe(None)
+        self.assertEqual(first.status, "ok")
+        self.assertEqual(first.events, [])
+        self.assertIsNotNone(first.cursor)
+        second = source.observe(first.cursor)
+        self.assertEqual(second.status, "ok")
+        self.assertEqual(second.events, [])
+
+    def test_store_replay_baselines_and_needs_backend(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = open_store(Path(directory), "store", verify_on_open=False)
+            source = sources.StoreReplaySource(store, "ses_mine:")
+            first = source.observe(None)
+            self.assertEqual(first.status, "ok")
+            self.assertEqual(first.events, [])
+            file_store = open_store(Path(directory) / "f", "file")
+            missing = sources.StoreReplaySource(file_store, "ses_mine:")
+            self.assertEqual(missing.observe(None).status, "unknown")
+
+    def test_absent_providers_report_unknown(self) -> None:
+        commons = sources.CommonsSyncSource("/nonexistent-commons.sock")
+        result = commons.observe(None)
+        self.assertEqual(result.status, "unknown")
+        language = sources.LanguageServiceSource(None)
+        self.assertEqual(language.observe(None).status, "unknown")
+
+
+class ReconcilerTests(unittest.TestCase):
+    def _setup(self, directory):
+        state = Path(directory)
+        store = open_store(state, "store", verify_on_open=False)
+        session, created = reconciler.open_or_create_session(state, store, ROOT)
+        self.assertTrue(created)
+        return state, store, session
+
+    def test_first_run_baselines_without_noise(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state, store, session = self._setup(directory)
+            report = reconciler.reconcile_once(
+                session, store, ROOT, language_socket=None,
+                commons_socket="/nonexistent-commons.sock")
+            self.assertEqual(report["observations"], [])
+            self.assertEqual(report["resets"], [])
+            self.assertIn("commons-sync", [u["source"] for u in report["unknown"]])
+            health = reconciler.session_health(session)
+            self.assertEqual(health["consumer_id"], "environment-reconciler")
+            self.assertIn("store-replay", health["cursors"])
+
+    def test_external_claim_becomes_one_observation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state, store, session = self._setup(directory)
+            reconciler.reconcile_once(session, store, ROOT)
+            peer = open_store(state, "store", verify_on_open=False)
+            try:
+                peer.put_claim({"schema_version": "mncs.environment.claim/1",
+                                "claim_id": "claim:ext", "version": 1,
+                                "repository": "ext", "session_id": "other",
+                                "consumer_id": "other", "basis": "explicit-claim",
+                                "reason": "probe", "status": "held",
+                                "acquired_at": "2026-01-01T00:00:00",
+                                "expires_at": "2026-01-02T00:00:00",
+                                "provenance": {}, "identity": "clm_probe"})
+            finally:
+                peer.close()
+            report = reconciler.reconcile_once(session, store, ROOT)
+            kinds = [o["kind"] for o in report["observations"]]
+            self.assertIn("claim.changed", kinds)
+            # Dedup: a second pass sees nothing new and writes nothing.
+            before = store.generation()
+            again = reconciler.reconcile_once(session, store, ROOT)
+            self.assertEqual(again["observations"], [])
+            self.assertFalse(again["persisted"])
+            self.assertEqual(store.generation(), before)
+
+    def test_restart_resumes_cursor_without_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state, store, session = self._setup(directory)
+            reconciler.reconcile_once(session, store, ROOT)
+            first_id = session.session_id
+            store.close()
+            reopened_store = open_store(state, "store", verify_on_open=False)
+            try:
+                resumed, created = reconciler.open_or_create_session(
+                    state, reopened_store, ROOT)
+                self.assertFalse(created)
+                self.assertEqual(resumed.session_id, first_id)
+                report = reconciler.reconcile_once(resumed, reopened_store, ROOT)
+                self.assertEqual(report["observations"], [])
+            finally:
+                reopened_store.close()
+
+    def test_janitor_denies_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            _, _, session = self._setup(directory)
+            verdict = session.check(action="write", target="mncs-test")
+            self.assertEqual(verdict["verdict"], "deny")
+
+
+class BriefingTests(unittest.TestCase):
+    def test_brief_ack_cycle(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            capsule = session.brief()
+            self.assertEqual(capsule["cursor"]["index"], 0)
+            self.assertIn("active", capsule["summary"])
+            session.checkpoint(progress="halfway")
+            capsule = session.brief()
+            self.assertTrue(any(i["kind"] == "session.checkpointed"
+                                for i in capsule["items"]))
+            total = capsule["cursor"]["total"]
+            acked = session.ack(total)
+            self.assertEqual(acked["cursor"]["index"], total)
+            self.assertEqual(session.brief()["items"], [])
+            back = session.ack(0)
+            self.assertEqual(back["cursor"]["index"], total)
+            clamped = session.ack(total + 100)
+            self.assertEqual(clamped["cursor"]["index"], total)
+            self.assertIn("clamped", clamped["note"])
+
+    def test_denial_surfaces_safety_first(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            session.check(action="write", target="mncs-language")
+            capsule = session.brief()
+            safety = [i for i in capsule["items"] if i["category"] == "safety"]
+            self.assertTrue(safety)
+            self.assertEqual(capsule["items"][0]["category"], "safety")
 
 
 if __name__ == "__main__":
