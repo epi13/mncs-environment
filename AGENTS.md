@@ -26,7 +26,11 @@ Read, in order:
 3. `docs/MODEL.md`
 4. `docs/INTEGRATIONS.md`
 5. `rfcs/0001-environment-session-model.md`
-6. `docs/DEVELOPMENT.md`
+6. `rfcs/0002-built-boundaries.md`
+7. `docs/DEVELOPMENT.md`
+
+Verify behavior with `python3 -m pytest tests/ -q` and
+`python3 scripts/vertical_proof.py` before changing contracts.
 
 ## Architectural test
 

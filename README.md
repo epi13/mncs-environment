@@ -130,20 +130,51 @@ A durable continuation boundary. Another compatible consumer should be able to r
 ├── AGENTS.md
 ├── README.md
 ├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── DEVELOPMENT.md
-│   ├── INTEGRATIONS.md
-│   ├── MODEL.md
-│   └── ROADMAP.md
 ├── examples/
-│   └── work-intent.md
+│   ├── work-intent.md
+│   └── development-environment/environment.json
+├── mncs_env/            # canonical implementation (stdlib-only Python)
+├── pressures/registry.json
 ├── rfcs/
-│   └── 0001-environment-session-model.md
-└── src/
-    └── README.md
+├── scripts/mncs-env     # consumer entry point
+├── scripts/vertical_proof.py
+└── tests/
 ```
 
-The repository is intentionally documentation-first at inception. Runtime and schema choices should follow the architectural contracts rather than accidentally define them.
+## Implementation status
+
+The foundation campaign implemented the full session system:
+
+- stable content-hash identities (`mncs_env/identity.py`);
+- `WorkIntent` contract with validation (`mncs_env/intent.py`);
+- workspace discovery with foreign-work signals (`mncs_env/workspace.py`);
+- data-driven capability discovery/binding/invocation (`mncs_env/capabilities.py`);
+- pure default-deny authority projection (`mncs_env/authority.py`);
+- advisory leases (`mncs_env/leases.py`);
+- typed events with subscriptions and replay (`mncs_env/events.py`);
+- durable sessions: lifecycle machine, checkpoints, handoff, JSONL log (`mncs_env/sessions.py`);
+- pressure registry (`mncs_env/pressures.py`, `pressures/registry.json`);
+- CLI entry (`scripts/mncs-env`).
+
+## Entering an environment
+
+```bash
+./scripts/mncs-env enter --definition examples/development-environment/environment.json \
+    --workspace /path/to/workspace --consumer my-agent
+./scripts/mncs-env capabilities <session>
+./scripts/mncs-env authority <session>
+./scripts/mncs-env invoke <session> <capability> -- <args...>
+./scripts/mncs-env checkpoint <session> --progress "..." --remaining ...
+./scripts/mncs-env resume <session> --revalidate
+./scripts/mncs-env handoff <session> --to other-consumer --next ...
+./scripts/mncs-env complete <session> --outcome "..."
+```
+
+Run the vertical proof (real workspace, real capability, cross-process
+resume, handoff): `python3 scripts/vertical_proof.py`. Run tests:
+`python3 -m pytest tests/ -q`. See [RFC 0002](rfcs/0002-built-boundaries.md)
+for as-built decisions and `pressures/registry.json` for blockers owned
+elsewhere.
 
 ## Initial entry contract
 
@@ -164,6 +195,11 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md), [MODEL.md](docs/MODEL.md), and [RFC
 
 ## Status
 
-Foundational architecture and repository scaffold. Implementation should proceed by establishing the canonical data/contracts first, then binding real MNCS services and proving resumable end-to-end sessions.
+Foundation implemented and proven: the vertical proof resolves a real
+workspace, invokes a real provider capability, enforces protected scope,
+checkpoints, resumes in a new process, hands off across consumer
+identities, and completes. Remaining work is broader bindings, richer
+event sources, and Store/Memory/rights integration as owning
+repositories publish the needed contracts (see pressures).
 
 Licensed under Apache-2.0.

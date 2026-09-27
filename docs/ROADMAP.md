@@ -2,6 +2,14 @@
 
 This roadmap is organized by capabilities to establish, not product versions. The repository should remain one continuously upgraded canonical implementation.
 
+Status ledger (foundation campaign): Foundation, Workspace awareness,
+Capability discovery and binding, Authority, Events and continuation,
+Checkpoint and handoff, and End-to-end environment entry are implemented
+and proven (`python3 scripts/vertical_proof.py`; 25 unit/failure/session
+tests). Human-facing projection, Store/Memory/rights integration, and
+canonical provider addressing/events remain pressures in
+`pressures/registry.json`.
+
 ## Foundation
 
 - Define stable identities for Environment, EnvironmentSession, WorkIntent, CapabilityBinding, Checkpoint, and Handoff.

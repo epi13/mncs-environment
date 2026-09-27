@@ -6,6 +6,19 @@ This document describes expected integration direction. It does not transfer sem
 
 Environment should expose a coherent view of MNCS by binding to authoritative services and artifacts. If a required machine-readable contract does not yet exist, that is an integration pressure on the owning repository—not permission to recreate the missing subsystem here.
 
+## Realized today
+
+Capability discovery consumes repository-owned
+`family-semantic-contracts-v1.json` `provides` and `.mncs/project.json`
+manifests across the workspace (~80 bindings in the local family), with
+availability probed per binding and revalidation on resume. Addressing
+uses an explicit bootstrap table plus a manifest `fingerprint_sources`
+heuristic. The vertical proof invokes `mncs-atlas:context-capsule`
+(repository-owned registry code) through a session binding with
+authority enforcement. Everything else in the table below remains
+binding-eligible but uninvoked; mock versus real is distinguished per
+binding by its availability observation.
+
 ## Expected relationships
 
 | MNCS area | Environment needs from it | Environment must not own |
@@ -111,9 +124,16 @@ EnvironmentSession
 
 The exact execution path is owned by those systems and may change without changing the fundamental Environment contract.
 
-## Integration pressures to expect
+## Integration pressures recorded
 
-Early implementation should deliberately discover and record pressures such as:
+The foundation campaign recorded the pressures it hit in
+`pressures/registry.json` (also manageable via `mncs-env pressures`).
+Each names the owning repository, evidence, desired contract, effect,
+and workaround. New pressures follow the same shape.
+
+## Integration pressures to expect (as found)
+
+Early implementation deliberately discovered and recorded pressures such as:
 
 - capabilities that lack stable semantic identities,
 - services that are callable only through CLI/process conventions,
