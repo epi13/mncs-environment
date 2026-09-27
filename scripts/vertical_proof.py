@@ -114,7 +114,8 @@ def main() -> int:
         handoff = cli(state, "handoff", session_id, "--to", PROOF_CONSUMER_B,
                       "--notes", "vertical proof handoff", "--next", "complete")
         assert handoff["to_consumer"] == PROOF_CONSUMER_B
-        accepted = cli(state, "accept", session_id, "--consumer", PROOF_CONSUMER_B)
+        accepted = cli(state, "accept", session_id, handoff["identity"],
+                       "--consumer", PROOF_CONSUMER_B)
         assert accepted["consumer_id"] == PROOF_CONSUMER_B
         print(f"7. handoff {handoff['identity']} accepted by {PROOF_CONSUMER_B}")
 

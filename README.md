@@ -132,7 +132,8 @@ A durable continuation boundary. Another compatible consumer should be able to r
 ├── docs/
 ├── examples/
 │   ├── work-intent.md
-│   └── development-environment/environment.json
+│   ├── development-environment/environment.json
+│   └── compiler-campaign/environment.json
 ├── mncs_env/            # canonical implementation (stdlib-only Python)
 ├── pressures/registry.json
 ├── rfcs/
@@ -143,24 +144,27 @@ A durable continuation boundary. Another compatible consumer should be able to r
 
 ## Implementation status
 
-The foundation campaign implemented the full session system:
+Sessions are Store-backed persistent objects: structured snapshots plus an
+append-only event log, so a different process or consumer resumes from
+state, not prose. The hardening campaign added:
 
-- stable content-hash identities (`mncs_env/identity.py`);
-- `WorkIntent` contract with validation (`mncs_env/intent.py`);
-- workspace discovery with foreign-work signals (`mncs_env/workspace.py`);
-- data-driven capability discovery/binding/invocation (`mncs_env/capabilities.py`);
-- pure default-deny authority projection (`mncs_env/authority.py`);
-- advisory leases (`mncs_env/leases.py`);
-- typed events with subscriptions and replay (`mncs_env/events.py`);
-- durable sessions: lifecycle machine, checkpoints, handoff, JSONL log (`mncs_env/sessions.py`);
-- pressure registry (`mncs_env/pressures.py`, `pressures/registry.json`);
-- CLI entry (`scripts/mncs-env`).
+- versioned workspace claims replacing advisory leases (`mncs_env/claims.py`);
+- ownership/acquisition authority with tri-state enforcement (`mncs_env/authority.py`);
+- rights/provenance gate over `mncs-rights-provenance` (`mncs_env/rights.py`);
+- provider-declared `invocation` addressing with toolchain env (`mncs_env/capabilities.py`);
+- generation-based Store-feed observer: own writes re-baseline, external
+  advances become events (`Session.observe_store`);
+- read-only inspect plus a control-mcp tool surface (`env_enter`, `env_inspect`,
+  `env_resume`, `env_claim_acquire`, `env_claim_release`, `env_claims`, `env_status`).
 
 ## Entering an environment
 
+The next language/compiler campaign enters through the shipped definition
+(workspace root is definition-relative, so this works from any cwd):
+
 ```bash
-./scripts/mncs-env enter --definition examples/development-environment/environment.json \
-    --workspace /path/to/workspace --consumer my-agent
+./scripts/mncs-env --state-dir ~/.local/share/mncs-environment enter \
+    --definition examples/compiler-campaign/environment.json --consumer my-agent
 ./scripts/mncs-env capabilities <session>
 ./scripts/mncs-env authority <session>
 ./scripts/mncs-env invoke <session> <capability> -- <args...>
