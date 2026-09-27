@@ -199,11 +199,17 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md), [MODEL.md](docs/MODEL.md), and [RFC
 
 ## Status
 
-Foundation implemented and proven: the vertical proof resolves a real
-workspace, invokes a real provider capability, enforces protected scope,
+Implemented and proven: the vertical proof resolves a real workspace,
+invokes a real provider capability, enforces protected scope,
 checkpoints, resumes in a new process, hands off across consumer
-identities, and completes. Remaining work is broader bindings, richer
-event sources, and Store/Memory/rights integration as owning
-repositories publish the needed contracts (see pressures).
+identities, and completes; the campaign proofs (`python3
+scripts/campaign_proofs.py`) cover two-agent conflicts, bypass
+fail-closed behavior, restart missed-event recovery, live
+language-service deltas, health, idle/resource bounds, brief/ack
+context, session reuse, and memory protection. Sessions persist on the
+canonical Store backend and a background reconciler maintains them with
+durable cursors. Remaining work is broader bindings, provider push
+events, and Memory/rights integration as owning repositories publish
+the needed contracts (see pressures).
 
 Licensed under Apache-2.0.

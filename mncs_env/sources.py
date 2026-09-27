@@ -395,9 +395,11 @@ class LanguageServiceSource(Source):
             except (TypeError, ValueError):
                 return SourceResult("reset", [], None, "unparsable cursor; restart sync")
         try:
-            result = self._call("poll_events", {
-                "stream_identity": stream, "after_cursor": after,
-                "max_events": MAX_OBSERVATIONS})
+            params: dict[str, Any] = {"after_cursor": after,
+                                      "max_events": MAX_OBSERVATIONS}
+            if stream is not None:
+                params["stream_identity"] = stream
+            result = self._call("poll_events", params)
         except (ConnectionError, RuntimeError, OSError, ValueError) as error:
             return SourceResult("unknown", [], since, f"language-service unreachable: {error}")
         if not isinstance(result, dict):

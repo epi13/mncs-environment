@@ -783,6 +783,72 @@ class SourcesTests(unittest.TestCase):
         language = sources.LanguageServiceSource(None)
         self.assertEqual(language.observe(None).status, "unknown")
 
+    def test_language_source_omits_unknown_stream_identity(self) -> None:
+        import socket
+        import threading
+        # Stub host enforcing the real dispatch rule: an explicit null
+        # stream_identity is rejected; the key must be omitted instead.
+        directory = tempfile.mkdtemp(prefix="mnls-stub-")
+        path = str(Path(directory) / "lang.sock")
+        seen: list[dict] = []
+        ready = threading.Event()
+
+        def serve() -> None:
+            listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            listener.bind(path)
+            listener.listen(2)
+            listener.settimeout(10)
+            ready.set()
+            for _ in range(2):
+                try:
+                    connection, _ = listener.accept()
+                except OSError:
+                    return
+                with connection:
+                    data = b""
+                    while b"\n" not in data:
+                        chunk = connection.recv(65536)
+                        if not chunk:
+                            break
+                        data += chunk
+                    try:
+                        request = json.loads(data.decode("utf-8"))
+                    except ValueError:
+                        continue
+                    params = request.get("params", {})
+                    seen.append(params)
+                    if ("stream_identity" in params
+                            and params["stream_identity"] is None):
+                        payload = {"id": 1, "ok": False, "result": None,
+                                   "error": "invalid parameter stream_identity"}
+                    else:
+                        payload = {
+                            "id": 1, "ok": True,
+                            "result": {"stream_identity": "stream-1",
+                                       "after_cursor": 0, "current_cursor": 0,
+                                       "oldest_cursor": 1,
+                                       "reset_required": False, "events": []},
+                        }
+                    connection.sendall(
+                        (json.dumps(payload) + "\n").encode("utf-8"))
+            listener.close()
+
+        worker = threading.Thread(target=serve, daemon=True)
+        worker.start()
+        self.assertTrue(ready.wait(timeout=10))
+        try:
+            source = sources.LanguageServiceSource(path)
+            first = source.observe(None)
+            self.assertEqual(first.status, "ok")
+            self.assertTrue(first.cursor)
+            second = source.observe(first.cursor)
+            self.assertEqual(second.status, "ok")
+        finally:
+            worker.join(timeout=10)
+        self.assertEqual(len(seen), 2)
+        self.assertNotIn("stream_identity", seen[0])
+        self.assertEqual(seen[1].get("stream_identity"), "stream-1")
+
 
 class ReconcilerTests(unittest.TestCase):
     def _setup(self, directory):
@@ -847,6 +913,40 @@ class ReconcilerTests(unittest.TestCase):
                 self.assertEqual(report["observations"], [])
             finally:
                 reopened_store.close()
+
+    def test_restart_recovers_missed_event_once(self) -> None:
+        # An event landing after the last persisted cycle (quiet adoption)
+        # must replay exactly once after restart, never silently dropped.
+        with tempfile.TemporaryDirectory() as directory:
+            state, store, session = self._setup(directory)
+            first = reconciler.reconcile_once(session, store, ROOT)
+            self.assertEqual(first["observations"], [])
+            self.assertTrue(first["persisted"])
+            peer = open_store(state, "store", verify_on_open=False)
+            try:
+                peer.put_claim({"schema_version": "mncs.environment.claim/1",
+                                "claim_id": "claim:missed", "version": 1,
+                                "repository": "missed", "session_id": "other",
+                                "consumer_id": "other", "basis": "explicit-claim",
+                                "reason": "restart probe", "status": "held",
+                                "acquired_at": "2026-01-01T00:00:00",
+                                "expires_at": "2027-01-02T00:00:00",
+                                "provenance": {}, "identity": "clm_missed"})
+            finally:
+                peer.close()
+            store.close()
+            reopened = open_store(state, "store", verify_on_open=False)
+            try:
+                resumed, created = reconciler.open_or_create_session(
+                    state, reopened, ROOT)
+                self.assertFalse(created)
+                report = reconciler.reconcile_once(resumed, reopened, ROOT)
+                kinds = [o["kind"] for o in report["observations"]]
+                self.assertIn("claim.changed", kinds)
+                again = reconciler.reconcile_once(resumed, reopened, ROOT)
+                self.assertEqual(again["observations"], [])
+            finally:
+                reopened.close()
 
     def test_janitor_denies_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -2,13 +2,16 @@
 
 This roadmap is organized by capabilities to establish, not product versions. The repository should remain one continuously upgraded canonical implementation.
 
-Status ledger (foundation campaign): Foundation, Workspace awareness,
-Capability discovery and binding, Authority, Events and continuation,
-Checkpoint and handoff, and End-to-end environment entry are implemented
-and proven (`python3 scripts/vertical_proof.py`; 25 unit/failure/session
-tests). Human-facing projection, Store/Memory/rights integration, and
-canonical provider addressing/events remain pressures in
-`pressures/registry.json`.
+Status ledger (coordination campaign): Foundation, Workspace awareness,
+Capability discovery and binding (provider-published descriptor
+addressing), Authority (live-claim enforcement, fail-closed), Events and
+continuation (background reconciler with durable cursors and Store
+replay-across-downtime), Checkpoint and handoff, and End-to-end
+environment entry are implemented and proven
+(`python3 scripts/vertical_proof.py`; `python3 scripts/campaign_proofs.py`;
+69 tests). Sessions persist on the canonical Store backend. Human-facing
+projection, Memory/rights integration, and provider push events remain
+pressures in `pressures/registry.json`.
 
 ## Foundation
 

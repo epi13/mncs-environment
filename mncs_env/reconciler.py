@@ -13,7 +13,8 @@ observations. It never edits repositories, merges, publishes, deletes
 worktrees, reclaims data, or declares another agent's task complete.
 
 Cost discipline: idle cycles perform no persistent writes. Cursors
-persist when observations are emitted, on source resets, every
+persist when observations are emitted, on source resets, on fresh cursor
+adoption (so a restart never re-baselines past unseen history), every
 CURSOR_PERSIST_EVERY quiet cycles, and on clean shutdown. Dedup is
 content-keyed over a bounded ring of emitted observation identities.
 """
@@ -135,7 +136,7 @@ def reconcile_once(session, store, workspace_root: str | Path,
     seen = set(emitted)
     report: dict[str, Any] = {
         "at": utcnow(), "observations": [], "resets": [], "unknown": [],
-        "errors": [], "cursors_advanced": [],
+        "errors": [], "cursors_advanced": [], "adopted": [],
     }
     own_prefix = f"{session.session_id}:"
     for source in build_sources(
@@ -178,6 +179,11 @@ def reconcile_once(session, store, workspace_root: str | Path,
                 {"source": source.name, "kind": event.kind,
                  "subject": event.subject, "summary": event.summary})
         if result.cursor is not None and result.cursor != previous:
+            if previous is None:
+                # Fresh baseline adoption: persist even a quiet cycle, or a
+                # restart before the next persist would re-baseline at a
+                # later head and silently drop the interim history.
+                report["adopted"].append(source.name)
             cursors[source.name] = result.cursor
             report["cursors_advanced"].append(source.name)
     del emitted[:max(0, len(emitted) - EMITTED_RING)]
@@ -190,7 +196,11 @@ def reconcile_once(session, store, workspace_root: str | Path,
                          "unknown": len(report["unknown"]),
                          "errors": len(report["errors"])}
     meaningful = bool(report["observations"] or report["resets"] or report["errors"])
-    if meaningful:
+    # Cursor advances over already-skipped generations (own writes, session
+    # event payloads) stay memory-only: persisting them would chase the
+    # save's own generation forever. Fresh adoptions persist so a restart
+    # never re-baselines past unseen history.
+    if meaningful or report["adopted"]:
         state["quiet_cycles"] = 0
         session._save()
     else:
@@ -198,7 +208,7 @@ def reconcile_once(session, store, workspace_root: str | Path,
         if state["quiet_cycles"] >= CURSOR_PERSIST_EVERY:
             state["quiet_cycles"] = 0
             session._save()
-    report["persisted"] = meaningful or state["quiet_cycles"] == 0
+    report["persisted"] = meaningful or bool(report["adopted"]) or state["quiet_cycles"] == 0
     return report
 
 

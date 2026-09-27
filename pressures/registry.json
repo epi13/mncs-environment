@@ -2,26 +2,26 @@
   {
     "description": "Services emit logs and return values but no typed completion/state-change events Environment can subscribe to. Session effects rely on a git-poll adapter and invocation-result envelopes.",
     "desired_contract": "Typed, subscribable completion/state events per owning service.",
-    "effect": "Service-affects-session is adapter-only; push notification is not yet reliable.",
-    "evidence": "mncs-environment/mncs_env/events.py git_poll_events; no event bus found in forge/actions/automation survey",
+    "effect": "Poll-based sources only; provider push notification is not yet available.",
+    "evidence": "mncs-environment/mncs_env/sources.py generic Source contract with live store-replay, git-heads, commons-sync, and language-service sources; no provider push bus found",
     "identity": "prs_409a0250c0e1210c",
     "owner": "mncs-forge (orchestration), owning services (domain events)",
     "schema_version": "mncs.environment.pressure/1",
     "title": "No canonical provider event feeds",
     "why_not_local": "Event semantics belong to the owning services; an environment-local bus would become a competing standard.",
-    "workaround": "Session log + adapter:git-poll + invocation envelopes; subscriptions replay from the log."
+    "workaround": "Background reconciler polls typed sources with durable cursors and Store replay-across-downtime; subscriptions replay from the session log."
   },
   {
     "description": "Nothing in MNCS records which agent owns a worktree or branch. Environment keeps a local advisory lease file enforced only inside its own authority evaluation.",
     "desired_contract": "Family lease record (holder, scope, expiry, release) readable without joining Environment.",
-    "effect": "Foreign-work protection is heuristic plus voluntary leases.",
+    "effect": "Cross-harness ownership is voluntary; Environment-side conflicts deny inside its own authority evaluation.",
     "evidence": "control/leases.py exists but is service-local; no family lease contract found",
     "identity": "prs_fd2f7dd8a84e4860",
     "owner": "mncs-control (ownership plane)",
     "schema_version": "mncs.environment.pressure/1",
     "title": "No canonical workspace lease/ownership mechanism",
     "why_not_local": "Cross-agent ownership must be authoritative family-wide; a local file cannot bind other harnesses.",
-    "workaround": "mncs_env/leases.py advisory leases + foreign_work_signals; unknown work is never touched."
+    "workaround": "claims v2 (repository/worktree/path scopes, conflict denial, dirty-adoption, liveness) + Control worktree surface; unknown work is never touched."
   },
   {
     "description": "Session authority is projected from intent constraints and protected scopes. Canonical authorization semantics live in mncs-rights-provenance, which Environment does not yet bind.",
@@ -34,30 +34,6 @@
     "title": "Rights/provenance granularity for session authority",
     "why_not_local": "Replacing rights evaluation would be security theater and a competing authorization universe.",
     "workaround": "Pure evaluate() with default-deny; every denial/escalation is an event."
-  },
-  {
-    "description": "Sessions persist as JSON snapshots + JSONL logs under the state directory. Neither Store nor Memory currently offers a session-state contract.",
-    "desired_contract": "Store-backed session segments or a referenceable session schema.",
-    "effect": "Sessions are machine-local; cross-machine resume needs shared state-dir transport.",
-    "evidence": "mncs_store.StoreSession is MNCS-binary-backed relation storage; no session/checkpoint schema exists there",
-    "identity": "prs_2d90cb15e399db6b",
-    "owner": "mncs-store (durable objects), mncs-memory (experience)",
-    "schema_version": "mncs.environment.pressure/1",
-    "title": "Session durability lives in Environment file state, not Store/Memory",
-    "why_not_local": "Environment must own the session model; opaque blobs into Memory would misuse it.",
-    "workaround": "Atomic file writes + content identities; references (not copies) for external artifacts."
-  },
-  {
-    "description": "Entrypoint spellings resolve through a small bootstrap table plus manifest fingerprint heuristics, not provider-published addresses.",
-    "desired_contract": "Provider-published invocation address per capability revision.",
-    "effect": "Novel entrypoint spellings bind as unavailable until addressed.",
-    "evidence": "family-provider-metadata-v1.json carries no invocation address",
-    "identity": "prs_6b6c41a72d875dad",
-    "owner": "owning service repositories (provider metadata)",
-    "schema_version": "mncs.environment.pressure/1",
-    "title": "No canonical provider addressing",
-    "why_not_local": "Addressing belongs to providers; environment-side guessing would be a shadow registry.",
-    "workaround": "ENTRYPOINT_CANDIDATES table + fingerprint_sources heuristic, both explicit and tested."
   },
   {
     "description": "Intent, authority projection, lifecycle, and checkpoints are JSON contracts over host infrastructure.",

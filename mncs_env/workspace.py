@@ -52,6 +52,12 @@ def _porcelain(repo: Path) -> tuple[list[str], bool]:
     if completed is None or completed.returncode != 0:
         return [], False
     lines = [line for line in completed.stdout.splitlines() if line.strip()]
+    # Managed worktree infrastructure is control-plane bookkeeping, like
+    # .git itself: it must not mark the main checkout dirty. Worktrees
+    # are observed as their own records.
+    lines = [line for line in lines
+             if line[3:] != MANAGED_WORKTREES_DIR and
+             not line[3:].startswith(MANAGED_WORKTREES_DIR + "/")]
     truncated = len(lines) > MAX_PORCELAIN_LINES
     return lines[:MAX_PORCELAIN_LINES], truncated
 
@@ -95,12 +101,14 @@ class RepoState:
     dirty_truncated: bool = False
     untracked_count: int = 0
     worktrees: list[dict[str, str]] = field(default_factory=list)
+    worktree_of: str | None = None
     git_error: str | None = None
 
     def record(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "path": self.path,
+            "worktree_of": self.worktree_of,
             "manifest_repository": self.manifest_repository,
             "manifest_revision": self.manifest_revision,
             "branch": self.branch,
@@ -147,8 +155,18 @@ def inspect_repo(path: Path) -> RepoState | None:
     )
 
 
+MANAGED_WORKTREES_DIR = ".worktrees"
+
+
 def discover_workspace(root: Path | str) -> dict[str, Any]:
-    """Discover repository checkouts directly under root (non-recursive)."""
+    """Discover repository checkouts directly under root (non-recursive).
+
+    Managed worktrees at ``<repo>/.worktrees/<name>`` surface as
+    first-class records named ``<repo>@<name>`` with ``worktree_of``
+    set, so sessions can see and claim them without a family rescan.
+    Worktrees stay nested inside their project so sandbox project scope
+    remains writable.
+    """
     base = Path(root).resolve()
     try:
         candidates = sorted(path for path in base.iterdir() if path.is_dir() and not path.is_symlink())
@@ -159,15 +177,38 @@ def discover_workspace(root: Path | str) -> dict[str, Any]:
     for candidate in candidates[:MAX_REPOS]:
         state = inspect_repo(candidate)
         if state is None:
-            skipped += 1
+            if candidate.name != MANAGED_WORKTREES_DIR:
+                skipped += 1
             continue
         repos.append(state.record())
+        for record in _managed_worktrees(candidate):
+            repos.append(record)
     return {
         "root": str(base),
         "repository_count": len(repos),
         "non_repository_count": skipped,
         "repositories": repos,
     }
+
+
+def _managed_worktrees(repo: Path) -> list[dict[str, Any]]:
+    """First-class records for worktrees nested in one repository."""
+    out: list[dict[str, Any]] = []
+    directory = repo / MANAGED_WORKTREES_DIR
+    try:
+        checkouts = sorted(path for path in directory.iterdir()
+                           if path.is_dir() and not path.is_symlink())
+    except OSError:
+        return out
+    for checkout in checkouts[:MAX_REPOS]:
+        state = inspect_repo(checkout)
+        if state is None:
+            continue
+        state.worktree_of = repo.name
+        record = state.record()
+        record["name"] = f"{repo.name}@{checkout.name}"
+        out.append(record)
+    return out
 
 
 def foreign_work_signals(repo: dict[str, Any]) -> list[dict[str, str]]:

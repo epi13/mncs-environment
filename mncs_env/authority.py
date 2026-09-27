@@ -158,6 +158,12 @@ def evaluate(
             "verdict": "deny",
             "reason": f"{repo} is protected scope for this session",
         }
+    if action in ("publish", "merge"):
+        if any((h.get("scope") or {}).get("kind") == "repository"
+               and (h.get("scope") or {}).get("repository", repo) == repo
+               for h in own):
+            return {"verdict": "allow",
+                    "reason": f"{action} by repository claim on {repo}"}
     if action in MUTATING_ACTIONS:
         facts = (repo_facts or {}).get(repo, {})
         owned = any(
