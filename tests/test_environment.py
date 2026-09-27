@@ -421,6 +421,19 @@ class CapabilityTests(unittest.TestCase):
         self.assertTrue(result["truncated"])
         self.assertLessEqual(len(result["stdout"].encode("utf-8")), 32768 + 1024)
 
+    def test_output_limit_can_be_increased_within_the_bound(self) -> None:
+        binding = capabilities.probe_availability(
+            capabilities.bind(provider="p", capability="c", contract_revision="1",
+                              entrypoint="e", address="/bin/sh"))
+        result = capabilities.invoke(
+            binding, ["-c", "yes x | head -c 100000"], output_limit_bytes=262144)
+        self.assertFalse(result["truncated"])
+        self.assertEqual(len(result["stdout"].encode("utf-8")), 100000)
+        with self.assertRaises(capabilities.CapabilityError):
+            capabilities.invoke(
+                binding, ["-c", "echo unreachable"],
+                output_limit_bytes=capabilities.MAX_OUTPUT_LIMIT_BYTES + 1)
+
     def test_descriptor_invocation_block(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -673,6 +686,31 @@ class SessionTests(unittest.TestCase):
             session.snapshot["bindings"].append(binding)
             result = session.invoke("echoer", ["hi"])
             self.assertEqual(result["status"], "ok")
+
+    def test_session_invoke_forwards_bounded_output_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            binding = capabilities.probe_availability(
+                capabilities.bind(provider="p", capability="echoer", contract_revision="1",
+                                  entrypoint="e", address="/bin/echo", effects=["read"]))
+            session.snapshot["bindings"].append(binding)
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke",
+                return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
+            ) as invoke:
+                result = session.invoke("echoer", ["hi"], output_limit_bytes=131072)
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(invoke.call_args.kwargs["output_limit_bytes"], 131072)
+            with self.assertRaises(capabilities.CapabilityError):
+                session.invoke(
+                    "echoer", ["hi"],
+                    output_limit_bytes=capabilities.MAX_OUTPUT_LIMIT_BYTES + 1)
+
+    def test_cli_exposes_bounded_output_limit(self) -> None:
+        parsed = cli.build_parser().parse_args([
+            "invoke", "ses_fixture", "example", "--output-limit-bytes", "131072",
+        ])
+        self.assertEqual(parsed.output_limit_bytes, 131072)
 
     def test_provider_effects_independently_authorized(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

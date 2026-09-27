@@ -14,6 +14,7 @@ import os
 import sys
 from pathlib import Path
 
+from . import capabilities as capabilities_module
 from . import claims as claims_module
 from . import pressures as pressures_module
 from . import rights as rights_module
@@ -190,9 +191,11 @@ def cmd_invoke(args: argparse.Namespace) -> int:
         return fail(str(error))
     try:
         result = session.invoke(
-            args.capability, args.argv, cwd=args.cwd, timeout_seconds=args.timeout
+            args.capability, args.argv, cwd=args.cwd, timeout_seconds=args.timeout,
+            output_limit_bytes=args.output_limit_bytes,
         )
-    except (sessions_module.AuthorityDenied, sessions_module.LifecycleError) as error:
+    except (sessions_module.AuthorityDenied, sessions_module.LifecycleError,
+            capabilities_module.CapabilityError) as error:
         return fail(str(error), code=3)
     out(result)
     return 0 if result["status"] in ("ok", "pending-escalation") else 4
@@ -486,6 +489,9 @@ def build_parser() -> argparse.ArgumentParser:
     invoke.add_argument("capability")
     invoke.add_argument("--cwd", default=None)
     invoke.add_argument("--timeout", type=int, default=120)
+    invoke.add_argument("--output-limit-bytes", type=int,
+                        default=capabilities_module.DEFAULT_OUTPUT_LIMIT_BYTES,
+                        help=f"bounded stdout/stderr capture limit (max {capabilities_module.MAX_OUTPUT_LIMIT_BYTES})")
     invoke.add_argument("argv", nargs="*")
     invoke.set_defaults(func=cmd_invoke)
 

@@ -757,9 +757,13 @@ class Session:
         *,
         cwd: str | Path | None = None,
         timeout_seconds: int = 120,
+        output_limit_bytes: int = capabilities_module.DEFAULT_OUTPUT_LIMIT_BYTES,
         env: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Invoke a bound capability. Deny and escalate NEVER spawn a process."""
+        output_limit_bytes = capabilities_module.validate_output_limit_bytes(
+            output_limit_bytes
+        )
         binding = self._binding(capability)
         if binding.get("availability", {}).get("status") != "available":
             raise AuthorityDenied(
@@ -781,7 +785,8 @@ class Session:
         self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
                    {"capability": capability, "argv": argv})
         result = capabilities_module.invoke(
-            binding, argv, cwd=cwd, timeout_seconds=timeout_seconds, env=env)
+            binding, argv, cwd=cwd, timeout_seconds=timeout_seconds,
+            output_limit_bytes=output_limit_bytes, env=env)
         self.snapshot.setdefault("artifacts", []).append(
             {"kind": "invocation-result", "capability": capability,
              "status": result["status"], "at": utcnow()}

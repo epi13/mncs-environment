@@ -20,6 +20,8 @@ from typing import Any
 from .identity import digest_hex
 
 SCHEMA = "mncs.environment.capability-binding/1"
+DEFAULT_OUTPUT_LIMIT_BYTES = 64 * 1024
+MAX_OUTPUT_LIMIT_BYTES = 2 * 1024 * 1024
 
 # Bootstrap addressing for declared entrypoint spellings. Each entry maps a
 # known spelling to candidate executables (checked in order). Providers
@@ -36,6 +38,15 @@ ENTRYPOINT_CANDIDATES: dict[str, list[str]] = {
 
 class CapabilityError(ValueError):
     """Raised for unusable capability declarations or invocations."""
+
+
+def validate_output_limit_bytes(value: int) -> int:
+    """Validate an explicit, bounded capability-output capture window."""
+    if type(value) is not int or value < 1 or value > MAX_OUTPUT_LIMIT_BYTES:
+        raise CapabilityError(
+            f"output_limit_bytes must be an integer between 1 and {MAX_OUTPUT_LIMIT_BYTES}"
+        )
+    return value
 
 
 def utcnow() -> str:
@@ -396,7 +407,7 @@ def invoke(
     *,
     cwd: Path | str | None = None,
     timeout_seconds: int = 120,
-    output_limit_bytes: int = 65536,
+    output_limit_bytes: int = DEFAULT_OUTPUT_LIMIT_BYTES,
     env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Invoke a bound capability (transport only; authority checked by caller).
@@ -405,6 +416,7 @@ def invoke(
     A binding-resolved ``toolchain_address`` is exported under
     ``toolchain_env``; explicit ``env`` entries win over it.
     """
+    output_limit_bytes = validate_output_limit_bytes(output_limit_bytes)
     address = binding.get("address")
     if not address:
         raise CapabilityError(f"capability {binding.get('capability')} has no bound address")
