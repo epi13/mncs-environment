@@ -22,6 +22,7 @@ from . import authority as authority_module
 from . import capabilities as capabilities_module
 from . import claims as claims_module
 from . import events as events_module
+from . import rights as rights_module
 from . import workspace as workspace_module
 from .identity import (
     checkpoint_id,
@@ -109,6 +110,11 @@ def resolve_environment(
         | set(definition.get("protected_repositories", []))
     )
     claim_holders = claims_module.holders(backend.read_claims())
+    repo_names = [repo["name"] for repo in workspace_view.get("repositories", [])]
+    rights = rights_module.evaluate_rights(
+        workspace_repos=repo_names,
+        records=rights_module.load_claim_records(definition, workspace_root),
+    )
     authority_context = authority_module.build_context(
         subject=consumer_id,
         intent=intent,
@@ -140,6 +146,7 @@ def resolve_environment(
         "protected_repositories": protected,
         "authority": authority_context,
         "claim_holders": claim_holders,
+        "rights": rights,
         "event_sources": [
             {"kind": "session-log", "replay": True},
             {"kind": "adapter:git-poll", "replay": False,
@@ -189,6 +196,10 @@ class Session:
         store: SessionStore | None = None,
     ) -> "Session":
         store = store or open_store(state_dir, backend, verify_on_open=verify_on_open)
+        rights_module.check_enter(
+            [repo["name"] for repo in environment.get("workspace", {}).get("repositories", [])],
+            environment.get("rights", {}),
+        )
         session_id = new_session_id(environment["identity"], consumer_id)
         snapshot = {
             "schema_version": SESSION_SCHEMA,
@@ -201,6 +212,7 @@ class Session:
             "lifecycle_history": [{"state": "defined", "reason": "session created", "at": utcnow()}],
             "intent": environment.get("intent"),
             "authority": environment.get("authority"),
+            "rights": environment.get("rights", {}),
             "repo_facts": environment.get("repo_facts", {}),
             "claim_holders": environment.get("claim_holders", {}),
             "bindings": environment.get("bindings", []),

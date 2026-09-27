@@ -11,6 +11,7 @@ import stat
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +24,7 @@ from mncs_env import (  # noqa: E402
     events,
     identity,
     intent,
+    rights,
     sessions,
     workspace,
 )
@@ -463,6 +465,63 @@ class EventTests(unittest.TestCase):
         self.assertEqual(len(made), 1)
         self.assertEqual(made[0]["type"], "workspace.changed")
         self.assertEqual(made[0]["producer"], "adapter:git-poll")
+
+
+class RightsTests(unittest.TestCase):
+    def _workspace(self, directory):
+        root = Path(directory) / "ws"
+        (root / "demo-repo" / ".git").mkdir(parents=True)
+        return root
+
+    def _resolve(self, state_dir, workspace_root, records):
+        store = open_store(state_dir, "store", verify_on_open=False)
+        env = sessions.resolve_environment(
+            definition=definition(rights_claims=records),
+            workspace_root=workspace_root,
+            state_dir=state_dir,
+            consumer_id="tester",
+            store=store,
+        )
+        return store, env
+
+    def _verified(self, subject, **extra):
+        record = {"subject": subject, "claimant": "epi13", "license": "Apache-2.0",
+                  "evidence": ["LICENSE"], "verified": True}
+        record.update(extra)
+        return record
+
+    def test_clear_gate_enters(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self._workspace(directory)
+            state = Path(directory) / "state"
+            store, env = self._resolve(state, root, [self._verified("demo-repo")])
+            self.assertEqual(env["rights"]["overall"], "clear")
+            session = sessions.Session.create(
+                state_dir=state, environment=env, consumer_id="tester", store=store)
+            self.assertEqual(session.snapshot["rights"]["overall"], "clear")
+
+    def test_revoked_claim_blocks_enter(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self._workspace(directory)
+            state = Path(directory) / "state"
+            store, env = self._resolve(
+                state, root, [self._verified("demo-repo", revoked=True)])
+            self.assertEqual(env["rights"]["overall"], "blocked")
+            with self.assertRaises(rights.RightsBlocked):
+                sessions.Session.create(
+                    state_dir=state, environment=env, consumer_id="tester", store=store)
+
+    def test_missing_library_reviews_never_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self._workspace(directory)
+            state = Path(directory) / "state"
+            with mock.patch.dict(sys.modules, {"mncs_rights_provenance": None}):
+                store, env = self._resolve(state, root, [self._verified("demo-repo")])
+            self.assertFalse(env["rights"]["available"])
+            self.assertEqual(env["rights"]["overall"], "review")
+            # Review gates work but do not block entry.
+            sessions.Session.create(
+                state_dir=state, environment=env, consumer_id="tester", store=store)
 
 
 if __name__ == "__main__":

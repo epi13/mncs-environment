@@ -15,6 +15,7 @@ from pathlib import Path
 
 from . import claims as claims_module
 from . import pressures as pressures_module
+from . import rights as rights_module
 from . import sessions as sessions_module
 from . import workspace as workspace_module
 from .persist import read_json
@@ -86,6 +87,8 @@ def cmd_enter(args: argparse.Namespace) -> int:
         session.transition("active", f"consumer {args.consumer} entered")
         out(session.inspect())
         return 0
+    except rights_module.RightsBlocked as error:
+        return fail(str(error))
     finally:
         close_store(store)
 
