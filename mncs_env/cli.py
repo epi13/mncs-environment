@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -40,9 +41,30 @@ def load_definition(path: Path) -> dict:
     return raw
 
 
+def resolve_workspace_root(args: argparse.Namespace, definition: dict) -> str:
+    """Workspace root for a command: explicit flag wins, then the definition.
+
+    A relative ``workspace_root`` in the definition resolves against the
+    definition file's directory, so checked-in definitions stay portable
+    (no absolute paths, any cwd). An absent value means the current directory.
+    """
+    if args.workspace:
+        return args.workspace
+    declared = definition.get("workspace_root", ".")
+    if not isinstance(declared, str) or not declared:
+        return "."
+    candidate = Path(declared)
+    if candidate.is_absolute():
+        return str(candidate)
+    definition_file = getattr(args, "definition", None)
+    if definition_file is not None:
+        return os.path.normpath(Path(definition_file).resolve().parent / candidate)
+    return str(candidate)
+
+
 def cmd_resolve(args: argparse.Namespace) -> int:
     definition = load_definition(args.definition)
-    workspace_root = args.workspace or definition.get("workspace_root", ".")
+    workspace_root = resolve_workspace_root(args, definition)
     store = open_store(args.state_dir, args.persistence)
     try:
         environment = sessions_module.resolve_environment(
@@ -60,7 +82,7 @@ def cmd_resolve(args: argparse.Namespace) -> int:
 
 def cmd_enter(args: argparse.Namespace) -> int:
     definition = load_definition(args.definition)
-    workspace_root = args.workspace or definition.get("workspace_root", ".")
+    workspace_root = resolve_workspace_root(args, definition)
     store = open_store(args.state_dir, args.persistence)
     try:
         environment = sessions_module.resolve_environment(

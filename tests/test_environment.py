@@ -7,6 +7,8 @@ persistence, CAS-safe sequences, and restart/resume.
 
 from __future__ import annotations
 
+import argparse
+import json
 import stat
 import sys
 import tempfile
@@ -21,6 +23,7 @@ from mncs_env import (  # noqa: E402
     authority,
     capabilities,
     claims,
+    cli,
     events,
     identity,
     intent,
@@ -638,6 +641,33 @@ class RightsTests(unittest.TestCase):
             # Review gates work but do not block entry.
             sessions.Session.create(
                 state_dir=state, environment=env, consumer_id="tester", store=store)
+
+
+class CLITests(unittest.TestCase):
+    def test_relative_workspace_resolves_against_definition_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            definition_file = Path(directory) / "defs" / "env.json"
+            definition_file.parent.mkdir(parents=True)
+            args = argparse.Namespace(workspace=None, definition=str(definition_file))
+            resolved = cli.resolve_workspace_root(
+                args, {"workspace_root": "../family"})
+            self.assertEqual(resolved, str(Path(directory) / "family"))
+
+    def test_explicit_workspace_wins_and_absolute_passes_through(self) -> None:
+        args = argparse.Namespace(workspace="/explicit", definition="env.json")
+        self.assertEqual(cli.resolve_workspace_root(args, {}), "/explicit")
+        args = argparse.Namespace(workspace=None, definition="env.json")
+        self.assertEqual(
+            cli.resolve_workspace_root(args, {"workspace_root": "/abs"}), "/abs")
+
+    def test_shipped_campaign_definition_is_portable(self) -> None:
+        path = ROOT / "examples" / "compiler-campaign" / "environment.json"
+        self.assertTrue(path.is_file())
+        raw = json.loads(path.read_text())
+        self.assertNotIn("/home", json.dumps(raw))
+        args = argparse.Namespace(workspace=None, definition=str(path))
+        resolved = cli.resolve_workspace_root(args, raw)
+        self.assertEqual(Path(resolved).resolve(), FAMILY.resolve())
 
 
 if __name__ == "__main__":
