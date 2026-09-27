@@ -700,6 +700,8 @@ class Session:
             "environment_id": self.snapshot.get("environment_id"),
             "intent": self.snapshot.get("intent"),
             "authority": self.snapshot.get("authority"),
+            "rights": self.snapshot.get("rights", {}),
+            "claim_holders": self.snapshot.get("claim_holders", {}),
             "bindings": [
                 {"capability": binding.get("capability"), "provider": binding.get("provider"),
                  "availability": binding.get("availability")}

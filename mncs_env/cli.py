@@ -278,13 +278,15 @@ def cmd_claims(args: argparse.Namespace) -> int:
     try:
         if args.release:
             session = sessions_module.Session.resume(
-                state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+                state_dir=args.state_dir, session_id=args.session, backend=args.persistence,
+                store=store,
             )
             out({"released": session.release_claim(args.release, reason=args.reason)})
             return 0
         if args.acquire:
             session = sessions_module.Session.resume(
-                state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+                state_dir=args.state_dir, session_id=args.session, backend=args.persistence,
+                store=store,
             )
             try:
                 out(session.acquire_claim(args.acquire, basis=args.basis, reason=args.reason,
