@@ -14,6 +14,7 @@ identical re-put is idempotent.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -79,9 +80,240 @@ def _repo_facts(workspace_view: dict[str, Any]) -> dict[str, dict[str, Any]]:
         facts[repo["name"]] = {
             "clean": not repo.get("dirty", False),
             "main_branch": repo.get("branch") in ("main", "master", None),
+            "dirty": bool(repo.get("dirty", False)),
+            "head": repo.get("head"),
+            "branch": repo.get("branch"),
+            "path": repo.get("path"),
             "foreign_signals": [signal["kind"] for signal in signals],
         }
+    for selected in workspace_view.get("selected_checkouts", {}).values():
+        repository = str(selected.get("repository", ""))
+        if not repository:
+            continue
+        clean = bool(selected.get("clean", False))
+        facts[repository] = {
+            "clean": clean,
+            "main_branch": selected.get("branch") in ("main", "master", None),
+            "dirty": not clean,
+            "head": selected.get("head"),
+            "branch": selected.get("branch"),
+            "path": selected.get("path"),
+            "foreign_signals": [] if clean else ["dirty-tree"],
+        }
     return facts
+
+
+def _provider_managed_checkouts(
+    definition: dict[str, Any],
+    workspace_root: str | Path,
+    workspace_view: dict[str, Any],
+) -> tuple[dict[str, Path], dict[str, dict[str, Any]]]:
+    """Ask the declared workspace provider to select exact campaign checkouts.
+
+    Environment only composes the provider capability and validates its
+    bounded result shape. Git revision resolution and worktree mutations
+    stay inside the provider.
+    """
+    selection = definition.get("managed_checkouts")
+    provider = definition.get("workspace_provider")
+    if selection is None and provider is None:
+        return {}, {}
+    if not isinstance(selection, list) or not selection:
+        raise ValueError("workspace_provider requires a non-empty managed_checkouts list")
+    if not isinstance(provider, dict):
+        raise ValueError("managed_checkouts requires a declared workspace_provider")
+
+    root = Path(workspace_root).resolve()
+    repository = str(provider.get("repository", ""))
+    checkout = str(provider.get("checkout", ""))
+    capability = str(provider.get("capability", ""))
+    expected_head = provider.get("revision")
+    if not repository or not checkout or not capability or not isinstance(expected_head, str):
+        raise ValueError("workspace_provider needs repository, checkout, capability, and pinned revision")
+    relative = Path(checkout)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError("workspace_provider.checkout must be repository-relative")
+    provider_root = (root / repository / relative).resolve()
+    try:
+        provider_root.relative_to(root)
+    except ValueError as error:
+        raise ValueError("workspace provider checkout escapes workspace root") from error
+    if (root / repository / relative).is_symlink() or not provider_root.is_dir():
+        raise ValueError("workspace provider checkout is missing or a symbolic link")
+    provider_record = next(
+        (item for item in workspace_view.get("repositories", [])
+         if Path(str(item.get("path", ""))).resolve() == provider_root),
+        None,
+    )
+    if provider_record is None:
+        raise ValueError("workspace provider checkout was not observed by the workspace provider")
+    if provider_record.get("dirty"):
+        raise ValueError("workspace provider checkout is dirty; refusing to bind it")
+    if expected_head and provider_record.get("head") != expected_head:
+        raise ValueError(
+            f"workspace provider revision mismatch: expected {expected_head}, "
+            f"observed {provider_record.get('head')}"
+        )
+
+    provider_bindings = capabilities_module.discover_capabilities(
+        root,
+        repository_roots={repository: provider_root},
+        checkout_facts={repository: {
+            "path": str(provider_root), "branch": provider_record.get("branch"),
+            "head": provider_record.get("head"), "clean": True,
+            "source_ref": "session-pinned-provider",
+            "authoritative_head": provider_record.get("head"),
+        }},
+    )
+    binding = next((item for item in provider_bindings if item.get("capability") == capability), None)
+    if binding is None:
+        raise ValueError(f"workspace provider does not declare capability {capability}")
+    binding = capabilities_module.probe_availability(binding)
+    if binding.get("availability", {}).get("status") != "available":
+        raise ValueError(f"workspace provider capability is unavailable: {capability}")
+
+    requests: list[dict[str, str]] = []
+    expected: dict[str, dict[str, str]] = {}
+    for item in selection:
+        if not isinstance(item, dict):
+            raise ValueError("managed_checkouts entries must be objects")
+        name = str(item.get("repository", ""))
+        slug = str(item.get("name", ""))
+        branch = str(item.get("branch", ""))
+        source_ref = str(item.get("source_ref", "origin/main"))
+        if not name or not slug or not branch:
+            raise ValueError("managed_checkouts entries need repository, name, and branch")
+        if name in expected:
+            raise ValueError(f"duplicate managed checkout request for {name}")
+        requests.append({"repository": name, "name": slug, "branch": branch,
+                         "source_ref": source_ref})
+        expected[name] = {"path": f"{name}/.worktrees/{slug}",
+                          "branch": branch, "source_ref": source_ref}
+
+    invocation = capabilities_module.invoke(
+        binding,
+        ["prepare", "--workspace-root", str(root), "--requests-json",
+         json.dumps(requests, separators=(",", ":"))],
+        cwd=provider_root,
+        timeout_seconds=180,
+        output_limit_bytes=256 * 1024,
+    )
+    if invocation.get("status") != "ok":
+        raise ValueError(
+            f"workspace provider failed ({invocation.get('status')}): "
+            f"{str(invocation.get('stderr', ''))[:1000]}"
+        )
+    try:
+        result = json.loads(str(invocation.get("stdout", "")))
+    except json.JSONDecodeError as error:
+        raise ValueError("workspace provider returned invalid JSON") from error
+    rows = result.get("selected_checkouts") if isinstance(result, dict) else None
+    if not isinstance(rows, list) or {str(row.get("repository")) for row in rows if isinstance(row, dict)} != set(expected):
+        raise ValueError("workspace provider returned an incomplete checkout closure")
+
+    roots: dict[str, Path] = {}
+    facts: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        name = str(row["repository"])
+        requirement = expected[name]
+        if row.get("path") != requirement["path"]:
+            raise ValueError(f"workspace provider selected an unexpected path for {name}")
+        if row.get("branch") != requirement["branch"] or row.get("source_ref") != requirement["source_ref"]:
+            raise ValueError(f"workspace provider selected an unexpected branch or ref for {name}")
+        if row.get("clean") is not True or row.get("head") != row.get("authoritative_head"):
+            raise ValueError(f"workspace provider did not select a clean authoritative checkout for {name}")
+        selected_root = (root / requirement["path"]).resolve()
+        try:
+            selected_root.relative_to(root)
+        except ValueError as error:
+            raise ValueError(f"workspace provider path escapes root for {name}") from error
+        if (root / requirement["path"]).is_symlink() or not selected_root.is_dir():
+            raise ValueError(f"workspace provider returned missing or symbolic checkout for {name}")
+        roots[name] = selected_root
+        facts[name] = dict(row)
+
+    pinned = definition.get("pinned_checkouts", [])
+    if not isinstance(pinned, list):
+        raise ValueError("pinned_checkouts must be a list")
+    for item in pinned:
+        if not isinstance(item, dict):
+            raise ValueError("pinned_checkouts entries must be objects")
+        name = str(item.get("repository", ""))
+        checkout_path = str(item.get("checkout", ""))
+        revision = item.get("revision")
+        relative_checkout = Path(checkout_path)
+        if not name or not checkout_path or not isinstance(revision, str):
+            raise ValueError("pinned_checkouts entries need repository, checkout, and revision")
+        if relative_checkout.is_absolute() or ".." in relative_checkout.parts:
+            raise ValueError("pinned checkout paths must be repository-relative")
+        selected_root = (root / name / relative_checkout).resolve()
+        if (root / name / relative_checkout).is_symlink() or not selected_root.is_dir():
+            raise ValueError(f"pinned checkout is missing or a symbolic link: {name}")
+        record = next(
+            (candidate for candidate in workspace_view.get("repositories", [])
+             if Path(str(candidate.get("path", ""))).resolve() == selected_root),
+            None,
+        )
+        if record is None or record.get("dirty") or record.get("head") != revision:
+            raise ValueError(f"pinned checkout is not clean at its declared revision: {name}")
+        if name in roots:
+            raise ValueError(f"repository appears more than once in selected checkout closure: {name}")
+        roots[name] = selected_root
+        facts[name] = {
+            "repository": name,
+            "path": str(selected_root),
+            "branch": record.get("branch"),
+            "head": record.get("head"),
+            "clean": True,
+            "source_ref": "session-pinned-checkout",
+            "authoritative_head": revision,
+        }
+
+    session_checkout = definition.get("session_checkout")
+    if session_checkout is not None:
+        if not isinstance(session_checkout, dict):
+            raise ValueError("session_checkout must be an object")
+        name = str(session_checkout.get("repository", ""))
+        checkout_path = str(session_checkout.get("checkout", ""))
+        relative_checkout = Path(checkout_path)
+        if not name or not checkout_path or relative_checkout.is_absolute() or ".." in relative_checkout.parts:
+            raise ValueError("session_checkout needs a repository-relative checkout")
+        selected_root = (root / name / relative_checkout).resolve()
+        if (root / name / relative_checkout).is_symlink() or not selected_root.is_dir():
+            raise ValueError("session checkout is missing or a symbolic link")
+        record = next(
+            (candidate for candidate in workspace_view.get("repositories", [])
+             if Path(str(candidate.get("path", ""))).resolve() == selected_root),
+            None,
+        )
+        if record is None or record.get("dirty"):
+            raise ValueError("session checkout is not an observed clean checkout")
+        if name in roots:
+            raise ValueError(f"repository appears more than once in selected checkout closure: {name}")
+        roots[name] = selected_root
+        facts[name] = {
+            "repository": name,
+            "path": str(selected_root),
+            "branch": record.get("branch"),
+            "head": record.get("head"),
+            "clean": True,
+            "source_ref": "running-session-checkout",
+            "authoritative_head": record.get("head"),
+        }
+
+    provider_fact = {
+        "repository": repository,
+        "path": str(provider_root),
+        "branch": provider_record.get("branch"),
+        "head": provider_record.get("head"),
+        "clean": True,
+        "source_ref": "session-pinned-provider",
+        "authoritative_head": provider_record.get("head"),
+        "capability": capability,
+    }
+    roots[repository] = provider_root
+    facts[repository] = provider_fact
+    return roots, facts
 
 
 def resolve_environment(
@@ -96,7 +328,30 @@ def resolve_environment(
     """Resolve a declarative environment definition into an inspectable world."""
     backend = store or open_store(state_dir, "store", verify_on_open=verify_on_open)
     workspace_view = workspace_module.discover_workspace(workspace_root)
-    discovered = capabilities_module.discover_capabilities(workspace_root)
+    selected_roots, selected_facts = _provider_managed_checkouts(
+        definition, workspace_root, workspace_view
+    )
+    if selected_roots:
+        # Reconcile the workspace view after provider provisioning so the
+        # resolved session includes the exact checkouts it selected.
+        workspace_view = workspace_module.discover_workspace(workspace_root)
+        workspace_view["selected_checkouts"] = selected_facts
+        language_root = selected_roots.get("mncs-language")
+        language_binary = None
+        if language_root is not None:
+            candidates = (
+                language_root / "target" / "release" / "mncs",
+                language_root / "target" / "debug" / "mncs",
+            )
+            language_binary = next((path for path in candidates if path.is_file()), candidates[-1])
+        discovered = capabilities_module.discover_capabilities(
+            workspace_root,
+            repository_roots=selected_roots,
+            checkout_facts=selected_facts,
+            language_binary=language_binary,
+        )
+    else:
+        discovered = capabilities_module.discover_capabilities(workspace_root)
     bindings = [capabilities_module.probe_availability(binding) for binding in discovered]
     unavailable = [
         {"provider": binding["provider"], "capability": binding["capability"],
@@ -135,14 +390,35 @@ def resolve_environment(
     inputs = {
         "workspace_root": str(Path(workspace_root).resolve()),
         "repository_heads": {
-            repo["name"]: repo.get("head")
-            for repo in workspace_view.get("repositories", [])
+            (name if selected_roots else repo["name"]): (
+                selected_facts[name].get("head") if selected_roots else repo.get("head")
+            )
+            for name, repo in (
+                selected_roots.items() if selected_roots
+                else ((item["name"], item) for item in workspace_view.get("repositories", []))
+            )
         },
         "binding_ids": sorted(binding["binding_id"] for binding in bindings),
         "intent": intent["identity"],
         "claim_holders": claim_holders,
     }
     definition_id = environment_id(definition)
+    toolchain = None
+    if selected_roots.get("mncs-language"):
+        language_root = selected_roots["mncs-language"]
+        candidates = (
+            language_root / "target" / "release" / "mncs",
+            language_root / "target" / "debug" / "mncs",
+        )
+        selected_binary = next((path for path in candidates if path.is_file()), candidates[-1])
+        language_facts = selected_facts["mncs-language"]
+        toolchain = {
+            "repository": "mncs-language",
+            "checkout": str(language_root),
+            "revision": language_facts.get("head"),
+            "binary": str(selected_binary) if selected_binary.is_file() else None,
+            "status": "available" if selected_binary.is_file() else "unavailable",
+        }
     environment = {
         "schema_version": ENVIRONMENT_SCHEMA,
         "identity": resolved_environment_id(definition_id, inputs),
@@ -150,6 +426,8 @@ def resolve_environment(
         "resolved_at": utcnow(),
         "consumer_id": consumer_id,
         "workspace": workspace_view,
+        "selected_checkouts": selected_facts,
+        "toolchain": toolchain,
         "repo_facts": _repo_facts(workspace_view),
         "bindings": bindings,
         "unavailable_capabilities": unavailable,
@@ -215,6 +493,15 @@ class Session:
             environment.get("rights", {}),
         )
         session_id = new_session_id(environment["identity"], consumer_id)
+        selected_checkouts = environment.get("selected_checkouts", {})
+        workspace_heads = (
+            {name: selected.get("head") for name, selected in selected_checkouts.items()}
+            if selected_checkouts
+            else {
+                repo["name"]: repo.get("head")
+                for repo in environment.get("workspace", {}).get("repositories", [])
+            }
+        )
         snapshot = {
             "schema_version": SESSION_SCHEMA,
             "session_id": session_id,
@@ -227,13 +514,13 @@ class Session:
             "intent": environment.get("intent"),
             "authority": environment.get("authority"),
             "rights": environment.get("rights", {}),
+            "workspace": environment.get("workspace", {}),
+            "selected_checkouts": environment.get("selected_checkouts", {}),
+            "toolchain": environment.get("toolchain"),
             "repo_facts": environment.get("repo_facts", {}),
             "claim_holders": environment.get("claim_holders", {}),
             "bindings": environment.get("bindings", []),
-            "workspace_heads": {
-                repo["name"]: repo.get("head")
-                for repo in environment.get("workspace", {}).get("repositories", [])
-            },
+            "workspace_heads": workspace_heads,
             "subscriptions": [],
             "artifacts": [],
             "decisions": [],
@@ -542,6 +829,29 @@ class Session:
         checkout_facts: dict[str, Any] | None = None,
         workspace_root: str | None = None,
     ) -> dict[str, Any]:
+        selected = self.snapshot.get("selected_checkouts", {}).get(repository)
+        if selected is not None:
+            if scope and scope.get("kind") == "worktree":
+                requested = Path(str(scope.get("checkout", ""))).resolve()
+                observed = Path(str(selected.get("path", "")))
+                if not observed.is_absolute():
+                    root = self.snapshot.get("workspace", {}).get("root")
+                    if root:
+                        observed = Path(str(root)) / observed
+                if requested != observed.resolve():
+                    raise ValueError(
+                        f"claim checkout does not match the session-selected checkout for {repository}"
+                    )
+            if checkout_facts is None:
+                clean = bool(selected.get("clean", False))
+                checkout_facts = {
+                    "head": selected.get("head"),
+                    "branch": selected.get("branch"),
+                    "dirty": not clean,
+                    "foreign_signals": [] if clean else ["dirty-tree"],
+                }
+        if workspace_root is None:
+            workspace_root = self.snapshot.get("workspace", {}).get("root")
         record = claims_module.acquire(
             self.store, repository=repository, session_id=self.session_id,
             consumer_id=self.snapshot.get("consumer_id", "unknown"),
@@ -615,10 +925,38 @@ class Session:
 
     def observe_workspace(self, workspace_root: str | Path) -> list[dict[str, Any]]:
         """Adapter poll: head changes since resolution become workspace.changed events."""
-        current = {
-            repo["name"]: repo.get("head")
-            for repo in workspace_module.discover_workspace(workspace_root).get("repositories", [])
-        }
+        workspace = workspace_module.discover_workspace(workspace_root)
+        if self.snapshot.get("selected_checkouts"):
+            current_checkouts: dict[str, dict[str, Any]] = {}
+            for name, previous_checkout in self.snapshot["selected_checkouts"].items():
+                selected_path = Path(str(previous_checkout.get("path", "")))
+                if not selected_path.is_absolute():
+                    selected_path = Path(workspace_root) / selected_path
+                match = next(
+                    (item for item in workspace.get("repositories", [])
+                     if Path(str(item.get("path", ""))).resolve() == selected_path.resolve()),
+                    None,
+                )
+                if match is None:
+                    current_checkouts[name] = {
+                        **previous_checkout, "head": None, "clean": False,
+                        "missing": True,
+                    }
+                else:
+                    current_checkouts[name] = {
+                        **previous_checkout,
+                        "head": match.get("head"),
+                        "branch": match.get("branch"),
+                        "clean": not bool(match.get("dirty")),
+                        "missing": False,
+                    }
+            current = {name: item.get("head") for name, item in current_checkouts.items()}
+            self.snapshot["selected_checkouts"] = current_checkouts
+        else:
+            current = {
+                repo["name"]: repo.get("head")
+                for repo in workspace.get("repositories", [])
+            }
         previous = self.snapshot.get("workspace_heads", {})
         events, _ = events_module.git_poll_events(
             session_id=self.session_id,
@@ -629,7 +967,10 @@ class Session:
         for event in events:
             self._emit(event["type"], event["producer"], event["payload"])
         self.snapshot["workspace_heads"] = current
-        self.snapshot["repo_facts"] = _repo_facts(workspace_module.discover_workspace(workspace_root))
+        if self.snapshot.get("selected_checkouts"):
+            workspace["selected_checkouts"] = self.snapshot["selected_checkouts"]
+        self.snapshot["workspace"] = workspace
+        self.snapshot["repo_facts"] = _repo_facts(workspace)
         self._save()
         return events
 
@@ -833,11 +1174,35 @@ class Session:
             "intent": self.snapshot.get("intent"),
             "authority": self.snapshot.get("authority"),
             "rights": self.snapshot.get("rights", {}),
+            "workspace": self.snapshot.get("workspace", {}),
+            "selected_checkouts": self.snapshot.get("selected_checkouts", {}),
+            "repo_facts": self.snapshot.get("repo_facts", {}),
+            "toolchain": self.snapshot.get("toolchain"),
             "claim_holders": self.snapshot.get("claim_holders", {}),
             "bindings": [
-                {"capability": binding.get("capability"), "provider": binding.get("provider"),
-                 "availability": binding.get("availability")}
+                {
+                    "capability": binding.get("capability"),
+                    "provider": binding.get("provider"),
+                    "provider_root": binding.get("provider_root"),
+                    "address": binding.get("address"),
+                    "toolchain_address": binding.get("toolchain_address"),
+                    "toolchain_env": binding.get("toolchain_env"),
+                    "contract_revision": binding.get("contract_revision"),
+                    "provenance": binding.get("provenance", {}),
+                    "availability": binding.get("availability"),
+                }
                 for binding in self.snapshot.get("bindings", [])
+            ],
+            "binding_toolchains": [
+                {
+                    "provider": binding.get("provider"),
+                    "capability": binding.get("capability"),
+                    "address": binding.get("address"),
+                    "toolchain_address": binding.get("toolchain_address"),
+                    "toolchain_env": binding.get("toolchain_env"),
+                }
+                for binding in self.snapshot.get("bindings", [])
+                if binding.get("toolchain_address")
             ],
             "event_count": len(log),
             "latest_events": log[-5:],

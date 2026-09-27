@@ -144,7 +144,12 @@ def cmd_resume(args: argparse.Namespace) -> int:
         return fail(str(error))
     if args.revalidate:
         revalidation = session.revalidate()
-        session.observe_workspace(args.workspace or ".")
+        workspace_root = (
+            args.workspace
+            or session.snapshot.get("workspace", {}).get("root")
+            or "."
+        )
+        session.observe_workspace(workspace_root)
     else:
         revalidation = {"reprobed": 0, "changed": []}
     result = session.inspect()
@@ -372,9 +377,21 @@ def cmd_claims(args: argparse.Namespace) -> int:
                 store=store,
             )
             scope = None
+            branch = args.branch
             if args.paths or args.worktree:
+                checkout = args.worktree
+                selected = session.snapshot.get("selected_checkouts", {}).get(args.acquire, {})
+                if checkout:
+                    checkout_path = Path(checkout)
+                    if not checkout_path.is_absolute():
+                        workspace = session.snapshot.get("workspace", {}).get("root")
+                        if not workspace:
+                            return fail("session has no resolved workspace root")
+                        checkout = str((Path(workspace) / checkout_path).resolve())
+                if args.worktree and branch is None:
+                    branch = selected.get("branch")
                 scope = {"kind": "worktree" if args.worktree else "paths",
-                         "checkout": args.worktree, "branch": args.branch,
+                         "checkout": checkout, "branch": branch,
                          "paths": args.paths}
             basis = claims_module.BASIS_ADOPTION if args.adopt else args.basis
             try:

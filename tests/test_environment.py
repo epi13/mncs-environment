@@ -18,6 +18,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+FAMILY = next(
+    (candidate for candidate in ROOT.parents
+     if (candidate / "mncs-language").is_dir()
+     and (candidate / "mncs-compiler").is_dir()),
+    ROOT.parent,
+)
 
 from mncs_env import (  # noqa: E402
     authority,
@@ -288,7 +294,7 @@ class ClaimTests(unittest.TestCase):
 
 class WorkspaceTests(unittest.TestCase):
     def test_discovers_real_repositories(self) -> None:
-        view = workspace.discover_workspace(ROOT.parent)
+        view = workspace.discover_workspace(FAMILY)
         names = {repo["name"] for repo in view["repositories"]}
         self.assertIn("mncs-atlas", names)
         self.assertIn("mncs-language", names)
@@ -306,10 +312,83 @@ class WorkspaceTests(unittest.TestCase):
 
 class CapabilityTests(unittest.TestCase):
     def test_discovers_real_declarations(self) -> None:
-        bindings = capabilities.discover_capabilities(ROOT.parent)
+        bindings = capabilities.discover_capabilities(FAMILY)
         by_provider = {binding["provider"] for binding in bindings}
         self.assertIn("mncs-test", by_provider)
         self.assertTrue(all(binding["binding_id"].startswith("cap_") for binding in bindings))
+
+    def test_selected_checkout_is_the_complete_capability_binding_set(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for checkout, repository in (("ordinary", "stale-provider"),
+                                         ("managed", "campaign-provider")):
+                repo = root / checkout
+                (repo / ".mncs").mkdir(parents=True)
+                (repo / "provider.py").write_text("print('provider')\n", encoding="utf-8")
+                (repo / ".mncs" / "project.json").write_text(json.dumps({
+                    "repository": repository,
+                    "contracts": {"provides": [{
+                        "contract": "example.capability/1",
+                        "fingerprint_sources": ["provider.py"],
+                    }]},
+                }), encoding="utf-8")
+
+            bindings = capabilities.discover_capabilities(
+                root,
+                repository_roots={"campaign-provider": root / "managed"},
+                checkout_facts={"campaign-provider": {
+                    "path": "managed", "head": "current-revision", "branch": "campaign/test",
+                    "clean": True,
+                }},
+            )
+
+            self.assertEqual([item["provider"] for item in bindings], ["campaign-provider"])
+            self.assertEqual(bindings[0]["provider_root"], str(root / "managed"))
+            self.assertEqual(
+                bindings[0]["provenance"]["checkout"]["head"], "current-revision"
+            )
+
+    def test_toolchain_descriptor_binds_the_selected_repository_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stale_language = root / "mncs-language"
+            stale_language.mkdir()
+            selected_language = root / "mncs-language-worktree"
+            selected_language.mkdir()
+            commons = root / "commons-worktree"
+            commons.mkdir()
+            (commons / "pressure_cli.py").write_text("print('pressure')\n", encoding="utf-8")
+            (commons / "family-semantic-contracts-v1.json").write_text(json.dumps({
+                "repository_id": "mncs-commons",
+                "provides": [{
+                    "contract_identity": "mncs.pressure-registry/1",
+                    "contract_revision": "1",
+                    "exported_identity": "mncs-commons:pressure-registry",
+                    "canonical_entrypoint": "mncs-commons pressure",
+                    "invocation": {
+                        "kind": "python",
+                        "path": "pressure_cli.py",
+                        "toolchain": {"repository": "mncs-language", "path": "."},
+                        "toolchain_env": "MNCS_LANGUAGE_CHECKOUT",
+                    },
+                }],
+            }), encoding="utf-8")
+
+            bindings = capabilities.discover_capabilities(
+                root,
+                repository_roots={
+                    "mncs-commons": commons,
+                    "mncs-language": selected_language,
+                },
+            )
+
+            binding = next(
+                item for item in bindings
+                if item["capability"] == "mncs.pressure-registry/1"
+            )
+            self.assertEqual(binding["toolchain_address"], str(selected_language))
+            self.assertEqual(binding["toolchain_env"], "MNCS_LANGUAGE_CHECKOUT")
+            self.assertNotEqual(binding["toolchain_address"], str(stale_language))
 
     def test_probe_marks_availability(self) -> None:
         probed = capabilities.probe_availability(
@@ -380,7 +459,98 @@ class CapabilityTests(unittest.TestCase):
         self.assertIn("/other", override["stdout"])
 
 
-FAMILY = ROOT.parent
+class CampaignSelectionTests(unittest.TestCase):
+    def test_provider_capability_selects_exact_clean_checkout_closure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            provider_root = root / "mncs-control-mcp" / ".worktrees" / "control"
+            compiler_root = root / "mncs-compiler" / ".worktrees" / "compiler"
+            provider_root.mkdir(parents=True)
+            compiler_root.mkdir(parents=True)
+            binding = capabilities.bind(
+                provider="mncs-control-mcp",
+                capability="mncs-control-mcp:workspace.worktree.prepare",
+                contract_revision="1",
+                entrypoint="provider-owned",
+                address="/provider/worktree_cli.py",
+                provider_root=str(provider_root),
+            )
+            provider_record = {
+                "path": str(provider_root), "head": "provider-revision",
+                "branch": "campaign/control", "dirty": False,
+            }
+            response = {"selected_checkouts": [{
+                "repository": "mncs-compiler",
+                "path": "mncs-compiler/.worktrees/compiler",
+                "branch": "campaign/compiler",
+                "head": "authoritative-revision",
+                "clean": True,
+                "source_ref": "origin/main",
+                "authoritative_head": "authoritative-revision",
+            }]}
+            definition_ = {
+                "workspace_provider": {
+                    "repository": "mncs-control-mcp",
+                    "checkout": ".worktrees/control",
+                    "capability": "mncs-control-mcp:workspace.worktree.prepare",
+                    "revision": "provider-revision",
+                },
+                "managed_checkouts": [{
+                    "repository": "mncs-compiler", "name": "compiler",
+                    "branch": "campaign/compiler", "source_ref": "origin/main",
+                }],
+            }
+            with (
+                mock.patch.object(capabilities, "discover_capabilities", return_value=[binding]) as discover,
+                mock.patch.object(capabilities, "probe_availability", side_effect=lambda item: {
+                    **item, "availability": {"status": "available"}
+                }),
+                mock.patch.object(capabilities, "invoke", return_value={
+                    "status": "ok", "stdout": json.dumps(response), "stderr": ""
+                }) as invoke,
+            ):
+                roots, facts = sessions._provider_managed_checkouts(
+                    definition_, root,
+                    {"repositories": [provider_record]},
+                )
+
+            self.assertEqual(roots["mncs-compiler"], compiler_root)
+            self.assertEqual(roots["mncs-control-mcp"], provider_root)
+            self.assertEqual(facts["mncs-compiler"]["head"], "authoritative-revision")
+            self.assertEqual(facts["mncs-control-mcp"]["head"], "provider-revision")
+            self.assertEqual(discover.call_args.kwargs["repository_roots"], {
+                "mncs-control-mcp": provider_root,
+            })
+            self.assertEqual(invoke.call_args.args[0]["provider_root"], str(provider_root))
+
+    def test_provider_refuses_dirty_or_unpinned_provider_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            provider_root = root / "mncs-control-mcp" / ".worktrees" / "control"
+            provider_root.mkdir(parents=True)
+            definition_ = {
+                "workspace_provider": {
+                    "repository": "mncs-control-mcp", "checkout": ".worktrees/control",
+                    "capability": "mncs-control-mcp:workspace.worktree.prepare",
+                    "revision": "expected",
+                },
+                "managed_checkouts": [{
+                    "repository": "mncs-compiler", "name": "compiler",
+                    "branch": "campaign/compiler", "source_ref": "origin/main",
+                }],
+            }
+            with mock.patch.object(capabilities, "discover_capabilities") as discover:
+                with self.assertRaisesRegex(ValueError, "provider checkout is dirty"):
+                    sessions._provider_managed_checkouts(
+                        definition_, root,
+                        {"repositories": [{
+                            "path": str(provider_root), "head": "expected",
+                            "branch": "campaign/control", "dirty": True,
+                        }]},
+                    )
+                discover.assert_not_called()
+
+
 TOOLCHAIN_SOURCE = FAMILY / "mncs-test" / "tests" / "self_suite.mncs"
 TOOLCHAIN_BIN = FAMILY / "mncs-test" / "bin" / "mncs-test"
 LANGUAGE_LIB = FAMILY / "mncs-language" / "library"

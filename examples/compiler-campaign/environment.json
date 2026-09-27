@@ -1,1 +1,94 @@
-{"forbidden_actions": ["delete"], "goal": "enter the next MNCS language/native-compiler campaign through Environment: resolve the family workspace once, bind the compiler toolchain, and work sessions instead of shell state", "intent": {"acceptance_criteria": ["mncs.test-result/1 bound available with descriptor addressing", "self-suite PASS invoked through the session", "session resumes in a new process with state intact"], "constraints": ["mncs-memory is foreign work: read-only, never claimed", "no capability invented inside Environment; providers stay provider-owned"], "expected_artifacts": ["active session", "toolchain invocation result", "checkpoint"], "forbidden_actions": ["delete"], "goal": "enter the next MNCS language/native-compiler campaign through Environment: resolve the family workspace once, bind the compiler toolchain, and work sessions instead of shell state", "outcomes": ["resolved family environment", "invoked compiler toolchain", "resumed session"], "protected_repositories": ["mncs-memory"], "repositories": ["mncs-language", "mncs-compiler", "mncs-test"]}, "name": "mncs-compiler-campaign", "protected_repositories": ["mncs-memory"], "rights_claims": [], "workspace_root": "../../.."}
+{
+  "forbidden_actions": ["delete"],
+  "goal": "advance native compiler parity from a persistent Environment campaign session",
+  "intent": {
+    "acceptance_criteria": [
+      "clean current managed worktrees are selected through the pinned Control provider",
+      "capabilities and toolchain are bound from those exact selected checkouts",
+      "a native compiler workload advances beyond bounded SSA",
+      "session checkpoints and resumes with selected revisions intact"
+    ],
+    "constraints": [
+      "mncs-memory is foreign work: read-only, never claimed",
+      "workspace selection and worktree mutation stay provider-owned",
+      "unrelated checkouts and worktrees are never adopted or overwritten"
+    ],
+    "expected_artifacts": [
+      "active Environment session",
+      "exact checkout and toolchain snapshot",
+      "verified native compiler artifact",
+      "checkpoint and resume evidence"
+    ],
+    "forbidden_actions": ["delete"],
+    "goal": "advance native compiler parity from a persistent Environment campaign session",
+    "outcomes": [
+      "resolved exact worktree closure",
+      "invoked Environment-bound capabilities",
+      "compiled and executed a native backend vertical",
+      "resumed the campaign from a checkpoint"
+    ],
+    "protected_repositories": ["mncs-memory"],
+    "repositories": [
+      "mncs-language",
+      "mncs-compiler",
+      "mncs-test",
+      "mncs-store",
+      "MNCS-Commons",
+      "RAVEL",
+      "mncs-control-mcp",
+      "mncs-environment"
+    ]
+  },
+  "managed_checkouts": [
+    {
+      "repository": "mncs-compiler",
+      "name": "compiler-parity-native-20260927",
+      "branch": "campaign/compiler-parity-native-20260927",
+      "source_ref": "origin/main"
+    },
+    {
+      "repository": "mncs-language",
+      "name": "compiler-parity-language-20260927",
+      "branch": "campaign/compiler-parity-language-20260927",
+      "source_ref": "origin/main"
+    },
+    {
+      "repository": "mncs-test",
+      "name": "compiler-parity-test-20260927",
+      "branch": "campaign/compiler-parity-test-20260927",
+      "source_ref": "origin/main"
+    },
+    {
+      "repository": "mncs-store",
+      "name": "compiler-parity-store-20260927",
+      "branch": "campaign/compiler-parity-store-20260927",
+      "source_ref": "origin/main"
+    },
+    {
+      "repository": "MNCS-Commons",
+      "name": "compiler-parity-commons-20260927",
+      "branch": "campaign/compiler-parity-commons-20260927",
+      "source_ref": "origin/main"
+    },
+    {
+      "repository": "RAVEL",
+      "name": "compiler-parity-ravel-20260927",
+      "branch": "campaign/compiler-parity-ravel-20260927",
+      "source_ref": "origin/main"
+    }
+  ],
+  "workspace_provider": {
+    "repository": "mncs-control-mcp",
+    "checkout": ".worktrees/compiler-parity-control-20260927",
+    "capability": "mncs-control-mcp:workspace.worktree.prepare",
+    "revision": "6e39a27bea8a2939b0393d5afba106e5e47df876"
+  },
+  "session_checkout": {
+    "repository": "mncs-environment",
+    "checkout": ".worktrees/compiler-parity-environment-20260927"
+  },
+  "name": "mncs-compiler-campaign",
+  "protected_repositories": ["mncs-memory"],
+  "rights_claims": [],
+  "workspace_root": "../../.."
+}

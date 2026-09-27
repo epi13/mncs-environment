@@ -93,16 +93,20 @@ def bind(
 
 
 def descriptor_invocation(
-    entry: dict[str, Any], repo: Path, workspace: Path,
+    entry: dict[str, Any],
+    repo: Path,
+    workspace: Path,
+    repository_roots: dict[str, Path] | None = None,
 ) -> dict[str, Any]:
     """Resolve a provider-declared ``invocation`` block, if usable.
 
     Returns ``{"address", "toolchain_address", "toolchain_env",
     "addressing"}``. ``addressing`` is ``"descriptor"`` when the entry
     carries a usable declaration, else ``"none"``. Paths in ``path``
-    are repo-relative; ``toolchain`` is workspace-relative (a
-    cross-repo toolchain need) and exported to the child under
-    ``toolchain_env`` (default ``MNCS``) at invoke time. Anything
+    are repo-relative; ``toolchain`` can be a workspace-relative file path
+    or ``{"repository": id, "path": relative_path}`` to bind a file or
+    checkout directory from the selected repository closure. It is exported
+    under ``toolchain_env`` (default ``MNCS``) at invoke time. Anything
     unparsable or missing resolves to ``"none"`` -- never a guess.
     """
     empty = {"address": None, "toolchain_address": None,
@@ -127,7 +131,22 @@ def descriptor_invocation(
     toolchain_address: str | None = None
     toolchain_env = str(spec.get("toolchain_env", "MNCS"))
     toolchain = spec.get("toolchain")
-    if isinstance(toolchain, str) and toolchain:
+    if isinstance(toolchain, dict):
+        repository = str(toolchain.get("repository", ""))
+        relative = Path(str(toolchain.get("path", ".")))
+        base = (repository_roots or {}).get(repository)
+        if base is None and repository:
+            base = workspace / repository
+        if base is not None and repository and not relative.is_absolute():
+            base = Path(base).resolve()
+            candidate = (base / relative).resolve()
+            try:
+                candidate.relative_to(base)
+            except ValueError:
+                candidate = None
+            if candidate is not None and candidate.exists():
+                toolchain_address = str(candidate)
+    elif isinstance(toolchain, str) and toolchain:
         raw = Path(toolchain)
         candidate = raw if raw.is_absolute() else workspace / raw
         if candidate.is_file():
@@ -159,25 +178,80 @@ def probe_availability(binding: dict[str, Any]) -> dict[str, Any]:
     return awaitable
 
 
-def discover_capabilities(workspace_root: Path | str) -> list[dict[str, Any]]:
-    """Build bindings from repository-owned declarations under workspace_root."""
+def discover_capabilities(
+    workspace_root: Path | str,
+    *,
+    repository_roots: dict[str, Path | str] | None = None,
+    checkout_facts: dict[str, dict[str, Any]] | None = None,
+    language_binary: Path | str | None = None,
+) -> list[dict[str, Any]]:
+    """Build bindings from repository declarations.
+
+    When ``repository_roots`` is supplied, it is the complete binding set:
+    no workspace-root checkout or PATH toolchain fallback is considered.
+    This lets a session bind declarations to its exact provider-selected
+    worktrees while retaining broad discovery for non-campaign callers.
+    """
     root = Path(workspace_root).resolve()
-    release_bin = root / "mncs-language" / "target" / "release" / "mncs"
-    language_bin = str(release_bin) if release_bin.is_file() else (shutil.which("mncs") or "")
+    if language_binary is not None:
+        language_bin = str(Path(language_binary).resolve()) if Path(language_binary).is_file() else ""
+    else:
+        release_bin = root / "mncs-language" / "target" / "release" / "mncs"
+        debug_bin = root / "mncs-language" / "target" / "debug" / "mncs"
+        language_bin = (
+            str(release_bin) if release_bin.is_file()
+            else str(debug_bin) if debug_bin.is_file()
+            else (shutil.which("mncs") or "")
+        )
     bindings: list[dict[str, Any]] = []
-    try:
-        repos = sorted(path for path in root.iterdir() if path.is_dir() and not path.is_symlink())
-    except OSError:
-        return bindings
+    if repository_roots is None:
+        try:
+            repos = sorted(path for path in root.iterdir() if path.is_dir() and not path.is_symlink())
+        except OSError:
+            return bindings
+    else:
+        repos = []
+        for repository, raw_path in sorted(repository_roots.items()):
+            candidate = Path(raw_path)
+            if candidate.is_symlink():
+                raise CapabilityError(f"selected checkout for {repository} is a symbolic link")
+            path = candidate.resolve()
+            try:
+                path.relative_to(root)
+            except ValueError as error:
+                raise CapabilityError(
+                    f"selected checkout for {repository} escapes workspace root"
+                ) from error
+            if not path.is_dir():
+                raise CapabilityError(f"selected checkout for {repository} is unavailable")
+            repos.append(path)
     for repo in repos:
-        bindings.extend(_from_semantic_contracts(repo, root, language_bin))
-        bindings.extend(_from_manifest(repo, root, language_bin))
+        discovered = [
+            *_from_semantic_contracts(repo, root, language_bin, repository_roots),
+            *_from_manifest(repo, root, language_bin, repository_roots),
+        ]
+        repository = next(
+            (name for name, selected in (repository_roots or {}).items()
+             if Path(selected).resolve() == repo),
+            repo.name,
+        )
+        facts = (checkout_facts or {}).get(repository)
+        if facts is not None:
+            for binding in discovered:
+                binding.setdefault("provenance", {})["checkout"] = {
+                    key: facts.get(key)
+                    for key in ("path", "branch", "head", "clean", "source_ref", "authoritative_head")
+                }
+        bindings.extend(discovered)
     bindings.sort(key=lambda item: (item["provider"], item["capability"]))
     return bindings
 
 
 def _from_semantic_contracts(
-    repo: Path, workspace: Path, language_bin: str
+    repo: Path,
+    workspace: Path,
+    language_bin: str,
+    repository_roots: dict[str, Path | str] | None = None,
 ) -> list[dict[str, Any]]:
     path = repo / "family-semantic-contracts-v1.json"
     try:
@@ -198,7 +272,12 @@ def _from_semantic_contracts(
         if not isinstance(contract, str) or not contract:
             continue
         entrypoint = entry.get("canonical_entrypoint")
-        declared = descriptor_invocation(entry, repo, workspace)
+        declared = descriptor_invocation(
+            entry,
+            repo,
+            workspace,
+            {name: Path(selected) for name, selected in (repository_roots or {}).items()},
+        )
         if declared["addressing"] == "descriptor":
             address = declared["address"]
             addressing = "descriptor"
@@ -223,7 +302,12 @@ def _from_semantic_contracts(
     return out
 
 
-def _from_manifest(repo: Path, workspace: Path, language_bin: str) -> list[dict[str, Any]]:
+def _from_manifest(
+    repo: Path,
+    workspace: Path,
+    language_bin: str,
+    repository_roots: dict[str, Path | str] | None = None,
+) -> list[dict[str, Any]]:
     path = repo / ".mncs" / "project.json"
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -250,7 +334,12 @@ def _from_manifest(repo: Path, workspace: Path, language_bin: str) -> list[dict[
         # fingerprint source that is an existing executable module becomes
         # the invocation address. No per-provider switch statement;
         # undeclared contracts stay address-less.
-        declared = descriptor_invocation(entry, repo, workspace)
+        declared = descriptor_invocation(
+            entry,
+            repo,
+            workspace,
+            {name: Path(selected) for name, selected in (repository_roots or {}).items()},
+        )
         address: str | None = declared["address"]
         addressing = declared["addressing"]
         entrypoint = "undeclared"
