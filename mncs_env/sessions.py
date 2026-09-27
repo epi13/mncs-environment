@@ -35,7 +35,7 @@ from .identity import (
 from .intent import parse as parse_intent
 from .session_store import SessionStore, SequenceTaken, open_store
 
-SESSION_SCHEMA = "mncs.environment.session/1"
+SESSION_SCHEMA = "mncs.environment.session/2"
 ENVIRONMENT_SCHEMA = "mncs.environment.resolved/1"
 CHECKPOINT_SCHEMA = "mncs.environment.checkpoint/1"
 HANDOFF_SCHEMA = "mncs.environment.handoff/1"
@@ -171,6 +171,9 @@ class Session:
         self._next_seq_hint: int | None = None
         self._log_cache: list[dict[str, Any]] | None = None
         self._log_cache_key: Any = None
+        # Store-generation baseline for observe_store; None means this
+        # handle has not adopted yet (adopts silently on first observe).
+        self._feed_generation: int | None = None
 
     def close(self) -> None:
         close = getattr(self.store, "close", None)
@@ -277,6 +280,9 @@ class Session:
         self.snapshot["snapshot_sequence"] = int(self.snapshot.get("snapshot_sequence", 0)) + 1
         self.snapshot["updated_at"] = utcnow()
         self.store.save_snapshot(self.session_id, self.snapshot)
+        # Own write: re-baseline the store-feed observer so observe_store
+        # only ever reports activity from outside this session.
+        self._refresh_feed_baseline()
 
     def _cache_key(self) -> Any:
         generation = getattr(self.store, "generation", None)
@@ -391,6 +397,7 @@ class Session:
         *,
         cwd: str | Path | None = None,
         timeout_seconds: int = 120,
+        env: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Invoke a bound capability. Deny and escalate NEVER spawn a process."""
         binding = self._binding(capability)
@@ -413,7 +420,8 @@ class Session:
                 return self._pending(capability, argv, required, effect_verdict["reason"])
         self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
                    {"capability": capability, "argv": argv})
-        result = capabilities_module.invoke(binding, argv, cwd=cwd, timeout_seconds=timeout_seconds)
+        result = capabilities_module.invoke(
+            binding, argv, cwd=cwd, timeout_seconds=timeout_seconds, env=env)
         self.snapshot.setdefault("artifacts", []).append(
             {"kind": "invocation-result", "capability": capability,
              "status": result["status"], "at": utcnow()}
@@ -523,22 +531,44 @@ class Session:
         self._save()
         return events
 
+    def _feed_generation_now(self) -> int | None:
+        generation = getattr(self.store, "generation", None)
+        if not callable(generation):
+            return None
+        try:
+            return int(generation())
+        except Exception:
+            return None
+
+    def _refresh_feed_baseline(self) -> None:
+        current = self._feed_generation_now()
+        if current is None:
+            return
+        self._feed_generation = current
+        self.snapshot["last_store_generation"] = current
+
     def observe_store(self) -> dict[str, Any] | None:
-        """Read the Store commit feed: an external generation advance becomes an event."""
-        backend = getattr(self.store, "backend", None)
-        if backend is None:
+        """Read the Store generation: an external advance becomes an event.
+
+        Every session write re-baselines through ``_save``, so a delta
+        observed here is Store activity from outside this session by
+        construction. A fresh handle adopts the current generation
+        silently: resume already re-reads snapshot, log, and claims, so
+        nothing is lost by not reporting the downtime delta as an event.
+        """
+        current = self._feed_generation_now()
+        if current is None:
             return None
-        feed = backend.commit_feed()
-        last = self.snapshot.get("last_store_feed")
-        current = feed.hex()
-        if last == current:
-            return None
-        self.snapshot["last_store_feed"] = current
-        if last is None:
+        if self._feed_generation is None:
+            self._feed_generation = current
+            self.snapshot["last_store_generation"] = current
             self._save()
             return None
+        if current == self._feed_generation:
+            return None
+        previous = self._feed_generation
         event = self._emit("adapter.observed", "adapter:store-feed",
-                           {"feed": current, "previous": last,
+                           {"generation": current, "previous": previous,
                             "note": "store generation advanced outside this session"})
         self._save()
         return event

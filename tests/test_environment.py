@@ -255,6 +255,93 @@ class CapabilityTests(unittest.TestCase):
         self.assertTrue(result["truncated"])
         self.assertLessEqual(len(result["stdout"].encode("utf-8")), 32768 + 1024)
 
+    def test_descriptor_invocation_block(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repo = root / "demo"
+            (repo / "bin").mkdir(parents=True)
+            exe = repo / "bin" / "run.sh"
+            exe.write_text("#!/bin/sh\n")
+            tool = root / "toolchain" / "mncs"
+            tool.parent.mkdir(parents=True)
+            tool.write_text("#!/bin/sh\n")
+            entry = {"canonical_entrypoint": "demo run",
+                     "invocation": {"kind": "executable", "path": "bin/run.sh",
+                                    "toolchain": "toolchain/mncs",
+                                    "toolchain_env": "MNCS"}}
+            resolved = capabilities.descriptor_invocation(entry, repo, root)
+            self.assertEqual(resolved["addressing"], "descriptor")
+            self.assertEqual(resolved["address"], str(exe))
+            self.assertEqual(resolved["toolchain_address"], str(tool))
+            self.assertEqual(resolved["toolchain_env"], "MNCS")
+            missing = capabilities.descriptor_invocation(
+                {"invocation": {"kind": "executable", "path": "nope"}}, repo, root)
+            self.assertEqual(missing["addressing"], "none")
+            self.assertIsNone(missing["address"])
+            plain = capabilities.descriptor_invocation({}, repo, root)
+            self.assertEqual(plain["addressing"], "none")
+
+    def test_toolchain_env_exported(self) -> None:
+        binding = capabilities.probe_availability(
+            capabilities.bind(provider="p", capability="c", contract_revision="1",
+                              entrypoint="e", address="/bin/sh",
+                              toolchain_address="/opt/tool", toolchain_env="DEMO_TOOL"))
+        result = capabilities.invoke(binding, ["-c", "echo $DEMO_TOOL"])
+        self.assertIn("/opt/tool", result["stdout"])
+        override = capabilities.invoke(
+            binding, ["-c", "echo $DEMO_TOOL"], env={"DEMO_TOOL": "/other"})
+        self.assertIn("/other", override["stdout"])
+
+
+FAMILY = ROOT.parent
+TOOLCHAIN_SOURCE = FAMILY / "mncs-test" / "tests" / "self_suite.mncs"
+TOOLCHAIN_BIN = FAMILY / "mncs-test" / "bin" / "mncs-test"
+LANGUAGE_LIB = FAMILY / "mncs-language" / "library"
+TEST_NATIVE_LIB = FAMILY / "mncs-test" / "native"
+
+
+@unittest.skipUnless(TOOLCHAIN_SOURCE.is_file() and TOOLCHAIN_BIN.is_file()
+                     and LANGUAGE_LIB.is_dir() and TEST_NATIVE_LIB.is_dir(),
+                     "family toolchain checkout required")
+class ToolchainTests(unittest.TestCase):
+    def test_mncs_test_binding_is_descriptor_addressed(self) -> None:
+        bindings = [capabilities.probe_availability(binding)
+                    for binding in capabilities.discover_capabilities(FAMILY)]
+        matches = [b for b in bindings if b["capability"] == "mncs.test-result/1"]
+        self.assertTrue(matches, "mncs.test-result/1 not discovered")
+        binding = matches[0]
+        self.assertEqual(binding["provenance"].get("addressing"), "descriptor")
+        self.assertEqual(binding["availability"]["status"], "available")
+        self.assertTrue(Path(str(binding["toolchain_address"])).is_file())
+
+    def test_session_invokes_real_toolchain(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            store = open_store(state, "store", verify_on_open=False)
+            env = sessions.resolve_environment(
+                definition=definition(), workspace_root=FAMILY,
+                state_dir=state, consumer_id="tester", store=store)
+            session = sessions.Session.create(
+                state_dir=state, environment=env, consumer_id="tester", store=store)
+            session.transition("resolving", "test")
+            session.transition("ready", "test")
+            session.transition("active", "test")
+            result = session.invoke(
+                "mncs.test-result/1",
+                [str(TOOLCHAIN_SOURCE), "--library", str(LANGUAGE_LIB),
+                 "--library", str(TEST_NATIVE_LIB), "--format", "text"],
+                timeout_seconds=180)
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["returncode"], 0)
+            self.assertIn("PASS", result["stdout"])
+
+    def test_compiler_binding_visible_with_manifest_tests(self) -> None:
+        bindings = capabilities.discover_capabilities(FAMILY)
+        matches = [b for b in bindings if b["provider"] == "mncs-compiler"]
+        self.assertTrue(matches, "mncs-compiler binding not discovered")
+        declared = matches[0]["provenance"].get("manifest_tests", [])
+        self.assertTrue(any(t.get("test") == "compiler-front-end" for t in declared))
+
 
 class SessionTests(unittest.TestCase):
     def test_lifecycle_table_sweep(self) -> None:
@@ -457,6 +544,35 @@ class EventTests(unittest.TestCase):
                             producer="vendor")
         self.assertEqual(event["type"], "adapter.observed")
         self.assertEqual(event["provider_type"], "vendor.blip")
+
+    def test_store_feed_advance_becomes_event(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            self.assertIsNone(session.observe_store())
+            # An external writer advances the Store generation outside the session.
+            peer = open_store(state, "store", verify_on_open=False)
+            try:
+                peer.put_claim({"schema_version": "mncs.environment.claim/1",
+                                "claim_id": "claim:external", "version": 1,
+                                "repository": "external", "session_id": "other",
+                                "consumer_id": "other", "basis": "explicit-claim",
+                                "reason": "probe", "status": "held",
+                                "acquired_at": "2026-01-01T00:00:00",
+                                "expires_at": "2026-01-02T00:00:00",
+                                "provenance": {}, "identity": "clm_probe"})
+            finally:
+                peer.close()
+            event = session.observe_store()
+            self.assertIsNotNone(event)
+            self.assertEqual(event["type"], "adapter.observed")
+            self.assertEqual(event["producer"], "adapter:store-feed")
+            self.assertIsNone(session.observe_store())
+            # A fresh handle adopts silently: resume re-reads state, so the
+            # downtime delta is never reported as an external event.
+            reopened = sessions.Session.open(
+                state_dir=state, session_id=session.session_id, store=session.store)
+            self.assertIsNone(reopened.observe_store())
 
     def test_git_poll_adapter(self) -> None:
         made, _ = events.git_poll_events(

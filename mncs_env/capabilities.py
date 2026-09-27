@@ -70,6 +70,8 @@ def bind(
     event_types: list[str] | None = None,
     provenance: dict[str, Any] | None = None,
     provider_root: str | None = None,
+    toolchain_address: str | None = None,
+    toolchain_env: str | None = None,
 ) -> dict[str, Any]:
     """Construct a binding record (availability is observed separately)."""
     return {
@@ -81,11 +83,57 @@ def bind(
         "contract_revision": contract_revision,
         "entrypoint": entrypoint,
         "address": address,
+        "toolchain_address": toolchain_address,
+        "toolchain_env": toolchain_env,
         "effects": list(effects or ["read"]),
         "event_types": list(event_types if event_types is not None else ["unknown"]),
         "availability": {"status": "unknown", "reason": "not yet probed", "observed_at": None},
         "provenance": provenance or {},
     }
+
+
+def descriptor_invocation(
+    entry: dict[str, Any], repo: Path, workspace: Path,
+) -> dict[str, Any]:
+    """Resolve a provider-declared ``invocation`` block, if usable.
+
+    Returns ``{"address", "toolchain_address", "toolchain_env",
+    "addressing"}``. ``addressing`` is ``"descriptor"`` when the entry
+    carries a usable declaration, else ``"none"``. Paths in ``path``
+    are repo-relative; ``toolchain`` is workspace-relative (a
+    cross-repo toolchain need) and exported to the child under
+    ``toolchain_env`` (default ``MNCS``) at invoke time. Anything
+    unparsable or missing resolves to ``"none"`` -- never a guess.
+    """
+    empty = {"address": None, "toolchain_address": None,
+             "toolchain_env": None, "addressing": "none"}
+    spec = entry.get("invocation")
+    if not isinstance(spec, dict):
+        return empty
+    kind = spec.get("kind")
+    address: str | None = None
+    if kind == "executable":
+        candidate = repo / str(spec.get("path", ""))
+        if candidate.is_file():
+            address = str(candidate)
+    elif kind == "python":
+        candidate = repo / str(spec.get("path", ""))
+        if candidate.is_file() and candidate.suffix == ".py":
+            address = "python:" + str(candidate)
+    elif kind == "binary":
+        address = shutil.which(str(spec.get("name", "")))
+    if address is None:
+        return empty
+    toolchain_address: str | None = None
+    toolchain_env = str(spec.get("toolchain_env", "MNCS"))
+    toolchain = spec.get("toolchain")
+    if isinstance(toolchain, str) and toolchain:
+        raw = Path(toolchain)
+        candidate = raw if raw.is_absolute() else workspace / raw
+        if candidate.is_file():
+            toolchain_address = str(candidate)
+    return {"address": address, "toolchain_address": toolchain_address,
+            "toolchain_env": toolchain_env, "addressing": "descriptor"}
 
 
 def probe_availability(binding: dict[str, Any]) -> dict[str, Any]:
@@ -150,16 +198,25 @@ def _from_semantic_contracts(
         if not isinstance(contract, str) or not contract:
             continue
         entrypoint = entry.get("canonical_entrypoint")
+        declared = descriptor_invocation(entry, repo, workspace)
+        if declared["addressing"] == "descriptor":
+            address = declared["address"]
+            addressing = "descriptor"
+        else:
+            address = _address(entrypoint, workspace, language_bin)
+            addressing = "bootstrap" if address else "none"
         record = bind(
             provider=repository_id,
             capability=contract,
             contract_revision=str(entry.get("contract_revision", "unknown")),
             entrypoint=str(entrypoint) if entrypoint else "undeclared",
-            address=_address(entrypoint, workspace, language_bin),
+            address=address,
+            toolchain_address=declared["toolchain_address"],
+            toolchain_env=declared["toolchain_env"],
             effects=["read"],
             event_types=["unknown"],
             provenance={"source": f"{repo.name}/family-semantic-contracts-v1.json",
-                        "status": entry.get("status")},
+                        "status": entry.get("status"), "addressing": addressing},
             provider_root=str(repo),
         )
         out.append(record)
@@ -178,6 +235,9 @@ def _from_manifest(repo: Path, workspace: Path, language_bin: str) -> list[dict[
     out = []
     contracts = payload.get("contracts", {})
     provides = contracts.get("provides") if isinstance(contracts, dict) else None
+    declared_tests = contracts.get("tests") if isinstance(contracts, dict) else None
+    if not isinstance(declared_tests, list):
+        declared_tests = []
     if not isinstance(provides, list):
         return []
     for entry in provides:
@@ -186,13 +246,16 @@ def _from_manifest(repo: Path, workspace: Path, language_bin: str) -> list[dict[
         contract = entry.get("contract")
         if not isinstance(contract, str) or not contract:
             continue
-        # Data-driven addressing: a fingerprint source that is an existing
-        # executable module becomes the invocation address. No per-provider
-        # switch statement; undeclared contracts stay address-less.
-        address: str | None = None
+        # Data-driven addressing: a declared invocation block wins, then a
+        # fingerprint source that is an existing executable module becomes
+        # the invocation address. No per-provider switch statement;
+        # undeclared contracts stay address-less.
+        declared = descriptor_invocation(entry, repo, workspace)
+        address: str | None = declared["address"]
+        addressing = declared["addressing"]
         entrypoint = "undeclared"
         sources = entry.get("fingerprint_sources")
-        if isinstance(sources, list):
+        if address is None and isinstance(sources, list):
             for source in sources:
                 if not isinstance(source, str) or not source.endswith(".py"):
                     continue
@@ -200,6 +263,7 @@ def _from_manifest(repo: Path, workspace: Path, language_bin: str) -> list[dict[
                 if candidate.is_file():
                     address = "python:" + str(candidate)
                     entrypoint = f"python:{source}"
+                    addressing = "descriptor-fingerprint"
                     break
         record = bind(
             provider=repository_id,
@@ -207,10 +271,13 @@ def _from_manifest(repo: Path, workspace: Path, language_bin: str) -> list[dict[
             contract_revision=str(entry.get("version", "unknown")),
             entrypoint=entrypoint,
             address=address,
+            toolchain_address=declared["toolchain_address"],
+            toolchain_env=declared["toolchain_env"],
             effects=["read"],
             event_types=["unknown"],
             provenance={"source": f"{repo.name}/.mncs/project.json",
-                        "kind": entry.get("kind"), "stability": entry.get("stability")},
+                        "kind": entry.get("kind"), "stability": entry.get("stability"),
+                        "addressing": addressing, "manifest_tests": declared_tests},
             provider_root=str(repo),
         )
         out.append(record)
@@ -241,10 +308,13 @@ def invoke(
     cwd: Path | str | None = None,
     timeout_seconds: int = 120,
     output_limit_bytes: int = 65536,
+    env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Invoke a bound capability (transport only; authority checked by caller).
 
     Returns a result envelope; provider semantics stay provider-owned.
+    A binding-resolved ``toolchain_address`` is exported under
+    ``toolchain_env``; explicit ``env`` entries win over it.
     """
     address = binding.get("address")
     if not address:
@@ -262,10 +332,21 @@ def invoke(
         command = [address, *argv]
     if cwd is None and binding.get("provider_root"):
         cwd = binding["provider_root"]
+    child_env: dict[str, str] | None = None
+    toolchain_address = binding.get("toolchain_address")
+    toolchain_env = binding.get("toolchain_env")
+    if (toolchain_address and toolchain_env) or env:
+        import os
+        child_env = dict(os.environ)
+        if toolchain_address and toolchain_env:
+            child_env[str(toolchain_env)] = str(toolchain_address)
+        if env:
+            child_env.update(env)
     try:
         return _run_bounded(
             binding, command, cwd=str(cwd) if cwd else None,
             timeout_seconds=timeout_seconds, output_limit_bytes=output_limit_bytes,
+            env=child_env,
         )
     except OSError as error:
         return {
@@ -286,6 +367,7 @@ def _run_bounded(
     cwd: str | None,
     timeout_seconds: int,
     output_limit_bytes: int,
+    env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Run a provider with streamed, capped output (never buffer unbounded).
 
@@ -300,6 +382,7 @@ def _run_bounded(
     deadline = time.monotonic() + timeout_seconds
     process = subprocess.Popen(
         command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        env=env,
     )
     assert process.stdout is not None and process.stderr is not None
     buffers = {process.stdout: bytearray(), process.stderr: bytearray()}
