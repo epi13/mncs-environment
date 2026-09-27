@@ -1038,13 +1038,11 @@ class Session:
                     {"capability": binding["capability"], "previous": before},
                 )
         holders = claims_module.holders(self.store.read_claims())
-        if holders != self.snapshot.get("claim_holders_detailed", holders):
+        if holders != self.snapshot.get("claim_holders", {}):
             self._emit("adapter.observed", "environment",
                        {"note": "claim holders changed", "holders": holders})
         self.snapshot["claim_holders_detailed"] = holders
-        self.snapshot["claim_holders"] = {
-            repo: info["session_id"] for repo, info in holders.items()
-        }
+        self.snapshot["claim_holders"] = holders
         self._save()
         return report
 

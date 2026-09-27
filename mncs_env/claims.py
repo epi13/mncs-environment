@@ -159,18 +159,20 @@ def active_claims(all_records: list[dict[str, Any]]) -> dict[str, dict[str, Any]
     return {key: record for key, record in latest.items() if _alive(record)}
 
 
-def holders(all_records: list[dict[str, Any]]) -> dict[str, list[dict[str, str]]]:
-    """Map repository -> live holder infos (multiple scopes may coexist)."""
-    grouped: dict[str, list[dict[str, str]]] = {}
+def holders(all_records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Map repository -> live holder infos, including each exact scope."""
+    grouped: dict[str, list[dict[str, Any]]] = {}
     for record in active_claims(all_records).values():
         scope = record.get("scope", {})
+        if not isinstance(scope, dict):
+            scope = {"kind": "repository"}
         grouped.setdefault(str(record.get("repository", "")), []).append(
             {
                 "claim_id": str(record.get("claim_id", "")),
                 "session_id": str(record.get("session_id", "")),
                 "consumer_id": str(record.get("consumer_id", "")),
                 "basis": str(record.get("basis", "")),
-                "scope_kind": str(scope.get("kind", "repository")),
+                "scope": scope,
             }
         )
     return grouped

@@ -712,6 +712,22 @@ class SessionTests(unittest.TestCase):
         ])
         self.assertEqual(parsed.output_limit_bytes, 131072)
 
+    def test_revalidate_preserves_scoped_claim_holders(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            scope = {"kind": "paths", "paths": ["src/compiler/project.mncs"]}
+            claim = session.acquire_claim(
+                "mncs-compiler", scope=scope, reason="test exact scoped claim")
+
+            report = session.revalidate()
+
+            self.assertEqual(report["changed"], [])
+            holders = session.snapshot["claim_holders"]["mncs-compiler"]
+            self.assertEqual(holders[0]["claim_id"], claim["claim_id"])
+            self.assertEqual(holders[0]["scope"], claim["scope"])
+            self.assertEqual(session.snapshot["claim_holders_detailed"],
+                             session.snapshot["claim_holders"])
+
     def test_provider_effects_independently_authorized(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))
