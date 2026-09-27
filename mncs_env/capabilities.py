@@ -263,24 +263,10 @@ def invoke(
     if cwd is None and binding.get("provider_root"):
         cwd = binding["provider_root"]
     try:
-        completed = subprocess.run(
-            command,
-            cwd=str(cwd) if cwd else None,
-            capture_output=True,
-            text=True,
-            timeout=timeout_seconds,
-            check=False,
+        return _run_bounded(
+            binding, command, cwd=str(cwd) if cwd else None,
+            timeout_seconds=timeout_seconds, output_limit_bytes=output_limit_bytes,
         )
-    except subprocess.TimeoutExpired as error:
-        return {
-            "binding_id": binding.get("binding_id"),
-            "capability": binding.get("capability"),
-            "status": "timeout",
-            "returncode": None,
-            "stdout": "",
-            "stderr": f"exceeded {timeout_seconds}s: {error}",
-            "truncated": False,
-        }
     except OSError as error:
         return {
             "binding_id": binding.get("binding_id"),
@@ -291,17 +277,78 @@ def invoke(
             "stderr": str(error),
             "truncated": False,
         }
-    stdout = completed.stdout or ""
-    stderr = completed.stderr or ""
-    truncated = False
-    if len(stdout.encode("utf-8")) > output_limit_bytes:
-        stdout = stdout.encode("utf-8")[:output_limit_bytes].decode("utf-8", "replace")
-        truncated = True
+
+
+def _run_bounded(
+    binding: dict[str, Any],
+    command: list[str],
+    *,
+    cwd: str | None,
+    timeout_seconds: int,
+    output_limit_bytes: int,
+) -> dict[str, Any]:
+    """Run a provider with streamed, capped output (never buffer unbounded).
+
+    stdout/stderr are read incrementally; each stream keeps a head window
+    and drops the middle, so a chatty provider cannot exhaust memory. Exit
+    status and tail diagnostics are always preserved.
+    """
+    import selectors
+    import time
+
+    head_each = output_limit_bytes // 2
+    deadline = time.monotonic() + timeout_seconds
+    process = subprocess.Popen(
+        command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    assert process.stdout is not None and process.stderr is not None
+    buffers = {process.stdout: bytearray(), process.stderr: bytearray()}
+    totals = {process.stdout: 0, process.stderr: 0}
+    selector = selectors.DefaultSelector()
+    selector.register(process.stdout, selectors.EVENT_READ)
+    selector.register(process.stderr, selectors.EVENT_READ)
+    timed_out = False
+    try:
+        while selector.get_map():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                timed_out = True
+                break
+            for key, _ in selector.select(timeout=min(remaining, 0.5)):
+                chunk = key.fileobj.read(65536)
+                if not chunk:
+                    selector.unregister(key.fileobj)
+                    continue
+                buffer = buffers[key.fileobj]
+                totals[key.fileobj] += len(chunk)
+                room = head_each - len(buffer)
+                if room > 0:
+                    buffer.extend(chunk[:room])
+            if process.poll() is not None and not selector.get_map():
+                break
+    finally:
+        if timed_out or process.poll() is None:
+            process.kill()
+        process.wait()
+        selector.close()
+    stdout = buffers[process.stdout].decode("utf-8", "replace")
+    stderr = buffers[process.stderr].decode("utf-8", "replace")
+    truncated = totals[process.stdout] > head_each or totals[process.stderr] > head_each
+    if timed_out:
+        return {
+            "binding_id": binding.get("binding_id"),
+            "capability": binding.get("capability"),
+            "status": "timeout",
+            "returncode": None,
+            "stdout": stdout,
+            "stderr": (stderr + f"\nexceeded {timeout_seconds}s").strip(),
+            "truncated": truncated,
+        }
     return {
         "binding_id": binding.get("binding_id"),
         "capability": binding.get("capability"),
-        "status": "ok" if completed.returncode == 0 else "failed",
-        "returncode": completed.returncode,
+        "status": "ok" if process.returncode == 0 else "failed",
+        "returncode": process.returncode,
         "stdout": stdout,
         "stderr": stderr,
         "truncated": truncated,
