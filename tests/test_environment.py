@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import stat
 import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 from pathlib import Path
@@ -40,7 +42,11 @@ from mncs_env import (  # noqa: E402
     sources,
     workspace,
 )
-from mncs_env.session_store import open_store  # noqa: E402
+from mncs_env.session_store import (  # noqa: E402
+    open_store,
+    store_provider_from_environment,
+    write_session_store_provider,
+)
 
 
 def definition(**overrides):
@@ -348,6 +354,168 @@ class CapabilityTests(unittest.TestCase):
                 bindings[0]["provenance"]["checkout"]["head"], "current-revision"
             )
 
+    def test_semantic_contract_binds_selected_executable_and_fixed_argv(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repo = root / "managed"
+            executable = repo / "tools" / "fixture-cli"
+            executable.parent.mkdir(parents=True)
+            executable.write_text(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\"\n", encoding="utf-8"
+            )
+            executable.chmod(0o755)
+            (repo / "family-semantic-contracts-v1.json").write_text(json.dumps({
+                "schema_version": "commons.mncs.semantic-contract-declarations/v1",
+                "repository_id": "campaign-provider",
+                "revision": "1",
+                "provides": [{
+                    "contract_identity": "fixture.impact/1",
+                    "contract_revision": "7",
+                    "exported_identity": "fixture:impact",
+                    "canonical_entrypoint": "fixture-cli impact",
+                    "invocation": {
+                        "kind": "executable",
+                        "path": "tools/fixture-cli",
+                        "fixed_argv": ["impact"],
+                    },
+                    "effects": ["read"],
+                }],
+                "consumes": [],
+            }), encoding="utf-8")
+            facts = {"campaign-provider": {
+                "path": str(repo), "head": "exact-head", "branch": "campaign/test",
+                "clean": True,
+            }}
+
+            bindings = capabilities.discover_capabilities(
+                root,
+                repository_roots={"campaign-provider": repo},
+                checkout_facts=facts,
+            )
+            binding = next(item for item in bindings if item["capability"] == "fixture.impact/1")
+
+            self.assertEqual(binding["address"], str(executable.resolve()))
+            self.assertEqual(binding["fixed_argv"], ["impact"])
+            self.assertEqual(binding["provenance"]["checkout"]["head"], "exact-head")
+            result = capabilities.invoke(binding, ["source.mncs"])
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["stdout"].splitlines(), ["impact", "source.mncs"])
+
+    def test_manifest_test_binds_fixed_command_to_selected_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stale = root / "ordinary"
+            selected = root / "managed"
+            fake_bin = root / "bin"
+            for repo in (stale, selected):
+                (repo / ".mncs").mkdir(parents=True)
+            fake_bin.mkdir()
+            cargo = fake_bin / "cargo"
+            cargo.write_text(
+                "#!/bin/sh\nprintf '%s\\n' \"$PWD\" \"$@\" \"$MNCS_TEST_MARKER\"\n",
+                encoding="utf-8",
+            )
+            cargo.chmod(0o755)
+            (selected / ".mncs" / "project.json").write_text(json.dumps({
+                "repository": "mncs-language",
+                "contracts": {
+                    "provides": [],
+                    "tests": [{
+                        "test": "language-tests-mncs-embed",
+                        "covers": ["compiler-runtime"],
+                        "command": {
+                            "argv": ["cargo", "test", "--package", "mncs-embed"],
+                            "timeout_seconds": 42,
+                            "environment": {"MNCS_TEST_MARKER": "from-manifest"},
+                        },
+                    }],
+                },
+            }), encoding="utf-8")
+
+            with mock.patch.object(
+                capabilities.shutil, "which",
+                side_effect=lambda name: str(cargo) if name == "cargo" else None,
+            ):
+                bindings = capabilities.discover_capabilities(
+                    root,
+                    repository_roots={"mncs-language": selected},
+                    checkout_facts={"mncs-language": {
+                        "path": str(selected), "head": "campaign-head",
+                        "branch": "campaign/language", "clean": True,
+                    }},
+                )
+
+            binding = next(
+                item for item in bindings
+                if item["capability"] == "mncs-language:test/language-tests-mncs-embed"
+            )
+            self.assertEqual(binding["address"], str(cargo))
+            self.assertEqual(binding["fixed_argv"], ["test", "--package", "mncs-embed"])
+            self.assertEqual(binding["fixed_env"], {"MNCS_TEST_MARKER": "from-manifest"})
+            self.assertEqual(binding["effects"], ["write"])
+            self.assertEqual(binding["timeout_seconds"], 42)
+            self.assertEqual(binding["working_directory"], str(selected.resolve()))
+            self.assertEqual(binding["provenance"]["checkout"]["head"], "campaign-head")
+            result = capabilities.invoke(binding, [])
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(
+                result["stdout"].splitlines(),
+                [str(selected.resolve()), "test", "--package", "mncs-embed", "from-manifest"],
+            )
+            overridden = capabilities.invoke(binding, [], env={"MNCS_TEST_MARKER": "explicit"})
+            self.assertEqual(overridden["stdout"].splitlines()[-1], "explicit")
+
+    def test_manifest_test_rejects_unsafe_fixed_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repo = root / "selected"
+            (repo / ".mncs").mkdir(parents=True)
+            (repo / ".mncs" / "project.json").write_text(json.dumps({
+                "repository": "mncs-language",
+                "contracts": {"provides": [], "tests": [{
+                    "test": "unsafe-env",
+                    "command": {"argv": ["python3", "-m", "unittest"],
+                                "environment": {"PATH": "/tmp/untrusted"}},
+                }]},
+            }), encoding="utf-8")
+            bindings = capabilities.discover_capabilities(root, repository_roots={"mncs-language": repo})
+            self.assertFalse(any(item["capability"].endswith("test/unsafe-env") for item in bindings))
+
+    def test_manifest_test_toolchain_binds_only_the_selected_repository_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stale = root / "mncs-language"
+            selected = root / "language-worktree"
+            repo = root / "commons-worktree"
+            for path in (stale, selected, repo):
+                path.mkdir()
+            (repo / ".mncs").mkdir()
+            (repo / ".mncs" / "project.json").write_text(json.dumps({
+                "repository": "mncs-commons",
+                "contracts": {"provides": [], "tests": [{
+                    "test": "uses-selected-language",
+                    "command": {
+                        "argv": ["python3", "-c", "import os; print(os.environ['MNCS_LANGUAGE_ROOT'])"],
+                        "toolchain": {"repository": "mncs-language", "path": "."},
+                        "toolchain_env": "MNCS_LANGUAGE_ROOT",
+                    },
+                }]},
+            }), encoding="utf-8")
+            selected_roots = {"mncs-commons": repo, "mncs-language": selected}
+            bindings = capabilities.discover_capabilities(root, repository_roots=selected_roots)
+            binding = next(item for item in bindings if item["capability"].endswith("test/uses-selected-language"))
+            self.assertEqual(binding["toolchain_address"], str(selected.resolve()))
+            result = capabilities.invoke(binding, [])
+            self.assertEqual(result["stdout"].strip(), str(selected.resolve()))
+
+            missing_language_roots = {"mncs-commons": repo}
+            unavailable = capabilities.discover_capabilities(root, repository_roots=missing_language_roots)
+            self.assertFalse(any(
+                item["capability"].endswith("test/uses-selected-language")
+                for item in unavailable
+            ))
+
     def test_toolchain_descriptor_binds_the_selected_repository_checkout(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -365,6 +533,7 @@ class CapabilityTests(unittest.TestCase):
                     "contract_revision": "1",
                     "exported_identity": "mncs-commons:pressure-registry",
                     "canonical_entrypoint": "mncs-commons pressure",
+                    "effects": ["write"],
                     "invocation": {
                         "kind": "python",
                         "path": "pressure_cli.py",
@@ -388,7 +557,82 @@ class CapabilityTests(unittest.TestCase):
             )
             self.assertEqual(binding["toolchain_address"], str(selected_language))
             self.assertEqual(binding["toolchain_env"], "MNCS_LANGUAGE_CHECKOUT")
+            self.assertEqual(binding["effects"], ["write"])
             self.assertNotEqual(binding["toolchain_address"], str(stale_language))
+
+    def test_verification_executor_binds_from_selected_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stale = root / "ordinary"
+            selected = root / "campaign"
+            for repo in (stale, selected):
+                (repo / ".mncs").mkdir(parents=True)
+                (repo / "tools").mkdir()
+                (repo / "tools" / "check.py").write_text(
+                    "import json, sys; print(json.dumps(sys.argv[1:]))\n",
+                    encoding="utf-8",
+                )
+                (repo / "tools" / "check.sh").write_text(
+                    "printf '%s\\n' \"$@\"\n", encoding="utf-8")
+                (repo / ".mncs" / "project.json").write_text(json.dumps({
+                    "repository": "mncs-compiler",
+                    "verification": {"obligation_inventory": ".mncs/verification.json"},
+                }), encoding="utf-8")
+                (repo / ".mncs" / "verification.json").write_text(json.dumps({
+                    "repository": "mncs-compiler",
+                    "revision": 3,
+                    "obligations": [{
+                        "identity": "mncs-compiler.example-check",
+                        "executor": {
+                            "provider": "mncs-compiler",
+                            "kind": "external_integration",
+                            "entrypoint": "python3 tools/check.py stable",
+                            "argv": ["python3", "tools/check.py", "stable"],
+                            "working_directory": ".",
+                            "timeout_seconds": 42,
+                        },
+                    }, {
+                        "identity": "mncs-compiler.example-bootstrap",
+                        "executor": {
+                            "provider": "mncs-compiler",
+                            "kind": "external_integration",
+                            "entrypoint": "bash tools/check.sh stable",
+                            "argv": ["bash", "tools/check.sh", "stable"],
+                            "working_directory": ".",
+                            "timeout_seconds": 43,
+                        },
+                    }],
+                }), encoding="utf-8")
+
+            bindings = capabilities.discover_capabilities(
+                root,
+                repository_roots={"mncs-compiler": selected},
+                checkout_facts={"mncs-compiler": {
+                    "path": str(selected), "head": "campaign-head", "clean": True,
+                }},
+            )
+            capability = "mncs-compiler:verification-executor/mncs-compiler.example-check"
+            binding = next(item for item in bindings if item["capability"] == capability)
+            self.assertEqual(binding["provider_root"], str(selected.resolve()))
+            self.assertEqual(binding["address"], f"python:{selected.resolve()}/tools/check.py")
+            self.assertEqual(binding["timeout_seconds"], 42)
+
+            result = capabilities.invoke(binding, ["campaign"])
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(json.loads(result["stdout"]), ["stable", "campaign"])
+
+            bash_capability = "mncs-compiler:verification-executor/mncs-compiler.example-bootstrap"
+            bash_binding = next(item for item in bindings if item["capability"] == bash_capability)
+            self.assertEqual(bash_binding["address"], shutil.which("bash"))
+            self.assertEqual(
+                bash_binding["fixed_argv"],
+                [str(selected.resolve() / "tools" / "check.sh"), "stable"],
+            )
+            self.assertEqual(bash_binding["timeout_seconds"], 43)
+            bash_result = capabilities.invoke(bash_binding, ["campaign"])
+            self.assertEqual(bash_result["status"], "ok")
+            self.assertEqual(bash_result["stdout"].splitlines(), ["stable", "campaign"])
 
     def test_probe_marks_availability(self) -> None:
         probed = capabilities.probe_availability(
@@ -433,6 +677,34 @@ class CapabilityTests(unittest.TestCase):
             capabilities.invoke(
                 binding, ["-c", "echo unreachable"],
                 output_limit_bytes=capabilities.MAX_OUTPUT_LIMIT_BYTES + 1)
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "POSIX process-group behavior")
+    def test_timeout_keeps_partial_output_and_kills_child_process_group(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            marker = Path(directory) / "child-survived-timeout"
+            child = (
+                "import pathlib,time; time.sleep(1.3); "
+                f"pathlib.Path({str(marker)!r}).write_text('alive'); time.sleep(10)"
+            )
+            parent = (
+                "import subprocess,sys,time; "
+                f"subprocess.Popen([sys.executable,'-c',{child!r}], "
+                "stdout=sys.stdout,stderr=sys.stderr); "
+                "print('started',flush=True); time.sleep(10)"
+            )
+            binding = capabilities.bind(
+                provider="p", capability="c", contract_revision="1",
+                entrypoint="python -c <bounded child fixture>", address=sys.executable,
+            )
+            started = time.monotonic()
+            result = capabilities.invoke(binding, ["-c", parent], timeout_seconds=1)
+            elapsed = time.monotonic() - started
+
+            self.assertEqual(result["status"], "timeout")
+            self.assertIn("started", result["stdout"])
+            self.assertLess(elapsed, 2.5)
+            time.sleep(0.6)
+            self.assertFalse(marker.exists(), "timed-out child process survived its group")
 
     def test_descriptor_invocation_block(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -614,6 +886,179 @@ class ToolchainTests(unittest.TestCase):
 
 
 class SessionTests(unittest.TestCase):
+    def test_provision_checkouts_extends_authority_and_binds_exact_provider_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            provider_root = root / "mncs-control-mcp" / ".worktrees" / "campaign-control"
+            selected_root = root / "mncs-fabric" / ".worktrees" / "campaign-fabric"
+            provider_root.mkdir(parents=True)
+            selected_root.mkdir(parents=True)
+            session = make_session(
+                root / "state",
+                intent={"goal": "extend checkout closure", "repositories": ["mncs-control-mcp"]},
+            )
+            session.snapshot["workspace"] = {"root": str(root), "repositories": []}
+            session.snapshot["selected_checkouts"] = {
+                "mncs-control-mcp": {
+                    "repository": "mncs-control-mcp",
+                    "path": str(provider_root),
+                    "branch": "campaign/control",
+                    "head": "control-head",
+                    "clean": True,
+                }
+            }
+            capability = "mncs-control-mcp:workspace.worktree.prepare"
+            provider_binding = capabilities.bind(
+                provider="mncs-control-mcp",
+                capability=capability,
+                contract_revision="2",
+                entrypoint="mncs-control-worktrees prepare",
+                address="python:" + str(provider_root / "worktree_cli.py"),
+                effects=["write"],
+                provider_root=str(provider_root),
+                provenance={"checkout": {"path": str(provider_root), "branch": "campaign/control"}},
+            )
+            provider_binding["availability"] = {"status": "available"}
+            session.snapshot["bindings"] = [provider_binding]
+            provider_result = {
+                "selected_checkouts": [{
+                    "repository": "mncs-fabric",
+                    "path": "mncs-fabric/.worktrees/campaign-fabric",
+                    "branch": "campaign/fabric",
+                    "head": "fabric-head",
+                    "clean": True,
+                    "source_ref": "origin/main",
+                    "authoritative_head": "fabric-head",
+                }]
+            }
+            observed = {
+                "root": str(root),
+                "repositories": [
+                    {"name": "mncs-control-mcp@campaign-control", "path": str(provider_root),
+                     "head": "control-head", "branch": "campaign/control", "dirty": False,
+                     "dirty_files": [], "dirty_truncated": False},
+                    {"name": "mncs-fabric@campaign-fabric", "path": str(selected_root),
+                     "head": "fabric-head", "branch": "campaign/fabric", "dirty": False,
+                     "dirty_files": [], "dirty_truncated": False},
+                ],
+            }
+            output_binding = capabilities.bind(
+                provider="mncs-fabric",
+                capability="mncs-fabric:test/fabric-suite",
+                contract_revision="3",
+                entrypoint="python3 -m pytest",
+                address="python:" + str(selected_root / "tests.py"),
+                provider_root=str(selected_root),
+                provenance={"checkout": {"path": str(selected_root), "head": "fabric-head"}},
+            )
+            with (
+                mock.patch.object(session, "invoke", return_value={
+                    "status": "ok", "returncode": 0, "stdout": json.dumps(provider_result),
+                    "stderr": "",
+                }) as invoke,
+                mock.patch.object(sessions.workspace_module, "discover_workspace", return_value=observed),
+                mock.patch.object(sessions.capabilities_module, "discover_capabilities",
+                                  return_value=[output_binding]),
+                mock.patch.object(sessions.capabilities_module, "probe_availability",
+                                  side_effect=lambda item: {**item, "availability": {"status": "available"}}),
+            ):
+                result = session.provision_checkouts(
+                    capability,
+                    [{"repository": "mncs-fabric", "name": "campaign-fabric",
+                      "branch": "campaign/fabric", "source_ref": "origin/main"}],
+                )
+
+            invoke.assert_called_once()
+            self.assertIn("mncs-fabric", session.snapshot["authority"]["writable"])
+            self.assertEqual(
+                session.snapshot["selected_checkouts"]["mncs-fabric"]["path"],
+                "mncs-fabric/.worktrees/campaign-fabric",
+            )
+            self.assertTrue(any(
+                binding["provider_root"] == str(selected_root)
+                and binding["capability"] == "mncs-fabric:test/fabric-suite"
+                for binding in result["bindings"]
+            ))
+
+    def test_provision_checkouts_rejects_provider_from_unselected_workspace_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            selected_provider = root / "mncs-control-mcp" / ".worktrees" / "campaign-control"
+            stale_provider = root / "mncs-control-mcp"
+            selected_provider.mkdir(parents=True)
+            stale_provider.mkdir(exist_ok=True)
+            session = make_session(root / "state")
+            session.snapshot["workspace"] = {"root": str(root), "repositories": []}
+            session.snapshot["selected_checkouts"] = {
+                "mncs-control-mcp": {"path": str(selected_provider), "head": "selected-head"}
+            }
+            capability = "mncs-control-mcp:workspace.worktree.prepare"
+            binding = capabilities.bind(
+                provider="mncs-control-mcp", capability=capability, contract_revision="2",
+                entrypoint="mncs-control-worktrees prepare", address="python:unused",
+                provider_root=str(stale_provider),
+            )
+            binding["availability"] = {"status": "available"}
+            session.snapshot["bindings"] = [binding]
+            with mock.patch.object(session, "invoke") as invoke:
+                with self.assertRaises(sessions.AuthorityDenied):
+                    session.provision_checkouts(
+                        capability,
+                        [{"repository": "mncs-fabric", "name": "campaign-fabric",
+                          "branch": "campaign/fabric"}],
+                    )
+            invoke.assert_not_called()
+
+    def test_observe_workspace_reports_dirty_selected_checkout_without_head_change(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "mncs-language" / ".worktrees" / "campaign"
+            checkout.mkdir(parents=True)
+            session = make_session(root / "state")
+            repository = "mncs-language"
+            selected = {
+                "repository": repository,
+                "path": str(checkout),
+                "branch": "campaign/parity",
+                "head": "same-head",
+                "clean": True,
+            }
+            clean_repo = {
+                "name": "mncs-language@campaign", "path": str(checkout),
+                "head": "same-head", "branch": "campaign/parity",
+                "dirty": False, "dirty_files": [], "dirty_truncated": False,
+            }
+            clean_workspace = {"root": str(root), "repositories": [clean_repo]}
+            session.snapshot["selected_checkouts"] = {repository: selected}
+            session.snapshot["workspace"] = clean_workspace
+            session.snapshot["workspace_heads"] = {repository: "same-head"}
+            session.snapshot["workspace_facts"] = sessions._workspace_change_facts(
+                clean_workspace, {repository: selected})
+
+            dirty_repo = {
+                **clean_repo, "dirty": True,
+                "dirty_files": [" M crates/mncs-embed/src/lib.rs"],
+            }
+            with mock.patch.object(
+                sessions.workspace_module, "discover_workspace",
+                return_value={"root": str(root), "repositories": [dirty_repo]},
+            ):
+                changes = session.observe_workspace(root)
+
+            self.assertEqual(len(changes), 1)
+            self.assertEqual(changes[0]["type"], "workspace.changed")
+            self.assertEqual(changes[0]["payload"]["repository"], repository)
+            self.assertEqual(changes[0]["payload"]["previous_head"], "same-head")
+            self.assertEqual(changes[0]["payload"]["current_head"], "same-head")
+            self.assertIn("clean", changes[0]["payload"]["changes"])
+            self.assertFalse(session.snapshot["selected_checkouts"][repository]["clean"])
+
+            with mock.patch.object(
+                sessions.workspace_module, "discover_workspace",
+                return_value={"root": str(root), "repositories": [dirty_repo]},
+            ):
+                self.assertEqual(session.observe_workspace(root), [])
+
     def test_lifecycle_table_sweep(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))
@@ -701,6 +1146,16 @@ class SessionTests(unittest.TestCase):
                 result = session.invoke("echoer", ["hi"], output_limit_bytes=131072)
             self.assertEqual(result["status"], "ok")
             self.assertEqual(invoke.call_args.kwargs["output_limit_bytes"], 131072)
+            artifact_directory = Path(
+                invoke.call_args.kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"]
+            )
+            self.assertTrue(artifact_directory.is_dir())
+            self.assertEqual(artifact_directory.parent.parent.parent.name, "sessions")
+            self.assertIn(session.session_id, artifact_directory.parts)
+            self.assertEqual(
+                session.snapshot["artifacts"][-1]["artifact_directory"],
+                str(artifact_directory),
+            )
             with self.assertRaises(capabilities.CapabilityError):
                 session.invoke(
                     "echoer", ["hi"],
@@ -739,6 +1194,76 @@ class SessionTests(unittest.TestCase):
             session.snapshot["authority"]["protected_repositories"] = ["mncs-atlas"]
             with self.assertRaises(sessions.AuthorityDenied):
                 session.invoke("writer", ["hi"])
+
+    def test_provider_write_uses_exact_selected_worktree_claim_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            checkout = "/selected/MNCS-Commons/.worktrees/campaign"
+            binding = capabilities.probe_availability(
+                capabilities.bind(
+                    provider="mncs-commons", capability="campaign-writer",
+                    contract_revision="1", entrypoint="e", address="/bin/echo",
+                    effects=["write"], provider_root=checkout,
+                    provenance={"checkout": {
+                        "path": checkout, "branch": "campaign/commons-parity",
+                    }},
+                ))
+            session.snapshot["bindings"].append(binding)
+            session.snapshot["selected_checkouts"] = {"MNCS-Commons": {
+                "path": checkout, "branch": "campaign/commons-parity",
+            }}
+            session.snapshot["claim_holders"]["MNCS-Commons"] = [{
+                "session_id": session.session_id,
+                "scope": {
+                    "kind": "worktree", "repository": "MNCS-Commons",
+                    "checkout": checkout, "branch": "campaign/commons-parity",
+                    "paths": None, "exclusive": False,
+                },
+            }]
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke",
+                return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
+            ) as invoke:
+                result = session.invoke("campaign-writer", ["fixture"])
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(invoke.call_count, 1)
+
+    def test_relative_worktree_claim_matches_bound_absolute_provider_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "worktrees" / "campaign"
+            checkout.mkdir(parents=True)
+            session = make_session(root)
+            session.snapshot["workspace"]["root"] = str(root)
+            session.snapshot["selected_checkouts"] = {"mncs-store": {
+                "path": "worktrees/campaign", "branch": "campaign/store",
+            }}
+            binding = capabilities.probe_availability(
+                capabilities.bind(
+                    provider="mncs-store", capability="campaign-writer",
+                    contract_revision="1", entrypoint="e", address="/bin/echo",
+                    effects=["write"], provider_root=str(checkout),
+                    provenance={"checkout": {
+                        "path": str(checkout), "branch": "campaign/store",
+                    }},
+                ))
+            session.snapshot["bindings"].append(binding)
+            claim = session.acquire_claim(
+                "mncs-store", basis=claims.BASIS_ADOPTION,
+                reason="adopt the campaign-owned selected checkout",
+                scope={"kind": "worktree", "checkout": "worktrees/campaign"},
+                checkout_facts={"head": "abc", "branch": "campaign/store",
+                                "dirty": True, "foreign_signals": ["campaign changes"]},
+            )
+            self.assertEqual(claim["scope"]["checkout"], str(checkout.resolve()))
+            self.assertEqual(claim["scope"]["branch"], "campaign/store")
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke",
+                return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
+            ) as invoke:
+                result = session.invoke("campaign-writer", ["fixture"])
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(invoke.call_count, 1)
 
     def test_checkpoint_handoff_resume(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -973,9 +1498,12 @@ class CLITests(unittest.TestCase):
         self.assertTrue(path.is_file())
         raw = json.loads(path.read_text())
         self.assertNotIn("/home", json.dumps(raw))
-        args = argparse.Namespace(workspace=None, definition=str(path))
+        args = argparse.Namespace(workspace=str(FAMILY), definition=str(path))
         resolved = cli.resolve_workspace_root(args, raw)
         self.assertEqual(Path(resolved).resolve(), FAMILY.resolve())
+        args.workspace = None
+        with self.assertRaisesRegex(ValueError, "explicit --workspace"):
+            cli.resolve_workspace_root(args, raw)
 
 
 class SourcesTests(unittest.TestCase):
@@ -1208,6 +1736,52 @@ class BriefingTests(unittest.TestCase):
             safety = [i for i in capsule["items"] if i["category"] == "safety"]
             self.assertTrue(safety)
             self.assertEqual(capsule["items"][0]["category"], "safety")
+
+
+class SelectedStoreProviderTests(unittest.TestCase):
+    def test_session_reopens_with_exact_selected_store_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workspace_root = root / "workspace"
+            checkout = workspace_root / "mncs-store" / ".worktrees" / "campaign"
+            package = checkout / "python"
+            init = package / "mncs_store" / "__init__.py"
+            init.parent.mkdir(parents=True)
+            init.write_text("", encoding="utf-8")
+
+            environment = {
+                "workspace": {"root": str(workspace_root)},
+                "selected_checkouts": {
+                    "mncs-store": {
+                        "path": str(checkout.relative_to(workspace_root)),
+                        "head": "abc123",
+                        "authoritative_head": "abc123",
+                        "branch": "campaign/store",
+                        "source_ref": "origin/main",
+                        "clean": True,
+                    }
+                },
+            }
+            binding = store_provider_from_environment(environment)
+            self.assertIsNotNone(binding)
+            assert binding is not None
+            self.assertEqual(binding["python_package"], str(package.resolve()))
+
+            state_dir = root / "state"
+            session_id = "ses_store_provider_test"
+            write_session_store_provider(state_dir, session_id, binding)
+            with mock.patch("mncs_env.session_store.StoreSessionStore") as store_ctor:
+                open_store(
+                    state_dir,
+                    "store",
+                    verify_on_open=False,
+                    session_id=session_id,
+                )
+            store_ctor.assert_called_once_with(
+                state_dir,
+                verify_on_open=False,
+                store_package_dir=str(package.resolve()),
+            )
 
 
 if __name__ == "__main__":

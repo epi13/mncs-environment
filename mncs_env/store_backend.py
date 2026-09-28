@@ -34,24 +34,36 @@ class StoreIntegrityFailure(Exception):
     """Raised when the Store reports failed verification or recovery need."""
 
 
-def _load_store_api():
-    package_dir = os.environ.get("MNCS_STORE_PYTHON")
+def _load_store_api(store_package_dir: str | Path | None = None):
+    package_dir = store_package_dir or os.environ.get("MNCS_STORE_PYTHON")
     if not package_dir:
         here = Path(__file__).resolve()
         candidate = here.parents[2] / "mncs-store" / "python"
         if (candidate / "mncs_store" / "__init__.py").is_file():
             package_dir = str(candidate)
-    if not package_dir or package_dir not in sys.path:
-        if package_dir:
+    if package_dir:
+        package_path = Path(package_dir).resolve()
+        if not (package_path / "mncs_store" / "__init__.py").is_file():
+            raise StoreUnavailable(
+                f"selected mncs-store Python package is unavailable: {package_path}"
+            )
+        package_dir = str(package_path)
+        existing_package = sys.modules.get("mncs_store")
+        existing_file = getattr(existing_package, "__file__", None)
+        if existing_file and not Path(existing_file).resolve().is_relative_to(package_path):
+            raise StoreUnavailable(
+                "a different mncs-store checkout is already loaded in this process"
+            )
+        if package_dir not in sys.path:
             sys.path.insert(0, package_dir)
     try:
         from mncs_store.embedded import EmbeddedStore  # noqa: E402
         from mncs_store.errors import StoreError, StoreResultCode  # noqa: E402
     except ImportError as error:
         raise StoreUnavailable(
-            "mncs-store consumer surface unavailable: set MNCS_STORE_PYTHON "
-            f"or keep mncs-store beside mncs-environment ({error})"
-        )
+            "mncs-store consumer surface unavailable: bind a selected mncs-store "
+            f"checkout or set MNCS_STORE_PYTHON ({error})"
+        ) from error
     return EmbeddedStore, StoreError, StoreResultCode
 
 
@@ -78,8 +90,14 @@ def _handoff_identity(session_id: str, handoff_id: str) -> bytes:
 class StoreBackend:
     """Durable session storage through mncs-store persistent objects."""
 
-    def __init__(self, state_dir: Path | str, *, verify_on_open: bool = True):
-        EmbeddedStore, StoreError, StoreResultCode = _load_store_api()
+    def __init__(
+        self,
+        state_dir: Path | str,
+        *,
+        verify_on_open: bool = True,
+        store_package_dir: str | Path | None = None,
+    ):
+        EmbeddedStore, StoreError, StoreResultCode = _load_store_api(store_package_dir)
         self._api = (EmbeddedStore, StoreError, StoreResultCode)
         self.state_dir = Path(state_dir)
         self.path = self.state_dir / "store"
@@ -151,11 +169,7 @@ class StoreBackend:
     def read_events(self, session_id: str) -> list[dict[str, Any]]:
         prefix = f"{session_id}:evt:".encode()
         found: list[tuple[int, dict[str, Any]]] = []
-        for item in self._store.current_objects():
-            if item.domain_schema != SCHEMA_EVENT:
-                continue
-            if not item.domain_identity.startswith(prefix):
-                continue
+        for item in self._store.find_bound_objects(SCHEMA_EVENT, prefix):
             try:
                 sequence = int(item.domain_identity[len(prefix):])
                 found.append((sequence, json.loads(item.payload.decode("utf-8"))))
@@ -177,11 +191,7 @@ class StoreBackend:
     def read_snapshot(self, session_id: str) -> dict[str, Any] | None:
         prefix = f"{session_id}:snap:".encode()
         best: tuple[int, dict[str, Any]] | None = None
-        for item in self._store.current_objects():
-            if item.domain_schema != SCHEMA_SNAPSHOT:
-                continue
-            if not item.domain_identity.startswith(prefix):
-                continue
+        for item in self._store.find_bound_objects(SCHEMA_SNAPSHOT, prefix):
             try:
                 revision = int(item.domain_identity[len(prefix):])
                 record = json.loads(item.payload.decode("utf-8"))
@@ -205,9 +215,7 @@ class StoreBackend:
 
     def read_claims(self) -> list[dict[str, Any]]:
         out = []
-        for item in self._store.current_objects():
-            if item.domain_schema != SCHEMA_CLAIM:
-                continue
+        for item in self._store.find_bound_objects(SCHEMA_CLAIM):
             try:
                 out.append(json.loads(item.payload.decode("utf-8")))
             except json.JSONDecodeError:
@@ -225,8 +233,17 @@ class StoreBackend:
         from mncs_store.errors import StoreError  # noqa: E402
 
         try:
-            item = self._store.get_bound_object(schema, identity)
+            item = next(
+                (
+                    candidate
+                    for candidate in self._store.find_bound_objects(schema, identity)
+                    if candidate.domain_identity == identity
+                ),
+                None,
+            )
         except StoreError:
+            return None
+        if item is None:
             return None
         try:
             record = json.loads(item.payload.decode("utf-8"))
@@ -253,9 +270,7 @@ class StoreBackend:
 
     def list_sessions(self) -> list[str]:
         found: set[str] = set()
-        for item in self._store.current_objects():
-            if item.domain_schema != SCHEMA_SNAPSHOT:
-                continue
+        for item in self._store.find_bound_objects(SCHEMA_SNAPSHOT):
             try:
                 identity = item.domain_identity.decode("utf-8")
             except UnicodeDecodeError:

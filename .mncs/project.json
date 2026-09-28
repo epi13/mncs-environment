@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs-family.repository-manifest/v0alpha1",
+  "repository": "mncs-environment",
+  "revision": 3,
+  "manifest_location": "in-repository",
+  "authority": {
+    "note": "mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration."
+  },
+  "verification": {
+    "schema_version": "mncs-family.verification-obligation-inventory/v1",
+    "test_runner_identity": "mncs-test/0.2.1"
+  },
+  "contracts": {
+    "provides": [],
+    "consumes": [],
+    "tests": [
+      {
+        "test": "environment-unit-tests",
+        "covers": [
+          "environment-session",
+          "environment-capabilities"
+        ],
+        "obligation": "self",
+        "command": {
+          "argv": [
+            "python3",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "tests",
+            "-p",
+            "test_environment.py",
+            "-v"
+          ],
+          "timeout_seconds": 300,
+          "toolchain": {"repository": "mncs-store", "path": "python"},
+          "toolchain_env": "MNCS_STORE_PYTHON"
+        }
+      },
+      {
+        "test": "selected-toolchain-binding",
+        "covers": [
+          "environment-capabilities"
+        ],
+        "command": {
+          "argv": [
+            "python3",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "tests",
+            "-p",
+            "test_environment.py",
+            "-k",
+            "manifest_test_toolchain",
+            "-v"
+          ],
+          "timeout_seconds": 60,
+          "toolchain": {"repository": "mncs-store", "path": "python"},
+          "toolchain_env": "MNCS_STORE_PYTHON"
+        }
+      },
+      {
+        "test": "environment-worktree-claim-paths",
+        "covers": [
+          "environment-session",
+          "environment-capabilities"
+        ],
+        "obligation": "self",
+        "command": {
+          "argv": [
+            "python3",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "tests",
+            "-p",
+            "test_environment.py",
+            "-k",
+            "relative_worktree_claim_matches_bound_absolute_provider_path",
+            "-v"
+          ],
+          "timeout_seconds": 60,
+          "toolchain": {"repository": "mncs-store", "path": "python"},
+          "toolchain_env": "MNCS_STORE_PYTHON"
+        }
+      }
+    ]
+  }
+}

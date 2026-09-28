@@ -34,7 +34,13 @@ from .identity import (
     resolved_environment_id,
 )
 from .intent import parse as parse_intent
-from .session_store import SessionStore, SequenceTaken, open_store
+from .session_store import (
+    SessionStore,
+    SequenceTaken,
+    open_store,
+    store_provider_from_environment,
+    write_session_store_provider,
+)
 
 SESSION_SCHEMA = "mncs.environment.session/2"
 ENVIRONMENT_SCHEMA = "mncs.environment.resolved/1"
@@ -101,6 +107,60 @@ def _repo_facts(workspace_view: dict[str, Any]) -> dict[str, dict[str, Any]]:
             "foreign_signals": [] if clean else ["dirty-tree"],
         }
     return facts
+
+
+def _workspace_change_facts(
+    workspace_view: dict[str, Any],
+    selected_checkouts: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Return bounded checkout-state facts used by workspace change events."""
+    repositories = workspace_view.get("repositories", [])
+
+    def facts_for(repo: dict[str, Any] | None, fallback: dict[str, Any] | None = None) -> dict[str, Any]:
+        fallback = fallback or {}
+        if repo is None:
+            return {
+                "branch": fallback.get("branch"),
+                "clean": False,
+                "missing": True,
+                "dirty_path_count": None,
+                "dirty_paths_digest": None,
+                "dirty_truncated": False,
+            }
+        dirty_paths = repo.get("dirty_files", [])
+        if not isinstance(dirty_paths, list):
+            dirty_paths = []
+        truncated = bool(repo.get("dirty_truncated", False))
+        return {
+            "branch": repo.get("branch"),
+            "clean": not bool(repo.get("dirty", False)),
+            "missing": False,
+            "dirty_path_count": len(dirty_paths),
+            "dirty_paths_digest": digest_hex({"paths": dirty_paths, "truncated": truncated}),
+            "dirty_truncated": truncated,
+        }
+
+    if selected_checkouts:
+        result: dict[str, dict[str, Any]] = {}
+        for name, selected in selected_checkouts.items():
+            selected_path = Path(str(selected.get("path", "")))
+            if not selected_path.is_absolute():
+                selected_path = Path(str(workspace_view.get("root", "."))) / selected_path
+            repo = next(
+                (item for item in repositories
+                 if Path(str(item.get("path", ""))).resolve() == selected_path.resolve()),
+                None,
+            )
+            state = facts_for(repo, selected)
+            state["head"] = repo.get("head") if repo is not None else selected.get("head")
+            result[name] = state
+        return result
+
+    return {
+        str(repo.get("name")): {**facts_for(repo), "head": repo.get("head")}
+        for repo in repositories
+        if repo.get("name")
+    }
 
 
 def _provider_managed_checkouts(
@@ -487,12 +547,26 @@ class Session:
         verify_on_open: bool = True,
         store: SessionStore | None = None,
     ) -> "Session":
-        store = store or open_store(state_dir, backend, verify_on_open=verify_on_open)
         rights_module.check_enter(
             [repo["name"] for repo in environment.get("workspace", {}).get("repositories", [])],
             environment.get("rights", {}),
         )
         session_id = new_session_id(environment["identity"], consumer_id)
+        store_provider = (
+            store_provider_from_environment(environment)
+            if store is None and backend == "store"
+            else None
+        )
+        store = store or open_store(
+            state_dir,
+            backend,
+            verify_on_open=verify_on_open,
+            store_package_dir=(
+                store_provider.get("python_package") if store_provider is not None else None
+            ),
+        )
+        if store_provider is not None:
+            write_session_store_provider(state_dir, session_id, store_provider)
         selected_checkouts = environment.get("selected_checkouts", {})
         workspace_heads = (
             {name: selected.get("head") for name, selected in selected_checkouts.items()}
@@ -521,6 +595,8 @@ class Session:
             "claim_holders": environment.get("claim_holders", {}),
             "bindings": environment.get("bindings", []),
             "workspace_heads": workspace_heads,
+            "workspace_facts": _workspace_change_facts(
+                environment.get("workspace", {}), selected_checkouts),
             "subscriptions": [],
             "artifacts": [],
             "decisions": [],
@@ -549,7 +625,12 @@ class Session:
         verify_on_open: bool = True, store: SessionStore | None = None,
     ) -> "Session":
         """Read-only open: loads state without appending any event."""
-        store = store or open_store(state_dir, backend, verify_on_open=verify_on_open)
+        store = store or open_store(
+            state_dir,
+            backend,
+            verify_on_open=verify_on_open,
+            session_id=session_id,
+        )
         return cls(store, session_id)
 
     @classmethod
@@ -659,6 +740,222 @@ class Session:
         self._save()
         return intent
 
+    def provision_checkouts(
+        self,
+        provider_capability: str,
+        requests: list[dict[str, str]],
+        *,
+        timeout_seconds: int = 180,
+    ) -> dict[str, Any]:
+        """Extend this session's exact checkout closure through its provider.
+
+        Environment composes the provider contract and validates the selected
+        facts. The provider remains responsible for resolving Git revisions
+        and creating or selecting worktrees. New checkouts become part of this
+        session's authority and capability-binding closure only after the
+        provider result agrees with a fresh workspace observation.
+        """
+        if self.snapshot.get("lifecycle") != "active":
+            raise LifecycleError("checkout provisioning requires an active session")
+        if not requests:
+            raise ValueError("checkout provisioning requires at least one request")
+        workspace_root_value = self.snapshot.get("workspace", {}).get("root")
+        if not isinstance(workspace_root_value, str) or not workspace_root_value:
+            raise ValueError("session has no resolved workspace root")
+        workspace_root = Path(workspace_root_value).resolve()
+
+        binding = self._binding(provider_capability)
+        provider_repository = str(binding.get("provider", ""))
+        selected_provider = self.snapshot.get("selected_checkouts", {}).get(provider_repository)
+        if not provider_repository or not isinstance(selected_provider, dict):
+            raise AuthorityDenied("checkout provider is not bound to a selected session checkout")
+        provider_path = Path(str(selected_provider.get("path", "")))
+        if not provider_path.is_absolute():
+            provider_path = workspace_root / provider_path
+        provider_path = provider_path.resolve()
+        if provider_path != Path(str(binding.get("provider_root", ""))).resolve():
+            raise AuthorityDenied("checkout provider binding does not match its selected checkout")
+        try:
+            provider_path.relative_to(workspace_root)
+        except ValueError as error:
+            raise AuthorityDenied("checkout provider escapes the session workspace") from error
+
+        expected: dict[str, dict[str, str]] = {}
+        normalized_requests: list[dict[str, str]] = []
+        protected = set(self.snapshot.get("intent", {}).get("protected_repositories", []))
+        selected = self.snapshot.get("selected_checkouts", {})
+        for request in requests:
+            if not isinstance(request, dict):
+                raise ValueError("checkout requests must be objects")
+            repository = str(request.get("repository", ""))
+            name = str(request.get("name", ""))
+            branch = str(request.get("branch", ""))
+            source_ref = str(request.get("source_ref", "origin/main"))
+            if not repository or not name or not branch:
+                raise ValueError("checkout requests need repository, name, and branch")
+            if repository in protected:
+                raise AuthorityDenied(f"{repository} is protected by this session intent")
+            if repository in selected:
+                raise ValueError(f"{repository} is already selected in this session")
+            if repository in expected:
+                raise ValueError(f"duplicate checkout request for {repository}")
+            if Path(name).is_absolute() or ".." in Path(name).parts or "/" in name or "\\" in name:
+                raise ValueError("checkout name must be a single safe path component")
+            relative_path = f"{repository}/.worktrees/{name}"
+            expected[repository] = {
+                "path": relative_path,
+                "branch": branch,
+                "source_ref": source_ref,
+            }
+            normalized_requests.append({
+                "repository": repository,
+                "name": name,
+                "branch": branch,
+                "source_ref": source_ref,
+            })
+
+        self._refresh_holders()
+        self.snapshot.setdefault("authority", {})["claim_holders"] = dict(
+            self.snapshot.get("claim_holders", {})
+        )
+        invocation = self.invoke(
+            provider_capability,
+            ["prepare", "--workspace-root", str(workspace_root), "--requests-json",
+             json.dumps(normalized_requests, separators=(",", ":"))],
+            cwd=provider_path,
+            timeout_seconds=timeout_seconds,
+            output_limit_bytes=256 * 1024,
+        )
+        if invocation.get("status") != "ok" or invocation.get("returncode") != 0:
+            raise ValueError(
+                f"checkout provider failed ({invocation.get('status')}): "
+                f"{str(invocation.get('stderr', ''))[:1000]}"
+            )
+        try:
+            result = json.loads(str(invocation.get("stdout", "")))
+        except json.JSONDecodeError as error:
+            raise ValueError("checkout provider returned invalid JSON") from error
+        rows = result.get("selected_checkouts") if isinstance(result, dict) else None
+        if (not isinstance(rows, list)
+                or {str(row.get("repository")) for row in rows if isinstance(row, dict)}
+                != set(expected)):
+            raise ValueError("checkout provider returned an incomplete checkout selection")
+
+        workspace = workspace_module.discover_workspace(workspace_root)
+        repositories = workspace.get("repositories", [])
+        selected_facts: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                raise ValueError("checkout provider returned a malformed selection")
+            repository = str(row.get("repository", ""))
+            requirement = expected[repository]
+            if row.get("path") != requirement["path"]:
+                raise ValueError(f"checkout provider selected an unexpected path for {repository}")
+            if (row.get("branch") != requirement["branch"]
+                    or row.get("source_ref") != requirement["source_ref"]):
+                raise ValueError(f"checkout provider selected an unexpected branch or ref for {repository}")
+            if (row.get("clean") is not True or not row.get("head")
+                    or row.get("head") != row.get("authoritative_head")):
+                raise ValueError(
+                    f"checkout provider did not select a clean authoritative checkout for {repository}"
+                )
+            selected_path = (workspace_root / requirement["path"]).resolve()
+            try:
+                selected_path.relative_to(workspace_root)
+            except ValueError as error:
+                raise ValueError(f"selected checkout escapes workspace for {repository}") from error
+            if (workspace_root / requirement["path"]).is_symlink():
+                raise ValueError(f"selected checkout is a symbolic link for {repository}")
+            observed = next(
+                (item for item in repositories
+                 if Path(str(item.get("path", ""))).resolve() == selected_path),
+                None,
+            )
+            if observed is None or observed.get("dirty") or observed.get("head") != row.get("head"):
+                raise ValueError(
+                    f"fresh workspace observation disagrees with provider selection for {repository}"
+                )
+            selected_facts[repository] = {
+                **row,
+                "path": requirement["path"],
+                "missing": False,
+            }
+
+        raw_intent = {
+            key: value for key, value in self.snapshot.get("intent", {}).items()
+            if key not in ("identity", "schema_version")
+        }
+        raw_intent["repositories"] = sorted(
+            set(raw_intent.get("repositories", [])) | set(selected_facts)
+        )
+        updated_intent = parse_intent(raw_intent)
+        merged = {**selected, **selected_facts}
+        workspace["selected_checkouts"] = merged
+        self.snapshot["intent"] = updated_intent
+        self.snapshot["selected_checkouts"] = merged
+        self.snapshot["workspace"] = workspace
+        self.snapshot["repo_facts"] = _repo_facts(workspace)
+        self.snapshot["authority"] = authority_module.build_context(
+            subject=self.snapshot.get("consumer_id", "unknown"),
+            intent=updated_intent,
+            protected_repos=self.snapshot.get("protected_repositories", []),
+            claim_holders=self.snapshot.get("claim_holders", {}),
+        )
+        self.snapshot["workspace_heads"] = {
+            **self.snapshot.get("workspace_heads", {}),
+            **{name: facts.get("head") for name, facts in selected_facts.items()},
+        }
+        self.snapshot["workspace_facts"] = _workspace_change_facts(workspace, merged)
+
+        language_root = None
+        language_facts = merged.get("mncs-language")
+        if isinstance(language_facts, dict):
+            language_root = Path(str(language_facts.get("path", "")))
+            if not language_root.is_absolute():
+                language_root = workspace_root / language_root
+        if language_root is not None:
+            candidates = (
+                language_root / "target" / "release" / "mncs",
+                language_root / "target" / "debug" / "mncs",
+            )
+            selected_binary = next((path for path in candidates if path.is_file()), candidates[-1])
+            self.snapshot["toolchain"] = {
+                "repository": "mncs-language",
+                "checkout": str(language_root.resolve()),
+                "revision": language_facts.get("head"),
+                "binary": str(selected_binary) if selected_binary.is_file() else None,
+                "status": "available" if selected_binary.is_file() else "unavailable",
+            }
+        self.revalidate()
+        self._emit(
+            "workspace.closure.extended", "environment",
+            {"provider": provider_capability,
+             "repositories": sorted(selected_facts),
+             "checkouts": [
+                 {"repository": name, "path": facts["path"], "head": facts["head"],
+                  "branch": facts["branch"]}
+                 for name, facts in sorted(selected_facts.items())
+             ]},
+        )
+        self._save()
+        return {"selected_checkouts": list(selected_facts.values()), "bindings": self.snapshot.get("bindings", [])}
+
+    def _canonical_scope(
+        self, repository: str, scope: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        if not scope or scope.get("kind") != "worktree":
+            return scope
+        checkout = scope.get("checkout")
+        if not isinstance(checkout, str) or not checkout:
+            return scope
+        path = Path(checkout)
+        workspace_root = self.snapshot.get("workspace", {}).get("root")
+        if not path.is_absolute() and isinstance(workspace_root, str) and workspace_root:
+            path = Path(workspace_root) / path
+        normalized = dict(scope)
+        normalized["checkout"] = str(path.resolve())
+        return normalized
+
     def check(
         self,
         *,
@@ -667,6 +964,8 @@ class Session:
         repo_facts: dict[str, dict[str, Any]] | None = None,
         scope: dict[str, Any] | None = None,
     ) -> dict[str, str]:
+        repository = target.split("/")[0] if "/" in target else target
+        normalized_scope = self._canonical_scope(repository, scope)
         verdict = authority_module.evaluate(
             self.snapshot.get("authority", {}),
             action=action,
@@ -674,7 +973,7 @@ class Session:
             session_id=self.session_id,
             claims=self.snapshot.get("claim_holders", {}),
             repo_facts=repo_facts if repo_facts is not None else self.snapshot.get("repo_facts", {}),
-            scope=scope,
+            scope=normalized_scope,
         )
         if verdict["verdict"] == "deny":
             self._emit("authority.denied", "environment",
@@ -756,7 +1055,7 @@ class Session:
         argv: list[str],
         *,
         cwd: str | Path | None = None,
-        timeout_seconds: int = 120,
+        timeout_seconds: int | None = None,
         output_limit_bytes: int = capabilities_module.DEFAULT_OUTPUT_LIMIT_BYTES,
         env: dict[str, str] | None = None,
     ) -> dict[str, Any]:
@@ -765,6 +1064,16 @@ class Session:
             output_limit_bytes
         )
         binding = self._binding(capability)
+        state_root = self.store.state_dir.resolve()
+        artifact_directory = (
+            state_root / "sessions" / self.session_id / "artifacts"
+            / digest_hex(capability)
+        ).resolve()
+        if not artifact_directory.is_relative_to(state_root):
+            raise SessionError("session artifact directory escapes the Environment state root")
+        artifact_directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        invocation_env = dict(env or {})
+        invocation_env["MNCS_ENV_SESSION_ARTIFACT_DIR"] = str(artifact_directory)
         if binding.get("availability", {}).get("status") != "available":
             raise AuthorityDenied(
                 f"capability {capability!r} is not available: "
@@ -777,7 +1086,30 @@ class Session:
             return self._pending(capability, argv, "invoke", verdict["reason"])
         required = authority_module.required_action_for_effects(binding.get("effects", ["read"]))
         if required != "read":
-            effect_verdict = self.check(action=required, target=binding.get("provider", capability))
+            provider = str(binding.get("provider", capability))
+            checkout = binding.get("provenance", {}).get("checkout", {})
+            checkout_path = checkout.get("path") or binding.get("provider_root")
+            effect_scope = None
+            if isinstance(checkout_path, str) and checkout_path:
+                selected_checkout = None
+                selected_path = Path(checkout_path).resolve()
+                workspace_root = self.snapshot.get("workspace", {}).get("root")
+                for repository, record in self.snapshot.get("selected_checkouts", {}).items():
+                    raw_selected = Path(str(record.get("path", "")))
+                    if not raw_selected.is_absolute() and workspace_root:
+                        raw_selected = Path(str(workspace_root)) / raw_selected
+                    if raw_selected.resolve() == selected_path:
+                        provider = str(repository)
+                        selected_checkout = record
+                        break
+                effect_scope = {"kind": "worktree", "checkout": str(selected_path)}
+                branch = checkout.get("branch") or (
+                    selected_checkout.get("branch") if selected_checkout else None
+                )
+                if isinstance(branch, str) and branch:
+                    effect_scope["branch"] = branch
+            effect_verdict = self.check(
+                action=required, target=provider, scope=effect_scope)
             if effect_verdict["verdict"] == "deny":
                 raise AuthorityDenied(effect_verdict["reason"])
             if effect_verdict["verdict"] == "escalate":
@@ -786,10 +1118,11 @@ class Session:
                    {"capability": capability, "argv": argv})
         result = capabilities_module.invoke(
             binding, argv, cwd=cwd, timeout_seconds=timeout_seconds,
-            output_limit_bytes=output_limit_bytes, env=env)
+            output_limit_bytes=output_limit_bytes, env=invocation_env)
         self.snapshot.setdefault("artifacts", []).append(
             {"kind": "invocation-result", "capability": capability,
-             "status": result["status"], "at": utcnow()}
+             "status": result["status"],
+             "artifact_directory": str(artifact_directory), "at": utcnow()}
         )
         self._emit("invocation.completed", binding.get("provider", "unknown"),
                    {"capability": capability, "status": result["status"],
@@ -837,16 +1170,21 @@ class Session:
         selected = self.snapshot.get("selected_checkouts", {}).get(repository)
         if selected is not None:
             if scope and scope.get("kind") == "worktree":
+                scope = self._canonical_scope(repository, scope)
                 requested = Path(str(scope.get("checkout", ""))).resolve()
                 observed = Path(str(selected.get("path", "")))
                 if not observed.is_absolute():
                     root = self.snapshot.get("workspace", {}).get("root")
                     if root:
                         observed = Path(str(root)) / observed
-                if requested != observed.resolve():
+                observed = observed.resolve()
+                if requested != observed:
                     raise ValueError(
                         f"claim checkout does not match the session-selected checkout for {repository}"
                     )
+                scope = dict(scope)
+                scope["checkout"] = str(observed)
+                scope.setdefault("branch", selected.get("branch"))
             if checkout_facts is None:
                 clean = bool(selected.get("clean", False))
                 checkout_facts = {
@@ -929,7 +1267,7 @@ class Session:
         return self._emit(event_type, producer, payload)
 
     def observe_workspace(self, workspace_root: str | Path) -> list[dict[str, Any]]:
-        """Adapter poll: head changes since resolution become workspace.changed events."""
+        """Adapter poll: selected checkout revision and state changes become events."""
         workspace = workspace_module.discover_workspace(workspace_root)
         if self.snapshot.get("selected_checkouts"):
             current_checkouts: dict[str, dict[str, Any]] = {}
@@ -963,15 +1301,26 @@ class Session:
                 for repo in workspace.get("repositories", [])
             }
         previous = self.snapshot.get("workspace_heads", {})
+        previous_states = self.snapshot.get("workspace_facts")
+        if not isinstance(previous_states, dict):
+            previous_states = _workspace_change_facts(
+                self.snapshot.get("workspace", {}),
+                self.snapshot.get("selected_checkouts", {}),
+            )
+        current_states = _workspace_change_facts(
+            workspace, current_checkouts if self.snapshot.get("selected_checkouts") else None)
         events, _ = events_module.git_poll_events(
             session_id=self.session_id,
             sequence_start=len(self._log()) + 1,
             previous_heads=previous,
             current_heads=current,
+            previous_states=previous_states,
+            current_states=current_states,
         )
         for event in events:
             self._emit(event["type"], event["producer"], event["payload"])
         self.snapshot["workspace_heads"] = current
+        self.snapshot["workspace_facts"] = current_states
         if self.snapshot.get("selected_checkouts"):
             workspace["selected_checkouts"] = self.snapshot["selected_checkouts"]
         self.snapshot["workspace"] = workspace
@@ -1022,21 +1371,97 @@ class Session:
         return event
 
     def revalidate(self) -> dict[str, Any]:
-        """Re-probe bindings and refresh claims; divergence becomes typed events."""
-        report: dict[str, Any] = {"reprobed": 0, "changed": []}
-        for binding in self.snapshot.get("bindings", []):
-            before = binding.get("availability", {}).get("status")
+        """Refresh selected providers, reprobe bindings, and reconcile claims."""
+        workspace_root = self.snapshot.get("workspace", {}).get("root")
+        if workspace_root:
+            self.observe_workspace(workspace_root)
+
+        old_bindings = list(self.snapshot.get("bindings", []))
+        selected = self.snapshot.get("selected_checkouts", {})
+        discovered = old_bindings
+        if workspace_root and selected:
+            roots: dict[str, Path] = {}
+            facts: dict[str, dict[str, Any]] = {}
+            for repository, record in sorted(selected.items()):
+                raw_path = Path(str(record.get("path", "")))
+                path = raw_path if raw_path.is_absolute() else Path(workspace_root) / raw_path
+                path = path.resolve()
+                try:
+                    path.relative_to(Path(workspace_root).resolve())
+                except ValueError:
+                    continue
+                if record.get("missing") or path.is_symlink() or not path.is_dir():
+                    continue
+                roots[str(repository)] = path
+                facts[str(repository)] = dict(record, path=str(path))
+            language_binary: Path | str = "/nonexistent/mncs-language/mncs"
+            if "mncs-language" in roots:
+                candidates = (
+                    roots["mncs-language"] / "target" / "release" / "mncs",
+                    roots["mncs-language"] / "target" / "debug" / "mncs",
+                )
+                language_binary = next(
+                    (item for item in candidates if item.is_file()), candidates[-1]
+                )
+            discovered = capabilities_module.discover_capabilities(
+                workspace_root,
+                repository_roots=roots,
+                checkout_facts=facts,
+                language_binary=language_binary,
+            )
+
+        prior_by_key = {(item.get("provider"), item.get("capability")): item
+                        for item in old_bindings}
+        current_by_key = {(item.get("provider"), item.get("capability")): item
+                          for item in discovered}
+        binding_fields = (
+                "contract_revision", "entrypoint", "address", "effects", "toolchain_address",
+                "toolchain_env", "fixed_argv", "fixed_env", "timeout_seconds", "working_directory", "provenance",
+            "provider_root",
+        )
+        report: dict[str, Any] = {
+            "reprobed": 0, "changed": [], "bound": [], "unbound": []
+        }
+        for key, binding in current_by_key.items():
+            previous = prior_by_key.get(key)
+            if previous is None:
+                report["bound"].append(binding.get("capability"))
+                self._emit("capability.bound", "environment",
+                           {"capability": binding.get("capability"),
+                            "provider": binding.get("provider"),
+                            "provider_root": binding.get("provider_root")})
+            elif any(previous.get(field) != binding.get(field) for field in binding_fields):
+                self._emit("capability.changed", "environment",
+                           {"capability": binding.get("capability"),
+                            "provider": binding.get("provider"),
+                            "previous_revision": previous.get("contract_revision"),
+                            "current_revision": binding.get("contract_revision"),
+                            "provider_root": binding.get("provider_root")})
+        for key, previous in prior_by_key.items():
+            if key not in current_by_key:
+                report["unbound"].append(previous.get("capability"))
+                self._emit("capability.unbound", "environment",
+                           {"capability": previous.get("capability"),
+                            "provider": previous.get("provider"),
+                            "provider_root": previous.get("provider_root")})
+
+        new_bindings = []
+        for binding in discovered:
+            before = prior_by_key.get((binding.get("provider"), binding.get("capability")), {})
+            before_status = before.get("availability", {}).get("status")
             fresh = capabilities_module.probe_availability(binding)
-            binding["availability"] = fresh["availability"]
+            new_bindings.append(fresh)
             report["reprobed"] += 1
-            if fresh["availability"]["status"] != before:
+            if fresh["availability"]["status"] != before_status:
                 report["changed"].append(binding["capability"])
                 self._emit(
                     "capability.available" if fresh["availability"]["status"] == "available"
                     else "capability.unavailable",
                     "environment",
-                    {"capability": binding["capability"], "previous": before},
+                    {"capability": binding["capability"], "previous": before_status},
                 )
+        if selected:
+            self.snapshot["bindings"] = new_bindings
         holders = claims_module.holders(self.store.read_claims())
         if holders != self.snapshot.get("claim_holders", {}):
             self._emit("adapter.observed", "environment",

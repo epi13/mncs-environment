@@ -11,6 +11,7 @@ checked by the session before this module ever spawns a process.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from datetime import datetime, timezone
@@ -83,6 +84,10 @@ def bind(
     provider_root: str | None = None,
     toolchain_address: str | None = None,
     toolchain_env: str | None = None,
+    fixed_argv: list[str] | None = None,
+    fixed_env: dict[str, str] | None = None,
+    timeout_seconds: int | None = None,
+    working_directory: str | None = None,
 ) -> dict[str, Any]:
     """Construct a binding record (availability is observed separately)."""
     return {
@@ -96,11 +101,53 @@ def bind(
         "address": address,
         "toolchain_address": toolchain_address,
         "toolchain_env": toolchain_env,
+        "fixed_argv": list(fixed_argv or []),
+        "fixed_env": dict(fixed_env or {}),
+        "timeout_seconds": timeout_seconds,
+        "working_directory": working_directory,
         "effects": list(effects or ["read"]),
         "event_types": list(event_types if event_types is not None else ["unknown"]),
         "availability": {"status": "unknown", "reason": "not yet probed", "observed_at": None},
         "provenance": provenance or {},
     }
+
+
+_PROTECTED_TOOLCHAIN_ENV = {
+    "PATH", "HOME", "LD_PRELOAD", "LD_LIBRARY_PATH",
+    "DYLD_INSERT_LIBRARIES", "PYTHONHOME", "PYTHONSTARTUP",
+    "PYTHONINSPECT", "BASH_ENV", "ENV",
+}
+
+
+def _selected_repository_toolchain(
+    toolchain: Any,
+    workspace: Path,
+    repository_roots: dict[str, Path] | None,
+) -> str | None:
+    """Resolve a repository toolchain only from the active checkout closure."""
+    if not isinstance(toolchain, dict):
+        return None
+    repository = toolchain.get("repository")
+    relative_raw = toolchain.get("path", ".")
+    if not isinstance(repository, str) or not repository:
+        return None
+    if not isinstance(relative_raw, str) or not relative_raw:
+        return None
+    relative = Path(relative_raw)
+    if relative.is_absolute() or ".." in relative.parts:
+        return None
+    base = (repository_roots or {}).get(repository)
+    if base is None:
+        if repository_roots is not None:
+            return None
+        base = workspace / repository
+    base = Path(base).resolve()
+    candidate = (base / relative).resolve()
+    try:
+        candidate.relative_to(base)
+    except ValueError:
+        return None
+    return str(candidate) if candidate.exists() else None
 
 
 def descriptor_invocation(
@@ -112,6 +159,7 @@ def descriptor_invocation(
     """Resolve a provider-declared ``invocation`` block, if usable.
 
     Returns ``{"address", "toolchain_address", "toolchain_env",
+    "fixed_argv",
     "addressing"}``. ``addressing`` is ``"descriptor"`` when the entry
     carries a usable declaration, else ``"none"``. Paths in ``path``
     are repo-relative; ``toolchain`` can be a workspace-relative file path
@@ -121,9 +169,14 @@ def descriptor_invocation(
     unparsable or missing resolves to ``"none"`` -- never a guess.
     """
     empty = {"address": None, "toolchain_address": None,
-             "toolchain_env": None, "addressing": "none"}
+             "toolchain_env": None, "fixed_argv": [], "addressing": "none"}
     spec = entry.get("invocation")
     if not isinstance(spec, dict):
+        return empty
+    fixed_argv = spec.get("fixed_argv", [])
+    if not isinstance(fixed_argv, list) or any(
+        not isinstance(argument, str) for argument in fixed_argv
+    ):
         return empty
     kind = spec.get("kind")
     address: str | None = None
@@ -143,27 +196,17 @@ def descriptor_invocation(
     toolchain_env = str(spec.get("toolchain_env", "MNCS"))
     toolchain = spec.get("toolchain")
     if isinstance(toolchain, dict):
-        repository = str(toolchain.get("repository", ""))
-        relative = Path(str(toolchain.get("path", ".")))
-        base = (repository_roots or {}).get(repository)
-        if base is None and repository:
-            base = workspace / repository
-        if base is not None and repository and not relative.is_absolute():
-            base = Path(base).resolve()
-            candidate = (base / relative).resolve()
-            try:
-                candidate.relative_to(base)
-            except ValueError:
-                candidate = None
-            if candidate is not None and candidate.exists():
-                toolchain_address = str(candidate)
+        toolchain_address = _selected_repository_toolchain(
+            toolchain, workspace, repository_roots
+        )
     elif isinstance(toolchain, str) and toolchain:
         raw = Path(toolchain)
         candidate = raw if raw.is_absolute() else workspace / raw
         if candidate.is_file():
             toolchain_address = str(candidate)
     return {"address": address, "toolchain_address": toolchain_address,
-            "toolchain_env": toolchain_env, "addressing": "descriptor"}
+            "toolchain_env": toolchain_env, "fixed_argv": list(fixed_argv),
+            "addressing": "descriptor"}
 
 
 def probe_availability(binding: dict[str, Any]) -> dict[str, Any]:
@@ -240,6 +283,7 @@ def discover_capabilities(
         discovered = [
             *_from_semantic_contracts(repo, root, language_bin, repository_roots),
             *_from_manifest(repo, root, language_bin, repository_roots),
+            *_from_verification_inventory(repo),
         ]
         repository = next(
             (name for name, selected in (repository_roots or {}).items()
@@ -256,6 +300,125 @@ def discover_capabilities(
         bindings.extend(discovered)
     bindings.sort(key=lambda item: (item["provider"], item["capability"]))
     return bindings
+
+
+def _from_verification_inventory(repo: Path) -> list[dict[str, Any]]:
+    """Bind safe, repository-owned Python integration obligations.
+
+    The repository manifest names the inventory and each inventory entry
+    names its executor. Environment exposes that declared executor as a
+    capability; it does not reinterpret the test or verification semantics.
+    Only a direct Python script owned by the same checkout is addressable.
+    """
+    manifest_path = repo / ".mncs" / "project.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    verification = manifest.get("verification") if isinstance(manifest, dict) else None
+    inventory_name = (
+        verification.get("obligation_inventory")
+        if isinstance(verification, dict) else None
+    )
+    if not isinstance(inventory_name, str) or not inventory_name:
+        return []
+    relative_inventory = Path(inventory_name)
+    if relative_inventory.is_absolute() or ".." in relative_inventory.parts:
+        return []
+    inventory_path = (repo / relative_inventory).resolve()
+    try:
+        inventory_path.relative_to(repo.resolve())
+        inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    except (ValueError, OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(inventory, dict) or inventory.get("repository") != manifest.get("repository"):
+        return []
+    obligations = inventory.get("obligations")
+    if not isinstance(obligations, list):
+        return []
+    inventory_digest = digest_hex(inventory)
+    out: list[dict[str, Any]] = []
+    for obligation in obligations:
+        if not isinstance(obligation, dict):
+            continue
+        identity = obligation.get("identity")
+        executor = obligation.get("executor")
+        if not isinstance(identity, str) or not identity or not isinstance(executor, dict):
+            continue
+        if executor.get("provider") != manifest.get("repository"):
+            continue
+        if executor.get("kind") != "external_integration":
+            continue
+        argv = executor.get("argv")
+        if not isinstance(argv, list) or len(argv) < 2:
+            continue
+        interpreter = str(argv[0])
+        suffix_by_interpreter = {"python3": ".py", "bash": ".sh"}
+        suffix = suffix_by_interpreter.get(interpreter)
+        if suffix is None:
+            continue
+        script_relative = Path(str(argv[1]))
+        if (script_relative.is_absolute() or ".." in script_relative.parts
+                or script_relative.suffix != suffix):
+            continue
+        script = (repo / script_relative).resolve()
+        try:
+            script.relative_to(repo.resolve())
+        except ValueError:
+            continue
+        if not script.is_file():
+            continue
+        working_directory = str(executor.get("working_directory", "."))
+        relative_working_directory = Path(working_directory)
+        if relative_working_directory.is_absolute() or ".." in relative_working_directory.parts:
+            continue
+        working_root = (repo / relative_working_directory).resolve()
+        try:
+            working_root.relative_to(repo.resolve())
+        except ValueError:
+            continue
+        if not working_root.is_dir():
+            continue
+        timeout = executor.get("timeout_seconds", 120)
+        if type(timeout) is not int or timeout < 1 or timeout > 86400:
+            continue
+        entrypoint = str(executor.get("entrypoint", f"{interpreter} {script_relative.as_posix()}"))
+        if interpreter == "python3":
+            address = "python:" + str(script)
+            fixed_argv = [str(item) for item in argv[2:]]
+        else:
+            address = shutil.which(interpreter)
+            if not address:
+                continue
+            fixed_argv = [str(script), *[str(item) for item in argv[2:]]]
+        revision = digest_hex({
+            "inventory": inventory_digest,
+            "obligation": obligation,
+            "script": str(script_relative),
+        })
+        capability = f"{manifest['repository']}:verification-executor/{identity}"
+        out.append(bind(
+            provider=str(manifest["repository"]),
+            capability=capability,
+            contract_revision=revision,
+            entrypoint=entrypoint,
+            address=address,
+            effects=["write"],
+            event_types=["verification.completed"],
+            provenance={
+                "source": str(relative_inventory),
+                "obligation_identity": identity,
+                "executor_identity": digest_hex(executor),
+                "inventory_revision": inventory.get("revision"),
+                "working_directory": working_directory,
+                "addressing": "declared-verification-inventory",
+            },
+            provider_root=str(repo.resolve()),
+            fixed_argv=fixed_argv,
+            timeout_seconds=timeout,
+            working_directory=str(working_root),
+        ))
+    return out
 
 
 def _from_semantic_contracts(
@@ -295,6 +458,11 @@ def _from_semantic_contracts(
         else:
             address = _address(entrypoint, workspace, language_bin)
             addressing = "bootstrap" if address else "none"
+        effects = entry.get("effects", ["read"])
+        if (not isinstance(effects, list) or not effects
+                or any(effect not in {"read", "write", "execute", "publish"}
+                       for effect in effects)):
+            continue
         record = bind(
             provider=repository_id,
             capability=contract,
@@ -303,7 +471,8 @@ def _from_semantic_contracts(
             address=address,
             toolchain_address=declared["toolchain_address"],
             toolchain_env=declared["toolchain_env"],
-            effects=["read"],
+            fixed_argv=declared["fixed_argv"],
+            effects=[str(effect) for effect in effects],
             event_types=["unknown"],
             provenance={"source": f"{repo.name}/family-semantic-contracts-v1.json",
                         "status": entry.get("status"), "addressing": addressing},
@@ -334,7 +503,7 @@ def _from_manifest(
     if not isinstance(declared_tests, list):
         declared_tests = []
     if not isinstance(provides, list):
-        return []
+        provides = []
     for entry in provides:
         if not isinstance(entry, dict):
             continue
@@ -381,6 +550,114 @@ def _from_manifest(
             provider_root=str(repo),
         )
         out.append(record)
+    out.extend(_manifest_test_bindings(
+        repo, repository_id, payload, declared_tests, workspace, repository_roots
+    ))
+    return out
+
+
+def _manifest_test_bindings(
+    repo: Path,
+    repository_id: str,
+    manifest: dict[str, Any],
+    tests: list[Any],
+    workspace: Path,
+    repository_roots: dict[str, Path | str] | None,
+) -> list[dict[str, Any]]:
+    """Bind repository-declared test commands to their selected checkout.
+
+    Test commands are fixed argv, run from the provider checkout, and carry
+    write effects because build tools may update local caches or test outputs.
+    The session must therefore hold a claim scoped to this exact worktree.
+    """
+    manifest_revision = digest_hex(manifest)
+    out: list[dict[str, Any]] = []
+    for test in tests:
+        if not isinstance(test, dict):
+            continue
+        identity = test.get("test")
+        command = test.get("command")
+        argv = command.get("argv") if isinstance(command, dict) else None
+        if (not isinstance(identity, str) or not identity
+                or not isinstance(argv, list) or not argv
+                or not all(isinstance(item, str) and item for item in argv)):
+            continue
+        address = shutil.which(argv[0])
+        if not address:
+            continue
+        timeout = command.get("timeout_seconds", 120)
+        if type(timeout) is not int or timeout < 1 or timeout > 86400:
+            continue
+        fixed_env = command.get("environment", {})
+        if not isinstance(fixed_env, dict) or len(fixed_env) > 32:
+            continue
+        protected_env = {
+            "PATH", "HOME", "LD_PRELOAD", "LD_LIBRARY_PATH",
+            "DYLD_INSERT_LIBRARIES", "PYTHONHOME", "PYTHONSTARTUP",
+            "PYTHONINSPECT", "BASH_ENV", "ENV",
+        }
+        if any(
+            not isinstance(key, str)
+            or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,127}", key)
+            or key in protected_env
+            or not isinstance(value, str)
+            or len(value) > 4096
+            or "\x00" in value
+            for key, value in fixed_env.items()
+        ):
+            continue
+        toolchain = command.get("toolchain")
+        toolchain_address: str | None = None
+        toolchain_env: str | None = None
+        if toolchain is not None:
+            declared_env = command.get("toolchain_env")
+            if (
+                not isinstance(toolchain, dict)
+                or not isinstance(declared_env, str)
+                or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,127}", declared_env)
+                or declared_env in protected_env
+            ):
+                continue
+            roots = (
+                {name: Path(selected) for name, selected in repository_roots.items()}
+                if repository_roots is not None else None
+            )
+            toolchain_address = _selected_repository_toolchain(
+                toolchain, workspace, roots
+            )
+            if toolchain_address is None:
+                continue
+            toolchain_env = declared_env
+        revision = digest_hex({"manifest": manifest_revision, "test": test})
+        coverage = test.get("covers", [])
+        invalidation_dependencies = test.get("invalidation_dependencies", [])
+        out.append(bind(
+            provider=repository_id,
+            capability=f"{repository_id}:test/{identity}",
+            contract_revision=revision,
+            entrypoint=" ".join(argv),
+            address=address,
+            effects=["write"],
+            event_types=["verification.completed"],
+            provenance={
+                "source": f"{repo.name}/.mncs/project.json",
+                "kind": "manifest-test-command",
+                "test_identity": identity,
+                "coverage": list(coverage) if isinstance(coverage, list) else [],
+                "invalidation_dependencies": (
+                    list(invalidation_dependencies)
+                    if isinstance(invalidation_dependencies, list) else []
+                ),
+                "addressing": "fixed-manifest-argv",
+            },
+            provider_root=str(repo.resolve()),
+            fixed_argv=[str(item) for item in argv[1:]],
+            fixed_env={str(key): str(value) for key, value in fixed_env.items()},
+            toolchain_address=toolchain_address,
+            toolchain_env=toolchain_env,
+            timeout_seconds=timeout,
+            working_directory=str(repo.resolve()),
+        ))
     return out
 
 
@@ -406,15 +683,15 @@ def invoke(
     argv: list[str],
     *,
     cwd: Path | str | None = None,
-    timeout_seconds: int = 120,
+    timeout_seconds: int | None = None,
     output_limit_bytes: int = DEFAULT_OUTPUT_LIMIT_BYTES,
     env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Invoke a bound capability (transport only; authority checked by caller).
 
     Returns a result envelope; provider semantics stay provider-owned.
-    A binding-resolved ``toolchain_address`` is exported under
-    ``toolchain_env``; explicit ``env`` entries win over it.
+    Manifest-declared ``fixed_env`` entries are applied first, then the
+    binding-resolved toolchain address, then explicit invocation overrides.
     """
     output_limit_bytes = validate_output_limit_bytes(output_limit_bytes)
     address = binding.get("address")
@@ -425,28 +702,32 @@ def invoke(
         if script.endswith("__main__.py") and Path(script).is_file():
             command = ["python3", "-m", Path(script).parent.name, *argv]
         elif script.endswith(".py") and Path(script).is_file():
-            command = ["python3", script, *argv]
+            command = ["python3", script, *binding.get("fixed_argv", []), *argv]
         else:
             module = script.replace("python -m ", "").split()[0]
-            command = ["python3", "-m", module, *argv]
+            command = ["python3", "-m", module, *binding.get("fixed_argv", []), *argv]
     else:
-        command = [address, *argv]
-    if cwd is None and binding.get("provider_root"):
-        cwd = binding["provider_root"]
+        command = [address, *binding.get("fixed_argv", []), *argv]
+    if cwd is None:
+        cwd = binding.get("working_directory") or binding.get("provider_root")
     child_env: dict[str, str] | None = None
     toolchain_address = binding.get("toolchain_address")
     toolchain_env = binding.get("toolchain_env")
-    if (toolchain_address and toolchain_env) or env:
+    fixed_env = binding.get("fixed_env", {})
+    if fixed_env or (toolchain_address and toolchain_env) or env:
         import os
         child_env = dict(os.environ)
+        if fixed_env:
+            child_env.update({str(key): str(value) for key, value in fixed_env.items()})
         if toolchain_address and toolchain_env:
             child_env[str(toolchain_env)] = str(toolchain_address)
         if env:
             child_env.update(env)
     try:
+        effective_timeout = timeout_seconds or binding.get("timeout_seconds") or 120
         return _run_bounded(
             binding, command, cwd=str(cwd) if cwd else None,
-            timeout_seconds=timeout_seconds, output_limit_bytes=output_limit_bytes,
+            timeout_seconds=effective_timeout, output_limit_bytes=output_limit_bytes,
             env=child_env,
         )
     except OSError as error:
@@ -476,16 +757,20 @@ def _run_bounded(
     and drops the middle, so a chatty provider cannot exhaust memory. Exit
     status and tail diagnostics are always preserved.
     """
+    import os
     import selectors
+    import signal
     import time
 
     head_each = output_limit_bytes // 2
     deadline = time.monotonic() + timeout_seconds
     process = subprocess.Popen(
         command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        env=env,
+        env=env, start_new_session=(os.name == "posix"),
     )
     assert process.stdout is not None and process.stderr is not None
+    os.set_blocking(process.stdout.fileno(), False)
+    os.set_blocking(process.stderr.fileno(), False)
     buffers = {process.stdout: bytearray(), process.stderr: bytearray()}
     totals = {process.stdout: 0, process.stderr: 0}
     selector = selectors.DefaultSelector()
@@ -499,7 +784,10 @@ def _run_bounded(
                 timed_out = True
                 break
             for key, _ in selector.select(timeout=min(remaining, 0.5)):
-                chunk = key.fileobj.read(65536)
+                try:
+                    chunk = os.read(key.fileobj.fileno(), 65536)
+                except BlockingIOError:
+                    continue
                 if not chunk:
                     selector.unregister(key.fileobj)
                     continue
@@ -512,9 +800,17 @@ def _run_bounded(
                 break
     finally:
         if timed_out or process.poll() is None:
-            process.kill()
+            if os.name == "posix":
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            else:
+                process.kill()
         process.wait()
         selector.close()
+        process.stdout.close()
+        process.stderr.close()
     stdout = buffers[process.stdout].decode("utf-8", "replace")
     stderr = buffers[process.stderr].decode("utf-8", "replace")
     truncated = totals[process.stdout] > head_each or totals[process.stderr] > head_each

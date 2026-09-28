@@ -89,6 +89,5 @@
   },
   "name": "mncs-compiler-campaign",
   "protected_repositories": ["mncs-memory"],
-  "rights_claims": [],
-  "workspace_root": "../../.."
+  "rights_claims": []
 }

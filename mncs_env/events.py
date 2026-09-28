@@ -33,6 +33,8 @@ TYPES = (
     "workspace.changed",
     "workspace.protection_raised",
     "capability.bound",
+    "capability.changed",
+    "capability.unbound",
     "capability.available",
     "capability.unavailable",
     "capability.invoked",
@@ -126,24 +128,47 @@ def git_poll_events(
     sequence_start: int,
     previous_heads: dict[str, str | None],
     current_heads: dict[str, str | None],
+    previous_states: dict[str, dict[str, Any]] | None = None,
+    current_states: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
-    """Adapter: head changes between two workspace observations become events.
+    """Adapter: checkout revision and state changes become workspace events.
 
     Explicitly an adapter (polling), not canonical provider events. Callers
-    record these with producer "adapter:git-poll".
+    record these with producer "adapter:git-poll". State facts include such
+    things as branch, cleanliness, and missing-checkout status, which can
+    change while HEAD remains constant.
     """
+    previous_states = previous_states or {}
+    current_states = current_states or {}
     events: list[dict[str, Any]] = []
     sequence = sequence_start
-    for repo in sorted(set(previous_heads) | set(current_heads)):
+    for repo in sorted(set(previous_heads) | set(current_heads) |
+                       set(previous_states) | set(current_states)):
         before, after = previous_heads.get(repo), current_heads.get(repo)
-        if before != after:
+        before_state = previous_states.get(repo, {})
+        after_state = current_states.get(repo, {})
+        changed_state = sorted(
+            key for key in (set(before_state) | set(after_state)) - {"head"}
+            if before_state.get(key) != after_state.get(key)
+        )
+        if before != after or changed_state:
+            payload = {
+                "repository": repo,
+                "previous_head": before,
+                "current_head": after,
+                "changes": (["head"] if before != after else []) + changed_state,
+            }
+            if before_state:
+                payload["previous_state"] = before_state
+            if after_state:
+                payload["current_state"] = after_state
             events.append(
                 make(
                     session_id=session_id,
                     sequence=sequence,
                     event_type="workspace.changed",
                     producer="adapter:git-poll",
-                    payload={"repository": repo, "previous_head": before, "current_head": after},
+                    payload=payload,
                 )
             )
             sequence += 1

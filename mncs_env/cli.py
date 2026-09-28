@@ -43,14 +43,20 @@ def load_definition(path: Path) -> dict:
 
 
 def resolve_workspace_root(args: argparse.Namespace, definition: dict) -> str:
-    """Workspace root for a command: explicit flag wins, then the definition.
+    """Workspace root for a command.
 
     A relative ``workspace_root`` in the definition resolves against the
-    definition file's directory, so checked-in definitions stay portable
-    (no absolute paths, any cwd). An absent value means the current directory.
+    definition file's directory. Provider-bound definitions must receive an
+    explicit root from their caller because the provider owns workspace
+    selection; inferring it from the definition's checkout can select the
+    wrong workspace when that checkout is nested or isolated.
     """
     if args.workspace:
         return args.workspace
+    if definition.get("workspace_provider"):
+        raise ValueError(
+            "provider-bound definitions require an explicit --workspace root"
+        )
     declared = definition.get("workspace_root", ".")
     if not isinstance(declared, str) or not declared:
         return "."
@@ -65,7 +71,10 @@ def resolve_workspace_root(args: argparse.Namespace, definition: dict) -> str:
 
 def cmd_resolve(args: argparse.Namespace) -> int:
     definition = load_definition(args.definition)
-    workspace_root = resolve_workspace_root(args, definition)
+    try:
+        workspace_root = resolve_workspace_root(args, definition)
+    except ValueError as error:
+        return fail(str(error))
     store = open_store(args.state_dir, args.persistence)
     try:
         environment = sessions_module.resolve_environment(
@@ -83,7 +92,10 @@ def cmd_resolve(args: argparse.Namespace) -> int:
 
 def cmd_enter(args: argparse.Namespace) -> int:
     definition = load_definition(args.definition)
-    workspace_root = resolve_workspace_root(args, definition)
+    try:
+        workspace_root = resolve_workspace_root(args, definition)
+    except ValueError as error:
+        return fail(str(error))
     store = open_store(args.state_dir, args.persistence)
     try:
         environment = sessions_module.resolve_environment(

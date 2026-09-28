@@ -18,6 +18,97 @@ class SequenceTaken(Exception):
     """Another writer committed a different record at this sequence/revision."""
 
 
+STORE_PROVIDER_SCHEMA = "mncs.environment.session-store-provider/1"
+
+
+def store_provider_from_environment(environment: dict[str, Any]) -> dict[str, Any] | None:
+    """Project the selected Store checkout into a small resume bootstrap record."""
+    selected_checkouts = environment.get("selected_checkouts", {})
+    selected = selected_checkouts.get("mncs-store") if isinstance(selected_checkouts, dict) else None
+    if selected is None:
+        return None
+    if not isinstance(selected, dict):
+        raise ValueError("selected mncs-store checkout facts must be an object")
+
+    workspace = environment.get("workspace", {})
+    workspace_root_value = workspace.get("root") if isinstance(workspace, dict) else None
+    checkout_value = selected.get("path")
+    if not isinstance(workspace_root_value, str) or not workspace_root_value:
+        raise ValueError("selected mncs-store checkout has no Environment workspace root")
+    if not isinstance(checkout_value, str) or not checkout_value:
+        raise ValueError("selected mncs-store checkout has no provider-owned path")
+    revision = selected.get("head")
+    if not isinstance(revision, str) or not revision:
+        raise ValueError("selected mncs-store checkout has no bound revision")
+
+    workspace_root = Path(workspace_root_value).resolve()
+    checkout = Path(checkout_value)
+    if not checkout.is_absolute():
+        checkout = workspace_root / checkout
+    checkout = checkout.resolve()
+    if not checkout.is_relative_to(workspace_root):
+        raise ValueError("selected mncs-store checkout escapes the Environment workspace")
+    python_package = (checkout / "python").resolve()
+    if not python_package.is_relative_to(checkout):
+        raise ValueError("selected mncs-store Python package escapes its checkout")
+    if not (python_package / "mncs_store" / "__init__.py").is_file():
+        raise ValueError(f"selected mncs-store package is unavailable at {python_package}")
+
+    return {
+        "schema_version": STORE_PROVIDER_SCHEMA,
+        "provider": "mncs-store",
+        "workspace_root": str(workspace_root),
+        "checkout": str(checkout),
+        "python_package": str(python_package),
+        "revision": revision,
+        "authoritative_head": selected.get("authoritative_head"),
+        "branch": selected.get("branch"),
+        "source_ref": selected.get("source_ref"),
+        "clean_at_selection": selected.get("clean"),
+    }
+
+
+def write_session_store_provider(
+    state_dir: Path | str, session_id: str, binding: dict[str, Any]
+) -> None:
+    """Persist Store package routing outside Store so a fresh process can reopen it."""
+    payload = {**binding, "session_id": session_id}
+    path = Path(state_dir) / "sessions" / session_id / "store-provider.json"
+    existing = read_json(path)
+    if existing is not None and existing != payload:
+        raise ValueError(f"session {session_id} already has a different Store provider binding")
+    write_json(path, payload)
+
+
+def _session_store_package(state_dir: Path | str, session_id: str) -> str | None:
+    path = Path(state_dir) / "sessions" / session_id / "store-provider.json"
+    payload = read_json(path)
+    if payload is None:
+        return None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema_version") != STORE_PROVIDER_SCHEMA
+        or payload.get("session_id") != session_id
+        or payload.get("provider") != "mncs-store"
+    ):
+        raise ValueError(f"session {session_id} has an invalid Store provider binding")
+    checkout_value = payload.get("checkout")
+    package_value = payload.get("python_package")
+    workspace_value = payload.get("workspace_root")
+    revision = payload.get("revision")
+    if not all(isinstance(value, str) and value for value in
+               (checkout_value, package_value, workspace_value, revision)):
+        raise ValueError(f"session {session_id} has an incomplete Store provider binding")
+    workspace_root = Path(workspace_value).resolve()
+    checkout = Path(checkout_value).resolve()
+    package = Path(package_value).resolve()
+    if not checkout.is_relative_to(workspace_root) or package != (checkout / "python").resolve():
+        raise ValueError(f"session {session_id} Store provider binding is outside its checkout")
+    if not (package / "mncs_store" / "__init__.py").is_file():
+        raise FileNotFoundError(f"bound mncs-store package is unavailable at {package}")
+    return str(package)
+
+
 class SessionStore:
     """Persistence contract for one state directory."""
 
@@ -129,11 +220,21 @@ class FileSessionStore(SessionStore):
 class StoreSessionStore(SessionStore):
     """Canonical Store-backed persistence (mncs-store persistent objects)."""
 
-    def __init__(self, state_dir: Path | str, *, verify_on_open: bool = True):
+    def __init__(
+        self,
+        state_dir: Path | str,
+        *,
+        verify_on_open: bool = True,
+        store_package_dir: str | Path | None = None,
+    ):
         from .store_backend import StoreBackend
 
         self.state_dir = Path(state_dir)
-        self.backend = StoreBackend(self.state_dir, verify_on_open=verify_on_open)
+        self.backend = StoreBackend(
+            self.state_dir,
+            verify_on_open=verify_on_open,
+            store_package_dir=store_package_dir,
+        )
 
     def close(self) -> None:
         self.backend.close()
@@ -214,11 +315,22 @@ class StoreSessionStore(SessionStore):
 
 
 def open_store(
-    state_dir: Path | str, backend: str = "store", *, verify_on_open: bool = True
+    state_dir: Path | str,
+    backend: str = "store",
+    *,
+    verify_on_open: bool = True,
+    session_id: str | None = None,
+    store_package_dir: str | Path | None = None,
 ) -> SessionStore:
-    """Open a session store; 'file' is the debug projection, 'store' canonical."""
+    """Open the canonical Store backend or the explicit file debug projection."""
     if backend == "file":
         return FileSessionStore(state_dir)
     if backend == "store":
-        return StoreSessionStore(state_dir, verify_on_open=verify_on_open)
+        if store_package_dir is None and session_id is not None:
+            store_package_dir = _session_store_package(state_dir, session_id)
+        return StoreSessionStore(
+            state_dir,
+            verify_on_open=verify_on_open,
+            store_package_dir=store_package_dir,
+        )
     raise ValueError(f"unknown session store backend {backend!r}")
