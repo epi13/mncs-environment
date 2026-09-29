@@ -204,6 +204,9 @@ def descriptor_invocation(
         candidate = raw if raw.is_absolute() else workspace / raw
         if candidate.is_file():
             toolchain_address = str(candidate)
+    if ((isinstance(toolchain, dict) or isinstance(toolchain, str) and toolchain)
+            and toolchain_address is None):
+        return empty
     return {"address": address, "toolchain_address": toolchain_address,
             "toolchain_env": toolchain_env, "fixed_argv": list(fixed_argv),
             "addressing": "descriptor"}
@@ -450,11 +453,17 @@ def _from_semantic_contracts(
             entry,
             repo,
             workspace,
-            {name: Path(selected) for name, selected in (repository_roots or {}).items()},
+            ({name: Path(selected) for name, selected in repository_roots.items()}
+             if repository_roots is not None else None),
         )
         if declared["addressing"] == "descriptor":
             address = declared["address"]
             addressing = "descriptor"
+        elif isinstance(entry.get("invocation"), dict):
+            # A declared exact toolchain that cannot be resolved must not
+            # silently fall through to the ambient PATH compiler.
+            address = None
+            addressing = "none"
         else:
             address = _address(entrypoint, workspace, language_bin)
             addressing = "bootstrap" if address else "none"
@@ -518,7 +527,8 @@ def _from_manifest(
             entry,
             repo,
             workspace,
-            {name: Path(selected) for name, selected in (repository_roots or {}).items()},
+            ({name: Path(selected) for name, selected in repository_roots.items()}
+             if repository_roots is not None else None),
         )
         address: str | None = declared["address"]
         addressing = declared["addressing"]

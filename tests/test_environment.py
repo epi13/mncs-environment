@@ -564,6 +564,43 @@ class CapabilityTests(unittest.TestCase):
             self.assertEqual(binding["effects"], ["write"])
             self.assertNotEqual(binding["toolchain_address"], str(stale_language))
 
+    def test_declared_toolchain_never_falls_back_to_ambient_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            language = root / "mncs-language"
+            test_repo = root / "mncs-test"
+            language.mkdir()
+            (test_repo / "bin").mkdir(parents=True)
+            executable = test_repo / "bin" / "mncs-test"
+            executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            executable.chmod(0o755)
+            (test_repo / "family-semantic-contracts-v1.json").write_text(json.dumps({
+                "repository_id": "mncs-test",
+                "provides": [{
+                    "contract_identity": "mncs.test-result/1",
+                    "contract_revision": "1",
+                    "canonical_entrypoint": "mncs test",
+                    "invocation": {
+                        "kind": "executable",
+                        "path": "bin/mncs-test",
+                        "toolchain": {
+                            "repository": "mncs-language",
+                            "path": "target/release/mncs",
+                        },
+                        "toolchain_env": "MNCS",
+                    },
+                }],
+            }), encoding="utf-8")
+
+            bindings = capabilities.discover_capabilities(
+                root,
+                repository_roots={"mncs-test": test_repo, "mncs-language": language},
+            )
+            binding = next(item for item in bindings
+                           if item["capability"] == "mncs.test-result/1")
+            self.assertIsNone(binding["address"])
+            self.assertIsNone(binding["toolchain_address"])
+
     def test_verification_executor_binds_from_selected_checkout(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
