@@ -88,6 +88,11 @@
     "checkout": ".worktrees/compiler-parity-environment-20260927"
   },
   "name": "mncs-compiler-campaign",
+  "workspace_scope": {
+    "kind": "campaign",
+    "selection": "explicit",
+    "max_directories": 32
+  },
   "protected_repositories": ["mncs-memory"],
   "rights_claims": []
 }
