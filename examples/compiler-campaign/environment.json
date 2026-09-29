@@ -81,7 +81,7 @@
     "repository": "mncs-control-mcp",
     "checkout": ".worktrees/compiler-parity-control-20260927",
     "capability": "mncs-control-mcp:workspace.worktree.prepare",
-    "revision": "6e39a27bea8a2939b0393d5afba106e5e47df876"
+    "revision": "ff21201c6b29e62094312dc69d5f7291cdf478b1"
   },
   "session_checkout": {
     "repository": "mncs-environment",
