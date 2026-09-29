@@ -918,12 +918,46 @@ class ToolchainTests(unittest.TestCase):
             self.assertEqual(result["returncode"], 0)
             self.assertIn("PASS", result["stdout"])
 
-    def test_compiler_binding_visible_with_manifest_tests(self) -> None:
+    def test_compiler_binding_visible_with_verification_inventory(self) -> None:
         bindings = capabilities.discover_capabilities(FAMILY)
         matches = [b for b in bindings if b["provider"] == "mncs-compiler"]
         self.assertTrue(matches, "mncs-compiler binding not discovered")
-        declared = matches[0]["provenance"].get("manifest_tests", [])
-        self.assertTrue(any(t.get("test") == "compiler-front-end" for t in declared))
+        manifest = next(
+            (b for b in matches
+             if b["capability"] == "mncs-compiler:compiler-next-generation"),
+            None,
+        )
+        self.assertIsNotNone(manifest, "mncs-compiler manifest binding missing")
+        assert manifest is not None
+        self.assertEqual(manifest["provenance"].get("manifest_tests", []), [])
+        capability = (
+            "mncs-compiler:verification-executor/"
+            "mncs-compiler.frontend-differential"
+        )
+        binding = next(
+            (b for b in matches if b["capability"] == capability), None)
+        self.assertIsNotNone(binding, f"{capability} not discovered")
+        assert binding is not None
+        compiler_root = (FAMILY / "mncs-compiler").resolve()
+        self.assertEqual(binding["provider"], "mncs-compiler")
+        self.assertEqual(binding["entrypoint"], "python3 tools/test_frontend.py")
+        self.assertEqual(
+            binding["address"],
+            f"python:{compiler_root / 'tools' / 'test_frontend.py'}")
+        self.assertIsNone(binding["toolchain_address"])
+        self.assertIsNone(binding["toolchain_env"])
+        self.assertEqual(binding["timeout_seconds"], 300)
+        self.assertEqual(binding["working_directory"], str(compiler_root))
+        self.assertEqual(binding["provider_root"], str(compiler_root))
+        self.assertEqual(
+            binding["provenance"].get("addressing"),
+            "declared-verification-inventory")
+        self.assertEqual(
+            binding["provenance"].get("source"),
+            ".mncs/verification-obligations.json")
+        self.assertEqual(
+            binding["provenance"].get("obligation_identity"),
+            "mncs-compiler.frontend-differential")
 
 
 class SessionTests(unittest.TestCase):
