@@ -482,7 +482,7 @@ def cmd_workspace(args: argparse.Namespace) -> int:
 
 
 def cmd_store(args: argparse.Namespace) -> int:
-    store = open_store(args.state_dir, "store")
+    store = open_store(args.state_dir, "store", session_id=args.session)
     try:
         if args.verify:
             out(store.backend.verify())
@@ -643,6 +643,10 @@ def build_parser() -> argparse.ArgumentParser:
     workspace.set_defaults(func=cmd_workspace)
 
     store = sub.add_parser("store", help="inspect the backing store")
+    store.add_argument(
+        "--session", default=None,
+        help="use this session's selected mncs-store checkout",
+    )
     store.add_argument("--verify", action="store_true")
     store.set_defaults(func=cmd_store)
 

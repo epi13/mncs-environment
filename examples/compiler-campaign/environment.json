@@ -50,7 +50,7 @@
       "repository": "mncs-language",
       "name": "compiler-parity-language-20260927",
       "branch": "campaign/compiler-parity-language-20260927",
-      "source_ref": "origin/main"
+      "source_ref": "a10486e613a20c00e393752bb1b9e451455fe457"
     },
     {
       "repository": "mncs-test",

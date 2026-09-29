@@ -1242,6 +1242,62 @@ class SessionTests(unittest.TestCase):
         ])
         self.assertEqual(parsed.output_limit_bytes, 131072)
 
+    def test_invocation_environment_uses_selected_store_and_language_toolchains(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            store_checkout = root / "mncs-store" / ".worktrees" / "campaign"
+            language_checkout = root / "mncs-language" / ".worktrees" / "campaign"
+            package_init = store_checkout / "python" / "mncs_store" / "__init__.py"
+            package_init.parent.mkdir(parents=True)
+            package_init.write_text("", encoding="utf-8")
+            binary = language_checkout / "target" / "debug" / "mncs"
+            embed = binary.parent / "libmncs_embed.so"
+            embed.parent.mkdir(parents=True)
+            binary.write_bytes(b"selected compiler")
+            embed.write_bytes(b"selected embed library")
+
+            session = sessions.Session.__new__(sessions.Session)
+            session.snapshot = {
+                "workspace": {"root": str(root)},
+                "selected_checkouts": {
+                    "mncs-store": {"path": str(store_checkout), "head": "store-revision"},
+                    "mncs-language": {"path": str(language_checkout), "head": "language-revision"},
+                },
+                "toolchain": {
+                    "checkout": str(language_checkout), "revision": "language-revision",
+                    "binary": str(binary), "status": "available",
+                },
+            }
+
+            selected = session._selected_runtime_environment({})
+            self.assertEqual(selected["MNCS_BIN"], str(binary.resolve()))
+            self.assertEqual(selected["MNCS_EMBED_LIB"], str(embed.resolve()))
+            self.assertEqual(selected["MNCS_LANGUAGE_ROOT"], str(language_checkout.resolve()))
+            self.assertEqual(selected["MNCS_STORE_ROOT"], str(store_checkout.resolve()))
+            self.assertEqual(
+                selected["MNCS_STORE_PYTHON"],
+                str((store_checkout / "python").resolve()),
+            )
+            self.assertEqual(
+                session._selected_runtime_environment({"toolchain_env": "MNCS_BIN"}),
+                {key: value for key, value in selected.items() if key != "MNCS_BIN"},
+            )
+
+    def test_store_inspection_accepts_selected_session(self) -> None:
+        parsed = cli.build_parser().parse_args([
+            "store", "--session", "ses_fixture", "--verify",
+        ])
+        self.assertEqual(parsed.session, "ses_fixture")
+        with (
+            mock.patch.object(cli, "open_store") as open_selected,
+            mock.patch.object(cli, "out"),
+        ):
+            open_selected.return_value.verify.return_value = {"status": "ok"}
+            self.assertEqual(cli.cmd_store(parsed), 0)
+        open_selected.assert_called_once_with(
+            parsed.state_dir, "store", session_id="ses_fixture",
+        )
+
     def test_revalidate_preserves_scoped_claim_holders(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))
@@ -2144,7 +2200,62 @@ class SelectedStoreProviderTests(unittest.TestCase):
                 state_dir,
                 verify_on_open=False,
                 store_package_dir=str(package.resolve()),
+                store_runtime=None,
             )
+
+    def test_campaign_store_provider_binds_exact_language_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            store_checkout = root / "mncs-store" / ".worktrees" / "campaign"
+            language_checkout = root / "mncs-language" / ".worktrees" / "campaign"
+            environment = self._environment(root, store_checkout)
+            binary = language_checkout / "target" / "release" / "mncs"
+            embed = binary.parent / "libmncs_embed.so"
+            embed.parent.mkdir(parents=True)
+            binary.write_bytes(b"selected compiler")
+            embed.write_bytes(b"selected embed library")
+            environment["selected_checkouts"]["mncs-language"] = {
+                "path": str(language_checkout), "head": "language-revision",
+            }
+            environment["toolchain"] = {
+                "repository": "mncs-language", "checkout": str(language_checkout),
+                "revision": "language-revision", "binary": str(binary),
+                "status": "available",
+            }
+
+            binding = store_provider_from_environment(environment)
+            assert binding is not None
+            expected_runtime = {
+                "MNCS_STORE_ROOT": str(store_checkout.resolve()),
+                "MNCS_LANGUAGE_ROOT": str(language_checkout.resolve()),
+                "MNCS_BIN": str(binary.resolve()),
+                "MNCS_EMBED_LIB": str(embed.resolve()),
+            }
+            self.assertEqual(binding["runtime_environment"], expected_runtime)
+
+            state_dir = Path(directory) / "state"
+            session_id = "ses_exact_toolchain_test"
+            write_session_store_provider(state_dir, session_id, binding)
+            with mock.patch("mncs_env.session_store.StoreSessionStore") as store_ctor:
+                open_store(state_dir, "store", session_id=session_id)
+            store_ctor.assert_called_once_with(
+                state_dir, verify_on_open=True,
+                store_package_dir=str((store_checkout / "python").resolve()),
+                store_runtime=expected_runtime,
+            )
+
+    def test_campaign_store_provider_refuses_missing_language_toolchain(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            store_checkout = root / "mncs-store" / ".worktrees" / "campaign"
+            language_checkout = root / "mncs-language" / ".worktrees" / "campaign"
+            environment = self._environment(root, store_checkout)
+            environment["selected_checkouts"]["mncs-language"] = {
+                "path": str(language_checkout), "head": "language-revision",
+            }
+
+            with self.assertRaisesRegex(ValueError, "refusing an ambient Store compiler"):
+                store_provider_from_environment(environment)
 
 
 if __name__ == "__main__":

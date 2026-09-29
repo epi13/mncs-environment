@@ -18,7 +18,7 @@ class SequenceTaken(Exception):
     """Another writer committed a different record at this sequence/revision."""
 
 
-STORE_PROVIDER_SCHEMA = "mncs.environment.session-store-provider/1"
+STORE_PROVIDER_SCHEMA = "mncs.environment.session-store-provider/2"
 
 
 def store_provider_from_environment(environment: dict[str, Any]) -> dict[str, Any] | None:
@@ -54,6 +54,48 @@ def store_provider_from_environment(environment: dict[str, Any]) -> dict[str, An
     if not (python_package / "mncs_store" / "__init__.py").is_file():
         raise ValueError(f"selected mncs-store package is unavailable at {python_package}")
 
+    runtime_environment = None
+    language = selected_checkouts.get("mncs-language") if isinstance(selected_checkouts, dict) else None
+    if language is not None:
+        if not isinstance(language, dict):
+            raise ValueError("selected mncs-language checkout facts must be an object")
+        toolchain = environment.get("toolchain")
+        if not isinstance(toolchain, dict) or toolchain.get("status") != "available":
+            raise ValueError(
+                "selected mncs-language toolchain is unavailable; refusing an ambient Store compiler"
+            )
+        language_checkout_value = language.get("path")
+        language_revision = language.get("head")
+        binary_value = toolchain.get("binary")
+        if not all(isinstance(value, str) and value for value in (
+            language_checkout_value, language_revision, binary_value,
+        )):
+            raise ValueError("selected mncs-language toolchain binding is incomplete")
+        language_checkout = Path(language_checkout_value)
+        if not language_checkout.is_absolute():
+            language_checkout = workspace_root / language_checkout
+        language_checkout = language_checkout.resolve()
+        if not language_checkout.is_relative_to(workspace_root):
+            raise ValueError("selected mncs-language checkout escapes the Environment workspace")
+        if toolchain.get("checkout") != str(language_checkout):
+            raise ValueError("selected mncs-language toolchain checkout does not match its provider binding")
+        if toolchain.get("revision") != language_revision:
+            raise ValueError("selected mncs-language toolchain revision does not match its provider binding")
+        binary = Path(binary_value).resolve()
+        if not binary.is_relative_to(language_checkout) or not binary.is_file():
+            raise ValueError("selected mncs-language compiler binary is unavailable in its checkout")
+        embed_library = binary.parent / "libmncs_embed.so"
+        if not embed_library.is_file():
+            raise ValueError(
+                f"selected mncs-language embed library is unavailable beside {binary}"
+            )
+        runtime_environment = {
+            "MNCS_STORE_ROOT": str(checkout),
+            "MNCS_LANGUAGE_ROOT": str(language_checkout),
+            "MNCS_BIN": str(binary),
+            "MNCS_EMBED_LIB": str(embed_library.resolve()),
+        }
+
     return {
         "schema_version": STORE_PROVIDER_SCHEMA,
         "provider": "mncs-store",
@@ -65,6 +107,7 @@ def store_provider_from_environment(environment: dict[str, Any]) -> dict[str, An
         "branch": selected.get("branch"),
         "source_ref": selected.get("source_ref"),
         "clean_at_selection": selected.get("clean"),
+        "runtime_environment": runtime_environment,
     }
 
 
@@ -80,7 +123,7 @@ def write_session_store_provider(
     write_json(path, payload)
 
 
-def _session_store_package(state_dir: Path | str, session_id: str) -> str | None:
+def _session_store_provider(state_dir: Path | str, session_id: str) -> dict[str, Any] | None:
     path = Path(state_dir) / "sessions" / session_id / "store-provider.json"
     payload = read_json(path)
     if payload is None:
@@ -106,7 +149,46 @@ def _session_store_package(state_dir: Path | str, session_id: str) -> str | None
         raise ValueError(f"session {session_id} Store provider binding is outside its checkout")
     if not (package / "mncs_store" / "__init__.py").is_file():
         raise FileNotFoundError(f"bound mncs-store package is unavailable at {package}")
-    return str(package)
+    runtime_environment = payload.get("runtime_environment")
+    if runtime_environment is not None:
+        if not isinstance(runtime_environment, dict):
+            raise ValueError(f"session {session_id} has an invalid Store runtime binding")
+        expected_store_root = str(checkout)
+        if runtime_environment.get("MNCS_STORE_ROOT") != expected_store_root:
+            raise ValueError(f"session {session_id} Store root is not its selected checkout")
+        language_root_value = runtime_environment.get("MNCS_LANGUAGE_ROOT")
+        binary_value = runtime_environment.get("MNCS_BIN")
+        embed_value = runtime_environment.get("MNCS_EMBED_LIB")
+        if not all(isinstance(value, str) and value for value in (
+            language_root_value, binary_value, embed_value,
+        )):
+            raise ValueError(f"session {session_id} has an incomplete MNCS runtime binding")
+        language_root = Path(language_root_value).resolve()
+        binary = Path(binary_value).resolve()
+        embed_library = Path(embed_value).resolve()
+        if not language_root.is_relative_to(workspace_root):
+            raise ValueError(f"session {session_id} MNCS checkout escapes its workspace")
+        if (not binary.is_relative_to(language_root) or not binary.is_file()
+                or not embed_library.is_relative_to(language_root)
+                or not embed_library.is_file()):
+            raise ValueError(f"session {session_id} selected MNCS runtime is unavailable")
+        runtime_environment = {
+            "MNCS_STORE_ROOT": str(checkout),
+            "MNCS_LANGUAGE_ROOT": str(language_root),
+            "MNCS_BIN": str(binary),
+            "MNCS_EMBED_LIB": str(embed_library),
+        }
+    elif payload.get("schema_version") == STORE_PROVIDER_SCHEMA:
+        # A Store-only environment has no selected Language checkout. Campaigns
+        # that select one must persist its exact runtime in this provider record.
+        runtime_environment = None
+    return {**payload, "python_package": str(package),
+            "runtime_environment": runtime_environment}
+
+
+def _session_store_package(state_dir: Path | str, session_id: str) -> str | None:
+    provider = _session_store_provider(state_dir, session_id)
+    return provider.get("python_package") if provider is not None else None
 
 
 class SessionStore:
@@ -226,6 +308,7 @@ class StoreSessionStore(SessionStore):
         *,
         verify_on_open: bool = True,
         store_package_dir: str | Path | None = None,
+        store_runtime: dict[str, str] | None = None,
     ):
         from .store_backend import StoreBackend
 
@@ -234,6 +317,7 @@ class StoreSessionStore(SessionStore):
             self.state_dir,
             verify_on_open=verify_on_open,
             store_package_dir=store_package_dir,
+            store_runtime=store_runtime,
         )
 
     def close(self) -> None:
@@ -321,16 +405,23 @@ def open_store(
     verify_on_open: bool = True,
     session_id: str | None = None,
     store_package_dir: str | Path | None = None,
+    store_runtime: dict[str, str] | None = None,
 ) -> SessionStore:
     """Open the canonical Store backend or the explicit file debug projection."""
     if backend == "file":
         return FileSessionStore(state_dir)
     if backend == "store":
-        if store_package_dir is None and session_id is not None:
-            store_package_dir = _session_store_package(state_dir, session_id)
+        if session_id is not None:
+            provider = _session_store_provider(state_dir, session_id)
+            if provider is not None:
+                if store_package_dir is None:
+                    store_package_dir = provider["python_package"]
+                if store_runtime is None:
+                    store_runtime = provider.get("runtime_environment")
         return StoreSessionStore(
             state_dir,
             verify_on_open=verify_on_open,
             store_package_dir=store_package_dir,
+            store_runtime=store_runtime,
         )
     raise ValueError(f"unknown session store backend {backend!r}")

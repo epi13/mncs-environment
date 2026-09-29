@@ -16,6 +16,8 @@ from __future__ import annotations
 import json
 import os
 import sys
+import threading
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +26,34 @@ SCHEMA_SNAPSHOT = b"mncs.environment.session-snapshot/1"
 SCHEMA_CLAIM = b"mncs.environment.workspace-claim/1"
 
 MAX_CAS_RETRIES = 16
+_STORE_RUNTIME_LOCK = threading.RLock()
+_STORE_RUNTIME_KEYS = (
+    "MNCS_STORE_ROOT",
+    "MNCS_LANGUAGE_ROOT",
+    "MNCS_BIN",
+    "MNCS_EMBED_LIB",
+)
+
+
+@contextmanager
+def _selected_store_runtime(runtime: dict[str, str] | None):
+    """Open a Store session with its Environment-selected MNCS toolchain."""
+    if runtime is None:
+        yield
+        return
+    if set(runtime) != set(_STORE_RUNTIME_KEYS):
+        raise ValueError("selected Store runtime must bind the complete MNCS toolchain")
+    with _STORE_RUNTIME_LOCK:
+        previous = {key: os.environ.get(key) for key in _STORE_RUNTIME_KEYS}
+        try:
+            os.environ.update(runtime)
+            yield
+        finally:
+            for key, value in previous.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
 
 
 class StoreUnavailable(Exception):
@@ -96,6 +126,7 @@ class StoreBackend:
         *,
         verify_on_open: bool = True,
         store_package_dir: str | Path | None = None,
+        store_runtime: dict[str, str] | None = None,
     ):
         EmbeddedStore, StoreError, StoreResultCode = _load_store_api(store_package_dir)
         self._api = (EmbeddedStore, StoreError, StoreResultCode)
@@ -103,9 +134,11 @@ class StoreBackend:
             str(Path(store_package_dir).resolve())
             if store_package_dir is not None else None
         )
+        self.store_runtime = dict(store_runtime) if store_runtime is not None else None
         self.state_dir = Path(state_dir)
         self.path = self.state_dir / "store"
-        self._store = EmbeddedStore(self.path, verify_on_open=verify_on_open)
+        with _selected_store_runtime(self.store_runtime):
+            self._store = EmbeddedStore(self.path, verify_on_open=verify_on_open)
         recovery = getattr(self._store, "recovery_result", None)
         if recovery is not None and str(recovery) in (
             "StoreResultCode.INTEGRITY_FAILURE",
