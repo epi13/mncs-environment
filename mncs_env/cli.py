@@ -404,7 +404,7 @@ def cmd_fail(args: argparse.Namespace) -> int:
 
 
 def cmd_claims(args: argparse.Namespace) -> int:
-    store = open_store(args.state_dir, args.persistence)
+    store = open_store(args.state_dir, args.persistence, session_id=args.session)
     try:
         if args.release:
             session = sessions_module.Session.resume(

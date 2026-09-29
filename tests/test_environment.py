@@ -1298,6 +1298,21 @@ class SessionTests(unittest.TestCase):
             parsed.state_dir, "store", session_id="ses_fixture",
         )
 
+    def test_claim_management_opens_selected_session_store(self) -> None:
+        parsed = cli.build_parser().parse_args([
+            "claims", "ses_fixture", "--acquire", "mncs-environment",
+        ])
+        with (
+            mock.patch.object(cli, "open_store") as open_selected,
+            mock.patch.object(cli.sessions_module.Session, "resume") as resume,
+            mock.patch.object(cli, "out"),
+        ):
+            cli.cmd_claims(parsed)
+        open_selected.assert_called_once_with(
+            parsed.state_dir, "store", session_id="ses_fixture",
+        )
+        resume.assert_called_once()
+
     def test_revalidate_preserves_scoped_claim_holders(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))
