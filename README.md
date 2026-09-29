@@ -160,11 +160,16 @@ state, not prose. The hardening campaign added:
 ## Entering an environment
 
 The next language/compiler campaign enters through the shipped definition
-(workspace root is definition-relative, so this works from any cwd):
+(which deliberately requires an explicit isolated campaign root):
 
 ```bash
-./scripts/mncs-env --state-dir ~/.local/share/mncs-environment enter \
-    --definition examples/compiler-campaign/environment.json --consumer my-agent
+./scripts/mncs-env --state-dir "$MNCS_ENV_STATE" enter \
+    --definition examples/compiler-campaign/environment.json \
+    --workspace "$MNCS_CAMPAIGN_ROOT" --consumer my-agent
+# The default response is a compact first-use context.
+./scripts/mncs-env --state-dir "$MNCS_ENV_STATE" status <session>
+# Use inspect for the complete session, authority, workspace, and bindings.
+./scripts/mncs-env --state-dir "$MNCS_ENV_STATE" inspect <session>
 ./scripts/mncs-env capabilities <session>
 ./scripts/mncs-env authority <session>
 ./scripts/mncs-env invoke <session> <capability> -- <args...>
@@ -174,8 +179,15 @@ The next language/compiler campaign enters through the shipped definition
 ./scripts/mncs-env complete <session> --outcome "..."
 ```
 
-Run the vertical proof (real workspace, real capability, cross-process
-resume, handoff): `python3 scripts/vertical_proof.py`. Run tests:
+`mncs-env status <session>` and `mncs-env context <session>` are read-only
+compact context views. A compiler campaign root must be scoped to the campaign;
+the repository's Projects directory is intentionally rejected before Git
+discovery begins, with a diagnostic explaining how to select the correct root.
+
+Run the vertical proof (real capability, cross-process resume, handoff) with
+an isolated workspace input when other campaign work is active:
+`MNCS_VERTICAL_WORKSPACE=/path/to/isolated/campaign python3 scripts/vertical_proof.py`.
+Run tests:
 `python3 -m pytest tests/ -q`. See [RFC 0002](rfcs/0002-built-boundaries.md)
 for as-built decisions and `pressures/registry.json` for blockers owned
 elsewhere.

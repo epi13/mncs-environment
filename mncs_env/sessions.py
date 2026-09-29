@@ -386,15 +386,43 @@ def resolve_environment(
     verify_on_open: bool = True,
 ) -> dict[str, Any]:
     """Resolve a declarative environment definition into an inspectable world."""
-    backend = store or open_store(state_dir, "store", verify_on_open=verify_on_open)
-    workspace_view = workspace_module.discover_workspace(workspace_root)
+    resolved_root = workspace_module.validate_workspace_root(
+        workspace_root, definition=definition
+    )
+    workspace_view = workspace_module.discover_workspace(resolved_root)
+    scan = workspace_view.get("scan", {})
+    if workspace_view.get("error") or scan.get("status") != "complete":
+        message = workspace_view.get("error") or scan.get(
+            "message", "workspace scan did not complete"
+        )
+        raise workspace_module.WorkspaceResolutionError(
+            f"workspace resolution stopped safely: {message}",
+            diagnostics={
+                "code": "workspace-scan-incomplete",
+                "root": str(resolved_root),
+                "scan": scan,
+            },
+        )
     selected_roots, selected_facts = _provider_managed_checkouts(
-        definition, workspace_root, workspace_view
+        definition, resolved_root, workspace_view
     )
     if selected_roots:
         # Reconcile the workspace view after provider provisioning so the
         # resolved session includes the exact checkouts it selected.
-        workspace_view = workspace_module.discover_workspace(workspace_root)
+        workspace_view = workspace_module.discover_workspace(resolved_root)
+        scan = workspace_view.get("scan", {})
+        if workspace_view.get("error") or scan.get("status") != "complete":
+            message = workspace_view.get("error") or scan.get(
+                "message", "workspace scan did not complete"
+            )
+            raise workspace_module.WorkspaceResolutionError(
+                f"workspace resolution stopped safely after provider selection: {message}",
+                diagnostics={
+                    "code": "workspace-scan-incomplete",
+                    "root": str(resolved_root),
+                    "scan": scan,
+                },
+            )
         workspace_view["selected_checkouts"] = selected_facts
         language_root = selected_roots.get("mncs-language")
         language_binary = None
@@ -405,13 +433,13 @@ def resolve_environment(
             )
             language_binary = next((path for path in candidates if path.is_file()), candidates[-1])
         discovered = capabilities_module.discover_capabilities(
-            workspace_root,
+            resolved_root,
             repository_roots=selected_roots,
             checkout_facts=selected_facts,
             language_binary=language_binary,
         )
     else:
-        discovered = capabilities_module.discover_capabilities(workspace_root)
+        discovered = capabilities_module.discover_capabilities(resolved_root)
     bindings = [capabilities_module.probe_availability(binding) for binding in discovered]
     unavailable = [
         {"provider": binding["provider"], "capability": binding["capability"],
@@ -419,6 +447,7 @@ def resolve_environment(
         for binding in bindings
         if binding["availability"]["status"] != "available"
     ]
+    backend = store or open_store(state_dir, "store", verify_on_open=verify_on_open)
     intent = parse_intent(definition.get("intent", {"goal": definition.get("goal", "unspecified")}))
     protected = sorted(
         set(intent.get("protected_repositories", []))
@@ -439,7 +468,7 @@ def resolve_environment(
     repo_names = [repo["name"] for repo in workspace_view.get("repositories", [])]
     rights = rights_module.evaluate_rights(
         workspace_repos=repo_names,
-        records=rights_module.load_claim_records(definition, workspace_root),
+        records=rights_module.load_claim_records(definition, resolved_root),
     )
     authority_context = authority_module.build_context(
         subject=consumer_id,
@@ -448,7 +477,7 @@ def resolve_environment(
         claim_holders=claim_holders,
     )
     inputs = {
-        "workspace_root": str(Path(workspace_root).resolve()),
+        "workspace_root": str(resolved_root),
         "repository_heads": {
             (name if selected_roots else repo["name"]): (
                 selected_facts[name].get("head") if selected_roots else repo.get("head")
@@ -1591,8 +1620,84 @@ class Session:
 
     # -- inspection ------------------------------------------------------------
 
+    def context(self) -> dict[str, Any]:
+        """Return the bounded first-use context for this session.
+
+        The context intentionally projects only the facts a consumer needs to
+        orient itself. ``inspect`` remains the detailed state/binding path.
+        This method is read-only and does not advance cursors or append events.
+        """
+        intent = self.snapshot.get("intent") or {}
+        authority = self.snapshot.get("authority") or {}
+        protected = sorted(set(authority.get("protected_repositories", [])))
+        writable = sorted(
+            set(authority.get("writable", [])) - set(protected)
+        )
+        available: list[dict[str, Any]] = []
+        unavailable = 0
+        for binding in self.snapshot.get("bindings", []):
+            availability = binding.get("availability") or {}
+            if availability.get("status") == "available":
+                available.append({
+                    "capability": binding.get("capability"),
+                    "provider": binding.get("provider"),
+                    "contract_revision": binding.get("contract_revision"),
+                })
+            else:
+                unavailable += 1
+
+        max_capabilities = 20
+        session_id = self.session_id
+        return {
+            "schema_version": "mncs.environment.entry-context/1",
+            "session_id": session_id,
+            "lifecycle": self.snapshot.get("lifecycle"),
+            "workspace_root": (self.snapshot.get("workspace") or {}).get("root"),
+            "work_intent": {
+                "identity": intent.get("identity"),
+                "goal": intent.get("goal", ""),
+            },
+            "writable_repositories": writable,
+            "protected_repositories": protected,
+            "authority": {
+                "subject": authority.get("subject"),
+                "readable": list(authority.get("readable", [])),
+                "writable": writable,
+                "invocable": list(authority.get("invocable", [])),
+                "protected_repositories": protected,
+                "escalation_required": list(authority.get("escalation_required", [])),
+            },
+            "capabilities": {
+                "available": available[:max_capabilities],
+                "available_count": len(available),
+                "unavailable_count": unavailable,
+                "truncated": len(available) > max_capabilities,
+            },
+            "available_capabilities": available[:max_capabilities],
+            "unavailable_capability_count": unavailable,
+            "next_commands": [
+                f"mncs-env inspect {session_id}",
+                f"mncs-env capabilities {session_id}",
+                f"mncs-env authority {session_id}",
+                f"mncs-env checkpoint {session_id} --progress \"...\"",
+            ],
+        }
+
+    def status(self) -> dict[str, Any]:
+        """Read-only alias for the compact session context."""
+        return self.context()
+
     def inspect(self) -> dict[str, Any]:
         log = self._log()
+        unavailable = [
+            {
+                "provider": binding.get("provider"),
+                "capability": binding.get("capability"),
+                "reason": (binding.get("availability") or {}).get("reason"),
+            }
+            for binding in self.snapshot.get("bindings", [])
+            if (binding.get("availability") or {}).get("status") != "available"
+        ]
         return {
             "session_id": self.session_id,
             "lifecycle": self.snapshot.get("lifecycle"),
@@ -1607,20 +1712,8 @@ class Session:
             "repo_facts": self.snapshot.get("repo_facts", {}),
             "toolchain": self.snapshot.get("toolchain"),
             "claim_holders": self.snapshot.get("claim_holders", {}),
-            "bindings": [
-                {
-                    "capability": binding.get("capability"),
-                    "provider": binding.get("provider"),
-                    "provider_root": binding.get("provider_root"),
-                    "address": binding.get("address"),
-                    "toolchain_address": binding.get("toolchain_address"),
-                    "toolchain_env": binding.get("toolchain_env"),
-                    "contract_revision": binding.get("contract_revision"),
-                    "provenance": binding.get("provenance", {}),
-                    "availability": binding.get("availability"),
-                }
-                for binding in self.snapshot.get("bindings", [])
-            ],
+            "unavailable_capabilities": unavailable,
+            "bindings": [dict(binding) for binding in self.snapshot.get("bindings", [])],
             "binding_toolchains": [
                 {
                     "provider": binding.get("provider"),

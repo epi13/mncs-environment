@@ -8,19 +8,23 @@ persistence, CAS-safe sequences, and restart/resume.
 from __future__ import annotations
 
 import argparse
+import io
 import json
+import os
 import shutil
 import stat
 import sys
 import tempfile
 import time
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-FAMILY = next(
+_TEST_FAMILY = os.environ.get("MNCS_TEST_FAMILY")
+FAMILY = Path(_TEST_FAMILY).expanduser().resolve() if _TEST_FAMILY else next(
     (candidate for candidate in ROOT.parents
      if (candidate / "mncs-language").is_dir()
      and (candidate / "mncs-compiler").is_dir()),
@@ -1504,6 +1508,201 @@ class CLITests(unittest.TestCase):
         args.workspace = None
         with self.assertRaisesRegex(ValueError, "explicit --workspace"):
             cli.resolve_workspace_root(args, raw)
+
+
+class EntryFrictionTests(unittest.TestCase):
+    """Entry safety and context-shape regressions use only temporary state."""
+
+    @staticmethod
+    def _campaign_definition(path: Path) -> dict:
+        definition = {
+            "name": "mncs-compiler-campaign",
+            "workspace_scope": {
+                "kind": "campaign", "selection": "explicit", "max_directories": 4
+            },
+            "intent": {
+                "goal": "exercise a scoped compiler campaign entry",
+                "repositories": ["mncs-language", "mncs-compiler"],
+                "protected_repositories": ["mncs-memory"],
+            },
+        }
+        path.write_text(json.dumps(definition), encoding="utf-8")
+        return definition
+
+    @staticmethod
+    def _run_cli(*args: str) -> tuple[int, dict, str]:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            code = cli.main(list(args))
+        payload = json.loads(stdout.getvalue()) if stdout.getvalue().strip() else {}
+        return code, payload, stderr.getvalue()
+
+    def test_broad_campaign_root_rejected_before_state_or_git_scan(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "Projects"
+            root.mkdir()
+            for index in range(5):
+                (root / f"repository-{index}").mkdir()
+            definition_path = Path(directory) / "environment.json"
+            definition = self._campaign_definition(definition_path)
+            state = Path(directory) / "state"
+
+            with self.assertRaisesRegex(
+                workspace.WorkspaceResolutionError,
+                r"too broad.*safe limit.*campaign-scoped",
+            ) as raised:
+                sessions.resolve_environment(
+                    definition=definition,
+                    workspace_root=root,
+                    state_dir=state,
+                    consumer_id="entry-test",
+                )
+
+            self.assertEqual(raised.exception.diagnostics["code"], "workspace-too-broad")
+            self.assertFalse(state.exists(), "invalid resolution must not create session state")
+
+    def test_slow_workspace_scan_returns_bounded_progress_diagnostic(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for index in range(3):
+                (root / f"candidate-{index}").mkdir()
+
+            def slow_inspection(_path: Path, *, deadline: float | None = None):
+                time.sleep(0.06)
+                return None
+
+            with mock.patch.object(workspace, "inspect_repo", side_effect=slow_inspection):
+                view = workspace.discover_workspace(root, timeout_seconds=0.01)
+
+            self.assertEqual(view["scan"]["status"], "timed_out")
+            self.assertLessEqual(view["scan"]["inspected_directories"], 2)
+            self.assertIn("inspected", view["scan"]["message"])
+            self.assertIn("bounded time budget", view["scan"]["message"])
+
+    def test_valid_campaign_entry_is_compact_and_uses_isolated_state(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            workspace_root = base / "campaign-root"
+            workspace_root.mkdir()
+            definition_path = base / "environment.json"
+            self._campaign_definition(definition_path)
+            state = base / "isolated-state"
+            shared = base / "shared-state"
+            shared.mkdir()
+            sentinel = shared / "claims.jsonl"
+            sentinel.write_text("unrelated\n", encoding="utf-8")
+
+            code, context, error = self._run_cli(
+                "--persistence", "file", "--state-dir", str(state), "enter",
+                "--definition", str(definition_path), "--workspace", str(workspace_root),
+                "--consumer", "entry-test",
+            )
+
+            self.assertEqual(code, 0, error)
+            self.assertEqual(context["lifecycle"], "active")
+            self.assertTrue(context["session_id"].startswith("ses_"))
+            self.assertEqual(context["workspace_root"], str(workspace_root.resolve()))
+            self.assertEqual(
+                context["work_intent"]["goal"],
+                "exercise a scoped compiler campaign entry",
+            )
+            self.assertEqual(context["writable_repositories"], ["mncs-compiler", "mncs-language"])
+            self.assertEqual(context["protected_repositories"], ["mncs-memory"])
+            self.assertIn("available", context["capabilities"])
+            self.assertIn("unavailable_capability_count", context)
+            self.assertTrue(context["next_commands"])
+            self.assertFalse((shared / "sessions").exists())
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "unrelated\n")
+
+            inspect_code, detailed, inspect_error = self._run_cli(
+                "--persistence", "file", "--state-dir", str(state), "inspect",
+                context["session_id"],
+            )
+            self.assertEqual(inspect_code, 0, inspect_error)
+            self.assertIn("intent", detailed)
+            self.assertIn("authority", detailed)
+            self.assertIn("workspace", detailed)
+            self.assertIn("bindings", detailed)
+            self.assertIn("lifecycle_history", detailed)
+            self.assertGreater(detailed["event_count"], 0)
+            self.assertGreater(len(json.dumps(detailed)), len(json.dumps(context)))
+
+    def test_status_and_context_are_read_only_and_documented(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            workspace_root = base / "campaign-root"
+            workspace_root.mkdir()
+            definition_path = base / "environment.json"
+            self._campaign_definition(definition_path)
+            state = base / "isolated-state"
+            code, entered, error = self._run_cli(
+                "--persistence", "file", "--state-dir", str(state), "enter",
+                "--definition", str(definition_path), "--workspace", str(workspace_root),
+                "--consumer", "entry-test",
+            )
+            self.assertEqual(code, 0, error)
+            session_id = entered["session_id"]
+            claims_before = (state / "claims.jsonl").read_bytes() if (state / "claims.jsonl").exists() else b""
+            events_before = (state / "sessions" / session_id / "events.jsonl").read_bytes()
+
+            status_code, status, status_error = self._run_cli(
+                "--persistence", "file", "--state-dir", str(state), "status", session_id,
+            )
+            context_code, context, context_error = self._run_cli(
+                "--persistence", "file", "--state-dir", str(state), "context", session_id,
+            )
+            self.assertEqual(status_code, 0, status_error)
+            self.assertEqual(context_code, 0, context_error)
+            self.assertEqual(status, context)
+            self.assertEqual(
+                events_before,
+                (state / "sessions" / session_id / "events.jsonl").read_bytes(),
+            )
+            self.assertEqual(
+                claims_before,
+                (state / "claims.jsonl").read_bytes() if (state / "claims.jsonl").exists() else b"",
+            )
+            readme = (ROOT / "README.md").read_text(encoding="utf-8")
+            self.assertIn("mncs-env", readme)
+            self.assertIn("status <session>", readme)
+
+    def test_status_does_not_change_unrelated_session_or_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            workspace_root = base / "workspace"
+            workspace_root.mkdir()
+            state = base / "state"
+            store = open_store(state, "file")
+            environment = sessions.resolve_environment(
+                definition=definition(
+                    intent={"goal": "unrelated session", "repositories": ["repo-a"]}
+                ),
+                workspace_root=workspace_root,
+                state_dir=state,
+                consumer_id="unrelated-agent",
+                store=store,
+            )
+            session = sessions.Session.create(
+                state_dir=state, environment=environment,
+                consumer_id="unrelated-agent", backend="file", store=store,
+            )
+            session.transition("resolving", "test")
+            session.transition("ready", "test")
+            session.transition("active", "test")
+            claim = session.acquire_claim("repo-a", reason="unrelated claim")
+            session_path = state / "sessions" / session.session_id / "session.json"
+            claims_path = state / "claims.jsonl"
+            session_before = session_path.read_bytes()
+            claims_before = claims_path.read_bytes()
+
+            code, _, error = self._run_cli(
+                "--persistence", "file", "--state-dir", str(state), "status", session.session_id,
+            )
+            self.assertEqual(code, 0, error)
+            self.assertEqual(session_path.read_bytes(), session_before)
+            self.assertEqual(claims_path.read_bytes(), claims_before)
+            self.assertEqual(claim["session_id"], session.session_id)
 
 
 class SourcesTests(unittest.TestCase):

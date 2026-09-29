@@ -60,7 +60,11 @@ Resolve the smallest coherent working world needed for the requested work. Resol
 - known event sources,
 - previous checkpoints or handoffs.
 
-Resolution should avoid copying authoritative external state when a stable reference and observed revision are sufficient.
+Resolution should avoid copying authoritative external state when a stable reference and observed revision are sufficient. Workspace selection is
+an explicit boundary: campaign definitions must receive a campaign-scoped
+root, and discovery is bounded before provider capabilities are considered.
+Slow or incomplete discovery is surfaced as structured resolution
+diagnostics rather than a partial environment.
 
 ### 2. Session establishment
 
@@ -137,6 +141,14 @@ A handoff additionally records consumer-facing continuation information such as:
 - state that must be revalidated on resume.
 
 Natural-language summaries may accompany a handoff, but they are not the canonical state.
+
+### First-use context and inspection
+
+Entry returns a bounded context containing the session lifecycle, resolved
+workspace root, work goal, effective writable and protected repositories,
+available capability summary, unavailable capability count, and recommended
+next commands. `status`/`context` expose the same read-only projection;
+`inspect` remains the detailed state and binding surface.
 
 ## Dependency direction
 

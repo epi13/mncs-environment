@@ -30,8 +30,16 @@ def out(value: object) -> None:
     print(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True))
 
 
-def fail(message: str, code: int = 2) -> int:
-    print(json.dumps({"error": message}), file=sys.stderr)
+def fail(
+    message: str,
+    code: int = 2,
+    *,
+    diagnostics: dict | None = None,
+) -> int:
+    payload = {"error": message}
+    if diagnostics:
+        payload["diagnostics"] = diagnostics
+    print(json.dumps(payload), file=sys.stderr)
     return code
 
 
@@ -53,9 +61,12 @@ def resolve_workspace_root(args: argparse.Namespace, definition: dict) -> str:
     """
     if args.workspace:
         return args.workspace
-    if definition.get("workspace_provider"):
+    scope = definition.get("workspace_scope")
+    if definition.get("workspace_provider") or (
+        isinstance(scope, dict) and scope.get("kind") == "campaign"
+    ):
         raise ValueError(
-            "provider-bound definitions require an explicit --workspace root"
+            "campaign-scoped definitions require an explicit --workspace root"
         )
     declared = definition.get("workspace_root", ".")
     if not isinstance(declared, str) or not declared:
@@ -73,6 +84,11 @@ def cmd_resolve(args: argparse.Namespace) -> int:
     definition = load_definition(args.definition)
     try:
         workspace_root = resolve_workspace_root(args, definition)
+        workspace_root = str(workspace_module.validate_workspace_root(
+            workspace_root, definition=definition
+        ))
+    except workspace_module.WorkspaceResolutionError as error:
+        return fail(str(error), diagnostics=error.diagnostics)
     except ValueError as error:
         return fail(str(error))
     store = open_store(args.state_dir, args.persistence)
@@ -94,6 +110,11 @@ def cmd_enter(args: argparse.Namespace) -> int:
     definition = load_definition(args.definition)
     try:
         workspace_root = resolve_workspace_root(args, definition)
+        workspace_root = str(workspace_module.validate_workspace_root(
+            workspace_root, definition=definition
+        ))
+    except workspace_module.WorkspaceResolutionError as error:
+        return fail(str(error), diagnostics=error.diagnostics)
     except ValueError as error:
         return fail(str(error))
     store = open_store(args.state_dir, args.persistence)
@@ -120,8 +141,12 @@ def cmd_enter(args: argparse.Namespace) -> int:
         session.transition("resolving", "enter: resolving environment")
         session.transition("ready", "environment resolved")
         session.transition("active", f"consumer {args.consumer} entered")
-        out(session.inspect())
+        out(session.context())
         return 0
+    except workspace_module.WorkspaceResolutionError as error:
+        return fail(str(error), diagnostics=error.diagnostics)
+    except ValueError as error:
+        return fail(str(error))
     except rights_module.RightsBlocked as error:
         return fail(str(error))
     finally:
@@ -146,6 +171,30 @@ def _open(args: argparse.Namespace) -> sessions_module.Session:
 def cmd_inspect(args: argparse.Namespace) -> int:
     out(_open(args).inspect())
     return 0
+
+
+def cmd_context(args: argparse.Namespace) -> int:
+    """Print the compact, read-only first-use session context."""
+    out(_open(args).status())
+    return 0
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    """Print compact session status, or list session ids when none is given."""
+    if args.session:
+        out(_open(args).status())
+        return 0
+    store = open_store(args.state_dir, args.persistence)
+    try:
+        session_ids = store.list_sessions()
+        out({
+            "schema_version": "mncs.environment.status/1",
+            "sessions": session_ids,
+            "session_count": len(session_ids),
+        })
+        return 0
+    finally:
+        close_store(store)
 
 
 def cmd_resume(args: argparse.Namespace) -> int:
@@ -483,6 +532,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     inspect = session_parser("inspect", "inspect session state (read-only)")
     inspect.set_defaults(func=cmd_inspect)
+
+    context = session_parser("context", "show compact first-use session context")
+    context.set_defaults(func=cmd_context)
+
+    status = sub.add_parser(
+        "status", parents=[common], help="show compact read-only session status"
+    )
+    status.add_argument("session", nargs="?", default=None)
+    status.set_defaults(func=cmd_status)
 
     resume = session_parser("resume", "resume a session in this process")
     resume.add_argument("--workspace", default=None)

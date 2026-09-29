@@ -19,6 +19,7 @@ capability is repository-owned code producing real output.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -29,7 +30,9 @@ sys.path.insert(0, str(REPO))
 
 from mncs_env import sessions  # noqa: E402
 
-WORKSPACE = Path("/home/epi13/Documents/Projects")
+WORKSPACE = Path(
+    os.environ.get("MNCS_VERTICAL_WORKSPACE", "/home/epi13/Documents/Projects")
+).expanduser().resolve()
 ATLAS = WORKSPACE / "mncs-atlas"
 PROOF_CONSUMER_A = "proof-agent-a"
 PROOF_CONSUMER_B = "proof-agent-b"
