@@ -1193,8 +1193,11 @@ class Session:
             effect_scope = None
             if isinstance(checkout_path, str) and checkout_path:
                 selected_checkout = None
-                selected_path = Path(checkout_path).resolve()
                 workspace_root = self.snapshot.get("workspace", {}).get("root")
+                raw_selected_path = Path(checkout_path)
+                if not raw_selected_path.is_absolute() and workspace_root:
+                    raw_selected_path = Path(str(workspace_root)) / raw_selected_path
+                selected_path = raw_selected_path.resolve()
                 for repository, record in self.snapshot.get("selected_checkouts", {}).items():
                     raw_selected = Path(str(record.get("path", "")))
                     if not raw_selected.is_absolute() and workspace_root:
@@ -1260,6 +1263,7 @@ class Session:
                 }
             )
         self.snapshot["claim_holders"] = grouped
+        self.snapshot.setdefault("authority", {})["claim_holders"] = dict(grouped)
 
     def acquire_claim(
         self, repository: str, *, basis: str = claims_module.BASIS_EXPLICIT,
@@ -1569,6 +1573,7 @@ class Session:
                        {"note": "claim holders changed", "holders": holders})
         self.snapshot["claim_holders_detailed"] = holders
         self.snapshot["claim_holders"] = holders
+        self.snapshot.setdefault("authority", {})["claim_holders"] = dict(holders)
         self._save()
         return report
 

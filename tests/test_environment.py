@@ -1342,6 +1342,8 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(holders[0]["scope"], claim["scope"])
             self.assertEqual(session.snapshot["claim_holders_detailed"],
                              session.snapshot["claim_holders"])
+            self.assertEqual(session.snapshot["authority"]["claim_holders"],
+                             session.snapshot["claim_holders"])
 
     def test_provider_effects_independently_authorized(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1377,6 +1379,45 @@ class SessionTests(unittest.TestCase):
                 "scope": {
                     "kind": "worktree", "repository": "MNCS-Commons",
                     "checkout": checkout, "branch": "campaign/commons-parity",
+                    "paths": None, "exclusive": False,
+                },
+            }]
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke",
+                return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
+            ) as invoke:
+                result = session.invoke("campaign-writer", ["fixture"])
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(invoke.call_count, 1)
+
+    def test_provider_effect_resolves_relative_checkout_from_campaign_root(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "MNCS-Commons" / ".worktrees" / "campaign"
+            checkout.mkdir(parents=True)
+            session = make_session(root)
+            session.snapshot["workspace"]["root"] = str(root)
+            session.snapshot["selected_checkouts"] = {"MNCS-Commons": {
+                "path": "MNCS-Commons/.worktrees/campaign",
+                "branch": "campaign/commons-parity",
+            }}
+            binding = capabilities.probe_availability(
+                capabilities.bind(
+                    provider="mncs-commons", capability="campaign-writer",
+                    contract_revision="1", entrypoint="e", address="/bin/echo",
+                    effects=["write"], provider_root=str(checkout),
+                    provenance={"checkout": {
+                        "path": "MNCS-Commons/.worktrees/campaign",
+                        "branch": "campaign/commons-parity",
+                    }},
+                ))
+            session.snapshot["bindings"].append(binding)
+            session.snapshot["claim_holders"]["MNCS-Commons"] = [{
+                "session_id": session.session_id,
+                "scope": {
+                    "kind": "worktree", "repository": "MNCS-Commons",
+                    "checkout": str(checkout.resolve()),
+                    "branch": "campaign/commons-parity",
                     "paths": None, "exclusive": False,
                 },
             }]
