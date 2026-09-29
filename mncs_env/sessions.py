@@ -383,6 +383,7 @@ def resolve_environment(
     state_dir: str | Path,
     consumer_id: str,
     store: SessionStore | None = None,
+    backend: str = "store",
     verify_on_open: bool = True,
 ) -> dict[str, Any]:
     """Resolve a declarative environment definition into an inspectable world."""
@@ -447,13 +448,32 @@ def resolve_environment(
         for binding in bindings
         if binding["availability"]["status"] != "available"
     ]
-    backend = store or open_store(state_dir, "store", verify_on_open=verify_on_open)
+    owns_store = store is None
+    backend_store = store
+    if backend_store is None:
+        store_package_dir = (
+            selected_roots["mncs-store"] / "python"
+            if "mncs-store" in selected_roots
+            else None
+        )
+        backend_store = open_store(
+            state_dir,
+            backend,
+            verify_on_open=verify_on_open,
+            store_package_dir=store_package_dir,
+        )
     intent = parse_intent(definition.get("intent", {"goal": definition.get("goal", "unspecified")}))
     protected = sorted(
         set(intent.get("protected_repositories", []))
         | set(definition.get("protected_repositories", []))
     )
-    live_claims = claims_module.active_claims(backend.read_claims())
+    try:
+        live_claims = claims_module.active_claims(backend_store.read_claims())
+    finally:
+        if owns_store:
+            close = getattr(backend_store, "close", None)
+            if callable(close):
+                close()
     claim_holders: dict[str, list[dict[str, Any]]] = {}
     for record in live_claims.values():
         claim_holders.setdefault(str(record.get("repository", "")), []).append(
@@ -583,9 +603,18 @@ class Session:
         session_id = new_session_id(environment["identity"], consumer_id)
         store_provider = (
             store_provider_from_environment(environment)
-            if store is None and backend == "store"
+            if backend == "store"
             else None
         )
+        if store is not None and store_provider is not None:
+            selected_package = Path(str(store_provider["python_package"])).resolve()
+            actual_package = getattr(
+                getattr(store, "backend", None), "store_package_dir", None
+            )
+            if actual_package is None or Path(str(actual_package)).resolve() != selected_package:
+                raise ValueError(
+                    "provided Store handle is not bound to the session-selected mncs-store checkout"
+                )
         store = store or open_store(
             state_dir,
             backend,

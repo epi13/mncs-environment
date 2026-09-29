@@ -99,6 +99,10 @@ class StoreBackend:
     ):
         EmbeddedStore, StoreError, StoreResultCode = _load_store_api(store_package_dir)
         self._api = (EmbeddedStore, StoreError, StoreResultCode)
+        self.store_package_dir = (
+            str(Path(store_package_dir).resolve())
+            if store_package_dir is not None else None
+        )
         self.state_dir = Path(state_dir)
         self.path = self.state_dir / "store"
         self._store = EmbeddedStore(self.path, verify_on_open=verify_on_open)

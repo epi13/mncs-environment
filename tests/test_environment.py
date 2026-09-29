@@ -1938,6 +1938,99 @@ class BriefingTests(unittest.TestCase):
 
 
 class SelectedStoreProviderTests(unittest.TestCase):
+    @staticmethod
+    def _environment(root: Path, checkout: Path) -> dict:
+        package = checkout / "python"
+        init = package / "mncs_store" / "__init__.py"
+        init.parent.mkdir(parents=True, exist_ok=True)
+        init.write_text("", encoding="utf-8")
+        return {
+            "identity": "env_selected_store_test",
+            "workspace": {"root": str(root), "repositories": []},
+            "selected_checkouts": {
+                "mncs-store": {
+                    "path": str(checkout), "head": "abc123",
+                    "authoritative_head": "abc123", "branch": "campaign/store",
+                    "source_ref": "session-pinned-checkout", "clean": True,
+                }
+            },
+        }
+
+    def test_resolution_opens_selected_store_package(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            checkout = root / "mncs-store" / ".worktrees" / "campaign"
+            checkout.mkdir(parents=True)
+            self._environment(root, checkout)
+            workspace_view = {
+                "root": str(root),
+                "repositories": [{
+                    "name": "mncs-store@campaign", "path": str(checkout),
+                    "head": "abc123", "branch": "campaign/store", "dirty": False,
+                }],
+                "scan": {"status": "complete"},
+            }
+
+            class ClaimStore:
+                closed = False
+
+                def read_claims(self):
+                    return []
+
+                def close(self):
+                    self.closed = True
+
+            backend = ClaimStore()
+            with (
+                mock.patch.object(sessions.workspace_module, "discover_workspace",
+                                  return_value=workspace_view),
+                mock.patch.object(sessions, "_provider_managed_checkouts", return_value=(
+                    {"mncs-store": checkout},
+                    {"mncs-store": {
+                        "repository": "mncs-store", "path": "mncs-store/.worktrees/campaign",
+                        "head": "abc123", "authoritative_head": "abc123",
+                        "branch": "campaign/store", "clean": True,
+                    }},
+                )),
+                mock.patch.object(capabilities, "discover_capabilities", return_value=[]),
+                mock.patch.object(sessions, "open_store", return_value=backend) as opened,
+            ):
+                environment = sessions.resolve_environment(
+                    definition={}, workspace_root=root,
+                    state_dir=Path(directory) / "state", consumer_id="selected-store-test",
+                )
+
+            self.assertEqual(
+                Path(str(opened.call_args.kwargs["store_package_dir"])).resolve(),
+                (checkout / "python").resolve(),
+            )
+            self.assertTrue(backend.closed)
+            self.assertEqual(environment["selected_checkouts"]["mncs-store"]["head"], "abc123")
+
+    def test_create_persists_selected_store_for_fresh_process(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            checkout = root / "mncs-store" / ".worktrees" / "campaign"
+            checkout.mkdir(parents=True)
+            environment = self._environment(root, checkout)
+            state_dir = Path(directory) / "state"
+            selected_store = open_store(state_dir, "file")
+            with mock.patch("mncs_env.sessions.open_store", return_value=selected_store) as opened:
+                session = sessions.Session.create(
+                    state_dir=state_dir, environment=environment,
+                    consumer_id="selected-store-test",
+                )
+
+            self.assertEqual(
+                Path(str(opened.call_args.kwargs["store_package_dir"])).resolve(),
+                (checkout / "python").resolve(),
+            )
+            marker = json.loads((state_dir / "sessions" / session.session_id
+                                 / "store-provider.json").read_text(encoding="utf-8"))
+            self.assertEqual(marker["revision"], "abc123")
+            self.assertEqual(marker["python_package"], str((checkout / "python").resolve()))
+            session.close()
+
     def test_session_reopens_with_exact_selected_store_checkout(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

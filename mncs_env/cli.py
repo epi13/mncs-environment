@@ -87,44 +87,35 @@ def cmd_resolve(args: argparse.Namespace) -> int:
         workspace_root = str(workspace_module.validate_workspace_root(
             workspace_root, definition=definition
         ))
-    except workspace_module.WorkspaceResolutionError as error:
-        return fail(str(error), diagnostics=error.diagnostics)
-    except ValueError as error:
-        return fail(str(error))
-    store = open_store(args.state_dir, args.persistence)
-    try:
         environment = sessions_module.resolve_environment(
             definition=definition,
             workspace_root=workspace_root,
             state_dir=args.state_dir,
             consumer_id=args.consumer,
-            store=store,
+            backend=args.persistence,
         )
-    finally:
-        close_store(store)
+    except workspace_module.WorkspaceResolutionError as error:
+        return fail(str(error), diagnostics=error.diagnostics)
+    except ValueError as error:
+        return fail(str(error))
     out(environment)
     return 0
 
 
 def cmd_enter(args: argparse.Namespace) -> int:
     definition = load_definition(args.definition)
+    session = None
     try:
         workspace_root = resolve_workspace_root(args, definition)
         workspace_root = str(workspace_module.validate_workspace_root(
             workspace_root, definition=definition
         ))
-    except workspace_module.WorkspaceResolutionError as error:
-        return fail(str(error), diagnostics=error.diagnostics)
-    except ValueError as error:
-        return fail(str(error))
-    store = open_store(args.state_dir, args.persistence)
-    try:
         environment = sessions_module.resolve_environment(
             definition=definition,
             workspace_root=workspace_root,
             state_dir=args.state_dir,
             consumer_id=args.consumer,
-            store=store,
+            backend=args.persistence,
         )
         session = sessions_module.Session.create(
             state_dir=args.state_dir,
@@ -132,11 +123,12 @@ def cmd_enter(args: argparse.Namespace) -> int:
             consumer_id=args.consumer,
             consumer_kind=args.consumer_kind,
             backend=args.persistence,
-            store=store,
         )
         session = sessions_module.Session.resume(
-            state_dir=args.state_dir, session_id=session.session_id,
-            backend=args.persistence, store=store,
+            state_dir=args.state_dir,
+            session_id=session.session_id,
+            backend=args.persistence,
+            store=session.store,
         )
         session.transition("resolving", "enter: resolving environment")
         session.transition("ready", "environment resolved")
@@ -150,7 +142,8 @@ def cmd_enter(args: argparse.Namespace) -> int:
     except rights_module.RightsBlocked as error:
         return fail(str(error))
     finally:
-        close_store(store)
+        if session is not None:
+            session.close()
 
 
 def close_store(store) -> None:
