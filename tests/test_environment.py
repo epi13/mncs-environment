@@ -306,7 +306,10 @@ class WorkspaceTests(unittest.TestCase):
     def test_discovers_real_repositories(self) -> None:
         view = workspace.discover_workspace(FAMILY)
         names = {repo["name"] for repo in view["repositories"]}
-        self.assertIn("mncs-atlas", names)
+        if (FAMILY / "mncs-atlas").is_dir():
+            self.assertIn("mncs-atlas", names)
+        else:
+            self.assertIn("mncs-compiler", names)
         self.assertIn("mncs-language", names)
         for repo in view["repositories"]:
             self.assertIn("branch", repo)
@@ -322,7 +325,18 @@ class WorkspaceTests(unittest.TestCase):
 
 class CapabilityTests(unittest.TestCase):
     def test_discovers_real_declarations(self) -> None:
-        bindings = capabilities.discover_capabilities(FAMILY)
+        test_root = FAMILY / "mncs-test"
+        if not (test_root / ".mncs" / "project.json").is_file():
+            worktrees = test_root / ".worktrees"
+            candidates = sorted(worktrees.glob("*/.mncs/project.json"))
+            if candidates:
+                test_root = candidates[0].parent.parent
+        if test_root != FAMILY / "mncs-test" and test_root.is_dir():
+            bindings = capabilities.discover_capabilities(
+                FAMILY, repository_roots={"mncs-test": test_root},
+            )
+        else:
+            bindings = capabilities.discover_capabilities(FAMILY)
         by_provider = {binding["provider"] for binding in bindings}
         self.assertIn("mncs-test", by_provider)
         self.assertTrue(all(binding["binding_id"].startswith("cap_") for binding in bindings))

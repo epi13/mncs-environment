@@ -407,6 +407,7 @@ def resolve_environment(
     selected_roots, selected_facts = _provider_managed_checkouts(
         definition, resolved_root, workspace_view
     )
+    toolchain = None
     if selected_roots:
         # Reconcile the workspace view after provider provisioning so the
         # resolved session includes the exact checkouts it selected.
@@ -427,7 +428,6 @@ def resolve_environment(
         workspace_view["selected_checkouts"] = selected_facts
         language_root = selected_roots.get("mncs-language")
         language_binary = None
-        toolchain = None
         if language_root is not None:
             candidates = (
                 language_root / "target" / "release" / "mncs",
@@ -1123,9 +1123,14 @@ class Session:
         raise AuthorityDenied(f"no binding for capability {capability!r} in this session")
 
     def _selected_runtime_environment(self, binding: dict[str, Any]) -> dict[str, str]:
+        selected_checkouts = self.snapshot.get("selected_checkouts", {})
+        if not isinstance(selected_checkouts, dict) or not all(
+            selected_checkouts.get(repository) for repository in ("mncs-store", "mncs-language")
+        ):
+            return {}
         provider = store_provider_from_environment({
             "workspace": self.snapshot.get("workspace", {}),
-            "selected_checkouts": self.snapshot.get("selected_checkouts", {}),
+            "selected_checkouts": selected_checkouts,
             "toolchain": self.snapshot.get("toolchain"),
         })
         if provider is None:
