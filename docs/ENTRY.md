@@ -55,6 +55,11 @@ scope. Repository manifests, Git, and provider contracts remain authoritative
 for identity, revisions, tools, and state. Selection persists into resume,
 health, and reconciliation; bindings and toolchains use those exact roots.
 Store routing is persisted for fresh-process continuation.
+The runtime binding also selects the Language compiler and embed library used
+by Store. Explicit entry upgrades older package-only bootstrap metadata after
+checking the same selected checkout, preserving session identity and history.
+Read-only inspection never performs that upgrade; re-enter first when older
+bootstrap metadata needs recovery.
 
 ## Work reuse and continuation
 

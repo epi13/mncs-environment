@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import identity, readiness, sessions, workspace
 from .persist import read_json
-from .session_store import open_store
+from .session_store import open_store, upgrade_session_store_provider
 from .intent import parse as parse_intent
 
 
@@ -82,17 +82,35 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
         has_persistence = (Path(state_dir) / ("store" if backend == "store" else "sessions")).exists()
         if not new_session and has_persistence:
             store_package = None
+            language_root = None
             if backend == "store":
                 selection = workspace.repository_selection(definition)
                 if selection and "mncs-store" in selection:
                     store_package = root / "mncs-store" / "python"
+                if selection and "mncs-language" in selection:
+                    language_root = root / "mncs-language"
                 for request in definition.get("managed_checkouts", []):
                     if request.get("repository") == "mncs-store":
                         slug = request.get("name", "")
                         if not isinstance(slug, str) or not slug or Path(slug).name != slug or slug in (".", ".."):
                             raise EntryError("invalid selected Store checkout name", "store-selection-invalid")
                         store_package = root / "mncs-store" / ".worktrees" / slug / "python"
-            store = open_store(state_dir, backend, store_package_dir=store_package)
+                    if request.get("repository") == "mncs-language":
+                        slug = request.get("name", "")
+                        if not isinstance(slug, str) or not slug or Path(slug).name != slug or slug in (".", ".."):
+                            raise EntryError("invalid selected Language checkout name", "store-selection-invalid")
+                        language_root = root / "mncs-language" / ".worktrees" / slug
+            store_runtime = None
+            if store_package is not None and language_root is not None:
+                candidates = (language_root / "target" / "release" / "mncs", language_root / "target" / "debug" / "mncs")
+                binary = next((candidate for candidate in candidates if candidate.is_file()), None)
+                if binary is None or not (binary.parent / "libmncs_embed.so").is_file():
+                    raise EntryError("selected Language compiler/embed runtime is unavailable for Store entry",
+                                     "store-runtime-unavailable", next="build the selected provider runtime before retrying entry")
+                store_runtime = {"MNCS_STORE_ROOT": str(store_package.parent.resolve()),
+                                 "MNCS_LANGUAGE_ROOT": str(language_root.resolve()), "MNCS_BIN": str(binary.resolve()),
+                                 "MNCS_EMBED_LIB": str((binary.parent / "libmncs_embed.so").resolve())}
+            store = open_store(state_dir, backend, store_package_dir=store_package, store_runtime=store_runtime)
             try:
                 matches = []
                 for session_id in store.list_sessions():
@@ -103,6 +121,8 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                             and snapshot.get("workspace", {}).get("root") == str(root)
                             and snapshot.get("lifecycle") in ("active", "blocked", "waiting", "checkpointed", "abandoned")):
                         matches.append(session_id)
+                if backend == "store" and len(matches) == 1:
+                    upgrade_session_store_provider(state_dir, store.load_snapshot(matches[0]))
             finally:
                 close = getattr(store, "close", None)
                 if callable(close):

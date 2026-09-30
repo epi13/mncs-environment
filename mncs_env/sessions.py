@@ -421,6 +421,7 @@ def resolve_environment(
             selected_facts[name] = {"repository": name, "path": str(path), "head": record.get("head"),
                                     "branch": record.get("branch"), "clean": not record.get("dirty"),
                                     "source_ref": "explicit-workspace-selection", "authoritative_head": record.get("head")}
+    toolchain = None
     if selected_roots:
         # Reconcile the workspace view after provider provisioning so the
         # resolved session includes the exact checkouts it selected.
@@ -448,6 +449,14 @@ def resolve_environment(
                 language_root / "target" / "debug" / "mncs",
             )
             language_binary = next((path for path in candidates if path.is_file()), candidates[-1])
+            language_facts = selected_facts["mncs-language"]
+            toolchain = {
+                "repository": "mncs-language",
+                "checkout": str(language_root),
+                "revision": language_facts.get("head"),
+                "binary": str(language_binary) if language_binary.is_file() else None,
+                "status": "available" if language_binary.is_file() else "unavailable",
+            }
         discovered = capabilities_module.discover_capabilities(
             resolved_root,
             repository_roots=selected_roots,
@@ -456,6 +465,27 @@ def resolve_environment(
         )
     else:
         discovered = capabilities_module.discover_capabilities(resolved_root)
+    toolchain = None
+    language_root = selected_roots.get("mncs-language")
+    language_record = selected_facts.get("mncs-language")
+    if not selected_roots:
+        language_record = next((repo for repo in workspace_view.get("repositories", [])
+                                if (repo.get("manifest_repository") or repo.get("name")) == "mncs-language"), None)
+        if language_record:
+            language_root = Path(language_record["path"])
+    if language_root is not None:
+        candidates = (
+            language_root / "target" / "release" / "mncs",
+            language_root / "target" / "debug" / "mncs",
+        )
+        selected_binary = next((path for path in candidates if path.is_file()), candidates[-1])
+        toolchain = {
+            "repository": "mncs-language",
+            "checkout": str(language_root),
+            "revision": language_record.get("head"),
+            "binary": str(selected_binary) if selected_binary.is_file() else None,
+            "status": "available" if selected_binary.is_file() else "unavailable",
+        }
     bindings = [capabilities_module.probe_availability(binding) for binding in discovered]
     unavailable = [
         {"provider": binding["provider"], "capability": binding["capability"],
@@ -466,16 +496,26 @@ def resolve_environment(
     owns_store = store is None
     backend_store = store
     if backend_store is None:
-        store_package_dir = (
-            selected_roots["mncs-store"] / "python"
-            if "mncs-store" in selected_roots
+        store_provider = (
+            store_provider_from_environment({
+                "workspace": {"root": str(resolved_root)},
+                "selected_checkouts": selected_facts,
+                "toolchain": toolchain,
+            })
+            if backend == "store"
             else None
         )
         backend_store = open_store(
             state_dir,
             backend,
             verify_on_open=verify_on_open,
-            store_package_dir=store_package_dir,
+            store_package_dir=(
+                store_provider.get("python_package") if store_provider is not None else None
+            ),
+            store_runtime=(
+                store_provider.get("runtime_environment")
+                if store_provider is not None else None
+            ),
         )
     intent = parse_intent(definition.get("intent", {"goal": definition.get("goal", "unspecified")}))
     protected = sorted(
@@ -527,27 +567,6 @@ def resolve_environment(
         "claim_holders": claim_holders,
     }
     definition_id = environment_id(definition)
-    toolchain = None
-    language_root = selected_roots.get("mncs-language")
-    language_record = selected_facts.get("mncs-language")
-    if not selected_roots:
-        language_record = next((repo for repo in workspace_view.get("repositories", [])
-                                if (repo.get("manifest_repository") or repo.get("name")) == "mncs-language"), None)
-        if language_record:
-            language_root = Path(language_record["path"])
-    if language_root is not None:
-        candidates = (
-            language_root / "target" / "release" / "mncs",
-            language_root / "target" / "debug" / "mncs",
-        )
-        selected_binary = next((path for path in candidates if path.is_file()), candidates[-1])
-        toolchain = {
-            "repository": "mncs-language",
-            "checkout": str(language_root),
-            "revision": language_record.get("head"),
-            "binary": str(selected_binary) if selected_binary.is_file() else None,
-            "status": "available" if selected_binary.is_file() else "unavailable",
-        }
     environment = {
         "schema_version": ENVIRONMENT_SCHEMA,
         "identity": resolved_environment_id(definition_id, inputs),
@@ -637,12 +656,24 @@ class Session:
                 raise ValueError(
                     "provided Store handle is not bound to the session-selected mncs-store checkout"
                 )
+            selected_runtime = store_provider.get("runtime_environment")
+            actual_runtime = getattr(
+                getattr(store, "backend", None), "store_runtime", None
+            )
+            if selected_runtime is not None and actual_runtime != selected_runtime:
+                raise ValueError(
+                    "provided Store handle is not bound to the session-selected MNCS toolchain"
+                )
         store = store or open_store(
             state_dir,
             backend,
             verify_on_open=verify_on_open,
             store_package_dir=(
                 store_provider.get("python_package") if store_provider is not None else None
+            ),
+            store_runtime=(
+                store_provider.get("runtime_environment")
+                if store_provider is not None else None
             ),
         )
         if store_provider is not None:
@@ -1137,6 +1168,33 @@ class Session:
                 return binding
         raise AuthorityDenied(f"no binding for capability {capability!r} in this session")
 
+    def _selected_runtime_environment(self, binding: dict[str, Any]) -> dict[str, str]:
+        selected_checkouts = self.snapshot.get("selected_checkouts", {})
+        if not isinstance(selected_checkouts, dict) or not all(
+            selected_checkouts.get(repository) for repository in ("mncs-store", "mncs-language")
+        ):
+            return {}
+        provider = store_provider_from_environment({
+            "workspace": self.snapshot.get("workspace", {}),
+            "selected_checkouts": selected_checkouts,
+            "toolchain": self.snapshot.get("toolchain"),
+        })
+        if provider is None:
+            return {}
+        runtime = provider.get("runtime_environment")
+        if not isinstance(runtime, dict):
+            return {}
+        contextual = {
+            **runtime,
+            "MNCS_STORE_PYTHON": provider["python_package"],
+            "MNCS_LANGUAGE_CHECKOUT": runtime["MNCS_LANGUAGE_ROOT"],
+        }
+        declared = set((binding.get("fixed_env") or {}).keys())
+        declared_toolchain_env = binding.get("toolchain_env")
+        if isinstance(declared_toolchain_env, str) and declared_toolchain_env:
+            declared.add(declared_toolchain_env)
+        return {key: value for key, value in contextual.items() if key not in declared}
+
     def invoke(
         self,
         capability: str,
@@ -1161,6 +1219,7 @@ class Session:
             raise SessionError("session artifact directory escapes the Environment state root")
         artifact_directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         invocation_env = dict(env or {})
+        invocation_env.update(self._selected_runtime_environment(binding))
         invocation_env["MNCS_ENV_SESSION_ARTIFACT_DIR"] = str(artifact_directory)
         if binding.get("availability", {}).get("status") != "available":
             raise AuthorityDenied(
@@ -1180,8 +1239,11 @@ class Session:
             effect_scope = None
             if isinstance(checkout_path, str) and checkout_path:
                 selected_checkout = None
-                selected_path = Path(checkout_path).resolve()
                 workspace_root = self.snapshot.get("workspace", {}).get("root")
+                raw_selected_path = Path(checkout_path)
+                if not raw_selected_path.is_absolute() and workspace_root:
+                    raw_selected_path = Path(str(workspace_root)) / raw_selected_path
+                selected_path = raw_selected_path.resolve()
                 for repository, record in self.snapshot.get("selected_checkouts", {}).items():
                     raw_selected = Path(str(record.get("path", "")))
                     if not raw_selected.is_absolute() and workspace_root:
@@ -1247,6 +1309,7 @@ class Session:
                 }
             )
         self.snapshot["claim_holders"] = grouped
+        self.snapshot.setdefault("authority", {})["claim_holders"] = dict(grouped)
 
     def acquire_claim(
         self, repository: str, *, basis: str = claims_module.BASIS_EXPLICIT,
@@ -1573,6 +1636,7 @@ class Session:
                        {"note": "claim holders changed", "holders": holders})
         self.snapshot["claim_holders_detailed"] = holders
         self.snapshot["claim_holders"] = holders
+        self.snapshot.setdefault("authority", {})["claim_holders"] = dict(holders)
         self._save()
         return report
 

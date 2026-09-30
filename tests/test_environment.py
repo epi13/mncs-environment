@@ -307,7 +307,10 @@ class WorkspaceTests(unittest.TestCase):
     def test_discovers_real_repositories(self) -> None:
         view = workspace.discover_workspace(FAMILY)
         names = {repo["name"] for repo in view["repositories"]}
-        self.assertIn("mncs-atlas", names)
+        if (FAMILY / "mncs-atlas").is_dir():
+            self.assertIn("mncs-atlas", names)
+        else:
+            self.assertIn("mncs-compiler", names)
         self.assertIn("mncs-language", names)
         for repo in view["repositories"]:
             self.assertIn("branch", repo)
@@ -323,7 +326,18 @@ class WorkspaceTests(unittest.TestCase):
 
 class CapabilityTests(unittest.TestCase):
     def test_discovers_real_declarations(self) -> None:
-        bindings = capabilities.discover_capabilities(FAMILY)
+        test_root = FAMILY / "mncs-test"
+        if not (test_root / ".mncs" / "project.json").is_file():
+            worktrees = test_root / ".worktrees"
+            candidates = sorted(worktrees.glob("*/.mncs/project.json"))
+            if candidates:
+                test_root = candidates[0].parent.parent
+        if test_root != FAMILY / "mncs-test" and test_root.is_dir():
+            bindings = capabilities.discover_capabilities(
+                FAMILY, repository_roots={"mncs-test": test_root},
+            )
+        else:
+            bindings = capabilities.discover_capabilities(FAMILY)
         by_provider = {binding["provider"] for binding in bindings}
         self.assertIn("mncs-test", by_provider)
         self.assertTrue(all(binding["binding_id"].startswith("cap_") for binding in bindings))
@@ -1252,6 +1266,77 @@ class SessionTests(unittest.TestCase):
         ])
         self.assertEqual(parsed.output_limit_bytes, 131072)
 
+    def test_invocation_environment_uses_selected_store_and_language_toolchains(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            store_checkout = root / "mncs-store" / ".worktrees" / "campaign"
+            language_checkout = root / "mncs-language" / ".worktrees" / "campaign"
+            package_init = store_checkout / "python" / "mncs_store" / "__init__.py"
+            package_init.parent.mkdir(parents=True)
+            package_init.write_text("", encoding="utf-8")
+            binary = language_checkout / "target" / "debug" / "mncs"
+            embed = binary.parent / "libmncs_embed.so"
+            embed.parent.mkdir(parents=True)
+            binary.write_bytes(b"selected compiler")
+            embed.write_bytes(b"selected embed library")
+
+            session = sessions.Session.__new__(sessions.Session)
+            session.snapshot = {
+                "workspace": {"root": str(root)},
+                "selected_checkouts": {
+                    "mncs-store": {"path": str(store_checkout), "head": "store-revision"},
+                    "mncs-language": {"path": str(language_checkout), "head": "language-revision"},
+                },
+                "toolchain": {
+                    "checkout": str(language_checkout), "revision": "language-revision",
+                    "binary": str(binary), "status": "available",
+                },
+            }
+
+            selected = session._selected_runtime_environment({})
+            self.assertEqual(selected["MNCS_BIN"], str(binary.resolve()))
+            self.assertEqual(selected["MNCS_EMBED_LIB"], str(embed.resolve()))
+            self.assertEqual(selected["MNCS_LANGUAGE_ROOT"], str(language_checkout.resolve()))
+            self.assertEqual(selected["MNCS_STORE_ROOT"], str(store_checkout.resolve()))
+            self.assertEqual(
+                selected["MNCS_STORE_PYTHON"],
+                str((store_checkout / "python").resolve()),
+            )
+            self.assertEqual(
+                session._selected_runtime_environment({"toolchain_env": "MNCS_BIN"}),
+                {key: value for key, value in selected.items() if key != "MNCS_BIN"},
+            )
+
+    def test_store_inspection_accepts_selected_session(self) -> None:
+        parsed = cli.build_parser().parse_args([
+            "store", "--session", "ses_fixture", "--verify",
+        ])
+        self.assertEqual(parsed.session, "ses_fixture")
+        with (
+            mock.patch.object(cli, "open_store") as open_selected,
+            mock.patch.object(cli, "out"),
+        ):
+            open_selected.return_value.verify.return_value = {"status": "ok"}
+            self.assertEqual(cli.cmd_store(parsed), 0)
+        open_selected.assert_called_once_with(
+            parsed.state_dir, "store", session_id="ses_fixture",
+        )
+
+    def test_claim_management_opens_selected_session_store(self) -> None:
+        parsed = cli.build_parser().parse_args([
+            "claims", "ses_fixture", "--acquire", "mncs-environment",
+        ])
+        with (
+            mock.patch.object(cli, "open_store") as open_selected,
+            mock.patch.object(cli.sessions_module.Session, "resume") as resume,
+            mock.patch.object(cli, "out"),
+        ):
+            cli.cmd_claims(parsed)
+        open_selected.assert_called_once_with(
+            parsed.state_dir, "store", session_id="ses_fixture",
+        )
+        resume.assert_called_once()
+
     def test_revalidate_preserves_scoped_claim_holders(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))
@@ -1266,6 +1351,8 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(holders[0]["claim_id"], claim["claim_id"])
             self.assertEqual(holders[0]["scope"], claim["scope"])
             self.assertEqual(session.snapshot["claim_holders_detailed"],
+                             session.snapshot["claim_holders"])
+            self.assertEqual(session.snapshot["authority"]["claim_holders"],
                              session.snapshot["claim_holders"])
 
     def test_provider_effects_independently_authorized(self) -> None:
@@ -1302,6 +1389,45 @@ class SessionTests(unittest.TestCase):
                 "scope": {
                     "kind": "worktree", "repository": "MNCS-Commons",
                     "checkout": checkout, "branch": "campaign/commons-parity",
+                    "paths": None, "exclusive": False,
+                },
+            }]
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke",
+                return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
+            ) as invoke:
+                result = session.invoke("campaign-writer", ["fixture"])
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(invoke.call_count, 1)
+
+    def test_provider_effect_resolves_relative_checkout_from_campaign_root(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "MNCS-Commons" / ".worktrees" / "campaign"
+            checkout.mkdir(parents=True)
+            session = make_session(root)
+            session.snapshot["workspace"]["root"] = str(root)
+            session.snapshot["selected_checkouts"] = {"MNCS-Commons": {
+                "path": "MNCS-Commons/.worktrees/campaign",
+                "branch": "campaign/commons-parity",
+            }}
+            binding = capabilities.probe_availability(
+                capabilities.bind(
+                    provider="mncs-commons", capability="campaign-writer",
+                    contract_revision="1", entrypoint="e", address="/bin/echo",
+                    effects=["write"], provider_root=str(checkout),
+                    provenance={"checkout": {
+                        "path": "MNCS-Commons/.worktrees/campaign",
+                        "branch": "campaign/commons-parity",
+                    }},
+                ))
+            session.snapshot["bindings"].append(binding)
+            session.snapshot["claim_holders"]["MNCS-Commons"] = [{
+                "session_id": session.session_id,
+                "scope": {
+                    "kind": "worktree", "repository": "MNCS-Commons",
+                    "checkout": str(checkout.resolve()),
+                    "branch": "campaign/commons-parity",
                     "paths": None, "exclusive": False,
                 },
             }]
@@ -2154,7 +2280,62 @@ class SelectedStoreProviderTests(unittest.TestCase):
                 state_dir,
                 verify_on_open=False,
                 store_package_dir=str(package.resolve()),
+                store_runtime=None,
             )
+
+    def test_campaign_store_provider_binds_exact_language_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            store_checkout = root / "mncs-store" / ".worktrees" / "campaign"
+            language_checkout = root / "mncs-language" / ".worktrees" / "campaign"
+            environment = self._environment(root, store_checkout)
+            binary = language_checkout / "target" / "release" / "mncs"
+            embed = binary.parent / "libmncs_embed.so"
+            embed.parent.mkdir(parents=True)
+            binary.write_bytes(b"selected compiler")
+            embed.write_bytes(b"selected embed library")
+            environment["selected_checkouts"]["mncs-language"] = {
+                "path": str(language_checkout), "head": "language-revision",
+            }
+            environment["toolchain"] = {
+                "repository": "mncs-language", "checkout": str(language_checkout),
+                "revision": "language-revision", "binary": str(binary),
+                "status": "available",
+            }
+
+            binding = store_provider_from_environment(environment)
+            assert binding is not None
+            expected_runtime = {
+                "MNCS_STORE_ROOT": str(store_checkout.resolve()),
+                "MNCS_LANGUAGE_ROOT": str(language_checkout.resolve()),
+                "MNCS_BIN": str(binary.resolve()),
+                "MNCS_EMBED_LIB": str(embed.resolve()),
+            }
+            self.assertEqual(binding["runtime_environment"], expected_runtime)
+
+            state_dir = Path(directory) / "state"
+            session_id = "ses_exact_toolchain_test"
+            write_session_store_provider(state_dir, session_id, binding)
+            with mock.patch("mncs_env.session_store.StoreSessionStore") as store_ctor:
+                open_store(state_dir, "store", session_id=session_id)
+            store_ctor.assert_called_once_with(
+                state_dir, verify_on_open=True,
+                store_package_dir=str((store_checkout / "python").resolve()),
+                store_runtime=expected_runtime,
+            )
+
+    def test_campaign_store_provider_refuses_missing_language_toolchain(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            store_checkout = root / "mncs-store" / ".worktrees" / "campaign"
+            language_checkout = root / "mncs-language" / ".worktrees" / "campaign"
+            environment = self._environment(root, store_checkout)
+            environment["selected_checkouts"]["mncs-language"] = {
+                "path": str(language_checkout), "head": "language-revision",
+            }
+
+            with self.assertRaisesRegex(ValueError, "refusing an ambient Store compiler"):
+                store_provider_from_environment(environment)
 
 
 if __name__ == "__main__":

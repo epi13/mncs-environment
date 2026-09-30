@@ -324,6 +324,31 @@ class EntryContractTests(unittest.TestCase):
         self.assertNotEqual(first.session_id, second.session_id)
         self.assertEqual(reconciler.find_session(self.state, store, self.project).session_id, first.session_id)
 
+    def test_entry_upgrade_preserves_store_routing_and_requires_matching_checkout(self):
+        from mncs_env import session_store
+        session_id = "ses_existing"
+        selected = {"provider": "mncs-store", "workspace_root": str(self.base),
+                    "checkout": str(self.base / "mncs-store"), "python_package": str(self.base / "mncs-store" / "python"),
+                    "revision": "original", "runtime_environment": {"MNCS_BIN": "selected-runtime"}}
+        prior = {key: value for key, value in selected.items() if key != "runtime_environment"}
+        prior.update(schema_version="mncs.environment.session-store-provider/1", session_id=session_id)
+        path = self.state / "sessions" / session_id / "store-provider.json"
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps(prior))
+        snapshot = {"session_id": session_id}
+        with mock.patch.object(session_store, "store_provider_from_environment", return_value=selected):
+            self.assertTrue(session_store.upgrade_session_store_provider(self.state, snapshot))
+            self.assertFalse(session_store.upgrade_session_store_provider(self.state, snapshot))
+        upgraded = json.loads(path.read_text())
+        self.assertEqual(upgraded["runtime_environment"], selected["runtime_environment"])
+        self.assertEqual(upgraded["revision"], "original")
+        prior["checkout"] = str(self.base / "foreign-store")
+        path.write_text(json.dumps(prior))
+        with mock.patch.object(session_store, "store_provider_from_environment", return_value=selected):
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                session_store.upgrade_session_store_provider(self.state, snapshot)
+        self.assertEqual(json.loads(path.read_text()), prior)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -92,7 +92,7 @@ def probe_services(session, *, bindings: list[dict] | None = None) -> list[dict[
                     record["code"] = "service-probe-budget"
                     raise ValueError("entry probe budget exhausted; retry health for a fresh observation")
                 result = capabilities.invoke(binding, call.get("argv", []), timeout_seconds=min(3.0, remaining),
-                                             output_limit_bytes=16384)
+                                             output_limit_bytes=16384, env=session._selected_runtime_environment(binding))
                 record["code"] = "service-probe-failed"
                 if result["status"] != "ok":
                     raise ValueError(f"{result['status']}: {result.get('stderr', '')[-1000:]}")
