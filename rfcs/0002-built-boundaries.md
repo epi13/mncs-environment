@@ -1,6 +1,6 @@
 # RFC 0002 — Session Persistence, Authority, and Composition Boundaries As Built
 
-Status: accepted (implemented on `campaign/environment-foundation`).
+Status: accepted; updated to reflect the current implementation. Git retains the foundation decisions.
 
 RFC 0001 defined the conceptual session model. This record fixes the
 implementation choices made while building it, so future work evolves the
@@ -25,49 +25,61 @@ nonce so identical inputs never collide; the nonce is persisted, keeping
 identities reproducible from stored records. No paths, PIDs, or ports in
 identities.
 
-## 3. File-backed session persistence owned by Environment
+## 3. Store-backed persistence with explicit bootstrap routing
 
-Each session is a directory: `session.json` snapshot, `events.jsonl`
-append-only log, `checkpoints/`, `handoffs/`. Atomic writes
-(write-tmp-then-rename). State root defaults to
-`~/.local/share/mncs-environment`.
-
-Store and Memory were inspected and deliberately not used: no
-session/checkpoint schema exists in either, and opaque blobs would misuse
-them. Recorded as pressures with desired contracts.
+Environment owns session/event/checkpoint/claim meaning. Store owns durable
+objects, immutable identities, generation CAS, verification, and commit feeds.
+Store is canonical; `session_store.py` retains a file debug projection.
+State defaults to `~/.local/share/mncs-environment`. Selected Store package
+routing is persisted outside Store so a new consumer can reopen the intended
+checkout. Entry reuse reads durable session records rather than maintaining
+an independent active-session registry.
 
 ## 4. Authority is pure, default-deny, and event-logged
 
-`authority.evaluate()` is a pure function over intent constraints,
-protected scope, and advisory leases. Unknown actions deny; ungranted
-sensitive actions escalate; every denial/escalation is a session event.
-Rights/provenance binding is a recorded pressure, not a local
-reimplementation.
+`authority.evaluate()` projects intent constraints, protected scope, observed
+workspace facts, and scoped claims into allow/deny/escalate. Denial and
+escalation never spawn provider processes. Sensitive invocation effects
+require the corresponding action authority. Rights/provenance evaluation
+composes the owning provider's host gate; unknown rights remain explicit.
 
-## 5. Leases are advisory and environment-local
+## 5. Claims preserve scoped concurrent work
 
-`mncs_env/leases.py` implements expiring session-scoped leases enforced
-only inside Environment authority evaluation. Foreign work is additionally
-detected heuristically (dirty trees, foreign branches, linked worktrees)
-and surfaced as protection reasons. Canonical family-wide leases belong
-to the control plane (recorded pressure).
+`claims.py` records versioned repository/worktree/path scopes, holders,
+acquisition basis, adoption, liveness, release, and transfer. Claims are
+Store-backed. Foreign branch, dirty tree, and linked worktree observations
+remain protection evidence. Family-wide ownership outside Environment is a
+Control integration pressure; Environment does not adopt other agents' work
+as an entry or recovery ritual.
 
-## 6. Capability discovery is data-driven with an explicit seam
+## 6. Provider addressing is explicit
 
-Bindings come from repository-owned `family-semantic-contracts-v1.json`
-`provides` and `.mncs/project.json` manifests. Addressing uses a small
-tested bootstrap table plus a manifest `fingerprint_sources` heuristic
-(existing `.py` module becomes a `python:` address with provider root as
-default cwd). Novel spellings bind as unavailable with reasons. No giant
-provider switch; the seam is a recorded pressure for canonical provider
-addressing.
+Bindings come from repository-owned semantic declarations, project manifests,
+and test/verification inventories. Invocation blocks carry addresses, fixed
+argv, effects, and exact toolchains. A small tested bootstrap table retains
+known entrypoint spellings and Atlas's proven context adapter. Fingerprint
+sources are evidence only: arbitrary source modules are not guessed tools.
+Unaddressed contracts remain discoverable with provider-owned diagnostics.
 
-## 7. Events are log-based with replay; polling is an adapter
+Repository roots discover themselves. Explicit bounded selection composes
+immediate providers from a large family workspace without touching unrelated
+repositories. Provider-managed campaigns retain their own exact worktree
+selection. Availability checks executable permissions and toolchain presence;
+provider readiness is a separate structured contract.
 
-Subscriptions track cursors into the session log; absent consumers replay
-on return. The only cross-process observation mechanism today is the
-`adapter:git-poll` head-change adapter, explicitly labeled. Canonical
-provider event feeds are a recorded pressure on Forge/owning services.
+## 7. Events and reconciliation compose provider observations
+
+Subscriptions track session log cursors for replay. Git, Store, Commons, and
+Language sources produce bounded observations; the background reconciler
+persists source cursors across restart. Reconciler sessions are scoped to
+their workspace. Provider push feeds remain an owning-service pressure.
+
+Canonical foreground entry selects/reuses work, refreshes discovery, probes
+provider JSON readiness, delegates declared recovery through normal authority,
+and verifies again. Status is historical; live health is read-only. Entry and
+foreground reconciliation serialize with a process lock; external providers
+own process supervision and idempotence. Lifecycle and readiness are separate.
+See [ENTRY.md](../docs/ENTRY.md) for the consumer/provider contract.
 
 ## 8. Lifecycle is an enforced machine, not a string
 

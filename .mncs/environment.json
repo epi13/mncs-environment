@@ -1,0 +1,23 @@
+{
+  "name": "mncs-environment-development",
+  "workspace_root": "../..",
+  "workspace_scope": {
+    "kind": "workspace",
+    "repositories": ["mncs-environment", "mncs-language", "mncs-compiler", "mncs-test", "mncs-store", "mncs-forge"]
+  },
+  "required_capabilities": ["mncs-environment:workspace-discovery"],
+  "services": [
+    {
+      "identity": "mncs-environment:workspace-discovery",
+      "probe": {"capability": "mncs-environment:workspace-discovery", "argv": []},
+      "response_schema": "mncs.environment.workspace/1",
+      "ready_when": {"/scan/status": "complete"},
+      "required": true
+    }
+  ],
+  "intent": {
+    "goal": "improve mncs-environment through a persistent, discoverable MNCS work context",
+    "repositories": ["mncs-environment"],
+    "constraints": ["preserve foreign branches and uncommitted work; acquire explicit claims before provider writes"]
+  }
+}

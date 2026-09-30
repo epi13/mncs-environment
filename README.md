@@ -2,6 +2,20 @@
 
 Canonical machine-native development environment for assembling work intent, repository state, services, capabilities, triggers, memory, authority, provenance, and execution context into a coherent entry point for agents and other MNCS consumers.
 
+Enter from this checkout (or a subdirectory):
+
+```bash
+./scripts/mncs-env enter --consumer my-agent
+```
+
+Entry discovers `.mncs/environment.json`, inspects its bounded selection of
+MNCS providers, creates or reuses durable work, reconciles declared services,
+and returns JSON context with identity, projects, toolchain, readiness, and
+callable actions. Repeat the same command to continue. No PATH installation
+or setup environment variables are required in the standard sibling layout.
+See [the entry contract](docs/ENTRY.md) for selection, recovery, and provider
+readiness declarations.
+
 ## Why this exists
 
 MNCS increasingly has the machinery needed to compile, plan, admit, execute, observe, verify, diagnose, automate, persist, and reason about work. What has been missing is the coherent boundary through which a consumer enters that machinery.
@@ -159,19 +173,18 @@ state, not prose. The hardening campaign added:
 
 ## Entering an environment
 
-The next language/compiler campaign enters through the shipped definition
-(which deliberately requires an explicit isolated campaign root):
+The checked-in development definition selects Environment, Language,
+Compiler, Test, Store, and Forge from the sibling workspace without inspecting
+unselected repositories. Only Environment is in its writable intent;
+provider mutations still pass through claims and authority. Availability and
+readiness are observations, not permission to modify a checkout.
 
 ```bash
-./scripts/mncs-env --state-dir "$MNCS_ENV_STATE" enter \
-    --definition examples/compiler-campaign/environment.json \
-    --workspace "$MNCS_CAMPAIGN_ROOT" --consumer my-agent
-# The default response is a compact first-use context.
-./scripts/mncs-env --state-dir "$MNCS_ENV_STATE" status <session>
-# Use inspect for the complete session, authority, workspace, and bindings.
-./scripts/mncs-env --state-dir "$MNCS_ENV_STATE" inspect <session>
+./scripts/mncs-env enter --consumer my-agent
+./scripts/mncs-env status <session>       # historical, read-only context
+./scripts/mncs-env health <session>       # live read-only probes
+./scripts/mncs-env reconcile <session>    # refresh, recover, verify
 ./scripts/mncs-env capabilities <session>
-./scripts/mncs-env authority <session>
 ./scripts/mncs-env invoke <session> <capability> -- <args...>
 ./scripts/mncs-env checkpoint <session> --progress "..." --remaining ...
 ./scripts/mncs-env resume <session> --revalidate
@@ -179,18 +192,32 @@ The next language/compiler campaign enters through the shipped definition
 ./scripts/mncs-env complete <session> --outcome "..."
 ```
 
-`mncs-env status <session>` and `mncs-env context <session>` are read-only
-compact context views. A compiler campaign root must be scoped to the campaign;
-the repository's Projects directory is intentionally rejected before Git
-discovery begins, with a diagnostic explaining how to select the correct root.
+Use the returned `actions.*.argv` directly when changing directories or using
+an isolated state root: each action preserves the executable, state directory,
+and persistence backend. `inspect` exposes detailed state; `status` and
+`context` are compact snapshots. Lifecycle `active` does not assert readiness.
+Optional provider gaps yield `degraded` readiness; required gaps yield
+`blocked` readiness and exit status 5 while preserving the session for recovery.
 
-Run the vertical proof (real capability, cross-process resume, handoff) with
-an isolated workspace input when other campaign work is active:
-`MNCS_VERTICAL_WORKSPACE=/path/to/isolated/campaign python3 scripts/vertical_proof.py`.
-Run tests:
-`python3 -m pytest tests/ -q`. See [RFC 0002](rfcs/0002-built-boundaries.md)
-for as-built decisions and `pressures/registry.json` for blockers owned
-elsewhere.
+Outside a declared project, entry establishes a read-only orientation session
+for the nearest Git checkout or explicit `--workspace`. It never infers a
+family root from sibling directories. Explicit definitions remain supported:
+
+```bash
+./scripts/mncs-env --state-dir "$MNCS_ENV_STATE" enter \
+    --definition examples/compiler-campaign/environment.json \
+    --workspace "$MNCS_CAMPAIGN_ROOT" --consumer my-agent
+```
+
+Compiler campaigns deliberately require an isolated root and provider-owned
+worktree selection. A broad root without an explicit bounded repository
+selection is rejected before Git discovery or provider invocation.
+
+Run the real-provider persistence/handoff proof with
+`python3 scripts/vertical_proof.py`. It creates temporary scoped clones of
+Atlas and Language by default; `MNCS_VERTICAL_WORKSPACE` can select an existing
+isolated proof workspace. Run regressions with `python3 -m pytest tests/ -q`.
+The campaign proofs are `python3 scripts/campaign_proofs.py`.
 
 ## Initial entry contract
 

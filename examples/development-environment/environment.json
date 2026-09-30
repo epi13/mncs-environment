@@ -1,1 +1,15 @@
-{"authority_requirements": ["read workspace state", "invoke orientation capabilities"], "intent": {"acceptance_criteria": ["session resumes in a new process with structured state intact", "handoff transfers to a different consumer identity", "no workspace mutation occurs"], "constraints": ["read-only against the workspace", "no commits, pushes, or merges"], "expected_artifacts": ["session checkpoint", "handoff record", "completion record"], "forbidden_actions": ["delete", "merge", "publish"], "goal": "prove the mncs-environment vertical slice against real workspace state", "outcomes": ["resolved environment", "invoked real capability", "resumed session", "completed handoff"], "protected_repositories": ["mncs-language", "mncs-compiler", "mncs-memory"], "repositories": ["mncs-atlas", "mncs-environment"]}, "name": "mncs-development-proof", "workspace_root": "/home/epi13/Documents/Projects"}
+{
+  "authority_requirements": ["read workspace state", "invoke orientation capabilities"],
+  "intent": {
+    "acceptance_criteria": ["session resumes in a new process with structured state intact", "handoff transfers to a different consumer identity", "no workspace mutation occurs"],
+    "constraints": ["read-only against the workspace", "no commits, pushes, or merges"],
+    "expected_artifacts": ["session checkpoint", "handoff record", "completion record"],
+    "forbidden_actions": ["write", "mutate", "execute", "delete", "merge", "publish"],
+    "goal": "prove the mncs-environment vertical slice against real workspace state",
+    "outcomes": ["resolved environment", "invoked real capability", "resumed session", "completed handoff"],
+    "protected_repositories": ["mncs-language", "mncs-compiler", "mncs-memory"],
+    "repositories": []
+  },
+  "name": "mncs-development-proof",
+  "workspace_root": "../.."
+}

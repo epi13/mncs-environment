@@ -14,6 +14,8 @@ import json
 import re
 import shutil
 import subprocess
+import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -34,6 +36,12 @@ ENTRYPOINT_CANDIDATES: dict[str, list[str]] = {
     "mncs-test": ["{workspace}/mncs-test/bin/mncs-test"],
     "mncs-debug": ["{workspace}/mncs-debug/bin/mncs-debug"],
     "mncs-registry-context": ["{workspace}/mncs-atlas/registry/__main__.py"],
+}
+
+# Proven orientation adapter retained until Atlas publishes its invocation.
+# This is an explicit provider contract, never inferred from fingerprint files.
+MANIFEST_BOOTSTRAP_INVOCATIONS = {
+    ("mncs-atlas", "context-capsule"): {"kind": "python", "path": "registry/__main__.py"},
 }
 
 
@@ -59,8 +67,8 @@ def resolve_executable(candidates: list[str]) -> str | None:
         if "/" in candidate:
             if Path(candidate).is_file():
                 return candidate
-        elif shutil.which(candidate):
-            return candidate
+        elif resolved := shutil.which(candidate):
+            return resolved
     return None
 
 
@@ -180,12 +188,18 @@ def descriptor_invocation(
         return empty
     kind = spec.get("kind")
     address: str | None = None
+    relative = Path(str(spec.get("path", "")))
+    if kind in ("executable", "python") and (
+        relative.is_absolute() or ".." in relative.parts
+        or not (repo / relative).resolve().is_relative_to(repo.resolve())
+    ):
+        return empty
     if kind == "executable":
-        candidate = repo / str(spec.get("path", ""))
+        candidate = repo / relative
         if candidate.is_file():
             address = str(candidate)
     elif kind == "python":
-        candidate = repo / str(spec.get("path", ""))
+        candidate = repo / relative
         if candidate.is_file() and candidate.suffix == ".py":
             address = "python:" + str(candidate)
     elif kind == "binary":
@@ -220,16 +234,39 @@ def probe_availability(binding: dict[str, Any]) -> dict[str, Any]:
         address[len("python:"):] if isinstance(address, str) and address.startswith("python:")
         else address
     )
-    if isinstance(target, str) and target and Path(target).is_file():
+    resolved = shutil.which(target) if isinstance(target, str) and "/" not in target else target
+    python_script = isinstance(address, str) and address.startswith("python:")
+    usable = bool(isinstance(resolved, str) and resolved and Path(resolved).is_file()
+                  and os.access(resolved, os.R_OK if python_script else os.X_OK))
+    toolchain = binding.get("toolchain_address")
+    if toolchain and not Path(toolchain).exists():
+        usable = False
+        reason = f"bound toolchain is missing: {toolchain}"
+        code = "toolchain-missing"
+    elif not usable:
+        if address is None and binding.get("entrypoint") == "undeclared":
+            code = "provider-invocation-undeclared"
+            reason = f"{binding.get('provider')} must publish an invocation descriptor for {binding.get('capability')}; source fingerprints are not commands"
+        else:
+            reason = f"no usable executable for entrypoint {binding.get('entrypoint')!r} at {address!r}"
+            code = "executable-unavailable"
+    else:
+        reason = f"invocation substrate present at {address}; provider readiness not yet verified"
+        code = "executable-present"
+    if usable:
         awaitable["availability"] = {
             "status": "available",
-            "reason": f"executable present at {address}",
+            "reason": reason,
+            "code": code,
+            "verification": "substrate",
             "observed_at": utcnow(),
         }
     else:
         awaitable["availability"] = {
             "status": "unavailable",
-            "reason": f"no executable for entrypoint {binding.get('entrypoint')!r}",
+            "reason": reason,
+            "code": code,
+            "verification": "substrate",
             "observed_at": utcnow(),
         }
     return awaitable
@@ -253,17 +290,19 @@ def discover_capabilities(
     if language_binary is not None:
         language_bin = str(Path(language_binary).resolve()) if Path(language_binary).is_file() else ""
     else:
-        release_bin = root / "mncs-language" / "target" / "release" / "mncs"
-        debug_bin = root / "mncs-language" / "target" / "debug" / "mncs"
+        language_root = root if root.name == "mncs-language" else root / "mncs-language"
+        release_bin = language_root / "target" / "release" / "mncs"
+        debug_bin = language_root / "target" / "debug" / "mncs"
         language_bin = (
             str(release_bin) if release_bin.is_file()
             else str(debug_bin) if debug_bin.is_file()
-            else (shutil.which("mncs") or "")
+            else ""
         )
     bindings: list[dict[str, Any]] = []
     if repository_roots is None:
         try:
-            repos = sorted(path for path in root.iterdir() if path.is_dir() and not path.is_symlink())
+            repos = ([root] if (root / ".git").exists() else
+                     sorted(path for path in root.iterdir() if path.is_dir() and not path.is_symlink()))
         except OSError:
             return bindings
     else:
@@ -519,10 +558,8 @@ def _from_manifest(
         contract = entry.get("contract")
         if not isinstance(contract, str) or not contract:
             continue
-        # Data-driven addressing: a declared invocation block wins, then a
-        # fingerprint source that is an existing executable module becomes
-        # the invocation address. No per-provider switch statement;
-        # undeclared contracts stay address-less.
+        # A fingerprint names source evidence, not an invocation protocol.
+        # Only provider-declared invocation blocks make a manifest callable.
         declared = descriptor_invocation(
             entry,
             repo,
@@ -533,17 +570,16 @@ def _from_manifest(
         address: str | None = declared["address"]
         addressing = declared["addressing"]
         entrypoint = "undeclared"
-        sources = entry.get("fingerprint_sources")
-        if address is None and isinstance(sources, list):
-            for source in sources:
-                if not isinstance(source, str) or not source.endswith(".py"):
-                    continue
-                candidate = repo / source
-                if candidate.is_file():
-                    address = "python:" + str(candidate)
-                    entrypoint = f"python:{source}"
-                    addressing = "descriptor-fingerprint"
-                    break
+        bootstrap = MANIFEST_BOOTSTRAP_INVOCATIONS.get((repository_id, contract))
+        if not isinstance(entry.get("invocation"), dict) and bootstrap is not None:
+            declared = descriptor_invocation({"invocation": bootstrap}, repo, workspace, repository_roots)
+            address = declared["address"]
+            addressing = "bootstrap" if address else "none"
+            entrypoint = "mncs-registry-context"
+        effects = entry.get("effects", ["read"])
+        if (not isinstance(effects, list) or not effects
+                or any(effect not in {"read", "write", "execute", "publish"} for effect in effects)):
+            continue
         record = bind(
             provider=repository_id,
             capability=f"{repository_id}:{contract}",
@@ -552,7 +588,8 @@ def _from_manifest(
             address=address,
             toolchain_address=declared["toolchain_address"],
             toolchain_env=declared["toolchain_env"],
-            effects=["read"],
+            fixed_argv=declared["fixed_argv"],
+            effects=list(effects),
             event_types=["unknown"],
             provenance={"source": f"{repo.name}/.mncs/project.json",
                         "kind": entry.get("kind"), "stability": entry.get("stability"),
@@ -710,12 +747,12 @@ def invoke(
     if address.startswith("python:"):
         script = address[len("python:"):]
         if script.endswith("__main__.py") and Path(script).is_file():
-            command = ["python3", "-m", Path(script).parent.name, *argv]
+            command = [sys.executable, "-m", Path(script).parent.name, *binding.get("fixed_argv", []), *argv]
         elif script.endswith(".py") and Path(script).is_file():
-            command = ["python3", script, *binding.get("fixed_argv", []), *argv]
+            command = [sys.executable, script, *binding.get("fixed_argv", []), *argv]
         else:
             module = script.replace("python -m ", "").split()[0]
-            command = ["python3", "-m", module, *binding.get("fixed_argv", []), *argv]
+            command = [sys.executable, "-m", module, *binding.get("fixed_argv", []), *argv]
     else:
         command = [address, *binding.get("fixed_argv", []), *argv]
     if cwd is None:

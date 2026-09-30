@@ -15,6 +15,8 @@ identical re-put is idempotent.
 from __future__ import annotations
 
 import json
+import shlex
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -24,6 +26,7 @@ from . import capabilities as capabilities_module
 from . import claims as claims_module
 from . import events as events_module
 from . import rights as rights_module
+from . import readiness as readiness_module
 from . import workspace as workspace_module
 from .identity import (
     checkpoint_id,
@@ -390,7 +393,9 @@ def resolve_environment(
     resolved_root = workspace_module.validate_workspace_root(
         workspace_root, definition=definition
     )
-    workspace_view = workspace_module.discover_workspace(resolved_root)
+    requirements = readiness_module.validate_requirements(definition)
+    repository_selection = workspace_module.repository_selection(definition)
+    workspace_view = workspace_module.discover_workspace(resolved_root, repositories=repository_selection)
     scan = workspace_view.get("scan", {})
     if workspace_view.get("error") or scan.get("status") != "complete":
         message = workspace_view.get("error") or scan.get(
@@ -407,10 +412,20 @@ def resolve_environment(
     selected_roots, selected_facts = _provider_managed_checkouts(
         definition, resolved_root, workspace_view
     )
+    provisioned = bool(selected_roots)
+    if repository_selection is not None:
+        for name in repository_selection:
+            path = resolved_root / name
+            record = next(repo for repo in workspace_view["repositories"] if Path(repo["path"]) == path)
+            selected_roots[name] = path
+            selected_facts[name] = {"repository": name, "path": str(path), "head": record.get("head"),
+                                    "branch": record.get("branch"), "clean": not record.get("dirty"),
+                                    "source_ref": "explicit-workspace-selection", "authoritative_head": record.get("head")}
     if selected_roots:
         # Reconcile the workspace view after provider provisioning so the
         # resolved session includes the exact checkouts it selected.
-        workspace_view = workspace_module.discover_workspace(resolved_root)
+        if provisioned:
+            workspace_view = workspace_module.discover_workspace(resolved_root)
         scan = workspace_view.get("scan", {})
         if workspace_view.get("error") or scan.get("status") != "complete":
             message = workspace_view.get("error") or scan.get(
@@ -513,18 +528,23 @@ def resolve_environment(
     }
     definition_id = environment_id(definition)
     toolchain = None
-    if selected_roots.get("mncs-language"):
-        language_root = selected_roots["mncs-language"]
+    language_root = selected_roots.get("mncs-language")
+    language_record = selected_facts.get("mncs-language")
+    if not selected_roots:
+        language_record = next((repo for repo in workspace_view.get("repositories", [])
+                                if (repo.get("manifest_repository") or repo.get("name")) == "mncs-language"), None)
+        if language_record:
+            language_root = Path(language_record["path"])
+    if language_root is not None:
         candidates = (
             language_root / "target" / "release" / "mncs",
             language_root / "target" / "debug" / "mncs",
         )
         selected_binary = next((path for path in candidates if path.is_file()), candidates[-1])
-        language_facts = selected_facts["mncs-language"]
         toolchain = {
             "repository": "mncs-language",
             "checkout": str(language_root),
-            "revision": language_facts.get("head"),
+            "revision": language_record.get("head"),
             "binary": str(selected_binary) if selected_binary.is_file() else None,
             "status": "available" if selected_binary.is_file() else "unavailable",
         }
@@ -532,6 +552,8 @@ def resolve_environment(
         "schema_version": ENVIRONMENT_SCHEMA,
         "identity": resolved_environment_id(definition_id, inputs),
         "definition_id": definition_id,
+        "configuration": {"name": definition.get("name"), "definition_id": definition_id},
+        "requirements": requirements,
         "resolved_at": utcnow(),
         "consumer_id": consumer_id,
         "workspace": workspace_view,
@@ -649,6 +671,9 @@ class Session:
             "workspace": environment.get("workspace", {}),
             "selected_checkouts": environment.get("selected_checkouts", {}),
             "toolchain": environment.get("toolchain"),
+            "configuration": environment.get("configuration", {}),
+            "requirements": environment.get("requirements", {}),
+            "service_observations": [],
             "repo_facts": environment.get("repo_facts", {}),
             "claim_holders": environment.get("claim_holders", {}),
             "bindings": environment.get("bindings", []),
@@ -900,6 +925,11 @@ class Session:
             raise ValueError("checkout provider returned an incomplete checkout selection")
 
         workspace = workspace_module.discover_workspace(workspace_root)
+        if workspace.get("error") or workspace.get("scan", {}).get("status") != "complete":
+            raise workspace_module.WorkspaceResolutionError(
+                "workspace revalidation stopped safely; keeping the previous complete observation",
+                diagnostics={"code": "workspace-scan-incomplete", "root": str(workspace_root),
+                             "scan": workspace.get("scan", {}), "next": "check workspace availability, then reconcile the session"})
         repositories = workspace.get("repositories", [])
         selected_facts: dict[str, dict[str, Any]] = {}
         for row in rows:
@@ -1326,7 +1356,13 @@ class Session:
 
     def observe_workspace(self, workspace_root: str | Path) -> list[dict[str, Any]]:
         """Adapter poll: selected checkout revision and state changes become events."""
-        workspace = workspace_module.discover_workspace(workspace_root)
+        workspace = workspace_module.discover_workspace(
+            workspace_root, repositories=self.snapshot.get("workspace", {}).get("selection"))
+        if workspace.get("error") or workspace.get("scan", {}).get("status") != "complete":
+            raise workspace_module.WorkspaceResolutionError(
+                "workspace revalidation stopped safely; keeping the previous complete observation",
+                diagnostics={"code": "workspace-scan-incomplete", "root": str(workspace_root),
+                             "scan": workspace.get("scan", {}), "next": "check workspace availability, then reconcile the session"})
         if self.snapshot.get("selected_checkouts"):
             current_checkouts: dict[str, dict[str, Any]] = {}
             for name, previous_checkout in self.snapshot["selected_checkouts"].items():
@@ -1467,6 +1503,18 @@ class Session:
                 checkout_facts=facts,
                 language_binary=language_binary,
             )
+        elif workspace_root:
+            discovered = capabilities_module.discover_capabilities(workspace_root)
+
+        toolchain = self.snapshot.get("toolchain")
+        if isinstance(toolchain, dict):
+            checkout = Path(str(toolchain.get("checkout", "")))
+            candidates = (checkout / "target" / "release" / "mncs", checkout / "target" / "debug" / "mncs")
+            binary = next((path for path in candidates if path.is_file()), None)
+            language = self.snapshot.get("selected_checkouts", {}).get("mncs-language", {})
+            self.snapshot["toolchain"] = {**toolchain, "binary": str(binary) if binary else None,
+                                          "status": "available" if binary else "unavailable",
+                                          "revision": language.get("head", toolchain.get("revision"))}
 
         prior_by_key = {(item.get("provider"), item.get("capability")): item
                         for item in old_bindings}
@@ -1518,8 +1566,7 @@ class Session:
                     "environment",
                     {"capability": binding["capability"], "previous": before_status},
                 )
-        if selected:
-            self.snapshot["bindings"] = new_bindings
+        self.snapshot["bindings"] = new_bindings
         holders = claims_module.holders(self.store.read_claims())
         if holders != self.snapshot.get("claim_holders", {}):
             self._emit("adapter.observed", "environment",
@@ -1681,6 +1728,19 @@ class Session:
             "schema_version": "mncs.environment.entry-context/1",
             "session_id": session_id,
             "lifecycle": self.snapshot.get("lifecycle"),
+            "environment_id": self.snapshot.get("environment_id"),
+            "consumer_id": self.snapshot.get("consumer_id"),
+            "configuration": self.snapshot.get("configuration", {}),
+            "state_dir": str(self.state_dir.expanduser().resolve()),
+            "persistence": "store" if hasattr(self.store, "backend") else "file",
+            "readiness": readiness_module.summarize(self.snapshot),
+            "service_operations": self.snapshot.get("service_operations", []),
+            "projects": [{"repository": repo.get("manifest_repository") or repo.get("name"),
+                          "path": repo.get("path"), "branch": repo.get("branch"),
+                          "dirty": repo.get("dirty"), "head": repo.get("head")}
+                         for repo in self.snapshot.get("workspace", {}).get("repositories", [])][:20],
+            "project_count": self.snapshot.get("workspace", {}).get("repository_count", 0),
+            "toolchain": self.snapshot.get("toolchain"),
             "workspace_root": (self.snapshot.get("workspace") or {}).get("root"),
             "work_intent": {
                 "identity": intent.get("identity"),
@@ -1704,13 +1764,39 @@ class Session:
             },
             "available_capabilities": available[:max_capabilities],
             "unavailable_capability_count": unavailable,
-            "next_commands": [
-                f"mncs-env inspect {session_id}",
-                f"mncs-env capabilities {session_id}",
-                f"mncs-env authority {session_id}",
-                f"mncs-env checkpoint {session_id} --progress \"...\"",
-            ],
+            "actions": self.actions(),
+            "next_commands": [shlex.join(self.actions()[
+                "reconcile" if readiness_module.summarize(self.snapshot)["blocking"] else "capabilities"
+            ]["argv"])],
         }
+
+    def actions(self) -> dict[str, Any]:
+        """Executable argv addressing, preserving state/backend across cwd changes."""
+        prefix = [sys.executable, str(Path(__file__).resolve().parents[1] / "scripts" / "mncs-env"),
+                  "--state-dir", str(self.state_dir.expanduser().resolve()),
+                  "--persistence", "store" if hasattr(self.store, "backend") else "file"]
+        return {name: {"argv": [*prefix, name, self.session_id]} for name in
+                ("health", "reconcile", "inspect", "capabilities")}
+
+    def health(self) -> dict[str, Any]:
+        """Live read-only inspection; no participation event or cursor advancement."""
+        fresh = [capabilities_module.probe_availability(binding) for binding in self.snapshot.get("bindings", [])]
+        services = readiness_module.probe_services(self, bindings=fresh)
+        snapshot = dict(self.snapshot)
+        snapshot["workspace"] = workspace_module.discover_workspace(
+            self.snapshot.get("workspace", {}).get("root", "."),
+            repositories=self.snapshot.get("workspace", {}).get("selection"))
+        return {"session_id": self.session_id, "environment_id": self.snapshot.get("environment_id"),
+                "readiness": readiness_module.summarize(snapshot, bindings=fresh, services=services, live=True),
+                "unavailable_capabilities": [{"capability": item["capability"], **item["availability"]}
+                                             for item in fresh if item["availability"]["status"] != "available"],
+                "actions": self.actions()}
+
+    def reconcile(self) -> dict[str, Any]:
+        """Refresh discovery and delegate declared service recovery, then verify."""
+        revalidation = self.revalidate()
+        result = readiness_module.reconcile_services(self)
+        return {**self.context(), "reconciliation": {"revalidation": revalidation, **result}}
 
     def status(self) -> dict[str, Any]:
         """Read-only alias for the compact session context."""
@@ -1733,6 +1819,9 @@ class Session:
             "consumer_id": self.snapshot.get("consumer_id"),
             "consumer_kind": self.snapshot.get("consumer_kind"),
             "environment_id": self.snapshot.get("environment_id"),
+            "configuration": self.snapshot.get("configuration", {}),
+            "requirements": self.snapshot.get("requirements", {}),
+            "readiness": readiness_module.summarize(self.snapshot),
             "intent": self.snapshot.get("intent"),
             "authority": self.snapshot.get("authority"),
             "rights": self.snapshot.get("rights", {}),

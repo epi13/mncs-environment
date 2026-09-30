@@ -144,11 +144,37 @@ Natural-language summaries may accompany a handoff, but they are not the canonic
 
 ### First-use context and inspection
 
-Entry returns a bounded context containing the session lifecycle, resolved
-workspace root, work goal, effective writable and protected repositories,
-available capability summary, unavailable capability count, and recommended
-next commands. `status`/`context` expose the same read-only projection;
-`inspect` remains the detailed state and binding surface.
+The canonical entry operation discovers a local definition, resolves its
+workspace selection, selects existing work by definition/workspace/consumer,
+reconciles provider readiness, and returns a bounded context. Explicit
+`--new-session` starts independent work; ambiguous matches require explicit
+resume. Entry and explicit reconciliation serialize across processes within
+a state directory. Session identity and continuation remain Store-owned
+persistent records; the file lock is only bootstrap exclusion.
+
+Context contains environment/session identities, configuration provenance,
+workspace/project facts, selected toolchain, effective authority, capability
+availability, readiness observations, and executable action argv. `status`
+and `context` project persisted observations without advancing cursors.
+`health` probes live substrate and declared provider capabilities without
+changing session records. `reconcile` refreshes discovery, invokes provider
+recovery under session authority when needed, then verifies readiness.
+
+Readiness is independent of lifecycle: an active durable session can be
+blocked or degraded. Executable presence verifies substrate only. Provider
+JSON schemas and declared readiness predicates verify actual capabilities.
+Probe and recovery budgets bound entry cost. An incomplete workspace rescan
+preserves the last complete view rather than publishing missing repositories
+as if they had been removed. Optional unavailable capabilities remain visible
+and do not block useful work.
+
+Workspace selection can be a Git checkout, a bounded directory of checkouts,
+or an explicit list of immediate repository directories. Explicit selection
+avoids unrelated discovery in a large family root. Provider-managed compiler
+campaigns retain their existing isolated root and exact worktree closure;
+static selection does not replace campaign provisioning.
+
+See [ENTRY.md](ENTRY.md) for the observable contract and provider declaration.
 
 ## Dependency direction
 

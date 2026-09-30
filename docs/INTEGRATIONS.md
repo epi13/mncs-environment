@@ -9,15 +9,29 @@ Environment should expose a coherent view of MNCS by binding to authoritative se
 ## Realized today
 
 Capability discovery consumes repository-owned
-`family-semantic-contracts-v1.json` `provides` and `.mncs/project.json`
-manifests across the workspace (~80 bindings in the local family), with
-availability probed per binding and revalidation on resume. Addressing
-uses an explicit bootstrap table plus a manifest `fingerprint_sources`
-heuristic. The vertical proof invokes `mncs-atlas:context-capsule`
-(repository-owned registry code) through a session binding with
-authority enforcement. Everything else in the table below remains
-binding-eligible but uninvoked; mock versus real is distinguished per
-binding by its availability observation.
+`family-semantic-contracts-v1.json` and `.mncs/project.json` manifests from
+selected checkouts. Explicit invocation descriptors and the small documented
+bootstrap spelling table provide addressing. Source fingerprints are evidence,
+never a guessed command. Unaddressed capabilities remain discoverable with a
+provider-owned recovery diagnostic. Test and verification inventory commands
+are bound with their declared effects and exact toolchain paths.
+
+Definitions may compose read-only JSON status capabilities and mutating
+reconciliation capabilities using the [entry contract](ENTRY.md). Environment
+verifies the declared provider schema and readiness fields; the provider owns
+startup, process identity, duplicate suppression, and recovery semantics.
+
+The vertical proof invokes Atlas's real context capability. The native
+integration test and agent dogfood invoke `mncs.test-result/1` through its
+selected Language executable and provider-owned wrapper. Store backs durable
+session and claim objects; explicit selections persist Store package routing
+for fresh processes.
+
+Forge's `continuous enter` already composes resident Language and supervisor
+state, but its current repository manifests publish fingerprints without
+callable status/reconciliation descriptors. Environment exposes this gap
+instead of executing an implementation module. Forge startup remains
+provider-owned until those descriptors are supplied (see pressures).
 
 ## Expected relationships
 

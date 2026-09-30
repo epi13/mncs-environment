@@ -77,7 +77,7 @@ def build_sources(*, store, workspace_root: str | Path,
     ]
 
 
-def find_session(state_dir: str | Path, store):
+def find_session(state_dir: str | Path, store, workspace_root: str | Path | None = None):
     """Open the live reconciler session without writing (status-safe)."""
     from . import sessions as sessions_module
     for session_id in store.list_sessions():
@@ -88,6 +88,7 @@ def find_session(state_dir: str | Path, store):
             continue
         snapshot = candidate.snapshot
         if (snapshot.get("consumer_id") == RECONCILER_CONSUMER
+                and (workspace_root is None or snapshot.get("workspace", {}).get("root") == str(Path(workspace_root).resolve()))
                 and snapshot.get("lifecycle") not in ("completed", "failed")):
             return candidate
     return None
@@ -97,7 +98,7 @@ def open_or_create_session(state_dir: str | Path, store,
                            workspace_root: str | Path):
     """Resume the live reconciler session or create it (restart-safe)."""
     from . import sessions as sessions_module
-    candidate = find_session(state_dir, store)
+    candidate = find_session(state_dir, store, workspace_root)
     if candidate is not None:
         if candidate.snapshot.get("lifecycle") == "abandoned":
             candidate.transition("active", "reconciler restarted")
@@ -350,7 +351,7 @@ class Daemon:
             from .session_store import open_store
             store = open_store(self.state_dir, "store")
             try:
-                session = find_session(self.state_dir, store)
+                session = find_session(self.state_dir, store, self.workspace_root)
                 if session is None:
                     result["session"] = None
                 else:

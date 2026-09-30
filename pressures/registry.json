@@ -46,5 +46,41 @@
     "title": "Environment concepts have no native MNCS representation yet",
     "why_not_local": "Forcing immature language features would block useful infrastructure for ideological purity.",
     "workaround": "JSON contracts are canonical; host code is transport/discovery only."
+  },
+  {
+    "description": "Real entry discovers Forge resident-entry and process-supervision contracts, but its manifests supply fingerprint sources rather than callable invocation descriptors. Treating those files as executable commands advertised unavailable tools as available. Atlas context also has older fingerprint-only metadata.",
+    "desired_contract": "Provider-declared fixed invocation argv/effects for read-only status and idempotent reconciliation, stable response schema, readiness fields, workspace identity, and bounded recovery. Atlas should publish its existing context invocation.",
+    "effect": "Forge resident availability is not verified or automatically started by standard Environment entry; unsupported provider contracts remain discoverable with actionable diagnostics.",
+    "evidence": "Forge .mncs/project.json revision 7 workspace-first-continuous-entry and continuous-process-supervision; Forge continuous.environment_enter already starts/reuses services and queries family_agent_context; dogfood selected entry reports Forge contracts as provider-invocation-undeclared. Atlas context-capsule uses registry/__main__.py through the explicit bootstrap adapter.",
+    "identity": "prs_5d267ebe29779379",
+    "owner": "mncs-forge; mncs-atlas; other provider repositories",
+    "schema_version": "mncs.environment.pressure/1",
+    "title": "Provider evidence is not invocation or readiness addressing",
+    "why_not_local": "Provider effects, startup semantics, process identity, JSON status meaning, and the correct CLI belong to the provider. Executing evidence modules would guess a protocol and can falsely report success.",
+    "workaround": "Environment composes explicitly declared service probes/reconciliation under session authority; source fingerprints stay noncallable. The proven Atlas orientation adapter is retained in the small bootstrap table."
+  },
+  {
+    "description": "Entry observes a Language checkout revision and binds its exact release/debug executable, but file presence and executable permissions cannot establish which revision produced that binary or which runtime/features it actually supports. Selected native Test invocation passed, but that does not prove every bound toolchain operation.",
+    "desired_contract": "Bounded provider-owned JSON toolchain inspection including binary build revision, compiler/runtime/schema versions, feature identities, and an actual readiness sentinel; status/reconciliation invocation declarations for Environment.",
+    "effect": "Toolchain status is availability, not proof of source/binary compatibility. Native invocation proves the exercised capability only.",
+    "evidence": "Dogfood session binds mncs-language/target/release/mncs, records observed checkout HEAD, and invokes mncs.test-result/1 successfully. CLI declarations separately select target/debug/mncs for several capabilities; no build-info/toolchain-info surface was found in crates/mncs-cli/src/main.rs.",
+    "identity": "prs_c2a41e2e5f3230f4",
+    "owner": "mncs-language / mncs-compiler",
+    "schema_version": "mncs.environment.pressure/1",
+    "title": "Compiler executable cannot be tied to observed checkout readiness",
+    "why_not_local": "Environment cannot infer compiler build provenance from Git HEAD or implement compiler/runtime feature semantics. Calling a binary present must remain a substrate observation.",
+    "workaround": "Bind selected paths without ambient compiler fallback, probe permissions/toolchain presence, expose the verification basis, and exercise native provider contracts explicitly."
+  },
+  {
+    "description": "The existing background reconciler tests os.kill(pid, 0) against a PID file. A reused unrelated live PID can appear to be the reconciler; simultaneous daemon starts can race between checking and writing the PID file.",
+    "desired_contract": "Exclusive daemon ownership lock plus process start identity and bounded heartbeat/readiness; consume the provider process-supervision contract for externally owned services.",
+    "effect": "Background daemon PID status is not a verified service-readiness observation. Foreground health and declared provider probes are the canonical entry readiness checks.",
+    "evidence": "mncs_env/reconciler.py Daemon.run and Daemon.status. This run added locking for foreground entry/reconciliation and workspace-scoped reconciler session selection, but did not launch or replace existing daemons.",
+    "identity": "prs_848a1a6a1a4c98e0",
+    "owner": "mncs-environment (follow-up); mncs-control / mncs-forge for reusable supervision contract",
+    "schema_version": "mncs.environment.pressure/1",
+    "title": "Environment reconciler process identity remains PID based",
+    "why_not_local": "Environment owns hardening its own daemon, but should consume provider supervision for external services rather than create another general process supervisor.",
+    "workaround": "Use foreground reconcile for deterministic entry recovery; do not kill or trust unrelated processes based on stale PID files."
   }
 ]

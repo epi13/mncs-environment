@@ -220,6 +220,33 @@ def _root_limit(definition: dict[str, Any] | None) -> int:
     return max(1, min(default, MAX_ROOT_DIRECTORIES))
 
 
+def repository_selection(definition: dict[str, Any] | None) -> list[str] | None:
+    """Explicit immediate checkouts; selection is intent, not a new registry."""
+    scope = definition.get("workspace_scope") if isinstance(definition, dict) else None
+    names = scope.get("repositories") if isinstance(scope, dict) else None
+    if names is None:
+        return None
+    if (_campaign_definition(definition) or not isinstance(names, list) or not names
+            or len(names) > MAX_ROOT_DIRECTORIES or len(set(str(name) for name in names)) != len(names)
+            or any(not isinstance(name, str) or not name or name in (".", "..")
+                   or Path(name).name != name or "/" in name or "\\" in name for name in names)):
+        raise WorkspaceResolutionError("workspace_scope.repositories must select unique immediate checkouts outside campaign provisioning",
+                                       diagnostics={"code": "workspace-selection-invalid"})
+    return sorted(names)
+
+
+def _selected_directories(base: Path, repositories: list[str] | None) -> list[Path]:
+    if repositories is None:
+        return [base] if (base / ".git").exists() else _candidate_directories(base)
+    candidates = [base / name for name in repositories]
+    for candidate in candidates:
+        if candidate.is_symlink() or not candidate.is_dir() or not (candidate / ".git").exists():
+            raise WorkspaceResolutionError(f"selected checkout is missing, a symbolic link, or not a Git repository: {candidate}",
+                                           diagnostics={"code": "workspace-selected-checkout-unavailable", "path": str(candidate),
+                                                        "next": "restore the selected checkout or update workspace_scope.repositories"})
+    return candidates
+
+
 def validate_workspace_root(
     root: Path | str,
     *,
@@ -249,7 +276,7 @@ def validate_workspace_root(
             diagnostics={"code": "workspace-not-directory", "root": str(base)},
         )
 
-    candidates = _candidate_directories(base)
+    candidates = _selected_directories(base, repository_selection(definition))
     limit = _root_limit(definition)
     if len(candidates) > limit:
         campaign_note = (
@@ -301,6 +328,7 @@ def discover_workspace(
     root: Path | str,
     *,
     timeout_seconds: float = WORKSPACE_SCAN_TIMEOUT_SECONDS,
+    repositories: list[str] | None = None,
 ) -> dict[str, Any]:
     """Discover repository checkouts directly under root (non-recursive).
 
@@ -313,7 +341,7 @@ def discover_workspace(
     started = time.monotonic()
     base = Path(root).expanduser().resolve()
     try:
-        candidates = _candidate_directories(base)
+        candidates = _selected_directories(base, repositories)
     except WorkspaceResolutionError as error:
         return {
             "root": str(base),
@@ -372,7 +400,9 @@ def discover_workspace(
         ),
     }
     return {
+        "schema_version": "mncs.environment.workspace/1",
         "root": str(base),
+        "selection": repositories,
         "repository_count": len(repos),
         "non_repository_count": skipped,
         "repositories": repos,

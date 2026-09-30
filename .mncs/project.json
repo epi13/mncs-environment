@@ -1,7 +1,7 @@
 {
   "schema_version": "mncs-family.repository-manifest/v0alpha1",
   "repository": "mncs-environment",
-  "revision": 3,
+  "revision": 4,
   "manifest_location": "in-repository",
   "authority": {
     "note": "mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration."
@@ -11,7 +11,22 @@
     "test_runner_identity": "mncs-test/0.2.1"
   },
   "contracts": {
-    "provides": [],
+    "provides": [
+      {
+        "contract": "workspace-discovery",
+        "version": "1",
+        "kind": "read-only-workspace-discovery",
+        "invocation": {
+          "kind": "executable",
+          "path": "scripts/mncs-env",
+          "fixed_argv": [
+            "workspace",
+            "--root",
+            "."
+          ]
+        }
+      }
+    ],
     "consumes": [],
     "tests": [
       {
@@ -30,11 +45,14 @@
             "-s",
             "tests",
             "-p",
-            "test_environment.py",
+            "test_*.py",
             "-v"
           ],
           "timeout_seconds": 300,
-          "toolchain": {"repository": "mncs-store", "path": "python"},
+          "toolchain": {
+            "repository": "mncs-store",
+            "path": "python"
+          },
           "toolchain_env": "MNCS_STORE_PYTHON"
         }
       },
@@ -58,7 +76,10 @@
             "-v"
           ],
           "timeout_seconds": 60,
-          "toolchain": {"repository": "mncs-store", "path": "python"},
+          "toolchain": {
+            "repository": "mncs-store",
+            "path": "python"
+          },
           "toolchain_env": "MNCS_STORE_PYTHON"
         }
       },
@@ -84,7 +105,10 @@
             "-v"
           ],
           "timeout_seconds": 60,
-          "toolchain": {"repository": "mncs-store", "path": "python"},
+          "toolchain": {
+            "repository": "mncs-store",
+            "path": "python"
+          },
           "toolchain_env": "MNCS_STORE_PYTHON"
         }
       }

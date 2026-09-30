@@ -79,6 +79,13 @@ Do not infer that locally stored build/debug/cache data is protected merely beca
 
 ## Testing priorities
 
+Run `python3 -m pytest tests/ -q`, `python3 scripts/vertical_proof.py`, and
+`python3 scripts/campaign_proofs.py`. The vertical proof selects temporary
+Atlas/Language clones by default so verification does not require a broad
+family root or modify foreign working trees. Entry regressions use fresh
+CLI processes, both persistence backends, read-only health, selected roots,
+failure recovery, and observable provider contracts.
+
 Prefer end-to-end architectural proofs over large amounts of isolated scaffolding.
 
 High-value tests include:

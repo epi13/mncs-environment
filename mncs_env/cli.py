@@ -12,9 +12,11 @@ import argparse
 import json
 import os
 import sys
+from contextlib import closing
 from pathlib import Path
 
 from . import capabilities as capabilities_module
+from . import entry as entry_module
 from . import claims as claims_module
 from . import pressures as pressures_module
 from . import rights as rights_module
@@ -22,6 +24,7 @@ from . import sessions as sessions_module
 from . import workspace as workspace_module
 from .persist import read_json
 from .session_store import open_store
+from .store_backend import StoreUnavailable, StoreIntegrityFailure
 
 DEFAULT_STATE_DIR = Path.home() / ".local" / "share" / "mncs-environment"
 
@@ -97,53 +100,29 @@ def cmd_resolve(args: argparse.Namespace) -> int:
     except workspace_module.WorkspaceResolutionError as error:
         return fail(str(error), diagnostics=error.diagnostics)
     except ValueError as error:
-        return fail(str(error))
+        return fail(str(error), diagnostics={"code": "entry-invalid", "next": "check the selected definition and workspace"})
     out(environment)
     return 0
 
 
 def cmd_enter(args: argparse.Namespace) -> int:
-    definition = load_definition(args.definition)
-    session = None
     try:
+        definition, definition_path = entry_module.select_definition(args.definition, args.workspace)
+        args.definition = definition_path
         workspace_root = resolve_workspace_root(args, definition)
-        workspace_root = str(workspace_module.validate_workspace_root(
-            workspace_root, definition=definition
-        ))
-        environment = sessions_module.resolve_environment(
-            definition=definition,
-            workspace_root=workspace_root,
-            state_dir=args.state_dir,
-            consumer_id=args.consumer,
-            backend=args.persistence,
-        )
-        session = sessions_module.Session.create(
-            state_dir=args.state_dir,
-            environment=environment,
-            consumer_id=args.consumer,
-            consumer_kind=args.consumer_kind,
-            backend=args.persistence,
-        )
-        session = sessions_module.Session.resume(
-            state_dir=args.state_dir,
-            session_id=session.session_id,
-            backend=args.persistence,
-            store=session.store,
-        )
-        session.transition("resolving", "enter: resolving environment")
-        session.transition("ready", "environment resolved")
-        session.transition("active", f"consumer {args.consumer} entered")
-        out(session.context())
-        return 0
-    except workspace_module.WorkspaceResolutionError as error:
+        result = entry_module.enter(definition=definition, definition_path=definition_path,
+                               workspace_root=workspace_root, state_dir=args.state_dir,
+                               backend=args.persistence, consumer_id=args.consumer,
+                               consumer_kind=args.consumer_kind, new_session=args.new_session)
+        out(result)
+        return 5 if result["readiness"]["status"] == "blocked" else 0
+    except (workspace_module.WorkspaceResolutionError, entry_module.EntryError) as error:
         return fail(str(error), diagnostics=error.diagnostics)
     except ValueError as error:
-        return fail(str(error))
+        return fail(str(error), diagnostics={"code": "entry-invalid", "next": "check the selected definition and workspace"})
     except rights_module.RightsBlocked as error:
-        return fail(str(error))
-    finally:
-        if session is not None:
-            session.close()
+        return fail(str(error), diagnostics={"code": "rights-blocked", "provider": "mncs-rights-provenance",
+                                           "next": "inspect provider-owned rights claims for the selected workspace"})
 
 
 def close_store(store) -> None:
@@ -162,20 +141,44 @@ def _open(args: argparse.Namespace) -> sessions_module.Session:
 
 
 def cmd_inspect(args: argparse.Namespace) -> int:
-    out(_open(args).inspect())
+    with closing(_open(args)) as session:
+        out(session.inspect())
     return 0
 
 
 def cmd_context(args: argparse.Namespace) -> int:
     """Print the compact, read-only first-use session context."""
-    out(_open(args).status())
+    with closing(_open(args)) as session:
+        out(session.status())
     return 0
+
+
+def cmd_health(args: argparse.Namespace) -> int:
+    session = _open(args)
+    try:
+        result = session.health()
+        out(result)
+        return 5 if result["readiness"]["status"] == "blocked" else 0
+    finally:
+        session.close()
+
+
+def cmd_reconcile(args: argparse.Namespace) -> int:
+    with entry_module.entry_lock(args.state_dir, args.persistence):
+        session = sessions_module.Session.resume(state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+        try:
+            result = session.reconcile()
+            out(result)
+            return 5 if result["readiness"]["status"] == "blocked" else 0
+        finally:
+            session.close()
 
 
 def cmd_status(args: argparse.Namespace) -> int:
     """Print compact session status, or list session ids when none is given."""
     if args.session:
-        out(_open(args).status())
+        with closing(_open(args)) as session:
+            out(session.status())
         return 0
     store = open_store(args.state_dir, args.persistence)
     try:
@@ -220,7 +223,8 @@ def cmd_resume(args: argparse.Namespace) -> int:
 
 
 def cmd_capabilities(args: argparse.Namespace) -> int:
-    out(_open(args).inspect()["bindings"])
+    with closing(_open(args)) as session:
+        out(session.inspect()["bindings"])
     return 0
 
 
@@ -511,11 +515,12 @@ def build_parser() -> argparse.ArgumentParser:
     resolve.add_argument("--consumer", default="local-agent")
     resolve.set_defaults(func=cmd_resolve)
 
-    enter = sub.add_parser("enter", help="resolve and enter (create a session)")
-    enter.add_argument("--definition", type=Path, required=True)
+    enter = sub.add_parser("enter", help="discover context, create/reuse a session, reconcile readiness")
+    enter.add_argument("--definition", type=Path, default=None, help="defaults to closest .mncs/environment.json or read-only orientation")
     enter.add_argument("--workspace", default=None)
     enter.add_argument("--consumer", default="local-agent")
     enter.add_argument("--consumer-kind", default="agent")
+    enter.add_argument("--new-session", action="store_true", help="create independent work instead of reusing matching work")
     enter.set_defaults(func=cmd_enter)
 
     def session_parser(name: str, help_text: str):
@@ -528,6 +533,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     context = session_parser("context", "show compact first-use session context")
     context.set_defaults(func=cmd_context)
+
+    health = session_parser("health", "probe live readiness without changing session state")
+    health.set_defaults(func=cmd_health)
+    reconcile = session_parser("reconcile", "refresh discovery, recover declared services, verify readiness")
+    reconcile.set_defaults(func=cmd_reconcile)
 
     status = sub.add_parser(
         "status", parents=[common], help="show compact read-only session status"
@@ -652,7 +662,18 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    args.state_dir = args.state_dir.expanduser().resolve()
+    try:
+        return args.func(args)
+    except (workspace_module.WorkspaceResolutionError, entry_module.EntryError) as error:
+        return fail(str(error), diagnostics=error.diagnostics)
+    except (StoreUnavailable, StoreIntegrityFailure) as error:
+        return fail(str(error), diagnostics={"code": "store-unavailable" if isinstance(error, StoreUnavailable) else "store-integrity-failure",
+                                           "provider": "mncs-store", "state_dir": str(args.state_dir),
+                                           "next": "bind the intended Store checkout with MNCS_STORE_PYTHON; inspect Store recovery before retrying"})
+    except (OSError, ValueError, sessions_module.LifecycleError) as error:
+        return fail(str(error), diagnostics={"code": "environment-command-failed", "command": args.command,
+                                           "state_dir": str(args.state_dir), "next": "check configuration and session state; retry entry"})
 
 
 if __name__ == "__main__":

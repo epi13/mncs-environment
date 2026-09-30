@@ -30,10 +30,7 @@ sys.path.insert(0, str(REPO))
 
 from mncs_env import sessions  # noqa: E402
 
-WORKSPACE = Path(
-    os.environ.get("MNCS_VERTICAL_WORKSPACE", "/home/epi13/Documents/Projects")
-).expanduser().resolve()
-ATLAS = WORKSPACE / "mncs-atlas"
+WORKSPACE_OVERRIDE = os.environ.get("MNCS_VERTICAL_WORKSPACE")
 PROOF_CONSUMER_A = "proof-agent-a"
 PROOF_CONSUMER_B = "proof-agent-b"
 
@@ -53,14 +50,25 @@ def cli(state_dir: Path, *args: str) -> dict:
 
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="mncs-env-proof-") as directory:
-        state = Path(directory)
+        state = Path(directory) / "state"
+        if WORKSPACE_OVERRIDE:
+            workspace = Path(WORKSPACE_OVERRIDE).expanduser().resolve()
+        else:
+            # Read providers through bounded, isolated Git checkouts. Shared
+            # objects avoid copying history; foreign working trees stay untouched.
+            workspace = Path(directory) / "workspace"
+            workspace.mkdir()
+            for repository in ("mncs-atlas", "mncs-language"):
+                subprocess.run(["git", "clone", "--shared", "--quiet",
+                                str(REPO.parent / repository), str(workspace / repository)], check=True)
+        atlas = workspace / "mncs-atlas"
         definition = json.loads(
             (REPO / "examples" / "development-environment" / "environment.json").read_text()
         )
 
         # 1. Resolve.
         environment = sessions.resolve_environment(
-            definition=definition, workspace_root=WORKSPACE, state_dir=state,
+            definition=definition, workspace_root=workspace, state_dir=state,
             consumer_id=PROOF_CONSUMER_A,
         )
         repos = {repo["name"] for repo in environment["workspace"]["repositories"]}
@@ -73,7 +81,7 @@ def main() -> int:
         # 2. Enter.
         entered = cli(state, "enter", "--definition",
                       str(REPO / "examples" / "development-environment" / "environment.json"),
-                      "--workspace", str(WORKSPACE), "--consumer", PROOF_CONSUMER_A)
+                      "--workspace", str(workspace), "--consumer", PROOF_CONSUMER_A)
         session_id = entered["session_id"]
         assert entered["lifecycle"] == "active", entered["lifecycle"]
         print(f"2. entered session {session_id}")
@@ -83,7 +91,7 @@ def main() -> int:
         names = [binding["capability"] for binding in caps]
         assert "mncs-atlas:context-capsule" in names, names
         result = cli(state, "invoke", session_id, "mncs-atlas:context-capsule",
-                     "--cwd", str(ATLAS), "--", "context", str(ATLAS))
+                     "--cwd", str(atlas), "--", "context", str(atlas))
         assert result["status"] == "ok", result
         assert "mncs-atlas" in result["stdout"], result["stdout"][:200]
         print(f"3. invoked mncs-atlas:context-capsule "
@@ -106,7 +114,7 @@ def main() -> int:
         print(f"5. checkpoint {checkpoint['identity']}")
 
         # 6. NEW PROCESS resumes (proves persistence beyond one process).
-        resumed = cli(state, "resume", session_id, "--revalidate", "--workspace", str(WORKSPACE))
+        resumed = cli(state, "resume", session_id, "--revalidate", "--workspace", str(workspace))
         assert resumed["session_id"] == session_id
         assert resumed["intent"]["goal"].startswith("prove the mncs-environment")
         assert any(a["capability"] == "mncs-atlas:context-capsule" for a in resumed["bindings"])

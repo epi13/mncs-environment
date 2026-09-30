@@ -13,6 +13,7 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 import time
@@ -899,10 +900,18 @@ class ToolchainTests(unittest.TestCase):
 
     def test_session_invokes_real_toolchain(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            state = Path(directory)
+            state = Path(directory) / "state"
+            scoped = Path(directory) / "workspace"
+            scoped.mkdir()
+            for repository in ("mncs-test", "mncs-language"):
+                subprocess.run(["git", "clone", "--shared", "--quiet",
+                                str(FAMILY / repository), str(scoped / repository)], check=True)
+            binary = scoped / "mncs-language" / "target" / "release" / "mncs"
+            binary.parent.mkdir(parents=True)
+            shutil.copy2(FAMILY / "mncs-language" / "target" / "release" / "mncs", binary)
             store = open_store(state, "store", verify_on_open=False)
             env = sessions.resolve_environment(
-                definition=definition(), workspace_root=FAMILY,
+                definition=definition(), workspace_root=scoped,
                 state_dir=state, consumer_id="tester", store=store)
             session = sessions.Session.create(
                 state_dir=state, environment=env, consumer_id="tester", store=store)
@@ -1008,6 +1017,7 @@ class SessionTests(unittest.TestCase):
             }
             observed = {
                 "root": str(root),
+                "scan": {"status": "complete"},
                 "repositories": [
                     {"name": "mncs-control-mcp@campaign-control", "path": str(provider_root),
                      "head": "control-head", "branch": "campaign/control", "dirty": False,
@@ -1116,7 +1126,7 @@ class SessionTests(unittest.TestCase):
             }
             with mock.patch.object(
                 sessions.workspace_module, "discover_workspace",
-                return_value={"root": str(root), "repositories": [dirty_repo]},
+                return_value={"root": str(root), "repositories": [dirty_repo], "scan": {"status": "complete"}},
             ):
                 changes = session.observe_workspace(root)
 
@@ -1130,7 +1140,7 @@ class SessionTests(unittest.TestCase):
 
             with mock.patch.object(
                 sessions.workspace_module, "discover_workspace",
-                return_value={"root": str(root), "repositories": [dirty_repo]},
+                return_value={"root": str(root), "repositories": [dirty_repo], "scan": {"status": "complete"}},
             ):
                 self.assertEqual(session.observe_workspace(root), [])
 
