@@ -73,7 +73,9 @@ def main():
                 context = run([*prefix, "enter", "--consumer", "resident-proof"], cwd=definition.parent.parent / "docs", codes=(0, 5))
                 assert context["session_id"] == session and context["entry"]["reused"]
                 observed = service()
-                if observed["status"] == "ready":
+                # A live health probe can observe readiness after entry's
+                # historical snapshot. Re-enter to persist that transition.
+                if observed["status"] == "ready" and not context["readiness"]["blocking"]:
                     return context, observed["provider_observed"]
                 if observed.get("observation", {}).get("/state") in {"failed", "incompatible"}:
                     raise AssertionError(observed)
