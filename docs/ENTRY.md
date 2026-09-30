@@ -170,9 +170,27 @@ and invocation transport. Providers own startup semantics, service identities,
 health meaning, and process lifecycle. Rights and claims still govern writes.
 The filesystem lock is bootstrap infrastructure, not workspace ownership.
 
-Forge's resident entry exists, but callable status and reconciliation
-declarations are still needed before Environment can automatically compose
-it. Compiler binary presence cannot prove that the binary matches the observed
-source revision. Both gaps are recorded in `pressures/registry.json`.
+Forge publishes resident status/reconciliation/stop/work descriptors. To require
+that provider, enter with `--definition samples/forge-resident.environment.json`.
+The sample selects Language Service explicitly and binds `.mncs/forge.toml`
+from the selected Environment checkout. Ordinary local entry retains its
+existing six-provider definition; Forge residency is an explicit requirement.
+An unavailable required descriptor blocks; optional gaps remain degradation.
+An unowned provider worktree needs a claim before its execute/write effects.
+
+Service `argv` also accepts `{"repository": "mncs-environment", "path":
+".mncs/forge.toml"}` references. These resolve only through selected capability
+roots, reject traversal/symlink escapes, and survive cwd changes and campaign
+relocation. Missing selection is diagnostic; no sibling path is inferred.
+
+Provider diagnostics, selected identity, observed identity, and recovery remain
+structured in service observations. Reconciliation preserves the provider JSON
+response; transport success is separate from subsequent verified readiness.
+Forge owns live challenge, process birth/pidfd control, runtime artifact identity,
+Language stream validation, and asynchronous startup. Environment owns none of
+those internal rules. See Forge's `docs/RESIDENT_PROVIDER.md`.
+Compiler build origin remains unproven by checkout HEAD or artifact SHA256.
+The corresponding Commons pressure is `MNCS-TOOLING-9E7E149C94D9`.
+
 Python remains the process/Git/Store/file transport substrate; native MNCS
 capabilities are invoked through the same session binding interface.

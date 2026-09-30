@@ -1,0 +1,19 @@
+mncs 0.18;
+module tests.environment_resident_work;
+
+use mncs.test.assertions;
+use mncs.test.suite;
+use mncs.test.snapshot;
+
+// Real selected-toolchain work for the resident Environment proof. The
+// compiler and native test provider own repetition and witness semantics.
+test exact_sequence_repetition() -> (result: TestResult) {
+    let repeated: [byte; 4] = [3; 4];
+    let expected: Witness = Witness { length: 4, checksum: 30 };
+    return from_assertion(equals_bool(true, same(bytes(repeated), expected), 2001));
+}
+
+test typed_result_join() -> (result: TestResult) {
+    let value: i64 = select(3 > 1, 42, 0);
+    return from_assertion(equals_i64(42, value, 2002));
+}

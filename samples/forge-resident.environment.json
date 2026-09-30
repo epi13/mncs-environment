@@ -1,0 +1,24 @@
+{
+  "name": "mncs-environment-with-resident-forge",
+  "workspace_root": "../..",
+  "workspace_scope": {
+    "kind": "workspace",
+    "repositories": ["mncs-environment", "mncs-language", "mncs-store", "mncs-test", "mncs-forge", "mncs-language-service"]
+  },
+  "intent": {
+    "goal": "develop Environment with the selected resident Forge and native MNCS tools",
+    "repositories": ["mncs-environment", "mncs-forge"],
+    "constraints": ["preserve foreign work; acquire claims before mutating non-owned checkouts"]
+  },
+  "required_capabilities": ["mncs-forge:resident-status", "mncs-forge:resident-reconcile", "mncs.test-result/1"],
+  "services": [
+    {
+      "identity": "mncs-forge:resident",
+      "required": true,
+      "probe": {"capability": "mncs-forge:resident-status", "argv": ["--config", {"repository": "mncs-environment", "path": ".mncs/forge.toml"}]},
+      "reconcile": {"capability": "mncs-forge:resident-reconcile", "argv": ["--config", {"repository": "mncs-environment", "path": ".mncs/forge.toml"}]},
+      "response_schema": "mncs.forge.resident-status/1",
+      "ready_when": {"/state": "ready"}
+    }
+  ]
+}

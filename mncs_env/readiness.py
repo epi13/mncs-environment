@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import time
+from pathlib import Path
 from typing import Any
 
 from . import authority, capabilities
@@ -16,6 +17,38 @@ from . import authority, capabilities
 SCHEMA = "mncs.environment.readiness/1"
 MAX_SERVICES = 16
 PROBE_BUDGET_SECONDS = 15
+
+
+def _valid_argument(value: Any) -> bool:
+    if isinstance(value, str):
+        return True
+    if not isinstance(value, dict) or set(value) != {"repository", "path"}:
+        return False
+    relative = value.get("path")
+    return (isinstance(value.get("repository"), str) and bool(value["repository"])
+            and isinstance(relative, str) and bool(relative)
+            and not Path(relative).is_absolute() and ".." not in Path(relative).parts)
+
+
+def resolve_arguments(session, argv: list[Any]) -> list[str]:
+    """Resolve declared path arguments against selected bindings, never cwd."""
+    roots = {item["provider"]: item.get("provider_root") for item in session.snapshot.get("bindings", [])}
+    result = []
+    for argument in argv:
+        if not _valid_argument(argument):
+            raise ValueError("service argument must be a string or a selected repository/path reference")
+        if isinstance(argument, str):
+            result.append(argument)
+            continue
+        selected = roots.get(argument["repository"])
+        if not selected:
+            raise ValueError(f"service argument repository was not selected: {argument['repository']}")
+        root = Path(selected).resolve()
+        path = (root / argument["path"]).resolve()
+        if not path.is_relative_to(root):
+            raise ValueError("service argument escapes the selected repository")
+        result.append(str(path))
+    return result
 
 
 def validate_requirements(definition: dict[str, Any]) -> dict[str, Any]:
@@ -41,8 +74,8 @@ def validate_requirements(definition: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(call, dict) or not isinstance(call.get("capability"), str) or not call["capability"]:
                 raise ValueError(f"service {operation} needs a capability identity")
             argv = call.get("argv", [])
-            if not isinstance(argv, list) or any(not isinstance(arg, str) for arg in argv):
-                raise ValueError(f"service {operation}.argv must be a list of strings")
+            if not isinstance(argv, list) or any(not _valid_argument(arg) for arg in argv):
+                raise ValueError(f"service {operation}.argv must contain strings or selected repository/path references")
         predicates = service.get("ready_when")
         if not isinstance(predicates, dict) or not predicates or any(
             not isinstance(pointer, str) or not pointer.startswith("/") for pointer in predicates
@@ -91,7 +124,7 @@ def probe_services(session, *, bindings: list[dict] | None = None) -> list[dict[
                 if remaining <= 0:
                     record["code"] = "service-probe-budget"
                     raise ValueError("entry probe budget exhausted; retry health for a fresh observation")
-                result = capabilities.invoke(binding, call.get("argv", []), timeout_seconds=min(3.0, remaining),
+                result = capabilities.invoke(binding, resolve_arguments(session, call.get("argv", [])), timeout_seconds=min(3.0, remaining),
                                              output_limit_bytes=16384, env=session._selected_runtime_environment(binding))
                 record["code"] = "service-probe-failed"
                 if result["status"] != "ok":
@@ -100,6 +133,14 @@ def probe_services(session, *, bindings: list[dict] | None = None) -> list[dict[
                 document = json.loads(result["stdout"])
                 if not isinstance(document, dict) or document.get("schema_version") != service["response_schema"]:
                     raise ValueError(f"expected provider schema {service['response_schema']}")
+                # Provider diagnostics remain provider-owned. Preserve bounded
+                # structured evidence instead of replacing it with prose.
+                diagnostics = document.get("diagnostics")
+                if isinstance(diagnostics, list):
+                    record["provider_diagnostics"] = diagnostics[:8]
+                for field in ("selected", "observed", "recovery"):
+                    if field in document:
+                        record[f"provider_{field}"] = document[field]
                 actual = {pointer: _pointer(document, pointer) for pointer in service["ready_when"]}
                 ready = all(actual[key] == expected for key, expected in service["ready_when"].items())
                 record.update(status="ready" if ready else "degraded", code="service-ready" if ready else "service-not-ready",
@@ -155,10 +196,17 @@ def reconcile_services(session) -> dict[str, Any]:
             if time.monotonic() >= deadline:
                 operations.append({"identity": observation["identity"], "status": "deferred", "reason": "reconciliation budget exhausted"})
                 continue
-            result = session.invoke(call["capability"], call.get("argv", []), timeout_seconds=min(10, deadline-time.monotonic()),
+            result = session.invoke(call["capability"], resolve_arguments(session, call.get("argv", [])), timeout_seconds=min(10, deadline-time.monotonic()),
                                     output_limit_bytes=16384)
-            operations.append({"identity": observation["identity"], "status": result["status"],
-                               "reason": result.get("stderr", "")[-1000:]})
+            operation = {"identity": observation["identity"], "status": result["status"],
+                         "reason": result.get("stderr", "")[-1000:]}
+            try:
+                response = json.loads(result.get("stdout", ""))
+                if isinstance(response, dict):
+                    operation["provider_response"] = response
+            except ValueError:
+                pass
+            operations.append(operation)
         except (AuthorityDenied, LifecycleError, ValueError, OSError) as error:
             # Session authority/lifecycle exceptions carry actionable reasons;
             # a failed optional provider must not discard a durable entry.

@@ -1,0 +1,52 @@
+version = 1
+
+[project]
+name = "MNCS Environment resident development"
+identity = "mncs-environment-resident-development"
+root = ".."
+
+[paths]
+candidates = ["tests/fixtures"]
+generated = [".mncs/generated"]
+contracts = ["docs/ENTRY.md"]
+references = []
+evaluators = []
+acceptance_policies = []
+development_evidence = [".mncs/evidence"]
+protected = []
+outputs = [".mncs/generated"]
+
+[limits]
+timeout_seconds = 30
+output_bytes = 65536
+
+[native]
+mode = "required"
+
+[authority.development]
+may_write_candidates = true
+may_write_generated = true
+may_run_providers = true
+
+[authority.evaluator]
+candidate_read_only = true
+authority_read_only = true
+require_frozen_identities = true
+withhold_repair_feedback = true
+
+[policies]
+selection = ".mncs/forge-selection.json"
+useful_benefit_objective = "README.md"
+
+[continuous]
+enabled = true
+start_timeout_seconds = 60
+poll_interval_seconds = 0.2
+triggers = []
+
+[[workflows]]
+name = "resident-inspection"
+category = "inspection"
+mode = "development"
+command = ["/usr/bin/true"]
+provider_protocol = false

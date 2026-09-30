@@ -118,3 +118,19 @@ A pressure record should state:
 - desired contract shape if known.
 
 This lets Environment drive cross-repo improvement without becoming the dumping ground for missing functionality.
+
+## Real resident provider proof
+
+After the unit/integration suite, run:
+
+```bash
+python3 scripts/forge_resident_proof.py --forge-checkout /absolute/selected/mncs-forge
+```
+
+The proof clones committed selected providers into an owned campaign, copies
+existing selected runtime artifacts, and enters through the local canonical
+interface. It uses real Store, Forge, Language Service, and native Test. It
+checks startup/reuse/recovery, cwd independence, invalid descriptors, foreign
+checkout rejection, native MNCS work, and checkpoint/resume/handoff. Failed
+campaigns remain available for diagnosis. Provider-owned stop is the cleanup
+boundary. Binary copying is fixture setup and makes no build-origin claim.

@@ -27,11 +27,13 @@ selected Language executable and provider-owned wrapper. Store backs durable
 session and claim objects; explicit selections persist Store package routing
 for fresh processes.
 
-Forge's `continuous enter` already composes resident Language and supervisor
-state, but its current repository manifests publish fingerprints without
-callable status/reconciliation descriptors. Environment exposes this gap
-instead of executing an implementation module. Forge startup remains
-provider-owned until those descriptors are supplied (see pressures).
+Forge now publishes checkout-owned resident status/reconciliation/stop/work
+invocation descriptors. The required-resident sample composes them through the
+same generic service model. Status preserves selected versus live startup
+provenance and verifies the native supervisor's current Language stream;
+reconciliation is asynchronous and provider-owned. Neither Forge commands nor
+PID/socket rules are embedded in Environment. See [entry](ENTRY.md) and Forge's
+resident provider contract for responsibilities and Linux platform bounds.
 
 ## Expected relationships
 

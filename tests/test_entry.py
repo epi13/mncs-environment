@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from mncs_env import capabilities, entry, sessions, workspace
+from mncs_env import capabilities, entry, readiness, sessions, workspace
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "scripts" / "mncs-env"
@@ -27,6 +27,36 @@ print(json.dumps({"schema_version": value.get("schema", "fixture.status/1"), **v
 
 
 class EntryContractTests(unittest.TestCase):
+    def test_selected_service_arguments_do_not_depend_on_cwd(self):
+        from types import SimpleNamespace
+        context = SimpleNamespace(snapshot={"bindings": [{"provider": "fixture", "provider_root": str(self.project)}]})
+        with mock.patch("pathlib.Path.cwd", return_value=Path("/tmp")):
+            self.assertEqual(readiness.resolve_arguments(context, ["--config", {"repository": "fixture", "path": ".mncs/environment.json"}]),
+                             ["--config", str(self.definition)])
+        for reference in ({"repository": "missing", "path": "config"},
+                          {"repository": "fixture", "path": "../config"},
+                          {"repository": "fixture", "path": "/ambient/config"}):
+            with self.assertRaises(ValueError):
+                readiness.resolve_arguments(context, [reference])
+
+    def test_selected_service_argument_rejects_symlink_escape(self):
+        from types import SimpleNamespace
+        (self.project / "escape").symlink_to(self.base)
+        context = SimpleNamespace(snapshot={"bindings": [{"provider": "fixture", "provider_root": str(self.project)}]})
+        with self.assertRaisesRegex(ValueError, "escapes"):
+            readiness.resolve_arguments(context, [{"repository": "fixture", "path": "escape/config"}])
+
+    def test_provider_diagnostics_preserve_selection_and_observation(self):
+        self.provider.write_text('import json\nprint(json.dumps({"schema_version":"fixture.status/1","ready":False,"diagnostics":[{"code":"SELECTED_PROVIDER_MISSING","message":"build the selected provider"}],"selected":{"checkout":"selected"},"observed":{"checkout":"old"}}))\n')
+        self.config["services"][0].pop("reconcile")
+        self.definition.write_text(json.dumps(self.config))
+        code, result = self.run_cli("enter", "--consumer", "diagnostic-test")
+        self.assertEqual(code, 5)
+        probe = result["readiness"]["services"][0]
+        self.assertEqual(probe["provider_diagnostics"][0]["code"], "SELECTED_PROVIDER_MISSING")
+        self.assertEqual(probe["provider_selected"]["checkout"], "selected")
+        self.assertEqual(probe["provider_observed"]["checkout"], "old")
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="mncs-entry-test-")
         self.addCleanup(self.temp.cleanup)
