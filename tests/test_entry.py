@@ -27,6 +27,12 @@ print(json.dumps({"schema_version": value.get("schema", "fixture.status/1"), **v
 
 
 class EntryContractTests(unittest.TestCase):
+    def test_declared_invocation_is_not_presented_as_undeclared(self):
+        bindings = capabilities.discover_capabilities(self.project)
+        binding = next(item for item in bindings if item["capability"] == "fixture.status/1")
+        self.assertEqual(binding["entrypoint"], binding["address"])
+        self.assertEqual(binding["provenance"]["addressing"], "descriptor")
+
     def test_selected_service_arguments_do_not_depend_on_cwd(self):
         from types import SimpleNamespace
         context = SimpleNamespace(snapshot={"bindings": [{"provider": "fixture", "provider_root": str(self.project)}]})

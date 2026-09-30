@@ -498,6 +498,7 @@ def _from_semantic_contracts(
         if declared["addressing"] == "descriptor":
             address = declared["address"]
             addressing = "descriptor"
+            entrypoint = entrypoint or address
         elif isinstance(entry.get("invocation"), dict):
             # A declared exact toolchain that cannot be resolved must not
             # silently fall through to the ambient PATH compiler.
@@ -569,7 +570,7 @@ def _from_manifest(
         )
         address: str | None = declared["address"]
         addressing = declared["addressing"]
-        entrypoint = "undeclared"
+        entrypoint = address or "undeclared"
         bootstrap = MANIFEST_BOOTSTRAP_INVOCATIONS.get((repository_id, contract))
         if not isinstance(entry.get("invocation"), dict) and bootstrap is not None:
             declared = descriptor_invocation({"invocation": bootstrap}, repo, workspace, repository_roots)
