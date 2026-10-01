@@ -612,5 +612,29 @@ class DiscoveryTests(ProjectionFixture):
             projections_module.input_digest(self.target_doc, ["nope"]))
 
 
+class ClassifyOutputTests(unittest.TestCase):
+    def test_baseline_less_row_is_first_touch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "out.md").write_bytes(b"stale\n")
+            code, detail = projections_module.classify_output(
+                root, "out.md", b"fresh\n",
+                {"rendered_digest": None, "canonical_gen": 1,
+                 "observed_gen": 0})
+            self.assertEqual(code, projections_module.OUTPUT_MISSING)
+            self.assertEqual(detail, "first-touch-adoption")
+
+    def test_recorded_baseline_still_catches_divergence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "out.md").write_bytes(b"hand-edited\n")
+            code, detail = projections_module.classify_output(
+                root, "out.md", b"fresh\n",
+                {"rendered_digest": projections_module.bytes_digest(
+                    b"adopted\n")})
+            self.assertEqual(code, projections_module.OUTPUT_DIVERGED)
+            self.assertEqual(detail, "output-diverged")
+
+
 if __name__ == "__main__":
     unittest.main()

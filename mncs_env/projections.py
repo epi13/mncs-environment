@@ -381,7 +381,13 @@ def render_cached(session, declaration: dict[str, Any], checkout: Path,
                   digest: str) -> tuple[bytes | None, str, bool]:
     """Render with an input-digest cache; validate determinism on miss."""
     cache_dir = _artifact_directory(session, "render-cache")
+    # Same inputs under a different template/argv/provider can render
+    # different bytes, so the declaration joins the cache key.
+    decl_key = digest_hex(
+        {key: declaration.get(key) for key in
+         ("template", "provider_capability", "render_argv")})
     cached = cache_dir / (digest_hex(str(declaration["id"]))[:16] + "."
+                            + decl_key + "."
                             + digest.replace(":", "_") + ".bin")
     if cached.is_file():
         try:
@@ -426,10 +432,12 @@ def classify_output(checkout: Path, output: str, fresh: bytes,
         return OUTPUT_MISSING, "output-missing"
     if current == fresh:
         return OUTPUT_MATCHES_FRESH, "matches-fresh"
-    if row is None:
+    if row is None or not (row or {}).get("rendered_digest"):
         # First touch of a declared machine-owned output: the
         # declaration authorizes adoption; afterwards the recorded
-        # baseline protects against hand-edits.
+        # baseline protects against hand-edits. Deferred passes leave
+        # rows without a rendered baseline, so absence of a baseline
+        # is first touch however the row came to exist.
         return OUTPUT_MISSING, "first-touch-adoption"
     if row.get("rendered_digest") and bytes_digest(current) == row.get(
             "rendered_digest"):

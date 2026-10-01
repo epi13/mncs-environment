@@ -96,14 +96,16 @@ or more descriptors in `.mncs/project.json`:
  "provider_capability": "mncs-doc:documentation-projection",
  "render_argv": ["project-rfc-index", "--rfc-root",
                  "{checkout}/docs/rfcs", "--output",
-                 "{artifact}/rendered.md"],
+                 "{artifact}/rendered.md", "--link-base",
+                 "{checkout}/docs/rfc-index.generated.md"],
  "policy": "ambient-safe"}
 ```
 
 `{checkout}` and `{artifact}` are resolved by the orchestrator from its
-session state. `ambient-safe` permits whole-file convergence; region
-outputs use `explicit-only` unless the owning provider proves ambient
-splicing safe.
+session state. `--link-base` names the final output path so provider
+links stay repo-relative when rendering to session scratch.
+`ambient-safe` permits whole-file convergence; region outputs use
+`explicit-only` unless the owning provider proves ambient splicing safe.
 
 ## Concurrency
 
