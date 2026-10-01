@@ -259,6 +259,29 @@ class SessionStore:
     def read_claims(self) -> list[dict[str, Any]]:
         raise NotImplementedError
 
+    def read_projection_row(
+            self, projection_id: str) -> tuple[int, dict[str, Any]] | None:
+        """Latest shared (version, row); None when never recorded."""
+        raise NotImplementedError
+
+    def write_projection_row(self, projection_id: str, version: int,
+                             row: dict[str, Any]) -> None:
+        """Publish immutable row version; raise ProjectionConflict on race."""
+        raise NotImplementedError
+
+    def read_projection_versions(self) -> dict[str, int]:
+        """Latest row version per projection identity."""
+        raise NotImplementedError
+
+    def read_evidence(self, evidence_id: str) -> dict[str, Any] | None:
+        """Immutable verification evidence by identity."""
+        raise NotImplementedError
+
+    def write_evidence(self, evidence_id: str,
+                       record: dict[str, Any]) -> dict[str, Any]:
+        """Record immutable evidence; identical rewrites are idempotent."""
+        raise NotImplementedError
+
     def list_sessions(self) -> list[str]:
         """Enumerate known session ids (best-effort, backend-specific)."""
         return []
@@ -328,6 +351,83 @@ class FileSessionStore(SessionStore):
         records = read_jsonl(self.state_dir / "claims.jsonl")
         records.sort(key=lambda record: (str(record.get("claim_id", "")), int(record.get("version", 0))))
         return records
+
+    @staticmethod
+    def _projection_path(state_dir: Path, projection_id: str) -> Path:
+        safe = "".join(char if char.isalnum() or char in ("-", "_", ".")
+                       else "_" for char in projection_id)
+        return state_dir / "projections" / f"{safe}.json"
+
+    def read_projection_row(
+            self, projection_id: str) -> tuple[int, dict[str, Any]] | None:
+        record = read_json(self._projection_path(self.state_dir,
+                                                 projection_id))
+        if not isinstance(record, dict):
+            return None
+        row = record.get("row")
+        if not isinstance(row, dict):
+            return None
+        try:
+            version = int(record.get("version", 0))
+        except (TypeError, ValueError):
+            return None
+        return version, row
+
+    def write_projection_row(self, projection_id: str, version: int,
+                             row: dict[str, Any]) -> None:
+        from .projection_store import ProjectionConflict  # noqa: E402
+
+        current = self.read_projection_row(projection_id)
+        if current is not None and current[0] > version - 1:
+            raise ProjectionConflict(projection_id, current[1])
+        if current is not None and current[0] == version:
+            if all(current[1].get(key) == row.get(key)
+                   for key in set(current[1]) | set(row)
+                   if key not in ("updated_by", "updated_at")):
+                return
+            raise ProjectionConflict(projection_id, current[1])
+        write_json(self._projection_path(self.state_dir, projection_id),
+                   {"version": int(version), "row": row})
+
+    def read_projection_versions(self) -> dict[str, int]:
+        base = self.state_dir / "projections"
+        if not base.is_dir():
+            return {}
+        versions: dict[str, int] = {}
+        for path in sorted(base.glob("*.json")):
+            record = read_json(path)
+            if not isinstance(record, dict):
+                continue
+            row = record.get("row")
+            if not isinstance(row, dict) or not row.get("projection"):
+                continue
+            try:
+                versions[str(row["projection"])] = int(
+                    record.get("version", 0))
+            except (TypeError, ValueError):
+                continue
+        return versions
+
+    def read_evidence(self, evidence_id: str) -> dict[str, Any] | None:
+        record = read_json(self.state_dir / "verification-evidence"
+                           / f"{evidence_id}.json")
+        return record if isinstance(record, dict) else None
+
+    def write_evidence(self, evidence_id: str,
+                       record: dict[str, Any]) -> dict[str, Any]:
+        from .projection_store import EvidenceConflict  # noqa: E402
+
+        existing = self.read_evidence(evidence_id)
+        if isinstance(existing, dict):
+            if all(existing.get(key) == record.get(key)
+                   for key in set(existing) | set(record)
+                   if key != "schema_version"):
+                return existing
+            raise EvidenceConflict(
+                f"conflicting payload under {evidence_id}")
+        write_json(self.state_dir / "verification-evidence"
+                   / f"{evidence_id}.json", record)
+        return record
 
 
 class StoreSessionStore(SessionStore):
@@ -424,6 +524,24 @@ class StoreSessionStore(SessionStore):
 
     def read_claims(self) -> list[dict[str, Any]]:
         return self.backend.read_claims()
+
+    def read_projection_row(
+            self, projection_id: str) -> tuple[int, dict[str, Any]] | None:
+        return self.backend.read_projection_row(projection_id)
+
+    def write_projection_row(self, projection_id: str, version: int,
+                             row: dict[str, Any]) -> None:
+        self.backend.write_projection_row(projection_id, version, row)
+
+    def read_projection_versions(self) -> dict[str, int]:
+        return self.backend.read_projection_versions()
+
+    def read_evidence(self, evidence_id: str) -> dict[str, Any] | None:
+        return self.backend.read_evidence(evidence_id)
+
+    def write_evidence(self, evidence_id: str,
+                       record: dict[str, Any]) -> dict[str, Any]:
+        return self.backend.write_evidence(evidence_id, record)
 
     def list_sessions(self) -> list[str]:
         return self.backend.list_sessions()

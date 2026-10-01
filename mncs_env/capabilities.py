@@ -438,6 +438,24 @@ def _from_verification_inventory(repo: Path) -> list[dict[str, Any]]:
             "obligation": obligation,
             "script": str(script_relative),
         })
+        # Providers may attest verification-only effects: the executor
+        # observes the checkout and writes solely to declared ephemeral
+        # roots (plus session scratch). Anything else keeps write
+        # effects and the owned-or-pristine bar. The attestation is
+        # enforced, not trusted: verification confines post-run state.
+        declared_effects = executor.get("effects")
+        ephemeral = executor.get("ephemeral_roots")
+        if declared_effects == ["verify"] and (
+                ephemeral is None or (
+                    isinstance(ephemeral, list) and all(
+                        isinstance(root, str) and root
+                        and not root.startswith("/")
+                        and ".." not in Path(root).parts
+                        for root in ephemeral))):
+            effects = ["verify"]
+        else:
+            effects = ["write"]
+            ephemeral = None
         capability = f"{manifest['repository']}:verification-executor/{identity}"
         out.append(bind(
             provider=str(manifest["repository"]),
@@ -445,7 +463,7 @@ def _from_verification_inventory(repo: Path) -> list[dict[str, Any]]:
             contract_revision=revision,
             entrypoint=entrypoint,
             address=address,
-            effects=["write"],
+            effects=effects,
             event_types=["verification.completed"],
             provenance={
                 "source": str(relative_inventory),
@@ -454,6 +472,7 @@ def _from_verification_inventory(repo: Path) -> list[dict[str, Any]]:
                 "inventory_revision": inventory.get("revision"),
                 "working_directory": working_directory,
                 "addressing": "declared-verification-inventory",
+                "ephemeral_roots": sorted(set(ephemeral or [])),
             },
             provider_root=str(repo.resolve()),
             fixed_argv=fixed_argv,

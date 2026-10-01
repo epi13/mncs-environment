@@ -28,11 +28,13 @@ ACTIONS = (
     "subscribe",
     "delegate",
     "handoff",
+    "verify",
 )
 
 # Capability effects mapped to the minimum session action required.
 EFFECT_ACTIONS = {
     "read": "read",
+    "verify": "verify",
     "write": "write",
     "execute": "execute",
     "publish": "publish",
@@ -134,9 +136,13 @@ def evaluate(
     others = [h for h in holders if h["session_id"] != session_id]
     own = [h for h in holders if h["session_id"] == session_id]
     mutating = action in ("write", "mutate", "merge", "delete", "execute")
-    requested = _requested_scope(repo, target, scope) if mutating else None
+    # Verification executes provider code inside a checkout, so foreign
+    # ownership conflicts deny exactly like mutation; unlike mutation,
+    # dirt and branch are the *subject* under verification, not a bar.
+    conflict_checked = mutating or action == "verify"
+    requested = _requested_scope(repo, target, scope) if conflict_checked else None
     for other in others:
-        if not mutating:
+        if not conflict_checked:
             continue
         conflict = claims_module.scopes_conflict(
             requested or {}, other.get("scope") or {"kind": "repository"})
@@ -153,6 +159,7 @@ def evaluate(
         "delete",
         "execute",
         "publish",
+        "verify",
     ):
         return {
             "verdict": "deny",
@@ -183,6 +190,10 @@ def evaluate(
                     "reason": f"{repo} is not owned scope (dirty/foreign/off-branch); claim it first"}
         return {"verdict": "allow",
                 "reason": f"{target} mutation by claim" if owned else f"{target} is owned clean scope"}
+    if action == "verify":
+        return {"verdict": "allow",
+                "reason": f"{target} verification permitted; "
+                          "repo writes must stay within declared ephemeral roots"}
     if action in context.get("escalation_required", []):
         return {"verdict": "escalate", "reason": f"{action} requires escalation"}
     if action == "invoke":
@@ -219,7 +230,7 @@ def _covers(held: dict[str, Any], requested: dict[str, Any]) -> bool:
 
 def required_action_for_effects(effects: list[str]) -> str:
     """Strongest session action implied by capability effects."""
-    order = ["read", "execute", "write", "publish"]
+    order = ["read", "verify", "execute", "write", "publish"]
     strongest = "read"
     for effect in effects:
         action = EFFECT_ACTIONS.get(effect, "execute")
