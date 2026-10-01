@@ -201,6 +201,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                "operations": remediation["operations"]}
             result["doctor"] = {"summary": remediation["summary"], "remaining": remediation["remaining"],
                                 "remaining_truncated": remediation.get("remaining_truncated", False),
+                                "unavailable": remediation.get("unavailable", {"count": 0, "digest": None}),
                                 "readiness": remediation["readiness"], "epoch": remediation["digest"],
                                 "reused": remediation["reused"],
                                 "elapsed_seconds": remediation.get("elapsed_seconds")}
