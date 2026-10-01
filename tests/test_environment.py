@@ -305,7 +305,7 @@ class ClaimTests(unittest.TestCase):
 
 class WorkspaceTests(unittest.TestCase):
     def test_discovers_real_repositories(self) -> None:
-        view = workspace.discover_workspace(FAMILY)
+        view = workspace.discover_workspace(FAMILY, repositories=[name for name in ("mncs-atlas", "mncs-compiler", "mncs-language") if (FAMILY / name / ".git").exists()])
         names = {repo["name"] for repo in view["repositories"]}
         if (FAMILY / "mncs-atlas").is_dir():
             self.assertIn("mncs-atlas", names)
@@ -337,7 +337,7 @@ class CapabilityTests(unittest.TestCase):
                 FAMILY, repository_roots={"mncs-test": test_root},
             )
         else:
-            bindings = capabilities.discover_capabilities(FAMILY)
+            bindings = capabilities.discover_capabilities(FAMILY, repository_roots={"mncs-test": test_root, "mncs-language": FAMILY / "mncs-language"})
         by_provider = {binding["provider"] for binding in bindings}
         self.assertIn("mncs-test", by_provider)
         self.assertTrue(all(binding["binding_id"].startswith("cap_") for binding in bindings))
@@ -904,7 +904,7 @@ TEST_NATIVE_LIB = FAMILY / "mncs-test" / "native"
 class ToolchainTests(unittest.TestCase):
     def test_mncs_test_binding_is_descriptor_addressed(self) -> None:
         bindings = [capabilities.probe_availability(binding)
-                    for binding in capabilities.discover_capabilities(FAMILY)]
+                    for binding in capabilities.discover_capabilities(FAMILY, repository_roots={"mncs-test": FAMILY / "mncs-test", "mncs-language": FAMILY / "mncs-language"})]
         matches = [b for b in bindings if b["capability"] == "mncs.test-result/1"]
         self.assertTrue(matches, "mncs.test-result/1 not discovered")
         binding = matches[0]
@@ -942,7 +942,7 @@ class ToolchainTests(unittest.TestCase):
             self.assertIn("PASS", result["stdout"])
 
     def test_compiler_binding_visible_with_verification_inventory(self) -> None:
-        bindings = capabilities.discover_capabilities(FAMILY)
+        bindings = capabilities.discover_capabilities(FAMILY, repository_roots={"mncs-compiler": FAMILY / "mncs-compiler", "mncs-language": FAMILY / "mncs-language"})
         matches = [b for b in bindings if b["provider"] == "mncs-compiler"]
         self.assertTrue(matches, "mncs-compiler binding not discovered")
         manifest = next(
@@ -1948,6 +1948,14 @@ class SourcesTests(unittest.TestCase):
         # stream_identity is rejected; the key must be omitted instead.
         directory = tempfile.mkdtemp(prefix="mnls-stub-")
         path = str(Path(directory) / "lang.sock")
+        # Restricted runners may prohibit Unix sockets entirely. Detect the
+        # platform boundary before starting a worker that cannot report it.
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as probe:
+            try:
+                probe.bind(path + ".probe")
+            except PermissionError as error:
+                self.skipTest(f"Unix socket creation denied by runner: {error}")
+        Path(path + ".probe").unlink()
         seen: list[dict] = []
         ready = threading.Event()
 

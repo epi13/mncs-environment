@@ -254,6 +254,13 @@ def proof_language() -> None:
         work = Path(directory) / "ws"
         work.mkdir()
         sock = str(Path(directory) / "lang.sock")
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as probe:
+            try:
+                probe.bind(sock + ".probe")
+            except PermissionError as error:
+                skip("language.live-delta", f"Unix socket creation denied by runner: {error}")
+                return
+        Path(sock + ".probe").unlink()
         env = dict(os.environ, MNLS_WORKSPACE_ROOT=str(work),
                    MNLS_SERVICE_SOCKET=sock)
         child = subprocess.Popen([str(host)], env=env, stdout=subprocess.DEVNULL,
@@ -341,8 +348,10 @@ def main() -> int:
     for name, status, detail in RESULTS:
         print(f"{status:4} {name}")
     failed = [name for name, status, _ in RESULTS if status == "FAIL"]
+    passed = sum(status == "PASS" for _, status, _ in RESULTS)
+    skipped = sum(status == "SKIP" for _, status, _ in RESULTS)
     print(f"\nCAMPAIGN PROOFS: {'FAIL ' + str(failed) if failed else 'PASS'} "
-          f"({len(RESULTS) - len(failed)}/{len(RESULTS)} ok)")
+          f"({passed} passed, {skipped} skipped, {len(failed)} failed)")
     # Fail-closed authority sanity: unknown actions deny, never execute.
     verdict = authority.evaluate({"denied": [], "claim_holders": {}},
                                  action="bogus-action", target="x",

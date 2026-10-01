@@ -161,3 +161,19 @@ Early implementation deliberately discovered and recorded pressures such as:
 - artifacts that cannot be durably referenced across machines/processes.
 
 Those findings are valuable outputs. Do not hide them with Environment-specific semantic substitutes.
+
+## Adaptive Store consumer
+
+Store publishes `adaptive-*` invocation descriptors and a provider-owned local
+Environment definition. Select that definition explicitly for adaptive work, or
+enter from the Store checkout/subdirectory. Store owns intent encoding, ranking,
+codec transformation, integrity, block closure, plans and physical inventory
+publication. Environment supplies exact selected runtime paths, effect authority
+and session artifact transport; it contains no Store selection policy.
+
+`python3 scripts/adaptive_store_proof.py` exercises actual Environment context,
+provider inventory, and durable state as tagged regions in Store. It proves
+fresh-process inspection/selective retrieval with an unrelated chunk absent,
+exact reconstruction, generation-bound physical evolution, subdirectory reuse
+and checkpoint/resume/handoff. See selected Store `docs/provider.md` and
+`adaptive-representations` description for discoverable request fields.

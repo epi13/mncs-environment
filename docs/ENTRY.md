@@ -194,3 +194,13 @@ The corresponding Commons pressure is `MNCS-TOOLING-9E7E149C94D9`.
 
 Python remains the process/Git/Store/file transport substrate; native MNCS
 capabilities are invoked through the same session binding interface.
+
+An unwritable state location reports `entry-state-unwritable` with the explicit
+`--state-dir` recovery action. Environment does not silently select a new state
+store. Keep the chosen state directory in subsequent actions to preserve work.
+
+Store publishes its own local Environment definition and adaptive operation
+descriptors. See selected Store `docs/provider.md`; Environment only composes
+those operations. `scripts/adaptive_store_proof.py` provides a real consumer
+proof from entry through physical inventory evolution, selective retrieval and
+durable handoff.

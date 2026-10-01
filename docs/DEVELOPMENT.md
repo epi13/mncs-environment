@@ -134,3 +134,11 @@ checks startup/reuse/recovery, cwd independence, invalid descriptors, foreign
 checkout rejection, native MNCS work, and checkpoint/resume/handoff. Failed
 campaigns remain available for diagnosis. Provider-owned stop is the cleanup
 boundary. Binary copying is fixture setup and makes no build-origin claim.
+
+## Adaptive Store proof
+
+Run `python3 scripts/adaptive_store_proof.py --family-root /absolute/family` after
+Store provider changes. It uses selected real providers and real Store session
+persistence, preserving its campaign/report for inspection. It does not require
+Forge or modify selected source checkouts. Results include actual inspected,
+materialized and coded-transfer bytes plus retained ABI counters.

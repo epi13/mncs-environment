@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import pytest
 from pathlib import Path
 from unittest import mock
 
@@ -388,3 +389,16 @@ class EntryContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_unwritable_entry_state_reports_explicit_recovery(tmp_path, monkeypatch):
+    import errno
+    from mncs_env.entry import EntryError, entry_lock
+    def denied(*args, **kwargs):
+        raise OSError(errno.EROFS, "read-only filesystem")
+    monkeypatch.setattr(Path, "open", denied)
+    with pytest.raises(EntryError) as raised:
+        with entry_lock(tmp_path, "store"):
+            pass
+    assert raised.value.diagnostics["code"] == "entry-state-unwritable"
+    assert "--state-dir" in raised.value.diagnostics["next"]

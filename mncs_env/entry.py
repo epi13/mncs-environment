@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import errno
 import fcntl
 from contextlib import contextmanager
 from pathlib import Path
 
 from . import identity, readiness, sessions, workspace
+from .intent import parse as parse_intent
 from .persist import read_json
 from .session_store import open_store, upgrade_session_store_provider
-from .intent import parse as parse_intent
 
 
 class EntryError(ValueError):
@@ -53,8 +54,16 @@ def select_definition(definition_path: Path | None, workspace_root: str | None) 
 def entry_lock(state_dir: Path | str, backend: str):
     """Serialize entry selection and provider reconciliation across processes."""
     root = Path(state_dir).expanduser().resolve()
-    root.mkdir(parents=True, exist_ok=True)
-    with (root / f"entry-{backend}.lock").open("a") as handle:
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        handle = (root / f"entry-{backend}.lock").open("a")
+    except OSError as error:
+        if error.errno not in (errno.EACCES, errno.EPERM, errno.EROFS):
+            raise
+        raise EntryError("Environment state directory is not writable",
+                         "entry-state-unwritable", state_dir=str(root),
+                         next="pass --state-dir with an explicitly writable directory; reuse that path on subsequent actions") from error
+    with handle:
         try:
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:
