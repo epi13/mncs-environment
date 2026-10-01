@@ -86,7 +86,7 @@ class FakeSession:
         if capability == verification_module.COHERENCE_CAPABILITY:
             return self._invoke_coherence(argv, cwd)
         if capability == verification_module.TEST_CAPABILITY:
-            return self._invoke_test(argv, cwd)
+            return self._invoke_test(argv, cwd, env)
         raise AssertionError(f"unexpected capability {capability}")
 
     def _invoke_coherence(self, argv: list[str], cwd) -> dict:
@@ -157,9 +157,10 @@ class FakeSession:
         (workdir / argv[1]).write_text(json.dumps(result), encoding="utf-8")
         return {"status": "ok", "stdout": "", "stderr": ""}
 
-    def _invoke_test(self, argv: list[str], cwd) -> dict:
+    def _invoke_test(self, argv: list[str], cwd, env) -> dict:
         workdir = Path(cwd)
         self.executions.append(list(argv))
+        self.last_test_env = dict(env or {})
         if self.execution_mode == "transport-error":
             raise OSError("stub transport failure")
         if self.execution_mode == "fail":
@@ -367,6 +368,16 @@ class AmbientPassTests(VerificationFixture):
         verification_module.ambient_pass(self.session)
         kinds = [kind for kind, _payload in self.session.emitted]
         self.assertIn("verification.failed", kinds)
+
+    def test_libraries_travel_as_env_roots_not_flags(self):
+        obligated = json.loads(json.dumps(OBLIGATION))
+        obligated["executor"]["library_paths"] = ["tests"]
+        self.write_obligations([obligated])
+        verification_module.ambient_pass(self.session)
+        self.assertEqual(len(self.session.executions), 1)
+        self.assertNotIn("--library", self.session.executions[0])
+        roots = self.session.last_test_env.get("MNCS_LIBRARY_PATH", "")
+        self.assertIn(str(self.repo / "tests"), roots)
 
 
 if __name__ == "__main__":

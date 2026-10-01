@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -479,19 +480,30 @@ def execute_suite(session, obligation: dict, measured: dict,
     checkout = Path(str(obligation["checkout"]))
     suite = str((checkout / declaration["executor"]["source_paths"][0]).resolve())
     argv = [suite, "--format", "json", "--result", "result.json"]
+    # Declared libraries travel as environment roots, never --library
+    # flags: explicit flags replace the provider adapter's own roots and
+    # would silently drop the provider native library.
+    libraries = []
     for library in declaration["executor"].get("library_paths") or []:
         if not isinstance(library, str) or not library:
             continue
-        candidate = (checkout / library).resolve()
-        argv.extend(["--library", str(candidate)])
+        libraries.append(str((checkout / library).resolve()))
+    inherited = os.environ.get("MNCS_LIBRARY_PATH", "")
+    if inherited:
+        libraries.append(inherited)
+    child_env = {"MNCS_LIBRARY_PATH": ":".join(libraries)} if libraries else None
     try:
         directory = _artifact_directory(session, "runs", run_tag)
         result = session.invoke(TEST_CAPABILITY, argv, cwd=str(directory),
-                                timeout_seconds=EXECUTION_TIMEOUT_SECONDS)
+                                timeout_seconds=EXECUTION_TIMEOUT_SECONDS,
+                                env=child_env)
     except Exception as error:
         return None, f"transport-error:{type(error).__name__}"
-    if not isinstance(result, dict) or result.get("status") not in ("ok", "error"):
-        return None, "transport-failed"
+    status = result.get("status") if isinstance(result, dict) else None
+    if status in ("timeout", "transport-error"):
+        return None, f"transport-failed:{status}"
+    if status not in ("ok", "failed"):
+        return None, f"transport-failed:{status}"
     try:
         document = json.loads((directory / "result.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
