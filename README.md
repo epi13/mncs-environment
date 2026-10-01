@@ -173,6 +173,10 @@ state, not prose. The hardening campaign added:
   advances become events (`Session.observe_store`);
 - read-only inspect plus a control-mcp tool surface (`env_enter`, `env_inspect`,
   `env_resume`, `env_claim_acquire`, `env_claim_release`, `env_claims`, `env_status`).
+- ambient Doctor remediation: validated health epochs skip redundant
+  revalidation, entries share one Store handle, contended entries wait
+  boundedly, and terse `repaired/reconciled/degraded/blockers` summaries
+  replace repeated diagnostics (`mncs_env/doctor.py`, `docs/DOCTOR.md`).
 
 ## Entering an environment
 

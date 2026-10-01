@@ -82,5 +82,29 @@
     "title": "Environment reconciler process identity remains PID based",
     "why_not_local": "Environment owns hardening its own daemon, but should consume provider supervision for external services rather than create another general process supervisor.",
     "workaround": "Use foreground reconcile for deterministic entry recovery; do not kill or trust unrelated processes based on stale PID files."
+  },
+  {
+    "description": "Opening the canonical Store backend (EmbeddedStore construction plus verification) costs ~1.6s per process even before any read. Every mncs-env command pays it at least once, so entry/health/status latency is dominated by open cost rather than the work itself.",
+    "desired_contract": "Sub-100ms Store open, or a documented persistent local handle / cheap generation probe that read-only commands can use without a full open.",
+    "effect": "All store-backed commands take seconds; polling loops (status/health) are expensive.",
+    "evidence": "mncs-environment session open measured at 1.6-1.9s with and without verify_on_open; entry paid it twice per invocation before the single-open change",
+    "identity": "prs_3c42d3b94fd63aa0",
+    "owner": "mncs-store",
+    "schema_version": "mncs.environment.pressure/1",
+    "title": "Store open cost dominates every CLI command",
+    "why_not_local": "Persistence lifecycle and verification live inside mncs-store; Environment cannot safely cache across processes without a store-owned handle or generation feed.",
+    "workaround": "Single store open per entry; no-store file-side epoch fast path for status --terse; validated health epochs skip redundant revalidation and probes."
+  },
+  {
+    "description": "Providers publish diagnostics and invocation descriptors, but no family contract names a remediation capability (observe/repair/validate/envelope). Each orchestrator-to-provider remediation binding is currently a bilateral convention.",
+    "desired_contract": "Family remediation capability shape: discovery suffix or manifest kind, argv/JSON envelope schema, effects/authority expectations, evidence routing (session artifact dir).",
+    "effect": "Only mncs-doctor exposes remediation; other providers cannot be orchestrated until they adopt the bilateral convention.",
+    "evidence": "mncs-environment/mncs_env/doctor.py defines the :repository-remediation suffix convention and consumes the mncs.doctor.remediation/1 envelope bilaterally with mncs-doctor",
+    "identity": "prs_b6d08030930b43c6",
+    "owner": "mncs-commons (contract), owning providers (implementations)",
+    "schema_version": "mncs.environment.pressure/1",
+    "title": "No family-standard remediation capability contract",
+    "why_not_local": "A family capability contract must be standardized where providers coordinate; an Environment-only standard would fork the vocabulary.",
+    "workaround": null
   }
 ]

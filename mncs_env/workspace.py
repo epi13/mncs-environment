@@ -79,9 +79,7 @@ def _porcelain(
     # Managed worktree infrastructure is control-plane bookkeeping, like
     # .git itself: it must not mark the main checkout dirty. Worktrees
     # are observed as their own records.
-    lines = [line for line in lines
-             if line[3:] != MANAGED_WORKTREES_DIR and
-             not line[3:].startswith(MANAGED_WORKTREES_DIR + "/")]
+    lines = _filtered_porcelain_names(lines)
     truncated = len(lines) > MAX_PORCELAIN_LINES
     return lines[:MAX_PORCELAIN_LINES], truncated
 
@@ -184,6 +182,114 @@ def inspect_repo(path: Path, *, deadline: float | None = None) -> RepoState | No
 
 
 MANAGED_WORKTREES_DIR = ".worktrees"
+
+
+def _filtered_porcelain_names(lines: list[str]) -> list[str]:
+    """Drop managed-worktree control-plane paths from porcelain lines."""
+    return [line for line in lines
+            if line[3:] != MANAGED_WORKTREES_DIR and
+            not line[3:].startswith(MANAGED_WORKTREES_DIR + "/")]
+
+
+def quick_repo_facts(path: Path) -> dict[str, Any] | None:
+    """Cheap exact change-detection facts for one checkout.
+
+    Three bounded git calls (head+branch, tracked status, untracked list)
+    capture exactly the facts a full scan would compare for staleness:
+    revision, branch, and the complete dirty/untracked content digests.
+    Control-plane `.worktrees/` paths are excluded exactly like the full
+    scan. Returns None when the checkout is not git-readable; callers must
+    treat None as changed (invalidate), never as clean.
+    """
+    import hashlib
+
+    repo = Path(path)
+    if not repo.is_dir() or not (repo / ".git").exists():
+        return None
+    identity = _git(repo, "rev-parse", "HEAD", "--abbrev-ref", "HEAD")
+    if identity is None or identity.returncode != 0:
+        return None
+    lines = identity.stdout.splitlines()
+    if len(lines) < 2 or not lines[0].strip():
+        return None
+    branch = lines[1].strip()
+    if branch == "HEAD":
+        # Detached head: match `branch --show-current` (empty) semantics.
+        branch = ""
+    tracked = _git(repo, "status", "--porcelain=v1", "--untracked-files=no")
+    if tracked is None or tracked.returncode != 0:
+        return None
+    others = _git(repo, "ls-files", "--others", "--exclude-standard")
+    if others is None or others.returncode != 0:
+        return None
+    tracked_lines = _filtered_porcelain_names(
+        [line for line in tracked.stdout.splitlines() if line.strip()])
+    untracked_lines = sorted(
+        line for line in (entry.strip() for entry in others.stdout.splitlines())
+        if line and line != MANAGED_WORKTREES_DIR
+        and not line.startswith(MANAGED_WORKTREES_DIR + "/"))
+    tracked_digest = hashlib.sha256("\n".join(tracked_lines).encode()).hexdigest()
+    untracked_digest = hashlib.sha256("\n".join(untracked_lines).encode()).hexdigest()
+    return {"head": lines[0].strip(), "branch": branch or None,
+            "dirty": bool(tracked_lines) or bool(untracked_lines),
+            "tracked_digest": tracked_digest, "untracked_digest": untracked_digest}
+
+
+def manifest_content_digest(path: Path) -> dict[str, str | None]:
+    """Content hashes for every declaration file discovery reads in a repo."""
+    import hashlib
+
+    repo = Path(path)
+    files = [".mncs/project.json", "family-semantic-contracts-v1.json"]
+    inventory = _obligation_inventory_name(repo)
+    if inventory is not None:
+        files.append(inventory)
+    digests: dict[str, str | None] = {}
+    for name in files:
+        try:
+            raw = (repo / name).read_bytes()
+        except OSError:
+            digests[name] = None
+        else:
+            digests[name] = hashlib.sha256(raw).hexdigest()
+    return digests
+
+
+def _obligation_inventory_name(repo: Path) -> str | None:
+    """Resolve the verification obligation inventory path (mirrors discovery)."""
+    try:
+        manifest = json.loads((repo / ".mncs" / "project.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(manifest, dict):
+        return None
+    verification = manifest.get("verification")
+    name = verification.get("obligation_inventory") if isinstance(verification, dict) else None
+    if not isinstance(name, str) or not name:
+        return None
+    relative = Path(name)
+    if relative.is_absolute() or ".." in relative.parts:
+        return None
+    return name
+
+
+def managed_worktree_names(repo: Path) -> list[str] | None:
+    """Sorted managed-checkout names, or None when the listing is unreadable."""
+    try:
+        return sorted(path.name for path in (Path(repo) / MANAGED_WORKTREES_DIR).iterdir()
+                      if path.is_dir() and not path.is_symlink())
+    except OSError:
+        return None
+
+
+def top_level_checkout_names(base: Path) -> list[str] | None:
+    """Immediate child directories containing `.git` (no git calls)."""
+    try:
+        return sorted(path.name for path in Path(base).iterdir()
+                      if path.is_dir() and not path.is_symlink()
+                      and (path / ".git").exists())
+    except OSError:
+        return None
 
 
 def _candidate_directories(base: Path) -> list[Path]:

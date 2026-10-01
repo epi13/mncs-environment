@@ -206,6 +206,11 @@ Given identical authoritative inputs and policy, environment resolution should b
 
 Resuming a session does not mean trusting every old observation. The resume path should explicitly revalidate time-sensitive or revision-sensitive bindings while preserving the durable history of what the session previously observed.
 
+The ambient Doctor pass (`docs/DOCTOR.md`) implements this as validated
+health epochs: entry fingerprints every readiness input exactly and skips
+revalidation only when the fingerprint proves the world unchanged, while
+declared services are always probed live. Any doubt runs the full path.
+
 ## Failure model
 
 Environment should distinguish between:

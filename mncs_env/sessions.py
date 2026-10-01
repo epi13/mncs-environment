@@ -1801,6 +1801,7 @@ class Session:
             "persistence": "store" if hasattr(self.store, "backend") else "file",
             "readiness": readiness_module.summarize(self.snapshot),
             "service_operations": self.snapshot.get("service_operations", []),
+            "doctor": self.doctor_summary(),
             "projects": [{"repository": repo.get("manifest_repository") or repo.get("name"),
                           "path": repo.get("path"), "branch": repo.get("branch"),
                           "dirty": repo.get("dirty"), "head": repo.get("head")}
@@ -1844,8 +1845,38 @@ class Session:
         return {name: {"argv": [*prefix, name, self.session_id]} for name in
                 ("health", "reconcile", "inspect", "capabilities")}
 
-    def health(self) -> dict[str, Any]:
-        """Live read-only inspection; no participation event or cursor advancement."""
+    def health(self, *, live: bool = False) -> dict[str, Any]:
+        """Read-only inspection; no participation event or cursor advancement.
+
+        By default a valid doctor epoch answers from the validated snapshot
+        (labeled `observation: epoch`) without rescanning or rebinding, but
+        declared services are always probed live: provider runtime state is
+        observable only by probing. Any doubt falls through to the live
+        path. `live=True` forces full live probes.
+        """
+        if not live:
+            from . import doctor as doctor_module
+            epoch = self.snapshot.get("doctor", {}).get("epoch") if isinstance(
+                self.snapshot.get("doctor"), dict) else None
+            if isinstance(epoch, dict):
+                valid, _ = doctor_module.validate_epoch(self, epoch)
+                if valid:
+                    match, services = doctor_module.live_services_match(self)
+                    if match:
+                        fresh = [capabilities_module.probe_availability(binding)
+                                 for binding in self.snapshot.get("bindings", [])]
+                        summary = readiness_module.summarize(
+                            self.snapshot, bindings=fresh, services=services, live=False)
+                        summary["observation"] = "epoch"
+                        summary["epoch"] = epoch.get("digest")
+                        return {"session_id": self.session_id,
+                                "environment_id": self.snapshot.get("environment_id"),
+                                "readiness": summary,
+                                "unavailable_capabilities": [
+                                    {"capability": item["capability"], **item["availability"]}
+                                    for item in fresh if item["availability"]["status"] != "available"],
+                                "doctor": doctor_module.terse(self),
+                                "actions": self.actions()}
         fresh = [capabilities_module.probe_availability(binding) for binding in self.snapshot.get("bindings", [])]
         services = readiness_module.probe_services(self, bindings=fresh)
         snapshot = dict(self.snapshot)
@@ -1860,13 +1891,34 @@ class Session:
 
     def reconcile(self) -> dict[str, Any]:
         """Refresh discovery and delegate declared service recovery, then verify."""
+        from . import doctor as doctor_module
+        previous_bindings = [dict(binding) for binding in self.snapshot.get("bindings", [])]
+        previous_services = [dict(item) for item in self.snapshot.get("service_observations", [])]
         revalidation = self.revalidate()
         result = readiness_module.reconcile_services(self)
-        return {**self.context(), "reconciliation": {"revalidation": revalidation, **result}}
+        repairs = doctor_module.repair_delta(previous_bindings, self.snapshot.get("bindings", []),
+                                              previous_services,
+                                              self.snapshot.get("service_observations", []))
+        report = doctor_module.record_epoch(
+            self, repairs=repairs,
+            reconciliations=[{"id": "reconcile:explicit", "class": "bounded_reconciliation",
+                              "provider": "mncs-environment",
+                              "detail": "explicit reconcile: full revalidation and service recovery",
+                              "validated": True}],
+            operations=result["operations"], revalidation=revalidation)
+        return {**self.context(), "reconciliation": {"revalidation": revalidation, **result},
+                "doctor": report}
 
     def status(self) -> dict[str, Any]:
         """Read-only alias for the compact session context."""
         return self.context()
+
+    def doctor_summary(self) -> dict[str, Any] | None:
+        """Last terse doctor state, or None before the first ambient pass."""
+        from . import doctor as doctor_module
+        if not isinstance(self.snapshot.get("doctor"), dict):
+            return None
+        return doctor_module.terse(self)
 
     def inspect(self) -> dict[str, Any]:
         log = self._log()
