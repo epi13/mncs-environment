@@ -128,6 +128,8 @@ def probe_services(session, *, bindings: list[dict] | None = None) -> list[dict[
                                              output_limit_bytes=16384, env=session._selected_runtime_environment(binding))
                 record["code"] = "service-probe-failed"
                 if result["status"] != "ok":
+                    if result["status"] == "timeout":
+                        record["code"] = "service-probe-timeout"
                     raise ValueError(f"{result['status']}: {result.get('stderr', '')[-1000:]}")
                 record["code"] = "service-response-incompatible"
                 document = json.loads(result["stdout"])

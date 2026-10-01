@@ -111,11 +111,22 @@ def main():
         "--state-dir",
         campaign / "environment-state",
     ]
-    context = run(
-        [*prefix, "enter", "--consumer", "sol-store-integration"],
-        campaign,
-        codes=(0, 5),
-    )
+    readiness_attempts = []
+    for _ in range(6):
+        context = run(
+            [*prefix, "enter", "--consumer", "sol-store-integration"],
+            campaign,
+            codes=(0, 5),
+        )
+        readiness_attempts.append(context["readiness"])
+        if not context["readiness"]["blocking"]:
+            break
+        # Retry only an observed bounded timeout, preserving the same durable
+        # session. Invalid descriptors or native failures never get hidden.
+        assert all(
+            item["code"] == "service-probe-timeout"
+            for item in context["readiness"]["services"]
+        ), context["readiness"]
     assert not context["readiness"]["blocking"], context["readiness"]
     session = context["session_id"]
     provider = campaign / "mncs-store"
@@ -249,7 +260,9 @@ def main():
         assert base64.b64decode(syn["base64"]) == synopsis
         selection = invoke("select", {"intent": {"fidelity": 5}})
         assert selection["satisfied"] and selection["constraints_satisfied"]
-        selective = invoke("materialize", {"intent": {"fidelity": 5, "transfer": 1000}, "tag": 1})
+        selective = invoke(
+            "materialize", {"intent": {"fidelity": 5, "transfer": 1000}, "tag": 1}
+        )
         assert payload(selective) == regions[0]
         assert selective["materialized_bytes"] == len(regions[0])
         assert selective["stored_bytes_touched"] < len(original)
@@ -307,6 +320,7 @@ def main():
         "session": session,
         "checkpoint": checkpoint["identity"],
         "selected_providers": again["projects"],
+        "initial_readiness_attempts": readiness_attempts,
         "selected_toolchain": context["toolchain"],
         "logical_id": admitted["logical_id"],
         "content_id": admitted["content_id"],

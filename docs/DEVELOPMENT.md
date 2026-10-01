@@ -142,3 +142,8 @@ Store provider changes. It uses selected real providers and real Store session
 persistence, preserving its campaign/report for inspection. It does not require
 Forge or modify selected source checkouts. Results include actual inspected,
 materialized and coded-transfer bytes plus retained ABI counters.
+
+The adaptive proof retries only bounded provider readiness timeouts, preserving
+the same durable session and recording each observation. Other failures fail
+immediately. This exposes cold admission/resource latency without adopting an
+ambient provider or broadening the three-second readiness deadline.
