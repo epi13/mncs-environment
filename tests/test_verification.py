@@ -62,8 +62,14 @@ class FakeSession:
         self.saved = 0
         self.coherence_calls: list[dict] = []
         self.executions: list[list[str]] = []
+        self.emitted: list[tuple[str, dict]] = []
         self.coherence_mode = "queue-fresh"
         self.execution_mode = "pass"
+
+    def _emit(self, event_type: str, producer: str,
+              payload: dict | None = None, causes=None) -> dict:
+        self.emitted.append((event_type, dict(payload or {})))
+        return {"type": event_type}
 
     def _binding(self, capability: str) -> dict:
         for binding in self.snapshot.get("bindings", []):
@@ -350,6 +356,17 @@ class AmbientPassTests(VerificationFixture):
         verification_module.ambient_pass(self.session)
         terse = verification_module.terse(self.session)
         self.assertLess(len(json.dumps(terse)), 1024)
+
+    def test_pass_emits_verified_event(self):
+        verification_module.ambient_pass(self.session)
+        kinds = [kind for kind, _payload in self.session.emitted]
+        self.assertIn("verification.verified", kinds)
+
+    def test_fail_emits_failed_event(self):
+        self.session.execution_mode = "fail"
+        verification_module.ambient_pass(self.session)
+        kinds = [kind for kind, _payload in self.session.emitted]
+        self.assertIn("verification.failed", kinds)
 
 
 if __name__ == "__main__":

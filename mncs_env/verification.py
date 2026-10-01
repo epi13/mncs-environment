@@ -644,6 +644,20 @@ def ambient_pass(session, *, mode: str = "ambient",
                     record["evidence_id"] = evidence_id
                     record["failure_class"] = str(document.get("failure_class", "none"))
                     record["failed_test_ids"] = _failed_test_ids(document)
+                    if record["outcome"] == "passed":
+                        session._emit("verification.verified", "environment",
+                                      {"obligation": identity,
+                                       "evidence_id": evidence_id})
+                    else:
+                        session._emit("verification.failed", "environment",
+                                      {"obligation": identity,
+                                       "outcome": record["outcome"],
+                                       "failure_class": record["failure_class"],
+                                       "evidence_id": evidence_id})
+        elif verdict.get("status") in ("new_execution_required", "stale"):
+            record["outcome"] = "deferred"
+            session._emit("verification.deferred", "environment",
+                          {"obligation": identity, "reason": "budget_deferred"})
         elif verdict.get("status") == "current":
             record["outcome"] = ("failed" if verdict.get("verdict") == "FAIL"
                                  else "passed" if verdict.get("verdict") == "PASS"
@@ -651,10 +665,16 @@ def ambient_pass(session, *, mode: str = "ambient",
             record["evidence_id"] = verdict.get("evidence_id", "")
         elif verdict.get("status") == "selection_unresolved":
             record["outcome"] = "unresolved"
+            session._emit("verification.deferred", "environment",
+                          {"obligation": identity, "reason": "selection_unresolved"})
         elif verdict.get("status") == "contradictory":
             record["outcome"] = "contradictory"
+            session._emit("verification.failed", "environment",
+                          {"obligation": identity, "outcome": "contradictory"})
         elif verdict.get("status") == "escalation_required":
             record["outcome"] = "escalated"
+            session._emit("verification.deferred", "environment",
+                          {"obligation": identity, "reason": "escalation_required"})
         elif verdict.get("status") == "not_selected":
             record["outcome"] = "excluded"
         else:
@@ -780,6 +800,7 @@ def terse(session) -> dict[str, Any]:
         "current": summary.get("current", 0),
         "executed": summary.get("executed", 0),
         "failed": summary.get("failed", 0),
+        "deferred": summary.get("deferred", 0),
         "blockers": summary.get("blockers", 0),
         "failed_ids": summary.get("failed_ids", []),
         "evidence": stored.get("evidence_ref")}}

@@ -7,7 +7,7 @@ import fcntl
 from contextlib import contextmanager
 from pathlib import Path
 
-from . import doctor, identity, projections, readiness, sessions, workspace
+from . import doctor, identity, projections, readiness, sessions, verification, workspace
 from .intent import parse as parse_intent
 from .persist import read_json
 from .session_store import open_store, upgrade_session_store_provider
@@ -128,6 +128,26 @@ def _selected_store_binding(root: Path, definition: dict) -> tuple:
     return store_package, store_runtime
 
 
+def _ambient_verification(session, definition: dict) -> dict:
+    """Run the ambient verification pass unless the definition opts out."""
+    knob = definition.get("verification", {})
+    if knob is None:
+        knob = {}
+    if not isinstance(knob, dict):
+        raise EntryError("environment definition verification knob must be an object",
+                         "definition-invalid", next="set verification to an object or omit it")
+    if knob.get("enabled", True) is False:
+        return {"summary": {"enabled": False, "obligations": 0},
+                "reused": False, "evidence": None}
+    budget = knob.get("max_executions", verification.DEFAULT_MAX_EXECUTIONS)
+    if type(budget) is not int or budget < 1 or budget > verification.MAX_OBLIGATIONS:
+        raise EntryError("verification max_executions must be an integer between 1 and 32",
+                         "definition-invalid", next="fix the definition verification knob")
+    outcome = verification.ambient_pass(session, max_executions=budget)
+    return {"summary": outcome["summary"], "reused": outcome["reused"],
+            "evidence": outcome.get("evidence")}
+
+
 def _close_store(store) -> None:
     close = getattr(store, "close", None)
     if callable(close):
@@ -209,6 +229,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
             result["projection"] = {"summary": coherence["summary"],
                                     "reused": coherence["reused"],
                                     "evidence": coherence.get("evidence")}
+            result["verification"] = _ambient_verification(session, definition)
             return result
         finally:
             if session is not None:
