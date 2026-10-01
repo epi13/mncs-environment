@@ -402,3 +402,15 @@ def test_unwritable_entry_state_reports_explicit_recovery(tmp_path, monkeypatch)
             pass
     assert raised.value.diagnostics["code"] == "entry-state-unwritable"
     assert "--state-dir" in raised.value.diagnostics["next"]
+
+
+def test_selected_store_runtime_suppresses_ambient_artifact_and_restores_process(monkeypatch):
+    import os
+    from mncs_env.store_backend import _selected_store_runtime
+    monkeypatch.setenv("MNCS_STORE_ARTIFACT", "/ambient/unselected-artifact")
+    runtime = {"MNCS_STORE_ROOT": "/selected/store", "MNCS_LANGUAGE_ROOT": "/selected/language",
+               "MNCS_BIN": "/selected/language/mncs", "MNCS_EMBED_LIB": "/selected/language/embed"}
+    with _selected_store_runtime(runtime):
+        assert "MNCS_STORE_ARTIFACT" not in os.environ
+        assert os.environ["MNCS_BIN"] == runtime["MNCS_BIN"]
+    assert os.environ["MNCS_STORE_ARTIFACT"] == "/ambient/unselected-artifact"

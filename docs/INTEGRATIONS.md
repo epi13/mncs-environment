@@ -177,3 +177,8 @@ fresh-process inspection/selective retrieval with an unrelated chunk absent,
 exact reconstruction, generation-bound physical evolution, subdirectory reuse
 and checkpoint/resume/handoff. See selected Store `docs/provider.md` and
 `adaptive-representations` description for discoverable request fields.
+
+Selected Store persistence also suppresses ambient `MNCS_STORE_ARTIFACT` during
+retained session opening. A raw precompiled override cannot bypass selected
+source/compiler artifact preparation; standalone Store callers retain their
+explicit bootstrap override. The caller environment is restored after opening.

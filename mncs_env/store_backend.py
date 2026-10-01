@@ -44,9 +44,13 @@ def _selected_store_runtime(runtime: dict[str, str] | None):
     if set(runtime) != set(_STORE_RUNTIME_KEYS):
         raise ValueError("selected Store runtime must bind the complete MNCS toolchain")
     with _STORE_RUNTIME_LOCK:
-        previous = {key: os.environ.get(key) for key in _STORE_RUNTIME_KEYS}
+        # A raw artifact override bypasses the selected source/compiler cache
+        # identity. It belongs to standalone bootstrap, never selected entry.
+        scoped_keys = (*_STORE_RUNTIME_KEYS, "MNCS_STORE_ARTIFACT")
+        previous = {key: os.environ.get(key) for key in scoped_keys}
         try:
             os.environ.update(runtime)
+            os.environ.pop("MNCS_STORE_ARTIFACT", None)
             yield
         finally:
             for key, value in previous.items():
