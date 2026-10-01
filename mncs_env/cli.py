@@ -16,6 +16,7 @@ from contextlib import closing
 from pathlib import Path
 
 from . import capabilities as capabilities_module
+from . import doctor as doctor_module
 from . import entry as entry_module
 from . import claims as claims_module
 from . import pressures as pressures_module
@@ -156,11 +157,64 @@ def cmd_context(args: argparse.Namespace) -> int:
 def cmd_health(args: argparse.Namespace) -> int:
     session = _open(args)
     try:
-        result = session.health()
+        result = session.health(live=args.live)
         out(result)
         return 5 if result["readiness"]["status"] == "blocked" else 0
     finally:
         session.close()
+
+
+def cmd_doctor(args: argparse.Namespace) -> int:
+    if args.evidence:
+        with closing(_open(args)) as session:
+            out(doctor_module.evidence(session))
+        return 0
+    if args.scope == "repository":
+        if not args.checkout:
+            return fail("repository remediation needs --checkout <repository>",
+                        diagnostics={"code": "remediation-scope-unknown"})
+        with entry_module.entry_lock(args.state_dir, args.persistence):
+            try:
+                session = sessions_module.Session.resume(
+                    state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+            except sessions_module.LifecycleError as error:
+                return fail(str(error))
+            try:
+                result = doctor_module.remediate_repository(
+                    session, args.checkout, dry_run=args.dry_run,
+                    changed_paths=args.changed_path)
+            except doctor_module.RemediationRefused as error:
+                return fail(str(error), code=3, diagnostics=error.diagnostics)
+            except claims_module.ClaimAdoptionRequired as error:
+                return fail(str(error), code=3,
+                            diagnostics={"code": "remediation-adoption-required",
+                                         "facts": error.facts})
+            except (sessions_module.AuthorityDenied, sessions_module.LifecycleError,
+                    capabilities_module.CapabilityError) as error:
+                return fail(str(error), code=3)
+            finally:
+                session.close()
+            out(result)
+            return 0
+    with entry_module.entry_lock(args.state_dir, args.persistence) as lock:
+        try:
+            session = sessions_module.Session.resume(
+                state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+        except sessions_module.LifecycleError as error:
+            return fail(str(error))
+        try:
+            result = doctor_module.ambient_pass(
+                session, lock_waited=float(lock.get("waited_seconds", 0.0)))
+            payload = {"session_id": args.session, "summary": result["summary"],
+                       "remaining": result["remaining"],
+                       "remaining_truncated": result.get("remaining_truncated", False),
+                       "readiness": result["readiness"], "epoch": result["digest"],
+                       "reused": result["reused"],
+                       "elapsed_seconds": result.get("elapsed_seconds")}
+            out(payload)
+            return 5 if result["summary"]["blockers"] else 0
+        finally:
+            session.close()
 
 
 def cmd_reconcile(args: argparse.Namespace) -> int:
@@ -176,6 +230,23 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
 
 def cmd_status(args: argparse.Namespace) -> int:
     """Print compact session status, or list session ids when none is given."""
+    if args.session and args.terse:
+        fast = doctor_module.serve_terse_fast(args.state_dir, args.session)
+        if fast is not None:
+            out(fast)
+            return 0
+        with closing(_open(args)) as session:
+            snapshot = session.snapshot
+            recorded = snapshot.get("doctor", {}).get("epoch", {})
+            out({"session_id": args.session, "observation": "snapshot",
+                 "epoch": recorded.get("digest"), "validated_at": recorded.get("validated_at"),
+                 "summary": recorded.get("summary"),
+                 "remaining": recorded.get("remaining", []),
+                 "remaining_truncated": recorded.get("remaining_truncated", False),
+                 "readiness": recorded.get("readiness"),
+                 "lifecycle": snapshot.get("lifecycle"),
+                 "note": "epoch stale or missing; run doctor for a fresh validated pass"})
+            return 0
     if args.session:
         with closing(_open(args)) as session:
             out(session.status())
@@ -535,14 +606,31 @@ def build_parser() -> argparse.ArgumentParser:
     context.set_defaults(func=cmd_context)
 
     health = session_parser("health", "probe live readiness without changing session state")
+    health.add_argument("--live", action="store_true",
+                        help="force full live probes instead of a validated epoch")
     health.set_defaults(func=cmd_health)
     reconcile = session_parser("reconcile", "refresh discovery, recover declared services, verify readiness")
     reconcile.set_defaults(func=cmd_reconcile)
+
+    doctor = session_parser("doctor", "ambient remediation pass with a terse summary")
+    doctor.add_argument("--evidence", action="store_true",
+                        help="print the full evidence trail instead of running a pass")
+    doctor.add_argument("--scope", choices=("session", "repository"), default="session",
+                        help="session remediates environment state; repository invokes the bound remediation provider")
+    doctor.add_argument("--checkout", default=None,
+                        help="repository to remediate with --scope repository (requires a session claim)")
+    doctor.add_argument("--dry-run", action="store_true",
+                        help="plan repository remediation without mutating")
+    doctor.add_argument("--changed-path", action="append", default=None,
+                        help="narrow repository remediation to this checkout-relative path (repeatable)")
+    doctor.set_defaults(func=cmd_doctor)
 
     status = sub.add_parser(
         "status", parents=[common], help="show compact read-only session status"
     )
     status.add_argument("session", nargs="?", default=None)
+    status.add_argument("--terse", action="store_true",
+                        help="terse doctor summary, served without opening the store when the epoch is valid")
     status.set_defaults(func=cmd_status)
 
     resume = session_parser("resume", "resume a session in this process")

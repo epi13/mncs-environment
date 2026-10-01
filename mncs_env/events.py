@@ -46,6 +46,8 @@ TYPES = (
     "checkpoint.created",
     "handoff.created",
     "pressure.recorded",
+    "doctor.remediated",
+    "doctor.repository-remediated",
     "adapter.observed",
 )
 
