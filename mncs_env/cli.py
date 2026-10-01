@@ -224,6 +224,8 @@ def cmd_projections(args: argparse.Namespace) -> int:
         with closing(_open(args)) as session:
             out(projections_module.read_evidence(session))
         return 0
+    if args.watch is not None:
+        return cmd_projections_watch(args)
     with entry_module.entry_lock(args.state_dir, args.persistence):
         try:
             session = sessions_module.Session.resume(
@@ -244,6 +246,57 @@ def cmd_projections(args: argparse.Namespace) -> int:
             return 5 if result["summary"]["blockers"] else 0
         finally:
             session.close()
+
+
+def cmd_projections_watch(args: argparse.Namespace) -> int:
+    """Resident epoch-gated reconciliation: notice change without re-entry.
+
+    Each tick re-resumes the session and runs one ambient pass, so
+    commits, claim releases, and verification resolutions made by any
+    agent are noticed on the next tick. Quiet ticks reuse the epoch
+    (no renders, no native calls); the lock is held per tick, never
+    across the sleep, so concurrent agents are never blocked.
+    """
+    import time as _time
+
+    try:
+        interval = float(args.watch)
+    except (TypeError, ValueError):
+        return fail("watch interval must be a number of seconds")
+    if interval < 1.0:
+        return fail("watch interval must be at least 1 second")
+    iterations = args.watch_iterations
+    if iterations is not None and iterations < 1:
+        return fail("watch iterations must be positive")
+    tick = 0
+    blockers = 0
+    try:
+        while iterations is None or tick < iterations:
+            with entry_module.entry_lock(args.state_dir, args.persistence):
+                try:
+                    session = sessions_module.Session.resume(
+                        state_dir=args.state_dir, session_id=args.session,
+                        backend=args.persistence)
+                except sessions_module.LifecycleError as error:
+                    return fail(str(error))
+                try:
+                    result = projections_module.ambient_pass(session)
+                finally:
+                    session.close()
+            summary = result["summary"]
+            blockers = summary.get("blockers", 0)
+            # Compact JSON lines (not the pretty `out` envelope) so a
+            # supervising agent can stream ticks incrementally.
+            print(json.dumps({"session_id": args.session,
+                              "iteration": tick, "summary": summary,
+                              "reused": result["reused"]},
+                             sort_keys=True), flush=True)
+            tick += 1
+            if iterations is None or tick < iterations:
+                _time.sleep(interval)
+    except KeyboardInterrupt:
+        pass
+    return 5 if blockers else 0
 
 
 def cmd_reconcile(args: argparse.Namespace) -> int:
@@ -660,6 +713,10 @@ def build_parser() -> argparse.ArgumentParser:
                              help="print the full projection evidence trail instead of running a pass")
     projections.add_argument("--apply", default=None,
                              help="explicitly apply one projection by id (region splicing allowed under claim)")
+    projections.add_argument("--watch", default=None, metavar="SECONDS",
+                             help="resident loop: one ambient pass per interval until interrupted")
+    projections.add_argument("--watch-iterations", default=None, type=int,
+                             help="stop the watch loop after this many passes")
     projections.set_defaults(func=cmd_projections)
 
     status = sub.add_parser(
