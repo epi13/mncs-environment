@@ -411,7 +411,7 @@ def request_coherence(session, request: dict[str, Any]) -> dict[str, Any] | None
         result = session.invoke(
             COHERENCE_CAPABILITY, ["request.json", "result.json"],
             cwd=str(workdir), timeout_seconds=180,
-            env={"MNCS_NATIVE_APPLICATION_CACHE_DIR": str(cache})
+            env={"MNCS_NATIVE_APPLICATION_CACHE_DIR": str(cache)})
     except Exception:
         return None
     if not isinstance(result, dict) or result.get("status") != "ok":
