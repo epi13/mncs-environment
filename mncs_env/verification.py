@@ -645,6 +645,7 @@ def ambient_pass(session, *, mode: str = "ambient",
                         "evidence": evidence,
                         "verdict": outcome_verdict,
                         "failure_class": str(document.get("failure_class", "none")),
+                        "classification": str(document.get("classification", "none")),
                         "failed_test_ids": _failed_test_ids(document),
                         "inventory_test_identities": inventory_ids,
                         "inventory_truncated": truncated,
@@ -660,6 +661,8 @@ def ambient_pass(session, *, mode: str = "ambient",
                                          else "unknown")
                     record["evidence_id"] = evidence_id
                     record["failure_class"] = str(document.get("failure_class", "none"))
+                    record["classification"] = str(document.get("classification", "none"))
+                    record["run_tag"] = run_tag
                     record["failed_test_ids"] = _failed_test_ids(document)
                     if record["outcome"] == "passed":
                         session._emit("verification.verified", "environment",
@@ -670,6 +673,7 @@ def ambient_pass(session, *, mode: str = "ambient",
                                       {"obligation": identity,
                                        "outcome": record["outcome"],
                                        "failure_class": record["failure_class"],
+                                       "classification": record["classification"],
                                        "evidence_id": evidence_id})
         elif verdict.get("status") in ("new_execution_required", "stale"):
             record["outcome"] = "deferred"
@@ -796,7 +800,8 @@ def _append_session_evidence(session, summary: dict[str, Any],
              "status": record.get("status"),
              "reason": record.get("reason"),
              "evidence_id": record.get("evidence_id"),
-             "failure_class": record.get("failure_class")}
+             "failure_class": record.get("failure_class"),
+             "classification": record.get("classification")}
             for record in results],
         "recorded_at": utcnow(),
     }
