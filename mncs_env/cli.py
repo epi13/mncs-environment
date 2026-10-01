@@ -208,6 +208,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             payload = {"session_id": args.session, "summary": result["summary"],
                        "remaining": result["remaining"],
                        "remaining_truncated": result.get("remaining_truncated", False),
+                       "unavailable": result.get("unavailable", {"count": 0, "digest": None}),
                        "readiness": result["readiness"], "epoch": result["digest"],
                        "reused": result["reused"],
                        "elapsed_seconds": result.get("elapsed_seconds")}
@@ -243,6 +244,7 @@ def cmd_status(args: argparse.Namespace) -> int:
                  "summary": recorded.get("summary"),
                  "remaining": recorded.get("remaining", []),
                  "remaining_truncated": recorded.get("remaining_truncated", False),
+                 "unavailable": recorded.get("unavailable", {"count": 0, "digest": None}),
                  "readiness": recorded.get("readiness"),
                  "lifecycle": snapshot.get("lifecycle"),
                  "note": "epoch stale or missing; run doctor for a fresh validated pass"})

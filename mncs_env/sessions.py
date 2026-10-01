@@ -1895,7 +1895,7 @@ class Session:
         previous_bindings = [dict(binding) for binding in self.snapshot.get("bindings", [])]
         previous_services = [dict(item) for item in self.snapshot.get("service_observations", [])]
         revalidation = self.revalidate()
-        result = readiness_module.reconcile_services(self)
+        result = readiness_module.reconcile_services(self, force_recovery=True)
         repairs = doctor_module.repair_delta(previous_bindings, self.snapshot.get("bindings", []),
                                               previous_services,
                                               self.snapshot.get("service_observations", []))

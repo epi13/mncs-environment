@@ -36,8 +36,8 @@ from . import workspace as workspace_module
 from .identity import digest_hex
 from .persist import read_json, write_json
 
-DOCTOR_SCHEMA = "mncs.environment.doctor/1"
-EPOCH_SCHEMA = "mncs.environment.doctor-epoch/1"
+DOCTOR_SCHEMA = "mncs.environment.doctor/2"
+EPOCH_SCHEMA = "mncs.environment.doctor-epoch/2"
 EVIDENCE_SCHEMA = "mncs.environment.doctor-evidence/1"
 
 #: File-side epoch freshness for the no-store fast path (`status --terse`).
@@ -55,8 +55,11 @@ MAX_REASONS = 16
 #: Suffix identifying provider-published remediation capabilities.
 REMEDIATION_CAPABILITY_SUFFIX = ":repository-remediation"
 
-#: Schema published by remediation providers on stdout.
-REMEDIATION_ENVELOPE_SCHEMA = "mncs.doctor.remediation/1"
+#: Schema published by remediation providers on stdout. Family-standard
+#: contract owned by MNCS-Commons (`mncs.remediation/1`); the repository
+#: domain is the only v1 domain.
+REMEDIATION_ENVELOPE_SCHEMA = "mncs.remediation/1"
+REMEDIATION_REPOSITORY_DOMAIN = "repository"
 
 
 def utcnow() -> str:
@@ -337,22 +340,30 @@ def classify_unavailable(bindings: list[dict[str, Any]]) -> dict[str, Any]:
 
 def summarize(snapshot: dict[str, Any], *, repairs: list[dict[str, Any]],
               reconciliations: list[dict[str, Any]]) -> dict[str, Any]:
-    """Build the terse doctor summary over a readiness snapshot."""
+    """Build the terse doctor summary over a readiness snapshot.
+
+    `remaining` carries only blocking (actionable) ids. The
+    non-blocking unavailable tail is stable background already visible
+    in readiness; it travels as a count plus a change digest, with full
+    per-capability detail in the evidence classification.
+    """
     readiness = readiness_module.summarize(snapshot)
     bindings = snapshot.get("bindings", [])
     unavailable = [item for item in bindings
                    if item.get("availability", {}).get("status") != "available"]
     blocking = list(readiness.get("blocking", []))
-    remaining = list(blocking)
-    remaining.extend(item["capability"] for item in unavailable
-                     if item.get("capability") not in remaining)
-    truncated = len(remaining) > MAX_REMAINING
+    unavailable_ids = sorted({str(item.get("capability")) for item in unavailable
+                              if item.get("capability")})
+    truncated = len(blocking) > MAX_REMAINING
     return {
         "schema_version": DOCTOR_SCHEMA,
         "summary": {"repaired": len(repairs), "reconciled": len(reconciliations),
-                    "degraded": len(unavailable), "blockers": len(blocking)},
-        "remaining": remaining[:MAX_REMAINING],
+                    "degraded": len(unavailable_ids), "blockers": len(blocking)},
+        "remaining": blocking[:MAX_REMAINING],
         "remaining_truncated": truncated,
+        "unavailable": {"count": len(unavailable_ids),
+                        "digest": digest_hex({"kind": "unavailable-capabilities",
+                                              "capabilities": unavailable_ids})},
         "readiness": readiness.get("status"),
     }
 
@@ -409,6 +420,7 @@ def record_epoch(session, *, repairs: list[dict[str, Any]],
     epoch = {"schema_version": EPOCH_SCHEMA, "digest": digest, "inputs": inputs,
              "summary": terse["summary"], "remaining": terse["remaining"],
              "remaining_truncated": terse["remaining_truncated"],
+             "unavailable": terse["unavailable"],
              "readiness": terse["readiness"], "validated_at": now,
              "snapshot_sequence": int(session.snapshot.get("snapshot_sequence", 0)) + 1}
     doctor = session.snapshot.get("doctor")
@@ -416,7 +428,8 @@ def record_epoch(session, *, repairs: list[dict[str, Any]],
         doctor = {"schema_version": DOCTOR_SCHEMA, "history": []}
     history = list(doctor.get("history", []))
     history.append({"validated_at": now, "digest": digest, "summary": terse["summary"],
-                    "remaining": terse["remaining"], "reused": reused})
+                    "remaining": terse["remaining"], "unavailable": terse["unavailable"],
+                    "reused": reused})
     doctor.update({"schema_version": DOCTOR_SCHEMA, "epoch": epoch,
                    "history": history[-MAX_HISTORY:]})
     session.snapshot["doctor"] = doctor
@@ -431,6 +444,7 @@ def record_epoch(session, *, repairs: list[dict[str, Any]],
                 "membership": inputs.get("membership"),
                 "summary": terse["summary"], "remaining": terse["remaining"],
                 "remaining_truncated": terse["remaining_truncated"],
+                "unavailable": terse["unavailable"],
                 "readiness": terse["readiness"], "validated_at": now}
     write_json(_epoch_file(session), fileside)
     evidence = {"schema_version": EVIDENCE_SCHEMA, "session_id": session.session_id,
@@ -444,6 +458,7 @@ def record_epoch(session, *, repairs: list[dict[str, Any]],
     return {"digest": digest, "validated_at": now, "summary": terse["summary"],
             "remaining": terse["remaining"],
             "remaining_truncated": terse["remaining_truncated"],
+            "unavailable": terse["unavailable"],
             "readiness": terse["readiness"], "reused": reused}
 
 
@@ -455,6 +470,7 @@ def terse(session) -> dict[str, Any]:
                                  {"repaired": 0, "reconciled": 0, "degraded": 0, "blockers": 0}),
             "remaining": epoch.get("remaining", []),
             "remaining_truncated": epoch.get("remaining_truncated", False),
+            "unavailable": epoch.get("unavailable", {"count": 0, "digest": None}),
             "readiness": epoch.get("readiness"),
             "epoch": epoch.get("digest"), "validated_at": epoch.get("validated_at")}
 
@@ -529,6 +545,7 @@ def ambient_pass(session, *, force_full: bool = False, fresh: bool = False,
             report = {"digest": epoch.get("digest"), "validated_at": epoch.get("validated_at"),
                       "summary": epoch.get("summary"), "remaining": epoch.get("remaining", []),
                       "remaining_truncated": epoch.get("remaining_truncated", False),
+                      "unavailable": epoch.get("unavailable", {"count": 0, "digest": None}),
                       "readiness": epoch.get("readiness"), "reused": True,
                       "revalidation": {"reprobed": 0, "changed": [], "bound": [],
                                        "unbound": [], "epoch": epoch.get("digest")},
@@ -629,6 +646,7 @@ def serve_terse_fast(state_dir: Path | str, session_id: str) -> dict[str, Any] |
             "epoch": record.get("digest"), "validated_at": record.get("validated_at"),
             "summary": record.get("summary"), "remaining": record.get("remaining", []),
             "remaining_truncated": record.get("remaining_truncated", False),
+            "unavailable": record.get("unavailable", {"count": 0, "digest": None}),
             "readiness": record.get("readiness")}
 
 
@@ -726,7 +744,7 @@ def remediate_repository(session, repository: str, *, dry_run: bool = False,
             f"{repository} checkout shows unknown work and the session claim does not record adoption; "
             "remediation refuses to rewrite it",
             facts={"dirty": observed.dirty, "head": observed.head, "branch": observed.branch})
-    argv = ["--root", str(checkout), "--json"]
+    argv = ["--target", str(checkout), "--json"]
     if dry_run:
         argv.append("--dry-run")
     for changed in changed_paths or []:
@@ -753,6 +771,16 @@ def remediate_repository(session, repository: str, *, dry_run: bool = False,
                                  "remediation-envelope-incompatible", repository=repository,
                                  schema=envelope.get("schema_version") if isinstance(envelope, dict) else None,
                                  status=result.get("status"))
+    scope = envelope.get("scope")
+    if not isinstance(scope, dict) or scope.get("domain") != REMEDIATION_REPOSITORY_DOMAIN:
+        raise RemediationRefused("remediation provider addressed an unsupported scope domain",
+                                 "remediation-scope-unsupported", repository=repository,
+                                 scope=scope if isinstance(scope, dict) else None)
+    echoed = scope.get("target")
+    if not isinstance(echoed, str) or Path(echoed).resolve() != checkout.resolve():
+        raise RemediationRefused("remediation provider scope echo does not match the authorized checkout",
+                                 "remediation-envelope-invalid", repository=repository,
+                                 scope_target=echoed if isinstance(echoed, str) else None)
     session._emit("doctor.repository-remediated", "environment",
                   {"repository": repository, "dry_run": dry_run,
                    "changed_paths": list(changed_paths or []),

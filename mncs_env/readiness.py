@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -179,28 +180,66 @@ def summarize(snapshot: dict[str, Any], *, bindings: list[dict] | None = None,
             "last_reconciled_at": snapshot.get("last_reconciled_at")}
 
 
-def reconcile_services(session) -> dict[str, Any]:
-    """Probe, delegate recovery only when needed, then verify again."""
+def reconcile_services(session, *, force_recovery: bool = False,
+                       retry_gate=None) -> dict[str, Any]:
+    """Probe, delegate recovery only when needed, then verify again.
+
+    Observation is always live; the recovery ACTION for an unchanged
+    failure is withheld while the family retry law says another attempt
+    has little value. `force_recovery` bypasses suppression for explicit
+    recovery. `retry_gate` is an injectable
+    `(base, max_delay, attempts, elapsed) -> (eligible, detail)` decision;
+    production always uses the native MNCS law via `retry.default_retry_gate`.
+    """
     from .sessions import AuthorityDenied, LifecycleError
+    from . import retry as retry_module
     observations = probe_services(session)
     operations = []
     deadline = time.monotonic() + 20
     declared = {item["identity"]: item for item in session.snapshot.get("requirements", {}).get("services", [])}
+    by_capability = {item["capability"]: item for item in session.snapshot.get("bindings", [])}
+    heads = retry_module.checkout_heads(session)
+    backoff = retry_module.backoff_state(session)
+    policy = retry_module.load_retry_policy(session)
+    gate = retry_gate or retry_module.default_retry_gate(session)
+    now = datetime.now(timezone.utc)
+    pre_identities: dict[str, dict[str, Any]] = {}
+    attempted: set[str] = set()
     for observation in observations:
-        call = declared[observation["identity"]].get("reconcile")
+        identity = observation["identity"]
+        call = declared[identity].get("reconcile")
         if observation["status"] == "ready" or call is None:
             continue
         if observation["code"] == "service-response-incompatible":
-            operations.append({"identity": observation["identity"], "status": "not-attempted",
+            operations.append({"identity": identity, "status": "not-attempted",
                                "reason": "provider schema is incompatible; repair the declared contract before recovery"})
             continue
+        failure = retry_module.failure_identity(observation, by_capability.get(call["capability"]), heads)
+        pre_identities[identity] = failure
+        entry = backoff.get(failure["digest"], {})
+        attempts = int(entry.get("attempts", 0) or 0)
+        consulted: dict[str, Any] | None = None
+        if not force_recovery and attempts > 0:
+            elapsed = retry_module.seconds_since(str(entry.get("last_attempt_at", "")), now)
+            eligible, detail = gate(base=policy["base_delay_secs"], max_delay=policy["max_delay_secs"],
+                                    attempts=attempts, elapsed=elapsed)
+            if not eligible:
+                operations.append({"identity": identity, "status": "suppressed",
+                                   "reason": "unchanged failure; the retry law withholds another identical "
+                                             f"recovery attempt (attempts={attempts}, elapsed={elapsed}s, "
+                                             f"retry_in={detail.get('retry_in_secs')}s)",
+                                   "failure_identity": failure["digest"], "retry": detail})
+                continue
+            consulted = detail
         try:
             if time.monotonic() >= deadline:
-                operations.append({"identity": observation["identity"], "status": "deferred", "reason": "reconciliation budget exhausted"})
+                operations.append({"identity": identity, "status": "deferred", "reason": "reconciliation budget exhausted"})
                 continue
             result = session.invoke(call["capability"], resolve_arguments(session, call.get("argv", [])), timeout_seconds=min(10, deadline-time.monotonic()),
                                     output_limit_bytes=16384)
-            operation = {"identity": observation["identity"], "status": result["status"],
+            if result.get("status") != "pending-escalation":
+                attempted.add(identity)
+            operation = {"identity": identity, "status": result["status"],
                          "reason": result.get("stderr", "")[-1000:]}
             try:
                 response = json.loads(result.get("stdout", ""))
@@ -208,15 +247,42 @@ def reconcile_services(session) -> dict[str, Any]:
                     operation["provider_response"] = response
             except ValueError:
                 pass
+            if consulted is not None:
+                operation["retry"] = {**consulted, "eligible": True,
+                                      "note": "retry law re-admitted recovery"}
+            elif attempts > 0 and force_recovery:
+                operation["retry"] = {"attempts": attempts, "forced": True,
+                                      "note": "explicit recovery bypassed suppression"}
             operations.append(operation)
         except (AuthorityDenied, LifecycleError, ValueError, OSError) as error:
             # Session authority/lifecycle exceptions carry actionable reasons;
             # a failed optional provider must not discard a durable entry.
-            operations.append({"identity": observation["identity"], "status": "failed", "reason": str(error)})
-    if operations:
+            # The provider never ran, so this is not a failed recovery
+            # attempt: it stays visible every run instead of backing off.
+            operations.append({"identity": identity, "status": "failed", "reason": str(error)})
+    if attempted:
         observations = probe_services(session)
+    final_by_identity = {item["identity"]: item for item in observations}
+    carried: dict[str, Any] = {}
+    for service_id, failure in pre_identities.items():
+        final = final_by_identity.get(service_id)
+        call = declared[service_id].get("reconcile")
+        if final is None or final.get("status") == "ready" or call is None:
+            continue
+        current = retry_module.failure_identity(final, by_capability.get(call["capability"]), heads)
+        if service_id in attempted and current["digest"] == failure["digest"]:
+            carried[failure["digest"]] = {"service": service_id, "attempts": attempts_for(backoff, failure) + 1,
+                                          "last_attempt_at": retry_module.utcnow(), "identity": failure}
+        elif current["digest"] in backoff:
+            carried[current["digest"]] = backoff[current["digest"]]
+    retry_module.store_backoff_state(session, carried)
     session.snapshot["service_observations"] = observations
     session.snapshot["service_operations"] = operations
     session.snapshot["last_reconciled_at"] = capabilities.utcnow()
     session._save()
     return {"operations": operations, "readiness": summarize(session.snapshot)}
+
+
+def attempts_for(backoff: dict[str, Any], failure: dict[str, Any]) -> int:
+    entry = backoff.get(failure["digest"], {})
+    return int(entry.get("attempts", 0) or 0)
