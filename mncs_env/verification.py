@@ -400,13 +400,18 @@ def request_coherence(session, request: dict[str, Any]) -> dict[str, Any] | None
         return None
     tag = digest_hex({"at": utcnow(), "request": request})[:12]
     workdir = directory / tag
+    # run-app defaults its compiled-artifact cache beside the provider
+    # descriptor; pin it into session state so ambient verification never
+    # writes into a provider checkout.
+    cache = _artifact_directory(session, "cache")
     try:
         workdir.mkdir(parents=True, exist_ok=True, mode=0o700)
         (workdir / "request.json").write_text(
             json.dumps(request, sort_keys=True), encoding="utf-8")
-        result = session.invoke(COHERENCE_CAPABILITY,
-                                ["request.json", "result.json"],
-                                cwd=str(workdir), timeout_seconds=180)
+        result = session.invoke(
+            COHERENCE_CAPABILITY, ["request.json", "result.json"],
+            cwd=str(workdir), timeout_seconds=180,
+            env={"MNCS_NATIVE_APPLICATION_CACHE_DIR": str(cache})
     except Exception:
         return None
     if not isinstance(result, dict) or result.get("status") != "ok":

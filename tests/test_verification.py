@@ -84,13 +84,14 @@ class FakeSession:
                cwd=None, timeout_seconds=None,
                output_limit_bytes=None, env=None) -> dict:
         if capability == verification_module.COHERENCE_CAPABILITY:
-            return self._invoke_coherence(argv, cwd)
+            return self._invoke_coherence(argv, cwd, env)
         if capability == verification_module.TEST_CAPABILITY:
             return self._invoke_test(argv, cwd, env)
         raise AssertionError(f"unexpected capability {capability}")
 
-    def _invoke_coherence(self, argv: list[str], cwd) -> dict:
+    def _invoke_coherence(self, argv: list[str], cwd, env) -> dict:
         workdir = Path(cwd)
+        self.last_coherence_env = dict(env or {})
         request = json.loads((workdir / argv[0]).read_text(encoding="utf-8"))
         self.coherence_calls.append(request)
         if self.coherence_mode == "fail":
@@ -378,6 +379,12 @@ class AmbientPassTests(VerificationFixture):
         self.assertTrue(item["evidence_present"])
         self.assertEqual(item["inventory_test_identities"], ["t-case-1"])
         self.assertFalse(item["inventory_truncated"])
+
+    def test_coherence_cache_stays_in_session_state(self):
+        verification_module.ambient_pass(self.session)
+        cache = self.session.last_coherence_env.get(
+            "MNCS_NATIVE_APPLICATION_CACHE_DIR", "")
+        self.assertTrue(cache.startswith(str(self.state)))
 
     def test_libraries_travel_as_env_roots_not_flags(self):
         obligated = json.loads(json.dumps(OBLIGATION))
