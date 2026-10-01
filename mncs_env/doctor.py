@@ -55,8 +55,11 @@ MAX_REASONS = 16
 #: Suffix identifying provider-published remediation capabilities.
 REMEDIATION_CAPABILITY_SUFFIX = ":repository-remediation"
 
-#: Schema published by remediation providers on stdout.
-REMEDIATION_ENVELOPE_SCHEMA = "mncs.doctor.remediation/1"
+#: Schema published by remediation providers on stdout. Family-standard
+#: contract owned by MNCS-Commons (`mncs.remediation/1`); the repository
+#: domain is the only v1 domain.
+REMEDIATION_ENVELOPE_SCHEMA = "mncs.remediation/1"
+REMEDIATION_REPOSITORY_DOMAIN = "repository"
 
 
 def utcnow() -> str:
@@ -726,7 +729,7 @@ def remediate_repository(session, repository: str, *, dry_run: bool = False,
             f"{repository} checkout shows unknown work and the session claim does not record adoption; "
             "remediation refuses to rewrite it",
             facts={"dirty": observed.dirty, "head": observed.head, "branch": observed.branch})
-    argv = ["--root", str(checkout), "--json"]
+    argv = ["--target", str(checkout), "--json"]
     if dry_run:
         argv.append("--dry-run")
     for changed in changed_paths or []:
@@ -753,6 +756,16 @@ def remediate_repository(session, repository: str, *, dry_run: bool = False,
                                  "remediation-envelope-incompatible", repository=repository,
                                  schema=envelope.get("schema_version") if isinstance(envelope, dict) else None,
                                  status=result.get("status"))
+    scope = envelope.get("scope")
+    if not isinstance(scope, dict) or scope.get("domain") != REMEDIATION_REPOSITORY_DOMAIN:
+        raise RemediationRefused("remediation provider addressed an unsupported scope domain",
+                                 "remediation-scope-unsupported", repository=repository,
+                                 scope=scope if isinstance(scope, dict) else None)
+    echoed = scope.get("target")
+    if not isinstance(echoed, str) or Path(echoed).resolve() != checkout.resolve():
+        raise RemediationRefused("remediation provider scope echo does not match the authorized checkout",
+                                 "remediation-envelope-invalid", repository=repository,
+                                 scope_target=echoed if isinstance(echoed, str) else None)
     session._emit("doctor.repository-remediated", "environment",
                   {"repository": repository, "dry_run": dry_run,
                    "changed_paths": list(changed_paths or []),

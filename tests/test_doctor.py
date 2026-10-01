@@ -13,7 +13,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from mncs_env import claims, doctor, entry, sessions
+from mncs_env import claims, doctor, entry, readiness, sessions
 from mncs_env.session_store import open_store
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,14 +29,28 @@ if sys.argv[1] == "start":
 print(json.dumps({"schema_version": value.get("schema", "fixture.status/1"), **value}))
 '''
 
+BROKEN_PROVIDER = '''import json, sys
+from pathlib import Path
+state = Path("service-state.json")
+value = json.loads(state.read_text()) if state.exists() else {"ready": False, "starts": 0}
+if sys.argv[1] == "start":
+    value.update(starts=value["starts"] + 1)
+    state.write_text(json.dumps(value))
+print(json.dumps({"schema_version": value.get("schema", "fixture.status/1"), **value}))
+'''
+
 STUB_REMEDIATION = '''import json, sys
-root = sys.argv[sys.argv.index("--root") + 1]
-envelope = {"schema_version": "mncs.doctor.remediation/1", "command": "remediate",
-            "root": root, "dry_run": "--dry-run" in sys.argv,
+target = sys.argv[sys.argv.index("--target") + 1]
+envelope = {"schema_version": "mncs.remediation/1", "provider": "fixture",
+            "provider_version": "test", "scope": {"domain": "repository", "target": target},
+            "dry_run": "--dry-run" in sys.argv,
             "summary": {"repaired": 1, "reconciled": 0, "degraded": 0, "blockers": 0},
-            "remaining": [], "repairs": [{"id": "safe:stub", "class": "safe_automatic"}],
+            "remaining": [], "repairs": [{"id": "safe:stub", "class": "safe_automatic",
+            "provider": "fixture", "detail": "stub", "validated": True}],
             "reconciliations": [], "evidence": None,
-            "budget": {"max_files": 256, "files_repaired": 1, "apply_rounds": 1, "exhausted": False},
+            "budget": {"max_items": 256, "items_done": 1, "rounds": 1, "exhausted": False},
+            "validation": {"passed": True, "errors_before": 1, "errors_after": 0,
+            "idempotent_known": True, "idempotent": True},
             "notes": [], "exit_code": 0, "exit_meaning": "healthy: stub"}
 print(json.dumps(envelope))
 '''
@@ -500,6 +514,194 @@ class RepositoryRemediationTests(DoctorFixture):
             with self.assertRaises(doctor.RemediationRefused) as raised:
                 doctor.remediate_repository(session, "fixture")
             self.assertEqual(raised.exception.diagnostics["code"], "remediation-envelope-invalid")
+        finally:
+            session.close()
+
+    def test_incompatible_envelope_is_refused(self):
+        self.ready()
+        _, first = self.enter()
+        session = self.open_session(first["session_id"])
+        try:
+            script = STUB_REMEDIATION.replace("mncs.remediation/1", "mncs.remediation/2")
+            self.inject_stub_binding(session, script=script)
+            session.acquire_claim("fixture", reason="claimed work")
+            with self.assertRaises(doctor.RemediationRefused) as raised:
+                doctor.remediate_repository(session, "fixture")
+            self.assertEqual(raised.exception.diagnostics["code"], "remediation-envelope-incompatible")
+            self.assertEqual(raised.exception.diagnostics["schema"], "mncs.remediation/2")
+        finally:
+            session.close()
+
+    def test_wrong_scope_domain_is_refused(self):
+        self.ready()
+        _, first = self.enter()
+        session = self.open_session(first["session_id"])
+        try:
+            script = STUB_REMEDIATION.replace('"domain": "repository"', '"domain": "registry"')
+            self.inject_stub_binding(session, script=script)
+            session.acquire_claim("fixture", reason="claimed work")
+            with self.assertRaises(doctor.RemediationRefused) as raised:
+                doctor.remediate_repository(session, "fixture")
+            self.assertEqual(raised.exception.diagnostics["code"], "remediation-scope-unsupported")
+        finally:
+            session.close()
+
+    def test_scope_echo_mismatch_is_refused(self):
+        self.ready()
+        _, first = self.enter()
+        session = self.open_session(first["session_id"])
+        try:
+            script = STUB_REMEDIATION.replace('"target": target', '"target": "/elsewhere"')
+            self.inject_stub_binding(session, script=script)
+            session.acquire_claim("fixture", reason="claimed work")
+            with self.assertRaises(doctor.RemediationRefused) as raised:
+                doctor.remediate_repository(session, "fixture")
+            self.assertEqual(raised.exception.diagnostics["code"], "remediation-envelope-invalid")
+        finally:
+            session.close()
+
+
+class RecoveryBackoffTests(DoctorFixture):
+    def open_session(self, session_id):
+        return sessions.Session.resume(state_dir=self.state, session_id=session_id, backend="file")
+
+    def broken_session(self):
+        self.provider.write_text(BROKEN_PROVIDER)
+        self.ready()
+        _, first = self.enter()
+        (self.project / "service-state.json").write_text(json.dumps({"ready": False, "starts": 0}))
+        return sessions.Session.resume(state_dir=self.state, session_id=first["session_id"], backend="file")
+
+    def refuse_gate(self, *, base, max_delay, attempts, elapsed):
+        raise AssertionError("gate must not be consulted for a fresh failure identity")
+
+    def test_first_failure_attempts_without_consulting_gate(self):
+        session = self.broken_session()
+        try:
+            calls = []
+            with mock.patch.object(session, "invoke",
+                                   side_effect=lambda *a, **k: (calls.append(a), {"status": "ok", "stdout": "{}",
+                                                                                 "stderr": ""})[1]):
+                result = readiness.reconcile_services(session, retry_gate=self.refuse_gate)
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(result["operations"][0]["status"], "ok")
+            backoff = session.snapshot["doctor"]["recovery_backoff"]
+            self.assertEqual(len(backoff), 1)
+            entry = next(iter(backoff.values()))
+            self.assertEqual(entry["attempts"], 1)
+            self.assertEqual(entry["service"], "fixture-service")
+            # Live observation stays truthful: still degraded, still blocking.
+            self.assertEqual(session.snapshot["service_observations"][0]["status"], "degraded")
+            self.assertIn("fixture-service", result["readiness"]["blocking"])
+        finally:
+            session.close()
+
+    def test_unchanged_failure_suppresses_recovery_but_not_observation(self):
+        session = self.broken_session()
+        try:
+            calls = []
+            fake_invoke = lambda *a, **k: (calls.append(a), {"status": "ok", "stdout": "{}",
+                                                             "stderr": ""})[1]
+            with mock.patch.object(session, "invoke", side_effect=fake_invoke):
+                readiness.reconcile_services(session, retry_gate=self.refuse_gate)
+                suppress = lambda *, base, max_delay, attempts, elapsed: (
+                    False, {"native": True, "attempts": attempts, "elapsed_secs": elapsed,
+                            "delay_secs": 60, "retry_in_secs": 60 - elapsed})
+                result = readiness.reconcile_services(session, retry_gate=suppress)
+            self.assertEqual(len(calls), 1, "suppressed run must not invoke recovery")
+            operation = result["operations"][0]
+            self.assertEqual(operation["status"], "suppressed")
+            self.assertTrue(operation["failure_identity"].startswith("fri_"))
+            backoff = session.snapshot["doctor"]["recovery_backoff"]
+            self.assertEqual(next(iter(backoff.values()))["attempts"], 1)
+            self.assertEqual(session.snapshot["service_observations"][0]["status"], "degraded")
+            self.assertIn("fixture-service", result["readiness"]["blocking"])
+        finally:
+            session.close()
+
+    def test_readmitted_recovery_attempts_and_counts_again(self):
+        session = self.broken_session()
+        try:
+            calls = []
+            fake_invoke = lambda *a, **k: (calls.append(a), {"status": "ok", "stdout": "{}",
+                                                             "stderr": ""})[1]
+            admit = lambda *, base, max_delay, attempts, elapsed: (
+                True, {"native": True, "attempts": attempts, "elapsed_secs": elapsed})
+            with mock.patch.object(session, "invoke", side_effect=fake_invoke):
+                readiness.reconcile_services(session, retry_gate=self.refuse_gate)
+                result = readiness.reconcile_services(session, retry_gate=admit)
+            self.assertEqual(len(calls), 2)
+            self.assertEqual(result["operations"][0]["status"], "ok")
+            self.assertTrue(result["operations"][0]["retry"]["eligible"])
+            backoff = session.snapshot["doctor"]["recovery_backoff"]
+            self.assertEqual(next(iter(backoff.values()))["attempts"], 2)
+        finally:
+            session.close()
+
+    def test_explicit_recovery_bypasses_suppression(self):
+        session = self.broken_session()
+        try:
+            calls = []
+            fake_invoke = lambda *a, **k: (calls.append(a), {"status": "ok", "stdout": "{}",
+                                                             "stderr": ""})[1]
+            suppress = lambda *, base, max_delay, attempts, elapsed: (False, {"native": True})
+            with mock.patch.object(session, "invoke", side_effect=fake_invoke):
+                readiness.reconcile_services(session, retry_gate=self.refuse_gate)
+                result = readiness.reconcile_services(session, force_recovery=True,
+                                                      retry_gate=suppress)
+            self.assertEqual(len(calls), 2)
+            self.assertEqual(result["operations"][0]["status"], "ok")
+            self.assertTrue(result["operations"][0]["retry"]["forced"])
+        finally:
+            session.close()
+
+    def test_rotated_identity_is_immediately_eligible(self):
+        session = self.broken_session()
+        try:
+            calls = []
+            fake_invoke = lambda *a, **k: (calls.append(a), {"status": "ok", "stdout": "{}",
+                                                             "stderr": ""})[1]
+            with mock.patch.object(session, "invoke", side_effect=fake_invoke):
+                readiness.reconcile_services(session, retry_gate=self.refuse_gate)
+                for item in session.snapshot["bindings"]:
+                    if item["capability"] == "fixture.start/1":
+                        item["contract_revision"] = "2"
+                result = readiness.reconcile_services(session, retry_gate=self.refuse_gate)
+            self.assertEqual(len(calls), 2, "rotated identity must re-attempt without gate")
+            self.assertEqual(result["operations"][0]["status"], "ok")
+        finally:
+            session.close()
+
+    def test_resolved_service_drops_backoff(self):
+        session = self.broken_session()
+        try:
+            with mock.patch.object(session, "invoke",
+                                   return_value={"status": "ok", "stdout": "{}", "stderr": ""}):
+                readiness.reconcile_services(session, retry_gate=self.refuse_gate)
+            self.assertEqual(len(session.snapshot["doctor"]["recovery_backoff"]), 1)
+            (self.project / "service-state.json").write_text(json.dumps({"ready": True, "starts": 1}))
+            with mock.patch.object(session, "invoke",
+                                   return_value={"status": "ok", "stdout": "{}", "stderr": ""}):
+                result = readiness.reconcile_services(session, retry_gate=self.refuse_gate)
+            self.assertEqual(result["operations"], [])
+            self.assertEqual(session.snapshot["doctor"]["recovery_backoff"], {})
+        finally:
+            session.close()
+
+    def test_pending_escalation_is_never_counted_or_suppressed(self):
+        session = self.broken_session()
+        try:
+            pending = {"status": "pending-escalation", "stdout": "", "stderr": "escalation required"}
+            calls = []
+            fake_invoke = lambda *a, **k: (calls.append(a), dict(pending))[1]
+            suppress = lambda *, base, max_delay, attempts, elapsed: (False, {"native": True})
+            with mock.patch.object(session, "invoke", side_effect=fake_invoke):
+                first = readiness.reconcile_services(session, retry_gate=suppress)
+                second = readiness.reconcile_services(session, retry_gate=suppress)
+            self.assertEqual(first["operations"][0]["status"], "pending-escalation")
+            self.assertEqual(second["operations"][0]["status"], "pending-escalation")
+            self.assertEqual(len(calls), 2, "escalations must stay visible every run")
+            self.assertEqual(session.snapshot["doctor"].get("recovery_backoff", {}), {})
         finally:
             session.close()
 
