@@ -30,6 +30,8 @@ from typing import Any
 
 from . import capabilities as capabilities_module
 from . import claims as claims_module
+from . import projection_store as store_module
+from . import projection_verification as verification_module
 from . import workspace as workspace_module
 from .identity import digest_hex
 from .persist import read_json, write_json
@@ -110,6 +112,41 @@ def _workspace_root(session) -> Path | None:
     return path if path.is_dir() else None
 
 
+def _collect_from_checkout(repository: str, child: Path,
+                         declarations: list[dict],
+                         invalid: list[dict]) -> bool:
+    """Collect one checkout's declarations; False when capped."""
+    manifest_path = child / ".mncs" / "project.json"
+    if not manifest_path.is_file():
+        return True
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        invalid.append({"repository": repository,
+                        "reason": "manifest-unreadable"})
+        return True
+    entries = manifest.get("projections") or []
+    if not isinstance(entries, list):
+        invalid.append({"repository": repository,
+                        "reason": "projections-not-a-list"})
+        return True
+    for entry in entries:
+        problem = _validate_declaration(entry)
+        record = {"repository": repository, "checkout": str(child)}
+        if problem is not None:
+            record.update({"reason": problem,
+                           "declaration": _summarize(entry)})
+            invalid.append(record)
+            continue
+        record.update(entry)
+        declarations.append(record)
+        if len(declarations) >= MAX_DECLARATIONS:
+            invalid.append({"repository": repository,
+                            "reason": "declaration-cap-reached"})
+            return False
+    return True
+
+
 def discover_declarations(workspace_root: Path) -> tuple[list[dict], list[dict]]:
     """Collect projection declarations from workspace manifests.
 
@@ -125,34 +162,58 @@ def discover_declarations(workspace_root: Path) -> tuple[list[dict], list[dict]]
     except OSError:
         return [], [{"repository": "", "reason": "workspace-unreadable"}]
     for child in children:
-        manifest_path = child / ".mncs" / "project.json"
-        if not manifest_path.is_file():
+        if not _collect_from_checkout(child.name, child, declarations,
+                                      invalid):
+            return declarations, invalid
+    return declarations, invalid
+
+
+def discover_selected_declarations(
+        session, workspace_root: Path) -> tuple[list[dict], list[dict]]:
+    """Collect declarations from explicitly selected checkouts only.
+
+    The ambient pass must not wander the workspace looking for
+    manifests: it inspects exactly the checkouts the session selected,
+    so unrelated directories are never opened. Sessions without any
+    selection fall back to the bounded direct-child scan.
+    """
+    selected = session.snapshot.get("selected_checkouts") or {}
+    if not isinstance(selected, dict) or not selected:
+        return discover_declarations(workspace_root)
+    declarations: list[dict] = []
+    invalid: list[dict] = []
+    try:
+        root = workspace_root.resolve()
+    except OSError:
+        return [], [{"repository": "", "reason": "workspace-unreadable"}]
+    for name in sorted(selected):
+        record = selected[name]
+        path = (record or {}).get("path") if isinstance(record, dict) else None
+        if not isinstance(path, str) or not path:
+            invalid.append({"repository": str(name),
+                            "reason": "selection-without-path"})
+            continue
+        child = Path(path)
+        if not child.is_absolute():
+            child = workspace_root / child
+        if child.is_symlink():
+            invalid.append({"repository": str(name),
+                            "reason": "selection-is-symlink"})
             continue
         try:
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            resolved = child.resolve()
+            resolved.relative_to(root)
         except (OSError, ValueError):
-            invalid.append({"repository": child.name,
-                            "reason": "manifest-unreadable"})
+            invalid.append({"repository": str(name),
+                            "reason": "selection-escapes-workspace"})
             continue
-        entries = manifest.get("projections") or []
-        if not isinstance(entries, list):
-            invalid.append({"repository": child.name,
-                            "reason": "projections-not-a-list"})
+        if not resolved.is_dir():
+            invalid.append({"repository": str(name),
+                            "reason": "selection-unavailable"})
             continue
-        for entry in entries:
-            problem = _validate_declaration(entry)
-            record = {"repository": child.name, "checkout": str(child)}
-            if problem is not None:
-                record.update({"reason": problem,
-                               "declaration": _summarize(entry)})
-                invalid.append(record)
-                continue
-            record.update(entry)
-            declarations.append(record)
-            if len(declarations) >= MAX_DECLARATIONS:
-                invalid.append({"repository": child.name,
-                                "reason": "declaration-cap-reached"})
-                return declarations, invalid
+        if not _collect_from_checkout(str(name), resolved, declarations,
+                                      invalid):
+            return declarations, invalid
     return declarations, invalid
 
 
@@ -167,6 +228,9 @@ def _validate_declaration(entry: Any) -> str | None:
         return "bad-output-kind"
     if entry.get("policy") not in ("ambient-safe", "explicit-only"):
         return "bad-policy"
+    verification = entry.get("verification")
+    if verification is not None and not isinstance(verification, dict):
+        return "bad-verification"
     if entry.get("output_kind") == "region":
         admit = entry.get("admit")
         if not isinstance(admit, dict):
@@ -263,6 +327,7 @@ def repo_facts(session, repository: str, checkout: Path,
     else:
         repo_code = REPO_DIRTY_OTHER
     return {"repo": repo_code, "branch": branch_code,
+            "branch_name": branch,
             "head": getattr(state, "head", None),
             "dirty_files": sorted(path for path in dirty_files
                                   if path is not None),
@@ -496,9 +561,42 @@ def admit_region_bytes(session, declaration: dict[str, Any],
         return None, admission
 
 
+def _revalidate_for_commit(session, declaration: dict[str, Any],
+                           checkout: Path, digest: str, verdict: int,
+                           evidence_id: str | None,
+                           preimage: bytes | None) -> tuple[bool, str]:
+    """Confirm plan-time facts still hold before bytes or state commit.
+
+    Closes the render/apply TOCTOU: inputs, verification, and the
+    classified output preimage are re-observed, and any drift aborts
+    the commit so B-derived bytes are never recorded as digest A.
+    """
+    current = input_digest(
+        checkout, [str(item) for item in declaration["inputs"]])
+    if current != digest:
+        return False, "inputs-moved-before-commit"
+    output = str(declaration["output"])
+    try:
+        on_disk = (checkout / output).read_bytes()
+    except OSError:
+        on_disk = None
+    if on_disk != preimage:
+        return False, "output-moved-before-commit"
+    reverdict, reevidence, _detail, _seen = (
+        verification_module.resolve_declared(
+            session, declaration, checkout, digest, allow_run=False))
+    if reverdict != verdict or reevidence != evidence_id:
+        return False, "verification-moved-before-commit"
+    return True, "revalidated"
+
+
 def apply_expected_bytes(session, declaration: dict[str, Any],
                          checkout: Path,
-                         expected: bytes) -> tuple[bool, str]:
+                         expected: bytes,
+                         *, digest: str | None = None,
+                         verdict: int | None = None,
+                         evidence_id: str | None = None,
+                         preimage: bytes | None = None) -> tuple[bool, str]:
     """Write admitted bytes under a narrow path claim. Never commits."""
     repository = str(declaration["repository"])
     output = str(declaration["output"])
@@ -539,12 +637,12 @@ def apply_expected_bytes(session, declaration: dict[str, Any],
     claim_id = str(claim.get("claim_id", ""))
     _refresh_claim_holders(session)
     try:
-        verdict = session.check(
+        authority = session.check(
             action="write", target=f"{repository}/{output}",
             scope={"kind": "paths", "paths": [output],
                    "checkout": str(checkout)})
-        if verdict.get("verdict") != "allow":
-            return False, f"authority-{verdict.get('verdict')}"
+        if authority.get("verdict") != "allow":
+            return False, f"authority-{authority.get('verdict')}"
         try:
             rechecked = workspace_module.inspect_repo(checkout)
         except (OSError, ValueError):
@@ -553,6 +651,14 @@ def apply_expected_bytes(session, declaration: dict[str, Any],
                 or getattr(rechecked, "branch", None)
                 != checkout_facts["branch"]):
             return False, "repo-moved-under-claim"
+        if digest is not None and verdict is not None:
+            # Two-phase commit: the claim is held, so re-observe the
+            # authoritative facts the plan used before touching bytes.
+            fresh, reason = _revalidate_for_commit(
+                session, declaration, checkout, digest, verdict,
+                evidence_id, preimage)
+            if not fresh:
+                return False, reason
         target.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile("wb", dir=target.parent,
                                          prefix=f".{target.name}.",
@@ -583,6 +689,55 @@ def _state_rows(session) -> dict[str, dict[str, Any]]:
     return dict(rows) if isinstance(rows, dict) else {}
 
 
+def _read_shared_row(session, projection_id: str) -> dict[str, Any] | None:
+    """Latest shared row, or None when the shared backend is down.
+
+    None is a fail-closed signal: the ambient path defers without
+    adopting. A blank version-0 row means the projection simply has
+    no recorded state yet.
+    """
+    if session.store is None:
+        return None
+    try:
+        return store_module.read_row(session.store, projection_id)
+    except store_module.SharedStoreUnavailable:
+        return None
+
+
+def _persist_shared_row(session, projection_id: str,
+                        fields: dict[str, Any],
+                        expected_version: int) -> dict[str, Any] | None:
+    """CAS-publish shared fields; None on conflict or outage.
+
+    Conflicts mean another session advanced the row first: the caller
+    must re-plan from the latest row instead of overwriting. Like all
+    absence here, None never becomes permission.
+    """
+    if session.store is None:
+        return None
+    row = dict(fields)
+    row["projection"] = projection_id
+    row["updated_by"] = session.session_id
+    row["updated_at"] = utcnow()
+    try:
+        return store_module.write_row(
+            session.store, row, expected_version=expected_version)
+    except (store_module.ProjectionConflict,
+            store_module.SharedStoreUnavailable):
+        return None
+
+
+def _lookup_verdict(session, declaration: dict[str, Any],
+                    digest: str | None) -> dict[str, Any]:
+    """Read-only verdict for epoch invalidation (never runs executors)."""
+    checkout = Path(str(declaration["checkout"]))
+    verdict, evidence_id, detail, _seen = (
+        verification_module.resolve_declared(
+            session, declaration, checkout, digest, allow_run=False))
+    return {"verdict": verdict, "evidence_id": evidence_id,
+            "detail": detail}
+
+
 def _epoch_inputs(session, declarations: list[dict],
                   digests: dict[str, str | None]) -> dict[str, Any]:
     claims_digest: Any = None
@@ -610,26 +765,56 @@ def _epoch_inputs(session, declarations: list[dict],
             "head": getattr(state, "head", None),
             "dirty": _dirty_digest(state),
         }
+    obligations: set[str] = set()
+    for declaration in declarations:
+        spec = declaration.get("verification")
+        if isinstance(spec, dict):
+            for item in spec.get("obligations") or []:
+                if isinstance(item, str) and item:
+                    obligations.add(item)
     bindings: dict[str, str] = {}
     for capability in [PLANNER_CAPABILITY] + sorted(
             {str(declaration["provider_capability"])
-             for declaration in declarations}):
+             for declaration in declarations} | obligations):
         binding = _session_binding(session, capability)
         if binding is None:
             bindings[capability] = "unbound"
         else:
             bindings[capability] = str(binding.get("availability", {})
                                        .get("status"))
+    shared: dict[str, Any] = {}
+    verdicts: dict[str, Any] = {}
+    for declaration in declarations:
+        projection_id = str(declaration["id"])
+        row = _read_shared_row(session, projection_id)
+        if row is None:
+            shared[projection_id] = "shared-store-unavailable"
+        else:
+            # Version and defer counters are write/retry metadata,
+            # not world state: a pass that only advances them must
+            # still hit the quiet path next time.
+            shared[projection_id] = {
+                key: row.get(key) for key in
+                ("canonical_gen", "observed_gen",
+                 "canonical_digest", "rendered_digest", "verdict",
+                 "evidence_id", "status")}
+        verdicts[projection_id] = _lookup_verdict(
+            session, declaration, digests.get(projection_id))
     return {
         "declarations": {declaration["id"]: digest_hex(
             {key: declaration[key] for key in
              ("template", "inputs", "output", "output_kind",
-              "provider_capability", "render_argv", "policy")})
+              "provider_capability", "render_argv", "policy")
+             if key in declaration} |
+            ({"verification": declaration["verification"]}
+             if declaration.get("verification") is not None else {}))
             for declaration in declarations},
         "digests": digests,
         "repos": repos,
         "claims": claims_digest,
         "bindings": bindings,
+        "shared": shared,
+        "verification": verdicts,
         "lifecycle": session.snapshot.get("lifecycle", "active"),
     }
 
@@ -644,7 +829,8 @@ def ambient_pass(session, *, mode: str = "ambient",
     if workspace_root is None:
         return _finish(session, started, clock_started, [], rows, [], mode,
                        {"reason": "workspace-unavailable"}, "no-workspace")
-    declarations, invalid = discover_declarations(workspace_root)
+    declarations, invalid = discover_selected_declarations(
+        session, workspace_root)
     if only is not None:
         declarations = [declaration for declaration in declarations
                         if declaration["id"] == only]
@@ -671,8 +857,12 @@ def ambient_pass(session, *, mode: str = "ambient",
     for declaration in declarations:
         results.append(_reconcile_one(session, declaration, digests[
             declaration["id"]], rows, mode))
+    # The stored epoch describes the post-pass world: shared rows are
+    # both an input and an output of the pass, so caching the
+    # pre-pass state would never hit after a pass that wrote.
+    post_epoch = digest_hex(_epoch_inputs(session, declarations, digests))
     return _finish(session, started, clock_started, results, rows,
-                   invalid, mode, None, epoch)
+                   invalid, mode, None, post_epoch)
 
 
 def _reconcile_one(session, declaration: dict[str, Any],
@@ -687,41 +877,104 @@ def _reconcile_one(session, declaration: dict[str, Any],
     machine_outputs = _machine_outputs(session, repository, checkout)
     facts = repo_facts(session, repository, checkout, machine_outputs)
     claimed = claim_facts(session, repository, str(declaration["output"]))
-    row = rows.get(projection_id)
-    canonical = int((row or {}).get("canonical_gen", 0))
-    observed = int((row or {}).get("observed_gen", 0))
-    defer_count = int((row or {}).get("defer_count", 0))
+    # Durable observed state is shared, not session-local: every agent
+    # reads and CAS-writes the same row. The session cache only feeds
+    # presentation and the epoch fast path.
+    shared = _read_shared_row(session, projection_id)
     record["repo"] = facts
     record["claim"] = claimed
+    if shared is None:
+        record.update({"verdict": VERDICT_UNKNOWN, "gate": GATE_DEFER,
+                       "gate_reason": "shared-store-unavailable",
+                       "outcome": "deferred", "digest": digest})
+        cached = rows.get(projection_id) or {}
+        _retain_row(rows, projection_id,
+                    int(cached.get("canonical_gen", 0)),
+                    int(cached.get("observed_gen", 0)), digest, cached,
+                    STATUS_UNKNOWN, int(cached.get("defer_count", 0)) + 1)
+        return record
+    base_version = int(shared.get("version", 0))
+    observed = int(shared.get("observed_gen", 0))
+    defer_count = int(shared.get("defer_count", 0))
     if digest is None:
         record.update({"verdict": VERDICT_UNKNOWN, "gate": GATE_DEFER,
                        "gate_reason": "inputs-unreadable",
                        "outcome": "deferred"})
-        _retain_row(rows, projection_id, canonical, observed, None, row,
-                    STATUS_UNKNOWN, defer_count + 1)
+        _retain_shared(session, rows, projection_id, shared,
+                       int(shared.get("canonical_gen", 0)), observed,
+                       None, STATUS_UNKNOWN, defer_count + 1,
+                       VERDICT_UNKNOWN, None, None)
         return record
+    canonical = int(shared.get("canonical_gen", 0))
+    if digest != shared.get("canonical_digest"):
+        canonical = max(canonical, observed) + 1
+    if observed == canonical and digest == shared.get("canonical_digest"):
+        # Fast path, guarded by the adopted bytes still being on disk:
+        # a hand edit to the output (or broken markers) must fall
+        # through to classification, never report current.
+        try:
+            on_disk = (checkout / str(declaration["output"])).read_bytes()
+        except OSError:
+            on_disk = None
+        if (on_disk is not None
+                and shared.get("rendered_digest") is not None
+                and bytes_digest(on_disk) == shared.get("rendered_digest")):
+            rows[projection_id] = _cache_row(shared)
+            record.update(
+                {"verdict": int(shared.get("verdict", VERDICT_UNKNOWN)),
+                 "evidence_id": shared.get("evidence_id"),
+                 "outcome": "current", "digest": digest})
+            return record
+    # Real generation-bound verification: PASS only when evidence
+    # covers this exact subject. Lookup first; when stale and still
+    # unknown, run bound executors once to produce it. Rendering
+    # success is never consulted as a verdict signal.
+    verdict, evidence_id, detail, seen = verification_module.resolve_declared(
+        session, declaration, checkout, digest, allow_run=False)
+    if verdict == VERDICT_UNKNOWN:
+        verdict, evidence_id, detail, seen = (
+            verification_module.resolve_declared(
+                session, declaration, checkout, digest, allow_run=True))
+    spec = declaration.get("verification")
+    require_verified = 1
+    if isinstance(spec, dict) and spec.get("required") is False:
+        require_verified = 0
+    source = {"repository": repository, "head": facts.get("head"),
+              "branch": facts.get("branch_name"), "input_digest": digest}
+    record.update({"verdict": verdict, "evidence_id": evidence_id,
+                   "verification": detail,
+                   "require_verified": require_verified,
+                   "source": source, "digest": digest})
     fresh, reason, cached = render_cached(session, declaration, checkout,
                                           digest)
     if fresh is None:
-        verdict = (VERDICT_FAIL if reason == "render-nondeterministic"
-                   else VERDICT_UNKNOWN)
-        record.update({"verdict": verdict, "gate": GATE_DEFER,
-                       "gate_reason": f"render-{reason}",
+        # Render health is not a verification verdict: the resolved
+        # evidence verdict stands, and the row status carries the
+        # render failure.
+        record.update({"gate": GATE_DEFER, "gate_reason": f"render-{reason}",
                        "outcome": "deferred", "digest": digest})
-        _retain_row(rows, projection_id, canonical, observed, digest, row,
-                    STATUS_UNKNOWN if verdict == VERDICT_UNKNOWN
-                    else STATUS_FAILED, defer_count + 1, verdict)
+        kept = _retain_shared(
+            session, rows, projection_id, shared, canonical, observed,
+            digest, (STATUS_FAILED if reason == "render-nondeterministic"
+                     else STATUS_UNKNOWN), defer_count + 1, verdict,
+            evidence_id, seen)
+        if not kept:
+            record.update({"gate_reason": "projection-state-conflict"})
         return record
     if declaration.get("output_kind", "whole-file") == "region":
         target_kind = TARGET_REGION_IN_FILE
         expected, admission = admit_region_bytes(
             session, declaration, checkout, fresh)
         if admission is None:
-            record.update({"verdict": VERDICT_UNKNOWN, "gate": GATE_DEFER,
+            record.update({"gate": GATE_DEFER,
                            "gate_reason": "admit-unavailable",
                            "outcome": "deferred", "digest": digest})
-            _retain_row(rows, projection_id, canonical, observed, digest,
-                        row, STATUS_UNKNOWN, defer_count + 1)
+            kept = _retain_shared(
+                session, rows, projection_id, shared, canonical,
+                observed, digest, STATUS_UNKNOWN, defer_count + 1,
+                verdict, evidence_id, seen)
+            if not kept:
+                record.update({"gate_reason": "projection-state-conflict"})
             return record
         region_code = int(admission.get("status", REGION_INVALID))
         record["admission"] = {key: admission.get(key) for key in
@@ -734,21 +987,25 @@ def _reconcile_one(session, declaration: dict[str, Any],
                                           "admission-refused")
         else:
             output_code, output_detail = classify_output(
-                checkout, str(declaration["output"]), expected, row)
+                checkout, str(declaration["output"]), expected, shared)
     else:
         target_kind = TARGET_WHOLE_FILE
         region_code = REGION_NOT_APPLICABLE
         expected = fresh
         output_code, output_detail = classify_output(
-            checkout, str(declaration["output"]), expected, row)
+            checkout, str(declaration["output"]), expected, shared)
+    try:
+        preimage = (checkout / str(declaration["output"])).read_bytes()
+    except OSError:
+        preimage = None
     splice_ok = 1 if (mode == "explicit"
                       or declaration.get("policy") == "ambient-safe") else 0
     request = {
         "projection": projection_id,
         "canonical_gen": canonical, "observed_gen": observed,
-        "inputs_changed": 1 if digest != (row or {}).get(
+        "inputs_changed": 1 if digest != shared.get(
             "canonical_digest") else 0,
-        "verdict": VERDICT_PASS, "require_verified": 1,
+        "verdict": verdict, "require_verified": require_verified,
         "repo": facts["repo"], "branch": facts["branch"],
         "claim": claimed["claim"], "target": target_kind,
         "region": region_code, "output": output_code,
@@ -763,33 +1020,49 @@ def _reconcile_one(session, declaration: dict[str, Any],
     record.update({"digest": digest, "render_cached": cached,
                    "output": output_detail, "request": request})
     if plan is None:
-        record.update({"verdict": VERDICT_UNKNOWN, "gate": GATE_DEFER,
+        record.update({"gate": GATE_DEFER,
                        "gate_reason": "planner-unavailable",
                        "outcome": "deferred"})
-        _retain_row(rows, projection_id, canonical, observed, digest, row,
-                    STATUS_UNKNOWN, defer_count + 1)
+        kept = _retain_shared(
+            session, rows, projection_id, shared, canonical, observed,
+            digest, STATUS_UNKNOWN, defer_count + 1, verdict,
+            evidence_id, seen)
+        if not kept:
+            record.update({"gate_reason": "projection-state-conflict"})
         return record
     record["plan"] = plan
     gate = int(plan["gate"])
     if gate == GATE_ESCALATE:
         record.update({"outcome": "escalated",
                        "gate_reason": plan.get("gate_reason_name")})
-        _retain_row(rows, projection_id, int(plan["new_canonical"]),
-                    observed, digest, row, STATUS_BLOCKED, defer_count + 1,
-                    VERDICT_PASS)
+        kept = _retain_shared(
+            session, rows, projection_id, shared,
+            int(plan["new_canonical"]), observed, digest, STATUS_BLOCKED,
+            defer_count + 1, verdict, evidence_id, seen)
+        if not kept:
+            record.update({"outcome": "deferred",
+                           "gate_reason": "projection-state-conflict"})
+            return record
         session._emit("projection.escalated", "environment",
                       {"projection": projection_id, "plan": plan})
         return record
     if gate == GATE_DEFER or not plan.get("execute"):
-        status = STATUS_CURRENT if int(plan["action"]) == 0 else STATUS_STALE
-        record.update({"outcome": "deferred" if gate == GATE_DEFER
-                       else "current",
+        # execute=false with a non-current action is a native refusal
+        # (await/failed verification, blocked): pending, not current.
+        current = gate == GATE_PROCEED and int(plan["action"]) == 0
+        status = STATUS_CURRENT if current else STATUS_STALE
+        record.update({"outcome": "current" if current else "deferred",
                        "gate_reason": plan.get("gate_reason_name")})
-        _retain_row(rows, projection_id, int(plan["new_canonical"]),
-                    observed, digest, row, status,
-                    defer_count + 1 if gate == GATE_DEFER else 0,
-                    VERDICT_PASS)
-        if gate == GATE_DEFER:
+        kept = _retain_shared(
+            session, rows, projection_id, shared,
+            int(plan["new_canonical"]), observed, digest, status,
+            0 if current else defer_count + 1, verdict,
+            evidence_id, seen)
+        if not kept:
+            record.update({"outcome": "deferred",
+                           "gate_reason": "projection-state-conflict"})
+            return record
+        if not current:
             session._emit("projection.deferred", "environment",
                           {"projection": projection_id, "plan": plan})
         return record
@@ -798,39 +1071,67 @@ def _reconcile_one(session, declaration: dict[str, Any],
         # closed rather than applying absent bytes.
         record.update({"outcome": "escalated",
                        "gate_reason": "missing-expected-bytes"})
-        _retain_row(rows, projection_id, int(plan["new_canonical"]),
-                    observed, digest, row, STATUS_BLOCKED, defer_count + 1,
-                    VERDICT_PASS)
+        kept = _retain_shared(
+            session, rows, projection_id, shared,
+            int(plan["new_canonical"]), observed, digest, STATUS_BLOCKED,
+            defer_count + 1, verdict, evidence_id, seen)
+        if not kept:
+            record.update({"outcome": "deferred",
+                           "gate_reason": "projection-state-conflict"})
         return record
     if output_code == OUTPUT_MATCHES_FRESH:
-        rows[projection_id] = {"canonical_gen": int(plan["new_canonical"]),
-                               "observed_gen": int(plan["new_canonical"]),
-                               "canonical_digest": digest,
-                               "rendered_digest": bytes_digest(expected),
-                               "verdict": VERDICT_PASS,
-                               "status": STATUS_CURRENT, "defer_count": 0,
-                               "updated_at": utcnow()}
+        fresh, reason = _revalidate_for_commit(
+            session, declaration, checkout, digest, verdict,
+            evidence_id, preimage)
+        if not fresh:
+            record.update({"outcome": "deferred", "gate_reason": reason})
+            kept = _retain_shared(
+                session, rows, projection_id, shared,
+                int(plan["new_canonical"]), observed, digest,
+                STATUS_STALE, defer_count + 1, verdict, evidence_id,
+                seen)
+            if not kept:
+                record.update(
+                    {"gate_reason": "projection-state-conflict"})
+            return record
+        adopted = _adopt_shared(
+            session, rows, projection_id, shared,
+            int(plan["new_canonical"]), digest, bytes_digest(expected),
+            verdict, evidence_id, seen, source)
+        if not adopted:
+            record.update({"outcome": "deferred",
+                           "gate_reason": "projection-state-conflict"})
+            return record
         record.update({"outcome": "converged"})
         return record
-    applied, detail = apply_expected_bytes(session, declaration, checkout,
-                                           expected)
+    applied, detail = apply_expected_bytes(
+        session, declaration, checkout, expected, digest=digest,
+        verdict=verdict, evidence_id=evidence_id, preimage=preimage)
     if not applied:
         record.update({"outcome": "deferred",
                        "gate_reason": f"apply-{detail}"})
-        _retain_row(rows, projection_id, int(plan["new_canonical"]),
-                    observed, digest, row, STATUS_STALE, defer_count + 1,
-                    VERDICT_PASS)
+        kept = _retain_shared(
+            session, rows, projection_id, shared,
+            int(plan["new_canonical"]), observed, digest, STATUS_STALE,
+            defer_count + 1, verdict, evidence_id, seen)
+        if not kept:
+            record.update({"gate_reason": "projection-state-conflict"})
+            return record
         session._emit("projection.deferred", "environment",
                       {"projection": projection_id, "plan": plan,
                        "apply": detail})
         return record
-    rows[projection_id] = {"canonical_gen": int(plan["new_canonical"]),
-                           "observed_gen": int(plan["new_canonical"]),
-                           "canonical_digest": digest,
-                           "rendered_digest": bytes_digest(expected),
-                           "verdict": VERDICT_PASS,
-                           "status": STATUS_CURRENT, "defer_count": 0,
-                           "updated_at": utcnow()}
+    adopted = _adopt_shared(
+        session, rows, projection_id, shared, int(plan["new_canonical"]),
+        digest, bytes_digest(expected), verdict, evidence_id, seen,
+        source)
+    if not adopted:
+        # Bytes landed but another session owns the row now; the next
+        # pass re-renders from the latest row and converges. Never
+        # claim current on a row we did not publish.
+        record.update({"outcome": "deferred",
+                       "gate_reason": "projection-state-conflict"})
+        return record
     record.update({"outcome": "reconciled"})
     session._emit("projection.reconciled", "environment",
                   {"projection": projection_id, "plan": plan})
@@ -882,6 +1183,100 @@ def _retain_row(rows: dict, projection_id: str, canonical: int,
         "defer_count": defer_count, "updated_at": utcnow()}
 
 
+def _cache_row(shared: dict[str, Any]) -> dict[str, Any]:
+    """Session-cache view of a shared row (presentation only)."""
+    return {
+        "canonical_gen": int(shared.get("canonical_gen", 0)),
+        "observed_gen": int(shared.get("observed_gen", 0)),
+        "canonical_digest": shared.get("canonical_digest"),
+        "rendered_digest": shared.get("rendered_digest"),
+        "verdict": int(shared.get("verdict", VERDICT_UNKNOWN)),
+        "evidence_id": shared.get("evidence_id"),
+        "evidence_ids": list(shared.get("evidence_ids") or []),
+        "status": int(shared.get("status", STATUS_UNKNOWN)),
+        "defer_count": int(shared.get("defer_count", 0)),
+        "store_version": int(shared.get("version", 0)),
+        "updated_at": shared.get("updated_at"),
+    }
+
+
+def _shared_fields(shared: dict[str, Any], canonical: int, observed: int,
+                   digest: str | None, rendered: str | None, status: int,
+                   defer_count: int, verdict: int,
+                   evidence_id: str | None,
+                   seen: list | None,
+                   source: dict[str, Any] | None = None) -> dict[str, Any]:
+    return {
+        "canonical_gen": canonical,
+        "observed_gen": observed,
+        "canonical_digest": (digest if digest is not None
+                             else shared.get("canonical_digest")),
+        # Source generation identity: which repository state this row
+        # was derived from. Never conflated with the row's own
+        # projection generation counters.
+        "source": source if source is not None else shared.get("source"),
+        "rendered_digest": (rendered if rendered is not None
+                            else shared.get("rendered_digest")),
+        "verdict": verdict,
+        "evidence_id": evidence_id,
+        "evidence_ids": [str(item.get("evidence_id")) for item in seen or []
+                         if isinstance(item, dict)
+                         and item.get("evidence_id")],
+        "status": status,
+        "wait": int(shared.get("wait", 0)),
+        "defer_count": defer_count,
+    }
+
+
+def _retain_shared(session, rows: dict, projection_id: str,
+                   shared: dict[str, Any], canonical: int, observed: int,
+                   digest: str | None, status: int, defer_count: int,
+                   verdict: int, evidence_id: str | None,
+                   seen: list | None) -> bool:
+    """Persist defer/escalate progress to the shared row (CAS).
+
+    Returns False when another session advanced the row first or the
+    backend is down; the caller then reports a conflict instead of
+    claiming durable pending state it does not own.
+    """
+    published = _persist_shared_row(
+        session, projection_id,
+        _shared_fields(shared, canonical, observed, digest, None,
+                       status, defer_count, verdict, evidence_id, seen),
+        int(shared.get("version", 0)))
+    if published is None:
+        return False
+    rows[projection_id] = _cache_row(published)
+    return True
+
+
+def _adopt_shared(session, rows: dict, projection_id: str,
+                  shared: dict[str, Any], canonical: int, digest: str,
+                  rendered: str, verdict: int, evidence_id: str | None,
+                  seen: list | None,
+                  source: dict[str, Any] | None = None) -> bool:
+    """Adopt a converged generation through the shared CAS row.
+
+    Monotonicity is enforced by the versioned write: a render based
+    on a superseded row cannot publish. Stale bytes therefore fail
+    safely here even if every earlier check passed.
+    """
+    if canonical < int(shared.get("observed_gen", 0)):
+        # Regression: never move observed backwards, not even when the
+        # version arithmetic would allow it.
+        return False
+    published = _persist_shared_row(
+        session, projection_id,
+        _shared_fields(shared, canonical, canonical, digest, rendered,
+                       STATUS_CURRENT, 0, verdict, evidence_id, seen,
+                       source),
+        int(shared.get("version", 0)))
+    if published is None:
+        return False
+    rows[projection_id] = _cache_row(published)
+    return True
+
+
 def _finish(session, started: str, clock_started: float,
             results: list[dict], rows: dict, invalid: list[dict],
             mode: str, failure: dict | None,
@@ -900,7 +1295,8 @@ def _finish(session, started: str, clock_started: float,
             summary["pending"] += 1
             pending_ids.append(str(record.get("projection")))
             if str(record.get("gate_reason", "")).startswith(
-                    ("planner-", "render-", "provider-")):
+                    ("planner-", "render-", "provider-", "shared-store-",
+                     "projection-state-conflict")):
                 summary["degraded"] += 1
         elif outcome == "escalated":
             summary["blockers"] += 1
@@ -973,6 +1369,11 @@ def _append_session_evidence(session, summary: dict[str, Any],
              "repository": record.get("repository"),
              "outcome": record.get("outcome"),
              "digest": record.get("digest"),
+             "verdict": record.get("verdict"),
+             "evidence_id": record.get("evidence_id"),
+             "verification": record.get("verification"),
+             "source": (record.get("source") or {
+                 "head": (record.get("repo") or {}).get("head")}),
              "gate_reason": (record.get("plan") or {}).get(
                  "gate_reason_name", record.get("gate_reason"))}
             for record in results],
