@@ -414,3 +414,14 @@ def test_selected_store_runtime_suppresses_ambient_artifact_and_restores_process
         assert "MNCS_STORE_ARTIFACT" not in os.environ
         assert os.environ["MNCS_BIN"] == runtime["MNCS_BIN"]
     assert os.environ["MNCS_STORE_ARTIFACT"] == "/ambient/unselected-artifact"
+
+
+def test_selected_store_uses_explicit_writable_derived_cache(tmp_path, monkeypatch):
+    import os
+    from mncs_env.store_backend import _selected_store_runtime
+    monkeypatch.setenv("MNCS_STORE_ARTIFACT_CACHE", "/unwritable/ambient-cache")
+    runtime = {"MNCS_STORE_ROOT": "/selected/store", "MNCS_LANGUAGE_ROOT": "/selected/language",
+               "MNCS_BIN": "/selected/language/mncs", "MNCS_EMBED_LIB": "/selected/language/embed"}
+    with _selected_store_runtime(runtime, tmp_path / "provider-cache" / "mncs-store"):
+        assert os.environ["MNCS_STORE_ARTIFACT_CACHE"] == str(tmp_path / "provider-cache" / "mncs-store")
+    assert os.environ["MNCS_STORE_ARTIFACT_CACHE"] == "/unwritable/ambient-cache"

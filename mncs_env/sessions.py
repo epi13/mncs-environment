@@ -1187,6 +1187,7 @@ class Session:
         contextual = {
             **runtime,
             "MNCS_STORE_PYTHON": provider["python_package"],
+            "MNCS_STORE_ARTIFACT_CACHE": str(self.store.state_dir.resolve() / "provider-cache" / "mncs-store"),
             "MNCS_LANGUAGE_CHECKOUT": runtime["MNCS_LANGUAGE_ROOT"],
         }
         declared = set((binding.get("fixed_env") or {}).keys())

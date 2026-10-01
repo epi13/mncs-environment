@@ -36,7 +36,7 @@ _STORE_RUNTIME_KEYS = (
 
 
 @contextmanager
-def _selected_store_runtime(runtime: dict[str, str] | None):
+def _selected_store_runtime(runtime: dict[str, str] | None, cache_dir: Path | None = None):
     """Open a Store session with its Environment-selected MNCS toolchain."""
     if runtime is None:
         yield
@@ -46,11 +46,13 @@ def _selected_store_runtime(runtime: dict[str, str] | None):
     with _STORE_RUNTIME_LOCK:
         # A raw artifact override bypasses the selected source/compiler cache
         # identity. It belongs to standalone bootstrap, never selected entry.
-        scoped_keys = (*_STORE_RUNTIME_KEYS, "MNCS_STORE_ARTIFACT")
+        scoped_keys = (*_STORE_RUNTIME_KEYS, "MNCS_STORE_ARTIFACT", "MNCS_STORE_ARTIFACT_CACHE")
         previous = {key: os.environ.get(key) for key in scoped_keys}
         try:
             os.environ.update(runtime)
             os.environ.pop("MNCS_STORE_ARTIFACT", None)
+            if cache_dir is not None:
+                os.environ["MNCS_STORE_ARTIFACT_CACHE"] = str(cache_dir.resolve())
             yield
         finally:
             for key, value in previous.items():
@@ -141,7 +143,7 @@ class StoreBackend:
         self.store_runtime = dict(store_runtime) if store_runtime is not None else None
         self.state_dir = Path(state_dir)
         self.path = self.state_dir / "store"
-        with _selected_store_runtime(self.store_runtime):
+        with _selected_store_runtime(self.store_runtime, self.state_dir / "provider-cache" / "mncs-store"):
             self._store = EmbeddedStore(self.path, verify_on_open=verify_on_open)
         recovery = getattr(self._store, "recovery_result", None)
         if recovery is not None and str(recovery) in (
