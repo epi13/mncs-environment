@@ -51,6 +51,9 @@ TYPES = (
     "projection.reconciled",
     "projection.deferred",
     "projection.escalated",
+    "verification.verified",
+    "verification.failed",
+    "verification.deferred",
     "adapter.observed",
 )
 

@@ -18,6 +18,7 @@ from pathlib import Path
 from . import capabilities as capabilities_module
 from . import doctor as doctor_module
 from . import projections as projections_module
+from . import verification as verification_module
 from . import entry as entry_module
 from . import claims as claims_module
 from . import pressures as pressures_module
@@ -236,6 +237,37 @@ def cmd_projections(args: argparse.Namespace) -> int:
                     session, mode="explicit", only=args.apply)
             else:
                 result = projections_module.ambient_pass(session)
+            payload = {"session_id": args.session,
+                       "summary": result["summary"],
+                       "reused": result["reused"],
+                       "evidence": result.get("evidence")}
+            out(payload)
+            return 5 if result["summary"]["blockers"] else 0
+        finally:
+            session.close()
+
+
+def cmd_verification(args: argparse.Namespace) -> int:
+    if args.evidence:
+        with closing(_open(args)) as session:
+            out(verification_module.read_evidence(session))
+        return 0
+    with entry_module.entry_lock(args.state_dir, args.persistence):
+        try:
+            session = sessions_module.Session.resume(
+                state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+        except sessions_module.LifecycleError as error:
+            return fail(str(error))
+        try:
+            if args.only:
+                result = verification_module.ambient_pass(
+                    session, mode="explicit", only=args.only)
+            elif args.full:
+                result = verification_module.ambient_pass(
+                    session, mode="full",
+                    max_executions=verification_module.MAX_OBLIGATIONS)
+            else:
+                result = verification_module.ambient_pass(session)
             payload = {"session_id": args.session,
                        "summary": result["summary"],
                        "reused": result["reused"],
@@ -661,6 +693,15 @@ def build_parser() -> argparse.ArgumentParser:
     projections.add_argument("--apply", default=None,
                              help="explicitly apply one projection by id (region splicing allowed under claim)")
     projections.set_defaults(func=cmd_projections)
+
+    verification = session_parser("verify", "ambient verification coherence pass with a terse summary")
+    verification.add_argument("--evidence", action="store_true",
+                              help="print the full verification evidence trail instead of running a pass")
+    verification.add_argument("--only", default=None,
+                              help="explicitly verify one obligation by identity")
+    verification.add_argument("--full", action="store_true",
+                              help="explicit full pass without epoch reuse and with the full execution budget")
+    verification.set_defaults(func=cmd_verification)
 
     status = sub.add_parser(
         "status", parents=[common], help="show compact read-only session status"
