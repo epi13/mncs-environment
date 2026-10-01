@@ -369,6 +369,16 @@ class AmbientPassTests(VerificationFixture):
         kinds = [kind for kind, _payload in self.session.emitted]
         self.assertIn("verification.failed", kinds)
 
+    def test_second_pass_replays_recorded_inventory(self):
+        verification_module.ambient_pass(self.session)
+        (self.repo / "tests" / "suite.mncs").write_text(SUITE_SOURCE + "# edit\n")
+        verification_module.ambient_pass(self.session)
+        second = self.session.coherence_calls[1]
+        item = second["obligations"][0]
+        self.assertTrue(item["evidence_present"])
+        self.assertEqual(item["inventory_test_identities"], ["t-case-1"])
+        self.assertFalse(item["inventory_truncated"])
+
     def test_libraries_travel_as_env_roots_not_flags(self):
         obligated = json.loads(json.dumps(OBLIGATION))
         obligated["executor"]["library_paths"] = ["tests"]

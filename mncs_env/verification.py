@@ -373,7 +373,7 @@ def _coherence_request(session, obligations: list[dict],
             for key in evidence:
                 if key in recorded:
                     evidence[key] = recorded[key]
-        inventory_ids = list((recorded or {}).get("inventory_test_identities") or [])
+        inventory_ids = list(row.get("inventory_test_identities") or [])
         items.append({
             "identity": identity,
             "lifecycle": declaration["lifecycle"],
@@ -382,7 +382,7 @@ def _coherence_request(session, obligations: list[dict],
             "current": coherence_current,
             "declared_patterns": list(declaration["executor"].get("declaration_identities") or []),
             "inventory_test_identities": inventory_ids[:MAX_INVENTORY_IDS],
-            "inventory_truncated": bool((recorded or {}).get("inventory_truncated", False)),
+            "inventory_truncated": bool(row.get("inventory_truncated", False)),
             "evidence_present": recorded is not None,
             "evidence": evidence,
             "evidence_conflict": False,
