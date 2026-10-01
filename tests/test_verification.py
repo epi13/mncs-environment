@@ -162,6 +162,9 @@ class FakeSession:
         workdir = Path(cwd)
         self.executions.append(list(argv))
         self.last_test_env = dict(env or {})
+        if self.execution_mode == "mutate-mid-run":
+            with open(self.repo_suite, "a", encoding="utf-8") as handle:
+                handle.write("# mid-run mutation\n")
         if self.execution_mode == "transport-error":
             raise OSError("stub transport failure")
         if self.execution_mode == "fail":
@@ -379,6 +382,20 @@ class AmbientPassTests(VerificationFixture):
         self.assertTrue(item["evidence_present"])
         self.assertEqual(item["inventory_test_identities"], ["t-case-1"])
         self.assertFalse(item["inventory_truncated"])
+
+    def test_mid_run_mutation_rejects_result(self):
+        self.session.repo_suite = str(self.repo / "tests" / "suite.mncs")
+        self.session.execution_mode = "mutate-mid-run"
+        outcome = verification_module.ambient_pass(self.session)
+        self.assertEqual(outcome["summary"]["unknown"], 1)
+        self.assertEqual(outcome["summary"]["executed"], 0)
+        evidence = verification_module.read_evidence(self.session)["evidence"]
+        self.assertEqual(evidence["results"][0]["detail"],
+                         "state-changed-during-execution")
+        self.assertNotIn("fixture.native-suite",
+                         self.session.snapshot.get("verification_state", {}))
+        second = verification_module.ambient_pass(self.session)
+        self.assertFalse(second["reused"])
 
     def test_coherence_cache_stays_in_session_state(self):
         verification_module.ambient_pass(self.session)

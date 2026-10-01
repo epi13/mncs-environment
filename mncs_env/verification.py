@@ -565,6 +565,9 @@ def ambient_pass(session, *, mode: str = "ambient",
                            invalid, mode,
                            {"reason": f"unknown-obligation:{only}"},
                            f"unknown:{only}", None)
+        selected_repos = {item["repository"] for item in obligations}
+        invalid = [entry for entry in invalid
+                   if entry.get("repository") in selected_repos]
     measured: dict[str, dict | None] = {}
     unmeasurable: dict[str, str] = {}
     for obligation in obligations:
