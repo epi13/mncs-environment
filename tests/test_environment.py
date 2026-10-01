@@ -1281,6 +1281,7 @@ class SessionTests(unittest.TestCase):
             embed.write_bytes(b"selected embed library")
 
             session = sessions.Session.__new__(sessions.Session)
+            session.store = mock.Mock(state_dir=root / "state")
             session.snapshot = {
                 "workspace": {"root": str(root)},
                 "selected_checkouts": {
@@ -1298,6 +1299,7 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(selected["MNCS_EMBED_LIB"], str(embed.resolve()))
             self.assertEqual(selected["MNCS_LANGUAGE_ROOT"], str(language_checkout.resolve()))
             self.assertEqual(selected["MNCS_STORE_ROOT"], str(store_checkout.resolve()))
+            self.assertEqual(selected["MNCS_STORE_ARTIFACT_CACHE"], str(root / "state" / "provider-cache" / "mncs-store"))
             self.assertEqual(
                 selected["MNCS_STORE_PYTHON"],
                 str((store_checkout / "python").resolve()),
