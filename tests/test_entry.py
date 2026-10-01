@@ -425,3 +425,37 @@ def test_selected_store_uses_explicit_writable_derived_cache(tmp_path, monkeypat
     with _selected_store_runtime(runtime, tmp_path / "provider-cache" / "mncs-store"):
         assert os.environ["MNCS_STORE_ARTIFACT_CACHE"] == str(tmp_path / "provider-cache" / "mncs-store")
     assert os.environ["MNCS_STORE_ARTIFACT_CACHE"] == "/unwritable/ambient-cache"
+
+
+def test_snapshot_collision_is_an_environment_conflict(monkeypatch):
+    from mncs_env.session_store import SnapshotConflict
+    from mncs_env.store_backend import StoreBackend
+    from types import SimpleNamespace
+
+    class Error(Exception):
+        code = 7
+
+    backend = StoreBackend.__new__(StoreBackend)
+    backend._api = (None, Error, SimpleNamespace(IDENTITY_CONFLICT=7))
+    def collision(**kwargs):
+        raise Error("immutable identity already used")
+    monkeypatch.setattr(backend, "_put_immutable", collision)
+    with pytest.raises(SnapshotConflict) as raised:
+        backend.put_snapshot("session", 4, {"snapshot_sequence": 4})
+    assert raised.value.session_id == "session"
+    assert raised.value.revision == 4
+
+
+def test_cli_snapshot_conflict_reports_possible_completed_effects(monkeypatch, capsys):
+    from mncs_env import cli
+    from mncs_env.session_store import SnapshotConflict
+    from types import SimpleNamespace
+    def collision(args):
+        raise SnapshotConflict("session", 4)
+    args = SimpleNamespace(state_dir=Path("/tmp/state"), command="invoke", func=collision)
+    monkeypatch.setattr(cli, "build_parser", lambda: SimpleNamespace(parse_args=lambda argv: args))
+    assert cli.main([]) == 2
+    result = json.loads(capsys.readouterr().err)
+    assert result["diagnostics"]["code"] == "session-snapshot-conflict"
+    assert result["diagnostics"]["capability_may_have_run"] is True
+    assert result["diagnostics"]["snapshot_saved"] is False

@@ -204,3 +204,15 @@ descriptors. See selected Store `docs/provider.md`; Environment only composes
 those operations. `scripts/adaptive_store_proof.py` provides a real consumer
 proof from entry through physical inventory evolution, selective retrieval and
 durable handoff.
+
+## Concurrent session mutations
+
+Store-backed session snapshots are immutable revisions. Two participating
+commands that loaded the same revision can race; Store refuses differing
+contents instead of overwriting committed state. Environment reports
+`session-snapshot-conflict` with the session and revision. For an invocation,
+`capability_may_have_run` is true: inspect durable events and invocation
+artifacts before retrying. Serialize mutating commands for one session;
+read-only inspection can run independently. Entry's reuse lock does not
+serialize every subsequent participant. Safe concurrent snapshot convergence
+and durable invocation receipts remain Environment responsibilities.

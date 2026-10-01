@@ -225,11 +225,18 @@ class StoreBackend:
 
     def put_snapshot(self, session_id: str, revision: int, snapshot: dict[str, Any]):
         payload = json.dumps(snapshot, ensure_ascii=False, sort_keys=True).encode()
-        return self._put_immutable(
-            schema=SCHEMA_SNAPSHOT,
-            identity=_snapshot_identity(session_id, revision),
-            payload=payload,
-        )
+        _, StoreError, StoreResultCode = self._api
+        try:
+            return self._put_immutable(
+                schema=SCHEMA_SNAPSHOT,
+                identity=_snapshot_identity(session_id, revision),
+                payload=payload,
+            )
+        except StoreError as error:
+            if error.code == StoreResultCode.IDENTITY_CONFLICT:
+                from .session_store import SnapshotConflict
+                raise SnapshotConflict(session_id, revision) from error
+            raise
 
     def read_snapshot(self, session_id: str) -> dict[str, Any] | None:
         prefix = f"{session_id}:snap:".encode()

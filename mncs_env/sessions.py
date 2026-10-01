@@ -769,7 +769,8 @@ class Session:
 
     def _save(self) -> None:
         # Monotonic save sequence: every save is a new immutable Store
-        # object, so concurrent writers never collide on identity.
+        # object. Concurrent participants can still race on the same revision;
+        # persistence rejects differing contents rather than overwriting them.
         self.snapshot["snapshot_sequence"] = int(self.snapshot.get("snapshot_sequence", 0)) + 1
         self.snapshot["updated_at"] = utcnow()
         self.store.save_snapshot(self.session_id, self.snapshot)

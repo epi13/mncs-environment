@@ -18,6 +18,15 @@ class SequenceTaken(Exception):
     """Another writer committed a different record at this sequence/revision."""
 
 
+class SnapshotConflict(Exception):
+    """A concurrent participant published this immutable snapshot revision."""
+
+    def __init__(self, session_id: str, revision: int):
+        self.session_id = session_id
+        self.revision = revision
+        super().__init__(f"session {session_id} snapshot revision {revision} already contains different state")
+
+
 STORE_PROVIDER_SCHEMA = "mncs.environment.session-store-provider/2"
 
 

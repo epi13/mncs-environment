@@ -23,7 +23,7 @@ from . import rights as rights_module
 from . import sessions as sessions_module
 from . import workspace as workspace_module
 from .persist import read_json
-from .session_store import open_store
+from .session_store import open_store, SnapshotConflict
 from .store_backend import StoreUnavailable, StoreIntegrityFailure
 
 DEFAULT_STATE_DIR = Path.home() / ".local" / "share" / "mncs-environment"
@@ -671,6 +671,13 @@ def main(argv: list[str] | None = None) -> int:
         return args.func(args)
     except (workspace_module.WorkspaceResolutionError, entry_module.EntryError) as error:
         return fail(str(error), diagnostics=error.diagnostics)
+    except SnapshotConflict as error:
+        return fail(str(error), diagnostics={
+            "code": "session-snapshot-conflict", "session_id": error.session_id,
+            "revision": error.revision, "command": args.command,
+            "snapshot_saved": False, "capability_may_have_run": args.command == "invoke",
+            "next": "resume and inspect durable events and invocation artifacts before retrying; serialize mutating commands for this session",
+        })
     except (StoreUnavailable, StoreIntegrityFailure) as error:
         return fail(str(error), diagnostics={"code": "store-unavailable" if isinstance(error, StoreUnavailable) else "store-integrity-failure",
                                            "provider": "mncs-store", "state_dir": str(args.state_dir),
