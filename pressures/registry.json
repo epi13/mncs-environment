@@ -106,5 +106,29 @@
     "title": "No family-standard remediation capability contract",
     "why_not_local": "A family capability contract must be standardized where providers coordinate; an Environment-only standard would fork the vocabulary.",
     "workaround": null
+  },
+  {
+    "description": "Provider manifests expose verification/test argv with write effects. Session authority fail-closes on dirty/foreign/off-branch targets unless first claimed, so `mncs-env invoke ...` escalates before executing tests. This makes environment-native verification unavailable exactly while implementation branches are dirty.",
+    "desired_contract": "Narrow verification/test effect class or scoped read-only test invocation contract; declared caches/output roots; explicit short-lived verification claims where writes are unavoidable.",
+    "effect": "Native invoke cannot validate provider changes in active implementation branches; verification falls back to direct host unittest.",
+    "evidence": "ses_4c9525caa5ca674e invoke mncs-automation:test/reconcile-tests returned pending-escalation: 'mncs-automation is not owned scope (dirty/foreign/off-branch); claim it first'; direct provider unittest fallback passed 14 tests.",
+    "identity": "prs_f117146a6f28e4dd",
+    "owner": "mncs-environment (authority/verification effects); owning providers (test contracts)",
+    "schema_version": "mncs.environment.pressure/1",
+    "title": "Manifest verification commands cannot execute under session authority in dirty/foreign checkouts",
+    "why_not_local": "Environment cannot silently downgrade declared effects or seize a dirty checkout for verification; providers own whether tests are hermetic/read-only and what authority they need.",
+    "workaround": "Run the provider's declared argv directly in the checkout after confirming no other agent owns it; use environment invoke after the checkout is clean/claimed."
+  },
+  {
+    "description": "PATH `mncs` resolves to the offline validator/bootstrap CLI, while provider-local discovery expects the language compiler's `call` interface. Direct provider tests fail with validator usage unless MNCS_BIN selects the sibling release/debug compiler.",
+    "desired_contract": "Distinct executable identities or provider-owned toolchain inspection/readiness; local discovery prefers the declared language checkout and validates `call` before use.",
+    "effect": "Direct provider verification requires explicit toolchain env; the ambient path is safe only because provider invocation declares its toolchain.",
+    "evidence": "mncs-doc/tools/project.py find_mncs order is explicit, MNCS_BIN, which mncs, then sibling debug/release; PATH /home/epi13/.local/bin/mncs lacks `call`; export MNCS_BIN=.../mncs-language/target/release/mncs makes 38 doc tests pass. Ambient environment is unaffected because capability toolchain_env supplies MNCS_BIN.",
+    "identity": "prs_a3d2234e5564f0a1",
+    "owner": "mncs-language (binary/toolchain identity); mncs-doc (local discovery fallback)",
+    "schema_version": "mncs.environment.pressure/1",
+    "title": "Offline MNCS executable shadows the language compiler on PATH",
+    "why_not_local": "Environment cannot rename/replace user PATH tools or infer which `mncs` binary an executable is; providers/toolchain own binary identity and readiness.",
+    "workaround": "Export MNCS_BIN to sibling mncs-language target/release/mncs for direct provider tests; prefer bound capability invocation in the environment."
   }
 ]

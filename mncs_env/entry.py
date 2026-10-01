@@ -7,7 +7,7 @@ import fcntl
 from contextlib import contextmanager
 from pathlib import Path
 
-from . import doctor, identity, readiness, sessions, workspace
+from . import doctor, identity, projections, readiness, sessions, workspace
 from .intent import parse as parse_intent
 from .persist import read_json
 from .session_store import open_store, upgrade_session_store_provider
@@ -204,6 +204,10 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                 "readiness": remediation["readiness"], "epoch": remediation["digest"],
                                 "reused": remediation["reused"],
                                 "elapsed_seconds": remediation.get("elapsed_seconds")}
+            coherence = projections.ambient_pass(session)
+            result["projection"] = {"summary": coherence["summary"],
+                                    "reused": coherence["reused"],
+                                    "evidence": coherence.get("evidence")}
             return result
         finally:
             if session is not None:

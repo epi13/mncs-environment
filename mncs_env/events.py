@@ -48,6 +48,9 @@ TYPES = (
     "pressure.recorded",
     "doctor.remediated",
     "doctor.repository-remediated",
+    "projection.reconciled",
+    "projection.deferred",
+    "projection.escalated",
     "adapter.observed",
 )
 

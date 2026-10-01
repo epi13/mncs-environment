@@ -177,12 +177,18 @@ state, not prose. The hardening campaign added:
   revalidation, entries share one Store handle, contended entries wait
   boundedly, and terse `repaired/reconciled/degraded/blockers` summaries
   replace repeated diagnostics (`mncs_env/doctor.py`, `docs/DOCTOR.md`).
+- ambient projection coherence: epoch-gated evaluation of declared
+  projections, native automation proceed/defer/escalate plans,
+  provider-owned rendering, claim-scoped whole-file application, and
+  terse `current/pending/reconciled/blockers` summaries with session
+  evidence (`mncs_env/projections.py`, `docs/PROJECTIONS.md`).
 
 ## Entering an environment
 
 The checked-in development definition selects Environment, Language,
-Compiler, Test, Store, and Forge from the sibling workspace without inspecting
-unselected repositories. Only Environment is in its writable intent;
+Compiler, Test, Store, Forge, Automation, and Doc from the sibling
+workspace without inspecting unselected repositories. Only Environment is
+in its writable intent;
 provider mutations still pass through claims and authority. Availability and
 readiness are observations, not permission to modify a checkout.
 
@@ -191,6 +197,7 @@ readiness are observations, not permission to modify a checkout.
 ./scripts/mncs-env status <session>       # historical, read-only context
 ./scripts/mncs-env health <session>       # live read-only probes
 ./scripts/mncs-env reconcile <session>    # refresh, recover, verify
+./scripts/mncs-env projections <session>  # ambient projection coherence
 ./scripts/mncs-env capabilities <session>
 ./scripts/mncs-env invoke <session> <capability> -- <args...>
 ./scripts/mncs-env checkpoint <session> --progress "..." --remaining ...
