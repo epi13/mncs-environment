@@ -24,6 +24,8 @@ from typing import Any
 SCHEMA_EVENT = b"mncs.environment.session-event/1"
 SCHEMA_SNAPSHOT = b"mncs.environment.session-snapshot/1"
 SCHEMA_CLAIM = b"mncs.environment.workspace-claim/1"
+SCHEMA_PROJECTION = b"mncs.environment.projection-state/1"
+SCHEMA_PROJECTION_EVIDENCE = b"mncs.environment.verification-evidence/1"
 
 MAX_CAS_RETRIES = 16
 _STORE_RUNTIME_LOCK = threading.RLock()
@@ -121,6 +123,18 @@ def _checkpoint_identity(session_id: str, checkpoint_id: str) -> bytes:
 
 def _handoff_identity(session_id: str, handoff_id: str) -> bytes:
     return f"{session_id}:hff:{handoff_id}".encode("utf-8")
+
+
+def _projection_identity(projection_id: str, version: int) -> bytes:
+    return f"{projection_id}:{int(version):010d}".encode("utf-8")
+
+
+def _projection_prefix(projection_id: str) -> bytes:
+    return f"{projection_id}:".encode("utf-8")
+
+
+def _evidence_identity(evidence_id: str) -> bytes:
+    return str(evidence_id).encode("utf-8")
 
 
 class StoreBackend:
@@ -300,6 +314,89 @@ class StoreBackend:
         except json.JSONDecodeError:
             return None
         return record if isinstance(record, dict) else None
+
+    # -- shared projection rows / verification evidence --------------------
+
+    def read_projection_row(
+            self, projection_id: str) -> tuple[int, dict[str, Any]] | None:
+        prefix = _projection_prefix(projection_id)
+        best: tuple[int, dict[str, Any]] | None = None
+        for item in self._store.find_bound_objects(SCHEMA_PROJECTION,
+                                                   prefix):
+            try:
+                version = int(item.domain_identity[len(prefix):])
+                record = json.loads(item.payload.decode("utf-8"))
+            except (ValueError, json.JSONDecodeError):
+                continue
+            if not isinstance(record, dict):
+                continue
+            if best is None or version > best[0]:
+                best = (version, record)
+        return best
+
+    def read_projection_versions(self) -> dict[str, int]:
+        versions: dict[str, int] = {}
+        for item in self._store.find_bound_objects(SCHEMA_PROJECTION):
+            try:
+                identity = item.domain_identity.decode("utf-8")
+                projection_id, _, version = identity.rpartition(":")
+                number = int(version)
+            except (UnicodeDecodeError, ValueError):
+                continue
+            if not projection_id:
+                continue
+            if number > versions.get(projection_id, 0):
+                versions[projection_id] = number
+        return versions
+
+    def write_projection_row(self, projection_id: str, version: int,
+                             row: dict[str, Any]) -> None:
+        from .projection_store import ProjectionConflict  # noqa: E402
+        from mncs_store.errors import StoreResultCode  # noqa: E402
+
+        payload = json.dumps(row, ensure_ascii=False,
+                             sort_keys=True).encode()
+        try:
+            self._put_immutable(
+                schema=SCHEMA_PROJECTION,
+                identity=_projection_identity(projection_id, version),
+                payload=payload)
+        except Exception as error:
+            if getattr(error, "code", None) != StoreResultCode.IDENTITY_CONFLICT:
+                raise
+            latest = self.read_projection_row(projection_id)
+            raise ProjectionConflict(
+                projection_id, latest[1] if latest else None) from error
+
+    def read_evidence(self, evidence_id: str) -> dict[str, Any] | None:
+        return self.get_record(SCHEMA_PROJECTION_EVIDENCE,
+                               _evidence_identity(evidence_id))
+
+    def write_evidence(self, evidence_id: str,
+                       record: dict[str, Any]) -> dict[str, Any]:
+        from .projection_store import EvidenceConflict  # noqa: E402
+        from mncs_store.errors import StoreResultCode  # noqa: E402
+
+        payload = json.dumps(record, ensure_ascii=False,
+                             sort_keys=True).encode()
+        try:
+            self._put_immutable(
+                schema=SCHEMA_PROJECTION_EVIDENCE,
+                identity=_evidence_identity(evidence_id),
+                payload=payload)
+        except Exception as error:
+            if getattr(error, "code", None) != StoreResultCode.IDENTITY_CONFLICT:
+                raise
+            existing = self.read_evidence(evidence_id)
+            if (isinstance(existing, dict) and {
+                    key: existing.get(key) for key in existing
+                    if key != "schema_version"} == {
+                    key: record.get(key) for key in record
+                    if key != "schema_version"}):
+                return existing
+            raise EvidenceConflict(
+                f"conflicting payload under {evidence_id}") from error
+        return record
 
     def checkpoint_identity(self, session_id: str, checkpoint_id: str) -> bytes:
         return _checkpoint_identity(session_id, checkpoint_id)

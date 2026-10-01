@@ -130,5 +130,53 @@
     "title": "Offline MNCS executable shadows the language compiler on PATH",
     "why_not_local": "Environment cannot rename/replace user PATH tools or infer which `mncs` binary an executable is; providers/toolchain own binary identity and readiness.",
     "workaround": "Export MNCS_BIN to sibling mncs-language target/release/mncs for direct provider tests; prefer bound capability invocation in the environment."
+  },
+  {
+    "description": "Projection verification binds evidence to obligation + executor revision + subject (HEAD, worktree, input digest). The parallel ambient-verification track binds mncs.test.verification_coherence evidence to a richer family identity set (definition, subject, executor, toolchain, inventory, repository revision/fingerprint). Two evidence identity schemes now coexist.",
+    "desired_contract": "One family evidence identity both tracks write and read; projection verdicts resolve from coherence records where available.",
+    "effect": "Projection evidence and coherence evidence cannot yet be exchanged; toolchain/inventory drift does not invalidate projection evidence.",
+    "evidence": "mncs_env/projection_verification.py evidence_id_for vs mncs-test native/mncs/test/verification_coherence.mncs CoherenceEvidence (campaign/ambient-verification-20261001, read-only survey)",
+    "identity": "prs_2b506a75686eb318",
+    "owner": "mncs-test (coherence policy), mncs-environment (projection binding)",
+    "schema_version": "mncs.environment.pressure/1",
+    "title": "Projection evidence vs coherence evidence identity convergence",
+    "why_not_local": "Evidence identity is a family contract; unifying unilaterally would strand the coherence track's native policy.",
+    "workaround": "Projection-local content-addressed evidence with executor-revision binding; immutable FAIL matches coherence semantics ('recorded FAIL is current knowledge')."
+  },
+  {
+    "description": "Claim releases, verification resolutions, and Store generation changes emit no subscribable completion events, so continuous reconciliation runs on bounded-cadence epoch checks (projections --watch) instead of waking on the state transition itself.",
+    "desired_contract": "Typed wake conditions (canonical > observed, block cleared, verdict resolved) evaluated natively with targeted reconcile invocation.",
+    "effect": "Resident reconciliation notices change on the next tick (default 30s cadence) rather than immediately; quiet ticks still pay epoch observation.",
+    "evidence": "mncs_env/cli.py cmd_projections_watch; mncs.automation.projection.v1 revisit_tick policy exists but no executor calls it",
+    "identity": "prs_d7b5361fcdf4cfff",
+    "owner": "mncs-forge (orchestration), mncs-automation (revisit policy)",
+    "schema_version": "mncs.environment.pressure/1",
+    "title": "No event-driven projection wakeup",
+    "why_not_local": "Wakeup ownership spans automation policy, Forge execution, and provider event feeds; an environment-local poller would harden into a competing scheduler.",
+    "workaround": "Epoch-gated watch loop: quiet ticks reuse the epoch with no renders or native calls; lock held per tick only."
+  },
+  {
+    "description": "mncs-automation's reconcile suite (~19 tests, mostly native mncs call invocations) takes over 4 minutes wall-clock (~22s per test), so it cannot serve as an ambient verification executor: every new subject would stall the pass for minutes.",
+    "desired_contract": "Native test execution fast enough for per-subject ambient verification, or a natively cached verdict the executor can quote.",
+    "effect": "mncs-automation:rfc-index gates on mncs-doc's 2s self-check executor (cross-repo obligation) instead of its own suite.",
+    "evidence": "python3 -m unittest tests.test_reconcile wall time >240s for 11 tests; mncs-doc tools/verify_projection.py ~2s PASS",
+    "identity": "prs_05cd84ec3eed3bdd",
+    "owner": "mncs-compiler, mncs-language (native call latency)",
+    "schema_version": "mncs.environment.pressure/1",
+    "title": "Native test latency blocks full-suite verification executors",
+    "why_not_local": "Per-call native latency is toolchain-owned; Environment cannot make the compiler faster from the outside.",
+    "workaround": "Cross-repo obligation on the rendering provider's fast self-check; automation's own suite stays a merge gate, not an ambient executor."
+  },
+  {
+    "description": "Atlas owns canonical journal events, registry, and dashboard projections but declares no projections/verifications entries, so ambient coherence cannot yet observe or reconcile Atlas representations; branch is foreign-occupied.",
+    "desired_contract": "Atlas declares projection consumers over shared store.projection.v1 rows and canonical journal events; dashboard/registry become reconciled projections.",
+    "effect": "Atlas representations stay manually maintained; session evidence cannot yet flow into journal/media projections automatically.",
+    "evidence": "Read-only survey 2026-10-01: mncs-atlas on campaign/family-context-convergence-20260918, .mncs/project.json has no projections section",
+    "identity": "prs_66124e9ba70ff243",
+    "owner": "mncs-atlas",
+    "schema_version": "mncs.environment.pressure/1",
+    "title": "Atlas has no projection-consumer surface yet",
+    "why_not_local": "Atlas presentation semantics belong to Atlas; Environment only composes provider-declared projections.",
+    "workaround": "Session evidence (mncs.session-evidence/1) records source identities, verdicts, and evidence references for future Atlas/journal/media consumption."
   }
 ]

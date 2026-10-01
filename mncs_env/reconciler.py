@@ -57,7 +57,7 @@ def reconciler_definition(workspace_root: str | Path) -> dict[str, Any]:
             "repositories": [],
             "protected_repositories": [],
             "forbidden_actions": ["write", "mutate", "execute", "publish",
-                                  "merge", "delete", "delegate"],
+                                  "merge", "delete", "delegate", "verify"],
             "authority_requirements": ["read workspace state",
                                        "read provider state",
                                        "update own cursors"],

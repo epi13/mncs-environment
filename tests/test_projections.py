@@ -89,6 +89,8 @@ def render(argv):
     if mode == "fail":
         print("fixture renderer forced failure", file=sys.stderr)
         return 2
+    if mode == "mutate-inputs":
+        (inputs / "zzz-race.md").write_text("mid-render mutation\\n")
     digest = hashlib.sha256()
     for member in sorted(inputs.rglob("*")):
         if member.is_file() and not member.is_symlink():
@@ -118,6 +120,28 @@ def main(argv):
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
+'''
+
+
+VERIFY_STUB = '''\
+import json
+import os
+import sys
+
+
+def main():
+    mode = os.environ.get("MNCS_FIXTURE_VERIFY_MODE", "pass")
+    if mode == "crash":
+        print("fixture verifier forced crash", file=sys.stderr)
+        return 3
+    verdict = "fail" if mode == "fail" else "pass"
+    print(json.dumps({"schema_version": "mncs.check-result/1",
+                      "verdict": verdict}))
+    return 0 if verdict == "pass" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
 '''
 
 
@@ -213,6 +237,9 @@ class ProjectionFixture(unittest.TestCase):
         inputs = root / "docs" / "rfcs"
         inputs.mkdir(parents=True)
         (inputs / "0001.md").write_text(f"# RFC 0001: {repo} foundation\n")
+        (root / "tools").mkdir(parents=True)
+        (root / "tools" / "verify_projection.py").write_text(VERIFY_STUB)
+        identity = f"{repo}.projection-check"
         declaration: dict = {
             "id": f"{repo}:index", "template": "fixture-render",
             "inputs": ["docs/rfcs"], "output": output,
@@ -220,7 +247,9 @@ class ProjectionFixture(unittest.TestCase):
             "provider_capability": "mncs-doc:documentation-projection",
             "render_argv": ["render", "--inputs", "{checkout}/docs/rfcs",
                             "--output", "{artifact}/rendered.md"],
-            "policy": "ambient-safe"}
+            "policy": "ambient-safe",
+            "verification": {
+                "obligations": [f"{repo}:verification-executor/{identity}"]}}
         if output_kind == "region":
             declaration["admit"] = {"sources": 1, "template_present": True,
                                     "create_allowed": True}
@@ -233,9 +262,24 @@ class ProjectionFixture(unittest.TestCase):
             (root / output).parent.mkdir(parents=True, exist_ok=True)
             (root / output).write_bytes(
                 fixture_bytes(root / "docs" / "rfcs"))
+        inventory = {"repository": repo,
+                     "obligations": [{
+                         "identity": identity,
+                         "executor": {
+                             "provider": repo,
+                             "kind": "external_integration",
+                             "argv": ["python3", "tools/verify_projection.py"],
+                             "working_directory": ".",
+                             "timeout_seconds": 60,
+                             "effects": ["verify"],
+                             "ephemeral_roots": []}}]}
+        (root / ".mncs" / "verification.json").write_text(
+            json.dumps(inventory))
         manifest = {"schema_version": "mncs-family.repository-manifest/v0alpha1",
                     "repository": repo,
                     "contracts": {"provides": []},
+                    "verification": {
+                        "obligation_inventory": ".mncs/verification.json"},
                     "projections": [declaration]}
         (root / ".mncs" / "project.json").write_text(json.dumps(manifest))
         git_init(root)
@@ -333,16 +377,20 @@ class AmbientWholeFileTests(ProjectionFixture):
                          region_before)
 
     def test_unrelated_human_edit_does_not_stale_projection(self):
-        self.enter("human")
+        code, _ = self.enter("human")
+        self.assertEqual(code, 0)
+        before = (self.target_doc / "docs/out.generated.md").read_bytes()
         (self.target_doc / "NOTES.md").write_text("human scratch\n")
         code, second = self.enter("human")
         self.assertEqual(code, 0, second)
         summary = self.projection_summary(second)
-        # Human dirt elsewhere defers the target checkout but the
-        # unrelated region projection stays current.
-        pending = summary["pending_ids"]
-        self.assertIn("target-doc:index", pending)
-        self.assertNotIn("target-region:index", pending)
+        # Dirt that touches neither the inputs nor the adopted output
+        # leaves a converged projection current; nothing is rewritten.
+        self.assertEqual(summary["pending_ids"], [], summary)
+        self.assertEqual(summary["reconciled"], 0, summary)
+        self.assertEqual(
+            (self.target_doc / "docs/out.generated.md").read_bytes(),
+            before)
 
     def test_repeated_entry_is_quiet(self):
         _, first = self.enter("quiet")
@@ -536,6 +584,34 @@ class RegionTests(ProjectionFixture):
         self.assertGreater(summary["blockers"], 0)
         self.assertEqual(readme.read_bytes(), before)
 
+    def test_explicit_only_region_observes_ambiently_applies_explicitly(self):
+        manifest_path = (self.target_region / ".mncs" / "project.json")
+        manifest = json.loads(manifest_path.read_text())
+        manifest["projections"][0]["policy"] = "explicit-only"
+        manifest_path.write_text(json.dumps(manifest))
+        (self.target_region / "docs" / "rfcs" / "0002.md").write_text(
+            "# RFC 0002: follow-up\n")
+        self.commit_all(self.target_region, "second RFC, explicit policy")
+        before = (self.target_region / "README.md").read_bytes()
+        code, first = self.enter("explicit-region")
+        self.assertEqual(code, 0, first)
+        summary = self.projection_summary(first)
+        # Ambiently observed and recorded stale, but never mutated.
+        self.assertIn("target-region:index", summary["pending_ids"], summary)
+        self.assertEqual((self.target_region / "README.md").read_bytes(),
+                         before)
+        session_id = first["session_id"]
+        code, applied = self.run_cli("projections", session_id,
+                                     "--apply", "target-region:index")
+        self.assertEqual(code, 0, applied)
+        summary = applied["summary"]
+        self.assertNotIn("target-region:index",
+                         summary.get("pending_ids", []), summary)
+        rendered = (self.target_region / "README.md").read_text()
+        self.assertIn("Human intro.", rendered)
+        self.assertIn("Human outro.", rendered)
+        self.assertIn("RENDER:", rendered)
+
 
 @NEED_MNCS
 class HygieneTests(ProjectionFixture):
@@ -596,6 +672,28 @@ class DiscoveryTests(ProjectionFixture):
         self.assertIn("path-escapes-checkout", reasons)
         self.assertFalse(any(record["repository"] == "bad-target"
                              for record in declarations))
+
+    def test_unselected_directories_are_never_inspected(self):
+        decoy = self.entry / "target-decoy"
+        (decoy / ".mncs").mkdir(parents=True)
+        (decoy / ".mncs" / "project.json").write_text(json.dumps({
+            "repository": "target-decoy",
+            "projections": [{
+                "id": "target-decoy:index", "template": "fixture-render",
+                "inputs": ["docs/rfcs"], "output": "docs/out.generated.md",
+                "output_kind": "whole-file",
+                "provider_capability": "mncs-doc:documentation-projection",
+                "render_argv": ["render"], "policy": "ambient-safe"}]}))
+        code, first = self.enter("decoy")
+        self.assertEqual(code, 0, first)
+        session_id = first["session_id"]
+        code, payload = self.run_cli("projections", session_id, "--evidence")
+        self.assertEqual(code, 0, payload)
+        evidence = payload.get("evidence", payload)
+        seen = [record.get("projection")
+                for record in evidence.get("results", [])]
+        self.assertNotIn("target-decoy:index", seen, seen)
+        self.assertIn("target-doc:index", seen, seen)
 
     def test_input_digest_is_deterministic(self):
         first = projections_module.input_digest(
