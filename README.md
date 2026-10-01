@@ -182,6 +182,11 @@ state, not prose. The hardening campaign added:
   provider-owned rendering, claim-scoped whole-file application, and
   terse `current/pending/reconciled/blockers` summaries with session
   evidence (`mncs_env/projections.py`, `docs/PROJECTIONS.md`).
+- ambient verification coherence: epoch-gated evaluation of declared
+  verification obligations, native reuse/selection policy, bounded
+  suite execution through the test provider, identity-bound evidence,
+  and terse `current/executed/failed/blockers` summaries with session
+  evidence (`mncs_env/verification.py`, `docs/VERIFICATION.md`).
 
 ## Entering an environment
 
