@@ -301,7 +301,8 @@ def backoff_state(session) -> dict[str, Any]:
 def store_backoff_state(session, state: dict[str, Any]) -> None:
     doctor = session.snapshot.get("doctor")
     if not isinstance(doctor, dict):
-        doctor = {"schema_version": "mncs.environment.doctor/1", "history": []}
+        from .doctor import DOCTOR_SCHEMA
+        doctor = {"schema_version": DOCTOR_SCHEMA, "history": []}
         session.snapshot["doctor"] = doctor
     if len(state) > MAX_BACKOFF_ENTRIES:
         ordered = sorted(state.items(), key=lambda item: str(item[1].get("last_attempt_at", "")))

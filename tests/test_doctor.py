@@ -178,6 +178,44 @@ class EpochTests(DoctorFixture):
         self.assertGreater(second["doctor"]["summary"]["blockers"], 0)
         self.assertIn("fixture.status/1", second["readiness"]["required_unavailable"])
 
+    def test_doctor_block_lists_only_blockers_with_compact_unavailable(self):
+        self.ready()
+        _, first = self.enter()
+        healthy = first["doctor"]
+        self.assertEqual(healthy["remaining"], [])
+        self.assertEqual(healthy["unavailable"]["count"], 0)
+        self.provider.unlink()
+        code, second = self.enter()
+        self.assertEqual(code, 5, second)
+        # Actionable delta only: the required capability blocks; the
+        # non-required start capability is compact background.
+        self.assertIn("fixture.status/1", second["doctor"]["remaining"])
+        self.assertNotIn("fixture.start/1", second["doctor"]["remaining"])
+        self.assertEqual(second["doctor"]["summary"]["degraded"], 2)
+        self.assertEqual(second["doctor"]["unavailable"]["count"], 2)
+        digest = second["doctor"]["unavailable"]["digest"]
+        self.assertEqual(len(digest), 16)
+        int(digest, 16)
+        # Full per-capability detail stays retrievable in evidence.
+        code, evidence = self.run_cli("doctor", second["session_id"], "--evidence")
+        self.assertEqual(code, 0, evidence)
+        classified = [entry["capability"] for entry in
+                      evidence["evidence"]["classification"]["transient"] +
+                      evidence["evidence"]["classification"]["gaps"]]
+        self.assertIn("fixture.status/1", classified)
+        self.assertIn("fixture.start/1", classified)
+
+    def test_quiet_reentry_doctor_block_is_compact(self):
+        self.ready()
+        _, first = self.enter()
+        code, second = self.enter()
+        self.assertEqual(code, 0, second)
+        self.assertTrue(second["doctor"]["reused"])
+        block = second["doctor"]
+        self.assertEqual(block["summary"]["blockers"], 0)
+        self.assertEqual(block["remaining"], [])
+        self.assertLess(len(json.dumps(block)), 600, json.dumps(block))
+
     def test_health_serves_epoch_and_live_forces_probes(self):
         self.ready()
         _, first = self.enter()
