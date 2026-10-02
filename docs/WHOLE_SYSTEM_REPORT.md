@@ -10,7 +10,8 @@ The requested workspace-root command was absent; running the repository-owned
 entry reproduced `MNE173: mncs.std.sha256.v1 unavailable`. Entry now succeeds with
 Store in the normal `/home/epi13/.local/share/mncs-environment` namespace. The
 campaign's isolated-worktree session is `ses_79567a2a0de0b48e`; initial normal entry
-was `ses_97922f5e5f156c4f`. Seven exact worktree claims protect attributable edits.
+was `ses_97922f5e5f156c4f`. Seven exact worktree claims protected attributable
+edits; campaign claims are released after delivery, with durable checkpoints.
 A temporary file-backed bootstrap was replaced by Store-backed operation.
 
 Store admission, compilation and artifact caching disagreed about library roots:
@@ -43,7 +44,7 @@ readiness and pressure material were inspected. The evidence file records pins.
 | Scheduling / Automation | Claim changes and verification/generation/deadline changes invalidate family observation. Existing Automation revisit semantics remain authoritative for generic triggers; a unified event-to-affected-pass resident coordinator is still open. |
 | Status vocabulary | Domain distinctions documented. No unsupported equivalence between ConsumerClass, Test verdicts, Debug completeness, receipts or pressure lifecycle is introduced. |
 | Evidence identity | Exact equivalence still lacks producer-bound compiler bytes/build provenance, effective library content, freshly observed inventory and relevant environment identity. No unused universal evidence layer was added. |
-| Verification reuse | Session-local reuse retained. Selected worktree inventories are observed; invalid-only observations reuse exact diagnostics without native requests. Cross-session reuse remains deferred for the identity gap. |
+| Verification reuse | Session-local reuse retained. Selected worktree inventories are observed; invalid-only observations reuse exact diagnostics without native requests. Native post-repair adoption waits for renewed evidence for every owning obligation, refusing old PASS/FAIL. Cross-session reuse remains deferred for the identity gap. |
 | Debug / CI folding | Neither cross-session witness reuse nor CI folding is admitted. Debug P-013's effective library provenance is a concrete blocker. |
 | Actions single-flight | Local claim-once behavior retained. Shared dispatch needs a proven multi-machine Store transport and remote idempotency/recovery after ambiguous network outcomes. |
 | Doctor / transformations | Doctor remediation tests pass. Existing preimage-bound operations remain; family still has a direct Commons gate/edit orchestration seam. Typed ownership movement and candidate file-artifact analysis (LS-P-007) remain open. |
@@ -65,8 +66,10 @@ calls, not an IO syscall benchmark. Its available obligations still fail native
 coherence/provider operation. Physical scope removed seven unrelated invalid
 inventory reports, but did not establish the remaining obligations.
 
-Compact entry is **9,628 bytes**, compared with the captured initial **12,281**
-(21.6% smaller); ambient blocks total 914 bytes. This is a degraded real entry,
+Instrumented repeated entry is **9,628 bytes**; the delivered requested-consumer
+entry is **9,464 bytes**, compared with the captured initial **12,281** (22.9%
+smaller). Ambient blocks in the instrumented sample total 914 bytes. This is a
+degraded real entry,
 not an invented healthy baseline. Measured FD use grows 4 to 5 on initial open and
 stays at 5 across subsequent entries; the soft limit is 524,288. The earlier
 executor FD incident is not reproduced or attributed to global Linux exhaustion.
@@ -76,7 +79,7 @@ intelligence benchmark or unmeasured duplicate-work savings are claimed.
 
 | Validation | Result |
 | --- | --- |
-| Environment whole suite | 343 passed, 31 skipped; final additional focused regressions 58 passed |
+| Environment whole suite | 349 passed, 28 skipped after owned matched artifacts were bound; final proof-renewal regressions 58 passed |
 | Real concurrent/backend/worktree/recovery suite | 4 passed, including SIGKILL recovery |
 | Commons family native law, graph and import-edge audit | 21 passed, 1 skipped (unavailable full family checkout fixture) |
 | Store session/cache/embedded API | 37 passed |
@@ -91,7 +94,15 @@ intelligence benchmark or unmeasured duplicate-work savings are claimed.
 | Vertical Environment proof | PASS: real Atlas invocation, denial, checkpoint, new-process resume, handoff, completion |
 
 Automation: **47 passed, 7 skipped**, with explicit matched compiler/embed bindings.
-Final delivery results are recorded in the evidence ledger.
+Final proof-renewal checks: **58 passed**, plus **19 Commons checks passed,
+1 skipped**, exercising 44 native law assertions. The first broad rerun exposed
+two missing isolated release-artifact bindings. A symlink escaping the selected
+checkout was correctly refused; copying the owned matched build inside it
+established all three toolchain checks. No foreign artifact was replaced and no
+provider confinement rule was weakened. Final delivery results are in the ledger.
+Explicit hermetic Store compilation emitted its backend without implicit legacy
+library discovery. Its retained compiler result is
+`completed_with_unresolved_obligations`, not full backend-conformance proof.
 Skipped tests are not described as proof. Baselines and logs are preserved under
 `/tmp/mncs-coherence-*`; durable compact proof material is checked in alongside
 this report.

@@ -484,7 +484,7 @@
     "producer": "mncs-store",
     "change": {
       "identity": "fc:c93141ac0e1aa6f06c76b41ee266a3bb13488f6acad05df29ec9b540c64d7fd3",
-      "state": "established",
+      "state": "published",
       "generation": 1
     },
     "consumers": [
@@ -492,7 +492,90 @@
       "mncs-forge"
     ]
   },
-  "delivery": [],
+  "delivery": [
+    {
+      "repository": "mncs-store",
+      "implementation_commits": [
+        "a20b8736b3573f947f698dde3283300ff9e8c170",
+        "f31c7ffd52a98483802745ee6a9f5abecc98f9c8"
+      ],
+      "observed_pushed_main": "f31c7ffd52a98483802745ee6a9f5abecc98f9c8",
+      "main_contains_implementation": true,
+      "delivery_checkout": "/home/epi13/Documents/Projects/mncs-store",
+      "foreign_local_main_preserved": false,
+      "state": "merged and pushed; documentation ledger is published by its own later commit"
+    },
+    {
+      "repository": "MNCS-Commons",
+      "implementation_commits": [
+        "c42fee943f3f88b719f07dd739b02a1722ca5671",
+        "6860c6c7cf45532215db80f7324cf39dd53d0e80",
+        "99f5299db99bd8e48f854a7dc20e84cb63efc67c"
+      ],
+      "observed_pushed_main": "c3b932ef459b4c81a8790bdc6afe352ddcb5f07d",
+      "main_contains_implementation": true,
+      "delivery_checkout": "/home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/delivery-MNCS-Commons",
+      "foreign_local_main_preserved": true,
+      "state": "merged and pushed; documentation ledger is published by its own later commit"
+    },
+    {
+      "repository": "mncs-actions",
+      "implementation_commits": [
+        "1e38341fcbd3c6a08718bf6fbf6da9d144ff0bb2"
+      ],
+      "observed_pushed_main": "897ddfa0472b01e11bb23acb22f84c98cef07f5d",
+      "main_contains_implementation": true,
+      "delivery_checkout": "/tmp/mncs-actions-main-20260924",
+      "foreign_local_main_preserved": false,
+      "state": "merged and pushed; documentation ledger is published by its own later commit"
+    },
+    {
+      "repository": "mncs-test",
+      "implementation_commits": [
+        "119d3409b518f8498bc3d805a926915c1584df11"
+      ],
+      "observed_pushed_main": "119d3409b518f8498bc3d805a926915c1584df11",
+      "main_contains_implementation": true,
+      "delivery_checkout": "/home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/delivery-mncs-test",
+      "foreign_local_main_preserved": true,
+      "state": "merged and pushed; documentation ledger is published by its own later commit"
+    },
+    {
+      "repository": "mncs-debug",
+      "implementation_commits": [
+        "b466fc643e1f41591d164afd0619fd247b566c2a"
+      ],
+      "observed_pushed_main": "b466fc643e1f41591d164afd0619fd247b566c2a",
+      "main_contains_implementation": true,
+      "delivery_checkout": "/home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/delivery-mncs-debug",
+      "foreign_local_main_preserved": true,
+      "state": "merged and pushed; documentation ledger is published by its own later commit"
+    },
+    {
+      "repository": "mncs-forge",
+      "implementation_commits": [
+        "c80e3c0f2681ae8a790690e6747b7e956f3548b8"
+      ],
+      "observed_pushed_main": "c80e3c0f2681ae8a790690e6747b7e956f3548b8",
+      "main_contains_implementation": true,
+      "delivery_checkout": "/tmp/mncs-forge-main-closure-20260923",
+      "foreign_local_main_preserved": false,
+      "state": "merged and pushed; documentation ledger is published by its own later commit"
+    },
+    {
+      "repository": "mncs-environment",
+      "implementation_commits": [
+        "70bf05f8995d3e35a65af08a0e71d9b94c3666c7",
+        "492933825dd5d7eb100d63072352c70afcd8ad2e",
+        "f73fcd8bd4575eef36f8d76d88347bd496855936"
+      ],
+      "observed_pushed_main": "f73fcd8bd4575eef36f8d76d88347bd496855936",
+      "main_contains_implementation": true,
+      "delivery_checkout": "/home/epi13/Documents/Projects/mncs-environment",
+      "foreign_local_main_preserved": false,
+      "state": "merged and pushed; documentation ledger is published by its own later commit"
+    }
+  ],
   "pressure_review": [
     {
       "identity": "prs_409a0250c0e1210c",
@@ -647,9 +730,18 @@
   ],
   "tests": {
     "environment": {
-      "passed": 343,
-      "skipped": 31,
-      "additional_focused_passed": 58
+      "passed": 349,
+      "skipped": 28,
+      "seconds": 279.52,
+      "additional_focused_passed": 58,
+      "prior_passed": 343,
+      "prior_skipped": 31,
+      "first_final_rerun": {
+        "passed": 347,
+        "failed": 2,
+        "skipped": 28,
+        "failure": "missing isolated release artifact binding; both checks subsequently pass"
+      }
     },
     "concurrent_recovery_worktrees": {
       "passed": 4
@@ -693,6 +785,32 @@
     },
     "vertical": {
       "verdict": "PASS"
+    },
+    "post_repair_proof": {
+      "passed": 58,
+      "seconds": 61.0,
+      "scope": "Family, Store-backed concurrent/worktree/recovery, verification; every owning proof must renew"
+    },
+    "commons_post_repair_native": {
+      "passed": 19,
+      "skipped": 1,
+      "native_assertions": 44
+    },
+    "isolated_toolchain": {
+      "passed": 3,
+      "setup_failures_before_owned_artifact_binding": 2,
+      "confinement": "Outside-checkout symlink was correctly refused; matched owned artifacts copied inside checkout; foreign artifacts untouched"
+    },
+    "pressure_validation": {
+      "status": "valid",
+      "records": 196,
+      "views": "current"
+    },
+    "hermetic_store_compile": {
+      "status": "completed_with_unresolved_obligations",
+      "backend_emitted": true,
+      "implicit_legacy_library": false,
+      "full_conformance_proved": false
     }
   },
   "canonical_pressure_dispositions": [
@@ -716,5 +834,502 @@
       "status": "confirmed",
       "capability": "producer-bound-equivalence"
     }
-  ]
+  ],
+  "delivered_requested_consumer_entry": {
+    "consumer": "sol-whole-system-coherence",
+    "session": "ses_97922f5e5f156c4f",
+    "backend": "store",
+    "compact_bytes": 9464,
+    "initial_bytes": 12281,
+    "reduction_percent": 22.9,
+    "health": "degraded",
+    "verification_blockers": 2,
+    "invalid_inventories": 1
+  },
+  "checkpoints": [
+    {
+      "session": "ses_79567a2a0de0b48e",
+      "backend": "store",
+      "released": [],
+      "checkpoint": {
+        "schema_version": "mncs.environment.checkpoint/1",
+        "identity": "chk_d1a1432189b01efe",
+        "session_id": "ses_79567a2a0de0b48e",
+        "sequence": 1,
+        "progress": "Validated coherence slices committed and pushed; whole campaign NOT CLOSED.",
+        "remaining": [
+          "foreign stdlib extraction/provider artifact publication",
+          "producer-bound evidence provenance",
+          "event-to-affected-pass scheduling and quiet whole entry",
+          "Doctor family plan/typed ownership transforms",
+          "retained Actions baseline failures"
+        ],
+        "intent_id": "int_d3f68c3df52248ef",
+        "environment_id": "renv_1e359bc65bfe1b51",
+        "event_cursor": 31,
+        "artifacts": [],
+        "unresolved": [],
+        "revalidate_on_resume": [
+          "bindings",
+          "workspace-heads",
+          "claims",
+          "authority"
+        ],
+        "created_at": "2026-10-02T04:20:15+00:00",
+        "created_by": "sol-whole-system-coherence"
+      }
+    },
+    {
+      "session": "ses_61d22ae9d53081f7",
+      "backend": "store",
+      "released": [
+        "mncs-environment",
+        "mncs-store",
+        "MNCS-Commons"
+      ],
+      "checkpoint": {
+        "schema_version": "mncs.environment.checkpoint/1",
+        "identity": "chk_b3caed045e7d05e8",
+        "session_id": "ses_61d22ae9d53081f7",
+        "sequence": 1,
+        "progress": "Validated coherence slices committed and pushed; whole campaign NOT CLOSED.",
+        "remaining": [
+          "foreign stdlib extraction/provider artifact publication",
+          "producer-bound evidence provenance",
+          "event-to-affected-pass scheduling and quiet whole entry",
+          "Doctor family plan/typed ownership transforms",
+          "retained Actions baseline failures"
+        ],
+        "intent_id": "int_b47d3ab5e4221bd6",
+        "environment_id": "renv_91c56e0327289d9d",
+        "event_cursor": 11,
+        "artifacts": [],
+        "unresolved": [],
+        "revalidate_on_resume": [
+          "bindings",
+          "workspace-heads",
+          "claims",
+          "authority"
+        ],
+        "created_at": "2026-10-02T04:20:18+00:00",
+        "created_by": "sol-whole-system-coherence"
+      }
+    },
+    {
+      "session": "ses_ad6b2475901e3eeb",
+      "backend": "store",
+      "released": [
+        "mncs-actions",
+        "mncs-test",
+        "mncs-debug",
+        "mncs-forge"
+      ],
+      "checkpoint": {
+        "schema_version": "mncs.environment.checkpoint/1",
+        "identity": "chk_cd5017079cfced0c",
+        "session_id": "ses_ad6b2475901e3eeb",
+        "sequence": 1,
+        "progress": "Validated coherence slices committed and pushed; whole campaign NOT CLOSED.",
+        "remaining": [
+          "foreign stdlib extraction/provider artifact publication",
+          "producer-bound evidence provenance",
+          "event-to-affected-pass scheduling and quiet whole entry",
+          "Doctor family plan/typed ownership transforms",
+          "retained Actions baseline failures"
+        ],
+        "intent_id": "int_d3f68c3df52248ef",
+        "environment_id": "renv_c66ba5f56d9ae2a3",
+        "event_cursor": 16,
+        "artifacts": [
+          {
+            "artifact_directory": "/tmp/mncs-coherence-store-state/sessions/ses_ad6b2475901e3eeb/artifacts/1757895ba066dc34",
+            "at": "2026-10-02T03:06:08+00:00",
+            "capability": "mncs.actions-remote-evidence/1",
+            "kind": "invocation-result",
+            "status": "ok"
+          }
+        ],
+        "unresolved": [],
+        "revalidate_on_resume": [
+          "bindings",
+          "workspace-heads",
+          "claims",
+          "authority"
+        ],
+        "created_at": "2026-10-02T04:20:20+00:00",
+        "created_by": "sol-whole-system-coherence"
+      }
+    },
+    {
+      "session": "ses_0fc982eb8d0025b2",
+      "backend": "file",
+      "released": [
+        "mncs-environment",
+        "mncs-store",
+        "MNCS-Commons"
+      ],
+      "checkpoint": {
+        "schema_version": "mncs.environment.checkpoint/1",
+        "identity": "chk_d5bb30e77f6363c0",
+        "session_id": "ses_0fc982eb8d0025b2",
+        "sequence": 1,
+        "progress": "Validated coherence slices committed and pushed; whole campaign NOT CLOSED.",
+        "remaining": [
+          "foreign stdlib extraction/provider artifact publication",
+          "producer-bound evidence provenance",
+          "event-to-affected-pass scheduling and quiet whole entry",
+          "Doctor family plan/typed ownership transforms",
+          "retained Actions baseline failures"
+        ],
+        "intent_id": "int_b47d3ab5e4221bd6",
+        "environment_id": "renv_91c56e0327289d9d",
+        "event_cursor": 11,
+        "artifacts": [],
+        "unresolved": [],
+        "revalidate_on_resume": [
+          "bindings",
+          "workspace-heads",
+          "claims",
+          "authority"
+        ],
+        "created_at": "2026-10-02T04:20:20+00:00",
+        "created_by": "sol-whole-system-coherence"
+      }
+    }
+  ],
+  "foreign_state_final": [
+    {
+      "scope": "Language extraction",
+      "path": "/home/epi13/Documents/Projects/mncs-language",
+      "head": "425de2016a1273b66fa44609ea75aa25e04f0a0f",
+      "branch": "stdlib/extraction-20261002",
+      "dirty_lines": 309,
+      "preserved": true
+    },
+    {
+      "scope": "Stdlib extraction",
+      "path": "/home/epi13/Documents/Projects/mncs-stdlib",
+      "head": "4f138275e4b5bb9d813d8b3dcf6758eea7b55988",
+      "branch": "stdlib/bootstrap-20261002",
+      "dirty_lines": 1,
+      "preserved": true
+    },
+    {
+      "scope": "Test foreign main",
+      "path": "/home/epi13/Documents/Projects/mncs-test",
+      "head": "038f0e384d7f3d5c02cf420cde38772807c15e12",
+      "branch": "main",
+      "dirty_lines": 7,
+      "preserved": true
+    },
+    {
+      "scope": "Commons foreign main",
+      "path": "/home/epi13/mncs-commons-continuous-main-20260921",
+      "head": "5cd3d510313eeb40ea05eec21e2a3a516a4181b7",
+      "branch": "main",
+      "dirty_lines": 29,
+      "preserved": true
+    },
+    {
+      "scope": "Debug foreign main",
+      "path": "/tmp/mncs-debug-main-20260924",
+      "head": "f46546a327c29f075adf1ec1fe8bf7335fb04ef6",
+      "branch": "main",
+      "dirty_lines": 8,
+      "preserved": true
+    },
+    {
+      "scope": "LS extraction",
+      "path": "/home/epi13/Documents/Projects/mncs-language-service",
+      "head": "1f6600a5afbdfa0fa22e47ae614f663b0c37508a",
+      "branch": "campaign/continuous-hardening-cursor-safety-20260922",
+      "dirty_lines": 4,
+      "preserved": true
+    },
+    {
+      "scope": "Compiler extraction",
+      "path": "/home/epi13/Documents/Projects/mncs-compiler",
+      "head": "68358e6ae79742658717ee2ec0d5cdf927435c61",
+      "branch": "main",
+      "dirty_lines": 4,
+      "preserved": true
+    }
+  ],
+  "declared_dependency_audit_final": {
+    "missing_consumes": [],
+    "observed": [
+      {
+        "checkout": "mncs-actions",
+        "consumer": "mncs-actions",
+        "contract": "mncs-stdlib.stdlib-source",
+        "declared": true,
+        "evidence": [
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/actions/external_evidence.mncs"
+          },
+          {
+            "module": "mncs.core.sequences.v1",
+            "source": "native/mncs/actions/family.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/actions/family.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/actions/provider_canary.mncs"
+          },
+          {
+            "module": "mncs.core.sequences.v1",
+            "source": "native/mncs/actions/traversal.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/actions/traversal.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/artifact-envelope-boundary.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/changeset-boundary.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/family-acceptance.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/family-boundary.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/family-graph-coherence.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/promotion-boundary.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/rights-projection.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/semantic-conformance.mncs"
+          }
+        ]
+      },
+      {
+        "checkout": "mncs-debug",
+        "consumer": "mncs-debug",
+        "contract": "mncs-stdlib.stdlib-source",
+        "declared": true,
+        "evidence": [
+          {
+            "module": "mncs.std.process.v1",
+            "source": "native/mncs/debug/debug.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/debug/debug.mncs"
+          },
+          {
+            "module": "mncs.core.sequences.v1",
+            "source": "native/mncs/debug/debug.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/debug/diagnostic_coherence.mncs"
+          }
+        ]
+      },
+      {
+        "checkout": "mncs-forge",
+        "consumer": "mncs-forge",
+        "contract": "mncs-stdlib.stdlib-source",
+        "declared": true,
+        "evidence": [
+          {
+            "module": "mncs.std.application.v1",
+            "source": "src/mncs_forge/resources/native/forge/assurance_application.mncs"
+          },
+          {
+            "module": "mncs.core.sequences.v1",
+            "source": "src/mncs_forge/resources/native/forge/core.mncs"
+          },
+          {
+            "module": "mncs.std.process.v1",
+            "source": "src/mncs_forge/resources/native/forge/core.mncs"
+          },
+          {
+            "module": "mncs.std.process.v1",
+            "source": "src/mncs_forge/resources/pressure-reproducers/process-resource-handle.mncs"
+          }
+        ]
+      },
+      {
+        "checkout": "mncs-store",
+        "consumer": "mncs-store",
+        "contract": "mncs-stdlib.stdlib-source",
+        "declared": true,
+        "evidence": [
+          {
+            "module": "mncs.std.sha256.v1",
+            "source": "src/store/content.mncs"
+          }
+        ]
+      },
+      {
+        "checkout": "mncs-test",
+        "consumer": "mncs-test",
+        "contract": "mncs-stdlib.stdlib-source",
+        "declared": true,
+        "evidence": [
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/test/obligation_selection.mncs"
+          },
+          {
+            "module": "mncs.core.sequences.v1",
+            "source": "native/mncs/test/provider.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/test/provider.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/test/provider_admission_probe.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/test/provider_failure_probe.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/test/verification_coherence.mncs"
+          }
+        ]
+      }
+    ],
+    "provider": "mncs-stdlib",
+    "schema_version": "commons.mncs.family-dependency-audit/1"
+  },
+  "artifact_bindings": {
+    "compiler_embed_source_main": "425de2016a1273b66fa44609ea75aa25e04f0a0f",
+    "resident_ls_source_main": "17d2dc52f1e4e02f052559c580f1ecc8576e38bf",
+    "foreign_prebuilt_replaced": false,
+    "compiler_embed_sha256": {
+      "mncs": "04600f60d0bd6a91d2f41ba69c91cfb36f8bd03aad28913bbf488ceba3d8452b",
+      "libmncs_embed.so": "2149ba778d12fbdecea52bf3d22e8d616ca38329af2655b639faa60f9b708348"
+    }
+  },
+  "unchanged_latest_mains": [
+    {
+      "repository": "mncs-automation",
+      "origin_main": "ce8115e905bdd72a2c4b022e2ba200e7cc6eb739",
+      "modified_by_campaign": false
+    },
+    {
+      "repository": "mncs-doctor",
+      "origin_main": "d48256d9412a7c181060375fcff971f157a9cf8b",
+      "modified_by_campaign": false
+    },
+    {
+      "repository": "mncs-language-service",
+      "origin_main": "17d2dc52f1e4e02f052559c580f1ecc8576e38bf",
+      "modified_by_campaign": false
+    },
+    {
+      "repository": "mncs-language",
+      "origin_main": "425de2016a1273b66fa44609ea75aa25e04f0a0f",
+      "modified_by_campaign": false
+    },
+    {
+      "repository": "mncs-compiler",
+      "origin_main": "68358e6ae79742658717ee2ec0d5cdf927435c61",
+      "modified_by_campaign": false
+    },
+    {
+      "repository": "mncs-stdlib",
+      "origin_main": "6c922f215dcb61014a072ddcfd305e0f5b8fdd02",
+      "modified_by_campaign": false
+    }
+  ],
+  "final_campaign_claim_releases": [
+    {
+      "released": true
+    },
+    {
+      "released": true
+    }
+  ],
+  "final_checkpoint": {
+    "artifacts": [],
+    "created_at": "2026-10-02T04:51:48+00:00",
+    "created_by": "sol-whole-system-coherence",
+    "environment_id": "renv_1e359bc65bfe1b51",
+    "event_cursor": 41,
+    "identity": "chk_478d40793a2e2a98",
+    "intent_id": "int_d3f68c3df52248ef",
+    "progress": "Final Environment 349/28 and native freshness law validated, source changes merged and pushed; whole campaign NOT CLOSED.",
+    "remaining": [
+      "foreign stdlib extraction/provider artifact publication",
+      "producer-bound evidence provenance",
+      "event-to-affected-pass scheduling and quiet whole entry",
+      "Doctor family plan/typed ownership transforms",
+      "retained Actions baseline failures"
+    ],
+    "revalidate_on_resume": [
+      "bindings",
+      "workspace-heads",
+      "claims",
+      "authority"
+    ],
+    "schema_version": "mncs.environment.checkpoint/1",
+    "sequence": 2,
+    "session_id": "ses_79567a2a0de0b48e",
+    "unresolved": []
+  },
+  "final_log_digests": {
+    "proof-renewal-final": {
+      "path": "/tmp/mncs-coherence-proof-renewal-final.log",
+      "sha256": "4c7198d2667ec940c0d46678530e51b0edafbfc20cf1f2678947e122bc1b0009"
+    },
+    "commons-renewal": {
+      "path": "/tmp/mncs-coherence-commons-renewal.log",
+      "sha256": "49dd213c32f3e1414b3738ad72fe1b81e3e73c07147e53d322d904155d415afc"
+    },
+    "env-final-complete": {
+      "path": "/tmp/mncs-coherence-env-final-complete.log",
+      "sha256": "733ab45454a07f858793970b985d36fc3c008d4989da116a7e768d94f4f90711"
+    },
+    "isolated-toolchain-final": {
+      "path": "/tmp/mncs-coherence-isolated-toolchain-final.log",
+      "sha256": "cb5fa2b54e7f7bebda601e6db4a0612c04ba5ea63df4af5d4d3ca3058df64e80"
+    },
+    "pressure-final": {
+      "path": "/tmp/mncs-coherence-pressure-final.log",
+      "sha256": "383bdc74fedf99f0cdc54e47eaca226b49049e7aa4f2478a7e7213af87680501"
+    },
+    "hermetic-store": {
+      "path": "/tmp/mncs-coherence-hermetic-store.log",
+      "sha256": "f63e702124092a48662e1c3820affd41db6370c571ffcc88dcde32afdc7869ec"
+    },
+    "actions-delivery-check": {
+      "path": "/tmp/mncs-coherence-actions-delivery-check.log",
+      "sha256": "69d3dba02ba6d4bb37638901872294877f563526fc14e3036db962a8ad2d9f8a"
+    },
+    "vertical-final": {
+      "path": "/tmp/mncs-coherence-vertical-final.log",
+      "sha256": "58b9b5c71f772079236b4ed7631afacc26c7688479ad9a2bf77309a300a17e79"
+    },
+    "store-native-post": {
+      "path": "/tmp/mncs-coherence-store-native-post.log",
+      "sha256": "2f08c042b63ea9c247e354737057b0c4ffd2936b8b7f9ab08dba64c02e911cad"
+    }
+  }
 }
