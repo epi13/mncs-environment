@@ -16,6 +16,7 @@ from contextlib import closing
 from pathlib import Path
 
 from . import capabilities as capabilities_module
+from . import diagnostics as diagnostics_module
 from . import doctor as doctor_module
 from . import projections as projections_module
 from . import verification as verification_module
@@ -321,6 +322,38 @@ def cmd_verification(args: argparse.Namespace) -> int:
                     max_executions=verification_module.MAX_OBLIGATIONS)
             else:
                 result = verification_module.ambient_pass(session)
+            payload = {"session_id": args.session,
+                       "summary": result["summary"],
+                       "reused": result["reused"],
+                       "evidence": result.get("evidence")}
+            out(payload)
+            return 5 if result["summary"]["blockers"] else 0
+        finally:
+            session.close()
+
+
+def cmd_diagnostic(args: argparse.Namespace) -> int:
+    if args.evidence:
+        with closing(_open(args)) as session:
+            out(diagnostics_module.read_evidence(session))
+        return 0
+    with entry_module.entry_lock(args.state_dir, args.persistence):
+        try:
+            session = sessions_module.Session.resume(
+                state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+        except sessions_module.LifecycleError as error:
+            return fail(str(error))
+        try:
+            depth = args.depth or "minimal"
+            if args.only:
+                result = diagnostics_module.ambient_pass(
+                    session, mode="explicit", depth=depth, only=args.only)
+            elif args.full:
+                result = diagnostics_module.ambient_pass(
+                    session, mode="full", depth=depth,
+                    max_captures=diagnostics_module.MAX_FAILURES)
+            else:
+                result = diagnostics_module.ambient_pass(session)
             payload = {"session_id": args.session,
                        "summary": result["summary"],
                        "reused": result["reused"],
@@ -759,6 +792,17 @@ def build_parser() -> argparse.ArgumentParser:
     verification.add_argument("--full", action="store_true",
                               help="explicit full pass without epoch reuse and with the full execution budget")
     verification.set_defaults(func=cmd_verification)
+
+    diagnostic = session_parser("diagnostic", "ambient diagnostic coherence pass with a terse summary")
+    diagnostic.add_argument("--evidence", action="store_true",
+                            help="print the full diagnostic evidence trail instead of running a pass")
+    diagnostic.add_argument("--only", default=None,
+                            help="explicitly diagnose one failure by key")
+    diagnostic.add_argument("--depth", default=None, choices=("minimal", "standard", "deep"),
+                            help="explicit capture depth (ambient passes always use minimal)")
+    diagnostic.add_argument("--full", action="store_true",
+                            help="explicit full pass without epoch reuse and with the full capture budget")
+    diagnostic.set_defaults(func=cmd_diagnostic)
 
     status = sub.add_parser(
         "status", parents=[common], help="show compact read-only session status"
