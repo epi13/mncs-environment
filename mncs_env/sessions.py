@@ -1755,13 +1755,49 @@ class Session:
         return {"previous_consumer": previous, "consumer_id": consumer_id,
                 "handoff_id": handoff_id, "divergence": divergence}
 
+    def _release_own_claims(self, reason: str) -> dict[str, Any]:
+        """Release every live claim held by this session.
+
+        Terminal sessions must not pin scopes until TTL expiry: a
+        finished agent's claims would otherwise block the next agent
+        for up to 24h. Release failures never block the terminal
+        transition itself (TTL expiry remains the backstop); they are
+        recorded on the completion payload instead.
+        """
+        released: list[str] = []
+        error: str | None = None
+        try:
+            live = claims_module.active_claims(self.store.read_claims())
+            repositories = sorted({
+                str(record.get("repository", ""))
+                for record in live.values()
+                if record.get("session_id") == self.session_id
+                and record.get("repository")
+            })
+            for repository in repositories:
+                for record in claims_module.release(
+                    self.store, session_id=self.session_id,
+                    reason=reason, repository=repository,
+                ):
+                    released.append(str(record.get("claim_id", "")))
+        except Exception as exc:  # noqa: BLE001 - recorded, never raised
+            error = f"{type(exc).__name__}: {exc}"
+        if released:
+            self._refresh_holders()
+            self._emit("lease.released", self.snapshot.get("consumer_id", "unknown"),
+                       {"released": released, "reason": reason})
+        return {"released": released, "error": error}
+
     def complete(self, *, outcome: str, summary: str = "") -> dict[str, Any]:
         if self.snapshot.get("lifecycle") not in ("active", "checkpointed", "waiting", "blocked"):
             raise LifecycleError("only a live session can complete")
         self.transition("completed", outcome)
-        self.snapshot["completion"] = {"outcome": outcome, "summary": summary, "at": utcnow()}
+        claims_report = self._release_own_claims(f"session completed: {outcome}")
+        self.snapshot["completion"] = {"outcome": outcome, "summary": summary, "at": utcnow(),
+                                       "claims_released": claims_report["released"],
+                                       "claims_release_error": claims_report["error"]}
         self._emit("session.completed", self.snapshot.get("consumer_id", "unknown"),
-                   {"outcome": outcome})
+                   {"outcome": outcome, "claims_released": claims_report["released"]})
         self._save()
         return self.snapshot["completion"]
 
@@ -1771,9 +1807,12 @@ class Session:
         ):
             raise LifecycleError("session cannot fail from its current state")
         self.transition("failed", reason)
-        self._emit("session.failed", self.snapshot.get("consumer_id", "unknown"), {"reason": reason})
+        claims_report = self._release_own_claims(f"session failed: {reason}")
+        self._emit("session.failed", self.snapshot.get("consumer_id", "unknown"),
+                   {"reason": reason, "claims_released": claims_report["released"]})
         self._save()
-        return {"reason": reason}
+        return {"reason": reason, "claims_released": claims_report["released"],
+                "claims_release_error": claims_report["error"]}
 
     # -- inspection ------------------------------------------------------------
 
