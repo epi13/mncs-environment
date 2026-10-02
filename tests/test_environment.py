@@ -1481,6 +1481,9 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(claim["scope"]["checkout"], str(checkout.resolve()))
             self.assertEqual(claim["scope"]["branch"], "campaign/store")
             with mock.patch.object(
+                sessions.workspace_module, "inspect_repo", return_value=sessions.workspace_module.RepoState(
+                    name="mncs-store", path=str(checkout), manifest_repository="mncs-store",
+                    manifest_revision=1, branch="campaign/store", head="fixture", dirty=True)), mock.patch.object(
                 sessions.capabilities_module, "invoke",
                 return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
             ) as invoke:

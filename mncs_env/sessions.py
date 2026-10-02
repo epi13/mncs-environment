@@ -1979,6 +1979,10 @@ class Session:
             "checkpoints": self.snapshot.get("checkpoints", []),
             "handoffs": self.snapshot.get("handoffs", []),
             "artifacts": self.snapshot.get("artifacts", []),
+            "coherence": {key: value for key, value in self.snapshot.get("coherence", {}).items()
+                          if key in ("schema_version", "stable", "store_cursor", "policy_identity",
+                                     "policy_receipt", "last_trace", "deadlines", "result_refs",
+                                     "repositories", "artifacts", "libraries")},
             "completion": self.snapshot.get("completion"),
             "lifecycle_history": self.snapshot.get("lifecycle_history", []),
         }

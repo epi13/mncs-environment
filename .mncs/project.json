@@ -212,6 +212,29 @@
           },
           "toolchain_env": "MNCS_STORE_PYTHON"
         }
+      },
+      {
+        "test": "environment-incremental-coherence",
+        "covers": [
+          "workspace-readiness",
+          "environment-session"
+        ],
+        "obligation": "self",
+        "command": {
+          "argv": [
+            "python3",
+            "-m",
+            "pytest",
+            "tests/test_incremental.py",
+            "-q"
+          ],
+          "timeout_seconds": 90,
+          "toolchain": {
+            "repository": "mncs-language",
+            "path": "target/release/mncs"
+          },
+          "toolchain_env": "MNCS_BIN"
+        }
       }
     ]
   }
