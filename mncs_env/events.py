@@ -54,6 +54,9 @@ TYPES = (
     "verification.verified",
     "verification.failed",
     "verification.deferred",
+    "diagnostic.captured",
+    "diagnostic.deferred",
+    "diagnostic.failed",
     "adapter.observed",
 )
 

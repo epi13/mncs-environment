@@ -167,7 +167,7 @@ def descriptor_invocation(
     """Resolve a provider-declared ``invocation`` block, if usable.
 
     Returns ``{"address", "toolchain_address", "toolchain_env",
-    "fixed_argv",
+    "fixed_argv", "adapter_library_paths",
     "addressing"}``. ``addressing`` is ``"descriptor"`` when the entry
     carries a usable declaration, else ``"none"``. Paths in ``path``
     are repo-relative; ``toolchain`` can be a workspace-relative file path
@@ -175,9 +175,16 @@ def descriptor_invocation(
     checkout directory from the selected repository closure. It is exported
     under ``toolchain_env`` (default ``MNCS``) at invoke time. Anything
     unparsable or missing resolves to ``"none"`` -- never a guess.
+
+    The optional ``adapter_library_paths`` field names repo-relative
+    directories the provider adapter itself contributes to MNCS library
+    resolution beyond obligation-declared roots (for example the test
+    runner's private native root). Entries that are not contained
+    directories are dropped; a malformed field never breaks addressing.
     """
     empty = {"address": None, "toolchain_address": None,
-             "toolchain_env": None, "fixed_argv": [], "addressing": "none"}
+             "toolchain_env": None, "fixed_argv": [],
+             "adapter_library_paths": [], "addressing": "none"}
     spec = entry.get("invocation")
     if not isinstance(spec, dict):
         return empty
@@ -221,8 +228,26 @@ def descriptor_invocation(
     if ((isinstance(toolchain, dict) or isinstance(toolchain, str) and toolchain)
             and toolchain_address is None):
         return empty
+    adapter_library_paths: list[str] = []
+    raw_roots = spec.get("adapter_library_paths", [])
+    if isinstance(raw_roots, list):
+        base = repo.resolve()
+        for root in raw_roots:
+            if not isinstance(root, str) or not root:
+                continue
+            relative_root = Path(root)
+            if relative_root.is_absolute() or ".." in relative_root.parts:
+                continue
+            try:
+                candidate_root = (repo / relative_root).resolve()
+                candidate_root.relative_to(base)
+            except (OSError, ValueError):
+                continue
+            if candidate_root.is_dir():
+                adapter_library_paths.append(str(candidate_root))
     return {"address": address, "toolchain_address": toolchain_address,
             "toolchain_env": toolchain_env, "fixed_argv": list(fixed_argv),
+            "adapter_library_paths": adapter_library_paths,
             "addressing": "descriptor"}
 
 
@@ -528,7 +553,7 @@ def _from_semantic_contracts(
             addressing = "bootstrap" if address else "none"
         effects = entry.get("effects", ["read"])
         if (not isinstance(effects, list) or not effects
-                or any(effect not in {"read", "write", "execute", "publish"}
+                or any(effect not in {"read", "verify", "write", "execute", "publish"}
                        for effect in effects)):
             continue
         record = bind(
@@ -543,7 +568,8 @@ def _from_semantic_contracts(
             effects=[str(effect) for effect in effects],
             event_types=["unknown"],
             provenance={"source": f"{repo.name}/family-semantic-contracts-v1.json",
-                        "status": entry.get("status"), "addressing": addressing},
+                        "status": entry.get("status"), "addressing": addressing,
+                        "adapter_library_paths": declared["adapter_library_paths"]},
             provider_root=str(repo),
         )
         out.append(record)
@@ -598,7 +624,8 @@ def _from_manifest(
             entrypoint = "mncs-registry-context"
         effects = entry.get("effects", ["read"])
         if (not isinstance(effects, list) or not effects
-                or any(effect not in {"read", "write", "execute", "publish"} for effect in effects)):
+                or any(effect not in {"read", "verify", "write", "execute", "publish"}
+                       for effect in effects)):
             continue
         record = bind(
             provider=repository_id,

@@ -7,7 +7,7 @@ import fcntl
 from contextlib import contextmanager
 from pathlib import Path
 
-from . import doctor, identity, projections, readiness, sessions, verification, workspace
+from . import diagnostics, doctor, identity, projections, readiness, sessions, verification, workspace
 from .intent import parse as parse_intent
 from .persist import read_json
 from .session_store import open_store, upgrade_session_store_provider
@@ -148,6 +148,32 @@ def _ambient_verification(session, definition: dict) -> dict:
             "evidence": outcome.get("evidence")}
 
 
+def _ambient_diagnostics(session, definition: dict) -> dict | None:
+    """Run the ambient diagnostic pass; None when there is nothing to explain.
+
+    Diagnostics are reactive: a healthy world carries no diagnostic block
+    at all, so normal entry pays effectively zero diagnostic context.
+    """
+    knob = definition.get("diagnostics", {})
+    if knob is None:
+        knob = {}
+    if not isinstance(knob, dict):
+        raise EntryError("environment definition diagnostics knob must be an object",
+                         "definition-invalid", next="set diagnostics to an object or omit it")
+    if knob.get("enabled", True) is False:
+        return None
+    budget = knob.get("max_captures", diagnostics.DEFAULT_MAX_CAPTURES)
+    if type(budget) is not int or budget < 1 or budget > diagnostics.MAX_FAILURES:
+        raise EntryError("diagnostics max_captures must be an integer between 1 and 32",
+                         "definition-invalid", next="fix the definition diagnostics knob")
+    outcome = diagnostics.ambient_pass(session, max_captures=budget)
+    summary = outcome["summary"]
+    if summary.get("failures", 0) == 0 and summary.get("blockers", 0) == 0:
+        return None
+    return {"summary": summary, "reused": outcome["reused"],
+            "evidence": outcome.get("evidence")}
+
+
 def _close_store(store) -> None:
     close = getattr(store, "close", None)
     if callable(close):
@@ -230,6 +256,9 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                     "reused": coherence["reused"],
                                     "evidence": coherence.get("evidence")}
             result["verification"] = _ambient_verification(session, definition)
+            diagnostic = _ambient_diagnostics(session, definition)
+            if diagnostic is not None:
+                result["diagnostic"] = diagnostic
             return result
         finally:
             if session is not None:

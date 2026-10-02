@@ -232,7 +232,7 @@ def _porcelain_name(line: str) -> str | None:
     return name.strip().strip('"') or None
 
 
-def _dirty_content_digest(checkout: Path) -> str:
+def dirty_content_digest(checkout: Path) -> str:
     """Digest current dirty/untracked content (bounded, empty when clean)."""
     try:
         state = workspace_module.inspect_repo(checkout)
@@ -264,14 +264,14 @@ def _dirty_content_digest(checkout: Path) -> str:
     return "sha256:" + digester.hexdigest()
 
 
-def _repo_revision(checkout: Path) -> str:
+def repo_revision(checkout: Path) -> str:
     facts = workspace_module.quick_repo_facts(checkout)
     if facts is None:
         return "repo-unreadable"
     return str(facts.get("head") or "head-unknown")
 
 
-def _toolchain_identity(session) -> str:
+def toolchain_identity(session) -> str:
     toolchain = session.snapshot.get("toolchain")
     if not isinstance(toolchain, dict):
         return "toolchain-unknown"
@@ -296,7 +296,7 @@ def _measured_current(session, obligation: dict) -> tuple[dict | None, str | Non
         checkout, list(declaration.get("invalidation_dependencies") or []))
     if fingerprint is None:
         return None, problem or "subject-unmeasurable"
-    head = _repo_revision(checkout)
+    head = repo_revision(checkout)
     return {
         "definition_identity": digest_hex({"declaration": declaration}),
         "subject_identity": f"{obligation['repository']}:{sources[0]}",
@@ -304,10 +304,10 @@ def _measured_current(session, obligation: dict) -> tuple[dict | None, str | Non
         "executor_identity": digest_hex({"executor": executor}),
         "invalidation_identity": digest_hex(
             {"dependencies": list(declaration.get("invalidation_dependencies") or [])}),
-        "toolchain_identity": _toolchain_identity(session),
+        "toolchain_identity": toolchain_identity(session),
         "inventory_identity": "",
         "repository_revision": head,
-        "repository_fingerprint": _dirty_content_digest(checkout),
+        "repository_fingerprint": dirty_content_digest(checkout),
     }, None
 
 
@@ -324,7 +324,7 @@ def _state_rows(session) -> dict[str, dict[str, Any]]:
     return dict(rows) if isinstance(rows, dict) else {}
 
 
-def _session_binding(session, capability: str) -> dict[str, Any] | None:
+def session_binding(session, capability: str) -> dict[str, Any] | None:
     from .sessions import AuthorityDenied
 
     try:
@@ -334,8 +334,8 @@ def _session_binding(session, capability: str) -> dict[str, Any] | None:
     return binding if isinstance(binding, dict) else None
 
 
-def _binding_available(session, capability: str) -> bool:
-    binding = _session_binding(session, capability)
+def binding_available(session, capability: str) -> bool:
+    binding = session_binding(session, capability)
     if binding is None:
         return False
     return binding.get("availability", {}).get("status") == "available"
@@ -354,7 +354,7 @@ def _coherence_request(session, obligations: list[dict],
                        measured: dict[str, dict | None],
                        rows: dict[str, dict[str, Any]],
                        max_executions: int) -> dict[str, Any]:
-    provider_available = _binding_available(session, TEST_CAPABILITY)
+    provider_available = binding_available(session, TEST_CAPABILITY)
     items = []
     for obligation in obligations:
         declaration = obligation["declaration"]
@@ -516,8 +516,8 @@ def execute_suite(session, obligation: dict, measured: dict,
         return None, f"result-unreadable:{detail or result.get('status')}"
     if not isinstance(document, dict):
         return None, "result-invalid"
-    fresh_head = _repo_revision(checkout)
-    fresh_dirty = _dirty_content_digest(checkout)
+    fresh_head = repo_revision(checkout)
+    fresh_dirty = dirty_content_digest(checkout)
     if (fresh_head != measured.get("repository_revision")
             or fresh_dirty != measured.get("repository_fingerprint")):
         return None, "state-changed-during-execution"
@@ -528,7 +528,7 @@ def _epoch_inputs(session, obligations: list[dict],
                   measured: dict[str, dict | None]) -> dict[str, Any]:
     bindings: dict[str, str] = {}
     for capability in (COHERENCE_CAPABILITY, TEST_CAPABILITY):
-        binding = _session_binding(session, capability)
+        binding = session_binding(session, capability)
         if binding is None:
             bindings[capability] = "unbound"
         else:
@@ -540,7 +540,7 @@ def _epoch_inputs(session, obligations: list[dict],
                                  if current is not None else "unrunnable")
                      for identity, current in measured.items()},
         "bindings": bindings,
-        "toolchain": _toolchain_identity(session),
+        "toolchain": toolchain_identity(session),
         "lifecycle": session.snapshot.get("lifecycle", "active"),
     }
 
@@ -585,7 +585,7 @@ def ambient_pass(session, *, mode: str = "ambient",
         summary["elapsed_seconds"] = round(time.monotonic() - clock_started, 3)
         return {"summary": summary, "reused": True,
                 "evidence": stored.get("evidence_ref")}
-    if not _binding_available(session, COHERENCE_CAPABILITY):
+    if not binding_available(session, COHERENCE_CAPABILITY):
         return _finish(session, started, clock_started, [], rows, invalid,
                        mode, {"reason": "coherence-unavailable"},
                        f"uncached:{mode}:{epoch}", None)
