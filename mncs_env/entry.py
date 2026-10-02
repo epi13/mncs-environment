@@ -275,6 +275,21 @@ def _close_store(store) -> None:
         close()
 
 
+def ambient_tick(session, definition, *, fresh=False, upgraded=False, lock_waited=0.0):
+    """One entry/resident orchestration path with the same owner passes."""
+    runners = {
+        "doctor": lambda: doctor.ambient_pass(session, fresh=fresh,
+            upgraded_store=upgraded, lock_waited=lock_waited),
+        "semantics": lambda: _ambient_semantics(session, definition),
+        "actions": lambda: _ambient_actions(session, definition),
+        "verification": lambda: _ambient_verification(session, definition),
+        "diagnostics": lambda: _ambient_diagnostics(session, definition),
+        "family": lambda: _ambient_family(session, definition),
+        "projections": lambda: projections.ambient_pass(session),
+    }
+    return incremental.tick(session, definition, runners, fresh=fresh)
+
+
 def enter(*, definition: dict, definition_path: Path | None, workspace_root: str,
           state_dir: Path, backend: str, consumer_id: str, consumer_kind: str,
           new_session: bool = False) -> dict:
@@ -304,15 +319,16 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
             upgraded = False
             has_persistence = (Path(state_dir) / ("store" if backend == "store" else "sessions")).exists()
             if not new_session and has_persistence:
-                matches = []
-                for session_id in store.list_sessions():
-                    snapshot = store.load_snapshot(session_id) or {}
-                    if (snapshot.get("consumer_id") == consumer_id
+                from . import selection
+                selector = {'consumer': consumer_id, 'kind': consumer_kind,
+                            'definition': definition_id, 'workspace': str(root)}
+                def matches_snapshot(snapshot):
+                    return (snapshot.get("consumer_id") == consumer_id
                             and snapshot.get("consumer_kind") == consumer_kind
                             and snapshot.get("provenance", {}).get("definition_id") == definition_id
                             and snapshot.get("workspace", {}).get("root") == str(root)
-                            and snapshot.get("lifecycle") in ("active", "blocked", "waiting", "checkpointed", "abandoned")):
-                        matches.append(session_id)
+                            and snapshot.get("lifecycle") in ("active", "blocked", "waiting", "checkpointed", "abandoned"))
+                matches = selection.select(store, selector, matches_snapshot)
                 if backend == "store" and len(matches) == 1:
                     upgraded = upgrade_session_store_provider(state_dir, store.load_snapshot(matches[0]))
                 if len(matches) > 1:
@@ -336,17 +352,8 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                 session.transition("active", f"consumer {consumer_id} entered")
             elif session.snapshot["lifecycle"] in ("checkpointed", "abandoned"):
                 session.transition("active", "re-entered durable work")
-            runners = {
-                "doctor": lambda: doctor.ambient_pass(session, fresh=not reused,
-                    upgraded_store=upgraded, lock_waited=lock_waited),
-                "semantics": lambda: _ambient_semantics(session, definition),
-                "actions": lambda: _ambient_actions(session, definition),
-                "verification": lambda: _ambient_verification(session, definition),
-                "diagnostics": lambda: _ambient_diagnostics(session, definition),
-                "family": lambda: _ambient_family(session, definition),
-                "projections": lambda: projections.ambient_pass(session),
-            }
-            blocks, trace = incremental.tick(session, definition, runners, fresh=not reused)
+            blocks, trace = ambient_tick(session, definition, fresh=not reused,
+                upgraded=upgraded, lock_waited=lock_waited)
             remediation = blocks["doctor"]
             result = session.context()
             result["entry"] = {"reused": reused, "revalidation": remediation["revalidation"],

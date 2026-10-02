@@ -831,6 +831,30 @@ def cmd_store(args: argparse.Namespace) -> int:
         close_store(store)
 
 
+def cmd_resident(args):
+    """Resume an exact session and service the same incremental owner router."""
+    import time
+    if args.interval <= 0 or args.max_ticks < 0:
+        raise ValueError('resident interval must be positive and max-ticks nonnegative')
+    count = 0
+    while True:
+        with entry_module.entry_lock(args.state_dir, args.persistence):
+            with closing(_open(args)) as session:
+                source = session.snapshot.get('configuration', {}).get('source')
+                definition, _ = entry_module.select_definition(Path(source) if source and source != 'orientation-default' else None,
+                    session.snapshot['workspace']['root'])
+                expected = session.snapshot.get('provenance', {}).get('definition_id')
+                if expected and entry_module.identity.environment_id(definition) != expected:
+                    raise ValueError('resident definition changed; re-enter to select and bind the new environment')
+                _, trace = entry_module.ambient_tick(session, definition)
+                if not args.watch or trace.get('scheduled') or trace.get('events'):
+                    out({'session_id': session.session_id, 'trace': trace})
+        count += 1
+        if not args.watch or (args.max_ticks and count >= args.max_ticks):
+            return 0
+        time.sleep(args.interval)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="mncs-env")
     parser.add_argument("--state-dir", type=Path, default=DEFAULT_STATE_DIR)
@@ -991,6 +1015,13 @@ def build_parser() -> argparse.ArgumentParser:
     ack = session_parser("ack", "acknowledge the brief cursor at an event index")
     ack.add_argument("index", type=int)
     ack.set_defaults(func=cmd_ack)
+
+    resident = sub.add_parser('resident', help='service an existing session through the incremental owner router')
+    resident.add_argument('session')
+    resident.add_argument('--watch', action='store_true')
+    resident.add_argument('--interval', type=float, default=1.0)
+    resident.add_argument('--max-ticks', type=int, default=0)
+    resident.set_defaults(func=cmd_resident)
 
     reconciler = sub.add_parser("reconciler", help="background reconciliation service")
     reconciler.add_argument("--workspace", default=None)

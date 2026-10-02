@@ -6,27 +6,92 @@
   "coordination_schema_authority": "MNCS-Commons",
   "scheduling_authority": "mncs-automation",
   "durable_substrate": "mncs-store",
-  "subscriptions": ["semantic.changed", "provider.artifact_changed", "declaration.changed"],
+  "subscriptions": [
+    "semantic.changed",
+    "provider.artifact_changed",
+    "declaration.changed"
+  ],
   "input_identity": [
-    "semantic service and workspace identity", "semantic stream and cursor", "semantic generation",
-    "affected subject identities and content digests", "exact dependency artifact identities",
-    "compiler executable digest and provider-owned build receipt", "effective stdlib content identity",
-    "build configuration and effects/capability digest", "runtime ABI identity", "fresh inventory identity"
+    "semantic service and workspace identity",
+    "semantic stream and cursor",
+    "semantic generation",
+    "affected subject identities and content digests",
+    "exact dependency artifact identities",
+    "compiler executable digest and provider-owned build receipt",
+    "effective stdlib content identity",
+    "build configuration and effects/capability digest",
+    "runtime ABI identity",
+    "fresh inventory identity"
   ],
   "result_identity": [
-    "producer contract", "compiled generation", "compiled artifact digest",
-    "complete input identity", "dependency closure", "diagnostic/source mappings", "remaining obligations"
+    "producer contract",
+    "compiled generation",
+    "compiled artifact digest",
+    "complete input identity",
+    "dependency closure",
+    "diagnostic/source mappings",
+    "remaining obligations"
   ],
   "publication_event": "provider.artifact_changed",
   "publication": "CAS against the observed materialization row; superseded inputs cannot overwrite newer outputs",
   "stream_reset": "bounded reconciliation of exact workspace/toolchain identity; missing knowledge requires bootstrap",
-  "evidence_authorities": {"verdict": "mncs-test", "witness": "mncs-debug", "remote_receipt": "mncs-actions"},
+  "evidence_authorities": {
+    "verdict": "mncs-test",
+    "witness": "mncs-debug",
+    "remote_receipt": "mncs-actions"
+  },
   "prohibited_inference": [
-    "Store generation equals semantic generation", "revision equals executed artifact identity",
-    "successful compilation equals verification PASS", "matching source line equals matching failure"
+    "Store generation equals semantic generation",
+    "revision equals executed artifact identity",
+    "successful compilation equals verification PASS",
+    "matching source line equals matching failure"
   ],
   "remaining_provider_contracts": [
-    "source/build-origin receipt", "owner-bounded build/reconcile capability",
-    "subject dependency/invalidation publication", "coalesced cancellation of superseded materialization"
-  ]
+    "compiler owner build receipt and bounded reconcile capability",
+    "compiler dependency closure publication with exact subject/content bindings",
+    "producer Test/Debug execution/inventory receipt admission",
+    "coalesced cancellation of superseded materialization"
+  ],
+  "shared_provenance": {
+    "vocabulary": "mncs.provider-provenance-vocabulary/1",
+    "build_receipt": "mncs.provider-build-receipt/1",
+    "execution_receipt": "mncs.provider-execution-provenance/1",
+    "Forge_extension": "mncs:provider-provenance",
+    "native_admission": "mncs.commons.family.provenance.v1",
+    "targeted_remediation": "doctor.provider.v1"
+  },
+  "materialization_request": {
+    "schema_version": "mncs.compiler.materialization-request/1",
+    "required": [
+      "workspace_identity",
+      "semantic_stream_identity",
+      "semantic_cursor",
+      "semantic_generation",
+      "subjects_with_preimage_and_current_content",
+      "impact_complete",
+      "exact_dependency_receipts",
+      "compiler_artifact_sha256",
+      "effective_root_content_identities",
+      "configuration_identity",
+      "ABI_identity",
+      "inventory_identity",
+      "expected_materialization_CAS_version"
+    ],
+    "unknown_rule": "incomplete impact or missing required provenance selects bounded reconciliation; no reusable compiled evidence"
+  },
+  "materialization_result": {
+    "schema_version": "mncs.compiler.materialization-result/1",
+    "required": [
+      "request_identity",
+      "input_identity",
+      "compiled_generation",
+      "artifact_build_receipts",
+      "affected_closure",
+      "closure_complete",
+      "superseded_input_identity",
+      "remaining_obligations",
+      "source_diagnostic_mapping_identity"
+    ],
+    "publication_rule": "publish only if input identity remains current and CAS wins; retain superseded receipts as history"
+  }
 }

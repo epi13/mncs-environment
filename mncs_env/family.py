@@ -252,6 +252,10 @@ def native_classify_batch(session, facts: list[list[int]]) -> list[int | None]:
 
 
 def native_gate(session, facts: list[int]) -> int | None:
+    from . import doctor
+    declared, decision = doctor.family_plan(session, "gate_repair", facts)
+    if declared:
+        return _finite_discriminant(decision)
     ready = _native_ready(session)
     if ready is None:
         return None
@@ -271,6 +275,10 @@ def native_adopt(session, facts: list[int]) -> int | None:
 
 
 def native_transform_admit(session, facts: list[int]) -> int | None:
+    from . import doctor
+    declared, decision = doctor.family_plan(session, "transform_admit", facts)
+    if declared:
+        return _finite_discriminant(decision)
     ready = _native_ready(session)
     if ready is None:
         return None

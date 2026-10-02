@@ -7,6 +7,7 @@ not replacements for semantic generations, verdicts or build-origin proof.
 from __future__ import annotations
 
 import copy
+import importlib.util
 import json
 import os
 import subprocess
@@ -46,6 +47,48 @@ def _roots(session) -> dict[str, Path]:
             for record in session.snapshot["workspace"].get("repositories", [])}
 
 
+_resident_adapters = {}
+
+
+def _resident_provider(session, root, binary):
+    """Load only the selected owner's declared resident transport."""
+    manifest = json.loads((root / '.mncs/project.json').read_text())
+    declaration = next((item for item in manifest.get('contracts', {}).get('provides', [])
+                        if item.get('contract') == 'automation-coherence-routing'), {})
+    adapter = declaration.get('resident_adapter')
+    if not adapter:
+        return None
+    roots = _roots(session)
+    roots['mncs-automation'] = root
+    specification = json.loads((root / declaration['artifact_declaration']).read_text())
+    repositories = {item['repository'] for item in specification['inputs']}
+    repositories.add(adapter['runtime_repository'])
+    for repository in repositories:
+        if repository not in roots:
+            override = os.environ.get('MNCS_' + repository.removeprefix('mncs-').replace('-', '_').upper() + '_ROOT')
+            if repository == 'MNCS-Commons':
+                override = os.environ.get('MNCS_COMMONS_ROOT')
+            if override:
+                roots[repository] = Path(override).resolve()
+    if not repositories.issubset(roots):
+        return None  # older selected owners retain source-call recovery; no exact receipt
+    path = (root / adapter['path']).resolve()
+    runtime_root = roots[adapter['runtime_repository']]
+    runtime_path = (runtime_root / adapter['runtime_path']).resolve()
+    if not path.is_relative_to(root) or not runtime_path.is_relative_to(runtime_root):
+        raise ValueError('resident adapter escapes selected provider')
+    if str(runtime_path) not in sys.path:
+        sys.path.insert(0, str(runtime_path))
+    # Source changes create a fresh adapter, not a stale module singleton.
+    key = (str(path), observations.observe_artifact(path)['artifact_identity'].removeprefix('sha256:'))
+    if key not in _resident_adapters:
+        spec = importlib.util.spec_from_file_location('mncs_owner_coherence_' + key[1], path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _resident_adapters[key] = module
+    return _resident_adapters[key], adapter['function'], roots
+
+
 def _native(session, function: str, rows: list[list[int]]) -> tuple[list[int], dict]:
     from .family import find_mncs_binary
     selected = _roots(session)
@@ -63,13 +106,47 @@ def _native(session, function: str, rows: list[list[int]]) -> tuple[list[int], d
                "--function", function, "--args-json", json.dumps(args),
                "--library", str(root / "native"), "--cache-dir",
                str(session.state_dir / "provider-cache" / "automation-coherence")]
+    retained = _resident_provider(session, root, binary)
+    if retained is not None:
+        module, entrypoint, roots = retained
+        # The canonical embed ABI includes integer types; source-call CLI
+        # historically accepted omitted types as its own input shorthand.
+        for argument in args:
+            for row in argument['sequence']['values']:
+                for value in row['sequence']['values']:
+                    value['integer']['type'] = {'bits': 64, 'signed': False}
+        try:
+            returned, execution = getattr(module, entrypoint)(roots=roots, compiler=binary,
+                embed=Path(binary).parent / 'libmncs_embed.so',
+                cache=session.state_dir / 'provider-cache', function=function, arguments=args)
+        except RuntimeError as error:
+            raise ValueError('owner artifact reconcile/execution unavailable: ' + str(error)) from error
+        if returned.get('status') != 'returned':
+            raise ValueError('retained coherence call did not return')
+        values = returned['returned'][0]['sequence']['values']
+        codes = [int(value['integer']['value']) for value in values]
+        admitted = {0, 1} if function == 'scoped_events' else {0, 1, 2, 3} if function == 'route_batch' else {1, 2, 13}
+        if len(codes) != len(rows) or any(code not in admitted for code in codes):
+            raise ValueError('incomplete retained coherence batch')
+        if callable(getattr(session.store, 'put_record', None)):
+            for record in (execution.get('build'), execution):
+                if not isinstance(record, dict):
+                    continue
+                address = (session.session_id + ':provider-receipt:' + record['identity']).encode()
+                schema = record['schema_version'].encode()
+                existing = session.store.get_record(schema, address)
+                if existing is None:
+                    session.store.put_record(schema, address, record)
+                elif existing != record:
+                    raise ValueError('immutable owner receipt payload differs')
+        return codes, execution
     result = subprocess.run(command, capture_output=True, text=True, timeout=30, check=False)
     document = json.loads(result.stdout)
     if result.returncode or document.get("status") != "returned":
         raise ValueError("native Automation coherence decision unavailable")
     values = document["call"]["returned"][0]["sequence"]["values"]
     codes = [int(value["integer"]["value"]) for value in values]
-    admitted = {0, 1, 2, 3} if function == "route_batch" else {1, 2, 13}
+    admitted = {0, 1} if function == "scoped_events" else {0, 1, 2, 3} if function == "route_batch" else {1, 2, 13}
     if len(codes) != len(rows) or any(code not in admitted for code in codes):
         raise ValueError("incomplete native coherence batch")
     receipt = {key: document["call"].get(key) for key in
@@ -84,6 +161,24 @@ def _policy_identity(session, prior: dict) -> tuple[str, dict]:
     # change cannot reuse results classified by the previous adapter code.
     files = [INPUTS_PATH, *sorted(Path(__file__).parent.glob("*.py"))]
     if automation:
+        manifest = Path(automation) / '.mncs/project.json'
+        files.append(manifest)
+        if manifest.is_file():
+            declarations = json.loads(manifest.read_text()).get('contracts', {}).get('provides', [])
+            provider = next((item for item in declarations if item.get('contract') == 'automation-coherence-routing'), {})
+            if provider.get('artifact_declaration'):
+                declared = Path(automation) / provider['artifact_declaration']
+                files.append(declared)
+                specification = json.loads(declared.read_text())
+                bound = dict(roots, **{'mncs-automation': Path(automation)})
+                for repository, variable in [('MNCS-Commons', 'MNCS_COMMONS_ROOT'), ('mncs-doctor', 'MNCS_DOCTOR_ROOT'), ('mncs-forge', 'MNCS_FORGE_ROOT')]:
+                    if os.environ.get(variable):
+                        bound.setdefault(repository, Path(os.environ[variable]))
+                files.extend(bound[item['repository']] / item['path'] for item in specification['inputs']
+                             if item['repository'] in bound)
+                if 'mncs-forge' in bound:
+                    files.extend(bound['mncs-forge'] / 'src/mncs_forge' / name for name in
+                                 ('provider_artifacts.py', 'retained_embed.py'))
         files.extend(Path(automation) / "native/mncs/automation" / name
                      for name in ("coherence.mncs", "revisit.mncs"))
     from .family import find_mncs_binary
@@ -97,7 +192,8 @@ def _policy_identity(session, prior: dict) -> tuple[str, dict]:
 def _runtime_due(session, definition: dict) -> bool:
     # A provider without an admitted invalidation declaration still needs live
     # observation. Only the checkout-observation service is static today.
-    return any(service.get("observation_inputs") != ["selected-repositories"]
+    covered = {item.get('service_identity') for item in _streams(session, definition)}
+    return any(service.get("observation_inputs") != ["selected-repositories"] and service.get('identity') not in covered
                for service in definition.get("services", []))
 
 
@@ -128,11 +224,14 @@ def _file_events(session, events: list[dict]) -> list[dict]:
         event for event in events if event["kind"] != "file.changed"]
 
 
-def _store_events(session, prior: dict) -> tuple[list[dict], str | None, bool]:
+def _store_events(session, prior: dict, definition: dict | None = None) -> tuple[list[dict], str | None, bool]:
     if not callable(getattr(session.store, "generation", None)):
         # Explicit debug backend has no commit stream: read its bounded rows.
-        material = {"claims": session.store.read_claims(),
-                    "rows": session.store.read_projection_versions()}
+        versions = dict(session.store.read_projection_versions())
+        # Own contributor bookkeeping is not an invalidation of this session.
+        # Peers still observe that row through their respective cursors.
+        versions.pop('family:contributor/' + session.session_id, None)
+        material = {"claims": session.store.read_claims(), "rows": versions}
         cursor = digest_hex(material)
         changed = prior.get("file_cursor") not in (None, cursor)
         return ([{"kind": "claim.changed"}, {"kind": "family.changed"}] if changed else [], cursor, True)
@@ -140,6 +239,7 @@ def _store_events(session, prior: dict) -> tuple[list[dict], str | None, bool]:
     if result.status != "ok":
         return [], result.cursor, False
     selected = set(_roots(session))
+    publications = (definition or {}).get('coherence_publications') or []
     events = []
     for item in result.events:
         if item.kind == "claim.changed":
@@ -148,15 +248,98 @@ def _store_events(session, prior: dict) -> tuple[list[dict], str | None, bool]:
                 events.append({"kind": item.kind, "repository": repository})
         elif item.kind == "store.changed":
             identity = item.provenance.get("domain_identity", "")
+            if identity.startswith('family:contributor/' + session.session_id + ':'):
+                continue
             if identity.startswith("family:"):
                 events.append({"kind": "family.changed", "subject": identity})
             elif identity.startswith("entry:index/"):
                 continue
             else:
+                declared = next((entry for entry in publications if entry['schema'] == item.provenance.get('domain_schema')), None)
+                if declared:
+                    row = session.store.get_record(declared['schema'].encode(), identity.encode())
+                    if not isinstance(row, dict):
+                        return events, result.cursor, False
+                    repository = row.get(declared.get('repository_field', 'repository'))
+                    if not isinstance(repository, str):
+                        return events, result.cursor, False
+                    if repository in selected:
+                        events.append({'kind': declared['event'], 'repository': repository,
+                            'subject': row.get(declared.get('subject_field', 'subject')), 'identity': item.identity})
+                    continue
                 # Unknown shared writes cannot authorize reuse. Bound the
                 # reconciliation rather than inventing their domain meaning.
                 return events, result.cursor, False
     return events, result.cursor, True
+
+
+def _streams(session, definition):
+    declared = list(definition.get('coherence_streams') or [])
+    for observation in session.snapshot.get('service_observations', []):
+        transport = (observation.get('provider_observed') or {}).get('event_transport')
+        if isinstance(transport, dict):
+            declared.append(dict(transport, service_identity=observation['identity']))
+    # One socket/stream even when both the definition and probe declare it.
+    return list({item['identity']: item for item in declared}.values())
+
+
+def _semantic_events(session, prior, definition):
+    cursors = dict(prior.get('semantic_cursors') or {})
+    events, known = [], True
+    for declared in _streams(session, definition)[:8]:
+        if declared.get('protocol') != 'mncs.workspace-event-cursor/2':
+            known = False
+            continue
+        identity = declared['identity']
+        source = sources.LanguageServiceSource(declared['socket'])
+        result = source.observe(cursors.get(identity))
+        if result.status != 'ok':
+            known = False
+            events.append({'kind': 'provider.changed', 'provider': declared.get('provider'),
+                           'stream': identity, 'reason': result.detail, 'reset': result.status == 'reset'})
+        else:
+            for item in result.events:
+                for observation in session.snapshot.get('service_observations', []):
+                    if observation.get('identity') == declared.get('service_identity'):
+                        observed = observation.setdefault('provider_observed', {})
+                        observed.update(generation=item.generation, stream_identity=item.stream, event_cursor=item.provenance['cursor'])
+                events.append({'kind': item.kind, 'identity': item.identity,
+                    'provider': declared.get('provider'), 'stream': identity,
+                    'subject': item.subject, 'generation': item.generation,
+                    'provenance': item.provenance, **item.payload})
+        # On reset acknowledge no new epoch until a bounded pass has run.
+        cursors[identity] = result.cursor
+    return events, cursors, known
+
+
+def _pass_masks(session, events, spec, definition):
+    masks = {name: _event_mask(events, spec) for name in spec['passes']}
+    subscriptions = definition.get('coherence_subscriptions') or {}
+    for name, subscription in subscriptions.items():
+        if name not in masks:
+            raise ValueError('unknown coherence subscription owner')
+        rows, considered = [], []
+        for event in events:
+            if event['kind'] != 'semantic.changed' or event.get('stream') != subscription.get('stream'):
+                continue
+            subjects = {item.get('identity') for item in event.get('semantic_subjects', []) if isinstance(item, dict)}
+            obligations = event.get('obligations') or {}
+            identities = set()
+            for key in ('added', 'resolved', 'status_changed'):
+                identities.update(item.get('identity') for item in obligations.get(key, []) if isinstance(item, dict))
+            complete = bool(event.get('impact_complete')) and bool(obligations.get('complete')) and subscription.get('complete') is True
+            rows.append([1, int(complete), int(bool(subjects & set(subscription.get('subjects', [])))),
+                         int(bool(identities & set(subscription.get('obligations', []))))])
+            considered.append(event)
+        if rows:
+            decisions = []
+            for offset in range(0, len(rows), 16):
+                codes, _ = _native(session, 'scoped_events', rows[offset:offset + 16])
+                decisions.extend(codes)
+            retained = [event for event in events if event not in considered]
+            retained.extend(event for event, code in zip(considered, decisions) if code == 1)
+            masks[name] = _event_mask(retained, spec)
+    return masks
 
 
 def _observe(session, prior: dict) -> tuple[dict, list[dict], bool, dict]:
@@ -298,26 +481,29 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     if previous.get("schema_version") != SCHEMA:
         previous = {}
     observed, events, known, metrics = _observe(session, previous)
-    store_events, cursor, store_known = _store_events(session, previous)
+    store_events, cursor, store_known = _store_events(session, previous, definition)
     events.extend(store_events)
-    known = known and store_known and (not previous or previous.get("stable") is True)
+    semantic_events, semantic_cursors, semantic_known = _semantic_events(session, previous, definition)
+    events.extend(semantic_events)
+    known = known and semantic_known and store_known and (not previous or previous.get("stable") is True)
     policy, policy_artifacts = _policy_identity(session, previous.get("policy_artifacts", {}))
     if previous and previous.get("policy_identity") != policy:
         known = False
     deadlines = dict(previous.get("deadlines") or {})
     expired = {name for name, value in deadlines.items() if now_ms >= value}
     report = {"mode": "bootstrap_scan" if not previous else "targeted_update",
-              "events": events[:32], "scheduled": [], "skipped": [], **metrics}
+              "events": events[:32], "event_count": len(events), "scheduled": [], "skipped": [], **metrics}
     results, results_known = _load_results(session, previous.get("result_refs") or {})
     known = known and results_known
     names = list(spec["passes"])
     if set(names) != set(runners):
         raise ValueError("coherence runners must match the declared owner passes")
+    rows = []
     try:
         events = _file_events(session, events)
-        changes = _event_mask(events, spec)
+        masks = _pass_masks(session, events, spec, definition)
         rows = [[int(name in results), int(known),
-                 sum(1 << index for index in spec["passes"][name]), changes, 1, 0, 0,
+                 sum(1 << index for index in spec["passes"][name]), masks[name], 1, 0, 0,
                  int(name in expired or (name == "doctor" and _runtime_due(session, definition)))]
                 for name in names]
         request = digest_hex({"policy": policy, "facts": rows})
@@ -363,7 +549,12 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                 values = scheduler_deadlines(session)
                 if values:
                     deadlines[name] = min(int(datetime.fromisoformat(value).timestamp() * 1000) for value in values)
-            report["scheduled"].append({"pass": name, "disposition": code})
+            report["scheduled"].append({"pass": name, "owner": name, "disposition": code, "wave": wave,
+                "owner_reused": bool((results[name] or {}).get("reused", False)),
+                "invalidated_input_mask": rows[names.index(name)][3] if rows else None,
+                "timer_or_lifecycle_due": bool(rows[names.index(name)][7]) if rows else None,
+                "inputs": [event["kind"] for event in events if _event_mask([event], spec) & sum(1 << i for i in spec["passes"][name])],
+                "subjects": sorted({item.get("identity", "") for event in events for item in event.get("semantic_subjects", []) if isinstance(item, dict)})[:64]})
             if key and before != _domain_signature(session.snapshot.get(key)):
                 emitted.append({"kind": kind, "producer": name})
         if not emitted or len(scheduled) == len(names):
@@ -380,7 +571,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     # A replay, rather than sampling the latest generation, can acknowledge
     # our own effects without discarding a publication racing those effects.
     if callable(getattr(session.store, "generation", None)) and report["scheduled"]:
-        raced, checked_cursor, checked_known = _store_events(session, {"store_cursor": cursor})
+        raced, checked_cursor, checked_known = _store_events(session, {"store_cursor": cursor}, definition)
         if checked_known and not raced:
             cursor = checked_cursor
         else:
@@ -390,11 +581,12 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     if not stable:
         report["mode"] = "bounded_reconciliation"
         report["pending_events"] = intervening[:32]
-    if report["scheduled"] or events or previous.get("repositories") != observed["repositories"]:
+    effects = any(not (results.get(name) or {}).get('reused', False) for name in scheduled)
+    if effects or events or previous.get("repositories") != observed["repositories"] or semantic_cursors != previous.get("semantic_cursors", {}) or previous.get('policy_identity') != policy:
         state = {"schema_version": SCHEMA, **observed, "result_refs": _result_refs(session, results),
                  "policy_identity": policy, "policy_artifacts": policy_artifacts,
                  "policy_receipt": receipt, "last_trace": report, "deadlines": deadlines,
-                 "stable": stable, "store_cursor": cursor,
+                 "stable": stable and semantic_known, "store_cursor": cursor, "semantic_cursors": semantic_cursors,
                  "file_cursor": cursor}
         # Keep the replay cursor captured BEFORE effects. Own writes are
         # filtered by the feed. A concurrent peer publication must be replayed

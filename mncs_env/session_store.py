@@ -466,6 +466,12 @@ class StoreSessionStore(SessionStore):
     def close(self) -> None:
         self.backend.close()
 
+    def get_record(self, schema: bytes, identity: bytes):
+        return self.backend.get_record(schema, identity)
+
+    def put_record(self, schema: bytes, identity: bytes, record: dict):
+        return self.backend.put_record(schema, identity, record)
+
     def generation(self) -> int:
         return self.backend.generation()
 

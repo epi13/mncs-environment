@@ -1,0 +1,214 @@
+{
+  "result": {
+    "status": "returned",
+    "returned": [
+      {
+        "sequence": {
+          "values": [
+            {
+              "integer": {
+                "value": 0,
+                "type": {
+                  "bits": 64,
+                  "signed": false
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "steps": 68,
+    "artifact_identity": "mncs:compiler:backend-artifact:1e05d56096ba2caeb2b0a98922349355dd36d1750d2d9ad1e0894b73c51f151a",
+    "artifact_sha256": "f6b66f5910e1318c71417d5ff7d637c2ec1e4bb6163a473c7a6012058a9948d2",
+    "backend": "mncs-research-bytecode",
+    "reused_session": true
+  },
+  "execution": {
+    "schema_version": "mncs.provider-execution-provenance/1",
+    "identity": "162e060c0cd89622d3ad708f4386ed8dcb7501f6d4ac10c82cbd8469332ac2a0",
+    "core": {
+      "provider": {
+        "repository": "mncs-automation",
+        "contract": "automation-coherence-routing",
+        "version": "1"
+      },
+      "build_receipt": "7a32c4d5505f67de8bb6e382331184b26694aff64f5616dd1938f018a5c4e81e",
+      "artifact_identity": "mncs:compiler:backend-artifact:1e05d56096ba2caeb2b0a98922349355dd36d1750d2d9ad1e0894b73c51f151a",
+      "artifact_sha256": "f6b66f5910e1318c71417d5ff7d637c2ec1e4bb6163a473c7a6012058a9948d2",
+      "executor_sha256": "8cf2f1aa2364f6275097ead51cb1826dd6152267dcb3a7bfd19797cd04d58339",
+      "abi": {
+        "backend_schema": "0.6",
+        "runtime": "mncs-embed retained session C ABI",
+        "wire": "canonical MNCS value ABI"
+      },
+      "operation": "mncs.automation.coherence.v1::route_batch",
+      "subject_identity": "mncs.native-decision-input:70208697d4ffa8f5639dcf2953e91a3d60781c5a17eaa416e5296dbb11e395ff",
+      "input_identity": "a630e7c67252eb7060da8793c04c1ed50ef3d1c5c8520a616a83c8a265fa38f3",
+      "inventory_identity": "92483241c4ac94304e56de0584e69ffd33617b8ae93909b777f6cc1c5b11b860",
+      "result_identity": "7e6939120c03a248ef0b264a3e7e10ba43b2eed1484cd07d238aafeeadbcc5c6"
+    },
+    "build": {
+      "schema_version": "mncs.provider-build-receipt/1",
+      "identity": "7a32c4d5505f67de8bb6e382331184b26694aff64f5616dd1938f018a5c4e81e",
+      "core": {
+        "inputs": {
+          "provider": {
+            "repository": "mncs-automation",
+            "contract": "automation-coherence-routing",
+            "version": "1"
+          },
+          "declaration_identity": "f53f07d7f9ca3bd9a47e00bc881478a656e32e3c93d84f075ff2c0c658edd3dc",
+          "source_inputs": {
+            "mncs-automation:native/mncs/automation/provider.mncs": "8b84f0a51c2b1ffbe232449e26106abd536fa383092c521d967a58e3bf7b2d13",
+            "mncs-automation:native/mncs/automation/coherence.mncs": "d75aa6a5ab161f738475318b921bd5dc0cfc6e98bb8bce3c17d3950b9698e4d6",
+            "mncs-automation:native/mncs/automation/revisit.mncs": "8c558994a20e2e70133a47650b4b82ed110a2f89a466e3c614f283ba56ef67a6",
+            "mncs-automation:.mncs/coherence-artifact.json": "29d6197cef8e71d7a7c6afdf2081d3af985039cc8a419877ddcd21f5dcc78761",
+            "mncs-automation:tools/coherence_provider.py": "0dc0af67ed381b0290c220216e668424a8118da01a4ebe5f84b9bcd300957402",
+            "MNCS-Commons:src/mncs_commons/mesh/mncs/commons/family/provenance/v1.mncs": "afc6b0b0396f394f607851c39d5cbc8470dab797c90d914501757d3846d31fa1",
+            "mncs-doctor:mncs/doctor/provider.mncs": "940e954723d1898f541ee79bb8d69320c8bb7850e21060f4e346cbaed2fff9e0",
+            "mncs-automation:.mncs/project.json": "183701b5bbd6bf38127d5300aace72aa43c688903f5bd67242ecda6e935b6557"
+          },
+          "compiler_artifact_sha256": "4387bae352b68020a83edbbb312794522a76c9f618cc7548a8f68384c63ecb40",
+          "build_transport_sha256": "54590f32e27d11d50ea0915944cc15f87855ea2d94de429775f451084646073a",
+          "configuration": {
+            "target": "mncs-research-bytecode",
+            "profile": "retained-bounded",
+            "effects": []
+          },
+          "dependency_roots": [
+            {
+              "repository": "mncs-automation",
+              "path": "native",
+              "content_identity": "182b13f080ade358ffb275f7caa12b200645b06aa60f3e93409634e9df0c7d06"
+            },
+            {
+              "repository": "MNCS-Commons",
+              "path": "src/mncs_commons/mesh",
+              "content_identity": "1f3d2f7c5da69271795b0defdd01e6493fe3dc25cd455096d00c8bb50e10aafa"
+            },
+            {
+              "repository": "mncs-doctor",
+              "path": "mncs",
+              "content_identity": "70088051bfd6dc8a074a7e5b8a2ae1f91b52c36af9a755cf54f450d0e4178aa7"
+            }
+          ],
+          "stdlib": {
+            "applicability": "not-consumed",
+            "evidence": "declared module closure contains only Automation, Commons provenance and Doctor provider modules"
+          },
+          "abi": {
+            "backend_schema": "0.6",
+            "runtime": "mncs-embed retained session C ABI",
+            "wire": "canonical MNCS value ABI"
+          }
+        },
+        "artifact": {
+          "address": "artifacts/05b2a385730defdb855354e99169f407c627065755a9ba83031d91d2673d9b48.json",
+          "sha256": "05b2a385730defdb855354e99169f407c627065755a9ba83031d91d2673d9b48",
+          "identity": "mncs:compiler:backend-artifact:1e05d56096ba2caeb2b0a98922349355dd36d1750d2d9ad1e0894b73c51f151a",
+          "payload_sha256": "f6b66f5910e1318c71417d5ff7d637c2ec1e4bb6163a473c7a6012058a9948d2",
+          "interface_identity": "621b8404f629f70c45ad2e3bfb7aee5bd3f18ce7a0c14c05af458ef31f9d9557",
+          "schema_version": "0.6",
+          "backend": {
+            "identity": "mncs:compiler:backend:1f24243c2c15f1826cd129742e8217e09fab7a2911123043814f5c7ae5f16910",
+            "name": "mncs-research-bytecode",
+            "version": "0.1"
+          },
+          "target": "mncs:compiler:target-contract:7f5394766e6eb936b7f8d21f58e00f0d649917fe8e737bb2a2e2997a72c787ea"
+        },
+        "inventory_identity": "92483241c4ac94304e56de0584e69ffd33617b8ae93909b777f6cc1c5b11b860",
+        "build_capability": "mncs-automation:coherence-artifact-reconcile",
+        "build_invocation_identity": "de48b9ce482b455d0c3345a674a69a0bfa95f27aacdb64398f87f2e002b15c4d",
+        "remediation_admission": {
+          "artifact_identity": "mncs:compiler:backend-artifact:cf0d909fe0eec99f158bc6fbcdfab5dc2e815cc7fc0c26bc80a8b56fb62b5865",
+          "artifact_sha256": "d34caa4d4ae2ffdc55956a2f6b48057bc85b417886fe6371d9c9bb1220611648",
+          "backend": "mncs-research-bytecode"
+        }
+      }
+    }
+  },
+  "build": {
+    "schema_version": "mncs.provider-build-receipt/1",
+    "identity": "7a32c4d5505f67de8bb6e382331184b26694aff64f5616dd1938f018a5c4e81e",
+    "core": {
+      "inputs": {
+        "provider": {
+          "repository": "mncs-automation",
+          "contract": "automation-coherence-routing",
+          "version": "1"
+        },
+        "declaration_identity": "f53f07d7f9ca3bd9a47e00bc881478a656e32e3c93d84f075ff2c0c658edd3dc",
+        "source_inputs": {
+          "mncs-automation:native/mncs/automation/provider.mncs": "8b84f0a51c2b1ffbe232449e26106abd536fa383092c521d967a58e3bf7b2d13",
+          "mncs-automation:native/mncs/automation/coherence.mncs": "d75aa6a5ab161f738475318b921bd5dc0cfc6e98bb8bce3c17d3950b9698e4d6",
+          "mncs-automation:native/mncs/automation/revisit.mncs": "8c558994a20e2e70133a47650b4b82ed110a2f89a466e3c614f283ba56ef67a6",
+          "mncs-automation:.mncs/coherence-artifact.json": "29d6197cef8e71d7a7c6afdf2081d3af985039cc8a419877ddcd21f5dcc78761",
+          "mncs-automation:tools/coherence_provider.py": "0dc0af67ed381b0290c220216e668424a8118da01a4ebe5f84b9bcd300957402",
+          "MNCS-Commons:src/mncs_commons/mesh/mncs/commons/family/provenance/v1.mncs": "afc6b0b0396f394f607851c39d5cbc8470dab797c90d914501757d3846d31fa1",
+          "mncs-doctor:mncs/doctor/provider.mncs": "940e954723d1898f541ee79bb8d69320c8bb7850e21060f4e346cbaed2fff9e0",
+          "mncs-automation:.mncs/project.json": "183701b5bbd6bf38127d5300aace72aa43c688903f5bd67242ecda6e935b6557"
+        },
+        "compiler_artifact_sha256": "4387bae352b68020a83edbbb312794522a76c9f618cc7548a8f68384c63ecb40",
+        "build_transport_sha256": "54590f32e27d11d50ea0915944cc15f87855ea2d94de429775f451084646073a",
+        "configuration": {
+          "target": "mncs-research-bytecode",
+          "profile": "retained-bounded",
+          "effects": []
+        },
+        "dependency_roots": [
+          {
+            "repository": "mncs-automation",
+            "path": "native",
+            "content_identity": "182b13f080ade358ffb275f7caa12b200645b06aa60f3e93409634e9df0c7d06"
+          },
+          {
+            "repository": "MNCS-Commons",
+            "path": "src/mncs_commons/mesh",
+            "content_identity": "1f3d2f7c5da69271795b0defdd01e6493fe3dc25cd455096d00c8bb50e10aafa"
+          },
+          {
+            "repository": "mncs-doctor",
+            "path": "mncs",
+            "content_identity": "70088051bfd6dc8a074a7e5b8a2ae1f91b52c36af9a755cf54f450d0e4178aa7"
+          }
+        ],
+        "stdlib": {
+          "applicability": "not-consumed",
+          "evidence": "declared module closure contains only Automation, Commons provenance and Doctor provider modules"
+        },
+        "abi": {
+          "backend_schema": "0.6",
+          "runtime": "mncs-embed retained session C ABI",
+          "wire": "canonical MNCS value ABI"
+        }
+      },
+      "artifact": {
+        "address": "artifacts/05b2a385730defdb855354e99169f407c627065755a9ba83031d91d2673d9b48.json",
+        "sha256": "05b2a385730defdb855354e99169f407c627065755a9ba83031d91d2673d9b48",
+        "identity": "mncs:compiler:backend-artifact:1e05d56096ba2caeb2b0a98922349355dd36d1750d2d9ad1e0894b73c51f151a",
+        "payload_sha256": "f6b66f5910e1318c71417d5ff7d637c2ec1e4bb6163a473c7a6012058a9948d2",
+        "interface_identity": "621b8404f629f70c45ad2e3bfb7aee5bd3f18ce7a0c14c05af458ef31f9d9557",
+        "schema_version": "0.6",
+        "backend": {
+          "identity": "mncs:compiler:backend:1f24243c2c15f1826cd129742e8217e09fab7a2911123043814f5c7ae5f16910",
+          "name": "mncs-research-bytecode",
+          "version": "0.1"
+        },
+        "target": "mncs:compiler:target-contract:7f5394766e6eb936b7f8d21f58e00f0d649917fe8e737bb2a2e2997a72c787ea"
+      },
+      "inventory_identity": "92483241c4ac94304e56de0584e69ffd33617b8ae93909b777f6cc1c5b11b860",
+      "build_capability": "mncs-automation:coherence-artifact-reconcile",
+      "build_invocation_identity": "de48b9ce482b455d0c3345a674a69a0bfa95f27aacdb64398f87f2e002b15c4d",
+      "remediation_admission": {
+        "artifact_identity": "mncs:compiler:backend-artifact:cf0d909fe0eec99f158bc6fbcdfab5dc2e815cc7fc0c26bc80a8b56fb62b5865",
+        "artifact_sha256": "d34caa4d4ae2ffdc55956a2f6b48057bc85b417886fe6371d9c9bb1220611648",
+        "backend": "mncs-research-bytecode"
+      }
+    }
+  },
+  "rebuilds": 1,
+  "first_seconds": 0.8848263029940426,
+  "quiet_seconds": 0.15279624005779624,
+  "quiet_processes": 0
+}

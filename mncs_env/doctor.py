@@ -866,3 +866,42 @@ def remediate_family_change(session, identity: str, consumer: str, *,
     return {"repository": consumer, "dry_run": dry_run, "summary": summary,
             "remaining": remaining, "evidence": envelope["evidence"],
             "exit_code": exit_code}
+
+
+def family_plan(session, function: str, facts: list[int]) -> tuple[bool, Any]:
+    """Selected Doctor remediation policy; absence permits old-owner recovery.
+
+    The native provider descriptor supplies the source/entrypoint. A declared
+    but unusable policy never falls back to a different authority.
+    """
+    import os
+    import subprocess
+    from . import family
+    selected = _repo_paths(session)
+    root = os.environ.get('MNCS_DOCTOR_ROOT') or selected.get('mncs-doctor')
+    if not root:
+        return False, None
+    root = Path(root).resolve()
+    try:
+        document = json.loads((root / '.mncs/project.json').read_text())
+        contract = next((item for item in document.get('contracts', {}).get('provides', [])
+                         if item.get('contract') == 'family-remediation-plan'), None)
+        if contract is None:
+            return False, None
+        policy = contract['native_policy']
+        source = (root / policy['source']).resolve()
+        ready = family._native_ready(session)
+        if ready is None or not source.is_relative_to(root) or function not in policy['functions']:
+            return True, None
+        binary, _, libraries = ready
+        command = [binary, 'call', str(source), '--module', policy['module'], '--function', function,
+                   '--args-json', family._typed_integers(*facts)]
+        for library in [root / 'mncs', *libraries]:
+            command.extend(['--library', str(library)])
+        result = subprocess.run(command, capture_output=True, text=True, timeout=30, check=False)
+        value = json.loads(result.stdout)
+        if result.returncode or value.get('status') != 'returned':
+            return True, None
+        return True, value['call']['returned'][0]
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
+        return True, None

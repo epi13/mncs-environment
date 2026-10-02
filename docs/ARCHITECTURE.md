@@ -250,3 +250,12 @@ and resumes Store-backed owner observations. See [Incremental ambient coherence]
 for invalidation, recovery, cursor races, artifact observation and the proposed
 compiler materialization boundary. Provider build origin and cross-session
 evidence equivalence remain explicit unknowns.
+
+Provider/resident coherence composes owner-declared artifact capabilities,
+Commons provenance admission, Doctor targeted repair and Forge retained
+execution. Entry and resident ticks share the same incremental router. Store
+metadata replay and LS stream identities route bounded subject/obligation facts;
+unknown chains reconcile explicitly. The recoverable session-selection index
+is a projection of canonical snapshots, not authority. See
+[PROVIDER_RESIDENT_COHERENCE.md](PROVIDER_RESIDENT_COHERENCE.md) for contracts,
+current implementation boundaries and unresolved producer provenance.

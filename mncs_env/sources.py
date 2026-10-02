@@ -253,7 +253,7 @@ class StoreReplaySource(Source):
             subject=text, observed_at=moment, generation=str(generation),
             kind="store.changed", severity="info",
             summary=f"unclassified store identity appeared: {text[:64]}",
-            provenance={"domain_identity": text[:128]},
+            provenance={"domain_identity": text, "domain_schema": schema.decode("utf-8", "replace")},
             relations={},
             payload={},
         )
@@ -462,6 +462,11 @@ class LanguageServiceSource(Source):
                 provenance={"stream": current_stream, "cursor": cursor},
                 relations={"uri": uri, "source_identity": identity},
                 payload={
+                    "semantic_subjects": (item.get("semantic_subjects") or [])[:64],
+                    "obligations": item.get("obligations") or {},
+                    "impact": item.get("impact") or {},
+                    "impact_identity": item.get("impact_identity"),
+                    "impact_complete": bool(item.get("impact_complete")) and len(item.get("semantic_subjects") or []) <= 64,
                     "affected": [d.get("uri") for d in
                                  item.get("affected_documents", []) or []
                                  if isinstance(d, dict)][:10],

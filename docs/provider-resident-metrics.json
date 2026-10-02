@@ -1,0 +1,481 @@
+{
+  "schema_version": "mncs.environment.provider-resident-campaign-metrics/1",
+  "status": "not-closed",
+  "counter_scope": "instrumented logical Store API calls and spawned subprocesses; not low-level blob I/O",
+  "session_id": "ses_ac3a39366dec8936",
+  "implementation_session": "ses_53da3d0d926a4e2b",
+  "backend": "store",
+  "generation_observed": 555,
+  "replay_cursor_observed": "554",
+  "selected_projects": [
+    {
+      "branch": "main",
+      "dirty": false,
+      "head": "e179ebed71c4593f9c55a8526cb76a0f1a06e9d2",
+      "path": "/home/epi13/Documents/Projects/mncs-automation",
+      "repository": "mncs-automation"
+    },
+    {
+      "branch": "main",
+      "dirty": true,
+      "head": "68358e6ae79742658717ee2ec0d5cdf927435c61",
+      "path": "/home/epi13/Documents/Projects/mncs-compiler",
+      "repository": "mncs-compiler"
+    },
+    {
+      "branch": "campaign/ambient-debug-20261001",
+      "dirty": false,
+      "head": "13bf5025ba45e4c6b5bafb38268492e8f27cd49e",
+      "path": "/home/epi13/Documents/Projects/mncs-debug",
+      "repository": "mncs-debug"
+    },
+    {
+      "branch": "main",
+      "dirty": false,
+      "head": "2ad92c5b3f1bad0befcd1da5b42f3179c38142fe",
+      "path": "/home/epi13/Documents/Projects/mncs-doc",
+      "repository": "mncs-doc"
+    },
+    {
+      "branch": "main",
+      "dirty": false,
+      "head": "f598d24446d61e60b03c1e63e3964b00db11e1c2",
+      "path": "/home/epi13/Documents/Projects/mncs-environment",
+      "repository": "mncs-environment"
+    },
+    {
+      "branch": "campaign/ambient-language-service-20261001",
+      "dirty": false,
+      "head": "a3f8e75cabbba9f9bdd5c7357ec23b85a274e530",
+      "path": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/ambient-language-service",
+      "repository": "mncs-environment"
+    },
+    {
+      "branch": "campaign/ambient-verification-20261001",
+      "dirty": false,
+      "head": "c3c22fea18145a7f1e41dc926885d669c9914a06",
+      "path": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/ambient-verification",
+      "repository": "mncs-environment"
+    },
+    {
+      "branch": "stdlib/bootstrap-20261002",
+      "dirty": true,
+      "head": "64ec1eddad5d5367687872eb3f86be63d521b537",
+      "path": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/stdlib-bootstrap",
+      "repository": "mncs-environment"
+    },
+    {
+      "branch": "campaign/process-entry-continuous-closure-20260923",
+      "dirty": false,
+      "head": "089e71971505d8acfca2fe1bf655dd4122fe3bd9",
+      "path": "/home/epi13/Documents/Projects/mncs-forge",
+      "repository": "mncs-forge"
+    },
+    {
+      "branch": "stdlib/extraction-20261002",
+      "dirty": true,
+      "head": "425de2016a1273b66fa44609ea75aa25e04f0a0f",
+      "path": "/home/epi13/Documents/Projects/mncs-language",
+      "repository": "mncs-language"
+    },
+    {
+      "branch": null,
+      "dirty": false,
+      "head": "425de2016a1273b66fa44609ea75aa25e04f0a0f",
+      "path": "/home/epi13/Documents/Projects/mncs-language/.worktrees/pristine-ambient-actions",
+      "repository": "mncs-language"
+    },
+    {
+      "branch": "main",
+      "dirty": false,
+      "head": "24fbff7558eeaa746ae1296328cbd9c168c92299",
+      "path": "/home/epi13/Documents/Projects/mncs-store",
+      "repository": "mncs-store"
+    },
+    {
+      "branch": "main",
+      "dirty": true,
+      "head": "038f0e384d7f3d5c02cf420cde38772807c15e12",
+      "path": "/home/epi13/Documents/Projects/mncs-test",
+      "repository": "mncs-test"
+    }
+  ],
+  "selected_toolchain": {
+    "binary": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs",
+    "checkout": "/home/epi13/Documents/Projects/mncs-language",
+    "repository": "mncs-language",
+    "revision": "425de2016a1273b66fa44609ea75aa25e04f0a0f",
+    "status": "available"
+  },
+  "selected_stdlib": {
+    "/home/epi13/Documents/Projects/mncs-stdlib/library": {
+      "content_identity": "sha256:17b46deea40d27ea0510f3a9c5a0ca29ea18a5aea670c5e3c1438f999a8f64ce"
+    }
+  },
+  "initial_warm": [
+    {
+      "index": 0,
+      "seconds": 4.278027378022671,
+      "compact_context_bytes": 9581,
+      "ambient_bytes": 913,
+      "fd_before": 4,
+      "fd_after": 5,
+      "git_processes": 155,
+      "native_processes": 2,
+      "other_processes": 2,
+      "logical_store_puts": 11,
+      "store_read_calls": 25,
+      "git_operations": {
+        "ls-files --cached --others --exclude-standard -z": 8,
+        "rev-parse HEAD --abbrev-ref HEAD": 21,
+        "status --porcelain=v1 --untracked-files=no": 21,
+        "ls-files --others --exclude-standard": 21,
+        "rev-parse HEAD": 20,
+        "branch --show-current": 18,
+        "status --porcelain=v1 -uall": 18,
+        "worktree list --porcelain": 18,
+        "branch -r --contains 897ddfa0472b01e11bb23acb22f84c98cef07f5d": 2,
+        "branch -r --points-at 897ddfa0472b01e11bb23acb22f84c98cef07f5d --format=%(refname:short)": 2,
+        "rev-parse --abbrev-ref HEAD": 2,
+        "diff HEAD -- .": 2,
+        "ls-files --others --exclude-standard -z": 2
+      },
+      "git_callers": {
+        "observations.py:_enumerate": 8,
+        "workspace.py:_git": 135,
+        "actions.py:_subject_state": 2,
+        "actions.py:_dispatch_ref": 2,
+        "projection_verification.py:_git": 8
+      },
+      "session": "ses_ac3a39366dec8936",
+      "readiness": "degraded",
+      "verification": {
+        "obligations": 0,
+        "current": 0,
+        "executed": 0,
+        "failed": 0,
+        "unknown": 0,
+        "unsupported": 0,
+        "unresolved": 0,
+        "contradictory": 0,
+        "excluded": 0,
+        "deferred": 0,
+        "invalid": 1,
+        "blockers": 2,
+        "epoch_reused": false,
+        "failed_ids": [],
+        "elapsed_seconds": 0.234,
+        "persisted": true
+      }
+    },
+    {
+      "index": 1,
+      "seconds": 2.195847525028512,
+      "compact_context_bytes": 9580,
+      "ambient_bytes": 925,
+      "fd_before": 5,
+      "fd_after": 5,
+      "git_processes": 0,
+      "native_processes": 0,
+      "other_processes": 0,
+      "logical_store_puts": 0,
+      "store_read_calls": 10,
+      "session": "ses_ac3a39366dec8936",
+      "readiness": "degraded",
+      "verification": {
+        "blockers": 2,
+        "contradictory": 0,
+        "current": 0,
+        "deferred": 0,
+        "elapsed_seconds": 0.0,
+        "epoch_reused": true,
+        "excluded": 0,
+        "executed": 0,
+        "failed": 0,
+        "failed_ids": [],
+        "invalid": 1,
+        "obligations": 0,
+        "persisted": true,
+        "unknown": 0,
+        "unresolved": 0,
+        "unsupported": 0
+      }
+    },
+    {
+      "index": 2,
+      "seconds": 2.1872017399873585,
+      "compact_context_bytes": 9580,
+      "ambient_bytes": 925,
+      "fd_before": 5,
+      "fd_after": 5,
+      "git_processes": 0,
+      "native_processes": 0,
+      "other_processes": 0,
+      "logical_store_puts": 0,
+      "store_read_calls": 10,
+      "session": "ses_ac3a39366dec8936",
+      "readiness": "degraded",
+      "verification": {
+        "blockers": 2,
+        "contradictory": 0,
+        "current": 0,
+        "deferred": 0,
+        "elapsed_seconds": 0.0,
+        "epoch_reused": true,
+        "excluded": 0,
+        "executed": 0,
+        "failed": 0,
+        "failed_ids": [],
+        "invalid": 1,
+        "obligations": 0,
+        "persisted": true,
+        "unknown": 0,
+        "unresolved": 0,
+        "unsupported": 0
+      }
+    },
+    {
+      "index": 3,
+      "seconds": 2.1812145420117304,
+      "compact_context_bytes": 9580,
+      "ambient_bytes": 925,
+      "fd_before": 5,
+      "fd_after": 5,
+      "git_processes": 0,
+      "native_processes": 0,
+      "other_processes": 0,
+      "logical_store_puts": 0,
+      "store_read_calls": 10,
+      "session": "ses_ac3a39366dec8936",
+      "readiness": "degraded",
+      "verification": {
+        "blockers": 2,
+        "contradictory": 0,
+        "current": 0,
+        "deferred": 0,
+        "elapsed_seconds": 0.0,
+        "epoch_reused": true,
+        "excluded": 0,
+        "executed": 0,
+        "failed": 0,
+        "failed_ids": [],
+        "invalid": 1,
+        "obligations": 0,
+        "persisted": true,
+        "unknown": 0,
+        "unresolved": 0,
+        "unsupported": 0
+      }
+    },
+    {
+      "index": 4,
+      "seconds": 2.2122124349698424,
+      "compact_context_bytes": 9580,
+      "ambient_bytes": 925,
+      "fd_before": 5,
+      "fd_after": 5,
+      "git_processes": 0,
+      "native_processes": 0,
+      "other_processes": 0,
+      "logical_store_puts": 0,
+      "store_read_calls": 10,
+      "session": "ses_ac3a39366dec8936",
+      "readiness": "degraded",
+      "verification": {
+        "blockers": 2,
+        "contradictory": 0,
+        "current": 0,
+        "deferred": 0,
+        "elapsed_seconds": 0.0,
+        "epoch_reused": true,
+        "excluded": 0,
+        "executed": 0,
+        "failed": 0,
+        "failed_ids": [],
+        "invalid": 1,
+        "obligations": 0,
+        "persisted": true,
+        "unknown": 0,
+        "unresolved": 0,
+        "unsupported": 0
+      }
+    }
+  ],
+  "final_warm": [
+    {
+      "index": 2,
+      "seconds": 1.7251282810466364,
+      "compact_context_bytes": 9820,
+      "ambient_bytes": 925,
+      "fd_before": 5,
+      "fd_after": 5,
+      "git_processes": 0,
+      "native_processes": 0,
+      "other_processes": 0,
+      "logical_store_puts": 0,
+      "store_read_calls": 4,
+      "session": "ses_ac3a39366dec8936",
+      "readiness": "degraded",
+      "verification": {
+        "blockers": 2,
+        "contradictory": 0,
+        "current": 0,
+        "deferred": 0,
+        "elapsed_seconds": 0.0,
+        "epoch_reused": true,
+        "excluded": 0,
+        "executed": 0,
+        "failed": 0,
+        "failed_ids": [],
+        "invalid": 1,
+        "obligations": 0,
+        "persisted": true,
+        "unknown": 0,
+        "unresolved": 0,
+        "unsupported": 0
+      }
+    },
+    {
+      "index": 3,
+      "seconds": 1.7532710820669308,
+      "compact_context_bytes": 9820,
+      "ambient_bytes": 925,
+      "fd_before": 5,
+      "fd_after": 5,
+      "git_processes": 0,
+      "native_processes": 0,
+      "other_processes": 0,
+      "logical_store_puts": 0,
+      "store_read_calls": 4,
+      "session": "ses_ac3a39366dec8936",
+      "readiness": "degraded",
+      "verification": {
+        "blockers": 2,
+        "contradictory": 0,
+        "current": 0,
+        "deferred": 0,
+        "elapsed_seconds": 0.0,
+        "epoch_reused": true,
+        "excluded": 0,
+        "executed": 0,
+        "failed": 0,
+        "failed_ids": [],
+        "invalid": 1,
+        "obligations": 0,
+        "persisted": true,
+        "unknown": 0,
+        "unresolved": 0,
+        "unsupported": 0
+      }
+    },
+    {
+      "index": 4,
+      "seconds": 1.7267626759130508,
+      "compact_context_bytes": 9820,
+      "ambient_bytes": 925,
+      "fd_before": 5,
+      "fd_after": 5,
+      "git_processes": 0,
+      "native_processes": 0,
+      "other_processes": 0,
+      "logical_store_puts": 0,
+      "store_read_calls": 4,
+      "session": "ses_ac3a39366dec8936",
+      "readiness": "degraded",
+      "verification": {
+        "blockers": 2,
+        "contradictory": 0,
+        "current": 0,
+        "deferred": 0,
+        "elapsed_seconds": 0.0,
+        "epoch_reused": true,
+        "excluded": 0,
+        "executed": 0,
+        "failed": 0,
+        "failed_ids": [],
+        "invalid": 1,
+        "obligations": 0,
+        "persisted": true,
+        "unknown": 0,
+        "unresolved": 0,
+        "unsupported": 0
+      }
+    }
+  ],
+  "real_provider": {
+    "provider": "mncs-automation:automation-coherence-routing",
+    "build_receipt": "7a32c4d5505f67de8bb6e382331184b26694aff64f5616dd1938f018a5c4e81e",
+    "execution_receipt": "162e060c0cd89622d3ad708f4386ed8dcb7501f6d4ac10c82cbd8469332ac2a0",
+    "compiler_sha256": "4387bae352b68020a83edbbb312794522a76c9f618cc7548a8f68384c63ecb40",
+    "embed_sha256": "8cf2f1aa2364f6275097ead51cb1826dd6152267dcb3a7bfd19797cd04d58339",
+    "rebuilds": 1,
+    "first_seconds": 0.8848263029940426,
+    "quiet_seconds": 0.15279624005779624,
+    "quiet_processes": 0
+  },
+  "evidence_reuse": {
+    "Test": "deferred: exact producer subject/obligation/inventory/environment receipts missing",
+    "Debug": "deferred: exact failure/request/source mapping provenance missing",
+    "CI_folding": "deferred: Debug admission cannot prove equivalence",
+    "Actions_shared_dispatch": "deferred: producer-bound external request and ambiguous-outcome contract incomplete"
+  },
+  "live_socket_proof": "blocked by Unix bind Operation not permitted; transport substituted in router integration tests",
+  "tests": {
+    "environment_full": {
+      "passed": 372,
+      "skipped": 32
+    },
+    "automation_selected": {
+      "passed": 60
+    },
+    "commons_provenance": {
+      "passed": 5
+    },
+    "forge_focused": {
+      "passed": 19,
+      "skipped": 1
+    },
+    "forge_owner_final": {
+      "passed": 10
+    },
+    "store_embedded": {
+      "passed": 39
+    },
+    "actions_before": {
+      "failed": 11,
+      "passed": 367,
+      "skipped": 17
+    },
+    "actions_after": {
+      "failed": 3,
+      "passed": 375,
+      "skipped": 17
+    },
+    "LS_ambient": {
+      "passed": 7,
+      "failed_socket_permission": 1
+    },
+    "vertical_proof": "PASS",
+    "environment_final_targeted": {
+      "passed": 28
+    },
+    "doctor_artifact_and_family": {
+      "passed": 10
+    }
+  },
+  "delivery": {
+    "mode": "clean isolated local main fast-forwards; original foreign branches unchanged",
+    "network": "GitHub push rejected by DNS: Could not resolve host github.com",
+    "pushed": false,
+    "commits": {
+      "MNCS-Commons": "8193640fc139308f5c0aa0627f91f9c910d40a04",
+      "mncs-doctor": "6576dff7e7dab0821469509aa514f6bfd90885dd",
+      "mncs-forge": "cb7e0fce12b1002ceb9b29e1b91b8eac34107cff",
+      "mncs-automation": "b114c4227e8852b63ee81daea4c7cf7104ccdbb5",
+      "mncs-actions": "33d9d25c1c0ab3d473e18c6ea6391d096dcab5f8",
+      "mncs-store": "57f6b020d5072821d5ce82132a83f09ea58796d8",
+      "mncs-language-service": "9919cd705de3d1bd2ff1b71fc95ead9b6f3f325e"
+    },
+    "environment": "commit containing this report"
+  }
+}

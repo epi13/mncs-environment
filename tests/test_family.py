@@ -689,8 +689,12 @@ class FamilyHostTest(unittest.TestCase):
 
     def test_unknown_without_toolchain(self) -> None:
         session = self._session()
-        self.assertIsNone(family_module.native_gate(session, [1, 1, 1, 1, 0, 0, 3]))
-        self.assertIsNone(family_module.native_classify(session, [1] * 8))
+        # A suite-wide explicit compiler selection must not leak into this
+        # unavailable-provider fixture. Keep both refusal assertions intact.
+        from unittest.mock import patch
+        with patch.dict(os.environ, {"MNCS_BIN": "", "MNCS_BINARY": ""}):
+            self.assertIsNone(family_module.native_gate(session, [1, 1, 1, 1, 0, 0, 3]))
+            self.assertIsNone(family_module.native_classify(session, [1] * 8))
 
 
 if __name__ == "__main__":
