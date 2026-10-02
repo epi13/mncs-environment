@@ -1,0 +1,25 @@
+{
+  "name": "mncs-environment-with-ambient-semantics",
+  "workspace_root": "../..",
+  "workspace_scope": {
+    "kind": "workspace",
+    "repositories": ["mncs-environment", "mncs-language", "mncs-store", "mncs-test", "mncs-language-service"]
+  },
+  "intent": {
+    "goal": "develop with ambient semantic coherence over the selected resident Language Service",
+    "repositories": ["mncs-environment"],
+    "constraints": ["preserve foreign work; acquire claims before mutating non-owned checkouts"]
+  },
+  "required_capabilities": ["mncs-language-service:resident-status"],
+  "services": [
+    {
+      "identity": "mncs-language-service:mncs-test",
+      "required": false,
+      "probe": {"capability": "mncs-language-service:resident-status", "argv": ["--workspace", {"repository": "mncs-test", "path": "."}]},
+      "reconcile": {"capability": "mncs-language-service:resident-reconcile", "argv": ["--workspace", {"repository": "mncs-test", "path": "."}]},
+      "response_schema": "mncs.language-service.resident-status/1",
+      "ready_when": {"/ready": true}
+    }
+  ],
+  "semantics": {"enabled": true}
+}

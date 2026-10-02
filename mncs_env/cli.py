@@ -531,14 +531,20 @@ def cmd_ack(args: argparse.Namespace) -> int:
 
 
 def cmd_reconciler(args: argparse.Namespace) -> int:
+    import os
+
     from . import reconciler as reconciler_module
     store = open_store(args.state_dir, args.persistence)
     try:
         workspace_root = (args.workspace or
                           Path(args.state_dir).resolve().parent)
+        commons_socket = args.commons_socket or os.environ.get("MNCS_COMMONS_SOCKET")
+        language_socket = args.language_socket or os.environ.get("MNLS_SERVICE_SOCKET")
         daemon = reconciler_module.Daemon(
             state_dir=args.state_dir, workspace_root=workspace_root,
-            interval_seconds=args.interval)
+            interval_seconds=args.interval,
+            commons_socket=commons_socket,
+            language_socket=language_socket)
         if args.status:
             out(daemon.status())
             return 0
@@ -547,7 +553,9 @@ def cmd_reconciler(args: argparse.Namespace) -> int:
         session, _ = reconciler_module.open_or_create_session(
             args.state_dir, store, workspace_root)
         report = reconciler_module.reconcile_once(
-            session, store, workspace_root)
+            session, store, workspace_root,
+            commons_socket=commons_socket,
+            language_socket=language_socket)
         out(report)
         return 0
     finally:
@@ -861,6 +869,10 @@ def build_parser() -> argparse.ArgumentParser:
                             help="run the foreground reconcile loop")
     reconciler.add_argument("--interval", type=float, default=60.0)
     reconciler.add_argument("--status", action="store_true")
+    reconciler.add_argument("--commons-socket", default=None,
+                            help="commons sync socket (or MNCS_COMMONS_SOCKET)")
+    reconciler.add_argument("--language-socket", default=None,
+                            help="language-service event socket (or MNLS_SERVICE_SOCKET)")
     reconciler.set_defaults(func=cmd_reconciler)
 
     checkpoint = session_parser("checkpoint", "persist a checkpoint")
