@@ -394,6 +394,14 @@ class LanguageServiceSource(Source):
                 after = int(saved.get("cursor", 0))
             except (TypeError, ValueError):
                 return SourceResult("reset", [], None, "unparsable cursor; restart sync")
+        # Converge the resident to disk truth before polling, mirroring
+        # the provider probe: shell-made edits bypass LSP notifications,
+        # so polling a stale resident would report quiet as current. A
+        # refused refresh (one already running) is tolerated.
+        try:
+            self._call("refresh_workspace", {})
+        except (ConnectionError, RuntimeError, OSError, ValueError):
+            pass
         try:
             params: dict[str, Any] = {"after_cursor": after,
                                       "max_events": MAX_OBSERVATIONS}
