@@ -295,6 +295,49 @@ class FamilyNativeTest(unittest.TestCase):
             consumer, change2, "cons-repo")
         self.assertEqual(classification2["consumer_class"], "current")
 
+    def test_pre_repair_pass_or_fail_cannot_establish_post_repair_proof(self) -> None:
+        for verdict in ("PASS", "FAIL"):
+            with self.subTest(verdict=verdict):
+                (self.consumer_repo / "data.json").write_text(json.dumps({"revision": "rev-1"}))
+                producer = self._session("ses_prod_" + verdict)
+                established = self._change(producer)
+                identity = established["identity"]
+                consumer = self._session("ses_cons_" + verdict)
+                consumer.store.put_claim(_claim(consumer.session_id, "cons-repo"))
+                consumer.snapshot["verification_state"] = {"cons-repo:ob-1": {
+                    "evidence": {"verdict": verdict, "evidence_id": "pre-repair"}}}
+                self.assertTrue(family_module.converge(consumer, identity, "cons-repo")["converged"])
+                before = family_module.adopt_pending(consumer, identity, "cons-repo")
+                self.assertFalse(before["adopted"], before)
+                self.assertEqual(before["detail"], "awaiting-post-repair-verdict")
+                consumer.snapshot["verification_state"]["cons-repo:ob-1"]["evidence"] = {
+                    "verdict": "PASS", "evidence_id": "post-repair"}
+                self.assertTrue(family_module.adopt_pending(consumer, identity, "cons-repo")["adopted"])
+                claim = _claim(consumer.session_id, "cons-repo")
+                consumer.store.put_claim({**claim, "version": 2, "status": "released"})
+
+    def test_every_owning_obligation_requires_renewed_proof(self) -> None:
+        producer = self._session("ses_prod")
+        obligations = ["cons-repo:ob-1", "cons-repo:ob-2"]
+        change = self._change(producer, verification={
+            "state": "unknown", "obligations": obligations})
+        consumer = self._session("ses_cons")
+        consumer.store.put_claim(_claim(consumer.session_id, "cons-repo"))
+        consumer.snapshot["verification_state"] = {ob: {
+            "evidence": {"verdict": "PASS", "evidence_id": "pre-repair"}}
+            for ob in obligations}
+        self.assertTrue(family_module.converge(
+            consumer, change["identity"], "cons-repo")["converged"])
+        consumer.snapshot["verification_state"][obligations[0]]["evidence"] = {
+            "verdict": "PASS", "evidence_id": "post-repair"}
+        partial = family_module.adopt_pending(consumer, change["identity"], "cons-repo")
+        self.assertFalse(partial["adopted"], partial)
+        self.assertEqual(partial["detail"], "awaiting-post-repair-verdict")
+        consumer.snapshot["verification_state"][obligations[1]]["evidence"] = {
+            "verdict": "PASS", "evidence_id": "post-repair"}
+        self.assertTrue(family_module.adopt_pending(
+            consumer, change["identity"], "cons-repo")["adopted"])
+
     def test_converge_refuses_foreign_dirt(self) -> None:
         producer = self._session("ses_prod")
         established = self._change(producer)

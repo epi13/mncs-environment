@@ -105,7 +105,12 @@ not silently replace another campaign's runtime artifacts or finish its extracti
 ## Evidence and transformations
 
 Family adoption requires PASS for **every** named obligation; one PASS cannot
-mask missing or unknown obligations. Verification observes only the selected
+mask missing or unknown obligations. Repairs record pre-effect evidence digests
+for each owning obligation. The native `adopt_post_repair` law requires every
+owning proof to renew; an old PASS/FAIL or only partially renewed proof remains
+pending. Hashing the owning evidence object excludes row timestamps. Historical
+pending rows without a marker require explicit revalidation. This local freshness
+gate does not establish complete provenance or cross-session equivalence. Verification observes only the selected
 physical checkouts. Invalid-only inventories are structural blockers, not empty
 native verification requests; their diagnostic material participates in the epoch.
 

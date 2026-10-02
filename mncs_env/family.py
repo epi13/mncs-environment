@@ -266,7 +266,7 @@ def native_adopt(session, facts: list[int]) -> int | None:
         return None
     binary, source, libraries = ready
     return _finite_discriminant(native_call(
-        binary, source, libraries, "adopt_convergence",
+        binary, source, libraries, "adopt_post_repair",
         _typed_integers(*facts)))
 
 
@@ -714,18 +714,12 @@ def _verification_digest(session, obligations: list[str]) -> str:
         rows = session.snapshot.get("verification_state") or {}
     except AttributeError:
         rows = {}
-    parts = []
-    for obligation in sorted(obligations):
-        entry = rows.get(obligation) if isinstance(rows, dict) else None
-        evidence = (entry or {}).get("evidence") if isinstance(
-            entry, dict) else None
-        parts.append("%s=%s:%s" % (
-            obligation,
-            str((evidence or {}).get("verdict", "UNKNOWN")).upper(),
-            str((evidence or {}).get("digest",
-                                     (evidence or {}).get("evidence_ref",
-                                                         "")))))
-    return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()[:16]
+    # Bind the whole owning evidence object, including producer evidence IDs
+    # and exact subject/request identities. Row timestamps alone are not proof.
+    material = {obligation: ((rows.get(obligation) or {}).get("evidence")
+                            if isinstance(rows.get(obligation), dict) else None)
+                for obligation in sorted(obligations)} if isinstance(rows, dict) else {}
+    return digest_hex(material, length=64)
 
 
 def semantic_impact(session, workspace: str,
@@ -1223,6 +1217,10 @@ def converge(session, identity: str, consumer: str, *,
     if dry_run:
         return {"converged": False, "disposition": "dry-run",
                 "operations": len(operations)}
+    # Capture proof before effects; a previous PASS cannot adopt this repair.
+    obligations = [str(ob) for ob in (change.get("verification") or {}).get("obligations", [])]
+    verification_before = {ob: _verification_digest(session, [ob])
+                           for ob in obligations}
     # Phase two: revalidate then apply each operation atomically.
     applied = []
     for operation in operations:
@@ -1254,7 +1252,8 @@ def converge(session, identity: str, consumer: str, *,
                     "detail": f"transform-failed:{note}", "applied": applied}
     _record_attempt(session, row_id, row_version, classification,
                     attempts + 1, "pending_verification", "", identity,
-                    repair_state="applied_unknown")
+                    repair_state="applied_unknown",
+                    verification_before=verification_before)
     session._emit("family.repaired", "environment",
                   {"change": identity, "consumer": consumer,
                    "operations": len(applied)})
@@ -1327,7 +1326,8 @@ def _escalate_detail(dirt: list[str], attempts: int,
 def _record_attempt(session, row_id: str, row_version: int,
                     classification: dict[str, Any], attempts: int,
                     consumer_class: str, detail: str, identity: str,
-                    repair_state: str | None = None) -> None:
+                    repair_state: str | None = None,
+                    verification_before: dict[str, str] | None = None) -> None:
     vocabulary = _vocabulary(session)
     found = _read_row(session, row_id)
     if found is None:
@@ -1338,7 +1338,7 @@ def _record_attempt(session, row_id: str, row_version: int,
         return
     else:
         prior = found[1]
-    row = {
+    row = {**prior,
         "schema_version": vocabulary.FAMILY_RECONCILIATION_SCHEMA,
         "change": identity,
         "consumer": classification["consumer"],
@@ -1351,6 +1351,8 @@ def _record_attempt(session, row_id: str, row_version: int,
         "detail": detail,
         "evidence_ref": str(prior.get("evidence_ref", "")),
     }
+    if verification_before is not None:
+        row["verification_before"] = verification_before
     try:
         vocabulary.validate_reconciliation(row)
     except Exception:
@@ -1381,6 +1383,17 @@ def adopt_pending(session, identity: str, consumer: str) -> dict[str, Any]:
     obligations = [str(ob) for ob in
                    (change.get("verification") or {}).get("obligations", [])]
     verdict = _verification_verdict(session, obligations)
+    before = row.get("verification_before")
+    proof_renewed = (isinstance(before, dict) and bool(obligations)
+                     and set(before) == set(obligations)
+                     and all(before[ob] != _verification_digest(session, [ob])
+                             for ob in obligations))
+    adopt = native_adopt(session, [
+        version, version, vocabulary.VERDICTS.get(verdict, 0),
+        int(row.get("observed_generation", 0)),
+        int(row.get("canonical_generation", 0)), 1 if proof_renewed else 0])
+    if not proof_renewed:
+        return {"adopted": False, "detail": "awaiting-verdict" if verdict == "unknown" else "awaiting-post-repair-verdict"}
     if verdict == "failed":
         candidate = dict(row)
         candidate["consumer_class"] = "semantic_required"
@@ -1394,10 +1407,6 @@ def adopt_pending(session, identity: str, consumer: str) -> dict[str, Any]:
                 "recorded": ok}
     if verdict != "passed":
         return {"adopted": False, "detail": "awaiting-verdict"}
-    adopt = native_adopt(session, [
-        version, version, vocabulary.VERDICTS["passed"],
-        int(row.get("observed_generation", 0)),
-        int(row.get("canonical_generation", 0))])
     if adopt != 0:
         return {"adopted": False, "detail": "adopt-refused"}
     candidate = dict(row)
