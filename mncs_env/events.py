@@ -57,6 +57,10 @@ TYPES = (
     "diagnostic.captured",
     "diagnostic.deferred",
     "diagnostic.failed",
+    "external.dispatched",
+    "external.admitted",
+    "external.deferred",
+    "external.failed",
     "adapter.observed",
 )
 

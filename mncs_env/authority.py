@@ -32,12 +32,18 @@ ACTIONS = (
 )
 
 # Capability effects mapped to the minimum session action required.
+# `delegate` (ask an external system to perform bounded work, e.g. CI)
+# and `subscribe` (observe completion/status) are semantic effects, not
+# local execution: delegate escalates unless the session owns the target
+# repository scope, while subscribe is read-class workspace-wide.
 EFFECT_ACTIONS = {
     "read": "read",
     "verify": "verify",
     "write": "write",
     "execute": "execute",
     "publish": "publish",
+    "delegate": "delegate",
+    "subscribe": "subscribe",
 }
 
 
@@ -171,6 +177,15 @@ def evaluate(
                for h in own):
             return {"verdict": "allow",
                     "reason": f"{action} by repository claim on {repo}"}
+    if action == "delegate":
+        # Asking an external system to verify a repository scope the
+        # session owns is explicit intent, like publish. Anything else
+        # escalates; remote work never dispatches ambiently by default.
+        if any((h.get("scope") or {}).get("kind") == "repository"
+               and (h.get("scope") or {}).get("repository", repo) == repo
+               for h in own):
+            return {"verdict": "allow",
+                    "reason": f"delegate by repository claim on {repo}"}
     if action in MUTATING_ACTIONS:
         facts = (repo_facts or {}).get(repo, {})
         owned = any(
@@ -230,7 +245,8 @@ def _covers(held: dict[str, Any], requested: dict[str, Any]) -> bool:
 
 def required_action_for_effects(effects: list[str]) -> str:
     """Strongest session action implied by capability effects."""
-    order = ["read", "verify", "execute", "write", "publish"]
+    order = ["read", "subscribe", "verify", "execute", "write",
+             "delegate", "publish"]
     strongest = "read"
     for effect in effects:
         action = EFFECT_ACTIONS.get(effect, "execute")
