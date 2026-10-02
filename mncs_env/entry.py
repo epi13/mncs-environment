@@ -7,7 +7,7 @@ import fcntl
 from contextlib import contextmanager
 from pathlib import Path
 
-from . import actions, diagnostics, doctor, identity, projections, readiness, sessions, verification, workspace
+from . import actions, diagnostics, doctor, identity, projections, readiness, semantics, sessions, verification, workspace
 from .intent import parse as parse_intent
 from .persist import read_json
 from .session_store import open_store, upgrade_session_store_provider
@@ -200,6 +200,28 @@ def _ambient_diagnostics(session, definition: dict) -> dict | None:
             "evidence": outcome.get("evidence")}
 
 
+def _ambient_semantics(session, definition: dict) -> dict | None:
+    """Run the ambient semantic pass; None when no workspace is declared.
+
+    Like diagnostics, semantics is quiet by default: definitions that
+    declare no resident service carry no semantic block at all, so
+    normal entry pays effectively zero semantic context.
+    """
+    knob = definition.get("semantics", {})
+    if knob is None:
+        knob = {}
+    if not isinstance(knob, dict):
+        raise EntryError("environment definition semantics knob must be an object",
+                         "definition-invalid", next="set semantics to an object or omit it")
+    if knob.get("enabled", True) is False:
+        return None
+    outcome = semantics.ambient_pass(session)
+    if outcome["summary"].get("declared", 0) == 0:
+        return None
+    return {"summary": outcome["summary"], "reused": outcome["reused"],
+            "evidence": outcome.get("evidence")}
+
+
 def _close_store(store) -> None:
     close = getattr(store, "close", None)
     if callable(close):
@@ -288,6 +310,9 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
             diagnostic = _ambient_diagnostics(session, definition)
             if diagnostic is not None:
                 result["diagnostic"] = diagnostic
+            semantic = _ambient_semantics(session, definition)
+            if semantic is not None:
+                result["semantics"] = semantic
             return result
         finally:
             if session is not None:

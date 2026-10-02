@@ -1958,16 +1958,16 @@ class SourcesTests(unittest.TestCase):
             except PermissionError as error:
                 self.skipTest(f"Unix socket creation denied by runner: {error}")
         Path(path + ".probe").unlink()
-        seen: list[dict] = []
+        seen: list[tuple] = []
         ready = threading.Event()
 
         def serve() -> None:
             listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             listener.bind(path)
-            listener.listen(2)
+            listener.listen(4)
             listener.settimeout(10)
             ready.set()
-            for _ in range(2):
+            for _ in range(4):
                 try:
                     connection, _ = listener.accept()
                 except OSError:
@@ -1984,7 +1984,7 @@ class SourcesTests(unittest.TestCase):
                     except ValueError:
                         continue
                     params = request.get("params", {})
-                    seen.append(params)
+                    seen.append((request.get("method"), params))
                     if ("stream_identity" in params
                             and params["stream_identity"] is None):
                         payload = {"id": 1, "ok": False, "result": None,
@@ -2013,9 +2013,17 @@ class SourcesTests(unittest.TestCase):
             self.assertEqual(second.status, "ok")
         finally:
             worker.join(timeout=10)
-        self.assertEqual(len(seen), 2)
-        self.assertNotIn("stream_identity", seen[0])
-        self.assertEqual(seen[1].get("stream_identity"), "stream-1")
+        # Each observation converges disk truth before polling, so the
+        # wire sequence is refresh, poll, refresh, poll. The original
+        # stream-identity rule still holds on the poll calls.
+        self.assertEqual([method for method, _ in seen],
+                         ["refresh_workspace", "poll_events",
+                          "refresh_workspace", "poll_events"])
+        polls = [params for method, params in seen
+                 if method == "poll_events"]
+        self.assertEqual(len(polls), 2)
+        self.assertNotIn("stream_identity", polls[0])
+        self.assertEqual(polls[1].get("stream_identity"), "stream-1")
 
 
 class ReconcilerTests(unittest.TestCase):
