@@ -802,3 +802,67 @@ def remediate_repository(session, repository: str, *, dry_run: bool = False,
             "evidence": envelope.get("evidence"),
             "exit_code": envelope.get("exit_code"), "exit_meaning": envelope.get("exit_meaning"),
             "provider_status": result.get("status")}
+
+
+def remediate_family_change(session, identity: str, consumer: str, *,
+                            dry_run: bool = False) -> dict[str, Any]:
+    """Doctor consumes one established family change for one consumer.
+
+    The family layer plans and applies the admitted deterministic
+    repair; Doctor reports the outcome through the family-standard
+    ``mncs.remediation/1`` envelope shape and records it in doctor
+    history, so ChangeSet-driven repair stays visible to Doctor's view
+    of repository health. Authority, gating, and two-phase validation
+    stay in the family layer; this wrapper never invents a repair.
+    """
+    from . import family as family_module
+    try:
+        outcome = family_module.converge(session, identity, consumer,
+                                         dry_run=dry_run)
+    except family_module.FamilyError as error:
+        raise RemediationRefused(str(error), "remediation-family-refused",
+                                 repository=consumer, change=identity) from error
+    disposition = str(outcome.get("disposition", ""))
+    detail = str(outcome.get("detail", ""))
+    if outcome.get("converged"):
+        summary: dict[str, Any] = {"repaired": 1, "reconciled": 0,
+                                   "degraded": 0, "blockers": 0}
+        remaining: list[str] = []
+        exit_code = 0
+    elif disposition in ("defer", "deferred", "dry-run"):
+        summary = {"repaired": 0, "reconciled": 0, "degraded": 1,
+                   "blockers": 0}
+        remaining = []
+        exit_code = 0
+    else:
+        summary = {"repaired": 0, "reconciled": 0, "degraded": 0,
+                   "blockers": 1}
+        remaining = [f"family:{identity}:{consumer}:{detail or disposition}"]
+        exit_code = 1
+    envelope = {"schema_version": REMEDIATION_ENVELOPE_SCHEMA,
+                "scope": {"domain": REMEDIATION_REPOSITORY_DOMAIN,
+                          "target": consumer},
+                "summary": summary, "remaining": remaining,
+                "evidence": {"change": identity, "consumer": consumer,
+                             "disposition": disposition, "detail": detail,
+                             "applied": outcome.get("applied", [])},
+                "exit_code": exit_code}
+    doctor = session.snapshot.get("doctor")
+    if not isinstance(doctor, dict):
+        doctor = {"schema_version": DOCTOR_SCHEMA, "history": []}
+    history = list(doctor.get("history", []))
+    history.append({"validated_at": utcnow(), "repository": consumer,
+                    "dry_run": dry_run, "summary": summary,
+                    "remaining": remaining,
+                    "evidence": envelope["evidence"], "exit_code": exit_code,
+                    "provider_status": "family-converge"})
+    doctor.update({"schema_version": DOCTOR_SCHEMA,
+                   "history": history[-MAX_HISTORY:]})
+    session.snapshot["doctor"] = doctor
+    session._save()
+    session._emit("doctor.repository-remediated", "environment",
+                  {"repository": consumer, "dry_run": dry_run,
+                   "summary": summary, "remaining": remaining[:8]})
+    return {"repository": consumer, "dry_run": dry_run, "summary": summary,
+            "remaining": remaining, "evidence": envelope["evidence"],
+            "exit_code": exit_code}
