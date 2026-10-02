@@ -20,7 +20,9 @@ from . import capabilities as capabilities_module
 from . import diagnostics as diagnostics_module
 from . import doctor as doctor_module
 from . import family as family_module
+from . import netcheck as netcheck_module
 from . import projections as projections_module
+from . import retire as retire_module
 from . import verification as verification_module
 from . import entry as entry_module
 from . import claims as claims_module
@@ -791,7 +793,18 @@ def cmd_claims(args: argparse.Namespace) -> int:
             except claims_module.ClaimAdoptionRequired as error:
                 return fail(f"adoption required: {error}", code=4)
             return 0
-        out(store.read_claims())
+        records = store.read_claims()
+        live = claims_module.active_claims(records)
+        live_keys = {(str(item.get("claim_id", "")),
+                      int(item.get("version", 0)))
+                     for item in live.values()}
+        annotated = []
+        for record in records:
+            copy = dict(record)
+            copy["live"] = (str(record.get("claim_id", "")),
+                            int(record.get("version", 0))) in live_keys
+            annotated.append(copy)
+        out(annotated)
         return 0
     finally:
         close_store(store)
@@ -815,6 +828,61 @@ def cmd_workspace(args: argparse.Namespace) -> int:
                     ("schema_version", "root", "scan", "repository_count") if key in document}
         document["schema_version"] = "mncs.environment.workspace-readiness/1"
     out(document)
+    return 0
+
+
+def _resolve_retire_repo(session: sessions_module.Session, repository: str) -> Path:
+    root_value = session.snapshot.get("workspace", {}).get("root")
+    if not isinstance(root_value, str) or not root_value:
+        raise ValueError("session has no resolved workspace root")
+    root = Path(root_value).resolve()
+    candidate = Path(repository)
+    if not candidate.is_absolute():
+        candidate = root / candidate
+    resolved = candidate.resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError:
+        raise ValueError(f"repository escapes the workspace root: {repository}")
+    if not (resolved / ".git").exists():
+        raise ValueError(f"not a git checkout: {resolved}")
+    return resolved
+
+
+def cmd_retire(args: argparse.Namespace) -> int:
+    """Retire merged branches / spent worktrees after strict assessment."""
+    with closing(_open(args)) as session:
+        try:
+            repo = _resolve_retire_repo(session, args.repository)
+        except ValueError as error:
+            return fail(str(error))
+        store = open_store(args.state_dir, args.persistence, session_id=args.session)
+        try:
+            claim_records = store.read_claims()
+        finally:
+            close_store(store)
+        results: list[dict] = []
+        if args.prune:
+            results.append(retire_module.prune_worktrees(repo, dry_run=args.dry_run))
+        for branch in args.branch or []:
+            results.append(retire_module.retire_branch(
+                repo, branch, canonical=args.canonical,
+                claim_records=claim_records,
+                requesting_session=args.session, dry_run=args.dry_run))
+        for path in args.worktree or []:
+            results.append(retire_module.retire_worktree(
+                repo, path, canonical=args.canonical,
+                claim_records=claim_records,
+                requesting_session=args.session, dry_run=args.dry_run))
+        out({"session_id": args.session, "repository": str(repo),
+             "canonical": args.canonical, "dry_run": args.dry_run,
+             "results": results})
+        return 0
+
+
+def cmd_netcheck(args: argparse.Namespace) -> int:
+    """Probe layered GitHub reachability (DNS, TLS, HTTPS, git)."""
+    out(netcheck_module.check(args.host, remote=args.remote, timeout=args.timeout))
     return 0
 
 
@@ -1100,6 +1168,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     store.add_argument("--verify", action="store_true")
     store.set_defaults(func=cmd_store)
+
+    retire = sub.add_parser("retire", help="retire merged branches and spent worktrees")
+    retire.add_argument("session", help="session id (claim context; own claims do not block)")
+    retire.add_argument("--repository", required=True,
+                        help="repository name (under the session workspace) or absolute path")
+    retire.add_argument("--branch", action="append", default=[],
+                        help="local branch to retire (repeatable)")
+    retire.add_argument("--worktree", action="append", default=[],
+                        help="registered worktree path to retire (repeatable)")
+    retire.add_argument("--canonical", default="origin/main",
+                        help="canonical ref merged branches must reach (default: origin/main)")
+    retire.add_argument("--prune", action="store_true",
+                        help="drop worktree records whose directories are gone")
+    retire.add_argument("--dry-run", action="store_true",
+                        help="assess only; change nothing")
+    retire.set_defaults(func=cmd_retire)
+
+    netcheck = sub.add_parser("netcheck", help="probe layered GitHub reachability")
+    netcheck.add_argument("--host", default="github.com")
+    netcheck.add_argument("--remote", default=None,
+                          help="optional git remote URL for a read-only ls-remote layer")
+    netcheck.add_argument("--timeout", type=float, default=5.0)
+    netcheck.set_defaults(func=cmd_netcheck)
 
     return parser
 
