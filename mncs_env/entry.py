@@ -167,8 +167,11 @@ def _ambient_actions(session, definition: dict) -> dict | None:
     outcome = actions.ambient_pass(session)
     summary = outcome["summary"]
     if (summary.get("pending", 0) == 0 and summary.get("eligible", 0) == 0
-            and summary.get("blockers", 0) == 0
-            and not summary.get("capsule_ids")):
+            and not summary.get("capsule_ids")
+            and (summary.get("blockers", 0) == 0
+                 or summary.get("obligations", 0) == 0)):
+        # Zero obligations with a coherence failure is toolchain news,
+        # already owned by Doctor/verification — not routing news.
         return None
     return {"summary": summary, "reused": outcome["reused"],
             "evidence": outcome.get("evidence")}
@@ -305,7 +308,9 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                     "evidence": coherence.get("evidence")}
             external = _ambient_actions(session, definition)
             if external is not None:
-                result["actions"] = external
+                # `actions` is taken by the session's executable argv
+                # map; external evidence rides under its own key.
+                result["external_evidence"] = external
             result["verification"] = _ambient_verification(session, definition)
             diagnostic = _ambient_diagnostics(session, definition)
             if diagnostic is not None:

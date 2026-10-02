@@ -168,7 +168,7 @@ constant. The wrong level in either direction is a bug.
 - Identity: repository, revision, workflow, artifact, check identity.
 - Evidence: execution receipts, evidence manifests, check-results
   admitted per exact subject; retained under session actions artifacts.
-- Agent surface: tiny `actions` block only when something needs
+- Agent surface: tiny `external_evidence` block only when something needs
   attention (pending, eligible delegate requests, failures); full
   trail on demand.
 - Mutation: CI-side execution only; never local sources, never

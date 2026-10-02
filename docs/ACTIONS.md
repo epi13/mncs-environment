@@ -28,10 +28,11 @@ evidence keep their previous verification standing.
 
 ## What surfaces
 
-Healthy entry carries no `actions` block. Otherwise the block is tiny:
+Healthy entry carries no `external_evidence` block (`actions` stays the
+session's executable argv map). Otherwise the block is tiny:
 
 ```text
-actions:
+external_evidence:
   current: 1
   pending: 1
   eligible: 0

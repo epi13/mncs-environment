@@ -697,8 +697,8 @@ class ActionsLifecycleTest(unittest.TestCase):
         session = self._session()
         actions_module.ambient_pass(session)
         capsule = actions_module.terse(session)
-        self.assertIn("actions", capsule)
-        self.assertIn("delegate_requests", capsule["actions"])
+        self.assertIn("external_evidence", capsule)
+        self.assertIn("delegate_requests", capsule["external_evidence"])
         trail = actions_module.read_evidence(session)
         self.assertIn("evidence", trail)
         self.assertIn("history", trail)
@@ -746,6 +746,70 @@ class DelegateAuthorityTest(unittest.TestCase):
             context, action="delegate", target="mncs-actions",
             session_id="ses_fixture")
         self.assertEqual(verdict["verdict"], "escalate")
+
+
+class AmbientEntryGatingTest(unittest.TestCase):
+    def _gated(self, summary):
+        from mncs_env import entry as entry_module
+        seen = {}
+        real = entry_module.actions.ambient_pass
+
+        def fake(session):
+            seen["called"] = True
+            return {"summary": dict(summary), "reused": False,
+                    "evidence": "ref"}
+        try:
+            entry_module.actions.ambient_pass = fake
+            return entry_module._ambient_actions(object(), {})
+        finally:
+            entry_module.actions.ambient_pass = real
+
+    def test_coherence_failure_without_obligations_omits_block(self) -> None:
+        self.assertIsNone(self._gated(
+            {"obligations": 0, "pending": 0, "eligible": 0,
+             "blockers": 1, "capsule_ids": []}))
+
+    def test_coherence_failure_with_obligations_surfaces(self) -> None:
+        block = self._gated(
+            {"obligations": 2, "pending": 0, "eligible": 0,
+             "blockers": 1, "capsule_ids": []})
+        self.assertIsNotNone(block)
+
+    def test_quiet_pass_omits_block(self) -> None:
+        self.assertIsNone(self._gated(
+            {"obligations": 3, "pending": 0, "eligible": 0,
+             "blockers": 0, "capsule_ids": []}))
+
+    def test_entry_keeps_session_actions_map(self) -> None:
+        import test_environment as env_tests
+        from mncs_env import entry as entry_module
+        case = env_tests.EntryFrictionTests(
+            methodName="test_valid_campaign_entry_is_compact_and_uses_isolated_state")
+        real = entry_module._ambient_actions
+        entry_module._ambient_actions = lambda session, definition: {
+            "summary": {"obligations": 1}, "reused": False,
+            "evidence": "ref"}
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                base = Path(directory)
+                workspace_root = base / "campaign-root"
+                workspace_root.mkdir()
+                definition_path = base / "environment.json"
+                case._campaign_definition(definition_path)
+                state = base / "isolated-state"
+                code, context, error = case._run_cli(
+                    "--persistence", "file", "--state-dir", str(state),
+                    "enter", "--definition", str(definition_path),
+                    "--workspace", str(workspace_root),
+                    "--consumer", "entry-test")
+        finally:
+            entry_module._ambient_actions = real
+        self.assertEqual(code, 0, error)
+        # The session's executable argv map is never clobbered by
+        # the external-evidence block.
+        self.assertIn("health", context["actions"])
+        self.assertIn("argv", context["actions"]["health"])
+        self.assertEqual(context["external_evidence"]["evidence"], "ref")
 
 
 if __name__ == "__main__":

@@ -1035,7 +1035,7 @@ def terse(session) -> dict[str, Any]:
     """Compact external-evidence status for normal agent context."""
     stored = session.snapshot.get("actions_epoch") or {}
     summary = dict(stored.get("summary") or {})
-    return {"actions": {
+    return {"external_evidence": {
         "current": summary.get("current", 0),
         "pending": summary.get("pending", 0),
         "eligible": summary.get("eligible", 0),
