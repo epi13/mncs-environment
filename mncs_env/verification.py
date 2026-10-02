@@ -355,6 +355,11 @@ def _coherence_request(session, obligations: list[dict],
                        rows: dict[str, dict[str, Any]],
                        max_executions: int) -> dict[str, Any]:
     provider_available = binding_available(session, TEST_CAPABILITY)
+    # Imported locally: actions.py already imports this module.
+    from . import actions as actions_module
+    actions_rows = session.snapshot.get("actions_state")
+    if not isinstance(actions_rows, dict):
+        actions_rows = {}
     items = []
     for obligation in obligations:
         declaration = obligation["declaration"]
@@ -374,11 +379,17 @@ def _coherence_request(session, obligations: list[dict],
                 if key in recorded:
                     evidence[key] = recorded[key]
         inventory_ids = list(row.get("inventory_test_identities") or [])
+        admission = actions_module.external_admission(actions_rows, identity)
         items.append({
             "identity": identity,
             "lifecycle": declaration["lifecycle"],
             "executor_kind": declaration["executor"]["kind"],
             "runnable_native": current is not None,
+            "external_evidence_present": admission is not None,
+            "external_evidence": admission or {"obligation": "",
+                                               "subject_digest": "",
+                                               "verdict": "UNKNOWN",
+                                               "evidence_id": ""},
             "current": coherence_current,
             "declared_patterns": list(declaration["executor"].get("declaration_identities") or []),
             "inventory_test_identities": inventory_ids[:MAX_INVENTORY_IDS],
@@ -533,12 +544,17 @@ def _epoch_inputs(session, obligations: list[dict],
             bindings[capability] = "unbound"
         else:
             bindings[capability] = str(binding.get("availability", {}).get("status"))
+    # External evidence admitted by the Actions layer participates in
+    # the epoch so a newly current receipt invalidates a reused pass.
+    # Imported locally: actions.py already imports this module.
+    from . import actions as actions_module
     return {
         "declarations": {str(item["declaration"]["identity"]): digest_hex(
             {"declaration": item["declaration"]}) for item in obligations},
         "measured": {identity: (digest_hex({"current": current})
                                  if current is not None else "unrunnable")
                      for identity, current in measured.items()},
+        "external": actions_module.external_epoch_material(session),
         "bindings": bindings,
         "toolchain": toolchain_identity(session),
         "lifecycle": session.snapshot.get("lifecycle", "active"),

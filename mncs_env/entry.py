@@ -7,7 +7,7 @@ import fcntl
 from contextlib import contextmanager
 from pathlib import Path
 
-from . import diagnostics, doctor, identity, projections, readiness, sessions, verification, workspace
+from . import actions, diagnostics, doctor, identity, projections, readiness, sessions, verification, workspace
 from .intent import parse as parse_intent
 from .persist import read_json
 from .session_store import open_store, upgrade_session_store_provider
@@ -148,6 +148,32 @@ def _ambient_verification(session, definition: dict) -> dict:
             "evidence": outcome.get("evidence")}
 
 
+def _ambient_actions(session, definition: dict) -> dict | None:
+    """Run the ambient external-evidence pass; None when quietly current.
+
+    Actions are reactive: steady states (no route, unavailable subject,
+    current evidence) carry no actions block at all. The pass itself
+    always runs ahead of verification so newly admitted receipts feed
+    the verification epoch in the same entry.
+    """
+    knob = definition.get("actions", {})
+    if knob is None:
+        knob = {}
+    if not isinstance(knob, dict):
+        raise EntryError("environment definition actions knob must be an object",
+                         "definition-invalid", next="set actions to an object or omit it")
+    if knob.get("enabled", True) is False:
+        return None
+    outcome = actions.ambient_pass(session)
+    summary = outcome["summary"]
+    if (summary.get("pending", 0) == 0 and summary.get("eligible", 0) == 0
+            and summary.get("blockers", 0) == 0
+            and not summary.get("capsule_ids")):
+        return None
+    return {"summary": summary, "reused": outcome["reused"],
+            "evidence": outcome.get("evidence")}
+
+
 def _ambient_diagnostics(session, definition: dict) -> dict | None:
     """Run the ambient diagnostic pass; None when there is nothing to explain.
 
@@ -255,6 +281,9 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
             result["projection"] = {"summary": coherence["summary"],
                                     "reused": coherence["reused"],
                                     "evidence": coherence.get("evidence")}
+            external = _ambient_actions(session, definition)
+            if external is not None:
+                result["actions"] = external
             result["verification"] = _ambient_verification(session, definition)
             diagnostic = _ambient_diagnostics(session, definition)
             if diagnostic is not None:

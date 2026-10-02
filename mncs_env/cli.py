@@ -15,6 +15,7 @@ import sys
 from contextlib import closing
 from pathlib import Path
 
+from . import actions as actions_module
 from . import capabilities as capabilities_module
 from . import diagnostics as diagnostics_module
 from . import doctor as doctor_module
@@ -354,6 +355,40 @@ def cmd_diagnostic(args: argparse.Namespace) -> int:
                     max_captures=diagnostics_module.MAX_FAILURES)
             else:
                 result = diagnostics_module.ambient_pass(session)
+            payload = {"session_id": args.session,
+                       "summary": result["summary"],
+                       "reused": result["reused"],
+                       "evidence": result.get("evidence")}
+            out(payload)
+            return 5 if result["summary"]["blockers"] else 0
+        finally:
+            session.close()
+
+
+def cmd_actions(args: argparse.Namespace) -> int:
+    if args.evidence:
+        with closing(_open(args)) as session:
+            out(actions_module.read_evidence(session))
+        return 0
+    with entry_module.entry_lock(args.state_dir, args.persistence):
+        try:
+            session = sessions_module.Session.resume(
+                state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+        except sessions_module.LifecycleError as error:
+            return fail(str(error))
+        try:
+            if args.only:
+                result = actions_module.ambient_pass(
+                    session, mode="explicit", only=args.only,
+                    dispatch=args.dispatch)
+            elif args.full:
+                result = actions_module.ambient_pass(
+                    session, mode="full",
+                    max_dispatches=actions_module.MAX_OBLIGATIONS,
+                    dispatch=args.dispatch)
+            else:
+                result = actions_module.ambient_pass(
+                    session, dispatch=args.dispatch)
             payload = {"session_id": args.session,
                        "summary": result["summary"],
                        "reused": result["reused"],
@@ -803,6 +838,17 @@ def build_parser() -> argparse.ArgumentParser:
     diagnostic.add_argument("--full", action="store_true",
                             help="explicit full pass without epoch reuse and with the full capture budget")
     diagnostic.set_defaults(func=cmd_diagnostic)
+
+    external = session_parser("actions", "ambient external-evidence coherence pass with a terse summary")
+    external.add_argument("--evidence", action="store_true",
+                          help="print the full external-evidence trail instead of running a pass")
+    external.add_argument("--only", default=None,
+                          help="explicitly reconcile one obligation by identity")
+    external.add_argument("--dispatch", action="store_true",
+                          help="explicitly dispatch admitted remote runs (requires a repository claim)")
+    external.add_argument("--full", action="store_true",
+                          help="explicit full pass without epoch reuse and with the full dispatch budget")
+    external.set_defaults(func=cmd_actions)
 
     status = sub.add_parser(
         "status", parents=[common], help="show compact read-only session status"

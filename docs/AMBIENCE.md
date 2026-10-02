@@ -161,25 +161,31 @@ constant. The wrong level in either direction is a bug.
   Debug enrichment, RAVEL planning) consumes semantic identities.
   Bind the producer before the consumers.
 
-### Actions — A1, after Language Service
+### Actions — A2 reactive external-evidence orchestration (landed)
 
 - Owns: GitHub and CI execution plus evidence transport.
-- Trigger today: CI events and explicit action runs.
-- Identity: `mncs.family-verification/1`, receipts, selected proofs.
-- Evidence: `actions/mncs-debug` and `actions/mncs-test` receipts,
-  debug-on-failure packaging.
-- Agent surface today: CI outcomes and receipt artifacts.
-- Mutation: CI-side execution only; never local sources.
-- Explicit-only: workflow changes, new actions, secret handling.
-- Status: discoverable boundary, not reactive. Local ambient
-  evidence (verification, diagnostics) is not yet routed to CI
-  selection, and CI outcomes do not flow back as ambient evidence.
-- Target: A2 reactive orchestration: CI runs what local evidence
-  cannot settle, and returns structured outcomes the environment
-  can reuse without scraping logs.
-- Pressure: the 19 `external_integration` verification obligations
-  currently unsupported ambiently are the natural Actions-owned
-  set. Do not pull them into mncs-test.
+- Trigger: missing/stale external evidence for a published subject.
+- Identity: repository, revision, workflow, artifact, check identity.
+- Evidence: execution receipts, evidence manifests, check-results
+  admitted per exact subject; retained under session actions artifacts.
+- Agent surface: tiny `actions` block only when something needs
+  attention (pending, eligible delegate requests, failures); full
+  trail on demand.
+- Mutation: CI-side execution only; never local sources, never
+  commits/pushes/branches.
+- Explicit-only: dispatch (delegate grant via repository claim),
+  deployment/release/publication-shaped effects, workflow changes,
+  new actions, secret handling.
+- Status: reactive. `mncs.actions-external-evidence/1` (native
+  policy), `mncs.actions-remote-evidence/1` (read transport), and
+  `mncs.actions-dispatch/1` (delegate transport) are bound
+  environment capabilities; ambient passes reuse exact receipts,
+  subscribe to in-flight runs, and admit completed outcomes.
+  RAVEL remains an optional plan producer, not a requirement.
+- Pressure: most `external_integration` obligations still declare
+  no external route (local harnesses without workflows, vacuous or
+  partial entrypoints); owners must declare honest bindings or
+  reclassify (see pressures registry).
 
 ### Memory — A0, after Actions
 

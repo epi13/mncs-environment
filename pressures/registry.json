@@ -202,5 +202,61 @@
   "title": "Cross-session diagnostic evidence reuse needs unified identity + shared rows",
   "why_not_local": "Sharing on the current witness_id would confuse session-local material for equivalence; sharing must wait for one family evidence identity.",
   "workaround": "Per-session witnesses; concurrent duplicate capture is correct but redundant."
+ },
+ {
+  "description": "When the selected toolchain's standard-library sources vanish mid-session (concurrent stdlib extraction removed mncs-language/library), Store entry hard-fails and native coherence invocations fail closed, so environment entry is impossible on the canonical backend and verification reports 0 obligations instead of degraded read-only state.",
+  "desired_contract": "Degraded entry mode: open sessions read-only when the toolchain cannot admit artifacts, and report discovered-but-undecidable obligations as unknown with the toolchain cause instead of hiding them behind a zero-obligation summary.",
+  "effect": "Every agent is blocked from entry until the toolchain tree heals; file-backend fallback loses the canonical evidence path.",
+  "evidence": "2026-10-02 stdlib/extraction-20261002 removed library/; MNE173 sha256 store-admission failure; coherence-failed with obligations 0 over 32 discovered.",
+  "identity": "prs_772b1c9b8b5f2947",
+  "owner": "mncs-environment (entry/degraded mode), mncs-store (admission fallback)",
+  "schema_version": "mncs.environment.pressure/1",
+  "title": "Degraded ambient operation when the selected toolchain loses its stdlib sources",
+  "why_not_local": "Store admission and provider-shim root validation belong to Store and the providers; Environment can only choose how entry degrades, not admit artifacts it cannot compile.",
+  "workaround": "File-backend sessions for local work; native execution waits for the toolchain to heal. Pristine worktree + direct CLI keeps native development provable."
+ },
+ {
+  "description": "Ambient Actions dedupes dispatch through a per-machine ledger plus remote-run observation. Two agents on different machines (or a ledger loss) can still launch duplicate runs for the same exact subject; observation converges afterwards but the duplicate CI cost is spent.",
+  "desired_contract": "Shared pending rows for exact dispatch identities with compare-and-swap claim semantics in session-shared state, so at most one active dispatch exists per exact subject across all sessions.",
+  "effect": "Rare duplicate CI runs under concurrent multi-agent dispatch races.",
+  "identity": "prs_e21033d95bd6cdc8",
+  "owner": "mncs-environment (shared state), mncs-actions (dispatch identity)",
+  "schema_version": "mncs.environment.pressure/1",
+  "title": "Cross-session exact dispatch single-flight needs shared pending rows",
+  "why_not_local": "A session-local or single-machine ledger cannot see other agents; only shared state can arbitrate the race.",
+  "workaround": "Per-machine ledger with TTL plus newest-exact-run attachment; duplicates converge to one observed run."
+ },
+ {
+  "description": "CI runs may carry mncs-debug witnesses (debug-on-failure) for failures that local ambient diagnostics also explains. Actions records the CI witness reference in its evidence rows but does not fold it into local diagnostic rows, and local Debug does not consult CI witnesses before capturing.",
+  "desired_contract": "Exact-identity CI witness admission into diagnostic coherence: reuse a CI witness when failure, subject, request, toolchain, and capture identities match; prefer local evidence otherwise; never capture twice for the same exact failure.",
+  "effect": "Rare duplicate diagnostic capture for failures already witnessed in CI.",
+  "identity": "prs_d0f61a6fd93f3823",
+  "owner": "mncs-debug (witness identity), mncs-actions (CI reference), mncs-environment (composition)",
+  "schema_version": "mncs.environment.pressure/1",
+  "title": "CI debug-witness admission into local diagnostic coherence",
+  "why_not_local": "Witness equivalence spans debugger capture semantics and CI transport; no single layer can declare it alone.",
+  "workaround": "CI witness references retained in actions evidence; local capture proceeds independently."
+ },
+ {
+  "description": "Most external_integration obligations have no external route: 12 compiler differentials and others name local harnesses with no GitHub workflows to dispatch; several host-harness entrypoints are vacuous or partial under their declared runner (mncs-actions unittest collected 0 tests, fixed to pytest this campaign; Commons unittest collects 7 of 346; debug unittest errors).",
+  "desired_contract": "Every external_integration obligation either declares an honest external binding (workflow/job/artifact/check) with a CI job executing the entrypoint verbatim, or is reclassified to its true owner (local harness, manual boundary, retired).",
+  "effect": "Ambient Actions correctly reports no_route/unavailable for these; the obligations stay invisible to automation until owners declare routes.",
+  "identity": "prs_32060ffc9553d4e0",
+  "owner": "owning repositories (mncs-compiler, MNCS-Commons, mncs-debug, mncs-stdlib, mncs-language, mncs-forge)",
+  "schema_version": "mncs.environment.pressure/1",
+  "title": "External obligation declarations need honest routes and entrypoints",
+  "why_not_local": "Routes and entrypoints are owner declarations; Environment and Actions cannot invent workflows or runners for another repository.",
+  "workaround": "Typed no_route/unavailable states; representative route proven for mncs-actions itself."
+ },
+ {
+  "description": "Host-harness check emission (exit code to check-result/1) is a Python boundary script because CI runners carry no MNCS toolchain to execute a native emission app.",
+  "desired_contract": "Native check-emission application (obligation id, provider, exit code, output digest to check-result/1) executed in CI once runners carry a pinned toolchain; the host script shrinks to process/file transport.",
+  "effect": "One small semantic mapping lives in host code at the CI boundary instead of in MNCS.",
+  "identity": "prs_eac20fd32d37918b",
+  "owner": "mncs-actions (emission), CI/toolchain provisioning",
+  "schema_version": "mncs.environment.pressure/1",
+  "title": "Native check-emission app needs a CI toolchain",
+  "why_not_local": "MNCS execution in CI requires toolchain provisioning this campaign does not own.",
+  "workaround": "scripts/emit_obligation_check.py with pinned exit-code mapping and tests."
  }
 ]
