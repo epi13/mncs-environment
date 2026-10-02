@@ -493,7 +493,158 @@
     ]
   },
   "delivery": [],
-  "pressure_review": [],
+  "pressure_review": [
+    {
+      "identity": "prs_409a0250c0e1210c",
+      "title": "No canonical provider event feeds",
+      "disposition": "open",
+      "note": "Existing typed Store/Git/Commons/LS cursors are reused; provider push/event wake admission and complete affected-pass scheduling are not implemented."
+    },
+    {
+      "identity": "prs_fd2f7dd8a84e4860",
+      "title": "No canonical workspace lease/ownership mechanism",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_d3e612573f404d7e",
+      "title": "Rights/provenance granularity for session authority",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_21cdeca1813f412e",
+      "title": "Environment concepts have no native MNCS representation yet",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_5d267ebe29779379",
+      "title": "Provider evidence is not invocation or readiness addressing",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_c2a41e2e5f3230f4",
+      "title": "Compiler executable cannot be tied to observed checkout readiness",
+      "disposition": "open",
+      "note": "Reproduced stale embed composite ABI and LS service_status interfaces; isolated source builds pass, but artifact build-source admission remains unknown."
+    },
+    {
+      "identity": "prs_848a1a6a1a4c98e0",
+      "title": "Environment reconciler process identity remains PID based",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_3c42d3b94fd63aa0",
+      "title": "Store open cost dominates every CLI command",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_b6d08030930b43c6",
+      "title": "No family-standard remediation capability contract",
+      "disposition": "obsolete",
+      "note": "Published Commons mncs.remediation/1 and Doctor family remediation replace the historical missing-capability claim. Direct Environment convergence orchestration remains a separate seam."
+    },
+    {
+      "identity": "prs_f117146a6f28e4dd",
+      "title": "Manifest verification commands cannot execute under session authority in dirty/foreign checkouts",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_a3d2234e5564f0a1",
+      "title": "Offline MNCS executable shadows the language compiler on PATH",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_2b506a75686eb318",
+      "title": "Projection evidence vs coherence evidence identity convergence",
+      "disposition": "open",
+      "note": "Domain evidence remains separate; the common missing producer identity is recorded in MNCS-TOOLING-9FEE08F6756E."
+    },
+    {
+      "identity": "prs_d7b5361fcdf4cfff",
+      "title": "No event-driven projection wakeup",
+      "disposition": "open",
+      "note": "Family claim-release and exact row/verdict epochs now wake correctly. A unified source-event to affected-pass resident scheduler remains open."
+    },
+    {
+      "identity": "prs_05cd84ec3eed3bdd",
+      "title": "Native test latency blocks full-suite verification executors",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_66124e9ba70ff243",
+      "title": "Atlas has no projection-consumer surface yet",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_verify_xsession_dedup",
+      "title": "Cross-session verification evidence reuse needs unified identity + shared rows",
+      "disposition": "open",
+      "note": "MNCS-TOOLING-9FEE08F6756E: missing producer-bound compiler/library content, fresh inventory/provider and relevant environment equivalence; path/revision is insufficient."
+    },
+    {
+      "identity": "prs_diagnostic_xsession_dedup",
+      "title": "Cross-session diagnostic evidence reuse needs unified identity + shared rows",
+      "disposition": "open",
+      "note": "MNCS-TOOLING-9FEE08F6756E: Debug P-013 lacks effective library root/content provenance; same source line or failure label cannot establish witness equivalence."
+    },
+    {
+      "identity": "prs_772b1c9b8b5f2947",
+      "title": "Degraded ambient operation when the selected toolchain loses its stdlib sources",
+      "disposition": "open",
+      "note": "MNE173 selected-stdlib Store addressing is resolved under MNCS-TOOLING-B24EC76686BB. General degraded entry/provider artifact selection remains open."
+    },
+    {
+      "identity": "prs_e21033d95bd6cdc8",
+      "title": "Cross-session exact dispatch single-flight needs shared pending rows",
+      "disposition": "open",
+      "note": "Cross-machine single-flight requires proven shared Store multi-machine transport and remote idempotency/recovery for ambiguous dispatch outcomes."
+    },
+    {
+      "identity": "prs_d0f61a6fd93f3823",
+      "title": "CI debug-witness admission into local diagnostic coherence",
+      "disposition": "open",
+      "note": "CI/local witness equivalence requires exact failure/request/source/toolchain/library/executor identities; no folding was admitted."
+    },
+    {
+      "identity": "prs_32060ffc9553d4e0",
+      "title": "External obligation declarations need honest routes and entrypoints",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_eac20fd32d37918b",
+      "title": "Native check-emission app needs a CI toolchain",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_60dc29e4e9f9425c",
+      "title": "Janitor sessions lack provider-owned resident discovery",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_1e336bc3128f7fc9",
+      "title": "Fixed-depth sibling fallback breaks worktree checkouts",
+      "disposition": "open",
+      "note": "Reviewed; no evidenced resolution in this campaign."
+    },
+    {
+      "identity": "prs_fa6251ccbcf6646e",
+      "title": "Entry context has no per-block byte budget",
+      "disposition": "resolved",
+      "note": "MNCS-TOOLING-660287B78610: seven ambient layers now share explicit budgets and full expansion evidence; verified all-layer overflow and healthy omission."
+    }
+  ],
   "tests": {
     "environment": {
       "passed": 343,
@@ -543,5 +694,27 @@
     "vertical": {
       "verdict": "PASS"
     }
-  }
+  },
+  "canonical_pressure_dispositions": [
+    {
+      "id": "MNCS-TOOLING-B24EC76686BB",
+      "status": "resolved",
+      "capability": "stdlib.store.selected-roots"
+    },
+    {
+      "id": "MNCS-TOOLING-608926A83401",
+      "status": "resolved",
+      "capability": "family.observation.no-op"
+    },
+    {
+      "id": "MNCS-TOOLING-660287B78610",
+      "status": "resolved",
+      "capability": "context.ambient-budget"
+    },
+    {
+      "id": "MNCS-TOOLING-9FEE08F6756E",
+      "status": "confirmed",
+      "capability": "producer-bound-equivalence"
+    }
+  ]
 }

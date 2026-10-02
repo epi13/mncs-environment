@@ -96,6 +96,17 @@ Skipped tests are not described as proof. Baselines and logs are preserved under
 `/tmp/mncs-coherence-*`; durable compact proof material is checked in alongside
 this report.
 
+## Pressure review
+
+Commons native lifecycle closes scoped Store stdlib integration
+`MNCS-TOOLING-B24EC76686BB`, family no-op churn `MNCS-TOOLING-608926A83401`
+and ambient budgets `MNCS-TOOLING-660287B78610`. It confirms exact evidence
+provenance blocker `MNCS-TOOLING-9FEE08F6756E` and appends current evidence to
+the existing stale-build pressure `MNCS-TOOLING-9E7E149C94D9`. The obsolete local
+missing-remediation claim is marked obsolete; the 25-entry local catalog has a
+complete disposition review in the evidence ledger. Generic scheduling,
+xsession/CI reuse and dispatch pressures remain open.
+
 ## Remaining blockers and next campaign
 
 1. Complete the foreign stdlib extraction and publish coherent Language/Stdlib
