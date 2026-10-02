@@ -7,7 +7,7 @@ import fcntl
 from contextlib import contextmanager
 from pathlib import Path
 
-from . import actions, context_budget, diagnostics, doctor, family, identity, projections, readiness, semantics, sessions, verification, workspace
+from . import actions, coherence as incremental, context_budget, diagnostics, doctor, family, identity, projections, readiness, semantics, sessions, verification, workspace
 from .intent import parse as parse_intent
 from .persist import read_json
 from .session_store import open_store, upgrade_session_store_provider
@@ -299,7 +299,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
         store_package, store_runtime = (None, None)
         if backend == "store":
             store_package, store_runtime = _selected_store_binding(root, definition)
-        store = open_store(state_dir, backend, store_package_dir=store_package, store_runtime=store_runtime)
+        store = open_store(state_dir, backend, store_package_dir=store_package, store_runtime=store_runtime, defer_mutation=True)
         try:
             upgraded = False
             has_persistence = (Path(state_dir) / ("store" if backend == "store" else "sessions")).exists()
@@ -319,7 +319,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                     raise EntryError("multiple matching sessions exist; resume a specific session or use --new-session",
                                      "entry-session-ambiguous", sessions=sorted(matches), next="resume <session> --revalidate")
                 if matches:
-                    session = sessions.Session.resume(state_dir=state_dir, session_id=matches[0],
+                    session = sessions.Session.open(state_dir=state_dir, session_id=matches[0],
                                                       backend=backend, store=store)
             reused = session is not None
             if session is None:
@@ -334,13 +334,20 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                 session.transition("resolving", "enter: resolving environment")
                 session.transition("ready", "environment resolved; capability readiness is reported separately")
                 session.transition("active", f"consumer {consumer_id} entered")
-                remediation = doctor.ambient_pass(session, fresh=True, upgraded_store=upgraded,
-                                                  lock_waited=lock_waited)
-            else:
-                if session.snapshot["lifecycle"] == "checkpointed":
-                    session.transition("active", "re-entered checkpointed work")
-                remediation = doctor.ambient_pass(session, upgraded_store=upgraded,
-                                                  lock_waited=lock_waited)
+            elif session.snapshot["lifecycle"] in ("checkpointed", "abandoned"):
+                session.transition("active", "re-entered durable work")
+            runners = {
+                "doctor": lambda: doctor.ambient_pass(session, fresh=not reused,
+                    upgraded_store=upgraded, lock_waited=lock_waited),
+                "semantics": lambda: _ambient_semantics(session, definition),
+                "actions": lambda: _ambient_actions(session, definition),
+                "verification": lambda: _ambient_verification(session, definition),
+                "diagnostics": lambda: _ambient_diagnostics(session, definition),
+                "family": lambda: _ambient_family(session, definition),
+                "projections": lambda: projections.ambient_pass(session),
+            }
+            blocks, trace = incremental.tick(session, definition, runners, fresh=not reused)
+            remediation = blocks["doctor"]
             result = session.context()
             result["entry"] = {"reused": reused, "revalidation": remediation["revalidation"],
                                "operations": remediation["operations"]}
@@ -350,29 +357,17 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                 "readiness": remediation["readiness"], "epoch": remediation["digest"],
                                 "reused": remediation["reused"],
                                 "elapsed_seconds": remediation.get("elapsed_seconds")}
-            coherence = projections.ambient_pass(session)
-            if any(coherence["summary"].get(key, 0) for key in
+            projected = blocks["projections"]
+            if any(projected["summary"].get(key, 0) for key in
                    ("current", "pending", "reconciled", "blockers", "invalid")):
-                result["projection"] = {"summary": coherence["summary"],
-                                        "reused": coherence["reused"],
-                                        "evidence": coherence.get("evidence")}
-            external = _ambient_actions(session, definition)
-            if external is not None:
-                # `actions` is taken by the session's executable argv
-                # map; external evidence rides under its own key.
-                result["external_evidence"] = external
-            verified = _ambient_verification(session, definition)
-            if verified is not None:
-                result["verification"] = verified
-            diagnostic = _ambient_diagnostics(session, definition)
-            if diagnostic is not None:
-                result["diagnostic"] = diagnostic
-            semantic = _ambient_semantics(session, definition)
-            if semantic is not None:
-                result["semantics"] = semantic
-            collaboration = _ambient_family(session, definition)
-            if collaboration is not None:
-                result["family"] = collaboration
+                result["projection"] = {"summary": projected["summary"],
+                                        "reused": projected["reused"],
+                                        "evidence": projected.get("evidence")}
+            for name, key in (("actions", "external_evidence"), ("verification", "verification"),
+                              ("diagnostics", "diagnostic"), ("semantics", "semantics"),
+                              ("family", "family")):
+                if blocks[name] is not None:
+                    result[key] = blocks[name]
             return context_budget.apply(session, result, budget)
         finally:
             if session is not None:

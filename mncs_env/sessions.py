@@ -1086,6 +1086,21 @@ class Session:
     ) -> dict[str, str]:
         repository = target.split("/")[0] if "/" in target else target
         normalized_scope = self._canonical_scope(repository, scope)
+        if action in ("write", "mutate", "execute", "publish", "merge", "delete"):
+            # Current entry observations are not a mutation lease. Re-read
+            # claims and the exact selected target at the authority boundary;
+            # broad discovery is unnecessary on a quiet observational entry.
+            self._refresh_holders()
+            selected = self.snapshot.get("selected_checkouts", {}).get(repository)
+            if repo_facts is None and isinstance(selected, dict) and selected.get("path"):
+                root = Path(self.snapshot.get("workspace", {}).get("root", "."))
+                inspected = workspace_module.inspect_repo((root / selected["path"]).resolve())
+                if inspected is None or inspected.git_error:
+                    raise LifecycleError("selected checkout observation unavailable at mutation boundary")
+                record = inspected.record()
+                record["name"] = repository
+                repo_facts = {**self.snapshot.get("repo_facts", {}),
+                              **_repo_facts({"repositories": [record]})}
         verdict = authority_module.evaluate(
             self.snapshot.get("authority", {}),
             action=action,
@@ -1218,7 +1233,7 @@ class Session:
             / digest_hex(capability)
         ).resolve()
         if not artifact_directory.is_relative_to(state_root):
-            raise SessionError("session artifact directory escapes the Environment state root")
+            raise LifecycleError("session artifact directory escapes the Environment state root")
         artifact_directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         invocation_env = dict(env or {})
         invocation_env.update(self._selected_runtime_environment(binding))

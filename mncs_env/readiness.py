@@ -68,6 +68,12 @@ def validate_requirements(definition: dict[str, Any]) -> dict[str, Any]:
         identities.add(service["identity"])
         if type(service.get("required", True)) is not bool:
             raise ValueError("service required must be a boolean")
+        inputs = service.get("observation_inputs")
+        if inputs is not None and inputs != ["selected-repositories"]:
+            raise ValueError("service observation_inputs must declare selected-repositories or be omitted for live probing")
+        lease = service.get("observation_max_age_ms")
+        if lease is not None and (type(lease) is not int or not 1 <= lease <= 3600000):
+            raise ValueError("service observation_max_age_ms must be an integer from 1 to 3600000")
         for operation in ("probe", "reconcile"):
             call = service.get(operation)
             if call is None and operation == "reconcile":
@@ -126,7 +132,8 @@ def probe_services(session, *, bindings: list[dict] | None = None) -> list[dict[
                     record["code"] = "service-probe-budget"
                     raise ValueError("entry probe budget exhausted; retry health for a fresh observation")
                 result = capabilities.invoke(binding, resolve_arguments(session, call.get("argv", [])), timeout_seconds=min(3.0, remaining),
-                                             output_limit_bytes=16384, env=session._selected_runtime_environment(binding))
+                                             output_limit_bytes=16384, env={**session._selected_runtime_environment(binding),
+                                                                                        "GIT_OPTIONAL_LOCKS": "0"})
                 record["code"] = "service-probe-failed"
                 if result["status"] != "ok":
                     if result["status"] == "timeout":

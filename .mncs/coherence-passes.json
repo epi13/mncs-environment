@@ -1,0 +1,13 @@
+{
+  "schema_version": "mncs.environment.coherence-pass-inputs/1",
+  "facts": ["repository.control_changed", "declaration.changed", "source.changed", "semantic.changed", "provider.artifact_changed", "claim.changed", "verification.changed", "diagnostic.changed", "external-evidence.changed", "family.changed", "projection.changed", "provider.changed", "timer.due", "prose.changed"],
+  "passes": {
+    "doctor": [0, 1, 4, 11],
+    "semantics": [0, 1, 2, 3, 4, 11],
+    "actions": [0, 1, 4, 8, 11],
+    "verification": [0, 1, 2, 3, 4, 6, 8, 11],
+    "diagnostics": [0, 2, 3, 4, 6, 7],
+    "family": [0, 1, 3, 4, 5, 6, 9],
+    "projections": [0, 1, 2, 4, 5, 6, 9, 10, 13]
+  }
+}

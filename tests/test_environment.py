@@ -1394,7 +1394,12 @@ class SessionTests(unittest.TestCase):
                     "paths": None, "exclusive": False,
                 },
             }]
-            with mock.patch.object(
+            # This case isolates path mapping; provide current transport facts
+            # for its synthetic checkout and manually supplied claim fixture.
+            with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
+                sessions.workspace_module, "inspect_repo", return_value=sessions.workspace_module.RepoState(
+                    name="MNCS-Commons", path=str(checkout), manifest_repository="MNCS-Commons",
+                    manifest_revision=1, branch="campaign/commons-parity", head="fixture", dirty=False)), mock.patch.object(
                 sessions.capabilities_module, "invoke",
                 return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
             ) as invoke:
@@ -1433,7 +1438,12 @@ class SessionTests(unittest.TestCase):
                     "paths": None, "exclusive": False,
                 },
             }]
-            with mock.patch.object(
+            # This case isolates path mapping; provide current transport facts
+            # for its synthetic checkout and manually supplied claim fixture.
+            with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
+                sessions.workspace_module, "inspect_repo", return_value=sessions.workspace_module.RepoState(
+                    name="MNCS-Commons", path=str(checkout), manifest_repository="MNCS-Commons",
+                    manifest_revision=1, branch="campaign/commons-parity", head="fixture", dirty=False)), mock.patch.object(
                 sessions.capabilities_module, "invoke",
                 return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
             ) as invoke:

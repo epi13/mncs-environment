@@ -146,6 +146,14 @@ class StoreReplaySource(Source):
         self.own_prefix = own_session_prefix
 
     def _objects_at(self, generation: int) -> list[Any] | None:
+        identities_at = getattr(self.store, "domain_bindings_at", None)
+        if callable(identities_at):
+            try:
+                from types import SimpleNamespace
+                return [SimpleNamespace(domain_schema=schema, domain_identity=identity)
+                        for schema, identity in identities_at(generation)]
+            except Exception:
+                return None
         objects_at = getattr(self.store, "objects_at", None)
         if not callable(objects_at):
             return None
@@ -174,28 +182,30 @@ class StoreReplaySource(Source):
             return SourceResult(
                 "reset", [], str(head),
                 f"gap {head - last} exceeds walk bound {MAX_REPLAY_WALK}; re-baselined")
-        seen: set[bytes] = set()
+        seen: set[tuple[bytes, bytes]] = set()
         events: list[Observation] = []
         baseline = self._objects_at(last)
         if baseline is None:
             return SourceResult(
                 "reset", [], str(head),
                 f"cursor generation {last} unreadable; re-baselined")
-        previous = {bytes(item.domain_identity) for item in baseline}
+        previous = {(bytes(getattr(item, "domain_schema", b"")), bytes(item.domain_identity)) for item in baseline}
         for gen in range(last + 1, head + 1):
             objects = self._objects_at(gen)
             if objects is None:
                 return SourceResult(
                     "reset", [], str(head),
                     f"generation {gen} unreadable; re-baselined")
-            current = {bytes(item.domain_identity) for item in objects}
-            for identity in sorted(current - previous):
-                event = self._classify(identity, objects, gen)
-                if event is not None and identity not in seen:
-                    seen.add(identity)
+            current = {(bytes(getattr(item, "domain_schema", b"")), bytes(item.domain_identity)) for item in objects}
+            for binding in sorted(current - previous):
+                schema, identity = binding
+                event = self._classify(identity, objects, gen, schema)
+                if event is not None and binding not in seen:
+                    seen.add(binding)
                     events.append(event)
                     if len(events) >= MAX_OBSERVATIONS:
-                        break
+                        return SourceResult("reset", [], str(head),
+                                            "observation bound exceeded; reconcile before adopting head")
             previous = current
             if len(events) >= MAX_OBSERVATIONS:
                 break
@@ -203,7 +213,7 @@ class StoreReplaySource(Source):
                             f"replayed {head - last} generations, {len(events)} observations")
 
     def _classify(self, identity: bytes, objects: list[Any],
-                  generation: int) -> Observation | None:
+                  generation: int, schema: bytes = b"") -> Observation | None:
         try:
             text = identity.decode("utf-8", "replace")
         except Exception:
@@ -212,7 +222,7 @@ class StoreReplaySource(Source):
             return None
         if ":evt:" in text:
             return None  # session logs own event payloads
-        cursor = f"{generation}:{digest_hex({'g': generation, 'i': text})[:12]}"
+        cursor = f"{generation}:{digest_hex({'g': generation, 'i': text, 'schema': schema.hex()})[:12]}"
         moment = utcnow()
         if text.startswith("claim:"):
             return Observation(

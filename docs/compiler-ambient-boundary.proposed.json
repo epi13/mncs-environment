@@ -1,0 +1,32 @@
+{
+  "schema_version": "mncs.environment.materialization-boundary-proposal/1",
+  "status": "proposed; no compiler implementation or authority admission",
+  "producer_authority": "mncs-compiler",
+  "semantic_authority": "mncs-language-service",
+  "coordination_schema_authority": "MNCS-Commons",
+  "scheduling_authority": "mncs-automation",
+  "durable_substrate": "mncs-store",
+  "subscriptions": ["semantic.changed", "provider.artifact_changed", "declaration.changed"],
+  "input_identity": [
+    "semantic service and workspace identity", "semantic stream and cursor", "semantic generation",
+    "affected subject identities and content digests", "exact dependency artifact identities",
+    "compiler executable digest and provider-owned build receipt", "effective stdlib content identity",
+    "build configuration and effects/capability digest", "runtime ABI identity", "fresh inventory identity"
+  ],
+  "result_identity": [
+    "producer contract", "compiled generation", "compiled artifact digest",
+    "complete input identity", "dependency closure", "diagnostic/source mappings", "remaining obligations"
+  ],
+  "publication_event": "provider.artifact_changed",
+  "publication": "CAS against the observed materialization row; superseded inputs cannot overwrite newer outputs",
+  "stream_reset": "bounded reconciliation of exact workspace/toolchain identity; missing knowledge requires bootstrap",
+  "evidence_authorities": {"verdict": "mncs-test", "witness": "mncs-debug", "remote_receipt": "mncs-actions"},
+  "prohibited_inference": [
+    "Store generation equals semantic generation", "revision equals executed artifact identity",
+    "successful compilation equals verification PASS", "matching source line equals matching failure"
+  ],
+  "remaining_provider_contracts": [
+    "source/build-origin receipt", "owner-bounded build/reconcile capability",
+    "subject dependency/invalidation publication", "coalesced cancellation of superseded materialization"
+  ]
+}

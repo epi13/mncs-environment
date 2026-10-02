@@ -242,3 +242,11 @@ Architectural consumer edges come from Commons' validated declaration reader.
 Language Service supplies observed semantic impact separately. Source-import
 validation is an explicit Commons audit, never a repeated Environment discovery
 pass and never architectural authority by itself.
+
+## Incremental entry composition
+
+Canonical entry routes observed changes through Automation native subscriptions
+and resumes Store-backed owner observations. See [Incremental ambient coherence](INCREMENTAL_COHERENCE.md)
+for invalidation, recovery, cursor races, artifact observation and the proposed
+compiler materialization boundary. Provider build origin and cross-session
+evidence equivalence remain explicit unknowns.

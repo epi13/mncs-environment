@@ -5,12 +5,14 @@
     "kind": "workspace",
     "repositories": ["mncs-environment", "mncs-language", "mncs-compiler", "mncs-test", "mncs-store", "mncs-forge", "mncs-automation", "mncs-doc", "mncs-debug"]
   },
-  "required_capabilities": ["mncs-environment:workspace-discovery"],
+  "required_capabilities": ["mncs-environment:workspace-readiness"],
   "services": [
     {
-      "identity": "mncs-environment:workspace-discovery",
-      "probe": {"capability": "mncs-environment:workspace-discovery", "argv": []},
-      "response_schema": "mncs.environment.workspace/1",
+      "identity": "mncs-environment:workspace-readiness",
+      "observation_inputs": ["selected-repositories"],
+      "observation_max_age_ms": 60000,
+      "probe": {"capability": "mncs-environment:workspace-readiness", "argv": []},
+      "response_schema": "mncs.environment.workspace-readiness/1",
       "ready_when": {"/scan/status": "complete"},
       "required": true
     }

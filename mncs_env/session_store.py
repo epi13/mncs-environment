@@ -450,6 +450,7 @@ class StoreSessionStore(SessionStore):
         verify_on_open: bool = True,
         store_package_dir: str | Path | None = None,
         store_runtime: dict[str, str] | None = None,
+        defer_mutation: bool = False,
     ):
         from .store_backend import StoreBackend
 
@@ -459,6 +460,7 @@ class StoreSessionStore(SessionStore):
             verify_on_open=verify_on_open,
             store_package_dir=store_package_dir,
             store_runtime=store_runtime,
+            **({"defer_mutation": True} if defer_mutation else {}),
         )
 
     def close(self) -> None:
@@ -472,6 +474,9 @@ class StoreSessionStore(SessionStore):
         if not callable(objects_at):
             return None
         return list(objects_at(generation))
+
+    def domain_bindings_at(self, generation: int) -> tuple[tuple[bytes, bytes], ...]:
+        return self.backend.domain_bindings_at(generation)
 
     def load_snapshot(self, session_id: str) -> dict[str, Any] | None:
         return self.backend.read_snapshot(session_id)
@@ -565,6 +570,7 @@ def open_store(
     session_id: str | None = None,
     store_package_dir: str | Path | None = None,
     store_runtime: dict[str, str] | None = None,
+    defer_mutation: bool = False,
 ) -> SessionStore:
     """Open the canonical Store backend or the explicit file debug projection."""
     if backend == "file":
@@ -582,5 +588,6 @@ def open_store(
             verify_on_open=verify_on_open,
             store_package_dir=store_package_dir,
             store_runtime=store_runtime,
+            **({"defer_mutation": True} if defer_mutation else {}),
         )
     raise ValueError(f"unknown session store backend {backend!r}")

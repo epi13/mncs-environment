@@ -25,6 +25,28 @@
             "."
           ]
         }
+      },
+      {
+        "contract": "workspace-readiness",
+        "version": "1",
+        "kind": "read-only-workspace-readiness",
+        "effects": [
+          "read"
+        ],
+        "fingerprint_sources": [
+          "mncs_env/cli.py",
+          "mncs_env/workspace.py"
+        ],
+        "invocation": {
+          "kind": "executable",
+          "path": "scripts/mncs-env",
+          "fixed_argv": [
+            "workspace",
+            "--root",
+            ".",
+            "--summary"
+          ]
+        }
       }
     ],
     "consumes": [
@@ -82,6 +104,29 @@
           "mncs_env/family.py",
           "mncs_env/semantics.py"
         ]
+      },
+      {
+        "contract": "mncs-automation.coherence-routing",
+        "envelope": {
+          "op": "any"
+        },
+        "required": false,
+        "evidence_refs": [
+          "mncs_env/coherence.py",
+          ".mncs/coherence-passes.json"
+        ]
+      },
+      {
+        "contract": "mncs-store.binding-observation",
+        "required": false,
+        "envelope": {
+          "op": "any"
+        },
+        "evidence_refs": [
+          "mncs_env/sources.py",
+          "mncs_env/store_backend.py"
+        ],
+        "scope": "bounded replay; older providers retain verified object projection fallback"
       }
     ],
     "tests": [

@@ -9,6 +9,7 @@ resets, cleans, or checks out over anything.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -49,6 +50,7 @@ def _git(
             text=True,
             timeout=timeout,
             check=False,
+            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
         )
     except (OSError, subprocess.TimeoutExpired):
         return None

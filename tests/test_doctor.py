@@ -130,7 +130,7 @@ class EpochTests(DoctorFixture):
         self.assertTrue(second["doctor"]["reused"])
         self.assertEqual(second["doctor"]["epoch"], first["doctor"]["epoch"])
 
-    def test_epoch_hit_writes_only_the_resume_marker(self):
+    def test_epoch_hit_does_not_write_a_resume_marker(self):
         self.ready()
         _, first = self.enter()
         store = open_store(self.state, "file")
@@ -140,10 +140,9 @@ class EpochTests(DoctorFixture):
         self.assertTrue(second["doctor"]["reused"])
         snap_after = store.load_snapshot(first["session_id"])
         events_after = len(store.read_events(first["session_id"]))
-        # Exactly one snapshot save (resume) and one event (session.resumed):
-        # no revalidation saves, no service saves, no epoch rewrite.
-        self.assertEqual(snap_after["snapshot_sequence"], snap_before["snapshot_sequence"] + 1)
-        self.assertEqual(events_after, events_before + 1)
+        # Entry resumes observation without a participation event or epoch write.
+        self.assertEqual(snap_after["snapshot_sequence"], snap_before["snapshot_sequence"])
+        self.assertEqual(events_after, events_before)
 
     def test_epoch_miss_on_working_tree_change(self):
         self.ready()

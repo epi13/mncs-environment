@@ -1717,6 +1717,21 @@ def _observation_epoch(session, changes, contributors) -> tuple[str, bool]:
     return digest, revisit_due
 
 
+def scheduler_deadlines(session) -> list[str]:
+    """Owner-published wake deadlines; the coordinator does not infer retries."""
+    deadlines = []
+    for row_id in list_row_ids(session, RECON_ROW_PREFIX):
+        found = _read_row(session, row_id)
+        if found and _selected_reconciliation(session, row_id, found[1]):
+            value = found[1].get("next_revisit_at")
+            if value:
+                deadlines.append(str(value))
+    for claim in _live_claims(session).values():
+        if claim.get("repository") in _selected_checkout_paths(session) and claim.get("expires_at"):
+            deadlines.append(str(claim["expires_at"]))
+    return deadlines
+
+
 def capsule(session) -> dict[str, Any]:
     """Tiny relevant collaboration capsule for agent context."""
     try:

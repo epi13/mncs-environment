@@ -69,7 +69,8 @@ def _git(checkout: Path, *argv: str, timeout: int = 30) -> bytes | None:
     try:
         completed = subprocess.run(
             ["git", "-C", str(checkout), *argv],
-            capture_output=True, timeout=timeout)
+            capture_output=True, timeout=timeout,
+            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"})
     except (OSError, subprocess.SubprocessError):
         return None
     if completed.returncode != 0:

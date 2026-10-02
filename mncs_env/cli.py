@@ -809,7 +809,12 @@ def cmd_pressures(args: argparse.Namespace) -> int:
 
 
 def cmd_workspace(args: argparse.Namespace) -> int:
-    out(workspace_module.discover_workspace(args.root))
+    document = workspace_module.discover_workspace(args.root)
+    if args.summary:
+        document = {key: document[key] for key in
+                    ("schema_version", "root", "scan", "repository_count") if key in document}
+        document["schema_version"] = "mncs.environment.workspace-readiness/1"
+    out(document)
     return 0
 
 
@@ -1054,6 +1059,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     workspace = sub.add_parser("workspace", help="discover workspace repositories")
     workspace.add_argument("--root", default=".")
+    workspace.add_argument("--summary", action="store_true", help="bounded readiness response; omit repository details")
     workspace.set_defaults(func=cmd_workspace)
 
     store = sub.add_parser("store", help="inspect the backing store")

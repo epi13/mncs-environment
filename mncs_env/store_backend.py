@@ -149,6 +149,7 @@ class StoreBackend:
         verify_on_open: bool = True,
         store_package_dir: str | Path | None = None,
         store_runtime: dict[str, str] | None = None,
+        defer_mutation: bool = False,
     ):
         EmbeddedStore, StoreError, StoreResultCode = _load_store_api(store_package_dir)
         self._api = (EmbeddedStore, StoreError, StoreResultCode)
@@ -159,8 +160,13 @@ class StoreBackend:
         self.store_runtime = dict(store_runtime) if store_runtime is not None else None
         self.state_dir = Path(state_dir)
         self.path = self.state_dir / "store"
+        self._promotion_owner = None
+        self._verify_on_open = verify_on_open
         with _selected_store_runtime(self.store_runtime, self.state_dir / "provider-cache" / "mncs-store"):
-            self._store = EmbeddedStore(self.path, verify_on_open=verify_on_open)
+            if defer_mutation and (self.path / "head").is_file():
+                self._store = EmbeddedStore(self.path, read_only=True)
+            else:
+                self._store = EmbeddedStore(self.path, verify_on_open=verify_on_open)
         recovery = getattr(self._store, "recovery_result", None)
         if recovery is not None and str(recovery) in (
             "StoreResultCode.INTEGRITY_FAILURE",
@@ -171,6 +177,19 @@ class StoreBackend:
 
     def close(self) -> None:
         self._store.close()
+        if self._promotion_owner is not None:
+            self._promotion_owner.close()
+
+    def _ensure_writable(self) -> None:
+        if not getattr(self._store, "read_only", False):
+            return
+        EmbeddedStore, _, _ = self._api
+        owner = self._store
+        # Reuse the admitted native session. Only actual mutation pays recovery
+        # and complete projection verification; reads verify selected objects.
+        self._store = EmbeddedStore(self.path, session=owner.session,
+                                    verify_on_open=self._verify_on_open)
+        self._promotion_owner = owner
 
     # -- low-level put with CAS retry ------------------------------------
 
@@ -181,6 +200,7 @@ class StoreBackend:
         identity: bytes,
         payload: bytes,
     ):
+        self._ensure_writable()
         _, StoreError, StoreResultCode = self._api
         descriptor = json.dumps(
             {"schema": schema.decode(), "identity": identity.decode()},
@@ -256,16 +276,20 @@ class StoreBackend:
 
     def read_snapshot(self, session_id: str) -> dict[str, Any] | None:
         prefix = f"{session_id}:snap:".encode()
-        best: tuple[int, dict[str, Any]] | None = None
+        # Select by immutable revision before decoding JSON. Store has already
+        # verified object bytes; historical snapshots need no repeated parsing.
+        candidates = []
         for item in self._store.find_bound_objects(SCHEMA_SNAPSHOT, prefix):
             try:
-                revision = int(item.domain_identity[len(prefix):])
-                record = json.loads(item.payload.decode("utf-8"))
+                candidates.append((int(item.domain_identity[len(prefix):]), item))
+            except ValueError:
+                continue
+        for _, item in sorted(candidates, key=lambda pair: pair[0], reverse=True):
+            try:
+                return json.loads(item.payload.decode("utf-8"))
             except (ValueError, json.JSONDecodeError):
                 continue
-            if best is None or revision > best[0]:
-                best = (revision, record)
-        return best[1] if best else None
+        return None
 
     # -- claims ---------------------------------------------------------------
 
@@ -416,6 +440,12 @@ class StoreBackend:
         if not callable(objects_at):
             return None
         return list(objects_at(generation))
+
+    def domain_bindings_at(self, generation: int) -> tuple[tuple[bytes, bytes], ...]:
+        observe = getattr(self._store, "domain_bindings_at", None)
+        if callable(observe):
+            return observe(generation)
+        return tuple((item.domain_schema, item.domain_identity) for item in self._store.objects_at(generation))
 
     def list_sessions(self) -> list[str]:
         found: set[str] = set()
