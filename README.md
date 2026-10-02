@@ -192,6 +192,11 @@ state, not prose. The hardening campaign added:
   witness capture through the debugger under the `verify` effect,
   and a diagnostic block that exists only when there is something
   to explain (`mncs_env/diagnostics.py`, `docs/DIAGNOSTICS.md`).
+- ambient semantic coherence: resident Language Service lifecycle
+  through provider-owned contracts, durable per-workspace cursors,
+  bounded poll/capsule deltas, and a semantic block that exists
+  only for declared workspaces (`mncs_env/semantics.py`,
+  `docs/AMBIENT_SEMANTICS.md`).
 - tooling ambience inventory: which subsystems are explicit,
   discoverable, reactive, continuous, or adaptive, and the campaign
   order for Language Service, Actions, Memory, and RAVEL

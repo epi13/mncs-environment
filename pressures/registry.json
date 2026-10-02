@@ -202,5 +202,41 @@
   "title": "Cross-session diagnostic evidence reuse needs unified identity + shared rows",
   "why_not_local": "Sharing on the current witness_id would confuse session-local material for equivalence; sharing must wait for one family evidence identity.",
   "workaround": "Per-session witnesses; concurrent duplicate capture is correct but redundant."
+ },
+ {
+  "description": "The background reconciler accepts commons/language sockets only through explicit CLI flags or environment variables. There is no provider-owned discovery of resident sockets for the janitor scope, so long-running semantic observation needs operator wiring per workspace.",
+  "desired_contract": "Provider-published resident registry (workspace -> socket/lease/identity) readable by the janitor without lifecycle authority, or a declared per-workspace socket binding in the environment definition.",
+  "effect": "Long-running agents notice semantic changes only when the operator wires each workspace socket explicitly.",
+  "evidence": "mncs_env/cli.py --commons-socket/--language-socket threading into reconciler.build_sources; mncs-language-service provider owns socket paths but publishes no janitor-scoped discovery",
+  "identity": "prs_60dc29e4e9f9425c",
+  "owner": "mncs-environment (composition), provider repositories (socket facts)",
+  "schema_version": "mncs.environment.pressure/1",
+  "title": "Janitor sessions lack provider-owned resident discovery",
+  "why_not_local": "Socket paths, lease ownership, and workspace binding belong to the providers; an environment-local convention table would drift from provider reality.",
+  "workaround": "Pass --language-socket per workspace (or MNLS_SERVICE_SOCKET for one); entry-time semantics pass covers declared workspaces without the daemon."
+ },
+ {
+  "description": "store_backend resolves the mncs-store Python package through a fixed parents[2] sibling fallback from its own file location. Provider worktrees nested deeper (repo/.worktrees/<slug>) miss the fallback, so every store-backed test needs MNCS_STORE_PYTHON set explicitly.",
+  "desired_contract": "Git-aware family-root discovery with an explicit override, identical from any checkout depth.",
+  "effect": "Worktree-isolated development pays a manual environment tax; fresh agents meet 30+ spurious failures.",
+  "evidence": "mncs_env/store_backend.py _load_store_api parents[2] fallback; worktree suite runs fail with StoreUnavailable unless MNCS_STORE_PYTHON is exported",
+  "identity": "prs_1e336bc3128f7fc9",
+  "owner": "mncs-environment",
+  "schema_version": "mncs.environment.pressure/1",
+  "title": "Fixed-depth sibling fallback breaks worktree checkouts",
+  "why_not_local": "It is local: resolution should walk to the enclosing family root (git-aware) or require explicit binding instead of a fixed depth.",
+  "workaround": "Export MNCS_STORE_PYTHON (and MNCS_TEST_FAMILY) when running the suite from a worktree."
+ },
+ {
+  "description": "The valid-campaign-entry compactness test asserts inspect output exceeds entry context, and is red on main: successive ambient blocks (doctor, projection, verification) grew entry context past inspect output with no budget or per-block accounting.",
+  "desired_contract": "Explicit byte budgets per entry block plus a compactness assertion that names the over-budget block.",
+  "effect": "Compactness regressions are invisible until a coarse assertion trips; campaigns cannot tell whether their block is the cause.",
+  "evidence": "tests/test_environment.py::EntryFrictionTests::test_valid_campaign_entry_is_compact_and_uses_isolated_state red on main (3889 vs 4089); undeclared sessions now carry no semantic block",
+  "identity": "prs_fa6251ccbcf6646e",
+  "owner": "mncs-environment",
+  "schema_version": "mncs.environment.pressure/1",
+  "title": "Entry context has no per-block byte budget",
+  "why_not_local": "It is local: the budget (or the assertion shape) belongs to the entry contract.",
+  "workaround": "Keep new entry blocks terse, symmetric, and omitted when unconfigured; record measured footprints per block in campaign reports."
  }
 ]
