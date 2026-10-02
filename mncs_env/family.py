@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import time
 from datetime import datetime, timezone
@@ -97,6 +98,10 @@ def family_change_module(session=None) -> Any:
 
 
 def find_commons_root(session=None) -> Path | None:
+    """Commons root: explicit MNCS_COMMONS_ROOT wins, else selection."""
+    override = os.environ.get("MNCS_COMMONS_ROOT", "")
+    if override and (Path(override) / "src" / "mncs_commons").is_dir():
+        return Path(override)
     if session is not None:
         paths = _selected_checkout_paths(session)
         if paths.get("MNCS-Commons"):
@@ -120,6 +125,10 @@ def _selected_checkout_paths(session) -> dict[str, str]:
 
 
 def find_mncs_binary(session=None) -> str | None:
+    """Toolchain binary: explicit MNCS_BIN wins, else session toolchain."""
+    override = os.environ.get("MNCS_BIN", "")
+    if override and Path(override).is_file():
+        return override
     if session is not None:
         try:
             toolchain = session.snapshot.get("toolchain") or {}
@@ -132,6 +141,10 @@ def find_mncs_binary(session=None) -> str | None:
 
 
 def language_library_for(binary: str, session=None) -> Path | None:
+    """Language library: explicit MNCS_LIBRARY_ROOT wins, else layout."""
+    override = os.environ.get("MNCS_LIBRARY_ROOT", "")
+    if override and Path(override).is_dir():
+        return Path(override)
     if session is not None:
         paths = _selected_checkout_paths(session)
         if paths.get("mncs-language") and (
@@ -365,10 +378,14 @@ def publish_presence(session, active_changes: list[str]) -> dict[str, Any]:
         live = {}
     own = sorted(identity for identity, record in live.items()
                  if record.get("session_id") == session.session_id)
+    try:
+        consumer_id = str(session.snapshot.get("consumer_id", ""))
+    except AttributeError:
+        consumer_id = getattr(session, "consumer_id", "")
     record = {
         "schema_version": "mncs.family-contributor/1",
         "session": session.session_id,
-        "consumer": getattr(session, "consumer_id", ""),
+        "consumer": consumer_id,
         "workspaces": sorted(_selected_checkout_paths(session).values()),
         "active_changes": list(active_changes)[:16],
         "claims": own[:32],
@@ -434,6 +451,13 @@ def publish_change(session, draft: dict[str, Any]) -> dict[str, Any]:
     session._emit("family.published", "environment",
                   {"change": identity, "state": record["state"],
                    "repository": record["producer"]["repository"]})
+    try:
+        produced = list(session.snapshot.get("family_produced") or [])
+        if identity not in produced:
+            produced.append(identity)
+        session.snapshot["family_produced"] = produced[-32:]
+    except AttributeError:
+        pass
     return {"identity": identity, "state": record["state"]}
 
 
@@ -449,6 +473,9 @@ def read_change(session, identity: str) -> dict[str, Any] | None:
         record = dict(record)
         record["state"] = found[1].get("state", record.get("state"))
         record["row_version"] = found[0]
+        if found[1].get("established_generation") is not None:
+            record["established_generation"] = int(
+                found[1]["established_generation"])
     return record
 
 
@@ -514,6 +541,16 @@ def establish_change(session, identity: str) -> dict[str, Any]:
     generation = bump_generation(session, str(producer.get("repository", "")),
                                  str((record.get("base") or {}).get("head", "")),
                                  identity)
+    # Pin the establishment generation on the change row: each
+    # reconciliation row converges toward its own change's target,
+    # never a moving producer HEAD.
+    row_id = CHANGE_ROW_PREFIX + identity
+    found = _read_row(session, row_id)
+    if found is not None:
+        candidate = dict(found[1])
+        candidate["established_generation"] = int(generation.get(
+            "generation", 0))
+        _write_row(session, row_id, found[0] + 1, candidate)
     session._emit("family.established", "environment",
                   {"change": identity, "generation": generation.get(
                       "generation")})
@@ -648,6 +685,27 @@ def _verification_verdict(session, obligations: list[str]) -> str:
     return "passed" if seen_pass and obligations else "unknown"
 
 
+def _verification_digest(session, obligations: list[str]) -> str:
+    """Stable digest of the verdict inputs adoption depends on."""
+    import hashlib
+    try:
+        rows = session.snapshot.get("verification_state") or {}
+    except AttributeError:
+        rows = {}
+    parts = []
+    for obligation in sorted(obligations):
+        entry = rows.get(obligation) if isinstance(rows, dict) else None
+        evidence = (entry or {}).get("evidence") if isinstance(
+            entry, dict) else None
+        parts.append("%s=%s:%s" % (
+            obligation,
+            str((evidence or {}).get("verdict", "UNKNOWN")).upper(),
+            str((evidence or {}).get("digest",
+                                     (evidence or {}).get("evidence_ref",
+                                                         "")))))
+    return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()[:16]
+
+
 def semantic_impact(session, workspace: str,
                     subjects: list[dict[str, Any]]) -> dict[str, Any]:
     """Language Service impact for changed subjects; honest degradation.
@@ -716,12 +774,21 @@ def classify_drift(session, change: dict[str, Any],
     vocabulary = _vocabulary(session)
     classes = vocabulary.CONSUMER_CLASSES
     producer = (change.get("producer") or {}).get("repository", "")
-    canonical = project_generation(session, producer)
     row_id = RECON_ROW_PREFIX + change["identity"] + "/" + consumer
     found = _read_row(session, row_id)
     observed = int((found[1] if found else {}).get(
         "observed_generation", 0))
-    canonical_generation = int(canonical.get("generation", 0))
+    # Converge toward this change's own establishment generation;
+    # fall back to producer HEAD for rows predating the pin.
+    pinned = change.get("established_generation")
+    if pinned is None:
+        change_row = _read_row(
+            session, CHANGE_ROW_PREFIX + change["identity"])
+        pinned = (change_row[1].get("established_generation")
+                  if change_row else None)
+    if pinned is None:
+        pinned = project_generation(session, producer)["generation"]
+    canonical_generation = int(pinned)
     drift = 1 if canonical_generation > observed else 0
     repair_state = str((found[1] if found else {}).get(
         "repair_state", "no_repair"))
@@ -1065,9 +1132,12 @@ def converge(session, identity: str, consumer: str, *,
         _preimage_ok(checkout_path, operation) or _postimage_converged(
             checkout_path, operation) for operation in operations) else 0
     producer = (change.get("producer") or {}).get("repository", "")
-    generation_now = project_generation(session, producer)["generation"]
-    generation_current = 1 if generation_now == int(
-        classification["canonical_generation"]) else 0
+    # The plan targets this change's pinned establishment generation;
+    # producer HEAD advancing beyond it never invalidates the plan.
+    # What invalidates is the change leaving established (superseded).
+    live = read_change(session, identity)
+    generation_current = 1 if live is not None and str(
+        live.get("state")) == "established" else 0
     claim_live = 1 if _own_covering_claim(session, consumer) is not None else 0
     class_code = vocabulary.CONSUMER_CLASSES.get(
         classification["consumer_class"], 6)
@@ -1098,10 +1168,11 @@ def converge(session, identity: str, consumer: str, *,
     # Phase two: revalidate then apply each operation atomically.
     applied = []
     for operation in operations:
-        if project_generation(session, producer)["generation"] != \
-                classification["canonical_generation"]:
+        live_state = read_change(session, identity)
+        if live_state is None or str(live_state.get("state")) != \
+                "established":
             return {"converged": False, "disposition": "deferred",
-                    "detail": "producer-advanced",
+                    "detail": "change-superseded",
                     "applied": applied}
         if _own_covering_claim(session, consumer) is None:
             return {"converged": False, "disposition": "deferred",
@@ -1320,7 +1391,7 @@ def revisit_deferred(session, identity: str,
     detail = str(row.get("detail", ""))
     reason = {"replan": 0, "claim-required": 1, "occupied": 2,
               "provider-unavailable": 3, "awaiting-verdict": 4,
-              "producer-advanced": 0, "claim-lost": 1,
+              "change-superseded": 0, "claim-lost": 1,
               "preimage-changed": 0}.get(detail, 4)
     if str(row.get("consumer_class")) in ("current", "semantic_required",
                                           "incompatible"):
@@ -1401,12 +1472,39 @@ def ambient_pass(session, *, mode: str = "ambient",
         produced = session.snapshot.get("family_produced") or []
     except AttributeError:
         produced = []
-    publish_presence(session, [str(item) for item in produced
-                               if isinstance(item, str)][:16])
+    active = []
+    for item in produced:
+        if not isinstance(item, str):
+            continue
+        record = read_change(session, item)
+        state = str((record or {}).get("state", "draft"))
+        if state not in ("superseded", "abandoned", "invalid", "published"):
+            active.append(item)
+    try:
+        session.snapshot["family_produced"] = active[-32:]
+    except AttributeError:
+        pass
+    publish_presence(session, active[:16])
     contributors = read_contributors(session)
     summary["contributors"] = len(contributors)
     changes = observe_changes(session)
     summary["observed_changes"] = len(changes)
+    epoch_key, revisit_due = _observation_epoch(session, changes, contributors)
+    try:
+        stored = session.snapshot.get("family_epoch") or {}
+    except AttributeError:
+        stored = {}
+    if (not revisit_due and stored.get("key") == epoch_key
+            and isinstance(stored.get("summary"), dict)):
+        cached = dict(stored["summary"])
+        cached["contributors"] = len(contributors)
+        cached["epoch_reused"] = True
+        cached["elapsed_seconds"] = round(time.monotonic() - clock_started, 3)
+        try:
+            session.snapshot["family_last_summary"] = cached
+        except AttributeError:
+            pass
+        return {"summary": cached, "reused": True, "started_at": started}
     selected = set(_selected_checkout_paths(session))
     repairs_this_pass = 0
     for entry in changes:
@@ -1467,15 +1565,78 @@ def ambient_pass(session, *, mode: str = "ambient",
         if consumer not in selected:
             continue
         adopt_pending(session, str(row.get("change", "")), consumer)
+    post_key, _ = _observation_epoch(
+        session, observe_changes(session), read_contributors(session))
     try:
         session.snapshot["family_cursor"] = {
             "cursor": read_generation(session)[1].get("cursor", 0),
             "observed_at": utcnow()}
         session.snapshot["family_last_summary"] = summary
+        session.snapshot["family_epoch"] = {"key": post_key,
+                                            "summary": dict(summary)}
     except AttributeError:
         pass
     summary["elapsed_seconds"] = round(time.monotonic() - clock_started, 3)
+    try:
+        session.snapshot["family_epoch"]["summary"] = dict(summary)
+    except (AttributeError, KeyError, TypeError):
+        pass
     return {"summary": summary, "reused": False, "started_at": started}
+
+
+def _observation_epoch(session, changes, contributors) -> tuple[str, bool]:
+    """Cheap epoch key over observed family state (no native calls).
+
+    Returns (key, revisit_due). A revisit whose backoff has expired
+    forces a full pass even when the key is unchanged.
+    """
+    import hashlib
+    parts: list[str] = []
+    try:
+        _, generation = read_generation(session)
+        parts.append("gen=%s" % generation.get("cursor", 0))
+    except FamilyError:
+        parts.append("gen=?")
+    for entry in sorted(changes, key=lambda item: item["identity"]):
+        record = entry.get("record") or {}
+        parts.append("%s:%s:%s" % (
+            entry["identity"], entry.get("state", "?"),
+            record.get("established_generation", "?")))
+    selected = set(_selected_checkout_paths(session))
+    revisit_due = False
+    recon: list[str] = []
+    for row_id in sorted(list_row_ids(session, RECON_ROW_PREFIX)):
+        found = _read_row(session, row_id)
+        if found is None:
+            continue
+        version, row = found
+        if str(row.get("consumer", "")) not in selected:
+            continue
+        recon.append("%s:v%s:%s:%s" % (
+            row_id, version, row.get("consumer_class", "?"),
+            row.get("repair_state", "?")))
+        due_at = str(row.get("next_revisit_at", ""))
+        if due_at and due_at <= utcnow():
+            revisit_due = True
+        if str(row.get("repair_state", "")) == "applied_unknown":
+            # Adoption depends only on the owning verdicts; fold them
+            # into the key so an unchanged verdict does not bust the
+            # epoch, while a landed verdict invalidates immediately.
+            change = read_change(session, str(row.get("change", "")))
+            obligations = [str(ob) for ob in
+                           ((change or {}).get("verification") or {}).get(
+                               "obligations", [])]
+            recon.append("verdict=%s:%s" % (
+                _verification_verdict(session, obligations),
+                _verification_digest(session, obligations)))
+    parts.append("recon=[%s]" % ",".join(recon))
+    claims = sorted("%s=%s" % (name, bool(_own_covering_claim(session, name)))
+                    for name in sorted(selected))
+    parts.append("claims=[%s]" % ",".join(claims))
+    sessions = sorted(str(item.get("session", "?")) for item in contributors)
+    parts.append("contributors=[%s]" % ",".join(sessions))
+    digest = hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()[:32]
+    return digest, revisit_due
 
 
 def capsule(session) -> dict[str, Any]:

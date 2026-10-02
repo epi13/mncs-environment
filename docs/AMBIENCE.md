@@ -89,6 +89,26 @@ constant. The wrong level in either direction is a bug.
   test verdict. Shared exact-witness reuse is future work behind the
   same unified evidence identity as verification.
 
+### Family collaboration — A3, implemented
+
+- Owns: shared semantic workspace coherence (producer working
+  changes, contributor presence, per-consumer reconciliation).
+- Trigger: ChangeSet publish/establish/supersede, claim release,
+  landed verification, explicit converge.
+- Identity: `fc:<sha256>` change identities, pinned established
+  generations, CAS reconciliation rows.
+- Evidence: immutable change rows, contributor rows, recon rows in
+  shared state; raw diffs stay referenced artifacts.
+- Agent surface: ~226B capsule (generation, contributors, relevant,
+  reconciled, attention); quiet re-entry costs 0.003s with zero
+  native calls.
+- Mutation: deterministic transforms inside own claimed checkouts
+  only, two per pass, two-phase revalidated, never toward drafts.
+- Explicit-only: Git publication, snapshot updates, semantic
+  migrations without deterministic operations.
+- Status: implemented (see `docs/COLLABORATION.md`). Native law in
+  `mncs.commons.family.change.v1`; vocabulary in Commons.
+
 ### Store — A3 substrate, implemented
 
 - Owns: durable session state, immutable evidence, content addressing.
@@ -240,6 +260,7 @@ done:
     mncs-debug      A2 diagnostic coherence
     store           A3 state substrate
     rights          A3 authority substrate
+    family-collab   A3 shared continuous coherence
 
 next:
     language-service    A0 -> A3 semantic coherence

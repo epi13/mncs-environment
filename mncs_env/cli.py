@@ -430,8 +430,20 @@ def cmd_family(args: argparse.Namespace) -> int:
                 session._save()
                 out(result)
                 return 0
+            if args.transition:
+                identity, _, state = args.transition.rpartition(":")
+                if not identity or not state:
+                    return fail("--transition needs CHANGE:STATE")
+                try:
+                    result = family_module.transition_change(
+                        session, identity, state)
+                except family_module.FamilyError as error:
+                    return fail(str(error))
+                session._save()
+                out(result)
+                return 0
             if args.converge:
-                repository, _, consumer = args.converge.partition(":")
+                repository, _, consumer = args.converge.rpartition(":")
                 if not repository or not consumer:
                     return fail("--converge needs CHANGE:CONSUMER")
                 try:
@@ -917,6 +929,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="validate and publish a draft working change")
     family.add_argument("--establish", default=None, metavar="CHANGE",
                         help="validate and establish a published change")
+    family.add_argument("--transition", default=None, metavar="CHANGE:STATE",
+                        help="advance change lifecycle (native law judges)")
     family.add_argument("--converge", default=None, metavar="CHANGE:CONSUMER",
                         help="explicitly converge one consumer (requires a claim)")
     family.add_argument("--dry-run", action="store_true",

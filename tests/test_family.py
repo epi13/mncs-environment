@@ -321,6 +321,44 @@ class FamilyNativeTest(unittest.TestCase):
         self.assertEqual(outcome["disposition"], "defer")
         self.assertEqual(outcome["detail"], "claim-required")
 
+    def test_epoch_reuse_skips_repeated_observation(self) -> None:
+        producer = self._session("ses_prod")
+        self._change(producer)
+        consumer = self._session("ses_cons")
+        first = family_module.ambient_pass(consumer)
+        self.assertFalse(first["reused"])
+        self.assertFalse(first["summary"]["epoch_reused"])
+        self.assertGreater(first["summary"]["relevant"], 0)
+        second = family_module.ambient_pass(consumer)
+        self.assertTrue(second["reused"])
+        self.assertTrue(second["summary"]["epoch_reused"])
+        self.assertEqual(second["summary"]["relevant"],
+                         first["summary"]["relevant"])
+
+    def test_new_change_invalidates_epoch(self) -> None:
+        producer = self._session("ses_prod")
+        self._change(producer)
+        consumer = self._session("ses_cons")
+        family_module.ambient_pass(consumer)
+        self.assertTrue(
+            family_module.ambient_pass(consumer)["summary"]["epoch_reused"])
+        (self.consumer_repo / "data.json").write_text(
+            json.dumps({"revision": "rev-2"}))
+        self._change(producer)
+        third = family_module.ambient_pass(consumer)
+        self.assertFalse(third["summary"]["epoch_reused"])
+
+    def test_claim_acquisition_invalidates_epoch(self) -> None:
+        producer = self._session("ses_prod")
+        self._change(producer)
+        consumer = self._session("ses_cons")
+        family_module.ambient_pass(consumer)
+        self.assertTrue(
+            family_module.ambient_pass(consumer)["summary"]["epoch_reused"])
+        consumer.store.put_claim(_claim("ses_cons", "cons-repo"))
+        third = family_module.ambient_pass(consumer)
+        self.assertFalse(third["summary"]["epoch_reused"])
+
     def test_converge_dry_run_mutates_nothing(self) -> None:
         producer = self._session("ses_prod")
         established = self._change(producer)
