@@ -187,11 +187,20 @@ state, not prose. The hardening campaign added:
   suite execution through the test provider, identity-bound evidence,
   and terse `current/executed/failed/blockers` summaries with session
   evidence (`mncs_env/verification.py`, `docs/VERIFICATION.md`).
+- ambient diagnostic coherence: reactive explanation of structured
+  verification FAILs, native reuse/depth/escalation policy, bounded
+  witness capture through the debugger under the `verify` effect,
+  and a diagnostic block that exists only when there is something
+  to explain (`mncs_env/diagnostics.py`, `docs/DIAGNOSTICS.md`).
+- tooling ambience inventory: which subsystems are explicit,
+  discoverable, reactive, continuous, or adaptive, and the campaign
+  order for Language Service, Actions, Memory, and RAVEL
+  (`docs/AMBIENCE.md`).
 
 ## Entering an environment
 
 The checked-in development definition selects Environment, Language,
-Compiler, Test, Store, Forge, Automation, and Doc from the sibling
+Compiler, Test, Store, Forge, Automation, Doc, and Debug from the sibling
 workspace without inspecting unselected repositories. Only Environment is
 in its writable intent;
 provider mutations still pass through claims and authority. Availability and
