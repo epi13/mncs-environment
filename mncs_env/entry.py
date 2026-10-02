@@ -7,7 +7,7 @@ import fcntl
 from contextlib import contextmanager
 from pathlib import Path
 
-from . import actions, diagnostics, doctor, family, identity, projections, readiness, semantics, sessions, verification, workspace
+from . import actions, context_budget, diagnostics, doctor, family, identity, projections, readiness, semantics, sessions, verification, workspace
 from .intent import parse as parse_intent
 from .persist import read_json
 from .session_store import open_store, upgrade_session_store_provider
@@ -99,17 +99,25 @@ def _selected_store_binding(root: Path, definition: dict) -> tuple:
     """Resolve the definition-selected Store package and MNCS runtime."""
     store_package = None
     language_root = None
+    stdlib_root = None
     selection = workspace.repository_selection(definition)
     if selection and "mncs-store" in selection:
         store_package = root / "mncs-store" / "python"
     if selection and "mncs-language" in selection:
         language_root = root / "mncs-language"
+    if selection and "mncs-stdlib" in selection:
+        stdlib_root = root / "mncs-stdlib"
     for request in definition.get("managed_checkouts", []):
         if request.get("repository") == "mncs-store":
             slug = request.get("name", "")
             if not isinstance(slug, str) or not slug or Path(slug).name != slug or slug in (".", ".."):
                 raise EntryError("invalid selected Store checkout name", "store-selection-invalid")
             store_package = root / "mncs-store" / ".worktrees" / slug / "python"
+        if request.get("repository") == "mncs-stdlib":
+            slug = request.get("name", "")
+            if not isinstance(slug, str) or not slug or Path(slug).name != slug or slug in (".", ".."):
+                raise EntryError("invalid selected stdlib checkout name", "store-selection-invalid")
+            stdlib_root = root / "mncs-stdlib" / ".worktrees" / slug
         if request.get("repository") == "mncs-language":
             slug = request.get("name", "")
             if not isinstance(slug, str) or not slug or Path(slug).name != slug or slug in (".", ".."):
@@ -125,10 +133,16 @@ def _selected_store_binding(root: Path, definition: dict) -> tuple:
         store_runtime = {"MNCS_STORE_ROOT": str(store_package.parent.resolve()),
                          "MNCS_LANGUAGE_ROOT": str(language_root.resolve()), "MNCS_BIN": str(binary.resolve()),
                          "MNCS_EMBED_LIB": str((binary.parent / "libmncs_embed.so").resolve())}
+    if store_runtime is not None and stdlib_root is not None:
+        from .toolchain import selected_stdlib_root
+        try:
+            store_runtime["MNCS_STDLIB_ROOT"] = str(selected_stdlib_root(root, {"path": str(stdlib_root)}))
+        except ValueError as error:
+            raise EntryError(str(error), "store-runtime-unavailable") from error
     return store_package, store_runtime
 
 
-def _ambient_verification(session, definition: dict) -> dict:
+def _ambient_verification(session, definition: dict) -> dict | None:
     """Run the ambient verification pass unless the definition opts out."""
     knob = definition.get("verification", {})
     if knob is None:
@@ -144,6 +158,8 @@ def _ambient_verification(session, definition: dict) -> dict:
         raise EntryError("verification max_executions must be an integer between 1 and 32",
                          "definition-invalid", next="fix the definition verification knob")
     outcome = verification.ambient_pass(session, max_executions=budget)
+    if outcome["summary"].get("obligations", 0) == 0 and outcome["summary"].get("blockers", 0) == 0:
+        return None
     return {"summary": outcome["summary"], "reused": outcome["reused"],
             "evidence": outcome.get("evidence")}
 
@@ -267,6 +283,10 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
     if backend not in ("store", "file") or not consumer_id.strip() or not consumer_kind.strip():
         raise EntryError("entry requires a valid persistence backend and nonempty consumer identity/kind", "entry-invalid")
     root = workspace.validate_workspace_root(workspace_root, definition=definition)
+    try:
+        budget = context_budget.validate(definition)
+    except ValueError as error:
+        raise EntryError(str(error), "definition-invalid") from error
     readiness.validate_requirements(definition)
     parse_intent(definition.get("intent", {"goal": definition.get("goal", "unspecified")}))
     definition_id = identity.environment_id(definition)
@@ -331,15 +351,19 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                 "reused": remediation["reused"],
                                 "elapsed_seconds": remediation.get("elapsed_seconds")}
             coherence = projections.ambient_pass(session)
-            result["projection"] = {"summary": coherence["summary"],
-                                    "reused": coherence["reused"],
-                                    "evidence": coherence.get("evidence")}
+            if any(coherence["summary"].get(key, 0) for key in
+                   ("current", "pending", "reconciled", "blockers", "invalid")):
+                result["projection"] = {"summary": coherence["summary"],
+                                        "reused": coherence["reused"],
+                                        "evidence": coherence.get("evidence")}
             external = _ambient_actions(session, definition)
             if external is not None:
                 # `actions` is taken by the session's executable argv
                 # map; external evidence rides under its own key.
                 result["external_evidence"] = external
-            result["verification"] = _ambient_verification(session, definition)
+            verified = _ambient_verification(session, definition)
+            if verified is not None:
+                result["verification"] = verified
             diagnostic = _ambient_diagnostics(session, definition)
             if diagnostic is not None:
                 result["diagnostic"] = diagnostic
@@ -349,7 +373,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
             collaboration = _ambient_family(session, definition)
             if collaboration is not None:
                 result["family"] = collaboration
-            return result
+            return context_budget.apply(session, result, budget)
         finally:
             if session is not None:
                 session.close()

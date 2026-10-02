@@ -43,15 +43,17 @@ def _selected_store_runtime(runtime: dict[str, str] | None, cache_dir: Path | No
     if runtime is None:
         yield
         return
-    if set(runtime) != set(_STORE_RUNTIME_KEYS):
+    if not set(_STORE_RUNTIME_KEYS) <= set(runtime) or set(runtime) - {*_STORE_RUNTIME_KEYS, "MNCS_STDLIB_ROOT"}:
         raise ValueError("selected Store runtime must bind the complete MNCS toolchain")
     with _STORE_RUNTIME_LOCK:
         # A raw artifact override bypasses the selected source/compiler cache
         # identity. It belongs to standalone bootstrap, never selected entry.
-        scoped_keys = (*_STORE_RUNTIME_KEYS, "MNCS_STORE_ARTIFACT", "MNCS_STORE_ARTIFACT_CACHE")
+        scoped_keys = (*_STORE_RUNTIME_KEYS, "MNCS_STDLIB_ROOT", "MNCS_STORE_ARTIFACT", "MNCS_STORE_ARTIFACT_CACHE")
         previous = {key: os.environ.get(key) for key in scoped_keys}
         try:
             os.environ.update(runtime)
+            if "MNCS_STDLIB_ROOT" not in runtime:
+                os.environ.pop("MNCS_STDLIB_ROOT", None)
             os.environ.pop("MNCS_STORE_ARTIFACT", None)
             if cache_dir is not None:
                 os.environ["MNCS_STORE_ARTIFACT_CACHE"] = str(cache_dir.resolve())

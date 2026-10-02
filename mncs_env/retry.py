@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .toolchain import language_library_for
 from .identity import canonical_bytes, digest_hex
 
 REMEDIATION_MODULE = "mncs.commons.family.remediation.v1"
@@ -98,23 +99,6 @@ def find_commons_root(session=None) -> Path | None:
             if (sibling / name).is_dir():
                 return sibling / name
     return None
-
-
-def language_library_for(binary: str, session=None) -> Path | None:
-    """Library root for `mncs call`: session language checkout, else layout."""
-    if session is not None:
-        paths = _selected_checkout_paths(session)
-        for name in ("mncs-language",):
-            if paths.get(name) and (Path(paths[name]) / "library").is_dir():
-                return Path(paths[name]) / "library"
-        toolchain = session.snapshot.get("toolchain")
-        if isinstance(toolchain, dict) and toolchain.get("checkout"):
-            candidate = Path(str(toolchain["checkout"])) / "library"
-            if candidate.is_dir():
-                return candidate
-    root = Path(binary).resolve().parents[2]
-    candidate = root / "library"
-    return candidate if candidate.is_dir() else None
 
 
 def load_retry_policy(session=None) -> dict[str, Any]:

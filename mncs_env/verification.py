@@ -139,7 +139,7 @@ def _validate_obligation(entry: Any) -> str | None:
     return None
 
 
-def discover_obligations(workspace_root: Path) -> tuple[list[dict], list[dict]]:
+def discover_obligations(workspace_root: Path, checkouts: dict[str, Path] | None = None) -> tuple[list[dict], list[dict]]:
     """Collect verification obligations from workspace manifests.
 
     Only direct-child repositories carrying `.mncs/project.json` with a
@@ -150,31 +150,32 @@ def discover_obligations(workspace_root: Path) -> tuple[list[dict], list[dict]]:
     obligations: list[dict] = []
     invalid: list[dict] = []
     try:
-        children = sorted(path for path in workspace_root.iterdir()
-                          if path.is_dir() and not path.name.startswith("."))
+        children = (sorted(checkouts.items()) if checkouts is not None else
+                    [(path.name, path) for path in sorted(workspace_root.iterdir())
+                     if path.is_dir() and not path.name.startswith(".")])
     except OSError:
         return [], [{"repository": "", "reason": "workspace-unreadable"}]
-    for child in children:
+    for repository, child in children:
         name = _inventory_name(child)
         if name is None:
             continue
         try:
             payload = json.loads((child / name).read_text(encoding="utf-8"))
         except (OSError, ValueError):
-            invalid.append({"repository": child.name, "reason": "inventory-unreadable"})
+            invalid.append({"repository": repository, "reason": "inventory-unreadable"})
             continue
         entries = payload.get("obligations") if isinstance(payload, dict) else None
         if not isinstance(entries, list):
-            invalid.append({"repository": child.name, "reason": "obligations-not-a-list"})
+            invalid.append({"repository": repository, "reason": "obligations-not-a-list"})
             continue
         for entry in entries:
             problem = _validate_obligation(entry)
             if problem is not None:
                 identity = entry.get("identity") if isinstance(entry, dict) else None
-                invalid.append({"repository": child.name, "reason": problem,
+                invalid.append({"repository": repository, "reason": problem,
                                 "identity": identity})
                 continue
-            obligations.append({"repository": child.name, "checkout": str(child),
+            obligations.append({"repository": repository, "checkout": str(child),
                                 "declaration": entry})
     obligations.sort(key=lambda item: str(item["declaration"].get("identity")))
     if len(obligations) > MAX_OBLIGATIONS:
@@ -536,7 +537,7 @@ def execute_suite(session, obligation: dict, measured: dict,
 
 
 def _epoch_inputs(session, obligations: list[dict],
-                  measured: dict[str, dict | None]) -> dict[str, Any]:
+                  measured: dict[str, dict | None], invalid: list[dict] | None = None) -> dict[str, Any]:
     bindings: dict[str, str] = {}
     for capability in (COHERENCE_CAPABILITY, TEST_CAPABILITY):
         binding = session_binding(session, capability)
@@ -549,6 +550,7 @@ def _epoch_inputs(session, obligations: list[dict],
     # Imported locally: actions.py already imports this module.
     from . import actions as actions_module
     return {
+        "invalid": invalid or [],
         "declarations": {str(item["declaration"]["identity"]): digest_hex(
             {"declaration": item["declaration"]}) for item in obligations},
         "measured": {identity: (digest_hex({"current": current})
@@ -572,7 +574,15 @@ def ambient_pass(session, *, mode: str = "ambient",
     if workspace_root is None:
         return _finish(session, started, clock_started, [], rows, [], mode,
                        {"reason": "workspace-unavailable"}, "no-workspace", None)
-    obligations, invalid = discover_obligations(workspace_root)
+    selected = session.snapshot.get("selected_checkouts")
+    checkouts = None
+    if isinstance(selected, dict):
+        checkouts = {}
+        for repository, facts in selected.items():
+            if isinstance(facts, dict) and isinstance(facts.get("path"), str):
+                path = Path(facts["path"])
+                checkouts[repository] = path if path.is_absolute() else workspace_root / path
+    obligations, invalid = discover_obligations(workspace_root, checkouts)
     if only is not None:
         obligations = [item for item in obligations
                        if str(item["declaration"]["identity"]) == only]
@@ -592,7 +602,7 @@ def ambient_pass(session, *, mode: str = "ambient",
         measured[identity] = current
         if problem is not None:
             unmeasurable[identity] = problem
-    epoch_inputs = _epoch_inputs(session, obligations, measured)
+    epoch_inputs = _epoch_inputs(session, obligations, measured, invalid)
     epoch = digest_hex(epoch_inputs)
     stored = session.snapshot.get("verification_epoch") or {}
     if stored.get("epoch") == epoch and mode == "ambient":
@@ -601,6 +611,12 @@ def ambient_pass(session, *, mode: str = "ambient",
         summary["elapsed_seconds"] = round(time.monotonic() - clock_started, 3)
         return {"summary": summary, "reused": True,
                 "evidence": stored.get("evidence_ref")}
+    if not obligations:
+        # Invalid declarations remain structural blockers. With no admitted
+        # obligations there is no verification policy request to execute.
+        # Their exact diagnostic material participates in the epoch.
+        return _finish(session, started, clock_started, [], rows, invalid, mode,
+                       None, epoch, {"summary": {}})
     if not binding_available(session, COHERENCE_CAPABILITY):
         return _finish(session, started, clock_started, [], rows, invalid,
                        mode, {"reason": "coherence-unavailable"},

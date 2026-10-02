@@ -11,7 +11,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .persist import append_jsonl, read_json, read_jsonl, write_json
+from .toolchain import selected_stdlib_root
+from .persist import append_jsonl, exclusive_file_lock, read_json, read_jsonl, write_json
 
 
 class SequenceTaken(Exception):
@@ -104,6 +105,12 @@ def store_provider_from_environment(environment: dict[str, Any]) -> dict[str, An
             "MNCS_BIN": str(binary),
             "MNCS_EMBED_LIB": str(embed_library.resolve()),
         }
+
+    stdlib = selected_checkouts.get("mncs-stdlib")
+    if runtime_environment is not None and stdlib is not None:
+        if not isinstance(stdlib, dict):
+            raise ValueError("selected mncs-stdlib checkout facts must be an object")
+        runtime_environment["MNCS_STDLIB_ROOT"] = str(selected_stdlib_root(workspace_root, stdlib))
 
     return {
         "schema_version": STORE_PROVIDER_SCHEMA,
@@ -203,12 +210,16 @@ def _session_store_provider(state_dir: Path | str, session_id: str) -> dict[str,
                 or not embed_library.is_relative_to(language_root)
                 or not embed_library.is_file()):
             raise ValueError(f"session {session_id} selected MNCS runtime is unavailable")
+        stdlib_value = runtime_environment.get("MNCS_STDLIB_ROOT")
         runtime_environment = {
             "MNCS_STORE_ROOT": str(checkout),
             "MNCS_LANGUAGE_ROOT": str(language_root),
             "MNCS_BIN": str(binary),
             "MNCS_EMBED_LIB": str(embed_library),
         }
+        if stdlib_value is not None:
+            runtime_environment["MNCS_STDLIB_ROOT"] = str(selected_stdlib_root(
+                workspace_root, {"path": stdlib_value}))
     elif payload.get("schema_version") == STORE_PROVIDER_SCHEMA:
         # A Store-only environment has no selected Language checkout. Campaigns
         # that select one must persist its exact runtime in this provider record.
@@ -377,17 +388,16 @@ class FileSessionStore(SessionStore):
                              row: dict[str, Any]) -> None:
         from .projection_store import ProjectionConflict  # noqa: E402
 
-        current = self.read_projection_row(projection_id)
-        if current is not None and current[0] > version - 1:
-            raise ProjectionConflict(projection_id, current[1])
-        if current is not None and current[0] == version:
-            if all(current[1].get(key) == row.get(key)
-                   for key in set(current[1]) | set(row)
-                   if key not in ("updated_by", "updated_at")):
-                return
-            raise ProjectionConflict(projection_id, current[1])
-        write_json(self._projection_path(self.state_dir, projection_id),
-                   {"version": int(version), "row": row})
+        path = self._projection_path(self.state_dir, projection_id)
+        with exclusive_file_lock(path.with_suffix(".lock")):
+            current = self.read_projection_row(projection_id)
+            if current is not None and current[0] == version:
+                if current[1] == row:
+                    return
+                raise ProjectionConflict(projection_id, current[1])
+            if current is not None and current[0] > version - 1:
+                raise ProjectionConflict(projection_id, current[1])
+            write_json(path, {"version": int(version), "row": row})
 
     def read_projection_versions(self) -> dict[str, int]:
         base = self.state_dir / "projections"

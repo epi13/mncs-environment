@@ -265,6 +265,34 @@ class DiscoveryTests(VerificationFixture):
 
 
 class AmbientPassTests(VerificationFixture):
+    def test_invalid_only_observation_is_current_without_policy_calls(self):
+        self.write_obligations([])
+        first = verification_module.ambient_pass(self.session)
+        self.assertEqual(first["summary"]["blockers"], 0)
+        broken = dict(OBLIGATION)
+        broken["executor"] = {"kind": "nope"}
+        self.write_obligations([broken])
+        second = verification_module.ambient_pass(self.session)
+        self.assertFalse(second["reused"])
+        self.assertEqual(second["summary"]["blockers"], 1)
+        saved = self.session.saved
+        self.assertTrue(verification_module.ambient_pass(self.session)["reused"])
+        self.assertEqual(self.session.saved, saved)
+        self.assertEqual(self.session.coherence_calls, [])
+        self.write_obligations([OBLIGATION])
+        repaired = verification_module.ambient_pass(self.session)
+        self.assertFalse(repaired["reused"])
+        self.assertEqual(repaired["summary"]["executed"], 1)
+
+    def test_unselected_repository_obligations_remain_asleep(self):
+        self.session.snapshot["selected_checkouts"] = {}
+        result = verification_module.ambient_pass(self.session)
+        self.assertEqual(result["summary"]["obligations"], 0)
+        self.assertEqual(self.session.executions, [])
+        self.session.snapshot["selected_checkouts"] = {"fixture-repo": {"path": str(self.repo)}}
+        result = verification_module.ambient_pass(self.session)
+        self.assertEqual(result["summary"]["executed"], 1)
+
     def test_first_pass_executes_and_records(self):
         outcome = verification_module.ambient_pass(self.session)
         summary = outcome["summary"]

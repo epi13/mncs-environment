@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .toolchain import language_library_for
 from .identity import digest_hex
 
 #: Shared row identities (projection-row namespace).
@@ -53,6 +54,7 @@ MAX_CAPSULE_ATTENTION = 8
 
 #: Contributor records older than this with no live session read stale.
 CONTRIBUTOR_TTL_SECS = 4 * 3600
+CONTRIBUTOR_HEARTBEAT_SECS = CONTRIBUTOR_TTL_SECS // 4
 
 #: Revisit backoff base for externally-gated deferrals.
 REVISIT_BACKOFF_BASE_SECS = 60
@@ -68,33 +70,36 @@ def utcnow() -> str:
 
 # --- Commons vocabulary -------------------------------------------------
 
-_FAMILY_CHANGE_MODULE: Any = None
+_COMMONS_MODULES: dict[tuple[str, str], Any] = {}
 
 
-def family_change_module(session=None) -> Any:
-    """Load ``mncs_commons.family_change`` from the selected Commons root."""
-    global _FAMILY_CHANGE_MODULE
-    if _FAMILY_CHANGE_MODULE is not None:
-        return _FAMILY_CHANGE_MODULE
+def _commons_module(session, filename: str) -> Any:
+    """Load a structural authority by exact selected path and content."""
     root = find_commons_root(session)
     if root is None:
         return None
-    module_path = root / "src" / "mncs_commons" / "family_change.py"
-    if not module_path.is_file():
+    path = root / "src/mncs_commons" / filename
+    try:
+        key = (str(path.resolve()), digest_hex(path.read_text()))
+    except (OSError, ValueError):
         return None
-    name = "_mncs_commons_family_change_canonical"
-    existing = __import__("sys").modules.get(name)
-    if existing is not None:
-        _FAMILY_CHANGE_MODULE = existing
-        return existing
-    spec = importlib.util.spec_from_file_location(name, module_path)
+    if key in _COMMONS_MODULES:
+        return _COMMONS_MODULES[key]
+    name = "_mncs_commons_selected_" + digest_hex(key)
+    spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
         return None
     module = importlib.util.module_from_spec(spec)
     __import__("sys").modules[name] = module
     spec.loader.exec_module(module)
-    _FAMILY_CHANGE_MODULE = module
+    if len(_COMMONS_MODULES) >= 8:
+        _COMMONS_MODULES.pop(next(iter(_COMMONS_MODULES)))
+    _COMMONS_MODULES[key] = module
     return module
+
+
+def family_change_module(session=None) -> Any:
+    return _commons_module(session, "family_change.py")
 
 
 def find_commons_root(session=None) -> Path | None:
@@ -140,21 +145,6 @@ def find_mncs_binary(session=None) -> str | None:
     return None
 
 
-def language_library_for(binary: str, session=None) -> Path | None:
-    """Language library: explicit MNCS_LIBRARY_ROOT wins, else layout."""
-    override = os.environ.get("MNCS_LIBRARY_ROOT", "")
-    if override and Path(override).is_dir():
-        return Path(override)
-    if session is not None:
-        paths = _selected_checkout_paths(session)
-        if paths.get("mncs-language") and (
-                Path(paths["mncs-language"]) / "library").is_dir():
-            return Path(paths["mncs-language"]) / "library"
-    root = Path(binary).resolve().parents[2]
-    candidate = root / "library"
-    return candidate if candidate.is_dir() else None
-
-
 def _typed_integers(*values: int) -> str:
     return json.dumps([{"integer": {"value": int(value)}} for value in values])
 
@@ -162,6 +152,8 @@ def _typed_integers(*values: int) -> str:
 def native_call(binary: str, source: Path, libraries: list[Path],
                 function: str, args_json: str) -> Any | None:
     """One `mncs call` against the family-change law; None when unusable."""
+    if fd_pressure().get("pressured"):
+        return None
     command = [binary, "call", str(source), "--module", CHANGE_MODULE,
                "--function", function, "--args-json", args_json]
     for library in libraries:
@@ -236,6 +228,27 @@ def native_classify(session, facts: list[int]) -> int | None:
     return _finite_discriminant(native_call(
         binary, source, libraries, "classify_consumer",
         _typed_integers(*facts)))
+
+
+def native_classify_batch(session, facts: list[list[int]]) -> list[int | None]:
+    if not facts:
+        return []
+    if len(facts) > MAX_CONSUMERS_PER_CHANGE or any(len(row) != 8 for row in facts):
+        raise ValueError("family classification exceeds bounded request")
+    ready = _native_ready(session)
+    if ready is None:
+        return [None] * len(facts)
+    binary, source, libraries = ready
+    values = [{"sequence": {"values": [{"integer": {"value": int(value)}}
+               for value in row]}} for row in facts]
+    result = native_call(binary, source, libraries, "classify_consumers",
+                         json.dumps([{"sequence": {"values": values}}]))
+    returned = (result or {}).get("sequence", {}).get("values")
+    if not isinstance(returned, list) or len(returned) != len(facts):
+        return [None] * len(facts)
+    return [int(value["integer"]["value"]) if isinstance(value, dict)
+            and isinstance(value.get("integer", {}).get("value"), int)
+            else None for value in returned]
 
 
 def native_gate(session, facts: list[int]) -> int | None:
@@ -394,6 +407,17 @@ def publish_presence(session, active_changes: list[str]) -> dict[str, Any]:
     }
     row_id = CONTRIBUTOR_ROW_PREFIX + session.session_id
     found = _read_row(session, row_id)
+    if found:
+        prior = found[1]
+        stable = {key: value for key, value in record.items() if key != "updated_at"}
+        same = all(prior.get(key) == value for key, value in stable.items())
+        try:
+            age = (datetime.fromisoformat(record["updated_at"]) -
+                   datetime.fromisoformat(str(prior.get("updated_at", "")))).total_seconds()
+        except (ValueError, TypeError):
+            age = CONTRIBUTOR_HEARTBEAT_SECS
+        if same and 0 <= age < CONTRIBUTOR_HEARTBEAT_SECS:
+            return {"published": False, "version": found[0], "current": True}
     version = (found[0] if found else 0) + 1
     ok, _ = _write_row(session, row_id, version, record)
     return {"published": ok, "version": version if ok else -1}
@@ -560,59 +584,42 @@ def establish_change(session, identity: str) -> dict[str, Any]:
 
 # --- dependency edges (host-observed manifest facts) --------------------------
 
-def _manifest_contracts(checkout: Path) -> tuple[set[str], set[str]]:
-    """Provides/consumes contract names from the repository manifest."""
-    manifest_path = checkout / ".mncs" / "project.json"
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return set(), set()
-    contracts = manifest.get("contracts") or {}
-    provides, consumes = set(), set()
-    if isinstance(contracts, dict):
-        for entry in contracts.get("provides", []) or []:
-            name = entry.get("contract") if isinstance(entry, dict) else entry
-            if isinstance(name, str) and name:
-                provides.add(name)
-        for entry in contracts.get("consumes", []) or []:
-            name = entry.get("contract") if isinstance(entry, dict) else entry
-            if isinstance(name, str) and name:
-                consumes.add(name)
-    return provides, consumes
-
-
 def dependency_consumers(session, producer_repository: str,
-                         contracts_changed: list[dict[str, Any]]
-                         ) -> list[str]:
-    """Repositories whose manifests consume the producer's changed contracts.
+                         contracts_changed: list[dict[str, Any]]) -> list[str]:
+    """Query Commons-declared architecture without semantic source scans.
 
-    Structural discovery only: a consumer is listed when it consumes a
-    contract the producer provides and changed. Contract identity match
-    is by exact name or producer-owned prefix.
+    Manifest exports and explicit semantic-contract declarations complement
+    one another. Observed Language Service impact never invents an edge.
     """
+    authority = _commons_module(session, "family_graph.py")
     paths = _selected_checkout_paths(session)
-    producer_checkout = paths.get(producer_repository)
-    if not producer_checkout:
+    checkout = paths.get(producer_repository)
+    if authority is None or not checkout:
         return []
-    provides, _ = _manifest_contracts(Path(producer_checkout))
-    changed = {str(item.get("contract", "")) for item in contracts_changed
-               if isinstance(item, dict)}
-    if not changed:
+    try:
+        manifest = json.loads((Path(checkout) / ".mncs/project.json").read_text())
+        provider = str(manifest["repository"])
+        provides, _ = authority.repository_contracts(Path(checkout))
+    except (OSError, ValueError, KeyError):
         return []
+    changed = set()
+    for item in contracts_changed:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("contract", ""))
+        identity = name if "." in name or "/" in name else f"{provider}.{name}"
+        if identity in provides:
+            changed.add(identity)
     consumers = []
-    for repository, checkout in sorted(paths.items()):
+    for repository, path in sorted(paths.items()):
         if repository == producer_repository:
             continue
-        _, consumes = _manifest_contracts(Path(checkout))
-        if not consumes:
+        try:
+            _, consumes = authority.repository_contracts(Path(path))
+        except (OSError, ValueError, KeyError):
             continue
-        for contract in changed:
-            if contract in consumes:
-                consumers.append(repository)
-                break
-            # Producer-owned prefix: "mncs-language.semantic-identity"
-            # consumed as "mncs-language.semantic-identity" exactly, or a
-            # consumer-side alias is NOT inferred (fail closed on names).
+        if consumes & changed:
+            consumers.append(repository)
     return consumers[:MAX_CONSUMERS_PER_CHANGE]
 
 
@@ -634,9 +641,12 @@ def _own_covering_claim(session, repository: str) -> dict[str, Any] | None:
         if str(record.get("repository", "")) != repository:
             continue
         scope = record.get("scope") or {}
-        if isinstance(scope, dict) and scope.get("kind") in (
-                "repository", "worktree"):
+        if isinstance(scope, dict) and scope.get("kind") == "repository":
             return record
+        if isinstance(scope, dict) and scope.get("kind") == "worktree":
+            checkout = _selected_checkout_paths(session).get(repository)
+            if checkout and Path(str(scope.get("checkout", ""))).resolve() == Path(checkout).resolve():
+                return record
     return None
 
 
@@ -653,8 +663,20 @@ def _occupied_by_other(session, repository: str,
         scope = record.get("scope") or {}
         if not isinstance(scope, dict):
             continue
-        if scope.get("kind") in ("repository", "worktree"):
+        if scope.get("kind") == "repository":
             return record
+        if scope.get("kind") == "worktree":
+            checkout = _selected_checkout_paths(session).get(repository)
+            selected = session.snapshot.get("selected_checkouts", {}).get(repository, {})
+            candidate = {"kind": "worktree", "repository": repository,
+                         "checkout": checkout, "branch": selected.get("branch"),
+                         "paths": list(paths) or None}
+            # Missing addressing facts cannot prove isolated authority.
+            if not checkout or not scope.get("checkout") or not selected.get("branch") or not scope.get("branch"):
+                return record
+            if claims_module.scopes_conflict(candidate, scope) is not None:
+                return record
+            continue
         if scope.get("kind") == "paths":
             claimed = scope.get("paths") or []
             if claims_module.scopes_conflict(
@@ -672,7 +694,7 @@ def _verification_verdict(session, obligations: list[str]) -> str:
         return "unknown"
     if not isinstance(rows, dict):
         return "unknown"
-    seen_pass = False
+    all_pass = bool(obligations)
     for obligation in obligations:
         entry = rows.get(obligation)
         evidence = (entry or {}).get("evidence") if isinstance(
@@ -680,9 +702,9 @@ def _verification_verdict(session, obligations: list[str]) -> str:
         verdict = str((evidence or {}).get("verdict", "UNKNOWN")).upper()
         if verdict == "FAIL":
             return "failed"
-        if verdict == "PASS":
-            seen_pass = True
-    return "passed" if seen_pass and obligations else "unknown"
+        if verdict != "PASS":
+            all_pass = False
+    return "passed" if all_pass else "unknown"
 
 
 def _verification_digest(session, obligations: list[str]) -> str:
@@ -771,10 +793,42 @@ def classify_drift(session, change: dict[str, Any],
     Returns the class plus the observed facts; unknown when the
     toolchain cannot judge.
     """
+    observation = _drift_observation(session, change, consumer)
+    return _classified_observation(session, observation,
+                                   native_classify(session, observation["facts"]))
+
+
+def reconciliation_row_id(session, identity: str, consumer: str) -> str:
+    """Address one physical checkout's reconciliation in this Store namespace.
+
+    Family change identity is shared. Adoption is a fact about a checkout,
+    so another worktree must establish its own repair and verification.
+    Legacy repository-only rows are preserved but cannot authorize adoption.
+    This address is not cross-machine semantic/evidence equivalence.
+    """
+    import hashlib
+    checkout = _selected_checkout_paths(session).get(consumer)
+    if not checkout:
+        raise FamilyError("consumer checkout unavailable", "family-checkout-unavailable")
+    projection = hashlib.sha256(str(Path(checkout).resolve()).encode()).hexdigest()
+    return RECON_ROW_PREFIX + identity + "/" + consumer + "/wc:" + projection
+
+
+def _selected_reconciliation(session, row_id: str, row: dict[str, Any]) -> bool:
+    try:
+        expected = reconciliation_row_id(session, str(row.get("change", "")),
+                                          str(row.get("consumer", "")))
+    except FamilyError:
+        return False
+    return row_id == expected or row_id == expected.replace(":", "_").replace("/", "_")
+
+
+def _drift_observation(session, change: dict[str, Any], consumer: str) -> dict[str, Any]:
+    """Collect facts once; the native authority chooses their disposition."""
     vocabulary = _vocabulary(session)
     classes = vocabulary.CONSUMER_CLASSES
     producer = (change.get("producer") or {}).get("repository", "")
-    row_id = RECON_ROW_PREFIX + change["identity"] + "/" + consumer
+    row_id = reconciliation_row_id(session, change["identity"], consumer)
     found = _read_row(session, row_id)
     observed = int((found[1] if found else {}).get(
         "observed_generation", 0))
@@ -821,26 +875,27 @@ def classify_drift(session, change: dict[str, Any],
              vocabulary.REPAIR_STATES.get(repair_state, 0), occupied,
              semantic_choice, ops_known, provider_available,
              verification_known]
-    code = native_classify(session, facts)
-    if code is None:
-        return {"consumer": consumer, "consumer_class": "unknown",
-                "detail": "toolchain-unavailable", "facts": facts,
-                "observed_generation": observed,
-                "canonical_generation": canonical_generation}
-    names = {value: key for key, value in classes.items()}
-    return {"consumer": consumer,
-            "consumer_class": names.get(code, "unknown"),
-            "detail": "", "facts": facts,
+    return {"consumer": consumer, "facts": facts,
             "observed_generation": observed,
             "canonical_generation": canonical_generation}
+
+
+def _classified_observation(session, observation: dict[str, Any],
+                            code: int | None) -> dict[str, Any]:
+    if code is None:
+        return {**observation, "consumer_class": "unknown",
+                "detail": "toolchain-unavailable"}
+    names = {value: key for key, value in _vocabulary(session).CONSUMER_CLASSES.items()}
+    return {**observation,
+            "consumer_class": names.get(code, "unknown"),
+            "detail": ""}
 
 
 def record_drift(session, change: dict[str, Any],
                  classification: dict[str, Any]) -> dict[str, Any]:
     """Persist a reconciliation row (CAS; conflict observes latest)."""
     vocabulary = _vocabulary(session)
-    row_id = RECON_ROW_PREFIX + change["identity"] + "/" + classification[
-        "consumer"]
+    row_id = reconciliation_row_id(session, change["identity"], classification["consumer"])
     for _ in range(8):
         found = _read_row(session, row_id)
         version = found[0] if found else 0
@@ -853,7 +908,7 @@ def record_drift(session, change: dict[str, Any],
             return {"row": row_id, "version": version,
                     "converged": True,
                     "consumer_class": prior.get("consumer_class")}
-        row = {
+        row = {**prior,
             "schema_version": vocabulary.FAMILY_RECONCILIATION_SCHEMA,
             "change": change["identity"],
             "consumer": classification["consumer"],
@@ -865,6 +920,9 @@ def record_drift(session, change: dict[str, Any],
             "detail": str(classification.get("detail", "")),
             "evidence_ref": str(prior.get("evidence_ref", "")),
         }
+        if all(prior.get(key) == value for key, value in row.items()):
+            return {"row": row_id, "version": version, "converged": False,
+                    "consumer_class": row["consumer_class"], "current": True}
         try:
             vocabulary.validate_reconciliation(row)
         except Exception as error:
@@ -893,8 +951,8 @@ def fd_pressure() -> dict[str, Any]:
     try:
         import resource
         used = len(list((Path("/proc/self/fd")).iterdir()))
-        _, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-        limit = hard if hard > 0 else 1024
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        limit = soft if soft > 0 else hard if hard > 0 else 1024
         return {"measurable": True, "used": used, "limit": int(limit),
                 "pressured": (used / limit) >= FD_PRESSURE_FRACTION}
     except (OSError, ValueError, ImportError):
@@ -1117,7 +1175,7 @@ def converge(session, identity: str, consumer: str, *,
         return {"converged": False, "disposition": "deferred",
                 "detail": "fd-exhausted"}
     classification = classify_drift(session, change, consumer)
-    row_id = RECON_ROW_PREFIX + identity + "/" + consumer
+    row_id = reconciliation_row_id(session, identity, consumer)
     found = _read_row(session, row_id)
     row_version = found[0] if found else 0
     attempts = int((found[1] if found else {}).get("attempts", 0))
@@ -1313,7 +1371,7 @@ def adopt_pending(session, identity: str, consumer: str) -> dict[str, Any]:
     change = read_change(session, identity)
     if change is None:
         return {"adopted": False, "detail": "change-missing"}
-    row_id = RECON_ROW_PREFIX + identity + "/" + consumer
+    row_id = reconciliation_row_id(session, identity, consumer)
     found = _read_row(session, row_id)
     if found is None:
         return {"adopted": False, "detail": "row-missing"}
@@ -1383,7 +1441,7 @@ def _note_backoff(session, row_id: str) -> None:
 def revisit_deferred(session, identity: str,
                      consumer: str) -> dict[str, Any]:
     """Reconsider one deferred row; native law decides eligibility."""
-    row_id = RECON_ROW_PREFIX + identity + "/" + consumer
+    row_id = reconciliation_row_id(session, identity, consumer)
     found = _read_row(session, row_id)
     if found is None:
         return {"reconsidered": False, "detail": "row-missing"}
@@ -1514,14 +1572,14 @@ def ambient_pass(session, *, mode: str = "ambient",
             # Drafts are visible, never authoritative.
             summary["relevant"] += 1
             continue
-        for consumer in entry["consumers"]:
-            if consumer not in selected:
-                continue
+        consumers = [consumer for consumer in entry["consumers"] if consumer in selected]
+        observations = [_drift_observation(session, record, consumer) for consumer in consumers]
+        codes = native_classify_batch(session, [item["facts"] for item in observations])
+        for consumer, observation, code in zip(consumers, observations, codes):
             summary["relevant"] += 1
-            row_id = RECON_ROW_PREFIX + identity + "/" + consumer
+            row_id = reconciliation_row_id(session, identity, consumer)
             row_known = _read_row(session, row_id) is not None
-            classification = classify_drift(session, change=record,
-                                            consumer=consumer)
+            classification = _classified_observation(session, observation, code)
             record_drift(session, record, classification)
             consumer_class = classification["consumer_class"]
             if consumer_class in ("semantic_required", "incompatible",
@@ -1559,6 +1617,8 @@ def ambient_pass(session, *, mode: str = "ambient",
         if found is None:
             continue
         row = found[1]
+        if not _selected_reconciliation(session, row_id, row):
+            continue
         if str(row.get("repair_state")) != "applied_unknown":
             continue
         consumer = str(row.get("consumer", ""))
@@ -1581,6 +1641,9 @@ def ambient_pass(session, *, mode: str = "ambient",
         session.snapshot["family_epoch"]["summary"] = dict(summary)
     except (AttributeError, KeyError, TypeError):
         pass
+    # Persist a changed epoch once. Without this boundary, a fresh entry
+    # process reconstructs and reclassifies even though shared rows are current.
+    session._save()
     return {"summary": summary, "reused": False, "started_at": started}
 
 
@@ -1610,6 +1673,8 @@ def _observation_epoch(session, changes, contributors) -> tuple[str, bool]:
         if found is None:
             continue
         version, row = found
+        if not _selected_reconciliation(session, row_id, row):
+            continue
         if str(row.get("consumer", "")) not in selected:
             continue
         recon.append("%s:v%s:%s:%s" % (
@@ -1630,9 +1695,13 @@ def _observation_epoch(session, changes, contributors) -> tuple[str, bool]:
                 _verification_verdict(session, obligations),
                 _verification_digest(session, obligations)))
     parts.append("recon=[%s]" % ",".join(recon))
-    claims = sorted("%s=%s" % (name, bool(_own_covering_claim(session, name)))
-                    for name in sorted(selected))
-    parts.append("claims=[%s]" % ",".join(claims))
+    # Foreign claim release and transfer are wake inputs too. Observing only
+    # our own covering claim leaves an occupied consumer cached indefinitely.
+    live_claims = _live_claims(session)
+    claims = sorted((key, item.get("version"), item.get("session_id"),
+                     item.get("scope")) for key, item in live_claims.items()
+                    if item.get("repository") in selected)
+    parts.append("claims=" + json.dumps(claims, sort_keys=True))
     sessions = sorted(str(item.get("session", "?")) for item in contributors)
     parts.append("contributors=[%s]" % ",".join(sessions))
     digest = hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()[:32]

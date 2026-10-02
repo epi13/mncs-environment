@@ -1,7 +1,7 @@
 {
   "schema_version": "mncs-family.repository-manifest/v0alpha1",
   "repository": "mncs-environment",
-  "revision": 4,
+  "revision": 5,
   "manifest_location": "in-repository",
   "authority": {
     "note": "mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration."
@@ -27,7 +27,63 @@
         }
       }
     ],
-    "consumes": [],
+    "consumes": [
+      {
+        "contract": "mncs-store.persistent-object",
+        "envelope": {
+          "op": "any"
+        },
+        "required": true,
+        "evidence_refs": [
+          "mncs_env/store_backend.py",
+          "mncs_env/session_store.py"
+        ]
+      },
+      {
+        "contract": "mncs-store.projection-state",
+        "envelope": {
+          "op": "any"
+        },
+        "required": true,
+        "evidence_refs": [
+          "mncs_env/projection_store.py",
+          "mncs_env/store_backend.py"
+        ]
+      },
+      {
+        "contract": "mncs-store.commit-feed",
+        "envelope": {
+          "op": "any"
+        },
+        "required": true,
+        "evidence_refs": [
+          "mncs_env/sources.py",
+          "mncs_env/store_backend.py"
+        ]
+      },
+      {
+        "contract": "mncs-commons.family-change",
+        "envelope": {
+          "op": "any"
+        },
+        "required": false,
+        "evidence_refs": [
+          "mncs_env/family.py"
+        ]
+      },
+      {
+        "contract": "mncs-language-service.semantic-query",
+        "envelope": {
+          "op": "any"
+        },
+        "required": false,
+        "scope": "declared semantic workspaces",
+        "evidence_refs": [
+          "mncs_env/family.py",
+          "mncs_env/semantics.py"
+        ]
+      }
+    ],
     "tests": [
       {
         "test": "environment-unit-tests",

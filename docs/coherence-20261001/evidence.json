@@ -1,0 +1,547 @@
+{
+  "campaign": "whole-system-coherence-20261001",
+  "status": "NOT CLOSED",
+  "initial_inventory": [
+    {
+      "repo": "mncs-environment",
+      "main": "5093e6f3955804e344d89041ab7fbd1574e0e4dd",
+      "status": "?? .worktrees/\n",
+      "worktrees": "worktree /home/epi13/Documents/Projects/mncs-environment\nHEAD 5093e6f3955804e344d89041ab7fbd1574e0e4dd\nbranch refs/heads/main\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/mncs-environment\nHEAD 5093e6f3955804e344d89041ab7fbd1574e0e4dd\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\nworktree /home/epi13/Documents/Projects/mncs-environment/.worktrees/ambient-language-service\nHEAD a3f8e75cabbba9f9bdd5c7357ec23b85a274e530\nbranch refs/heads/campaign/ambient-language-service-20261001\n\nworktree /home/epi13/Documents/Projects/mncs-environment/.worktrees/ambient-verification\nHEAD c3c22fea18145a7f1e41dc926885d669c9914a06\nbranch refs/heads/campaign/ambient-verification-20261001\n\nworktree /home/epi13/Documents/Projects/mncs-environment/.worktrees/stdlib-bootstrap\nHEAD 64ec1eddad5d5367687872eb3f86be63d521b537\nbranch refs/heads/stdlib/bootstrap-20261002\n\n"
+    },
+    {
+      "repo": "MNCS-Commons",
+      "main": "f1abe234118d826c9fc4e3c6f77ac754d2e8ee26",
+      "status": "?? .mncs/cache/\n?? .worktrees/\n",
+      "worktrees": "worktree /home/epi13/Documents/Projects/MNCS-Commons\nHEAD cb6c84fd911587950687e0940a5579549b6fbc3c\nbranch refs/heads/campaign/doctor-remediation-contract-20261001\n\nworktree /home/epi13/Documents/Projects/.campaign-20260923/MNCS-Commons\nHEAD d7f48c5aebe1904f4cc1120516177a471038cd15\nbranch refs/heads/campaign/repository-canonical-proof-20260923\n\nworktree /home/epi13/Documents/Projects/.campaign-20260923/integration/MNCS-Commons\nHEAD c3220683061e020377d939d56ef4afc8c8f3aebd\nbranch refs/heads/delivery/repository-canonical-proof-20260923\n\nworktree /home/epi13/Documents/Projects/.campaign-20260924/MNCS-Commons\nHEAD 7645cb9e6165d3075ab12d98e7ad598503722187\nbranch refs/heads/campaign/structured-projection-20260924\n\nworktree /home/epi13/Documents/Projects/.campaign-20260927-agent-native/MNCS-Commons\nHEAD 74ea66bfbb5fff2b46eaca35adcb9c26639090dc\nbranch refs/heads/campaign/agent-native-20260927-mncs_commons\n\nworktree /home/epi13/Documents/Projects/.campaign-20260927-agent-native/delivery/MNCS-Commons\nHEAD 74ea66bfbb5fff2b46eaca35adcb9c26639090dc\ndetached\n\nworktree /home/epi13/Documents/Projects/.campaign-20260928-machine-native/MNCS-Commons\nHEAD 74ea66bfbb5fff2b46eaca35adcb9c26639090dc\nbranch refs/heads/campaign/machine-native-20260928-MNCS-Commons\n\nworktree /home/epi13/Documents/Projects/.campaign-20260929-native-advance/MNCS-Commons\nHEAD 74ea66bfbb5fff2b46eaca35adcb9c26639090dc\nbranch refs/heads/campaign/native-advance-20260929-MNCS-Commons\n\nworktree /home/epi13/Documents/Projects/.campaign-continuous-semantic-20260921/MNCS-Commons\nHEAD 349fe0f5644b04bad7fc1b9633ffaddf2882cdc3\nbranch refs/heads/campaign/continuous-semantic-observation-20260921\n\nworktree /home/epi13/Documents/Projects/.mncs-agent-debt-20260919/MNCS-Commons\nHEAD 62bbddf6503d37a791e8c232f7f4ad5fb088bc0d\nbranch refs/heads/campaign/agent-debt-substrate-20260919\n\nworktree /home/epi13/Documents/Projects/.worktrees/compiler-value-ssa-20260926/MNCS-Commons\nHEAD 93e2ec7bebb85b4b0d9f809375d60ddcfc4cabd1\nbranch refs/heads/campaign/compiler-value-ssa-20260926\n\nworktree /home/epi13/Documents/Projects/.worktrees/resident-campaign/mncs-commons\nHEAD 0ac068da5e0ead53549330854db7e78d1b05d11f\nbranch refs/heads/improve/resident-provider-observations\n\nworktree /home/epi13/Documents/Projects/.worktrees/sol-store-integration/MNCS-Commons\nHEAD 1d6287728f21d12014ea9a618afe577cf9703e6e\nbranch refs/heads/integrate/store-substrate-observations\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/MNCS-Commons\nHEAD f1abe234118d826c9fc4e3c6f77ac754d2e8ee26\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\nworktree /home/epi13/mncs-commons-continuous-main-20260921\nHEAD 5cd3d510313eeb40ea05eec21e2a3a516a4181b7\nbranch refs/heads/main\n\nworktree /tmp/mncs-commons-continuous-evidence-20260923\nHEAD 9b8b5caa6490ca1b7b46ad81a86b192f35e88788\nbranch refs/heads/campaign/continuous-evidence-20260923\n\nworktree /tmp/mncs-compiler-campaign/MNCS-Commons\nHEAD fa6d38922c18dc7ffe32431af876e856dafe40dd\ndetached\n\nworktree /tmp/mncs-identity-audit-MNCS-Commons\nHEAD 99f66e70155a01dc95c87344ba9573aa4ca90600\nbranch refs/heads/campaign/identity-bound-callables-20260924\n\n"
+    },
+    {
+      "repo": "mncs-actions",
+      "main": "29508712b2c298183ea29e2a701ffc7509f7aa30",
+      "status": "",
+      "worktrees": "worktree /home/epi13/Documents/Projects/mncs-actions\nHEAD ab9005e43dc968e38d0e819bfc33849bcdb1b9c6\nbranch refs/heads/campaign/mncs-language-conversion-20260920\n\nworktree /home/epi13/Documents/Projects/.campaign-20260924/mncs-actions\nHEAD 3c7e88f3e7d652c1de23225fdff9c600a545512b\nbranch refs/heads/campaign/structured-projection-20260924\n\nworktree /home/epi13/Documents/Projects/.mncs-agent-debt-20260919/mncs-actions\nHEAD 964d38c7c36eedbba667c97fab100d29f81ea1c1\nbranch refs/heads/campaign/agent-debt-substrate-20260919\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/mncs-actions\nHEAD 29508712b2c298183ea29e2a701ffc7509f7aa30\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\nworktree /tmp/mncs-actions-identity-delivery\nHEAD 03a4b948c1918b1011348aa911688c2930801ff7\ndetached\n\nworktree /tmp/mncs-actions-main-20260924\nHEAD 2de0a3774b9b554c17a66c0957e7e35fdb97784d\nbranch refs/heads/main\n\nworktree /tmp/mncs-identity-audit-mncs-actions\nHEAD b7f06b57bc8752dee50b8a8853e4a291b265642e\nbranch refs/heads/campaign/identity-bound-callables-20260924\n\n"
+    },
+    {
+      "repo": "mncs-automation",
+      "main": "ce8115e905bdd72a2c4b022e2ba200e7cc6eb739",
+      "status": "",
+      "worktrees": "worktree /home/epi13/Documents/Projects/mncs-automation\nHEAD ce8115e905bdd72a2c4b022e2ba200e7cc6eb739\nbranch refs/heads/main\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/mncs-automation\nHEAD ce8115e905bdd72a2c4b022e2ba200e7cc6eb739\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\n"
+    },
+    {
+      "repo": "mncs-doctor",
+      "main": "d48256d9412a7c181060375fcff971f157a9cf8b",
+      "status": "",
+      "worktrees": "worktree /home/epi13/Documents/Projects/mncs-doctor\nHEAD 199f44162fc706b20140447a8e99cfd75487b6c2\nbranch refs/heads/stdlib/bootstrap-20261002\n\nworktree /home/epi13/Documents/Projects/.campaign-continuous-semantic-20260921/mncs-doctor\nHEAD 62c6aded73f6cb83f145a5679105ea83ff9e1b7a\nbranch refs/heads/campaign/continuous-semantic-observation-20260921\n\nworktree /home/epi13/Documents/Projects/.campaign-luna-max-2026-09/mncs-doctor\nHEAD 8e659c1befff08f77b18ff5e148fa627cf1de028\nbranch refs/heads/campaign/luna-max-typed-behavior-2026-09\n\nworktree /home/epi13/Documents/Projects/.mncs-agent-debt-20260919/mncs-doctor\nHEAD e70973457234b94117d2aef5367c36e5105fd5c9\nbranch refs/heads/campaign/agent-debt-substrate-20260919\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/mncs-doctor\nHEAD d48256d9412a7c181060375fcff971f157a9cf8b\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\nworktree /tmp/mncs-doctor-main\nHEAD d48256d9412a7c181060375fcff971f157a9cf8b\nbranch refs/heads/main\n\nworktree /tmp/mncs-identity-audit-mncs-doctor\nHEAD 98597a49f23b78382d4294db97b8e0f9792c5ad9\ndetached\n\n"
+    },
+    {
+      "repo": "mncs-store",
+      "main": "5ac8c180876ed1356b063bda448fd8d43b7a0d34",
+      "status": "",
+      "worktrees": "worktree /home/epi13/Documents/Projects/mncs-store\nHEAD 5ac8c180876ed1356b063bda448fd8d43b7a0d34\nbranch refs/heads/main\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/mncs-store\nHEAD 5ac8c180876ed1356b063bda448fd8d43b7a0d34\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\n"
+    },
+    {
+      "repo": "mncs-language-service",
+      "main": "17d2dc52f1e4e02f052559c580f1ecc8576e38bf",
+      "status": " M crates/service-core/src/modules.rs\n M crates/service-core/src/render.rs\n M tests/fixtures/stdlib/stdlib-manifest.json\n?? .worktrees/\n",
+      "worktrees": "worktree /home/epi13/Documents/Projects/mncs-language-service\nHEAD 1f6600a5afbdfa0fa22e47ae614f663b0c37508a\nbranch refs/heads/campaign/continuous-hardening-cursor-safety-20260922\n\nworktree /home/epi13/Documents/Projects/.campaign-continuous-semantic-20260921/mncs-language-service\nHEAD 094de0e827f539e52cc8fffa94c8a39a8a638464\nbranch refs/heads/campaign/continuous-semantic-observation-20260921\n\nworktree /home/epi13/Documents/Projects/.mncs-agent-debt-20260919/mncs-language-service\nHEAD 0a75a98103db3723678ab08c80ab4677d90b2e80\nbranch refs/heads/campaign/agent-debt-substrate-20260919\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/mncs-language-service\nHEAD 17d2dc52f1e4e02f052559c580f1ecc8576e38bf\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\nworktree /home/epi13/Documents/Projects/mncs-language-service/.worktrees/ambient-semantic\nHEAD 17d2dc52f1e4e02f052559c580f1ecc8576e38bf\nbranch refs/heads/campaign/ambient-semantic-20261001\n\nworktree /home/epi13/mncs-language-service-continuous-main-20260921\nHEAD 49fc369e09a2487bdedf93cc4532560caebb30f3\nbranch refs/heads/main\n\n"
+    },
+    {
+      "repo": "mncs-test",
+      "main": "ae944d23ac94e535d60713bd7773608d580f3314",
+      "status": " M AGENTS.md\n M README.md\n M bin/mncs-test\n M tests/test_obligation_selection.py\n M tests/test_provider_projection.py\n M tests/test_runner.py\n M tests/test_verification_coherence.py\n",
+      "worktrees": "worktree /home/epi13/Documents/Projects/mncs-test\nHEAD 038f0e384d7f3d5c02cf420cde38772807c15e12\nbranch refs/heads/main\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/mncs-test\nHEAD ae944d23ac94e535d60713bd7773608d580f3314\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\n"
+    },
+    {
+      "repo": "mncs-debug",
+      "main": "f46546a327c29f075adf1ec1fe8bf7335fb04ef6",
+      "status": "",
+      "worktrees": "worktree /home/epi13/Documents/Projects/mncs-debug\nHEAD 13bf5025ba45e4c6b5bafb38268492e8f27cd49e\nbranch refs/heads/campaign/ambient-debug-20261001\n\nworktree /home/epi13/Documents/Projects/.campaign-20260924/mncs-debug\nHEAD 1cb06b9b9e0d66d1b5af0d2880cdef4ca3c3d2d0\nbranch refs/heads/campaign/structured-projection-20260924\n\nworktree /home/epi13/Documents/Projects/.campaign-continuous-semantic-20260921/mncs-debug\nHEAD ec8bc0592f168133df7ffcc8bf89069503c76d5a\nbranch refs/heads/campaign/continuous-semantic-observation-20260921\n\nworktree /home/epi13/Documents/Projects/.mncs-agent-debt-20260919/mncs-debug\nHEAD c973ec21afbb05ad080e81d6affdeeb8c774cec3\nbranch refs/heads/campaign/agent-debt-substrate-20260919\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/mncs-debug\nHEAD f46546a327c29f075adf1ec1fe8bf7335fb04ef6\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\nworktree /tmp/mncs-debug-main-20260924\nHEAD f46546a327c29f075adf1ec1fe8bf7335fb04ef6\nbranch refs/heads/main\n\nworktree /tmp/mncs-identity-audit-mncs-debug\nHEAD ec8bc0592f168133df7ffcc8bf89069503c76d5a\ndetached\n\n"
+    },
+    {
+      "repo": "mncs-forge",
+      "main": "94826a27dc8fbcddb99324fc92973359e306d170",
+      "status": "",
+      "worktrees": "worktree /home/epi13/Documents/Projects/mncs-forge\nHEAD 089e71971505d8acfca2fe1bf655dd4122fe3bd9\nbranch refs/heads/campaign/process-entry-continuous-closure-20260923\n\nworktree /home/epi13/Documents/Projects/.campaign-20260923/integration/mncs-forge\nHEAD 25085e028571b740bec884e346a00faab7c75279\ndetached\n\nworktree /home/epi13/Documents/Projects/.campaign-continuous-semantic-20260921/mncs-forge\nHEAD a63f3c8b411dfd9b80ad52a5242f9efdea631c86\nbranch refs/heads/campaign/continuous-semantic-observation-20260921\n\nworktree /home/epi13/Documents/Projects/.mncs-agent-debt-20260919/mncs-forge\nHEAD 456a9dedc4d5d47f42045c0267564db208cd913a\nbranch refs/heads/campaign/agent-debt-substrate-20260919\n\nworktree /home/epi13/Documents/Projects/.worktrees/mncs-forge-luna-max-20260919\nHEAD d86c5b8912e638feb7434f076e5dcab88a43e3e0\nbranch refs/heads/campaign/luna-max-forge-20260919\n\nworktree /home/epi13/Documents/Projects/.worktrees/resident-campaign/mncs-forge\nHEAD 94826a27dc8fbcddb99324fc92973359e306d170\nbranch refs/heads/improve/environment-resident-contract\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/mncs-forge\nHEAD 94826a27dc8fbcddb99324fc92973359e306d170\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\nworktree /home/epi13/Documents/Projects/mncs-forge-mcp-b1-compat\nHEAD ebcb633b46c4c51d68f36fae12a65cecbecd6c36\nbranch refs/heads/agent/b1-snapshot-portability\n\nworktree /tmp/mncs-family-e2e.87V1CP/family/forge\nHEAD 805f821f4eea457c3940274750b21774c487d9a1\ndetached\nprunable gitdir file points to non-existent location\n\nworktree /tmp/mncs-family-e2e.Xyr6h0/family/forge\nHEAD 805f821f4eea457c3940274750b21774c487d9a1\ndetached\nprunable gitdir file points to non-existent location\n\nworktree /tmp/mncs-family-validation.8FIHHa/family/forge\nHEAD 805f821f4eea457c3940274750b21774c487d9a1\ndetached\nprunable gitdir file points to non-existent location\n\nworktree /tmp/mncs-family-validation.brr3C8/family/forge\nHEAD 805f821f4eea457c3940274750b21774c487d9a1\ndetached\nprunable gitdir file points to non-existent location\n\nworktree /tmp/mncs-forge-main-closure-20260923\nHEAD 94826a27dc8fbcddb99324fc92973359e306d170\nbranch refs/heads/main\n\nworktree /tmp/mncs-forge-main-delivery-20260919\nHEAD dc7a8d885ab4735d23a18ef589564b3f25db73cb\ndetached\nprunable gitdir file points to non-existent location\n\nworktree /tmp/mncs-forge-resident-resource-bounds-20260922\nHEAD 3ec1a7403409c06fb71a7cca567de3054f3958c8\nbranch refs/heads/campaign/resident-resource-bounds-20260922\nprunable gitdir file points to non-existent location\n\nworktree /tmp/mncs-native-family-campaign-20260919/mncs-forge\nHEAD dc7a8d885ab4735d23a18ef589564b3f25db73cb\nbranch refs/heads/campaign/native-family-convergence-20260919\nprunable gitdir file points to non-existent location\n\n"
+    },
+    {
+      "repo": "mncs-language",
+      "main": "425de2016a1273b66fa44609ea75aa25e04f0a0f",
+      "status": " M .github/workflows/backend-matrix-weekly.yml\n M .github/workflows/ci.yml\n M AGENTS.md\n M README.md\n M ROADMAP.md\n M crates/mncs-cli/src/main.rs\n M crates/mncs-cli/tests/abi_boundary.rs\n M crates/mncs-cli/tests/arch_classify.rs\n M crates/mncs-cli/tests/arena_guards.rs\n M crates/mncs-cli/tests/backend_family.rs\n M crates/mncs-cli/tests/channel_contract.rs\n M crates/mncs-cli/tests/clock_effects.rs\n M crates/mncs-cli/tests/collections.rs\n M crates/mncs-cli/tests/conformance.rs\n M crates/mncs-cli/tests/crypto_verify.rs\n M crates/mncs-cli/tests/fabric_pressure.rs\n M crates/mncs-cli/tests/family_coherence.rs\n M crates/mncs-cli/tests/family_envelopes.rs\n M crates/mncs-cli/tests/fixed_scores.rs\n M crates/mncs-cli/tests/fs_effects.rs\n M crates/mncs-cli/tests/host_effects.rs\n M crates/mncs-cli/tests/host_generic_entrypoints.rs\n M crates/mncs-cli/tests/host_write.rs\n M crates/mncs-cli/tests/jit_orchestration.rs\n M crates/mncs-cli/tests/journal.rs\n M crates/mncs-cli/tests/json_emit.rs\n M crates/mncs-cli/tests/json_recognition.rs\n M crates/mncs-cli/tests/library_core.rs\n M crates/mncs-cli/tests/library_resolution.rs\n M crates/mncs-cli/tests/platform_capability.rs\n M crates/mncs-cli/tests/pressure_bitwise_shifts.rs\n M crates/mncs-cli/tests/pressure_bool_ops.rs\n M crates/mncs-cli/tests/pressure_ceilings.rs\n M crates/mncs-cli/tests/pressure_checked_arith_u32.rs\n M crates/mncs-cli/tests/pressure_checked_division.rs\n M crates/mncs-cli/tests/pressure_checked_index.rs\n M crates/mncs-cli/tests/pressure_effect_partition.rs\n M crates/mncs-cli/tests/pressure_enum_payloads.rs\n M crates/mncs-cli/tests/pressure_field_borrow.rs\n M crates/mncs-cli/tests/pressure_fs_mutation.rs\n M crates/mncs-cli/tests/pressure_generation_scan.rs\n M crates/mncs-cli/tests/pressure_generic_inference.rs\n M crates/mncs-cli/tests/pressure_guarded_match.rs\n M crates/mncs-cli/tests/pressure_iteration_identity.rs\n M crates/mncs-cli/tests/pressure_leading_intent.rs\n M crates/mncs-cli/tests/pressure_literal_symmetry.rs\n M crates/mncs-cli/tests/pressure_loop_region.rs\n M crates/mncs-cli/tests/pressure_native_soundness.rs\n M crates/mncs-cli/tests/pressure_nested_sequences.rs\n M crates/mncs-cli/tests/pressure_next_field.rs\n M crates/mncs-cli/tests/pressure_prefix_traverse.rs\n M crates/mncs-cli/tests/pressure_raised_bounds.rs\n M crates/mncs-cli/tests/pressure_rebinding.rs\n M crates/mncs-cli/tests/pressure_record_field_identity.rs\n M crates/mncs-cli/tests/pressure_repeat_literals.rs\n M crates/mncs-cli/tests/pressure_scalar_match.rs\n M crates/mncs-cli/tests/pressure_select_strict.rs\n M crates/mncs-cli/tests/pressure_span_copy.rs\n M crates/mncs-cli/tests/pressure_structural_recursion.rs\n M crates/mncs-cli/tests/pressure_symbol_identity.rs\n M crates/mncs-cli/tests/pressure_u64_domain.rs\n M crates/mncs-cli/tests/pressure_view_narrow.rs\n M crates/mncs-cli/tests/pressure_view_widen.rs\n M crates/mncs-cli/tests/profile06_payload_sums.rs\n M crates/mncs-cli/tests/profile06_random.rs\n M crates/mncs-cli/tests/profile07_bounded_data.rs\n M crates/mncs-cli/tests/profile08_branchless_vectors.rs\n M crates/mncs-cli/tests/profile08_numeric_boundary.rs\n M crates/mncs-cli/tests/profile_compat.rs\n M crates/mncs-cli/tests/proof_demo.rs\n M crates/mncs-cli/tests/proof_dep_admission.rs\n M crates/mncs-cli/tests/proof_kernel.rs\n M crates/mncs-cli/tests/rfc_ledger.rs\n M crates/mncs-cli/tests/sha256_pure.rs\n M crates/mncs-cli/tests/stage_b1_bitwise.rs\n M crates/mncs-cli/tests/stage_b3_nested.rs\n M crates/mncs-cli/tests/stage_c1_float.rs\n M crates/mncs-cli/tests/stage_c2_neg.rs\n M crates/mncs-cli/tests/stage_c2_trig.rs\n M crates/mncs-cli/tests/stdlib_bundle.rs\n M crates/mncs-cli/tests/store_contracts.rs\n M crates/mncs-cli/tests/task_lifecycle.rs\n M crates/mncs-cli/tests/task_scope.rs\n M crates/mncs-cli/tests/text_scan.rs\n M crates/mncs-cli/tests/token_sets.rs\n M crates/mncs-compiler/src/bundle.rs\n M crates/mncs-compiler/src/lib.rs\n M crates/mncs-compiler/src/proof_admission.rs\n M crates/mncs-compiler/tests/stdlib_bundle.rs\n M crates/mncs-embed/tests/jit_execution.rs\n M crates/mncs-model/examples/emit_scratchtrack_p010_gap.rs\n M crates/mncs-model/src/proof_dep.rs\n M crates/mncs-model/src/proof_kernel.rs\n M docs/core-standard-library.md\n M docs/jit-architecture.md\n M docs/journal-event-core.md\n M docs/language-capabilities.json\n M docs/language-capability-deltas.json\n M docs/rfc-0007-evidence.md\n M docs/rfc-0007-tranche-02-calculus.md\n M docs/rfc-conformance.md\n M docs/source-profile-0.6.md\n M docs/source-profile-0.9.md\n M docs/stdlib-bundle.md\nD  examples/consumers/ravel-core-snapshot.mncs\nD  examples/execution/ansi-parser-corpus.json\nD  examples/execution/arch-classify-corpus.json\nD  examples/execution/arch-classify-host-corpus.json\nD  examples/execution/atlas-json-projection-corpus.json\nD  examples/execution/atlas-json-scan-corpus.json\nD  examples/execution/channel-corpus.json\nD  examples/execution/chunk-corpus.json\nD  examples/execution/clock-scan-corpus.json\nD  examples/execution/family-coherence-aggregate-corpus.json\nD  examples/execution/family-coherence-compatibility-corpus.json\nD  examples/execution/family-coherence-drift-corpus.json\nD  examples/execution/family-coherence-impact-corpus.json\nD  examples/execution/family-coherence-promotion-corpus.json\nD  examples/execution/family-coherence-transition-corpus.json\nD  examples/execution/family-version-corpus.json\nD  examples/execution/fixed-corpus.json\nD  examples/execution/fleet-tokens-corpus.json\nD  examples/execution/jit-binding-corpus.json\nD  examples/execution/jit-depends-corpus.json\nD  examples/execution/jit-lifecycle-corpus.json\nD  examples/execution/jit-plan-corpus.json\nD  examples/execution/jit-profile-corpus.json\nD  examples/execution/jit-proof-corpus.json\nD  examples/execution/jit-session-corpus.json\nD  examples/execution/jit-types-corpus.json\nD  examples/execution/journal-corpus.json\nD  examples/execution/json-cursor-corpus.json\nD  examples/execution/json-cursor-wide-key-corpus.json\nD  examples/execution/json-emit-corpus.json\nD  examples/execution/json-emit-roundtrip-corpus.json\nD  examples/execution/json-probe-corpus.json\nD  examples/execution/json-projection-corpus.json\nD  examples/execution/json-stream-corpus.json\nD  examples/execution/library-consumer-corpus.json\nD  examples/execution/library-core-contracts-corpus.json\nD  examples/execution/library-core-geometry-extra-corpus.json\nD  examples/execution/library-core-logic-corpus.json\nD  examples/execution/library-core-mask-corpus.json\nD  examples/execution/library-core-ordering-corpus.json\nD  examples/execution/library-core-ravel-linked-corpus.json\nD  examples/execution/library-core-result-corpus.json\nD  examples/execution/library-core-sequences-corpus.json\nD  examples/execution/library-core-sequences-extra-corpus.json\nD  examples/execution/library-core-status-corpus.json\nD  examples/execution/library-core-status-summary-request.json\nD  examples/execution/library-core-status-wrong-corpus.json\nD  examples/execution/library-core-unsigned-encoding-corpus.json\nD  examples/execution/library-core-unsigned-mutant-corpus.json\nD  examples/execution/library-core-unsigned-sequences-corpus.json\nD  examples/execution/library-core-vector-corpus.json\nD  examples/execution/library-core-vector-u64-corpus.json\nD  examples/execution/library-core-view-over-capacity-corpus.json\nD  examples/execution/library-std-encoding-corpus.json\nD  examples/execution/library-std-fnv1a-corpus.json\nD  examples/execution/partition-corpus.json\nD  examples/execution/platform-capability-corpus.json\nD  examples/execution/pressure-validated-spelling-corpus.json\nD  examples/execution/pressure-wide-stage-scans-corpus.json\nD  examples/execution/profile06-boolean-operators-corpus.json\nD  examples/execution/profile06-payload-sums-corpus.json\nD  examples/execution/profile06-random-split-corpus.json\nD  examples/execution/profile07-bounded-data-corpus.json\nD  examples/execution/profile07-serialization-corpus.json\nD  examples/execution/profile08-branchless-corpus.json\nD  examples/execution/profile08-numeric-boundary-corpus.json\nD  examples/execution/profile08-vectors-corpus.json\nD  examples/execution/profile09-stdlib-namespace-consumer-corpus.json\nD  examples/execution/proof-dep-admission-corpus.json\nD  examples/execution/proof-dep-corpus.json\nD  examples/execution/proof-kernel-corpus.json\nD  examples/execution/proof-kernel-fuzz-corpus.json\nD  examples/execution/relation-corpus.json\nD  examples/execution/rfc-status-corpus.json\nD  examples/execution/scope-corpus.json\nD  examples/execution/semantic-image-laws-corpus.json\nD  examples/execution/semantic-vision-laws-corpus.json\nD  examples/execution/sha256-corpus.json\nD  examples/execution/sort-corpus.json\nD  examples/execution/status-generic-consumer-corpus.json\nD  examples/execution/store-corpus.json\nD  examples/execution/subtype-windows-corpus.json\nD  examples/execution/task-corpus.json\nD  examples/execution/text-map-corpus.json\nD  examples/execution/text-scan-corpus.json\nD  examples/execution/text-utf8-corpus.json\nD  examples/execution/token-set-corpus.json\nD  examples/source/ansi-parser-probe.mncs\nD  examples/source/application-entry.mncs\nD  examples/source/arch/classify.mncs\nD  examples/source/clock-scan.mncs\nD  examples/source/fleet-tokens.mncs\nD  examples/source/host-read-scan.mncs\nD  examples/source/json-cursor-probe.mncs\nD  examples/source/json-emit-roundtrip.mncs\nD  examples/source/json-probe.mncs\nD  examples/source/json-projection-probe.mncs\nD  examples/source/json-stream-probe.mncs\nD  examples/source/library-consumer.mncs\nD  examples/source/library-core-status-wrong.mncs\nD  examples/source/pressure-validated-spelling.mncs\nD  examples/source/pressure-wide-stage-scans.mncs\nD  examples/source/profile06-boolean-operators.mncs\nD  examples/source/profile06-payload-sums.mncs\nD  examples/source/profile06-random-split.mncs\nD  examples/source/profile07-bounded-data.mncs\nD  examples/source/profile07-serialization.mncs\nD  examples/source/profile08-branchless.mncs\nD  examples/source/profile08-numeric-boundary.mncs\nD  examples/source/profile08-vectors.mncs\nD  examples/source/profile09-stdlib-namespace-consumer.mncs\nD  examples/source/semantic/image_mutant.mncs\nD  examples/source/semantic/vision_mutant.mncs\nD  examples/source/status-generic-consumer.mncs\nD  examples/source/subtype-windows.mncs\n M family-provider-metadata-v1.json\nD  library/README.md\nD  library/core/bounds.mncs\nD  library/core/bytes.mncs\nD  library/core/contracts.mncs\nD  library/core/geometry.mncs\nD  library/core/identity.mncs\nD  library/core/image.mncs\nD  library/core/lineage.mncs\nD  library/core/logic.mncs\nD  library/core/mask.mncs\nD  library/core/numeric.mncs\nD  library/core/ordering.mncs\nD  library/core/partition.mncs\nD  library/core/proof_admit.mncs\nD  library/core/proof_check.mncs\nD  library/core/proof_dep.mncs\nD  library/core/proof_term.mncs\nD  library/core/random.mncs\nD  library/core/result.mncs\nD  library/core/sequences.mncs\nD  library/core/status.mncs\nD  library/core/vector.mncs\nD  library/core/version.mncs\nD  library/core/vision.mncs\nD  library/family/coherence.mncs\nD  library/family/journal.mncs\nD  library/family/rfc_status.mncs\nD  library/jit/binding.mncs\nD  library/jit/depends.mncs\nD  library/jit/lifecycle.mncs\nD  library/jit/plan.mncs\nD  library/jit/profile.mncs\nD  library/jit/proof.mncs\nD  library/jit/session.mncs\nD  library/jit/types.mncs\nD  library/std/ansi.mncs\nD  library/std/application.mncs\nD  library/std/channel.mncs\nD  library/std/chunk.mncs\nD  library/std/clock.mncs\nD  library/std/encoding.mncs\nD  library/std/fixed.mncs\nD  library/std/fnv1a.mncs\nD  library/std/json.mncs\nD  library/std/json_cursor.mncs\nD  library/std/json_emit.mncs\nD  library/std/json_projection.mncs\nD  library/std/json_stream.mncs\nD  library/std/platform.mncs\nD  library/std/process.mncs\nD  library/std/relation.mncs\nD  library/std/scope.mncs\nD  library/std/sha256.mncs\nD  library/std/simd.mncs\nD  library/std/sort.mncs\nD  library/std/store.mncs\nD  library/std/task.mncs\nD  library/std/text_map.mncs\nD  library/std/text_scan.mncs\nD  library/std/text_utf8.mncs\nD  library/std/text_view.mncs\nD  library/std/token_set.mncs\n M mncs-test.toml\n M rfcs/0048-mncs-native-jit-execution-architecture.md\n M rfcs/conformance-ledger.json\nD  scripts/gen-family-coherence-corpora.py\nD  scripts/gen-library-core-corpora.py\nD  scripts/gen_clock_corpus.py\nD  scripts/gen_collection_corpora.py\nD  scripts/gen_journal_corpus.py\nD  scripts/gen_json_emit_corpus.py\nD  scripts/gen_platform_capability_corpus.py\nD  scripts/gen_proof_corpus.py\nD  scripts/gen_proof_dep_corpus.py\nD  scripts/gen_proof_fuzz.py\nD  scripts/gen_rfc_status_corpus.py\nD  scripts/gen_scope_channel_corpora.py\nD  scripts/gen_sha256_corpus.py\nD  scripts/gen_store_corpus.py\nD  scripts/gen_subtype_windows_corpus.py\nD  scripts/gen_task_corpus.py\nD  scripts/gen_text_scan_corpus.py\n M scripts/generate_language_capabilities.py\n M scripts/test_family_provider_metadata.py\nR  library/stdlib-bundle.json -> stdlib-pin/stdlib-bundle.json\n?? .worktrees/\n?? crates/mncs-cli/tests/stdlib_root.rs\n?? scripts/__pycache__/\n?? stdlib-pin/README.md\n",
+      "worktrees": "worktree /home/epi13/Documents/Projects/mncs-language\nHEAD 425de2016a1273b66fa44609ea75aa25e04f0a0f\nbranch refs/heads/stdlib/extraction-20261002\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/mncs-language\nHEAD 425de2016a1273b66fa44609ea75aa25e04f0a0f\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\nworktree /home/epi13/Documents/Projects/mncs-language/.worktrees/pristine-ambient-actions\nHEAD 425de2016a1273b66fa44609ea75aa25e04f0a0f\ndetached\n\nworktree /tmp/mncs-lang-main\nHEAD 425de2016a1273b66fa44609ea75aa25e04f0a0f\nbranch refs/heads/main\n\n"
+    },
+    {
+      "repo": "mncs-compiler",
+      "main": "68358e6ae79742658717ee2ec0d5cdf927435c61",
+      "status": " M src/compiler/decl.mncs\n M tools/test_sem.py\n",
+      "worktrees": "worktree /home/epi13/Documents/Projects/mncs-compiler\nHEAD 68358e6ae79742658717ee2ec0d5cdf927435c61\nbranch refs/heads/main\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/mncs-compiler\nHEAD 68358e6ae79742658717ee2ec0d5cdf927435c61\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\n"
+    },
+    {
+      "repo": "mncs-stdlib",
+      "main": "6c922f215dcb61014a072ddcfd305e0f5b8fdd02",
+      "status": " M docs/compatibility.md\n",
+      "worktrees": "worktree /home/epi13/Documents/Projects/mncs-stdlib\nHEAD 4f138275e4b5bb9d813d8b3dcf6758eea7b55988\nbranch refs/heads/stdlib/bootstrap-20261002\n\nworktree /home/epi13/Documents/Projects/.worktrees/whole-system-coherence-20261001/mncs-stdlib\nHEAD 6c922f215dcb61014a072ddcfd305e0f5b8fdd02\nbranch refs/heads/campaign/whole-system-coherence-20261001\n\n"
+    }
+  ],
+  "entry_measurements": [
+    {
+      "index": 0,
+      "seconds": 2.8541978530120105,
+      "compact_context_bytes": 9628,
+      "ambient_bytes": 914,
+      "fd_before": 4,
+      "fd_after": 5,
+      "git_processes": 129,
+      "native_processes": 0,
+      "other_processes": 2,
+      "logical_store_puts": 12,
+      "store_read_calls": 17,
+      "session": "ses_ab017a0a563fd556",
+      "readiness": "degraded",
+      "verification": {
+        "obligations": 0,
+        "current": 0,
+        "executed": 0,
+        "failed": 0,
+        "unknown": 0,
+        "unsupported": 0,
+        "unresolved": 0,
+        "contradictory": 0,
+        "excluded": 0,
+        "deferred": 0,
+        "invalid": 1,
+        "blockers": 2,
+        "epoch_reused": false,
+        "failed_ids": [],
+        "elapsed_seconds": 0.166,
+        "persisted": true
+      }
+    },
+    {
+      "index": 1,
+      "seconds": 2.6310606281040236,
+      "compact_context_bytes": 9628,
+      "ambient_bytes": 914,
+      "fd_before": 5,
+      "fd_after": 5,
+      "git_processes": 129,
+      "native_processes": 0,
+      "other_processes": 2,
+      "logical_store_puts": 12,
+      "store_read_calls": 17,
+      "session": "ses_ab017a0a563fd556",
+      "readiness": "degraded",
+      "verification": {
+        "obligations": 0,
+        "current": 0,
+        "executed": 0,
+        "failed": 0,
+        "unknown": 0,
+        "unsupported": 0,
+        "unresolved": 0,
+        "contradictory": 0,
+        "excluded": 0,
+        "deferred": 0,
+        "invalid": 1,
+        "blockers": 2,
+        "epoch_reused": false,
+        "failed_ids": [],
+        "elapsed_seconds": 0.165,
+        "persisted": true
+      }
+    },
+    {
+      "index": 2,
+      "seconds": 2.6864431109279394,
+      "compact_context_bytes": 9628,
+      "ambient_bytes": 914,
+      "fd_before": 5,
+      "fd_after": 5,
+      "git_processes": 129,
+      "native_processes": 0,
+      "other_processes": 2,
+      "logical_store_puts": 12,
+      "store_read_calls": 17,
+      "session": "ses_ab017a0a563fd556",
+      "readiness": "degraded",
+      "verification": {
+        "obligations": 0,
+        "current": 0,
+        "executed": 0,
+        "failed": 0,
+        "unknown": 0,
+        "unsupported": 0,
+        "unresolved": 0,
+        "contradictory": 0,
+        "excluded": 0,
+        "deferred": 0,
+        "invalid": 1,
+        "blockers": 2,
+        "epoch_reused": false,
+        "failed_ids": [],
+        "elapsed_seconds": 0.164,
+        "persisted": true
+      }
+    },
+    {
+      "index": 3,
+      "seconds": 2.744510787073523,
+      "compact_context_bytes": 9628,
+      "ambient_bytes": 914,
+      "fd_before": 5,
+      "fd_after": 5,
+      "git_processes": 129,
+      "native_processes": 0,
+      "other_processes": 2,
+      "logical_store_puts": 12,
+      "store_read_calls": 17,
+      "session": "ses_ab017a0a563fd556",
+      "readiness": "degraded",
+      "verification": {
+        "obligations": 0,
+        "current": 0,
+        "executed": 0,
+        "failed": 0,
+        "unknown": 0,
+        "unsupported": 0,
+        "unresolved": 0,
+        "contradictory": 0,
+        "excluded": 0,
+        "deferred": 0,
+        "invalid": 1,
+        "blockers": 2,
+        "epoch_reused": false,
+        "failed_ids": [],
+        "elapsed_seconds": 0.164,
+        "persisted": true
+      }
+    }
+  ],
+  "family_measurements": [
+    {
+      "backend": "store",
+      "sessions": 5,
+      "repair_attempts": 1,
+      "quiet_seconds": [
+        0.0015449980273842812,
+        0.0014562649885192513,
+        0.0014079309767112136,
+        0.001491175964474678,
+        0.001438603037968278
+      ],
+      "quiet_writes": 0,
+      "quiet_native_calls": 0
+    },
+    {
+      "backend": "file",
+      "sessions": 5,
+      "repair_attempts": 1,
+      "quiet_seconds": [
+        0.0028323419392108917,
+        0.002170262043364346,
+        0.002251792000606656,
+        0.0022083399817347527,
+        0.0022201669635251164
+      ],
+      "quiet_writes": 0,
+      "quiet_native_calls": 0
+    }
+  ],
+  "declared_dependency_audit": {
+    "missing_consumes": [],
+    "observed": [
+      {
+        "checkout": "mncs-actions",
+        "consumer": "mncs-actions",
+        "contract": "mncs-stdlib.stdlib-source",
+        "declared": true,
+        "evidence": [
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/actions/external_evidence.mncs"
+          },
+          {
+            "module": "mncs.core.sequences.v1",
+            "source": "native/mncs/actions/family.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/actions/family.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/actions/provider_canary.mncs"
+          },
+          {
+            "module": "mncs.core.sequences.v1",
+            "source": "native/mncs/actions/traversal.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/actions/traversal.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/artifact-envelope-boundary.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/changeset-boundary.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/family-acceptance.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/family-boundary.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/family-graph-coherence.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/promotion-boundary.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/rights-projection.mncs"
+          },
+          {
+            "module": "mncs.core.status.v1",
+            "source": "pressure/semantic-conformance.mncs"
+          }
+        ]
+      },
+      {
+        "checkout": "mncs-debug",
+        "consumer": "mncs-debug",
+        "contract": "mncs-stdlib.stdlib-source",
+        "declared": true,
+        "evidence": [
+          {
+            "module": "mncs.std.process.v1",
+            "source": "native/mncs/debug/debug.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/debug/debug.mncs"
+          },
+          {
+            "module": "mncs.core.sequences.v1",
+            "source": "native/mncs/debug/debug.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/debug/diagnostic_coherence.mncs"
+          }
+        ]
+      },
+      {
+        "checkout": "mncs-forge",
+        "consumer": "mncs-forge",
+        "contract": "mncs-stdlib.stdlib-source",
+        "declared": true,
+        "evidence": [
+          {
+            "module": "mncs.std.application.v1",
+            "source": "src/mncs_forge/resources/native/forge/assurance_application.mncs"
+          },
+          {
+            "module": "mncs.core.sequences.v1",
+            "source": "src/mncs_forge/resources/native/forge/core.mncs"
+          },
+          {
+            "module": "mncs.std.process.v1",
+            "source": "src/mncs_forge/resources/native/forge/core.mncs"
+          },
+          {
+            "module": "mncs.std.process.v1",
+            "source": "src/mncs_forge/resources/pressure-reproducers/process-resource-handle.mncs"
+          }
+        ]
+      },
+      {
+        "checkout": "mncs-store",
+        "consumer": "mncs-store",
+        "contract": "mncs-stdlib.stdlib-source",
+        "declared": true,
+        "evidence": [
+          {
+            "module": "mncs.std.sha256.v1",
+            "source": "src/store/content.mncs"
+          }
+        ]
+      },
+      {
+        "checkout": "mncs-test",
+        "consumer": "mncs-test",
+        "contract": "mncs-stdlib.stdlib-source",
+        "declared": true,
+        "evidence": [
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/test/obligation_selection.mncs"
+          },
+          {
+            "module": "mncs.core.sequences.v1",
+            "source": "native/mncs/test/provider.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/test/provider.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/test/provider_admission_probe.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/test/provider_failure_probe.mncs"
+          },
+          {
+            "module": "mncs.std.application.v1",
+            "source": "native/mncs/test/verification_coherence.mncs"
+          }
+        ]
+      }
+    ],
+    "provider": "mncs-stdlib",
+    "schema_version": "commons.mncs.family-dependency-audit/1"
+  },
+  "fd_observation": {
+    "platform": "Linux",
+    "spawner_limit": [
+      524288,
+      524288
+    ],
+    "spawner_fds": 4,
+    "top_processes": [
+      {
+        "pid": 4034170,
+        "comm": "muse-bin-1.4.2-",
+        "fds": 457
+      },
+      {
+        "pid": 13340,
+        "comm": "chrome",
+        "fds": 447
+      },
+      {
+        "pid": 1613976,
+        "comm": "ChatGPT",
+        "fds": 360
+      },
+      {
+        "pid": 559260,
+        "comm": "chrome",
+        "fds": 293
+      },
+      {
+        "pid": 2679859,
+        "comm": "plasmashell",
+        "fds": 230
+      },
+      {
+        "pid": 1614213,
+        "comm": "codex",
+        "fds": 203
+      },
+      {
+        "pid": 2401000,
+        "comm": "MainThread",
+        "fds": 179
+      },
+      {
+        "pid": 1951,
+        "comm": "dbus-broker",
+        "fds": 177
+      },
+      {
+        "pid": 2400998,
+        "comm": "node_repl",
+        "fds": 170
+      },
+      {
+        "pid": 1984120,
+        "comm": "codex-code-mode",
+        "fds": 166
+      },
+      {
+        "pid": 2400999,
+        "comm": "python",
+        "fds": 164
+      },
+      {
+        "pid": 1908,
+        "comm": "systemd",
+        "fds": 145
+      }
+    ]
+  },
+  "live_shared_store_change": {
+    "session": "ses_79567a2a0de0b48e",
+    "backend": "store",
+    "producer": "mncs-store",
+    "change": {
+      "identity": "fc:c93141ac0e1aa6f06c76b41ee266a3bb13488f6acad05df29ec9b540c64d7fd3",
+      "state": "established",
+      "generation": 1
+    },
+    "consumers": [
+      "mncs-environment",
+      "mncs-forge"
+    ]
+  },
+  "delivery": [],
+  "pressure_review": [],
+  "tests": {
+    "environment": {
+      "passed": 343,
+      "skipped": 31,
+      "additional_focused_passed": 58
+    },
+    "concurrent_recovery_worktrees": {
+      "passed": 4
+    },
+    "commons_focused": {
+      "passed": 21,
+      "skipped": 1
+    },
+    "store_focused": {
+      "passed": 37
+    },
+    "store_native": {
+      "passed": 8
+    },
+    "test_focused": {
+      "passed": 14
+    },
+    "debug_focused": {
+      "passed": 14
+    },
+    "doctor": {
+      "unit_passed": 71,
+      "remediation_passed": 9
+    },
+    "automation": {
+      "passed": 47,
+      "skipped": 7
+    },
+    "ls_provider": {
+      "passed": 8,
+      "stale_baseline_failed": 5
+    },
+    "forge_focused": {
+      "passed": 17
+    },
+    "actions": {
+      "passed": 383,
+      "skipped": 8,
+      "failed": 4,
+      "unchanged_manifest_failed": 4
+    },
+    "vertical": {
+      "verdict": "PASS"
+    }
+  }
+}

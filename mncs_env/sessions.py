@@ -1829,8 +1829,6 @@ class Session:
                 "unavailable_count": unavailable,
                 "truncated": len(available) > max_capabilities,
             },
-            "available_capabilities": available[:max_capabilities],
-            "unavailable_capability_count": unavailable,
             "actions": self.actions(),
             "next_commands": [shlex.join(self.actions()[
                 "reconcile" if readiness_module.summarize(self.snapshot)["blocking"] else "capabilities"

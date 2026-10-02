@@ -227,3 +227,18 @@ Environment should preserve enough structured failure state that Debug/Doctor or
 ## Human interfaces
 
 A human dashboard may render Environment and EnvironmentSession state, but the dashboard is a view, not the source of truth. The same session objects should be usable by agents, automation, and humans without parallel state models.
+
+## Shared family coherence
+
+The current cross-service authority and identity map is documented in
+[WHOLE_SYSTEM_COHERENCE.md](WHOLE_SYSTEM_COHERENCE.md). Family operational rows
+use the selected session Store; file persistence remains an explicit debug
+projection. A family ChangeSet is shared semantic intent, while a reconciliation
+is adoption by one selected physical checkout. Another worktree establishes its
+own repair and proof. Repository-wide adoption must not imply checkout-wide
+adoption.
+
+Architectural consumer edges come from Commons' validated declaration reader.
+Language Service supplies observed semantic impact separately. Source-import
+validation is an explicit Commons audit, never a repeated Environment discovery
+pass and never architectural authority by itself.

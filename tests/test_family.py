@@ -17,15 +17,15 @@ from mncs_env import family as family_module  # noqa: E402
 from mncs_env.session_store import FileSessionStore  # noqa: E402
 
 PRISTINE = Path("/home/epi13/Documents/Projects/mncs-language/.worktrees/pristine-ambient-actions")
-PRISTINE_BINARY = PRISTINE / "target/release/mncs"
-PRISTINE_LIBRARY = PRISTINE / "library"
+PRISTINE_BINARY = Path(os.environ.get("MNCS_BINARY", PRISTINE / "target/release/mncs"))
+PRISTINE_LIBRARY = Path(os.environ.get("MNCS_LIBRARY_ROOT", PRISTINE / "library"))
 
 COMMONS_WORKTREE = Path("/home/epi13/Documents/Projects/MNCS-Commons/.worktrees/family-collaboration")
 COMMONS_MAIN = Path("/home/epi13/Documents/Projects/MNCS-Commons")
 
 
 def _commons_with_family() -> Path | None:
-    for root in (COMMONS_WORKTREE, COMMONS_MAIN):
+    for root in (Path(os.environ.get("MNCS_COMMONS_ROOT", COMMONS_WORKTREE)), COMMONS_MAIN):
         if (root / "src/mncs_commons/family_change.py").is_file():
             return root
     return None
@@ -348,6 +348,28 @@ class FamilyNativeTest(unittest.TestCase):
         third = family_module.ambient_pass(consumer)
         self.assertFalse(third["summary"]["epoch_reused"])
 
+    def test_claim_in_a_distinct_branch_worktree_does_not_occupy_this_target(self) -> None:
+        producer = self._session("ses_prod")
+        established = self._change(producer)
+        change = family_module.read_change(producer, established["identity"])
+        assert change is not None
+        consumer = self._session("ses_cons")
+        consumer.snapshot["selected_checkouts"]["cons-repo"]["branch"] = "current-branch"
+        other = self.root / "other-worktree"
+        _git(self.consumer_repo, "worktree", "add", "-b", "other-branch", str(other))
+        claim = _claim("ses_other", "cons-repo", kind="worktree")
+        claim["scope"].update({"checkout": str(other), "branch": "other-branch"})
+        consumer.store.put_claim(claim)
+        self.assertEqual(family_module.classify_drift(consumer, change, "cons-repo")["consumer_class"], "reconcilable")
+        claim.update({"version": 2, "session_id": consumer.session_id})
+        consumer.store.put_claim(claim)
+        self.assertIsNone(family_module._own_covering_claim(consumer, "cons-repo"))
+        # Sharing a branch keeps ref mutation protection even across paths.
+        claim.update({"version": 3, "session_id": "ses_other"})
+        claim["scope"]["branch"] = "current-branch"
+        consumer.store.put_claim(claim)
+        self.assertEqual(family_module.classify_drift(consumer, change, "cons-repo")["consumer_class"], "occupied")
+
     def test_claim_acquisition_invalidates_epoch(self) -> None:
         producer = self._session("ses_prod")
         self._change(producer)
@@ -358,6 +380,27 @@ class FamilyNativeTest(unittest.TestCase):
         consumer.store.put_claim(_claim("ses_cons", "cons-repo"))
         third = family_module.ambient_pass(consumer)
         self.assertFalse(third["summary"]["epoch_reused"])
+
+    def test_foreign_claim_release_invalidates_epoch(self) -> None:
+        producer = self._session("ses_prod")
+        self._change(producer)
+        consumer = self._session("ses_cons")
+        claim = _claim("ses_other", "cons-repo")
+        consumer.store.put_claim(claim)
+        family_module.ambient_pass(consumer)
+        self.assertTrue(family_module.ambient_pass(consumer)["reused"])
+        consumer.store.put_claim({**claim, "version": 2, "status": "released"})
+        self.assertFalse(family_module.ambient_pass(consumer)["reused"])
+
+    def test_identical_drift_does_not_publish_another_row(self) -> None:
+        producer = self._session("ses_prod")
+        change = self._change(producer)
+        consumer = self._session("ses_cons")
+        classification = family_module.classify_drift(consumer, change, "cons-repo")
+        first = family_module.record_drift(consumer, change, classification)
+        second = family_module.record_drift(consumer, change, classification)
+        self.assertTrue(second["current"])
+        self.assertEqual(first["version"], second["version"])
 
     def test_converge_dry_run_mutates_nothing(self) -> None:
         producer = self._session("ses_prod")
@@ -570,6 +613,36 @@ class FamilyHostTest(unittest.TestCase):
         self.assertEqual(len(contributors), 1)
         self.assertEqual(contributors[0]["session"], "ses_a")
         self.assertEqual(contributors[0]["active_changes"], ["fc:x"])
+
+    def test_presence_is_write_free_until_facts_change_or_heartbeat(self) -> None:
+        from unittest.mock import patch
+        session = self._session("ses_presence")
+        with patch.object(family_module, "utcnow", return_value="2026-10-02T00:00:00+00:00"):
+            first = family_module.publish_presence(session, [])
+        with patch.object(family_module, "utcnow", return_value="2026-10-02T00:05:00+00:00"):
+            quiet = family_module.publish_presence(session, [])
+            changed = family_module.publish_presence(session, ["fc:x"])
+        self.assertTrue(quiet["current"])
+        self.assertEqual(first["version"], quiet["version"])
+        self.assertTrue(changed["published"])
+        with patch.object(family_module, "utcnow", return_value="2026-10-02T01:05:00+00:00"):
+            self.assertTrue(family_module.publish_presence(session, ["fc:x"])["published"])
+
+    def test_fd_pressure_uses_effective_soft_limit(self) -> None:
+        from unittest.mock import patch
+        with patch("resource.getrlimit", return_value=(1, 1048576)):
+            pressure = family_module.fd_pressure()
+        self.assertEqual(pressure["limit"], 1)
+        self.assertTrue(pressure["pressured"])
+
+    def test_family_adoption_requires_every_declared_verdict(self) -> None:
+        session = self._session()
+        session.snapshot["verification_state"] = {"one": {"evidence": {"verdict": "PASS"}}}
+        self.assertEqual(family_module._verification_verdict(session, ["one", "missing"]), "unknown")
+        session.snapshot["verification_state"]["missing"] = {"evidence": {"verdict": "FAIL"}}
+        self.assertEqual(family_module._verification_verdict(session, ["one", "missing"]), "failed")
+        session.snapshot["verification_state"]["missing"]["evidence"]["verdict"] = "PASS"
+        self.assertEqual(family_module._verification_verdict(session, ["one", "missing"]), "passed")
 
     def test_unknown_without_toolchain(self) -> None:
         session = self._session()
