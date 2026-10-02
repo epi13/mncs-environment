@@ -19,6 +19,7 @@ from . import actions as actions_module
 from . import capabilities as capabilities_module
 from . import diagnostics as diagnostics_module
 from . import doctor as doctor_module
+from . import family as family_module
 from . import projections as projections_module
 from . import verification as verification_module
 from . import entry as entry_module
@@ -395,6 +396,71 @@ def cmd_actions(args: argparse.Namespace) -> int:
                        "evidence": result.get("evidence")}
             out(payload)
             return 5 if result["summary"]["blockers"] else 0
+        finally:
+            session.close()
+
+
+def cmd_family(args: argparse.Namespace) -> int:
+    with entry_module.entry_lock(args.state_dir, args.persistence):
+        try:
+            session = sessions_module.Session.resume(
+                state_dir=args.state_dir, session_id=args.session,
+                backend=args.persistence)
+        except sessions_module.LifecycleError as error:
+            return fail(str(error))
+        try:
+            if args.publish:
+                try:
+                    draft = json.loads(Path(args.publish).read_text(
+                        encoding="utf-8"))
+                except (OSError, ValueError) as error:
+                    return fail(f"draft unreadable: {error}")
+                try:
+                    out(family_module.publish_change(session, draft))
+                except family_module.FamilyError as error:
+                    return fail(str(error))
+                session._save()
+                return 0
+            if args.establish:
+                try:
+                    result = family_module.establish_change(
+                        session, args.establish)
+                except family_module.FamilyError as error:
+                    return fail(str(error))
+                session._save()
+                out(result)
+                return 0
+            if args.transition:
+                identity, _, state = args.transition.rpartition(":")
+                if not identity or not state:
+                    return fail("--transition needs CHANGE:STATE")
+                try:
+                    result = family_module.transition_change(
+                        session, identity, state)
+                except family_module.FamilyError as error:
+                    return fail(str(error))
+                session._save()
+                out(result)
+                return 0
+            if args.converge:
+                repository, _, consumer = args.converge.rpartition(":")
+                if not repository or not consumer:
+                    return fail("--converge needs CHANGE:CONSUMER")
+                try:
+                    result = family_module.converge(
+                        session, repository, consumer,
+                        dry_run=args.dry_run)
+                except family_module.FamilyError as error:
+                    return fail(str(error))
+                session._save()
+                out(result)
+                return 0
+            result = family_module.ambient_pass(session, mode="explicit")
+            payload = {"session_id": args.session,
+                       "capsule": family_module.capsule(session),
+                       "summary": result["summary"]}
+            out(payload)
+            return 0
         finally:
             session.close()
 
@@ -857,6 +923,19 @@ def build_parser() -> argparse.ArgumentParser:
     external.add_argument("--full", action="store_true",
                           help="explicit full pass without epoch reuse and with the full dispatch budget")
     external.set_defaults(func=cmd_actions)
+
+    family = session_parser("family", "family shared-workspace observation and convergence")
+    family.add_argument("--publish", default=None, metavar="DRAFT_JSON",
+                        help="validate and publish a draft working change")
+    family.add_argument("--establish", default=None, metavar="CHANGE",
+                        help="validate and establish a published change")
+    family.add_argument("--transition", default=None, metavar="CHANGE:STATE",
+                        help="advance change lifecycle (native law judges)")
+    family.add_argument("--converge", default=None, metavar="CHANGE:CONSUMER",
+                        help="explicitly converge one consumer (requires a claim)")
+    family.add_argument("--dry-run", action="store_true",
+                        help="plan convergence without mutating")
+    family.set_defaults(func=cmd_family)
 
     status = sub.add_parser(
         "status", parents=[common], help="show compact read-only session status"

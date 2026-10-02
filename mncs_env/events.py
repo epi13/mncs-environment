@@ -61,6 +61,12 @@ TYPES = (
     "external.admitted",
     "external.deferred",
     "external.failed",
+    "family.published",
+    "family.transitioned",
+    "family.established",
+    "family.repaired",
+    "family.converged",
+    "family.escalated",
     "adapter.observed",
 )
 

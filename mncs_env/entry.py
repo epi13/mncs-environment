@@ -7,7 +7,7 @@ import fcntl
 from contextlib import contextmanager
 from pathlib import Path
 
-from . import actions, diagnostics, doctor, identity, projections, readiness, semantics, sessions, verification, workspace
+from . import actions, diagnostics, doctor, family, identity, projections, readiness, semantics, sessions, verification, workspace
 from .intent import parse as parse_intent
 from .persist import read_json
 from .session_store import open_store, upgrade_session_store_provider
@@ -177,6 +177,34 @@ def _ambient_actions(session, definition: dict) -> dict | None:
             "evidence": outcome.get("evidence")}
 
 
+def _ambient_family(session, definition: dict) -> dict | None:
+    """Run the ambient family-collaboration pass; None when quiet.
+
+    The pass always observes (presence + drift classification are
+    read-only); repair converges only inside this session's own
+    claimed checkouts. The capsule surfaces only when something is
+    relevant: new changes, reconciliations, or attention items.
+    """
+    knob = definition.get("family", {})
+    if knob is None:
+        knob = {}
+    if not isinstance(knob, dict):
+        raise EntryError("environment definition family knob must be an object",
+                         "definition-invalid", next="set family to an object or omit it")
+    if knob.get("enabled", True) is False:
+        return None
+    outcome = family.ambient_pass(
+        session, converge_repairs=knob.get("converge", True) is not False)
+    summary = outcome["summary"]
+    if (summary.get("relevant", 0) == 0 and summary.get("reconciled", 0) == 0
+            and summary.get("deferred", 0) == 0
+            and summary.get("escalated", 0) == 0
+            and not summary.get("attention")):
+        return None
+    return {"capsule": family.capsule(session), "summary": summary,
+            "reused": outcome["reused"]}
+
+
 def _ambient_diagnostics(session, definition: dict) -> dict | None:
     """Run the ambient diagnostic pass; None when there is nothing to explain.
 
@@ -318,6 +346,9 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
             semantic = _ambient_semantics(session, definition)
             if semantic is not None:
                 result["semantics"] = semantic
+            collaboration = _ambient_family(session, definition)
+            if collaboration is not None:
+                result["family"] = collaboration
             return result
         finally:
             if session is not None:
