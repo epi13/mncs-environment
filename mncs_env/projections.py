@@ -266,6 +266,17 @@ def _validate_declaration(entry: Any) -> str | None:
         renderer = entry['renderer']
         if not isinstance(renderer, dict) or not all(renderer.get(k) for k in ('identity', 'version', 'schema_version')):
             return 'bad-renderer-identity'
+        renderer_entry = renderer.get('entry')
+        if renderer_entry is not None:
+            if (not isinstance(renderer_entry, dict)
+                    or not renderer_entry.get('module')
+                    or not renderer_entry.get('callable')):
+                return 'bad-renderer-entry'
+            module = Path(str(renderer_entry['module']))
+            if module.is_absolute() or '..' in module.parts:
+                return 'renderer-entry-escapes-checkout'
+            if not isinstance(entry.get('renderer_sources'), list) or not entry['renderer_sources']:
+                return 'renderer-entry-without-sources'
         if not isinstance(entry['subjects'], list) or not 0 < len(entry['subjects']) <= semantic_sources.MAX_SUBJECTS:
             return 'bad-subjects'
         for subject in entry['subjects']:
@@ -303,7 +314,7 @@ def _validate_declaration(entry: Any) -> str | None:
     if (not isinstance(entry["inputs"], list)
             or not isinstance(entry["render_argv"], list)):
         return "bad-shapes"
-    for rel in entry["inputs"] + [entry["output"]]:
+    for rel in entry["inputs"] + [entry["output"]] + list(entry.get("renderer_sources") or []):
         path = Path(str(rel))
         if path.is_absolute() or ".." in path.parts:
             return "path-escapes-checkout"
@@ -388,6 +399,28 @@ def _subject_resolver(session, declaration):
     return resolve
 
 
+def _family_expand(session):
+    """Enumerate family membership for wildcard subjects, selection-first.
+
+    The session's selected checkouts define the observed family; only when
+    nothing is selected does a bounded workspace scan stand in. Either way
+    the sorted expansion is recorded in the observed model, so scope
+    changes invalidate exactly like content changes.
+    """
+    selected = session.snapshot.get('selected_checkouts') or {}
+    if selected:
+        return sorted(selected)
+    root = _workspace_root(session)
+    if root is None:
+        return []
+    try:
+        return sorted(path.name for path in root.iterdir()
+                      if path.is_dir() and not path.is_symlink()
+                      and (path / '.git').exists())[:semantic_sources.MAX_SUBJECTS]
+    except OSError:
+        return []
+
+
 def source_state(session, declaration):
     binding = _session_binding(session, declaration['provider_capability']) or {}
     renderer = {key: binding.get(key) for key in ('contract_revision', 'fingerprint', 'source_identity')}
@@ -401,11 +434,22 @@ def source_state(session, declaration):
         renderer['inputs'] = input_digest(root, descriptor.get('fingerprint_sources', []))
         if renderer['inputs'] is None:
             raise ValueError('renderer source unavailable')
+    entry = (declaration.get('renderer') or {}).get('entry')
+    renderer_sources = declaration.get('renderer_sources') or []
+    if entry is not None and not renderer_sources:
+        raise ValueError('repo-owned renderer without renderer_sources')
+    if renderer_sources:
+        own = input_digest(Path(declaration['checkout']), renderer_sources)
+        if own is None:
+            raise ValueError('renderer source unavailable')
+        renderer['inputs'] = semantic_sources.identity(
+            [renderer.get('inputs'), own])
     schema = validation_schema(session, declaration)
     if schema is not None:
         renderer['validation_identity'] = semantic_sources.identity(schema)
     return semantic_sources.observe(Path(declaration['checkout']), declaration, renderer,
-                                     resolve=_subject_resolver(session, declaration))
+                                     resolve=_subject_resolver(session, declaration),
+                                     expand=lambda: _family_expand(session))
 
 
 def declaration_digest(session, declaration):
@@ -614,6 +658,10 @@ def render_projection(session, declaration: dict[str, Any], checkout: Path,
         # ambient execution; only Environment writes claimed target bytes.
         argv = ['semantic-project', '--state', str(semantic_path), '--route',
                 declaration['renderer']['identity'], '--result-envelope']
+        if (declaration.get('renderer') or {}).get('entry') is not None:
+            # Repo-owned renderer: the dispatcher loads the declared entry
+            # module confined to the declaring checkout, never the provider.
+            argv += ['--renderer-root', str(checkout)]
         try:
             result = session.invoke(capability, argv, timeout_seconds=120)
             if result.get('status') != 'ok':
@@ -1126,9 +1174,19 @@ def interpretation(session, repository, route):
              int(bool(row) and (row.get('source') or {}).get('renderer') == declaration['renderer']),
              int(bool(row) and row.get('status') == STATUS_CURRENT),
              int(bool(row) and row.get('canonical_digest') == model['identity']), 0], [1, 0, 1])
+        advanced = None
+        prior_sources = ((row.get('source') or {}).get('semantic') or {}).get('sources') or []
+        if row and prior_sources:
+            prior = {entry.get('slot'): entry.get('identity') for entry in prior_sources
+                     if isinstance(entry, dict)}
+            current = {entry.get('slot'): entry.get('identity') for entry in model.get('sources', [])
+                       if isinstance(entry, dict)}
+            advanced = sorted(slot for slot in set(prior) | set(current)
+                              if prior.get(slot) != current.get(slot))
         return {'declaration': declaration, 'current_semantic_state': model,
                 'last_verified': row, 'output_identity': actual, 'health': health,
-                'current': health.get('code') == 0}
+                'advanced_subjects': advanced,
+                'current': (health or {}).get('code') == 0}
     directory = _artifact_directory(session, 'interpretations')
     path = directory / 'semantic.json'
     path.write_text(json.dumps(model, sort_keys=True, ensure_ascii=False))

@@ -788,6 +788,33 @@ class CapabilityTests(unittest.TestCase):
             plain = capabilities.descriptor_invocation({}, repo, root)
             self.assertEqual(plain["addressing"], "none")
 
+    def test_unresolvable_invocation_names_its_cause(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repo = root / "demo"
+            (repo / "bin").mkdir(parents=True)
+            (repo / "bin" / "run.sh").write_text("#!/bin/sh\n")
+            entry = {"invocation": {"kind": "executable", "path": "bin/run.sh",
+                                    "toolchain": "toolchain/mncs"}}
+            resolved = capabilities.descriptor_invocation(entry, repo, root)
+            self.assertEqual(resolved["addressing"], "none")
+            self.assertIn("toolchain", resolved["detail"])
+            binding = capabilities.bind(
+                provider="p", capability="c", contract_revision="1",
+                entrypoint="undeclared", address=None,
+                provenance={"addressing": "none",
+                            "addressing_detail": resolved["detail"]})
+            probed = capabilities.probe_availability(binding)
+            self.assertEqual(probed["availability"]["code"],
+                             "provider-invocation-unresolvable")
+            self.assertIn("toolchain", probed["availability"]["reason"])
+            plain = capabilities.probe_availability(
+                capabilities.bind(provider="p", capability="c",
+                                  contract_revision="1",
+                                  entrypoint="undeclared", address=None))
+            self.assertEqual(plain["availability"]["code"],
+                             "provider-invocation-undeclared")
+
     def test_toolchain_env_exported(self) -> None:
         binding = capabilities.probe_availability(
             capabilities.bind(provider="p", capability="c", contract_revision="1",
