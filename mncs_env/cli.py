@@ -29,6 +29,7 @@ from . import claims as claims_module
 from . import pressures as pressures_module
 from . import rights as rights_module
 from . import sessions as sessions_module
+from . import testcmd as testcmd_module
 from . import workspace as workspace_module
 from .persist import read_json
 from .session_store import open_store, SnapshotConflict
@@ -581,6 +582,42 @@ def cmd_invoke(args: argparse.Namespace) -> int:
     return 0 if result["status"] in ("ok", "pending-escalation") else 4
 
 
+def cmd_test(args: argparse.Namespace) -> int:
+    try:
+        session = sessions_module.Session.resume(
+            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
+        )
+    except sessions_module.LifecycleError as error:
+        return fail(str(error))
+    try:
+        try:
+            result = testcmd_module.run_tests(
+                session, args.checkout, output_format=args.format,
+                timeout_seconds=args.timeout, max_executions=args.max_executions,
+                no_store=args.no_store,
+            )
+        except testcmd_module.TestRoutingError as error:
+            return fail(str(error), code=3, diagnostics=error.diagnostics)
+        except (sessions_module.AuthorityDenied, sessions_module.LifecycleError,
+                capabilities_module.CapabilityError) as error:
+            return fail(str(error), code=3)
+    finally:
+        session.close()
+    report = result.get("report", "")
+    if report and not report.endswith("\n"):
+        report += "\n"
+    sys.stdout.write(report)
+    if result.get("stderr"):
+        sys.stderr.write(result["stderr"])
+        if not result["stderr"].endswith("\n"):
+            sys.stderr.write("\n")
+    if result.get("truncated"):
+        print("warning: provider report was truncated by the capture limit",
+              file=sys.stderr)
+    returncode = result.get("returncode")
+    return returncode if isinstance(returncode, int) else 3
+
+
 def cmd_events(args: argparse.Namespace) -> int:
     session = _open(args)
     if args.subscribe:
@@ -1064,6 +1101,19 @@ def build_parser() -> argparse.ArgumentParser:
                         help=f"bounded stdout/stderr capture limit (max {capabilities_module.MAX_OUTPUT_LIMIT_BYTES})")
     invoke.add_argument("argv", nargs="*")
     invoke.set_defaults(func=cmd_invoke)
+
+    test = session_parser("test", "run a checkout's verification obligations natively")
+    test.add_argument("--checkout", default=None, required=True,
+                      help="repository to verify (must be selected in the session)")
+    test.add_argument("--format", choices=("text", "json"), default="text",
+                      help="provider report format")
+    test.add_argument("--timeout", type=int, default=600,
+                      help="provider execution timeout in seconds")
+    test.add_argument("--max-executions", type=int, default=16,
+                      help="native coherence execution budget")
+    test.add_argument("--no-store", action="store_true",
+                      help="skip Store vault admission (file receipts only)")
+    test.set_defaults(func=cmd_test)
 
     events = session_parser("events", "read, subscribe, poll, or observe events")
     events.add_argument("--subscribe", nargs="*", default=None)
