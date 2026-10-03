@@ -842,6 +842,17 @@ def cmd_claims(args: argparse.Namespace) -> int:
                 return fail(f"adoption required: {error}", code=4)
             return 0
         records = store.read_claims()
+        if args.explain:
+            latest = None
+            for record in records:
+                if str(record.get("claim_id", "")) != args.explain:
+                    continue
+                if latest is None or int(record.get("version", 0)) > int(latest.get("version", 0)):
+                    latest = record
+            if latest is None:
+                return fail(f"unknown claim {args.explain}")
+            out(claims_module.explain(latest, store))
+            return 0
         live = claims_module.active_claims(records)
         live_keys = {(str(item.get("claim_id", "")),
                       int(item.get("version", 0)))
@@ -1213,6 +1224,8 @@ def build_parser() -> argparse.ArgumentParser:
                                  claims_module.BASIS_RECOVERY, claims_module.BASIS_ADOPTION))
     claims.add_argument("--reason", default="")
     claims.add_argument("--ttl", type=int, default=24)
+    claims.add_argument("--explain", default=None,
+                        help="explain one claim id as live/stale/recoverable/not-recoverable")
     claims.set_defaults(func=cmd_claims)
 
     pressures = sub.add_parser("pressures", help="record or list pressures")

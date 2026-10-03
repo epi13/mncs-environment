@@ -28,6 +28,15 @@ class SnapshotConflict(Exception):
         super().__init__(f"session {session_id} snapshot revision {revision} already contains different state")
 
 
+class ClaimVersionConflict(Exception):
+    """A concurrent participant published this immutable claim version."""
+
+    def __init__(self, claim_id: str, version: int):
+        self.claim_id = claim_id
+        self.version = version
+        super().__init__(f"claim {claim_id} version {version} already contains different state")
+
+
 STORE_PROVIDER_SCHEMA = "mncs.environment.session-store-provider/2"
 
 
@@ -541,7 +550,16 @@ class StoreSessionStore(SessionStore):
         )
 
     def put_claim(self, claim: dict[str, Any]) -> None:
-        self.backend.put_claim(claim)
+        try:
+            self.backend.put_claim(claim)
+        except Exception as error:
+            # The backend surfaces mncs-store identity conflicts as a
+            # StoreError carrying an IDENTITY_CONFLICT code; translate to
+            # the backend-agnostic CAS signal without importing mncs-store.
+            if getattr(getattr(error, "code", None), "name", None) == "IDENTITY_CONFLICT":
+                raise ClaimVersionConflict(str(claim.get("claim_id", "")),
+                                           int(claim.get("version", 0))) from error
+            raise
 
     def read_claims(self) -> list[dict[str, Any]]:
         return self.backend.read_claims()
