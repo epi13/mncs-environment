@@ -35,6 +35,14 @@ def test_renderer_identity_changes_invalidate(tmp_path, field):
     assert sources.observe(tmp_path, d)['identity'] != first['identity']
 
 
+def test_adoption_witness_does_not_change_semantic_identity(tmp_path):
+    (tmp_path / 'state.json').write_text('{"capabilities": []}')
+    first = sources.observe(tmp_path, declaration())
+    witnessed = declaration()
+    witnessed['bootstrap_digest'] = 'sha256:' + '0' * 64
+    assert sources.observe(tmp_path, witnessed) == first
+
+
 def test_subject_missing_is_not_an_empty_source(tmp_path):
     (tmp_path / 'state.json').write_text('{}')
     with pytest.raises(KeyError):

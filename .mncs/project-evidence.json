@@ -2,15 +2,15 @@
   "projection-conformance": {
     "schema_version": "mncs.semantic-evidence/1",
     "producer": "mncs-environment:projection-conformance",
-    "subject_identity": "sha256:e5951ff88a1f99558ad6a94bdb24bce33fed4af035f04bbb1c21f33d4fc82b73",
+    "subject_identity": "sha256:3432bcee240688bac8ce07fb242684c4fb60859b1188027c5e7feab9e1d0dafd",
     "verdict": "pass",
     "validation": {
       "contract": "MNCS-Commons:semantic-projection/1",
-      "identity": "sha256:4ba42aa7a2338840dc08ff1f86112e30a0ae0a57102c972e86cf7963164f6640",
+      "identity": "sha256:eee211dc3a7175ad4aa423df92360751215f5e0590888f6b8cbea044f2f82c25",
       "profile": "sha256:259e41ea542e7a1400f1471b0316de4fafc888d6f953c8e91165ff2cfe1e78cb",
       "profile_schema": "sha256:622ca8df9cc2862cd7df12477e55e14e06479e5d6062d34046f32a3d1272a982",
-      "native_receipt": "c833315ece1d5ebd3f84e3a28218bfd79a1b603aadfcd3e5cdb4f8e354f83ec5"
+      "native_receipt": "0a62c1d3f4ce8756eb5f0f96c7d46d648c80a6d41326b705c324f1f09e232197"
     },
-    "receipt_identity": "sha256:e8c1e054e6dd17e73978ff5ff54b4ec96c70d7bb006b1ab1f6a45ea263fccfb3"
+    "receipt_identity": "sha256:9d8e4891ce4e1118fd5a1d26b410e0723a53ce95dc246fb4c62c0b3422de0abe"
   }
 }

@@ -68,8 +68,10 @@ def observe(checkout, declaration, renderer_identity=None):
         sources.append({'subject': subject['subject'], 'slot': slot,
                         'path': subject['path'], 'format': kind, 'select': subject.get('select', ''),
                         'identity': identity(value)})
+    # Adoption witnesses are not semantic content: a view embedding its own
+    # source identity could otherwise never match its declared preimage.
     contract = {key: value for key, value in declaration.items()
-                if key not in ('repository', 'checkout', '_inventory')}
+                if key not in ('repository', 'checkout', '_inventory', 'bootstrap_digest')}
     core = {'schema_version': 'mncs.semantic-state/1', 'values': values,
             'sources': sources, 'declaration_identity': identity(contract),
             'renderer_identity': renderer_identity}
