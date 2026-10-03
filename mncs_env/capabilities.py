@@ -168,8 +168,10 @@ def descriptor_invocation(
 
     Returns ``{"address", "toolchain_address", "toolchain_env",
     "fixed_argv", "adapter_library_paths",
-    "addressing"}``. ``addressing`` is ``"descriptor"`` when the entry
-    carries a usable declaration, else ``"none"``. Paths in ``path``
+    "addressing", "detail"}``. ``addressing`` is ``"descriptor"`` when the
+    entry carries a usable declaration, else ``"none"`` with ``detail``
+    naming the failure so availability can distinguish a missing
+    declaration from an unresolvable one. Paths in ``path``
     are repo-relative; ``toolchain`` can be a workspace-relative file path
     or ``{"repository": id, "path": relative_path}`` to bind a file or
     checkout directory from the selected repository closure. It is exported
@@ -184,7 +186,12 @@ def descriptor_invocation(
     """
     empty = {"address": None, "toolchain_address": None,
              "toolchain_env": None, "fixed_argv": [],
-             "adapter_library_paths": [], "addressing": "none"}
+             "adapter_library_paths": [], "addressing": "none",
+             "detail": None}
+
+    def unusable(detail):
+        return dict(empty, detail=detail)
+
     spec = entry.get("invocation")
     if not isinstance(spec, dict):
         return empty
@@ -192,7 +199,7 @@ def descriptor_invocation(
     if not isinstance(fixed_argv, list) or any(
         not isinstance(argument, str) for argument in fixed_argv
     ):
-        return empty
+        return unusable("invocation fixed_argv malformed")
     kind = spec.get("kind")
     address: str | None = None
     relative = Path(str(spec.get("path", "")))
@@ -200,7 +207,7 @@ def descriptor_invocation(
         relative.is_absolute() or ".." in relative.parts
         or not (repo / relative).resolve().is_relative_to(repo.resolve())
     ):
-        return empty
+        return unusable("invocation path escapes provider checkout")
     if kind == "executable":
         candidate = repo / relative
         if candidate.is_file():
@@ -212,7 +219,9 @@ def descriptor_invocation(
     elif kind == "binary":
         address = shutil.which(str(spec.get("name", "")))
     if address is None:
-        return empty
+        return unusable("invocation target not present: %s"
+                        % (spec.get("path") if kind != "binary"
+                           else spec.get("name", "")))
     toolchain_address: str | None = None
     toolchain_env = str(spec.get("toolchain_env", "MNCS"))
     toolchain = spec.get("toolchain")
@@ -227,7 +236,8 @@ def descriptor_invocation(
             toolchain_address = str(candidate)
     if ((isinstance(toolchain, dict) or isinstance(toolchain, str) and toolchain)
             and toolchain_address is None):
-        return empty
+        return unusable("toolchain unresolvable in selected closure: %r"
+                        % (toolchain,))
     adapter_library_paths: list[str] = []
     raw_roots = spec.get("adapter_library_paths", [])
     if isinstance(raw_roots, list):
@@ -270,8 +280,14 @@ def probe_availability(binding: dict[str, Any]) -> dict[str, Any]:
         code = "toolchain-missing"
     elif not usable:
         if address is None and binding.get("entrypoint") == "undeclared":
-            code = "provider-invocation-undeclared"
-            reason = f"{binding.get('provider')} must publish an invocation descriptor for {binding.get('capability')}; source fingerprints are not commands"
+            detail = (binding.get("provenance") or {}).get("addressing_detail")
+            if detail:
+                code = "provider-invocation-unresolvable"
+                reason = (f"{binding.get('provider')} declares invocation for "
+                          f"{binding.get('capability')} but it cannot resolve: {detail}")
+            else:
+                code = "provider-invocation-undeclared"
+                reason = f"{binding.get('provider')} must publish an invocation descriptor for {binding.get('capability')}; source fingerprints are not commands"
         else:
             reason = f"no usable executable for entrypoint {binding.get('entrypoint')!r} at {address!r}"
             code = "executable-unavailable"
@@ -640,7 +656,8 @@ def _from_manifest(
             event_types=["unknown"],
             provenance={"source": f"{repo.name}/.mncs/project.json",
                         "kind": entry.get("kind"), "stability": entry.get("stability"),
-                        "addressing": addressing, "manifest_tests": declared_tests},
+                        "addressing": addressing, "manifest_tests": declared_tests,
+                        "addressing_detail": declared.get("detail")},
             provider_root=str(repo),
         )
         out.append(record)

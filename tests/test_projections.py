@@ -337,6 +337,16 @@ class ProjectionFixture(unittest.TestCase):
 
 @NEED_MNCS
 class AmbientWholeFileTests(ProjectionFixture):
+    def test_applied_outputs_carry_deterministic_permissions(self):
+        import stat
+        self.enter('permissions')
+        (self.target_doc / 'docs/rfcs/0002.md').write_text('# RFC 0002: perms\\n')
+        self.commit_all(self.target_doc, 'advance source for permissions')
+        code, _ = self.enter('permissions')
+        self.assertEqual(code, 0)
+        mode = stat.S_IMODE((self.target_doc / 'docs/out.generated.md').stat().st_mode)
+        self.assertEqual(oct(mode), oct(0o644))
+
     def test_interrupted_replacement_recovers_after_source_advances(self):
         from unittest.mock import patch
         from mncs_env import projections, sessions

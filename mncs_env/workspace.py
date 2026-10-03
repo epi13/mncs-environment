@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -21,6 +22,41 @@ MAX_PORCELAIN_LINES = 200
 MAX_REPOS = 500
 MAX_ROOT_DIRECTORIES = 64
 WORKSPACE_SCAN_TIMEOUT_SECONDS = 10.0
+
+# One git resolution per process: every spawn otherwise pays a full PATH
+# search of failed exec probes before reaching the real binary.
+_GIT_BINARY: str | None = None
+
+
+def _git_binary() -> str:
+    global _GIT_BINARY
+    if _GIT_BINARY is None:
+        _GIT_BINARY = shutil.which("git") or "git"
+    return _GIT_BINARY
+
+
+def git_binary() -> str:
+    """Process-wide resolved git executable (no per-spawn PATH search)."""
+    return _git_binary()
+
+
+# Per-process inspection cache. Entry consults the same checkouts from
+# many passes; the facts are re-observed after every in-process mutation
+# (see invalidate_repo_facts), so sharing them cannot hide our own writes.
+# Mutation boundaries and change detectors must bypass the cache with
+# _refresh=True: cached git flags are never a mutation lease.
+_inspect_cache: dict[str, RepoState | None] = {}
+_quick_cache: dict[str, dict[str, Any] | None] = {}
+
+
+def invalidate_repo_facts(path: Path | str) -> None:
+    """Drop cached facts for one checkout after mutating it."""
+    try:
+        key = str(Path(path).resolve())
+    except OSError:
+        return
+    _inspect_cache.pop(key, None)
+    _quick_cache.pop(key, None)
 
 MAIN_BRANCHES = {"main", "master"}
 
@@ -45,7 +81,7 @@ def _git(
             return None
     try:
         return subprocess.run(
-            ["git", "-C", str(repo), *args],
+            [_git_binary(), "-C", str(repo), *args],
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -150,9 +186,17 @@ class RepoState:
         }
 
 
-def inspect_repo(path: Path, *, deadline: float | None = None) -> RepoState | None:
+def inspect_repo(path: Path, *, deadline: float | None = None,
+                 _refresh: bool = False) -> RepoState | None:
     """Inspect one directory; return None when it is not a git checkout."""
+    try:
+        key = str(Path(path).resolve())
+    except OSError:
+        return None
+    if not _refresh and key in _inspect_cache:
+        return _inspect_cache[key]
     if not (path / ".git").exists():
+        _inspect_cache[key] = None
         return None
     manifest = _manifest(path)
     head_proc = _git(path, "rev-parse", "HEAD", deadline=deadline)
@@ -167,7 +211,7 @@ def inspect_repo(path: Path, *, deadline: float | None = None) -> RepoState | No
         git_error = None
     lines, truncated = _porcelain(path, deadline=deadline)
     untracked = sum(1 for line in lines if line.startswith("??"))
-    return RepoState(
+    state = RepoState(
         name=path.name,
         path=str(path),
         manifest_repository=manifest.get("repository") if manifest else None,
@@ -181,6 +225,11 @@ def inspect_repo(path: Path, *, deadline: float | None = None) -> RepoState | No
         worktrees=_worktrees(path, deadline=deadline),
         git_error=git_error,
     )
+    # Transient git failures (timeouts) are never cached: a loaded moment
+    # must not become a permanent "unavailable" verdict for the process.
+    if git_error is None:
+        _inspect_cache[key] = state
+    return state
 
 
 MANAGED_WORKTREES_DIR = ".worktrees"
@@ -193,7 +242,7 @@ def _filtered_porcelain_names(lines: list[str]) -> list[str]:
             not line[3:].startswith(MANAGED_WORKTREES_DIR + "/")]
 
 
-def quick_repo_facts(path: Path) -> dict[str, Any] | None:
+def quick_repo_facts(path: Path, *, _refresh: bool = False) -> dict[str, Any] | None:
     """Cheap exact change-detection facts for one checkout.
 
     Three bounded git calls (head+branch, tracked status, untracked list)
@@ -206,6 +255,12 @@ def quick_repo_facts(path: Path) -> dict[str, Any] | None:
     import hashlib
 
     repo = Path(path)
+    try:
+        key = str(repo.resolve())
+    except OSError:
+        return None
+    if not _refresh and key in _quick_cache:
+        return _quick_cache[key]
     if not repo.is_dir() or not (repo / ".git").exists():
         return None
     identity = _git(repo, "rev-parse", "HEAD", "--abbrev-ref", "HEAD")
@@ -232,9 +287,11 @@ def quick_repo_facts(path: Path) -> dict[str, Any] | None:
         and not line.startswith(MANAGED_WORKTREES_DIR + "/"))
     tracked_digest = hashlib.sha256("\n".join(tracked_lines).encode()).hexdigest()
     untracked_digest = hashlib.sha256("\n".join(untracked_lines).encode()).hexdigest()
-    return {"head": lines[0].strip(), "branch": branch or None,
-            "dirty": bool(tracked_lines) or bool(untracked_lines),
-            "tracked_digest": tracked_digest, "untracked_digest": untracked_digest}
+    facts = {"head": lines[0].strip(), "branch": branch or None,
+             "dirty": bool(tracked_lines) or bool(untracked_lines),
+             "tracked_digest": tracked_digest, "untracked_digest": untracked_digest}
+    _quick_cache[key] = facts
+    return facts
 
 
 def manifest_content_digest(path: Path) -> dict[str, str | None]:

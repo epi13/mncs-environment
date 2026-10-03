@@ -12,6 +12,7 @@ import os
 import subprocess
 from pathlib import Path
 
+from . import workspace as workspace_module
 from .identity import digest_hex
 from .persist import write_json
 
@@ -61,8 +62,8 @@ def control_paths(checkout: Path) -> list[Path]:
 
 def _enumerate(checkout: Path) -> list[str]:
     completed = subprocess.run(
-        ["git", "-C", str(checkout), "ls-files", "--cached", "--others",
-         "--exclude-standard", "-z"], capture_output=True, timeout=10, check=True, env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"})
+        [workspace_module.git_binary(), "-C", str(checkout), "ls-files",
+         "--cached", "--others", "--exclude-standard", "-z"], capture_output=True, timeout=10, check=True, env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"})
     paths = sorted(set(os.fsdecode(value) for value in completed.stdout.split(b"\0") if value))
     paths = [name for name in paths if not name.startswith(".worktrees/")]
     if len(paths) > MAX_PATHS or any(Path(name).is_absolute() or ".." in Path(name).parts for name in paths):

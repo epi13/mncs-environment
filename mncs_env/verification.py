@@ -236,7 +236,7 @@ def _porcelain_name(line: str) -> str | None:
 def dirty_content_digest(checkout: Path) -> str:
     """Digest current dirty/untracked content (bounded, empty when clean)."""
     try:
-        state = workspace_module.inspect_repo(checkout)
+        state = workspace_module.inspect_repo(checkout, _refresh=True)
     except (OSError, ValueError):
         return "repo-unreadable"
     if state is None:
@@ -266,7 +266,7 @@ def dirty_content_digest(checkout: Path) -> str:
 
 
 def repo_revision(checkout: Path) -> str:
-    facts = workspace_module.quick_repo_facts(checkout)
+    facts = workspace_module.quick_repo_facts(checkout, _refresh=True)
     if facts is None:
         return "repo-unreadable"
     return str(facts.get("head") or "head-unknown")

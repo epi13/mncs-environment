@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import workspace as workspace_module
 from .toolchain import language_library_for
 from .identity import digest_hex
 
@@ -984,7 +985,8 @@ def _preimage_ok(checkout: Path, operation: dict[str, Any]) -> bool:
 def _git_status_paths(checkout: Path) -> set[str]:
     try:
         completed = subprocess.run(
-            ["git", "-C", str(checkout), "status", "--porcelain=v1"],
+            [workspace_module.git_binary(), "-C", str(checkout), "status",
+             "--porcelain=v1"],
             capture_output=True, text=True, timeout=30, check=False)
     except (OSError, subprocess.SubprocessError):
         return set()
@@ -1121,7 +1123,8 @@ def _execute_run_capability(session, checkout: Path,
         for path in outside:
             target = checkout / path
             completed = subprocess.run(
-                ["git", "-C", str(checkout), "checkout", "--", path],
+                [workspace_module.git_binary(), "-C", str(checkout),
+                 "checkout", "--", path],
                 capture_output=True, timeout=30, check=False)
             if completed.returncode == 0:
                 restored.append(path)
@@ -1132,8 +1135,10 @@ def _execute_run_capability(session, checkout: Path,
                     restored.append(path)
             except OSError:
                 pass
+        workspace_module.invalidate_repo_facts(checkout)
         return False, ("output escaped allowlist; restored: "
                        + ",".join(restored))
+    workspace_module.invalidate_repo_facts(checkout)
     return True, "applied"
 
 

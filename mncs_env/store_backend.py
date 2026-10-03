@@ -18,8 +18,11 @@ import os
 import sys
 import threading
 from contextlib import contextmanager
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+from . import workspace as workspace_module
 
 SCHEMA_EVENT = b"mncs.environment.session-event/1"
 SCHEMA_SNAPSHOT = b"mncs.environment.session-snapshot/1"
@@ -74,13 +77,38 @@ class StoreIntegrityFailure(Exception):
     """Raised when the Store reports failed verification or recovery need."""
 
 
+def _store_package_for_checkout(checkout: Path) -> Path | None:
+    """Sibling Store fallback, following linked worktrees to their main."""
+    direct = checkout.parent / "mncs-store" / "python"
+    if (direct / "mncs_store" / "__init__.py").is_file():
+        return direct
+    completed = workspace_module._git(checkout, "rev-parse",
+                                      "--git-common-dir")
+    if completed is None or completed.returncode != 0:
+        return None
+    common = Path(completed.stdout.strip())
+    if not common.is_absolute():
+        common = checkout / common
+    main_checkout = common.parent if common.name == ".git" else common
+    candidate = main_checkout.parent / "mncs-store" / "python"
+    if (candidate / "mncs_store" / "__init__.py").is_file():
+        return candidate
+    return None
+
+
+@lru_cache(maxsize=1)
+def _workspace_store_package() -> Path | None:
+    """Sibling Store fallback that also works from linked worktrees."""
+    here = Path(__file__).resolve()
+    return _store_package_for_checkout(here.parents[1])
+
+
 def _load_store_api(store_package_dir: str | Path | None = None):
     package_dir = store_package_dir or os.environ.get("MNCS_STORE_PYTHON")
     if not package_dir:
-        here = Path(__file__).resolve()
-        candidate = here.parents[2] / "mncs-store" / "python"
-        if (candidate / "mncs_store" / "__init__.py").is_file():
-            package_dir = str(candidate)
+        fallback = _workspace_store_package()
+        if fallback is not None:
+            package_dir = str(fallback)
     if package_dir:
         package_path = Path(package_dir).resolve()
         if not (package_path / "mncs_store" / "__init__.py").is_file():
