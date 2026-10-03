@@ -503,3 +503,77 @@ def test_declaration_validation_for_repo_owned_renderers():
         base['renderer'], entry={'module': 'sub/r.py', 'callable': 'f'}),
         renderer_sources=['sub/r.py'])
     assert projections._validate_declaration(good) is None
+
+
+class _RenderSession(_StubSession):
+    def __init__(self, snapshot, state_dir, bindings, payload,
+                 status='ok', truncated=False):
+        super().__init__(snapshot, bindings)
+        from types import SimpleNamespace
+        self.store = SimpleNamespace(state_dir=Path(state_dir))
+        self.session_id = 'ses_render_test'
+        self._payload = payload
+        self._status = status
+        self._truncated = truncated
+        self.invoke_calls = []
+
+    def invoke(self, capability, argv, timeout_seconds=None,
+               output_limit_bytes=None, env=None):
+        self.invoke_calls.append({'capability': capability,
+                                  'output_limit_bytes': output_limit_bytes})
+        return {'status': self._status, 'stdout': self._payload,
+                'truncated': self._truncated}
+
+
+def _render_declaration(tmp_path):
+    (tmp_path / 'state.json').write_text('{"capabilities": []}')
+    return {'schema_version': 'mncs.semantic-projection/1', 'id': 'own:big',
+            'repository': 'own-repo', 'checkout': str(tmp_path),
+            'owner': 'own:state',
+            'subjects': [{'subject': 'own:capabilities', 'slot': 'capabilities',
+                          'path': 'state.json', 'select': '/capabilities'}],
+            'renderer': {'identity': 'test-route', 'version': '1',
+                         'schema_version': 'mncs.semantic-state/1'},
+            'output': 'out.md', 'output_kind': 'whole-file',
+            'policy': 'ambient-safe', 'manual_edit_policy': 'protected',
+            'validation': {'format': 'utf-8'},
+            'provider_capability': 'test:cap', 'render_argv': [],
+            'inputs': [], 'template': 'test-route'}
+
+
+def test_render_requests_full_transport_limit(tmp_path):
+    from mncs_env import capabilities as capabilities_module
+    content = 'x' * (64 * 1024 + 1024)
+    session = _RenderSession(
+        {'workspace': {'root': str(tmp_path)}, 'selected_checkouts': {}},
+        tmp_path / 'state',
+        {'test:cap': {'availability': {'status': 'available'}}}, '')
+    declaration = _render_declaration(tmp_path)
+    identity = projections.source_state(session, declaration)['identity']
+    session._payload = json.dumps(
+        {'schema_version': 'mncs.projection-render-result/1',
+         'content': content, 'source_identity': identity,
+         'renderer': 'test-route', 'version': '1', 'native': []})
+    data, reason = projections.render_projection(session, declaration,
+                                                 tmp_path, 'a')
+    assert reason == 'ok'
+    assert data == content.encode('utf-8')
+    assert session.invoke_calls[0]['output_limit_bytes'] == \
+        projections.RENDER_OUTPUT_LIMIT_BYTES
+    assert session.invoke_calls[0]['output_limit_bytes'] > 64 * 1024
+    assert projections.RENDER_OUTPUT_LIMIT_BYTES == \
+        capabilities_module.MAX_OUTPUT_LIMIT_BYTES
+
+
+def test_render_reports_truncation_distinctly(tmp_path):
+    session = _RenderSession(
+        {'workspace': {'root': str(tmp_path)}, 'selected_checkouts': {}},
+        tmp_path / 'state',
+        {'test:cap': {'availability': {'status': 'available'}}},
+        '{"schema_version": "mncs.projection-render-result/1", "partial": true',
+        truncated=True)
+    declaration = _render_declaration(tmp_path)
+    data, reason = projections.render_projection(session, declaration,
+                                                 tmp_path, 'a')
+    assert data is None
+    assert reason == 'semantic-render-truncated'

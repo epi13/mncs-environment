@@ -45,6 +45,10 @@ MAX_DECLARATIONS = 256
 MAX_INPUT_FILES = 512
 MAX_INPUT_BYTES = 8 * 1024 * 1024
 MAX_RENDER_CACHE = 20
+# Semantic renders transport full artifact content through the result
+# envelope, so they run under the transport maximum rather than the
+# interactive invoke default (64 KiB), which would truncate real outputs.
+RENDER_OUTPUT_LIMIT_BYTES = capabilities_module.MAX_OUTPUT_LIMIT_BYTES
 PLANNER_CAPABILITY = "mncs-automation:automation-reconciliation"
 
 # Status codes mirror store.projection: current/stale/unknown/blocked/failed.
@@ -663,9 +667,12 @@ def render_projection(session, declaration: dict[str, Any], checkout: Path,
             # module confined to the declaring checkout, never the provider.
             argv += ['--renderer-root', str(checkout)]
         try:
-            result = session.invoke(capability, argv, timeout_seconds=120)
+            result = session.invoke(capability, argv, timeout_seconds=120,
+                                    output_limit_bytes=RENDER_OUTPUT_LIMIT_BYTES)
             if result.get('status') != 'ok':
                 return None, 'semantic-render-failed'
+            if result.get('truncated'):
+                return None, 'semantic-render-truncated'
             envelope = json.loads(result['stdout'])
             if (envelope.get('schema_version') != 'mncs.projection-render-result/1'
                     or envelope.get('source_identity') != source_state(session, declaration)['identity']
