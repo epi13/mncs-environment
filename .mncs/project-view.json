@@ -1,0 +1,173 @@
+{
+  "capabilities": [
+    {
+      "contract": "workspace-discovery",
+      "invocation": {
+        "fixed_argv": [
+          "workspace",
+          "--root",
+          "."
+        ],
+        "kind": "executable",
+        "path": "scripts/mncs-env"
+      },
+      "kind": "read-only-workspace-discovery",
+      "stability": "experimental",
+      "version": "1"
+    },
+    {
+      "contract": "workspace-readiness",
+      "effects": [
+        "read"
+      ],
+      "fingerprint_sources": [
+        "mncs_env/cli.py",
+        "mncs_env/workspace.py"
+      ],
+      "invocation": {
+        "fixed_argv": [
+          "workspace",
+          "--root",
+          ".",
+          "--summary"
+        ],
+        "kind": "executable",
+        "path": "scripts/mncs-env"
+      },
+      "kind": "read-only-workspace-readiness",
+      "stability": "experimental",
+      "version": "1"
+    },
+    {
+      "contract": "ambient-projection-coherence",
+      "kind": "semantic-projection-lifecycle-and-interpretation",
+      "output_scope": "explicit projection declarations; canonical subjects; Store provenance; native reconciliation",
+      "stability": "experimental",
+      "version": "1"
+    }
+  ],
+  "dependencies": [
+    {
+      "contract": "mncs-store.persistent-object",
+      "envelope": {
+        "op": "any"
+      },
+      "evidence_refs": [
+        "mncs_env/store_backend.py",
+        "mncs_env/session_store.py"
+      ],
+      "required": true
+    },
+    {
+      "contract": "mncs-store.projection-state",
+      "envelope": {
+        "op": "any"
+      },
+      "evidence_refs": [
+        "mncs_env/projection_store.py",
+        "mncs_env/store_backend.py"
+      ],
+      "required": true
+    },
+    {
+      "contract": "mncs-store.commit-feed",
+      "envelope": {
+        "op": "any"
+      },
+      "evidence_refs": [
+        "mncs_env/sources.py",
+        "mncs_env/store_backend.py"
+      ],
+      "required": true
+    },
+    {
+      "contract": "mncs-commons.family-change",
+      "envelope": {
+        "op": "any"
+      },
+      "evidence_refs": [
+        "mncs_env/family.py"
+      ],
+      "required": false
+    },
+    {
+      "contract": "mncs-language-service.semantic-query",
+      "envelope": {
+        "op": "any"
+      },
+      "evidence_refs": [
+        "mncs_env/family.py",
+        "mncs_env/semantics.py"
+      ],
+      "required": false,
+      "scope": "declared semantic workspaces"
+    },
+    {
+      "contract": "mncs-automation.coherence-routing",
+      "envelope": {
+        "op": "any"
+      },
+      "evidence_refs": [
+        "mncs_env/coherence.py",
+        ".mncs/coherence-passes.json"
+      ],
+      "required": false
+    },
+    {
+      "contract": "mncs-store.binding-observation",
+      "envelope": {
+        "op": "any"
+      },
+      "evidence_refs": [
+        "mncs_env/sources.py",
+        "mncs_env/store_backend.py"
+      ],
+      "required": false,
+      "scope": "bounded replay; older providers retain verified object projection fallback"
+    }
+  ],
+  "entry": [
+    "./scripts/mncs-env enter --consumer my-agent"
+  ],
+  "purpose": "mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration.",
+  "repository": "mncs-environment",
+  "schema_version": "mncs.project-view/1",
+  "source_identity": "sha256:d151e4ca91e4ce8b93f1b69a63da63d3d33541bb7989aa1fd6516a2ab1873fdb",
+  "structure": {
+    "layout": "mncs.repository-layout/1",
+    "surfaces": [
+      {
+        "artifact_class": "authoritative",
+        "authority": "mncs-environment",
+        "class": "canonical",
+        "note": "Authored project intent; execution state is evidence-derived.",
+        "path": ".mncs/project-state.json"
+      },
+      {
+        "artifact_class": "authoritative",
+        "authority": "mncs-environment",
+        "class": "canonical",
+        "note": "Explicit semantic projection ownership and dependencies.",
+        "path": ".mncs/projections.json"
+      },
+      {
+        "artifact_class": "mixed",
+        "class": "generated",
+        "note": "Mixed: only delimited semantic region is projection-owned; surrounding authored bytes are protected.",
+        "path": "README.md"
+      },
+      {
+        "artifact_class": "mixed",
+        "class": "generated",
+        "note": "Mixed: projected evidence board beside preserved authored intent.",
+        "path": "ROADMAP.md"
+      },
+      {
+        "artifact_class": "derived",
+        "class": "generated",
+        "note": "Derived machine-facing interpretation; never an execution input.",
+        "path": ".mncs/project-view.json"
+      }
+    ]
+  }
+}

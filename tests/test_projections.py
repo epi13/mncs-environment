@@ -262,6 +262,7 @@ class ProjectionFixture(unittest.TestCase):
             (root / output).parent.mkdir(parents=True, exist_ok=True)
             (root / output).write_bytes(
                 fixture_bytes(root / "docs" / "rfcs"))
+        declaration['bootstrap_digest'] = projections_module.bytes_digest((root / output).read_bytes())
         inventory = {"repository": repo,
                      "obligations": [{
                          "identity": identity,
@@ -336,6 +337,59 @@ class ProjectionFixture(unittest.TestCase):
 
 @NEED_MNCS
 class AmbientWholeFileTests(ProjectionFixture):
+    def test_interrupted_replacement_recovers_after_source_advances(self):
+        from unittest.mock import patch
+        from mncs_env import projections, sessions
+        _, entered = self.enter('interrupted')
+        (self.target_doc / 'docs/rfcs/0002.md').write_text('# RFC 0002: source advance\n')
+        self.commit_all(self.target_doc, 'advance source before interrupted reconciliation')
+        session = sessions.Session.open(state_dir=self.state, session_id=entered['session_id'], backend='file')
+        session.revalidate()
+        original = projections.apply_expected_bytes
+        def interrupted(*args, **kwargs):
+            result = original(*args, **kwargs)
+            self.assertTrue(result[0], result)
+            raise RuntimeError('interrupted after atomic replacement')
+        try:
+            with patch.dict(os.environ, self.env), patch.object(projections, 'apply_expected_bytes', interrupted):
+                with self.assertRaisesRegex(RuntimeError, 'interrupted after'):
+                    projections.ambient_pass(session, only='target-doc:index')
+        finally:
+            session.close()
+        (self.target_doc / 'docs/rfcs/0003.md').write_text('# RFC 0003: newer source\n')
+        self.commit_all(self.target_doc, 'advance source after interrupted write')
+        code, recovered = self.enter('interrupted')
+        self.assertEqual(code, 0, recovered)
+        self.assertEqual(self.projection_summary(recovered)['pending'], 0, recovered)
+        self.assertEqual((self.target_doc/'docs/out.generated.md').read_bytes(),
+                         fixture_bytes(self.target_doc/'docs/rfcs'))
+
+    def test_concurrent_entries_converge_one_target_without_clobber(self):
+        from concurrent.futures import ThreadPoolExecutor
+        self.enter('concurrent-one')
+        (self.target_doc / 'docs/rfcs/0002.md').write_text('# RFC 0002: concurrent source\n')
+        self.commit_all(self.target_doc, 'advance concurrent source')
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(self.enter, ['concurrent-one', 'concurrent-two']))
+        for code, result in results:
+            self.assertEqual(code, 0, result)
+        _, current = self.enter('concurrent-one')
+        self.assertEqual(self.projection_summary(current)['pending'], 0)
+        self.assertEqual((self.target_doc/'docs/out.generated.md').read_bytes(),
+                         fixture_bytes(self.target_doc/'docs/rfcs'))
+
+    def test_missing_current_target_rebuilds_same_source_epoch(self):
+        self.enter('missing-current')
+        target = self.target_doc / 'docs/out.generated.md'
+        expected = target.read_bytes()
+        target.unlink()
+        code, result = self.enter('missing-current')
+        self.assertEqual(code, 0, result)
+        self.assertEqual(self.projection_summary(result)['reconciled'], 1, result)
+        self.assertEqual(target.read_bytes(), expected)
+        _, again = self.enter('missing-current')
+        self.assertEqual(self.projection_summary(again)['reconciled'], 0)
+
     def test_current_entry_converges_without_writes(self):
         before_doc = (self.target_doc / "docs/out.generated.md").read_bytes()
         before_region = (self.target_region / "README.md").read_bytes()
@@ -557,6 +611,30 @@ class DegradedProviderTests(ProjectionFixture):
 
 @NEED_MNCS
 class RegionTests(ProjectionFixture):
+    def test_manual_projected_region_edit_is_protected(self):
+        code, _ = self.enter('protected-region')
+        self.assertEqual(code, 0)
+        target = self.target_region / 'README.md'
+        original = target.read_bytes()
+        edited = original.replace(b'RENDER:', b'authored replacement:')
+        target.write_bytes(edited)
+        code, result = self.enter('protected-region')
+        self.assertEqual(code, 0, result)
+        self.assertIn('target-region:index', self.projection_summary(result)['pending_ids'])
+        self.assertEqual(target.read_bytes(), edited)
+
+    def test_authored_edit_is_preserved_byte_for_byte(self):
+        self.enter('authored-region')
+        target = self.target_region / 'README.md'
+        edited = target.read_bytes().replace(b'Human intro.', 'Durable 文書.\r\n'.encode())
+        target.write_bytes(edited)
+        (self.target_region / 'docs/rfcs/0002.md').write_text('# RFC 0002: actual source change\n')
+        self.commit_all(self.target_region, 'authored region and actual source update')
+        code, result = self.enter('authored-region')
+        self.assertEqual(code, 0, result)
+        self.assertNotIn('target-region:index', self.projection_summary(result)['pending_ids'])
+        self.assertIn('Durable 文書.\r\n'.encode(), target.read_bytes())
+
     def test_region_projection_preserves_prose(self):
         self.enter("prose")
         (self.target_region / "docs" / "rfcs" / "0002.md").write_text(
@@ -711,7 +789,7 @@ class DiscoveryTests(ProjectionFixture):
 
 
 class ClassifyOutputTests(unittest.TestCase):
-    def test_baseline_less_row_is_first_touch(self):
+    def test_baseline_less_occupied_target_is_protected(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "out.md").write_bytes(b"stale\n")
@@ -719,8 +797,8 @@ class ClassifyOutputTests(unittest.TestCase):
                 root, "out.md", b"fresh\n",
                 {"rendered_digest": None, "canonical_gen": 1,
                  "observed_gen": 0})
-            self.assertEqual(code, projections_module.OUTPUT_MISSING)
-            self.assertEqual(detail, "first-touch-adoption")
+            self.assertEqual(code, projections_module.OUTPUT_DIVERGED)
+            self.assertEqual(detail, "target-occupied")
 
     def test_recorded_baseline_still_catches_divergence(self):
         with tempfile.TemporaryDirectory() as directory:
