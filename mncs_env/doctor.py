@@ -620,7 +620,7 @@ def validate_fileside_epoch(record: dict[str, Any]) -> tuple[bool, str]:
     for name in sorted(repos):
         info = repos[name]
         path = Path(str(info.get("path", "")))
-        facts = workspace_module.quick_repo_facts(path)
+        facts = workspace_module.quick_repo_facts(path, _refresh=True)
         if facts is None or facts != info.get("facts"):
             return False, f"repo-changed:{name}"
         if workspace_module.manifest_content_digest(path) != info.get("manifests"):
@@ -735,7 +735,7 @@ def remediate_repository(session, repository: str, *, dry_run: bool = False,
         raise RemediationRefused(f"checkout for {repository} is missing: {checkout}",
                                  "remediation-checkout-missing", repository=repository)
     claim = _covering_claim(session, repository, str(checkout))
-    observed = workspace_module.inspect_repo(checkout)
+    observed = workspace_module.inspect_repo(checkout, _refresh=True)
     if observed is None:
         raise RemediationRefused(f"checkout for {repository} is not git-readable",
                                  "remediation-checkout-unreadable", repository=repository)

@@ -39,6 +39,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from . import workspace as workspace_module
+
 CANONICAL_BRANCHES = ("main", "master")
 DEFAULT_CANONICAL_REF = "origin/main"
 
@@ -49,7 +51,7 @@ class RetireError(Exception):
 
 def _git(repo: Path, *args: str, timeout: int = 60) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["git", "-C", str(repo), *args],
+        [workspace_module.git_binary(), "-C", str(repo), *args],
         capture_output=True, text=True, timeout=timeout,
     )
 

@@ -266,12 +266,15 @@ def _validate_declaration(entry: Any) -> str | None:
         renderer = entry['renderer']
         if not isinstance(renderer, dict) or not all(renderer.get(k) for k in ('identity', 'version', 'schema_version')):
             return 'bad-renderer-identity'
-        if not isinstance(entry['subjects'], list) or not 0 < len(entry['subjects']) <= 64:
+        if not isinstance(entry['subjects'], list) or not 0 < len(entry['subjects']) <= semantic_sources.MAX_SUBJECTS:
             return 'bad-subjects'
         for subject in entry['subjects']:
             if not isinstance(subject, dict) or not all(subject.get(k) for k in ('subject', 'slot', 'path')):
                 return 'bad-subject'
-            if subject['path'] == entry.get('output'):
+            repo = subject.get('repository')
+            if repo is not None and (not isinstance(repo, str) or not repo or '/' in repo or len(repo) > 128):
+                return 'bad-subject-repository'
+            if repo in (None, entry.get('repository')) and subject['path'] == entry.get('output'):
                 return 'projection-feedback-dependency'
             try:
                 semantic_sources.confined(Path('.'), subject['path'])
@@ -357,6 +360,34 @@ def validation_schema(session, declaration):
     return schema
 
 
+def _subject_resolver(session, declaration):
+    """Resolve subject repositories to workspace checkouts, selection-first."""
+    root = _workspace_root(session)
+    selected = session.snapshot.get('selected_checkouts') or {}
+    own = declaration.get('repository')
+    own_checkout = Path(declaration['checkout'])
+
+    def resolve(name):
+        if not isinstance(name, str) or not name or '/' in name or name in ('.', '..'):
+            return None
+        if name == own:
+            return own_checkout
+        entry = selected.get(name) or {}
+        checkout = Path(entry['path']) if entry.get('path') else None
+        if checkout is None:
+            try:
+                checkout = semantic_sources.confined(root, name)
+            except ValueError:
+                return None
+        if not checkout.is_absolute():
+            checkout = root / checkout
+        if not checkout.is_dir():
+            return None
+        return checkout
+
+    return resolve
+
+
 def source_state(session, declaration):
     binding = _session_binding(session, declaration['provider_capability']) or {}
     renderer = {key: binding.get(key) for key in ('contract_revision', 'fingerprint', 'source_identity')}
@@ -373,7 +404,8 @@ def source_state(session, declaration):
     schema = validation_schema(session, declaration)
     if schema is not None:
         renderer['validation_identity'] = semantic_sources.identity(schema)
-    return semantic_sources.observe(Path(declaration['checkout']), declaration, renderer)
+    return semantic_sources.observe(Path(declaration['checkout']), declaration, renderer,
+                                     resolve=_subject_resolver(session, declaration))
 
 
 def declaration_digest(session, declaration):
@@ -849,7 +881,13 @@ def apply_expected_bytes(session, declaration: dict[str, Any],
                                          delete=False) as handle:
             temporary = Path(handle.name)
             handle.write(expected)
+        # Temporary files land mode 600; projected repository files get
+        # deterministic human-facing permissions instead of umask accidents.
+        os.chmod(temporary, 0o644)
         os.replace(temporary, target)
+        # Our own write changed this checkout: later inspections in this
+        # process must re-observe rather than reuse pre-write git facts.
+        workspace_module.invalidate_repo_facts(checkout)
         try:
             written = target.read_bytes()
         except OSError:

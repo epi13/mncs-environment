@@ -35,6 +35,100 @@ def test_renderer_identity_changes_invalidate(tmp_path, field):
     assert sources.observe(tmp_path, d)['identity'] != first['identity']
 
 
+def test_cross_repository_subject_resolves_through_selection(tmp_path):
+    own = tmp_path / 'own'
+    sibling = tmp_path / 'sibling'
+    own.mkdir()
+    sibling.mkdir()
+    (own / 'state.json').write_text('{"capabilities": []}')
+    (sibling / 'manifest.json').write_text('{"contracts": ["a"]} ')
+    contract = declaration()
+    contract['repository'] = 'own-repo'
+    contract['subjects'].append({'subject': 'sibling:manifest',
+                                 'slot': 'peer', 'repository': 'sibling-repo',
+                                 'path': 'manifest.json',
+                                 'select': '/contracts'})
+    observed = sources.observe(own, contract,
+                               resolve=lambda name: sibling if name == 'sibling-repo' else None)
+    assert observed['values']['peer'] == ['a']
+    assert [entry['repository'] for entry in observed['sources']] == ['own-repo', 'sibling-repo']
+
+
+def test_unselected_repository_defers_observation(tmp_path):
+    (tmp_path / 'state.json').write_text('{"capabilities": []}')
+    contract = declaration()
+    contract['repository'] = 'own-repo'
+    contract['subjects'].append({'subject': 'missing:manifest',
+                                 'slot': 'peer', 'repository': 'missing-repo',
+                                 'path': 'manifest.json'})
+    with pytest.raises(ValueError, match='unavailable'):
+        sources.observe(tmp_path, contract, resolve=lambda name: None)
+
+
+def test_cross_repository_subject_requires_resolver(tmp_path):
+    (tmp_path / 'state.json').write_text('{"capabilities": []}')
+    contract = declaration()
+    contract['subjects'].append({'subject': 'sibling:manifest',
+                                 'slot': 'peer', 'repository': 'sibling-repo',
+                                 'path': 'manifest.json'})
+    with pytest.raises(ValueError, match='without resolver'):
+        sources.observe(tmp_path, contract)
+
+
+def test_optional_subject_tolerates_absence_and_recovers(tmp_path):
+    (tmp_path / 'state.json').write_text('{"capabilities": []}')
+    contract = declaration()
+    contract['subjects'].append({'subject': 'peer:manifest', 'slot': 'peer',
+                                 'path': 'absent.json', 'required': False})
+    observed = sources.observe(tmp_path, contract)
+    assert observed['values']['peer'] is None
+    assert observed['sources'][1]['status'] == 'missing'
+    (tmp_path / 'absent.json').write_text('{"contracts": []}')
+    revived = sources.observe(tmp_path, contract)
+    assert revived['values']['peer'] == {'contracts': []}
+    assert revived['identity'] != observed['identity']
+
+
+def test_required_subject_still_fails_closed_on_absence(tmp_path):
+    (tmp_path / 'state.json').write_text('{"capabilities": []}')
+    contract = declaration()
+    contract['subjects'].append({'subject': 'peer:manifest', 'slot': 'peer',
+                                 'path': 'absent.json'})
+    with pytest.raises(OSError):
+        sources.observe(tmp_path, contract)
+
+
+def test_optional_subject_tolerates_unparseable_content(tmp_path):
+    (tmp_path / 'state.json').write_text('{"capabilities": []}')
+    (tmp_path / 'broken.json').write_text('{nope')
+    contract = declaration()
+    contract['subjects'].append({'subject': 'peer:manifest', 'slot': 'peer',
+                                 'path': 'broken.json', 'required': False})
+    observed = sources.observe(tmp_path, contract)
+    assert observed['values']['peer'] is None
+    assert observed['sources'][1]['status'] == 'invalid'
+
+
+def test_declaration_bugs_fail_loud_even_when_optional(tmp_path):
+    (tmp_path / 'state.json').write_text('{"capabilities": []}')
+    contract = declaration()
+    contract['subjects'].append({'subject': 'peer:manifest', 'slot': 'peer',
+                                 'path': 'state.json', 'format': 'bogus',
+                                 'required': False})
+    with pytest.raises(ValueError, match='unsupported'):
+        sources.observe(tmp_path, contract)
+
+
+def test_explicit_own_repository_output_is_feedback(tmp_path):
+    contract = declaration()
+    contract['output'] = 'state.json'
+    contract['subjects'][0]['repository'] = 'own-repo'
+    contract['repository'] = 'own-repo'
+    (tmp_path / 'state.json').write_text('{"capabilities": []}')
+    with pytest.raises(ValueError, match='feedback'):
+        sources.observe(tmp_path, contract)
+
+
 def test_adoption_witness_does_not_change_semantic_identity(tmp_path):
     (tmp_path / 'state.json').write_text('{"capabilities": []}')
     first = sources.observe(tmp_path, declaration())

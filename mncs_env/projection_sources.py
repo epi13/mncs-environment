@@ -7,7 +7,8 @@ from pathlib import Path
 
 SCHEMA = 'mncs.semantic-projection/1'
 MAX_BYTES = 8 * 1024 * 1024
-MAX_SUBJECTS = 64
+# Aggregators fan out over many repositories; total cost stays byte-bounded.
+MAX_SUBJECTS = 128
 
 
 def identity(value):
@@ -36,38 +37,74 @@ def select(value, pointer):
     return value
 
 
-def observe(checkout, declaration, renderer_identity=None):
-    """Exact selected values determine epochs; unrelated fields do not."""
+def observe(checkout, declaration, renderer_identity=None, resolve=None):
+    """Exact selected values determine epochs; unrelated fields do not.
+
+    Subjects naming another repository resolve through `resolve` (session
+    selection first, workspace confinement as fallback); without a
+    resolver only own-checkout subjects are observable.
+    """
     subjects = declaration['subjects']
     if not isinstance(subjects, list) or not 0 < len(subjects) <= MAX_SUBJECTS:
         raise ValueError('subject count outside bounded contract')
+    own = declaration.get('repository')
+    output = declaration.get('output')
     values, sources, total = {}, [], 0
     for subject in subjects:
-        path = confined(checkout, subject['path'])
-        with path.open('rb') as handle:
-            raw = handle.read(MAX_BYTES - total + 1)
-        total += len(raw)
-        if total > MAX_BYTES:
-            raise ValueError('subject observation exceeds byte bound')
+        slot_repo = subject.get('repository') or own
+        if slot_repo and slot_repo != own and resolve is None:
+            raise ValueError('cross-repository subject without resolver')
+        slot_checkout = checkout
+        if slot_repo and slot_repo != own:
+            slot_checkout = resolve(slot_repo)
+            if slot_checkout is None:
+                raise ValueError('subject repository unavailable: %s' % slot_repo)
+        if output and slot_repo == own and subject['path'] == output:
+            raise ValueError('projection feedback dependency')
+        optional = subject.get('required', True) is False
+        status = 'present'
+        path = confined(Path(slot_checkout), subject['path'])
+        try:
+            with path.open('rb') as handle:
+                raw = handle.read(MAX_BYTES - total + 1)
+        except OSError:
+            if not optional:
+                raise
+            raw = None
+            status = 'missing'
+        value = None
         kind = subject.get('format', 'json')
-        if kind == 'json':
-            value = select(json.loads(raw), subject.get('select', ''))
-        else:
-            if subject.get('select'):
-                raise ValueError('only JSON observations accept a pointer')
-            if kind == 'utf-8':
-                value = raw.decode('utf-8')
-            elif kind == 'digest':
-                value = 'sha256:' + hashlib.sha256(raw).hexdigest()
-            else:
-                raise ValueError('unsupported subject observation format')
+        pointer = subject.get('select', '')
+        if kind not in ('json', 'utf-8', 'digest'):
+            raise ValueError('unsupported subject observation format')
+        if pointer and kind != 'json':
+            raise ValueError('only JSON observations accept a pointer')
+        if pointer and not pointer.startswith('/'):
+            raise ValueError('subject selector must be an RFC 6901 JSON pointer')
+        if raw is not None:
+            total += len(raw)
+            if total > MAX_BYTES:
+                raise ValueError('subject observation exceeds byte bound')
+            try:
+                if kind == 'json':
+                    value = select(json.loads(raw), pointer)
+                elif kind == 'utf-8':
+                    value = raw.decode('utf-8')
+                else:
+                    value = 'sha256:' + hashlib.sha256(raw).hexdigest()
+            except (ValueError, KeyError, IndexError, TypeError, UnicodeDecodeError):
+                if not optional:
+                    raise
+                value = None
+                status = 'invalid'
         slot = subject['slot']
         if slot in values:
             raise ValueError('duplicate subject slot')
         values[slot] = value
         sources.append({'subject': subject['subject'], 'slot': slot,
-                        'path': subject['path'], 'format': kind, 'select': subject.get('select', ''),
-                        'identity': identity(value)})
+                        'repository': slot_repo, 'path': subject['path'],
+                        'format': kind, 'select': subject.get('select', ''),
+                        'status': status, 'identity': identity(value)})
     # Adoption witnesses are not semantic content: a view embedding its own
     # source identity could otherwise never match its declared preimage.
     contract = {key: value for key, value in declaration.items()

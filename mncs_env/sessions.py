@@ -1094,7 +1094,7 @@ class Session:
             selected = self.snapshot.get("selected_checkouts", {}).get(repository)
             if repo_facts is None and isinstance(selected, dict) and selected.get("path"):
                 root = Path(self.snapshot.get("workspace", {}).get("root", "."))
-                inspected = workspace_module.inspect_repo((root / selected["path"]).resolve())
+                inspected = workspace_module.inspect_repo((root / selected["path"]).resolve(), _refresh=True)
                 if inspected is None or inspected.git_error:
                     raise LifecycleError("selected checkout observation unavailable at mutation boundary")
                 record = inspected.record()

@@ -24,6 +24,8 @@ import threading
 from typing import Any
 from urllib.parse import urlparse
 
+from . import workspace as workspace_module
+
 DEFAULT_HOST = "github.com"
 DEFAULT_TIMEOUT = 5.0
 
@@ -141,7 +143,7 @@ def check_git(remote: str, *, timeout: float = 25.0) -> dict[str, Any]:
     env["GIT_TERMINAL_PROMPT"] = "0"
     try:
         completed = subprocess.run(
-            ["git", "ls-remote", remote, "HEAD"],
+            [workspace_module.git_binary(), "ls-remote", remote, "HEAD"],
             capture_output=True, text=True, timeout=timeout, env=env,
         )
     except FileNotFoundError:

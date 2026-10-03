@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Any
 
 from . import projection_store as store_module
+from . import workspace as workspace_module
 from .identity import digest_hex
 
 VERDICT_FAIL = 0
@@ -68,7 +69,7 @@ def utcnow() -> str:
 def _git(checkout: Path, *argv: str, timeout: int = 30) -> bytes | None:
     try:
         completed = subprocess.run(
-            ["git", "-C", str(checkout), *argv],
+            [workspace_module.git_binary(), "-C", str(checkout), *argv],
             capture_output=True, timeout=timeout,
             env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"})
     except (OSError, subprocess.SubprocessError):
@@ -193,7 +194,8 @@ def _ignored(checkout: Path, paths: list[str]) -> set[str]:
         return set()
     try:
         completed = subprocess.run(
-            ["git", "-C", str(checkout), "check-ignore", "--stdin", "-z"],
+            [workspace_module.git_binary(), "-C", str(checkout),
+             "check-ignore", "--stdin", "-z"],
             input="\0".join(paths).encode(), capture_output=True, timeout=30)
     except (OSError, subprocess.SubprocessError):
         return set()

@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Any
 
 from . import verification as verification_module
+from . import workspace as workspace_module
 from .identity import digest_hex
 
 SCHEMA = "mncs.environment.actions/1"
@@ -168,7 +169,8 @@ def _subject_state(checkout: Path) -> tuple[str, str, str]:
         return "dirty", head, dirty
     try:
         completed = subprocess.run(
-            ["git", "-C", str(checkout), "branch", "-r", "--contains", head],
+            [workspace_module.git_binary(), "-C", str(checkout), "branch",
+             "-r", "--contains", head],
             capture_output=True, text=True, timeout=GIT_TIMEOUT_SECONDS,
             check=False)
     except (OSError, subprocess.SubprocessError):
@@ -190,7 +192,7 @@ def _dispatch_ref(checkout: Path, revision: str) -> str:
     """
     try:
         completed = subprocess.run(
-            ["git", "-C", str(checkout), "branch", "-r",
+            [workspace_module.git_binary(), "-C", str(checkout), "branch", "-r",
              "--points-at", revision, "--format=%(refname:short)"],
             capture_output=True, text=True, timeout=GIT_TIMEOUT_SECONDS,
             check=False)
