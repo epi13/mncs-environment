@@ -140,26 +140,41 @@ def observe(checkout, declaration, renderer_identity=None, resolve=None,
             continue
         if slot_repo and slot_repo != own and resolve is None:
             raise ValueError('cross-repository subject without resolver')
+        optional = subject.get('required', True) is False
+        slot = subject['slot']
+        if slot in values:
+            raise ValueError('duplicate subject slot')
         slot_checkout = checkout
         if slot_repo and slot_repo != own:
             slot_checkout = resolve(slot_repo)
             if slot_checkout is None:
-                raise ValueError('subject repository unavailable: %s' % slot_repo)
+                if not optional:
+                    raise ValueError('subject repository unavailable: %s' % slot_repo)
+                values[slot] = None
+                sources.append({'subject': subject['subject'], 'slot': slot,
+                                'repository': slot_repo, 'path': subject['path'],
+                                'format': kind, 'select': subject.get('select', ''),
+                                'status': 'missing', 'identity': identity(None),
+                                'reason': 'repository unavailable'})
+                continue
         if output and slot_repo == own and subject['path'] == output:
             raise ValueError('projection feedback dependency')
-        optional = subject.get('required', True) is False
         status = 'present'
+        reason = 'readable'
         path = confined(Path(slot_checkout), subject['path'])
         value = None
         if kind == 'json-dir':
-            records, consumed, dir_status, reason = _observe_json_dir(
+            records, consumed, dir_status, dir_reason = _observe_json_dir(
                 path, MAX_BYTES - total)
             total += consumed
             if dir_status == 'missing' and not optional:
                 raise OSError('subject directory unavailable: %s' % subject['path'])
             if dir_status == 'invalid' and not optional:
                 raise ValueError('subject directory invalid: %s' % subject['path'])
-            value, status = (records, dir_status) if dir_status == 'present' else (None, dir_status)
+            if dir_status == 'present':
+                value, status, reason = records, dir_status, dir_reason
+            else:
+                status, reason = dir_status, dir_reason
         else:
             try:
                 with path.open('rb') as handle:
@@ -168,20 +183,20 @@ def observe(checkout, declaration, renderer_identity=None, resolve=None,
                 if not optional:
                     raise
                 raw = None
-                status = 'missing'
+                status, reason = 'missing', 'file not present'
             if raw is not None:
                 total += len(raw)
                 if total > MAX_BYTES:
                     raise ValueError('subject observation exceeds byte bound')
                 value, status = _decode_subject(raw, kind, pointer, optional)
-        slot = subject['slot']
-        if slot in values:
-            raise ValueError('duplicate subject slot')
+                if status == 'invalid':
+                    reason = 'unparseable subject'
         values[slot] = value
         sources.append({'subject': subject['subject'], 'slot': slot,
                         'repository': slot_repo, 'path': subject['path'],
                         'format': kind, 'select': subject.get('select', ''),
-                        'status': status, 'identity': identity(value)})
+                        'status': status, 'identity': identity(value),
+                        'reason': reason})
     # Adoption witnesses are not semantic content: a view embedding its own
     # source identity could otherwise never match its declared preimage.
     contract = {key: value for key, value in declaration.items()
