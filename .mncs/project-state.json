@@ -1,0 +1,17 @@
+{
+  "schema_version": "mncs.project-intent/1",
+  "purpose": "mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration.",
+  "entry": [
+    "./scripts/mncs-env enter --consumer my-agent"
+  ],
+  "milestones": [
+    {
+      "id": "mncs-environment:projection-conformance",
+      "title": "Declared ambient projection surfaces satisfy their contract",
+      "subject_slot": "declarations",
+      "evidence": "projection-conformance",
+      "dependencies": [],
+      "blockers": []
+    }
+  ]
+}

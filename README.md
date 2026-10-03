@@ -1,5 +1,23 @@
 # mncs-environment
 
+<!-- MNCS:generated:begin -->
+## Project entry
+
+mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration.
+
+```bash
+./scripts/mncs-env enter --consumer my-agent
+```
+
+Declared capabilities (declarations do not establish execution health):
+
+- `ambient-projection-coherence/1` — semantic-projection-lifecycle-and-interpretation (experimental)
+- `workspace-discovery/1` — read-only-workspace-discovery (experimental)
+- `workspace-readiness/1` — read-only-workspace-readiness (experimental)
+
+Semantic sources and ownership: `.mncs/projections.json`.
+<!-- MNCS:generated:end -->
+
 Canonical machine-native development environment for assembling work intent, repository state, services, capabilities, triggers, memory, authority, provenance, and execution context into a coherent entry point for agents and other MNCS consumers.
 
 Enter from this checkout (or a subdirectory):

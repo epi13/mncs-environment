@@ -219,6 +219,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
                        "readiness": result["readiness"], "epoch": result["digest"],
                        "reused": result["reused"],
                        "elapsed_seconds": result.get("elapsed_seconds")}
+            projected = projections_module.ambient_pass(session)
+            payload['projections'] = projected['summary']
             out(payload)
             return 5 if result["summary"]["blockers"] else 0
         finally:
@@ -226,6 +228,15 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 
 def cmd_projections(args: argparse.Namespace) -> int:
+    if args.interpret:
+        if not args.repository:
+            return fail('--interpret requires --repository')
+        with closing(_open(args)) as session:
+            try:
+                out(projections_module.interpretation(session, args.repository, args.interpret))
+            except ValueError as error:
+                return fail(str(error))
+        return 0
     if args.evidence:
         with closing(_open(args)) as session:
             out(projections_module.read_evidence(session))
@@ -980,6 +991,8 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.set_defaults(func=cmd_doctor)
 
     projections = session_parser("projections", "ambient projection coherence pass with a terse summary")
+    projections.add_argument('--interpret', choices=('capabilities', 'dependencies', 'blockers', 'architecture', 'structure', 'why'))
+    projections.add_argument('--repository')
     projections.add_argument("--evidence", action="store_true",
                              help="print the full projection evidence trail instead of running a pass")
     projections.add_argument("--apply", default=None,

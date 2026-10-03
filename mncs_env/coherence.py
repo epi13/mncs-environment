@@ -125,7 +125,7 @@ def _native(session, function: str, rows: list[list[int]]) -> tuple[list[int], d
             raise ValueError('retained coherence call did not return')
         values = returned['returned'][0]['sequence']['values']
         codes = [int(value['integer']['value']) for value in values]
-        admitted = {0, 1} if function == 'scoped_events' else {0, 1, 2, 3} if function == 'route_batch' else {1, 2, 13}
+        admitted = {0, 1} if function == 'scoped_events' else {0, 1, 2, 3} if function == 'route_batch' else {0, 1, 2, 10, 13}
         if len(codes) != len(rows) or any(code not in admitted for code in codes):
             raise ValueError('incomplete retained coherence batch')
         if callable(getattr(session.store, 'put_record', None)):
@@ -146,7 +146,7 @@ def _native(session, function: str, rows: list[list[int]]) -> tuple[list[int], d
         raise ValueError("native Automation coherence decision unavailable")
     values = document["call"]["returned"][0]["sequence"]["values"]
     codes = [int(value["integer"]["value"]) for value in values]
-    admitted = {0, 1} if function == "scoped_events" else {0, 1, 2, 3} if function == "route_batch" else {1, 2, 13}
+    admitted = {0, 1} if function == "scoped_events" else {0, 1, 2, 3} if function == "route_batch" else {0, 1, 2, 10, 13}
     if len(codes) != len(rows) or any(code not in admitted for code in codes):
         raise ValueError("incomplete native coherence batch")
     receipt = {key: document["call"].get(key) for key in
@@ -207,20 +207,40 @@ def _event_mask(events: list[dict], spec: dict) -> int:
 
 def _file_events(session, events: list[dict]) -> list[dict]:
     files = [event for event in events if event["kind"] == "file.changed"]
+    if not files:
+        return [event for event in events if event['kind'] != 'file.changed']
+    from . import projections, projection_sources
+    root = Path(session.snapshot['workspace']['root'])
+    declarations, _ = projections.discover_selected_declarations(session, root)
+    targets = {(d['checkout'], d['output']): d for d in declarations}
     rows = []
     for event in files:
         name = event["path"]
         path = Path(name)
         declared = name in ("family-semantic-contracts-v1.json", "stdlib-manifest.json",
                             "dist/stdlib-bundle.json") or name.startswith(".mncs/")
-        rows.append([int(declared), int(path.suffix in (".md", ".txt", ".rst"))])
+        projection = targets.get((event['checkout'], name))
+        current = False
+        if projection:
+            shared = projections._read_shared_row(session, projection['id']) or {}
+            observed = projection_sources.output_identity(Path(event['checkout']), projection)
+            expected = (shared.get('source') or {}).get('owned_digest')
+            if expected is None:
+                expected = shared.get('rendered_digest')
+            current = observed is not None and observed == expected
+        rows.append([int(declared), int(path.suffix in (".md", ".txt", ".rst")),
+                     int(projection is not None), int(current)])
     # Classification is native; the host supplies filesystem spelling facts.
     codes = []
     for offset in range(0, len(rows), 16):
-        batch, _ = _native(session, "classify_files", rows[offset:offset + 16])
+        function = 'classify_projection_files' if targets else 'classify_files'
+        batch_rows = rows[offset:offset + 16]
+        if not targets:
+            batch_rows = [row[:2] for row in batch_rows]
+        batch, _ = _native(session, function, batch_rows)
         codes.extend(batch)
-    names = {1: "declaration.changed", 2: "source.changed", 13: "prose.changed"}
-    return [{**event, "kind": names[code]} for event, code in zip(files, codes)] + [
+    names = {1: "declaration.changed", 2: "source.changed", 10: 'projection.changed', 13: "prose.changed"}
+    return [{**event, "kind": names[code]} for event, code in zip(files, codes) if code != 0] + [
         event for event in events if event["kind"] != "file.changed"]
 
 

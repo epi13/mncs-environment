@@ -32,6 +32,7 @@ from . import capabilities as capabilities_module
 from . import claims as claims_module
 from . import projection_store as store_module
 from . import projection_verification as verification_module
+from . import projection_sources as semantic_sources
 from . import workspace as workspace_module
 from .identity import digest_hex
 from .persist import read_json, write_json
@@ -114,7 +115,7 @@ def _workspace_root(session) -> Path | None:
 
 def _collect_from_checkout(repository: str, child: Path,
                          declarations: list[dict],
-                         invalid: list[dict]) -> bool:
+                         invalid: list[dict], schema_path: Path | None = None) -> bool:
     """Collect one checkout's declarations; False when capped."""
     manifest_path = child / ".mncs" / "project.json"
     if not manifest_path.is_file():
@@ -126,17 +127,49 @@ def _collect_from_checkout(repository: str, child: Path,
                         "reason": "manifest-unreadable"})
         return True
     entries = manifest.get("projections") or []
+    inventory = manifest.get('projection_inventory')
+    if inventory:
+        try:
+            inventory_path = semantic_sources.confined(child, inventory)
+            published = json.loads(inventory_path.read_text())
+            if published.get('schema_version') != 'mncs.projection-inventory/1':
+                raise ValueError('unsupported projection inventory')
+            entries = list(entries) + published['projections']
+        except (OSError, ValueError, KeyError, TypeError):
+            invalid.append({'repository': repository, 'reason': 'inventory-unreadable'})
+            return True
     if not isinstance(entries, list):
         invalid.append({"repository": repository,
                         "reason": "projections-not-a-list"})
         return True
     for entry in entries:
         problem = _validate_declaration(entry)
+        if problem is None and entry.get('schema_version') == semantic_sources.SCHEMA:
+            try:
+                from jsonschema import Draft202012Validator
+                authority = schema_path or child.parent / 'MNCS-Commons/schemas/semantic-projection-1.schema.json'
+                schema = json.loads(authority.read_text())
+                Draft202012Validator(schema).validate(entry)
+            except Exception:
+                problem = 'projection-contract-invalid-or-unavailable'
         record = {"repository": repository, "checkout": str(child)}
         if problem is not None:
             record.update({"reason": problem,
                            "declaration": _summarize(entry)})
             invalid.append(record)
+            continue
+        if (any(d['id'] == entry['id'] for d in declarations)
+                or any(d.get('projection') == entry['id'] for d in invalid)):
+            invalid.append({'repository': repository, 'reason': 'duplicate-projection-identity',
+                            'projection': entry['id']})
+            declarations[:] = [d for d in declarations if d['id'] != entry['id']]
+            continue
+        if (any(d['checkout'] == str(child) and d['output'] == entry['output'] for d in declarations)
+                or any(d.get('checkout') == str(child) and d.get('output') == entry['output'] for d in invalid)):
+            invalid.append({'repository': repository, 'checkout': str(child),
+                'output': entry['output'], 'reason': 'overlapping-projection-ownership'})
+            declarations[:] = [d for d in declarations
+                if not (d['checkout'] == str(child) and d['output'] == entry['output'])]
             continue
         record.update(entry)
         declarations.append(record)
@@ -211,8 +244,12 @@ def discover_selected_declarations(
             invalid.append({"repository": str(name),
                             "reason": "selection-unavailable"})
             continue
+        commons = selected.get('MNCS-Commons') or selected.get('mncs-commons') or {}
+        owner = Path(commons['path']) if commons.get('path') else workspace_root / 'MNCS-Commons'
+        if not owner.is_absolute():
+            owner = workspace_root / owner
         if not _collect_from_checkout(str(name), resolved, declarations,
-                                      invalid):
+                                      invalid, owner / 'schemas/semantic-projection-1.schema.json'):
             return declarations, invalid
     return declarations, invalid
 
@@ -220,6 +257,26 @@ def discover_selected_declarations(
 def _validate_declaration(entry: Any) -> str | None:
     if not isinstance(entry, dict):
         return "declaration-not-an-object"
+    if entry.get('schema_version') == semantic_sources.SCHEMA:
+        for key in ('owner', 'subjects', 'renderer', 'validation', 'manual_edit_policy'):
+            if not entry.get(key):
+                return f'missing-{key}'
+        if entry['manual_edit_policy'] != 'protected':
+            return 'unsupported-manual-edit-policy'
+        renderer = entry['renderer']
+        if not isinstance(renderer, dict) or not all(renderer.get(k) for k in ('identity', 'version', 'schema_version')):
+            return 'bad-renderer-identity'
+        if not isinstance(entry['subjects'], list) or not 0 < len(entry['subjects']) <= 64:
+            return 'bad-subjects'
+        for subject in entry['subjects']:
+            if not isinstance(subject, dict) or not all(subject.get(k) for k in ('subject', 'slot', 'path')):
+                return 'bad-subject'
+            if subject['path'] == entry.get('output'):
+                return 'projection-feedback-dependency'
+            try:
+                semantic_sources.confined(Path('.'), subject['path'])
+            except ValueError:
+                return 'subject-escapes-checkout'
     for key in ("id", "template", "inputs", "output",
                 "provider_capability", "render_argv", "policy"):
         if key not in entry:
@@ -247,6 +304,9 @@ def _validate_declaration(entry: Any) -> str | None:
         path = Path(str(rel))
         if path.is_absolute() or ".." in path.parts:
             return "path-escapes-checkout"
+    output = Path(entry['output'])
+    if any(output == Path(rel) or output.is_relative_to(Path(rel)) for rel in entry['inputs']):
+        return 'projection-feedback-dependency'
     return None
 
 
@@ -283,6 +343,53 @@ def input_digest(checkout: Path, inputs: list[str]) -> str | None:
     return "sha256:" + digest.hexdigest()
 
 
+def validation_schema(session, declaration):
+    reference = (declaration.get('validation') or {}).get('schema_ref')
+    if not reference:
+        return None
+    root = _workspace_root(session)
+    selected = session.snapshot.get('selected_checkouts') or {}
+    checkout = Path(selected.get(reference['repository'], {}).get('path')
+                    or semantic_sources.confined(root, reference['repository']))
+    schema = json.loads(semantic_sources.confined(checkout, reference['path']).read_text())
+    if schema.get('$id') != reference['identity']:
+        raise ValueError('validation authority identity moved')
+    return schema
+
+
+def source_state(session, declaration):
+    binding = _session_binding(session, declaration['provider_capability']) or {}
+    renderer = {key: binding.get(key) for key in ('contract_revision', 'fingerprint', 'source_identity')}
+    provider_root = binding.get('provider_root')
+    if provider_root:
+        root = Path(provider_root)
+        manifest = json.loads((root / '.mncs/project.json').read_text())
+        contract = declaration['provider_capability'].split(':', 1)[1]
+        descriptor = next(item for item in manifest['contracts']['provides'] if item['contract'] == contract)
+        renderer['descriptor'] = semantic_sources.identity(descriptor)
+        renderer['inputs'] = input_digest(root, descriptor.get('fingerprint_sources', []))
+        if renderer['inputs'] is None:
+            raise ValueError('renderer source unavailable')
+    schema = validation_schema(session, declaration)
+    if schema is not None:
+        renderer['validation_identity'] = semantic_sources.identity(schema)
+    return semantic_sources.observe(Path(declaration['checkout']), declaration, renderer)
+
+
+def declaration_digest(session, declaration):
+    if declaration.get('schema_version') == semantic_sources.SCHEMA:
+        try:
+            return source_state(session, declaration)['identity']
+        except (OSError, ValueError, KeyError, TypeError, IndexError):
+            return None
+    source = input_digest(Path(declaration['checkout']), declaration['inputs'])
+    if source is None:
+        return None
+    # Renderer/schema/ownership changes are real semantic invalidations too.
+    return semantic_sources.identity({'source': source, 'declaration': {
+        k: v for k, v in declaration.items() if k not in ('checkout', 'repository')}})
+
+
 def _dirty_digest(state) -> str:
     files = sorted(getattr(state, "dirty_files", None) or [])
     return digest_hex({"dirty": bool(getattr(state, "dirty", False)),
@@ -317,6 +424,19 @@ def repo_facts(session, repository: str, checkout: Path,
         branch_code = BRANCH_FOREIGN
     else:
         branch_code = BRANCH_UNKNOWN
+    # A worktree claim is explicit branch ownership. A path claim alone does
+    # not grant ownership of an agent's branch or unrelated dirty sources.
+    try:
+        for holder in claims_module.active_claims(session.store.read_claims()).values():
+            scope = holder.get('scope') or {}
+            if (holder.get('session_id') == session.session_id
+                    and holder.get('repository') == repository
+                    and scope.get('kind') == 'worktree'
+                    and scope.get('checkout') == str(checkout.resolve())
+                    and scope.get('branch') == branch):
+                branch_code = BRANCH_MAINLINE
+    except (OSError, ValueError):
+        pass
     dirty_files = [_porcelain_path(line) for line in
                    (getattr(state, "dirty_files", None) or [])]
     if not getattr(state, "dirty", False):
@@ -414,6 +534,35 @@ def request_plan(session, request: dict[str, Any]) -> dict[str, Any] | None:
     return envelope
 
 
+
+def diagnose_projection(session, declaration, health, repair):
+    """Consume Doctor's native health/repair verdict; no host diagnosis law."""
+    capability = 'mncs-doctor:projection-health'
+    binding = _session_binding(session, capability)
+    if binding is None or binding.get('availability', {}).get('status') != 'available':
+        return None
+    try:
+        response = session.invoke(capability, ['--facts-json', json.dumps(
+            {'health': health, 'repair': repair})], timeout_seconds=120)
+        if response.get('status') != 'ok':
+            return None
+        envelope = json.loads(response['stdout'])
+        if envelope.get('schema_version') != 'mncs.projection-health/1':
+            return None
+        for receipt in envelope.get('provenance', []):
+            if callable(getattr(session.store, 'put_record', None)):
+                for item in (receipt.get('build'), receipt):
+                    if not isinstance(item, dict):
+                        continue
+                    address = ('projection-receipt:' + item['identity']).encode()
+                    schema = item['schema_version'].encode()
+                    if session.store.get_record(schema, address) is None:
+                        session.store.put_record(schema, address, item)
+        return {k: v for k, v in envelope.items() if k != 'provenance'}
+    except (OSError, ValueError, KeyError, RuntimeError):
+        return None
+
+
 def render_projection(session, declaration: dict[str, Any], checkout: Path,
                       tag: str) -> tuple[bytes | None, str]:
     """Render projection bytes to the session artifact directory."""
@@ -424,9 +573,41 @@ def render_projection(session, declaration: dict[str, Any], checkout: Path,
     if binding.get("availability", {}).get("status") != "available":
         return None, "provider-unavailable"
     directory = _artifact_directory(session, "renders")
+    semantic_path = directory / f"{digest_hex(declaration['id'])}.semantic.json"
+    if declaration.get('schema_version') == semantic_sources.SCHEMA:
+        semantic_path.write_text(json.dumps(source_state(session, declaration),
+                                 sort_keys=True, ensure_ascii=False))
+        # The semantic renderer protocol returns content. Projection
+        # declarations cannot smuggle provider-specific write arguments into
+        # ambient execution; only Environment writes claimed target bytes.
+        argv = ['semantic-project', '--state', str(semantic_path), '--route',
+                declaration['renderer']['identity'], '--result-envelope']
+        try:
+            result = session.invoke(capability, argv, timeout_seconds=120)
+            if result.get('status') != 'ok':
+                return None, 'semantic-render-failed'
+            envelope = json.loads(result['stdout'])
+            if (envelope.get('schema_version') != 'mncs.projection-render-result/1'
+                    or envelope.get('source_identity') != source_state(session, declaration)['identity']
+                    or envelope.get('renderer') != declaration['renderer']['identity']
+                    or envelope.get('version') != declaration['renderer']['version']):
+                return None, 'semantic-render-identity-mismatch'
+            for receipt in envelope.get('native', []):
+                if callable(getattr(session.store, 'put_record', None)):
+                    for item in (receipt.get('build'), receipt):
+                        if not isinstance(item, dict):
+                            continue
+                        key = ('projection-receipt:' + item['identity']).encode()
+                        schema = item['schema_version'].encode()
+                        if session.store.get_record(schema, key) is None:
+                            session.store.put_record(schema, key, item)
+            return envelope['content'].encode('utf-8'), 'ok'
+        except (OSError, ValueError, KeyError, RuntimeError):
+            return None, 'semantic-render-unavailable'
     rendered_path = directory / f"{digest_hex(declaration['id'])}.{tag}.bin"
     argv = [str(item).replace("{checkout}", str(checkout)).replace(
-        "{artifact}", str(directory)) for item in declaration["render_argv"]]
+        "{artifact}", str(directory)).replace('{semantic}', str(semantic_path))
+        for item in declaration["render_argv"]]
     # The declaration names {artifact}/rendered.md; redirect per-tag so
     # double-render validation never aliases the same path.
     argv = [item.replace("rendered.md", rendered_path.name) for item in argv]
@@ -450,7 +631,7 @@ def render_cached(session, declaration: dict[str, Any], checkout: Path,
     # different bytes, so the declaration joins the cache key.
     decl_key = digest_hex(
         {key: declaration.get(key) for key in
-         ("template", "provider_capability", "render_argv")})
+         ("template", "provider_capability", "render_argv", "renderer", "validation")})
     cached = cache_dir / (digest_hex(str(declaration["id"]))[:16] + "."
                             + decl_key + "."
                             + digest.replace(":", "_") + ".bin")
@@ -467,6 +648,8 @@ def render_cached(session, declaration: dict[str, Any], checkout: Path,
         return None, reason, False
     if first != second:
         return None, "render-nondeterministic", False
+    if declaration_digest(session, declaration) != digest:
+        return None, 'inputs-moved-before-commit', False
     try:
         cached.write_bytes(first)
         _prune_cache(cache_dir)
@@ -497,13 +680,15 @@ def classify_output(checkout: Path, output: str, fresh: bytes,
         return OUTPUT_MISSING, "output-missing"
     if current == fresh:
         return OUTPUT_MATCHES_FRESH, "matches-fresh"
+    if row and bytes_digest(current) == (row.get('pending') or {}).get('expected_digest'):
+        return OUTPUT_MATCHES_LAST_RENDER, 'interrupted-owned-write'
     if row is None or not (row or {}).get("rendered_digest"):
         # First touch of a declared machine-owned output: the
         # declaration authorizes adoption; afterwards the recorded
         # baseline protects against hand-edits. Deferred passes leave
         # rows without a rendered baseline, so absence of a baseline
         # is first touch however the row came to exist.
-        return OUTPUT_MISSING, "first-touch-adoption"
+        return OUTPUT_DIVERGED, "target-occupied"
     if row.get("rendered_digest") and bytes_digest(current) == row.get(
             "rendered_digest"):
         return OUTPUT_MATCHES_LAST_RENDER, "matches-last-render"
@@ -571,8 +756,7 @@ def _revalidate_for_commit(session, declaration: dict[str, Any],
     classified output preimage are re-observed, and any drift aborts
     the commit so B-derived bytes are never recorded as digest A.
     """
-    current = input_digest(
-        checkout, [str(item) for item in declaration["inputs"]])
+    current = declaration_digest(session, declaration)
     if current != digest:
         return False, "inputs-moved-before-commit"
     output = str(declaration["output"])
@@ -802,14 +986,12 @@ def _epoch_inputs(session, declarations: list[dict],
             session, declaration, digests.get(projection_id))
     return {
         "declarations": {declaration["id"]: digest_hex(
-            {key: declaration[key] for key in
-             ("template", "inputs", "output", "output_kind",
-              "provider_capability", "render_argv", "policy")
-             if key in declaration} |
-            ({"verification": declaration["verification"]}
-             if declaration.get("verification") is not None else {}))
+            {key: value for key, value in declaration.items()
+             if key not in ('repository', 'checkout')})
             for declaration in declarations},
         "digests": digests,
+        "outputs": {d['id']: semantic_sources.output_identity(Path(d['checkout']), d)
+                    for d in declarations},
         "repos": repos,
         "claims": claims_digest,
         "bindings": bindings,
@@ -839,16 +1021,23 @@ def ambient_pass(session, *, mode: str = "ambient",
                            invalid, mode,
                            {"reason": f"unknown-projection:{only}"},
                            f"unknown:{only}")
-    digests = {declaration["id"]: input_digest(
-        Path(str(declaration["checkout"])),
-        [str(item) for item in declaration["inputs"]])
+    digests = {declaration["id"]: declaration_digest(session, declaration)
         for declaration in declarations}
+    from .structure import inspect_structure
+    structure = {d['repository']: inspect_structure(session, Path(d['checkout'])) for d in declarations}
+    for d in declarations:
+        health = structure[d['repository']]
+        if health['state'] not in ('pass', 'not-declared'):
+            digests[d['id']] = None
     epoch_inputs = _epoch_inputs(session, declarations, digests)
+    epoch_inputs['structure'] = {name: {k: v for k, v in info.items() if k != 'roles'} for name, info in structure.items()}
     epoch = digest_hex(epoch_inputs)
     stored = session.snapshot.get("projection_epoch") or {}
     if stored.get("epoch") == epoch and mode == "ambient":
         summary = dict(stored.get("summary") or {})
         summary["epoch_reused"] = True
+        summary['reconciled'] = 0
+        summary['persisted'] = False
         summary["elapsed_seconds"] = round(time.monotonic() - clock_started,
                                            3)
         return {"summary": summary, "reused": True,
@@ -860,9 +1049,58 @@ def ambient_pass(session, *, mode: str = "ambient",
     # The stored epoch describes the post-pass world: shared rows are
     # both an input and an output of the pass, so caching the
     # pre-pass state would never hit after a pass that wrote.
-    post_epoch = digest_hex(_epoch_inputs(session, declarations, digests))
+    post_inputs = _epoch_inputs(session, declarations, digests)
+    post_inputs["structure"] = epoch_inputs["structure"]
+    post_epoch = digest_hex(post_inputs)
     return _finish(session, started, clock_started, results, rows,
                    invalid, mode, None, post_epoch)
+
+
+def interpretation(session, repository, route):
+    """Ephemeral query over the same canonical subjects as outward views."""
+    root = _workspace_root(session)
+    if root is None:
+        raise ValueError('workspace unavailable')
+    declarations, invalid = discover_selected_declarations(session, root)
+    candidates = [d for d in declarations if d['repository'] == repository
+                  and d.get('schema_version') == semantic_sources.SCHEMA]
+    if not candidates:
+        raise ValueError('repository has no semantic projection declaration')
+    if route == 'structure':
+        from .structure import inspect_structure
+        return inspect_structure(session, Path(candidates[0]['checkout']))
+    wanted = 'human.roadmap' if route == 'blockers' else 'machine.project-view'
+    declaration = next((d for d in candidates if d['renderer']['identity'] == wanted), None)
+    if declaration is None:
+        raise ValueError('no applicable semantic interpretation')
+    routes = {'capabilities': 'query.capabilities', 'dependencies': 'query.dependencies',
+              'blockers': 'query.blockers', 'architecture': 'human.structure'}
+    model = source_state(session, declaration)
+    if route == 'why':
+        row = _read_shared_row(session, declaration['id'])
+        actual = semantic_sources.output_identity(Path(declaration['checkout']), declaration)
+        previous = ((row.get('source') or {}).get('owned_digest') if row else None)
+        if previous is None and declaration.get('output_kind') == 'whole-file' and row:
+            previous = row.get('rendered_digest')
+        health = diagnose_projection(session, declaration,
+            [1, int(actual is not None), int(actual != 'malformed-region'),
+             int(previous is not None), int(actual == previous),
+             int(bool(row) and (row.get('source') or {}).get('renderer') == declaration['renderer']),
+             int(bool(row) and row.get('status') == STATUS_CURRENT),
+             int(bool(row) and row.get('canonical_digest') == model['identity']), 0], [1, 0, 1])
+        return {'declaration': declaration, 'current_semantic_state': model,
+                'last_verified': row, 'output_identity': actual, 'health': health,
+                'current': health.get('code') == 0}
+    directory = _artifact_directory(session, 'interpretations')
+    path = directory / 'semantic.json'
+    path.write_text(json.dumps(model, sort_keys=True, ensure_ascii=False))
+    response = session.invoke(declaration['provider_capability'], ['semantic-project',
+        '--state', str(path), '--route', routes[route]], timeout_seconds=120)
+    if response.get('status') != 'ok':
+        raise ValueError('semantic interpretation unavailable')
+    if route == 'architecture':
+        return {'interpretation': response['stdout'], 'source_identity': model['identity']}
+    return json.loads(response['stdout'])
 
 
 def _reconcile_one(session, declaration: dict[str, Any],
@@ -900,6 +1138,9 @@ def _reconcile_one(session, declaration: dict[str, Any],
         record.update({"verdict": VERDICT_UNKNOWN, "gate": GATE_DEFER,
                        "gate_reason": "inputs-unreadable",
                        "outcome": "deferred"})
+        if declaration.get('schema_version') == semantic_sources.SCHEMA:
+            record['health'] = diagnose_projection(session, declaration,
+                [0, 1, 1, 1, 1, 1, 0, 1, 0], [1, 1, 1])
         _retain_shared(session, rows, projection_id, shared,
                        int(shared.get("canonical_gen", 0)), observed,
                        None, STATUS_UNKNOWN, defer_count + 1,
@@ -916,9 +1157,12 @@ def _reconcile_one(session, declaration: dict[str, Any],
             on_disk = (checkout / str(declaration["output"])).read_bytes()
         except OSError:
             on_disk = None
+        owned_digest = semantic_sources.output_identity(checkout, declaration)
         if (on_disk is not None
                 and shared.get("rendered_digest") is not None
-                and bytes_digest(on_disk) == shared.get("rendered_digest")):
+                and (bytes_digest(on_disk) == shared.get("rendered_digest")
+                     or (declaration.get('output_kind') == 'region'
+                         and (shared.get('source') or {}).get('owned_digest') == owned_digest))):
             rows[projection_id] = _cache_row(shared)
             record.update(
                 {"verdict": int(shared.get("verdict", VERDICT_UNKNOWN)),
@@ -941,6 +1185,10 @@ def _reconcile_one(session, declaration: dict[str, Any],
         require_verified = 0
     source = {"repository": repository, "head": facts.get("head"),
               "branch": facts.get("branch_name"), "input_digest": digest}
+    if declaration.get('schema_version') == semantic_sources.SCHEMA:
+        semantic = source_state(session, declaration)
+        source.update({'semantic': semantic, 'owner': declaration['owner'],
+                       'renderer': declaration['renderer'], 'target': declaration['output']})
     record.update({"verdict": verdict, "evidence_id": evidence_id,
                    "verification": detail,
                    "require_verified": require_verified,
@@ -953,6 +1201,9 @@ def _reconcile_one(session, declaration: dict[str, Any],
         # render failure.
         record.update({"gate": GATE_DEFER, "gate_reason": f"render-{reason}",
                        "outcome": "deferred", "digest": digest})
+        if declaration.get('schema_version') == semantic_sources.SCHEMA:
+            record['health'] = diagnose_projection(session, declaration,
+                [1, 1, 1, 1, 1, 0, 0, 1, 0], [1, 1, 1])
         kept = _retain_shared(
             session, rows, projection_id, shared, canonical, observed,
             digest, (STATUS_FAILED if reason == "render-nondeterministic"
@@ -960,6 +1211,17 @@ def _reconcile_one(session, declaration: dict[str, Any],
             evidence_id, seen)
         if not kept:
             record.update({"gate_reason": "projection-state-conflict"})
+        return record
+    try:
+        semantic_sources.validate_output(fresh, declaration, schema=validation_schema(session, declaration))
+    except Exception as error:
+        record.update({'gate': GATE_DEFER, 'gate_reason': 'failed-validation',
+                       'outcome': 'deferred', 'validation_error': str(error)[:200]})
+        if declaration.get('schema_version') == semantic_sources.SCHEMA:
+            record['health'] = diagnose_projection(session, declaration,
+                [1, 1, 1, 1, 1, 1, 0, 0, 0], [1, 1, 1])
+        _retain_shared(session, rows, projection_id, shared, canonical, observed,
+                       digest, STATUS_FAILED, defer_count + 1, verdict, evidence_id, seen)
         return record
     if declaration.get("output_kind", "whole-file") == "region":
         target_kind = TARGET_REGION_IN_FILE
@@ -988,23 +1250,61 @@ def _reconcile_one(session, declaration: dict[str, Any],
         else:
             output_code, output_detail = classify_output(
                 checkout, str(declaration["output"]), expected, shared)
+            owned = semantic_sources.output_identity(checkout, declaration)
+            baseline = ((shared.get('pending') or {}).get('owned_digest')
+                        or (shared.get('source') or {}).get('owned_digest'))
+            # First touch of mixed files requires an exact declared preimage;
+            # later authored changes are free, projected changes are protected.
+            bootstrap = declaration.get('bootstrap_digest')
+            if baseline and owned != baseline:
+                output_code, output_detail = OUTPUT_DIVERGED, 'manual-divergence'
+            elif baseline and owned == baseline and output_code == OUTPUT_DIVERGED:
+                output_code, output_detail = OUTPUT_MATCHES_LAST_RENDER, 'authored-region-change'
+            elif not baseline and output_detail == 'target-occupied':
+                target_bytes = (checkout / declaration['output']).read_bytes()
+                if bytes_digest(target_bytes) == bootstrap:
+                    output_code, output_detail = OUTPUT_MATCHES_LAST_RENDER, 'declared-preimage'
+                else:
+                    expected = None
+                    output_detail = 'target-occupied'
+            if output_detail == 'manual-divergence':
+                expected = None
     else:
         target_kind = TARGET_WHOLE_FILE
         region_code = REGION_NOT_APPLICABLE
         expected = fresh
         output_code, output_detail = classify_output(
             checkout, str(declaration["output"]), expected, shared)
+        if output_detail == 'target-occupied' and declaration.get('bootstrap_digest'):
+            if bytes_digest((checkout / declaration['output']).read_bytes()) == declaration['bootstrap_digest']:
+                output_code, output_detail = OUTPUT_MATCHES_LAST_RENDER, 'declared-preimage'
     try:
         preimage = (checkout / str(declaration["output"])).read_bytes()
     except OSError:
         preimage = None
+    if declaration.get('schema_version') == semantic_sources.SCHEMA:
+        previous_renderer = (shared.get('source') or {}).get('renderer')
+        health = diagnose_projection(session, declaration,
+            [1, int(preimage is not None), int(output_detail != 'target-occupied'),
+             int(region_code not in (REGION_INVALID, REGION_MISSING) or target_kind == TARGET_WHOLE_FILE),
+             int(output_code != OUTPUT_DIVERGED), int(previous_renderer in (None, declaration['renderer'])),
+             int(digest == shared.get('canonical_digest') and observed == canonical), 1,
+             int(claimed['claim'] == CLAIM_FOREIGN)],
+            [1, int(claimed['claim'] != CLAIM_FOREIGN), 1])
+        record['health'] = health
+        if health is None or health.get('repair') == 2:
+            record.update({'outcome': 'deferred', 'gate_reason':
+                           health.get('status') if health else 'doctor-projection-unavailable'})
+            _retain_shared(session, rows, projection_id, shared, canonical, observed,
+                digest, STATUS_BLOCKED, defer_count + 1, verdict, evidence_id, seen)
+            return record
+        source['health'] = health
     splice_ok = 1 if (mode == "explicit"
                       or declaration.get("policy") == "ambient-safe") else 0
     request = {
         "projection": projection_id,
         "canonical_gen": canonical, "observed_gen": observed,
-        "inputs_changed": 1 if digest != shared.get(
-            "canonical_digest") else 0,
+        "inputs_changed": 0,
         "verdict": verdict, "require_verified": require_verified,
         "repo": facts["repo"], "branch": facts["branch"],
         "claim": claimed["claim"], "target": target_kind,
@@ -1094,6 +1394,7 @@ def _reconcile_one(session, declaration: dict[str, Any],
                 record.update(
                     {"gate_reason": "projection-state-conflict"})
             return record
+        source['owned_digest'] = semantic_sources.output_identity(checkout, declaration)
         adopted = _adopt_shared(
             session, rows, projection_id, shared,
             int(plan["new_canonical"]), digest, bytes_digest(expected),
@@ -1104,6 +1405,22 @@ def _reconcile_one(session, declaration: dict[str, Any],
             return record
         record.update({"outcome": "converged"})
         return record
+    # Publish the exact intended bytes before replacement. After interruption,
+    # only those bytes may be recognized as our own write, even if inputs moved.
+    pending_fields = {k: v for k, v in shared.items()
+                      if k not in ('version', 'schema_version', 'projection')}
+    pending_fields['pending'] = {'expected_digest': bytes_digest(expected),
+        'input_digest': digest, 'preimage_digest': bytes_digest(preimage) if preimage is not None else None,
+        'owned_digest': None}
+    if declaration.get('output_kind') == 'region':
+        begin, end = b'<!-- MNCS:generated:begin -->', b'<!-- MNCS:generated:end -->'
+        pending_fields['pending']['owned_digest'] = bytes_digest(
+            expected[expected.index(begin) + len(begin):expected.index(end)])
+    journal = _persist_shared_row(session, projection_id, pending_fields, int(shared['version']))
+    if journal is None:
+        record.update({'outcome': 'deferred', 'gate_reason': 'projection-state-conflict'})
+        return record
+    shared = journal
     applied, detail = apply_expected_bytes(
         session, declaration, checkout, expected, digest=digest,
         verdict=verdict, evidence_id=evidence_id, preimage=preimage)
@@ -1121,6 +1438,7 @@ def _reconcile_one(session, declaration: dict[str, Any],
                       {"projection": projection_id, "plan": plan,
                        "apply": detail})
         return record
+    source['owned_digest'] = semantic_sources.output_identity(checkout, declaration)
     adopted = _adopt_shared(
         session, rows, projection_id, shared, int(plan["new_canonical"]),
         digest, bytes_digest(expected), verdict, evidence_id, seen,
@@ -1166,6 +1484,12 @@ def _machine_outputs(session, repository: str,
     for entry in manifest.get("projections") or []:
         if isinstance(entry, dict) and entry.get("output"):
             outputs.append(str(entry["output"]))
+    if manifest.get('projection_inventory'):
+        try:
+            inventory = json.loads(semantic_sources.confined(checkout, manifest['projection_inventory']).read_text())
+            outputs.extend(str(entry['output']) for entry in inventory['projections'])
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
     return outputs
 
 
