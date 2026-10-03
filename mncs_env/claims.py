@@ -11,6 +11,15 @@ whose observed facts show unknown work requires an explicit adoption or
 recovery basis that records what was adopted. Liveness is derived from
 session activity, never renewed by the observer: quiet ownership goes
 stale and becomes recoverable, it is never seized silently.
+
+Recovery (`recovery` basis) supersedes an overlapping live claim only
+when the owner's session state shows it is safe: a terminal (dead)
+owner frees every scope, while a merely quiet or unknown owner frees
+only non-exclusive scopes. Exclusive repository scopes held by a live
+or quiet-but-undead owner still fail closed until TTL expiry. Every
+recovery is explicit, version-checked against races, and recorded with
+`recovered_from` provenance on both the superseding record and the new
+claim.
 """
 
 from __future__ import annotations
@@ -34,6 +43,12 @@ ADOPTION_BASES = (BASIS_RECOVERY, BASIS_ADOPTION)
 #: Quiet thresholds for derived liveness.
 ACTIVE_WINDOW = timedelta(minutes=15)
 STALE_WINDOW = timedelta(hours=1)
+
+#: Owner lifecycles that free every held scope immediately (dead owners).
+TERMINAL_LIFECYCLES = ("completed", "failed")
+
+#: Terminal record status written when a live claim is recovered.
+STATUS_SUPERSEDED = "superseded"
 
 
 def utcnow() -> str:
@@ -143,8 +158,8 @@ def _alive(record: dict[str, Any], now: datetime | None = None) -> bool:
         return False
 
 
-def active_claims(all_records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    """Latest live record per claim identity; released/expired drop out."""
+def _latest_by_identity(all_records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Latest record per claim identity regardless of status."""
     latest: dict[str, dict[str, Any]] = {}
     for raw in all_records:
         if not isinstance(raw, dict):
@@ -156,7 +171,13 @@ def active_claims(all_records: list[dict[str, Any]]) -> dict[str, dict[str, Any]
         current = latest.get(identity)
         if current is None or int(record.get("version", 0)) > int(current.get("version", 0)):
             latest[identity] = record
-    return {key: record for key, record in latest.items() if _alive(record)}
+    return latest
+
+
+def active_claims(all_records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Latest live record per claim identity; released/expired drop out."""
+    return {key: record for key, record in _latest_by_identity(all_records).items()
+            if _alive(record)}
 
 
 def holders(all_records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
@@ -211,6 +232,154 @@ def liveness(
     return "stale"
 
 
+def owner_state(store, session_id: str) -> dict[str, Any]:
+    """Best-effort owner session state from the authoritative session store.
+
+    Returns known/lifecycle/last_activity_at plus an error marker when the
+    owner cannot be determined. Callers fail closed on error: an unreadable
+    owner is never treated as dead.
+    """
+    state: dict[str, Any] = {"session_id": str(session_id), "known": False,
+                             "lifecycle": None, "last_activity_at": None,
+                             "error": None}
+    try:
+        snapshot = store.load_snapshot(session_id)
+    except Exception:
+        state["error"] = "session-state-unreadable"
+        return state
+    if not isinstance(snapshot, dict):
+        return state
+    state["known"] = True
+    lifecycle = snapshot.get("lifecycle")
+    state["lifecycle"] = str(lifecycle) if lifecycle is not None else None
+    try:
+        events = store.read_events(session_id)
+    except Exception:
+        state["error"] = "session-events-unreadable"
+        return state
+    latest: datetime | None = None
+    if isinstance(events, list):
+        for event in events:
+            if not isinstance(event, dict):
+                continue
+            seen = _parse_time(event.get("observed_at"))
+            if seen is not None and (latest is None or seen > latest):
+                latest = seen
+    if latest is None:
+        # Lifecycle transitions are genuine session activity too; a
+        # session that recently checkpointed or resumed is demonstrably
+        # alive even when its event log is unavailable.
+        history = snapshot.get("lifecycle_history")
+        if isinstance(history, list):
+            for transition in history:
+                if not isinstance(transition, dict):
+                    continue
+                seen = _parse_time(transition.get("at"))
+                if seen is not None and (latest is None or seen > latest):
+                    latest = seen
+    state["last_activity_at"] = (latest.isoformat(timespec="seconds") if latest else None)
+    return state
+
+
+def _freshness(age: timedelta) -> str:
+    if age <= ACTIVE_WINDOW:
+        return "active"
+    if age <= STALE_WINDOW:
+        return "idle"
+    return "stale"
+
+
+def classify(record: dict[str, Any], owner: dict[str, Any] | None, *,
+             now: datetime | None = None) -> dict[str, Any]:
+    """Explain one claim record as live/stale/recoverable/not-recoverable.
+
+    Verdicts `released`, `expired`, and `superseded` are informational (the
+    record blocks nothing). A `held`, unexpired record is `live` when its
+    owner shows recent activity, `recoverable` when the owner is dead or
+    the ownership went quietly stale on a non-exclusive scope, and
+    `not-recoverable` otherwise. `now` shifts only the quiet-age
+    comparison for inspection; TTL expiry always uses wall-clock time.
+    """
+    record = migrate_record(dict(record))
+    owner = dict(owner or {})
+    moment = now or datetime.now(timezone.utc)
+    claim_id = str(record.get("claim_id", ""))
+    holder = str(record.get("session_id", ""))
+    status = record.get("status")
+    base = {"claim_id": claim_id, "session_id": holder,
+            "owner_known": bool(owner.get("known")),
+            "owner_lifecycle": owner.get("lifecycle"),
+            "last_activity_at": owner.get("last_activity_at")}
+    if status == "released":
+        return {**base, "verdict": "released", "freshness": None,
+                "reason": "claim was released; it blocks nothing"}
+    try:
+        expired = datetime.fromisoformat(str(record["expires_at"])) <= moment
+    except (KeyError, ValueError):
+        expired = True
+    if expired:
+        return {**base, "verdict": "expired", "freshness": None,
+                "reason": "claim TTL elapsed; it blocks nothing"}
+    if status == STATUS_SUPERSEDED:
+        return {**base, "verdict": "superseded", "freshness": None,
+                "reason": "claim was superseded by recovery; it blocks nothing"}
+    if status != "held":
+        return {**base, "verdict": "not-recoverable", "freshness": None,
+                "reason": f"unrecognized claim status {status!r}; failing closed"}
+    lifecycle = owner.get("lifecycle")
+    if owner.get("error") and lifecycle not in TERMINAL_LIFECYCLES:
+        return {**base, "verdict": "not-recoverable", "freshness": None,
+                "reason": "owner session state is unreadable; failing closed"}
+    if lifecycle in TERMINAL_LIFECYCLES:
+        return {**base, "verdict": "recoverable", "freshness": "stale",
+                "reason": f"owner session {holder} is {lifecycle}; "
+                          "orphaned scope frees before TTL expiry"}
+    scope = record.get("scope") or {}
+    exclusive = bool(scope.get("exclusive", scope.get("kind") == "repository"))
+    seen = _parse_time(owner.get("last_activity_at"))
+    if seen is None:
+        acquired = _parse_time(record.get("acquired_at"))
+        if acquired is None:
+            return {**base, "verdict": "not-recoverable", "freshness": None,
+                    "reason": "no owner activity and no acquisition time; failing closed"}
+        age = moment - acquired
+        if owner.get("known"):
+            return {**base, "verdict": "not-recoverable",
+                    "freshness": _freshness(age),
+                    "reason": f"owner session {holder} shows no recorded activity "
+                              "and the claim is too fresh to judge"}
+        freshness = _freshness(age)
+        if freshness != "stale":
+            return {**base, "verdict": "not-recoverable", "freshness": freshness,
+                    "reason": "owner session is unknown but the claim is too fresh to judge"}
+        if exclusive:
+            return {**base, "verdict": "not-recoverable", "freshness": freshness,
+                    "reason": "owner session is unknown and exclusive scope needs "
+                              "a dead owner or TTL expiry"}
+        return {**base, "verdict": "recoverable", "freshness": freshness,
+                "reason": "owner session is unknown and the claim went quietly "
+                          "stale on a non-exclusive scope"}
+    freshness = _freshness(moment - seen)
+    if freshness in ("active", "idle"):
+        return {**base, "verdict": "live", "freshness": freshness,
+                "reason": f"owner session {holder} shows activity "
+                          f"({owner.get('last_activity_at')}); never seize live scope"}
+    if exclusive:
+        return {**base, "verdict": "not-recoverable", "freshness": freshness,
+                "reason": f"owner session {holder} is quiet but the exclusive scope "
+                          "needs a dead owner or TTL expiry"}
+    return {**base, "verdict": "recoverable", "freshness": freshness,
+            "reason": f"owner session {holder} went quietly stale; "
+                      "non-exclusive scope is recoverable"}
+
+
+def explain(record: dict[str, Any], store, *,
+            now: datetime | None = None) -> dict[str, Any]:
+    """Classify one record, resolving its owner from the session store."""
+    return classify(record, owner_state(store, record.get("session_id", "")),
+                    now=now)
+
+
 class ClaimConflict(Exception):
     """Raised when a scope overlaps another live session's scope."""
 
@@ -231,6 +400,71 @@ def _record(store, record: dict[str, Any]) -> dict[str, Any]:
     return record
 
 
+def _recover(store, victims: list[tuple[str, dict[str, Any]]], *,
+             session_id: str, consumer_id: str, reason: str,
+             now: datetime | None = None) -> list[dict[str, Any]]:
+    """Supersede recoverable victims with version-checked (CAS) writes.
+
+    Every victim is re-verified against a fresh read immediately before
+    its superseding write, and every write is re-verified after: a victim
+    that advanced (renewal, release, competing recovery) aborts the whole
+    recovery with ClaimConflict before any new claim is written.
+    """
+    from .session_store import ClaimVersionConflict
+    fresh = store.read_claims()
+    live = active_claims(fresh)
+    for victim_id, victim in victims:
+        latest = live.get(victim_id)
+        if latest is None or int(latest.get("version", 0)) != int(victim.get("version", 0)):
+            raise ClaimConflict(
+                f"recovery target {victim_id} changed during recovery; "
+                "re-evaluate before retrying")
+    moment = (now or datetime.now(timezone.utc)).isoformat(timespec="seconds")
+    written: list[dict[str, Any]] = []
+    for victim_id, victim in victims:
+        versions = [int(record.get("version", 0)) for record in fresh
+                    if str(record.get("claim_id", "")) == victim_id]
+        supersede = {
+            "schema_version": SCHEMA,
+            "claim_id": victim_id,
+            "version": (max(versions) + 1) if versions else 1,
+            "repository": str(victim.get("repository", "")),
+            "scope": victim.get("scope", {}),
+            "session_id": str(victim.get("session_id", "")),
+            "consumer_id": str(victim.get("consumer_id", "")),
+            "basis": str(victim.get("basis", "")),
+            "reason": str(victim.get("reason", "")),
+            "status": STATUS_SUPERSEDED,
+            "acquired_at": str(victim.get("acquired_at", "")),
+            "expires_at": str(victim.get("expires_at", "")),
+            "superseded_at": moment,
+            "provenance": {"recovered_by": session_id,
+                           "recovered_consumer": consumer_id,
+                           "recovered_from_version": int(victim.get("version", 0)),
+                           "recovery_reason": reason},
+        }
+        try:
+            written.append(_record(store, supersede))
+        except ClaimVersionConflict as error:
+            raise ClaimConflict(
+                f"lost recovery race for {victim_id}: {error}") from error
+    confirmed = _latest_by_identity(store.read_claims())
+    for ours in written:
+        current = confirmed.get(ours["claim_id"])
+        if current is None or current.get("identity") != ours.get("identity"):
+            raise ClaimConflict(
+                f"lost recovery race for {ours['claim_id']}; another session "
+                "superseded it concurrently")
+    return written
+
+
+def _conflict_text(claim_id: str, other_id: str, other: dict[str, Any],
+                   reason_: str) -> str:
+    return (f"{claim_id} overlaps {other_id} held by session "
+            f"{other.get('session_id')} (consumer {other.get('consumer_id')}, "
+            f"basis {other.get('basis')}): {reason_}")
+
+
 def acquire(
     store,
     *,
@@ -243,8 +477,16 @@ def acquire(
     scope: dict[str, Any] | None = None,
     checkout_facts: dict[str, Any] | None = None,
     workspace_root: str | None = None,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Claim a scope; conflicts and unknown-work adoption fail closed."""
+    """Claim a scope; conflicts and unknown-work adoption fail closed.
+
+    The `recovery` basis additionally supersedes overlapping live claims
+    whose owners classify as recoverable (dead, or quietly stale on a
+    non-exclusive scope). Every other basis fails closed on any live
+    overlap. `now` shifts only recovery quiet-age comparison; TTL expiry
+    always uses wall-clock time.
+    """
     allowed = (BASIS_EXPLICIT, BASIS_INTENT_SCOPE, BASIS_RECOVERY,
                BASIS_ADOPTION, BASIS_TRANSFER)
     if basis not in allowed:
@@ -262,16 +504,51 @@ def acquire(
     records = store.read_claims()
     live = active_claims(records)
     claim_id = claim_identity(repository, resolved)
+    conflicts = []
+    recovered: list[dict[str, Any]] = []
     for other_id, other in live.items():
         if other.get("session_id") == session_id:
             continue
         reason_ = scopes_conflict(resolved, other.get("scope", {}))
         if reason_ is not None:
+            conflicts.append((other_id, other, reason_))
+    if conflicts and basis == BASIS_RECOVERY:
+        assessments = []
+        for other_id, other, reason_ in conflicts:
+            verdict = explain(other, store, now=now)
+            assessments.append((other_id, other, reason_, verdict))
+        blocked = [item for item in assessments
+                   if item[3].get("verdict") != "recoverable"]
+        if blocked:
+            detail = "; ".join(
+                f"{other_id} held by {other.get('session_id')}: "
+                f"{verdict.get('verdict')} ({verdict.get('reason')})"
+                for other_id, other, _, verdict in blocked)
             raise ClaimConflict(
-                f"{claim_id} overlaps {other_id} held by session "
-                f"{other.get('session_id')} (consumer {other.get('consumer_id')}, "
-                f"basis {other.get('basis')}): {reason_}"
-            )
+                f"{claim_id} cannot recover overlapping scope: {detail}")
+        recovered = _recover(
+            store, [(other_id, other) for other_id, other, _, _ in assessments],
+            session_id=session_id, consumer_id=consumer_id, reason=reason,
+            now=now)
+        records = store.read_claims()
+        live = active_claims(records)
+        for other_id, other in live.items():
+            if other.get("session_id") == session_id:
+                continue
+            reason_ = scopes_conflict(resolved, other.get("scope", {}))
+            if reason_ is not None:
+                raise ClaimConflict(
+                    _conflict_text(claim_id, other_id, other, reason_) +
+                    " (acquired during recovery; re-evaluate before retrying)")
+    elif conflicts:
+        other_id, other, reason_ = conflicts[0]
+        try:
+            verdict = explain(other, store, now=now)
+            suffix = f" [{verdict.get('verdict')}: {verdict.get('reason')}]"
+        except Exception:
+            suffix = ""
+        raise ClaimConflict(
+            _conflict_text(claim_id, other_id, other, reason_) + suffix)
     facts = checkout_facts or {}
     dirty = bool(facts.get("dirty")) or bool(facts.get("foreign_signals"))
     if dirty and basis not in ADOPTION_BASES and not any(
@@ -290,7 +567,9 @@ def acquire(
         int(record.get("version", 0)) for record in records
         if str(record.get("claim_id", "")) == claim_id
     ]
-    now = datetime.now(timezone.utc)
+    # Record timestamps always use wall-clock time; the `now` parameter
+    # shifts only recovery quiet-age comparison, never TTL.
+    moment = datetime.now(timezone.utc)
     record = {
         "schema_version": SCHEMA,
         "claim_id": claim_id,
@@ -302,15 +581,30 @@ def acquire(
         "basis": basis,
         "reason": reason,
         "status": "held",
-        "acquired_at": now.isoformat(timespec="seconds"),
-        "expires_at": (now + timedelta(hours=ttl_hours)).isoformat(timespec="seconds"),
+        "acquired_at": moment.isoformat(timespec="seconds"),
+        "expires_at": (moment + timedelta(hours=ttl_hours)).isoformat(timespec="seconds"),
         "provenance": {"acquired_by": consumer_id},
     }
     if basis in ADOPTION_BASES:
         record["provenance"]["adopted_head"] = facts.get("head")
         record["provenance"]["adopted_dirty"] = facts.get("dirty")
         record["provenance"]["adopted_signals"] = facts.get("foreign_signals")
-    return _record(store, record)
+    if basis == BASIS_RECOVERY and recovered:
+        record["provenance"]["recovered_from"] = [
+            {"claim_id": str(item["claim_id"]),
+             "version": int(item["provenance"]["recovered_from_version"]),
+             "superseded_version": int(item["version"]),
+             "owner_session": str(item["session_id"])}
+            for item in recovered
+        ]
+    try:
+        return _record(store, record)
+    except Exception as error:
+        from .session_store import ClaimVersionConflict
+        if isinstance(error, ClaimVersionConflict):
+            raise ClaimConflict(
+                f"{claim_id} lost a concurrent acquisition race; retry") from error
+        raise
 
 
 def release(

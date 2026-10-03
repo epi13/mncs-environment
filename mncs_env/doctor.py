@@ -727,6 +727,10 @@ def remediate_repository(session, repository: str, *, dry_run: bool = False,
     Explicit only: ambient passes never touch repository content. Requires
     a live whole-checkout claim held by this session and refuses checkouts
     showing unknown work unless the claim records explicit adoption.
+
+    Execution and effect authority stay separate: the provider executes
+    from its own checkout, but the effect (write) check validates this
+    target checkout, which must be the session-claimed target.
     """
     binding = _remediation_binding(session)
     target = _target_checkout(session, repository)
@@ -754,8 +758,13 @@ def remediate_repository(session, repository: str, *, dry_run: bool = False,
         argv.extend(["--changed-path", changed])
     artifact_directory = _artifact_directory(session, str(binding.get("capability")))
     artifact_directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    effect_target: dict[str, Any] = {"repository": repository,
+                                     "checkout": str(checkout)}
+    if isinstance(target.get("branch"), str) and target["branch"]:
+        effect_target["branch"] = target["branch"]
     result = session.invoke(str(binding.get("capability")), argv, timeout_seconds=timeout_seconds,
-                            output_limit_bytes=64 * 1024)
+                            output_limit_bytes=64 * 1024,
+                            effect_target=effect_target)
     # Envelope over exit codes: a provider that ran to completion reports
     # findings, escalations, and even verification failure inside its
     # envelope. Only a missing or unparsable envelope is a refusal.
@@ -781,10 +790,18 @@ def remediate_repository(session, repository: str, *, dry_run: bool = False,
         raise RemediationRefused("remediation provider scope echo does not match the authorized checkout",
                                  "remediation-envelope-invalid", repository=repository,
                                  scope_target=echoed if isinstance(echoed, str) else None)
+    provenance = binding.get("provenance", {})
+    provider_checkout = provenance.get("checkout", {}) if isinstance(provenance, dict) else {}
+    executor = {"provider": binding.get("provider"),
+                "capability": binding.get("capability"),
+                "checkout": (provider_checkout.get("path")
+                             if isinstance(provider_checkout, dict) else None)
+                or binding.get("provider_root")}
     session._emit("doctor.repository-remediated", "environment",
                   {"repository": repository, "dry_run": dry_run,
                    "changed_paths": list(changed_paths or []),
-                   "summary": envelope.get("summary"), "remaining": envelope.get("remaining", [])[:8]})
+                   "summary": envelope.get("summary"), "remaining": envelope.get("remaining", [])[:8],
+                   "executor": executor, "effect_target": effect_target})
     doctor = session.snapshot.get("doctor")
     if not isinstance(doctor, dict):
         doctor = {"schema_version": DOCTOR_SCHEMA, "history": []}
@@ -793,7 +810,8 @@ def remediate_repository(session, repository: str, *, dry_run: bool = False,
                     "summary": envelope.get("summary"), "remaining": envelope.get("remaining", []),
                     "evidence": envelope.get("evidence"),
                     "exit_code": envelope.get("exit_code"),
-                    "provider_status": result.get("status")})
+                    "provider_status": result.get("status"),
+                    "executor": executor, "effect_target": effect_target})
     doctor.update({"schema_version": DOCTOR_SCHEMA, "history": history[-MAX_HISTORY:]})
     session.snapshot["doctor"] = doctor
     session._save()
@@ -801,7 +819,8 @@ def remediate_repository(session, repository: str, *, dry_run: bool = False,
             "summary": envelope.get("summary"), "remaining": envelope.get("remaining", []),
             "evidence": envelope.get("evidence"),
             "exit_code": envelope.get("exit_code"), "exit_meaning": envelope.get("exit_meaning"),
-            "provider_status": result.get("status")}
+            "provider_status": result.get("status"),
+            "executor": executor, "effect_target": effect_target}
 
 
 def remediate_family_change(session, identity: str, consumer: str, *,

@@ -598,6 +598,112 @@ class RepositoryRemediationTests(DoctorFixture):
             session.close()
 
 
+class RemediationEffectScopeTests(DoctorFixture):
+    """Effect/write authority targets the mutation checkout, not the provider."""
+
+    def open_session(self, session_id):
+        return sessions.Session.resume(state_dir=self.state, session_id=session_id, backend="file")
+
+    def make_target(self):
+        target = self.base / "target"
+        target.mkdir()
+        (target / "notes.txt").write_text("target content")
+        for argv in (["init", "-q", "-b", "main"], ["add", "."],
+                    ["-c", "user.name=Doctor Test", "-c", "user.email=doctor@example.invalid",
+                     "commit", "-qm", "target"]):
+            subprocess.run(["git", "-C", str(target), *argv], check=True, capture_output=True)
+        # Widen this session's workspace to the base directory so both the
+        # provider checkout (fixture) and the target checkout are selected.
+        config = json.loads(self.definition.read_text())
+        config["workspace_root"] = "../.."
+        self.definition.write_text(json.dumps(config))
+        return target
+
+    def inject_provider_binding(self, session):
+        from mncs_env import capabilities
+        binding = capabilities.bind(provider="fixture", capability="fixture:repository-remediation",
+                                    contract_revision="test", entrypoint="stub-remediate",
+                                    address="python:" + str(self.stub), effects=["write"],
+                                    provider_root=str(self.project))
+        binding["availability"] = {"status": "available", "reason": "test stub",
+                                   "code": "executable-present", "verification": "substrate",
+                                   "observed_at": "2026-01-01T00:00:00+00:00"}
+        session.snapshot["bindings"].append(binding)
+        session._save()
+
+    def test_repair_validates_target_checkout_not_provider(self):
+        target = self.make_target()
+        self.ready()
+        _, first = self.enter()
+        session = self.open_session(first["session_id"])
+        try:
+            self.inject_provider_binding(session)
+            # Provider checkout (fixture) is deliberately unclaimed and not
+            # writable; only the actual target checkout is claimed.
+            session.acquire_claim("target", reason="remediation target")
+            result = doctor.remediate_repository(session, "target")
+            self.assertEqual(result["summary"]["repaired"], 1)
+            self.assertEqual(result["remaining"], [])
+            holders = claims.holders(session.store.read_claims())
+            self.assertNotIn("fixture", holders)
+            invoked = [event for event in session._log()
+                       if event.get("type") == "capability.invoked"
+                       and event.get("payload", {}).get("capability") == "fixture:repository-remediation"]
+            self.assertEqual(len(invoked), 1)
+            payload = invoked[0]["payload"]
+            self.assertEqual(Path(payload["executor"]["checkout"]).resolve(), self.project.resolve())
+            self.assertEqual(Path(payload["effect_target"]["checkout"]).resolve(), target.resolve())
+            self.assertEqual(payload["effect_target"]["repository"], "target")
+            history = session.snapshot["doctor"]["history"]
+            self.assertEqual(history[-1]["effect_target"]["repository"], "target")
+        finally:
+            session.close()
+
+    def test_provider_claim_does_not_authorize_unclaimed_target(self):
+        self.make_target()
+        self.ready()
+        _, first = self.enter()
+        session = self.open_session(first["session_id"])
+        try:
+            self.inject_provider_binding(session)
+            session.acquire_claim("fixture", reason="provider checkout only")
+            with self.assertRaises(doctor.RemediationRefused) as raised:
+                doctor.remediate_repository(session, "target")
+            self.assertEqual(raised.exception.diagnostics["code"], "remediation-claim-required")
+        finally:
+            session.close()
+
+    def test_effect_target_outside_selection_is_denied(self):
+        self.make_target()
+        self.ready()
+        _, first = self.enter()
+        session = self.open_session(first["session_id"])
+        try:
+            self.inject_provider_binding(session)
+            session.acquire_claim("target", reason="remediation target")
+            outside = self.base / "outside"
+            outside.mkdir()
+            with self.assertRaises(sessions.AuthorityDenied):
+                session.invoke("fixture:repository-remediation", ["--target", str(outside)],
+                               effect_target={"repository": "target", "checkout": str(outside)})
+        finally:
+            session.close()
+
+    def test_effect_target_escaping_workspace_is_denied(self):
+        self.make_target()
+        self.ready()
+        _, first = self.enter()
+        session = self.open_session(first["session_id"])
+        try:
+            self.inject_provider_binding(session)
+            session.acquire_claim("target", reason="remediation target")
+            with self.assertRaises(sessions.AuthorityDenied):
+                session.invoke("fixture:repository-remediation", ["--target", "/tmp"],
+                               effect_target={"repository": "target", "checkout": "/tmp"})
+        finally:
+            session.close()
+
+
 class RecoveryBackoffTests(DoctorFixture):
     def open_session(self, session_id):
         return sessions.Session.resume(state_dir=self.state, session_id=session_id, backend="file")

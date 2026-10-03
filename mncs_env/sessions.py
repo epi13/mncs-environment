@@ -1212,6 +1212,104 @@ class Session:
             declared.add(declared_toolchain_env)
         return {key: value for key, value in contextual.items() if key not in declared}
 
+    def _executor_identity(self, binding: dict[str, Any]) -> dict[str, Any]:
+        """Attributable execution identity: provider plus its checkout."""
+        provenance = binding.get("provenance", {})
+        checkout = provenance.get("checkout", {}) if isinstance(provenance, dict) else {}
+        path = (checkout.get("path") if isinstance(checkout, dict) else None)
+        path = path or binding.get("provider_root")
+        if isinstance(path, str) and path:
+            workspace_root = self.snapshot.get("workspace", {}).get("root")
+            raw = Path(path)
+            if not raw.is_absolute() and workspace_root:
+                raw = Path(str(workspace_root)) / raw
+            try:
+                path = str(raw.resolve())
+            except OSError:
+                path = str(raw)
+        else:
+            path = None
+        return {"provider": str(binding.get("provider", "")),
+                "capability": str(binding.get("capability", "")),
+                "checkout": path}
+
+    def _admit_effect_target(self, capability: str,
+                             target: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+        """Validate an explicit effect target against the session closure.
+
+        The target repository must be session-observed (selected, else
+        workspace-discovered) and the checkout must be exactly that
+        checkout: effect writes stay confined to claimed session scope,
+        never to an arbitrary path the caller names. Anything else is
+        denied, never escalated.
+        """
+        if not isinstance(target, dict):
+            raise AuthorityDenied(
+                f"capability {capability!r} names a malformed effect target")
+        repository = target.get("repository")
+        checkout = target.get("checkout")
+        if not isinstance(repository, str) or not repository:
+            raise AuthorityDenied(
+                f"capability {capability!r} names an effect target without a repository")
+        if not isinstance(checkout, str) or not checkout:
+            raise AuthorityDenied(
+                f"capability {capability!r} names an effect target without a checkout")
+        workspace_root = self.snapshot.get("workspace", {}).get("root")
+        if not workspace_root:
+            raise AuthorityDenied("session has no resolved workspace root")
+        root = Path(str(workspace_root)).resolve()
+        raw = Path(checkout)
+        if not raw.is_absolute():
+            raw = root / raw
+        try:
+            resolved = raw.resolve()
+            resolved.relative_to(root)
+        except (OSError, ValueError):
+            raise AuthorityDenied(
+                f"capability {capability!r} effect target escapes the workspace root"
+            ) from None
+        expected, branch = self._effect_checkout(repository, root)
+        if expected is None:
+            raise AuthorityDenied(
+                f"capability {capability!r} effect target {repository!r} "
+                "is not session-observed scope")
+        if expected != resolved:
+            raise AuthorityDenied(
+                f"capability {capability!r} effect target checkout does not match "
+                f"the session-observed checkout for {repository!r}")
+        scope: dict[str, Any] = {"kind": "worktree", "checkout": str(resolved)}
+        wanted = target.get("branch") or branch
+        if isinstance(wanted, str) and wanted:
+            scope["branch"] = wanted
+        return repository, scope
+
+    def _effect_checkout(self, repository: str, root: Path) -> tuple[Path | None, Any]:
+        """Resolve a repository to its session-observed checkout and branch.
+
+        Selected checkouts win; otherwise fall back to the workspace
+        repositories discovered at entry (mirroring Doctor's target
+        resolution). Anything else is outside the session closure.
+        """
+        selected = self.snapshot.get("selected_checkouts", {}).get(repository)
+        if isinstance(selected, dict) and selected.get("path"):
+            expected = Path(str(selected["path"]))
+            if not expected.is_absolute():
+                expected = root / expected
+            try:
+                return expected.resolve(), selected.get("branch")
+            except OSError:
+                return None, None
+        for repo in self.snapshot.get("workspace", {}).get("repositories", []):
+            if not isinstance(repo, dict):
+                continue
+            if repo.get("name") != repository and repo.get("manifest_repository") != repository:
+                continue
+            try:
+                return Path(str(repo["path"])).resolve(), repo.get("branch")
+            except OSError:
+                return None, None
+        return None, None
+
     def invoke(
         self,
         capability: str,
@@ -1221,8 +1319,18 @@ class Session:
         timeout_seconds: int | None = None,
         output_limit_bytes: int = capabilities_module.DEFAULT_OUTPUT_LIMIT_BYTES,
         env: dict[str, str] | None = None,
+        effect_target: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Invoke a bound capability. Deny and escalate NEVER spawn a process."""
+        """Invoke a bound capability. Deny and escalate NEVER spawn a process.
+
+        Execution authority (running the provider) stays separate from
+        effect authority (mutating state). By default the declared effects
+        are checked against the provider's own checkout; pass
+        ``effect_target`` (``{"repository", "checkout", "branch"?}``) when
+        the provider legitimately mutates a different, explicitly claimed
+        target checkout, and the effect check validates that target
+        instead. Invocation records carry both executor and effect target.
+        """
         output_limit_bytes = capabilities_module.validate_output_limit_bytes(
             output_limit_bytes
         )
@@ -1249,46 +1357,58 @@ class Session:
         if verdict["verdict"] == "escalate":
             return self._pending(capability, argv, "invoke", verdict["reason"])
         required = authority_module.required_action_for_effects(binding.get("effects", ["read"]))
+        executor = self._executor_identity(binding)
+        admitted_effect_target: dict[str, Any] | None = None
         if required != "read":
-            provider = str(binding.get("provider", capability))
-            checkout = binding.get("provenance", {}).get("checkout", {})
-            checkout_path = checkout.get("path") or binding.get("provider_root")
-            effect_scope = None
-            if isinstance(checkout_path, str) and checkout_path:
-                selected_checkout = None
-                workspace_root = self.snapshot.get("workspace", {}).get("root")
-                raw_selected_path = Path(checkout_path)
-                if not raw_selected_path.is_absolute() and workspace_root:
-                    raw_selected_path = Path(str(workspace_root)) / raw_selected_path
-                selected_path = raw_selected_path.resolve()
-                for repository, record in self.snapshot.get("selected_checkouts", {}).items():
-                    raw_selected = Path(str(record.get("path", "")))
-                    if not raw_selected.is_absolute() and workspace_root:
-                        raw_selected = Path(str(workspace_root)) / raw_selected
-                    if raw_selected.resolve() == selected_path:
-                        provider = str(repository)
-                        selected_checkout = record
-                        break
-                effect_scope = {"kind": "worktree", "checkout": str(selected_path)}
-                branch = checkout.get("branch") or (
-                    selected_checkout.get("branch") if selected_checkout else None
-                )
-                if isinstance(branch, str) and branch:
-                    effect_scope["branch"] = branch
-            effect_verdict = self.check(
-                action=required, target=provider, scope=effect_scope)
+            if effect_target is not None:
+                effect_repository, effect_scope = self._admit_effect_target(
+                    capability, effect_target)
+                admitted_effect_target = {"repository": effect_repository,
+                                          **effect_scope}
+                effect_verdict = self.check(
+                    action=required, target=effect_repository, scope=effect_scope)
+            else:
+                provider = str(binding.get("provider", capability))
+                checkout = binding.get("provenance", {}).get("checkout", {})
+                checkout_path = checkout.get("path") or binding.get("provider_root")
+                effect_scope = None
+                if isinstance(checkout_path, str) and checkout_path:
+                    selected_checkout = None
+                    workspace_root = self.snapshot.get("workspace", {}).get("root")
+                    raw_selected_path = Path(checkout_path)
+                    if not raw_selected_path.is_absolute() and workspace_root:
+                        raw_selected_path = Path(str(workspace_root)) / raw_selected_path
+                    selected_path = raw_selected_path.resolve()
+                    for repository, record in self.snapshot.get("selected_checkouts", {}).items():
+                        raw_selected = Path(str(record.get("path", "")))
+                        if not raw_selected.is_absolute() and workspace_root:
+                            raw_selected = Path(str(workspace_root)) / raw_selected
+                        if raw_selected.resolve() == selected_path:
+                            provider = str(repository)
+                            selected_checkout = record
+                            break
+                    effect_scope = {"kind": "worktree", "checkout": str(selected_path)}
+                    branch = checkout.get("branch") or (
+                        selected_checkout.get("branch") if selected_checkout else None
+                    )
+                    if isinstance(branch, str) and branch:
+                        effect_scope["branch"] = branch
+                effect_verdict = self.check(
+                    action=required, target=provider, scope=effect_scope)
             if effect_verdict["verdict"] == "deny":
                 raise AuthorityDenied(effect_verdict["reason"])
             if effect_verdict["verdict"] == "escalate":
                 return self._pending(capability, argv, required, effect_verdict["reason"])
         self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
-                   {"capability": capability, "argv": argv})
+                   {"capability": capability, "argv": argv, "executor": executor,
+                    "effect_target": admitted_effect_target})
         result = capabilities_module.invoke(
             binding, argv, cwd=cwd, timeout_seconds=timeout_seconds,
             output_limit_bytes=output_limit_bytes, env=invocation_env)
         self.snapshot.setdefault("artifacts", []).append(
             {"kind": "invocation-result", "capability": capability,
-             "status": result["status"],
+             "status": result["status"], "executor": executor,
+             "effect_target": admitted_effect_target,
              "artifact_directory": str(artifact_directory), "at": utcnow()}
         )
         self._emit("invocation.completed", binding.get("provider", "unknown"),
