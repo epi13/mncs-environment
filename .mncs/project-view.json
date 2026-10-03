@@ -132,7 +132,7 @@
   "purpose": "mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration.",
   "repository": "mncs-environment",
   "schema_version": "mncs.project-view/1",
-  "source_identity": "sha256:4e3e4ce95271da2374e7232bad945764b0780ed14a87138de4f0f751930f66b0",
+  "source_identity": "sha256:46bd5353c0cdab36475c051d8c39629744a76022ce0ffc29f1410b2120028e18",
   "structure": {
     "layout": "mncs.repository-layout/1",
     "surfaces": [
