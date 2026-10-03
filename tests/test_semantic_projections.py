@@ -445,6 +445,42 @@ def test_source_state_rejects_entry_without_sources(tmp_path):
         projections.source_state(session, d)
 
 
+def test_optional_subject_tolerates_unavailable_repository(tmp_path):
+    (tmp_path / 'state.json').write_text('{"capabilities": []}')
+    contract = declaration()
+    contract['repository'] = 'own-repo'
+    contract['subjects'].append({'subject': 'missing:manifest',
+                                 'slot': 'peer', 'repository': 'missing-repo',
+                                 'path': 'manifest.json', 'required': False})
+    observed = sources.observe(tmp_path, contract, resolve=lambda name: None)
+    assert observed['values']['peer'] is None
+    assert observed['sources'][1]['status'] == 'missing'
+    assert observed['sources'][1]['reason'] == 'repository unavailable'
+
+
+def test_sources_carry_reasons(tmp_path):
+    (tmp_path / 'state.json').write_text('{"capabilities": []}')
+    (tmp_path / 'bad.json').write_text('not json')
+    records = tmp_path / 'records'
+    records.mkdir()
+    (records / 'a.json').write_text('{"id": "a"}')
+    (records / 'bad.json').write_text('not json')
+    d = declaration()
+    d['subjects'] = [{'subject': 'o:s', 'slot': 'good', 'path': 'state.json'},
+                     {'subject': 'o:b', 'slot': 'bad', 'path': 'bad.json',
+                      'required': False},
+                     {'subject': 'o:m', 'slot': 'gone', 'path': 'absent.json',
+                      'required': False},
+                     {'subject': 'o:r', 'slot': 'rows', 'path': 'records',
+                      'format': 'json-dir'}]
+    observed = sources.observe(tmp_path, d)
+    by_slot = {entry['slot']: entry for entry in observed['sources']}
+    assert by_slot['good']['reason'] == 'readable'
+    assert by_slot['bad']['reason'] == 'unparseable subject'
+    assert by_slot['gone']['reason'] == 'file not present'
+    assert by_slot['rows']['reason'] == '1 records; 1 unreadable (excluded, not fabricated)'
+
+
 def test_declaration_validation_for_repo_owned_renderers():
     base = {'schema_version': 'mncs.semantic-projection/1', 'id': 'x',
             'owner': 'o', 'subjects': [{'subject': 's', 'slot': 'v', 'path': 'p'}],
