@@ -617,7 +617,7 @@ def request_plan(session, request: dict[str, Any]) -> dict[str, Any] | None:
 
 def diagnose_projection(session, declaration, health, repair):
     """Consume Doctor's native health/repair verdict; no host diagnosis law."""
-    capability = 'mncs-doctor:projection-health'
+    capability = capabilities_module.DOCTOR_PROJECTION_HEALTH
     binding = _session_binding(session, capability)
     if binding is None or binding.get('availability', {}).get('status') != 'available':
         return None

@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 from .projection_sources import confined
+from .capabilities import DOCTOR_PROJECTION_HEALTH
 from .identity import digest_hex
 
 
@@ -30,7 +31,7 @@ def inspect_structure(session, checkout):
                         'schema': digest_hex(schema), 'roles': manifest.get('organization', {})}
         # A changed owning policy must not reuse an old conformance verdict.
         from .projections import _session_binding, input_digest
-        policy = _session_binding(session, 'mncs-doctor:projection-health') or {}
+        policy = _session_binding(session, DOCTOR_PROJECTION_HEALTH) or {}
         policy_root = Path(policy['provider_root'])
         policy_manifest = json.loads((policy_root / '.mncs/project.json').read_text())
         descriptor = next(row for row in policy_manifest['contracts']['provides']
@@ -42,7 +43,7 @@ def inspect_structure(session, checkout):
         if cached and cached.get('identity') == key:
             state = cached['state']
         else:
-            response = session.invoke('mncs-doctor:projection-health', ['--facts-json',
+            response = session.invoke(DOCTOR_PROJECTION_HEALTH, ['--facts-json',
                 json.dumps({'structure': [1, len(gaps), 0]})], timeout_seconds=120)
             result = json.loads(response['stdout'])
             if response.get('status') != 'ok' or result.get('schema_version') != 'mncs.projection-structure/1':

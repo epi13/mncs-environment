@@ -26,6 +26,10 @@ SCHEMA = "mncs.environment.capability-binding/1"
 DEFAULT_OUTPUT_LIMIT_BYTES = 64 * 1024
 MAX_OUTPUT_LIMIT_BYTES = 2 * 1024 * 1024
 
+#: Doctor's projection-health binding, consumed by structure conformance and
+#: projection reconciliation. Single spelling; capability renames land here.
+DOCTOR_PROJECTION_HEALTH = "mncs-doctor:projection-health"
+
 # Bootstrap addressing for declared entrypoint spellings. Each entry maps a
 # known spelling to candidate executables (checked in order). Providers
 # should eventually expose canonical addressing; until then this table is
