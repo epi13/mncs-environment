@@ -3,7 +3,7 @@
   "workspace_root": "../..",
   "workspace_scope": {
     "kind": "workspace",
-    "repositories": ["mncs-environment", "mncs-language", "mncs-compiler", "mncs-test", "mncs-store", "mncs-forge", "mncs-automation", "mncs-doc", "mncs-debug"]
+    "repositories": ["mncs-environment", "mncs-language", "mncs-compiler", "mncs-test", "mncs-store", "mncs-forge", "mncs-automation", "mncs-doc", "mncs-debug", "mncs-doctor"]
   },
   "required_capabilities": ["mncs-environment:workspace-readiness"],
   "services": [
