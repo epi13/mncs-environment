@@ -17,7 +17,7 @@ native Environment claims, not inferred from a process name alone.
 
 ## Quantitative descriptor evidence
 
-Existing `resource_usage_sampled` events cover 06:06–12:33 Alaska daylight time:
+Existing `resource_usage_sampled` events cover 08:06–14:33 Alaska daylight time:
 
 | Observation | Runtime FDs | Runtime RSS |
 | --- | ---: | ---: |
