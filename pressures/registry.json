@@ -296,5 +296,17 @@
     "title": "Entry context has no per-block byte budget",
     "why_not_local": "It is local: the budget (or the assertion shape) belongs to the entry contract.",
     "workaround": "Keep new entry blocks terse, symmetric, and omitted when unconfigured; record measured footprints per block in campaign reports."
+  },
+  {
+    "schema_version": "mncs.environment.pressure/1",
+    "identity": "prs_1bb66b5b53a6d0b2",
+    "title": "Agent runtime retains terminal tool output handles until EMFILE",
+    "description": "Muse 1.4.2-R4684.1 PID 320179 retained 947 tool-output handles (595 spool, 352 published output/directory handles). Runtime telemetry grew from 93 to 1020 FDs; 70 samples had no live processes or execution sessions. At least 472 retained spool handles match terminal tool calls. Soft limit 1024; host file table not exhausted.",
+    "owner": "Spark/Muse agent runtime (external binary; tool-output/spool lifetime owner)",
+    "evidence": "docs/FD_PRESSURE_INVESTIGATION.md; Linux procfs and existing runtime resource_usage_sampled events on 2026-10-04",
+    "why_not_local": "Environment cannot close handles owned by an active foreign runtime or patch unavailable binary source. Remote closing/restart would disturb authoritative active agent ownership.",
+    "desired_contract": "Drop spool writers and output/directory handles at tool completion/error/cancellation; retain durable paths or bounded data, not open files; repeat hundreds of mixed tools under a low FD limit and prove post-operation baseline, including async completion.",
+    "effect": "OPEN: active Spark session can read/edit but cannot reliably spawn commands. Environment resource visibility is delivered; the external runtime lifetime defect is not fixed.",
+    "workaround": "Read-only mncs-env resources exposes headroom; do not raise limits, reclaim agent resources or restart it automatically."
   }
 ]

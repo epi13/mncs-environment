@@ -2017,8 +2017,10 @@ class Session:
         prefix = [sys.executable, str(Path(__file__).resolve().parents[1] / "scripts" / "mncs-env"),
                   "--state-dir", str(self.state_dir.expanduser().resolve()),
                   "--persistence", "store" if hasattr(self.store, "backend") else "file"]
-        return {name: {"argv": [*prefix, name, self.session_id]} for name in
-                ("health", "reconcile", "inspect", "capabilities")}
+        actions = {name: {"argv": [*prefix, name, self.session_id]} for name in
+                   ("health", "reconcile", "inspect", "capabilities")}
+        actions["resources"] = {"argv": [*prefix, "resources"]}
+        return actions
 
     def health(self, *, live: bool = False) -> dict[str, Any]:
         """Read-only inspection; no participation event or cursor advancement.

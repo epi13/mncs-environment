@@ -22,6 +22,7 @@ from . import doctor as doctor_module
 from . import family as family_module
 from . import netcheck as netcheck_module
 from . import projections as projections_module
+from . import resources as resources_module
 from . import retire as retire_module
 from . import verification as verification_module
 from . import entry as entry_module
@@ -939,6 +940,12 @@ def cmd_retire(args: argparse.Namespace) -> int:
         return 0
 
 
+def cmd_resources(args: argparse.Namespace) -> int:
+    """Observe caller ancestry or selected PIDs without opening Store."""
+    out(resources_module.observe(args.pid))
+    return 0
+
+
 def cmd_netcheck(args: argparse.Namespace) -> int:
     """Probe layered GitHub reachability (DNS, TLS, HTTPS, git)."""
     out(netcheck_module.check(args.host, remote=args.remote, timeout=args.timeout))
@@ -1260,6 +1267,11 @@ def build_parser() -> argparse.ArgumentParser:
     retire.add_argument("--dry-run", action="store_true",
                         help="assess only; change nothing")
     retire.set_defaults(func=cmd_retire)
+
+    resources = sub.add_parser("resources", help="live bounded Linux resource observations (no Store open)")
+    resources.add_argument("--pid", type=int, action="append", default=None,
+                           help="observe a PID (repeatable, at most eight); defaults to caller ancestry")
+    resources.set_defaults(func=cmd_resources)
 
     netcheck = sub.add_parser("netcheck", help="probe layered GitHub reachability")
     netcheck.add_argument("--host", default="github.com")

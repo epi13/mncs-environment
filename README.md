@@ -233,6 +233,8 @@ readiness are observations, not permission to modify a checkout.
 ./scripts/mncs-env enter --consumer my-agent
 ./scripts/mncs-env status <session>       # historical, read-only context
 ./scripts/mncs-env health <session>       # live read-only probes
+./scripts/mncs-env resources              # caller ancestry FD limits/counts, RSS, watchers
+./scripts/mncs-env resources --pid 12345  # explicit PID observation; no Store open
 ./scripts/mncs-env reconcile <session>    # refresh, recover, verify
 ./scripts/mncs-env projections <session>  # ambient projection coherence
 ./scripts/mncs-env capabilities <session>
