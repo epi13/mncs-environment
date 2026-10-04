@@ -213,10 +213,12 @@ class StoreBackend:
             return
         EmbeddedStore, _, _ = self._api
         owner = self._store
-        # Reuse the admitted native session. Only actual mutation pays recovery
-        # and complete projection verification; reads verify selected objects.
+        # Reuse the admitted native session. Promotion runs recovery; it
+        # must not eagerly re-verify every unrelated payload. Each
+        # publication validates its generation and bindings, reads verify
+        # selected objects, and a complete scrub stays explicit via verify().
         self._store = EmbeddedStore(self.path, session=owner.session,
-                                    verify_on_open=self._verify_on_open)
+                                    verify_on_open=False)
         self._promotion_owner = owner
 
     # -- low-level put with CAS retry ------------------------------------
@@ -304,15 +306,30 @@ class StoreBackend:
 
     def read_snapshot(self, session_id: str) -> dict[str, Any] | None:
         prefix = f"{session_id}:snap:".encode()
-        # Select by immutable revision before decoding JSON. Store has already
-        # verified object bytes; historical snapshots need no repeated parsing.
-        candidates = []
-        for item in self._store.find_bound_objects(SCHEMA_SNAPSHOT, prefix):
+        # Select the latest immutable revision from verified binding metadata
+        # (no payload reads), then verify and decode only that payload. Older
+        # revisions are read only if a newer payload is missing or undecodable.
+        # Payload integrity failures still raise; they are never skipped.
+        revisions = []
+        for schema, identity in self._store.domain_bindings_at(self._store.current_generation):
+            if schema != SCHEMA_SNAPSHOT or not identity.startswith(prefix):
+                continue
             try:
-                candidates.append((int(item.domain_identity[len(prefix):]), item))
+                revisions.append(int(identity[len(prefix):]))
             except ValueError:
                 continue
-        for _, item in sorted(candidates, key=lambda pair: pair[0], reverse=True):
+        for revision in sorted(revisions, reverse=True):
+            identity = _snapshot_identity(session_id, revision)
+            item = next(
+                (
+                    candidate
+                    for candidate in self._store.find_bound_objects(SCHEMA_SNAPSHOT, identity)
+                    if candidate.domain_identity == identity
+                ),
+                None,
+            )
+            if item is None:
+                continue
             try:
                 return json.loads(item.payload.decode("utf-8"))
             except (ValueError, json.JSONDecodeError):
@@ -476,14 +493,18 @@ class StoreBackend:
         return tuple((item.domain_schema, item.domain_identity) for item in self._store.objects_at(generation))
 
     def list_sessions(self) -> list[str]:
+        # Session identities come from verified binding metadata; snapshot
+        # payloads are never read for a listing.
         found: set[str] = set()
-        for item in self._store.find_bound_objects(SCHEMA_SNAPSHOT):
+        for schema, identity in self._store.domain_bindings_at(self._store.current_generation):
+            if schema != SCHEMA_SNAPSHOT:
+                continue
             try:
-                identity = item.domain_identity.decode("utf-8")
+                text = identity.decode("utf-8")
             except UnicodeDecodeError:
                 continue
-            if ":snap:" in identity:
-                found.add(identity.split(":snap:")[0])
+            if ":snap:" in text:
+                found.add(text.split(":snap:")[0])
         return sorted(found)
 
     def commit_feed(self) -> bytes:

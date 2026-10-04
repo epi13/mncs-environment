@@ -446,6 +446,129 @@ def test_snapshot_collision_is_an_environment_conflict(monkeypatch):
     assert raised.value.revision == 4
 
 
+def test_read_only_open_defers_store_mutation(tmp_path, monkeypatch):
+    from mncs_env import sessions as sessions_module
+
+    calls = {}
+
+    class DeferredStore:
+        state_dir = tmp_path
+
+        def load_snapshot(self, session_id):
+            return {"session_id": session_id, "snapshot_sequence": 0}
+
+    def recording_open(state_dir, backend="store", **kwargs):
+        calls.update(kwargs)
+        calls["backend"] = backend
+        calls["state_dir"] = state_dir
+        return DeferredStore()
+
+    monkeypatch.setattr(sessions_module, "open_store", recording_open)
+    session = sessions_module.Session.open(
+        state_dir=tmp_path, session_id="ses_deferred", backend="store")
+    assert session.session_id == "ses_deferred"
+    assert calls.get("defer_mutation") is True
+
+
+def test_read_snapshot_verifies_only_the_latest_revision_payload():
+    import json as json_module
+    from types import SimpleNamespace
+    from mncs_env.store_backend import SCHEMA_SNAPSHOT, StoreBackend
+
+    payload_reads = []
+
+    class StubStore:
+        current_generation = 7
+
+        def domain_bindings_at(self, generation):
+            assert generation == 7
+            return [
+                (SCHEMA_SNAPSHOT, b"ses_x:snap:0000000001"),
+                (SCHEMA_SNAPSHOT, b"ses_x:snap:0000000002"),
+                (b"other.schema/1", b"ses_x:snap:0000000009"),
+            ]
+
+        def find_bound_objects(self, schema, prefix=b""):
+            payload_reads.append(bytes(prefix))
+            revision = bytes(prefix).decode().split(":snap:")[1]
+            return [SimpleNamespace(
+                domain_schema=schema, domain_identity=bytes(prefix),
+                payload=json_module.dumps({"rev": int(revision)}).encode())]
+
+    backend = StoreBackend.__new__(StoreBackend)
+    backend._store = StubStore()
+    assert backend.read_snapshot("ses_x") == {"rev": 2}
+    assert payload_reads == [b"ses_x:snap:0000000002"]
+
+
+def test_read_snapshot_falls_back_to_older_decodable_revision():
+    import json as json_module
+    from types import SimpleNamespace
+    from mncs_env.store_backend import SCHEMA_SNAPSHOT, StoreBackend
+
+    class StubStore:
+        current_generation = 3
+
+        def domain_bindings_at(self, generation):
+            return [
+                (SCHEMA_SNAPSHOT, b"ses_y:snap:0000000001"),
+                (SCHEMA_SNAPSHOT, b"ses_y:snap:0000000002"),
+            ]
+
+        def find_bound_objects(self, schema, prefix=b""):
+            payload = b"not-json" if prefix.endswith(b"2") else json_module.dumps({"rev": 1}).encode()
+            return [SimpleNamespace(
+                domain_schema=schema, domain_identity=bytes(prefix), payload=payload)]
+
+    backend = StoreBackend.__new__(StoreBackend)
+    backend._store = StubStore()
+    assert backend.read_snapshot("ses_y") == {"rev": 1}
+
+
+def test_read_snapshot_propagates_payload_integrity_failure():
+    from types import SimpleNamespace
+    from mncs_env.store_backend import SCHEMA_SNAPSHOT, StoreBackend
+
+    class IntegrityFailure(Exception):
+        pass
+
+    class StubStore:
+        current_generation = 3
+
+        def domain_bindings_at(self, generation):
+            return [(SCHEMA_SNAPSHOT, b"ses_z:snap:0000000004")]
+
+        def find_bound_objects(self, schema, prefix=b""):
+            raise IntegrityFailure("chunk failed integrity")
+
+    backend = StoreBackend.__new__(StoreBackend)
+    backend._store = StubStore()
+    with pytest.raises(IntegrityFailure):
+        backend.read_snapshot("ses_z")
+
+
+def test_list_sessions_reads_binding_metadata_only():
+    from mncs_env.store_backend import SCHEMA_EVENT, SCHEMA_SNAPSHOT, StoreBackend
+
+    class StubStore:
+        current_generation = 11
+
+        def domain_bindings_at(self, generation):
+            return [
+                (SCHEMA_SNAPSHOT, b"ses_a:snap:0000000001"),
+                (SCHEMA_SNAPSHOT, b"ses_a:snap:0000000002"),
+                (SCHEMA_SNAPSHOT, b"ses_b:snap:0000000001"),
+                (SCHEMA_EVENT, b"ses_a:evt:0000000001"),
+            ]
+
+        def find_bound_objects(self, schema, prefix=b""):
+            raise AssertionError("list_sessions must not read payloads")
+
+    backend = StoreBackend.__new__(StoreBackend)
+    backend._store = StubStore()
+    assert backend.list_sessions() == ["ses_a", "ses_b"]
+
+
 def test_cli_snapshot_conflict_reports_possible_completed_effects(monkeypatch, capsys):
     from mncs_env import cli
     from mncs_env.session_store import SnapshotConflict

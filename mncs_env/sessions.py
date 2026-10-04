@@ -509,6 +509,7 @@ def resolve_environment(
             state_dir,
             backend,
             verify_on_open=verify_on_open,
+            defer_mutation=True,
             store_package_dir=(
                 store_provider.get("python_package") if store_provider is not None else None
             ),
@@ -668,6 +669,7 @@ class Session:
             state_dir,
             backend,
             verify_on_open=verify_on_open,
+            defer_mutation=True,
             store_package_dir=(
                 store_provider.get("python_package") if store_provider is not None else None
             ),
@@ -743,6 +745,7 @@ class Session:
             state_dir,
             backend,
             verify_on_open=verify_on_open,
+            defer_mutation=True,
             session_id=session_id,
         )
         return cls(store, session_id)

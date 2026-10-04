@@ -459,7 +459,7 @@ class StoreSessionStore(SessionStore):
         verify_on_open: bool = True,
         store_package_dir: str | Path | None = None,
         store_runtime: dict[str, str] | None = None,
-        defer_mutation: bool = False,
+        defer_mutation: bool = True,
     ):
         from .store_backend import StoreBackend
 
@@ -594,9 +594,16 @@ def open_store(
     session_id: str | None = None,
     store_package_dir: str | Path | None = None,
     store_runtime: dict[str, str] | None = None,
-    defer_mutation: bool = False,
+    defer_mutation: bool = True,
 ) -> SessionStore:
-    """Open the canonical Store backend or the explicit file debug projection."""
+    """Open the canonical Store backend or the explicit file debug projection.
+
+    The Store backend opens read-only first and promotes to writable on the
+    first mutation. Reads verify the generation, bindings, and selected
+    objects without re-reading every unrelated payload; promotion runs
+    recovery and each publication validates its generation and bindings.
+    A complete payload scrub remains available through explicit verify.
+    """
     if backend == "file":
         return FileSessionStore(state_dir)
     if backend == "store":
@@ -612,6 +619,6 @@ def open_store(
             verify_on_open=verify_on_open,
             store_package_dir=store_package_dir,
             store_runtime=store_runtime,
-            **({"defer_mutation": True} if defer_mutation else {}),
+            **({} if defer_mutation else {"defer_mutation": False}),
         )
     raise ValueError(f"unknown session store backend {backend!r}")
