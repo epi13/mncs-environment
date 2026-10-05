@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime, timezone
+import hashlib
 import os
 from pathlib import Path
 
@@ -19,6 +20,22 @@ def _fields(path: Path) -> dict[str, str]:
     return dict(line.split(":", 1) for line in path.read_text().splitlines() if ":" in line)
 
 
+def _executable_observation(root: Path) -> tuple[str | None, str | None]:
+    """Observe the image currently exposed by procfs; this is not build proof."""
+    try:
+        path = os.readlink(root / "exe")
+    except OSError:
+        return None, None
+    digest = hashlib.sha256()
+    try:
+        with (root / "exe").open("rb") as handle:
+            while chunk := handle.read(1024 * 1024):
+                digest.update(chunk)
+    except OSError:
+        return path, None
+    return path, f"sha256:{digest.hexdigest()}"
+
+
 def process(pid: int, *, proc_root: Path = Path("/proc")) -> dict:
     result = {"pid": pid, "status": "unknown"}
     root = proc_root / str(pid)
@@ -26,8 +43,13 @@ def process(pid: int, *, proc_root: Path = Path("/proc")) -> dict:
         # Linux stat starttime prevents silently combining a recycled PID.
         birth = (root / "stat").read_text().rsplit(")", 1)[1].split()[19]
         fields = _fields(root / "status")
+        hwm = fields.get("VmHWM")
+        executable, executable_sha256 = _executable_observation(root)
         result.update(name=fields["Name"].strip(), ppid=int(fields["PPid"]),
-                      start_ticks=int(birth), rss_bytes=int(fields.get("VmRSS", "0 kB").split()[0]) * 1024)
+                      start_ticks=int(birth),
+                      rss_bytes=int(fields.get("VmRSS", "0 kB").split()[0]) * 1024,
+                      rss_hwm_bytes=(int(hwm.split()[0]) * 1024 if hwm else None),
+                      executable=executable, executable_sha256=executable_sha256)
         for line in (root / "limits").read_text().splitlines():
             if line.startswith("Max open files"):
                 soft, hard = line[len("Max open files"):].split()[:2]

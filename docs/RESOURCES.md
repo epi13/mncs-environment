@@ -10,13 +10,16 @@ explicit positive PIDs. Context/status/entry expose the callable command as
 `actions.resources.argv`; their historical readiness remains unchanged.
 
 The JSON `mncs.environment.resource-observation/1` envelope labels observations
-as live and includes process birth ticks, parent, cgroup, RSS, open FD count,
+as live and includes process birth ticks, parent, cgroup, current RSS, RSS
+high-water, executable path and executable-byte digest, open FD count,
 soft/hard FD limits, remaining headroom, descriptor classes, deleted handle
 count, and inotify watch entries. It also includes host available/total memory
 and the system file-table allocation/limit. Watch entries are counted per
 observed handle, so duplicated handles may count the same watches twice.
-This is a process sample, not a service identity, leak verdict, RSS aggregate,
-or ownership grant. Doctor/provider policies retain health interpretation.
+The executable digest observes the image exposed by procfs; it is not a build
+receipt or application-level producer attestation. This is a process sample,
+not a service identity, leak verdict, RSS aggregate, or ownership grant.
+Doctor/provider policies retain health interpretation.
 
 The command reads procfs directly without opening Store, scanning repositories,
 spawning tools, retaining output files, starting services, or modifying target

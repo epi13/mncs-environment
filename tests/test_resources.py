@@ -85,6 +85,10 @@ def test_cli_does_not_open_or_create_store(tmp_path):
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload['processes'][0]['pid'] == os.getpid()
+    row = payload['processes'][0]
+    assert row['rss_hwm_bytes'] >= row['rss_bytes']
+    assert row['executable']
+    assert row['executable_sha256'].startswith('sha256:')
     assert payload['session_process_mapping'] == 'not-asserted'
     assert not state.exists()
 
