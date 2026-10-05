@@ -11,7 +11,7 @@ import pytest
 from pathlib import Path
 from unittest import mock
 
-from mncs_env import capabilities, entry, readiness, sessions, workspace
+from mncs_env import capabilities, cli, entry, readiness, sessions, workspace
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "scripts" / "mncs-env"
@@ -133,6 +133,43 @@ class EntryContractTests(unittest.TestCase):
                     "effect_target": {"repository": "selected"},
                 }}
             ]})
+
+    def test_invoke_routes_mutation_authority_to_selected_effect_repository(self):
+        from types import SimpleNamespace
+
+        observed = {}
+
+        class FakeSession:
+            def invoke(self, capability, argv, **kwargs):
+                observed.update(capability=capability, argv=argv, **kwargs)
+                return {
+                    "status": "ok", "returncode": 0, "stdout": "{}",
+                    "stderr": "", "truncated": False,
+                }
+
+            def close(self):
+                return None
+
+        args = SimpleNamespace(
+            state_dir=self.state,
+            persistence="file",
+            session="session-id",
+            capability="mncs-forge:canonical-vm-work",
+            argv=["--workspace", "/selected/workspace"],
+            cwd=None,
+            timeout=10,
+            output_limit_bytes=4096,
+            effect_repository="mncs-reference-studies",
+        )
+        with mock.patch.object(
+            cli.sessions_module.Session, "resume", return_value=FakeSession()
+        ):
+            self.assertEqual(cli.cmd_invoke(args), 0)
+
+        self.assertEqual(observed["effect_target"], {
+            "repository": "mncs-reference-studies",
+        })
+        self.assertEqual(observed["capability"], "mncs-forge:canonical-vm-work")
 
     def test_provider_diagnostics_preserve_selection_and_observation(self):
         self.provider.write_text('import json\nprint(json.dumps({"schema_version":"fixture.status/1","ready":False,"diagnostics":[{"code":"SELECTED_PROVIDER_MISSING","message":"build the selected provider"}],"selected":{"checkout":"selected"},"observed":{"checkout":"old"}}))\n')

@@ -588,6 +588,10 @@ def cmd_invoke(args: argparse.Namespace) -> int:
                 args.capability, args.argv, cwd=args.cwd,
                 timeout_seconds=args.timeout,
                 output_limit_bytes=args.output_limit_bytes,
+                effect_target=(
+                    {"repository": args.effect_repository}
+                    if args.effect_repository else None
+                ),
             )
         except (sessions_module.AuthorityDenied, sessions_module.LifecycleError,
                 capabilities_module.CapabilityError) as error:
@@ -1133,6 +1137,10 @@ def build_parser() -> argparse.ArgumentParser:
     authority.set_defaults(func=cmd_authority)
 
     invoke = session_parser("invoke", "invoke a bound capability")
+    invoke.add_argument(
+        "--effect-repository", default=None,
+        help="selected repository whose checkout is the provider's mutation target",
+    )
     invoke.add_argument("capability")
     invoke.add_argument("--cwd", default=None)
     invoke.add_argument("--timeout", type=int, default=120)

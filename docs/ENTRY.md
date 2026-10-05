@@ -159,7 +159,8 @@ When reconciliation changes a selected consumer checkout instead of the
 provider checkout, `effect_target` names that repository. Environment resolves
 it to the exact checkout observed by the current session and checks its claim
 and authority before invocation; provider-supplied ambient paths are not
-accepted.
+accepted. Direct `mncs-env invoke` calls can select the same boundary with
+`--effect-repository <selected-repository>`.
 
 There are at most 16 service declarations. Each read probe has a three-second
 limit, within a 15-second aggregate probe budget; recovery has ten seconds per
