@@ -1366,6 +1366,49 @@ class SessionTests(unittest.TestCase):
             self.assertIn(session.session_id, artifact_root.parts)
             self.assertFalse(artifact_root.exists(), "a read-only readiness probe must not create its cache")
 
+    def test_readiness_preserves_structured_failure_from_nonzero_provider(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            binding = capabilities.bind(
+                provider="mncs-doctor", capability="doctor-health",
+                contract_revision="1", entrypoint="health", address="/bin/echo",
+                effects=["read"],
+            )
+            binding["availability"] = {"status": "available"}
+            session.snapshot["bindings"] = [binding]
+            session.snapshot["requirements"] = {
+                "services": [{
+                    "identity": "doctor-coherence", "required": True,
+                    "probe": {"capability": "doctor-health", "argv": ["--smoke"]},
+                    "probe_timeout_seconds": 42,
+                    "response_schema": "mncs.doctor.compiler-vm/1",
+                    "ready_when": {"/status": "pass"},
+                }],
+            }
+            report = {
+                "schema_version": "mncs.doctor.compiler-vm/1",
+                "status": "fail",
+                "reason": "selected Store artifact directory is read-only",
+                "components": {"runtime": {"build_origin": {"status": "matches-embedded-inputs"}}},
+            }
+            with mock.patch.object(authority, "evaluate", return_value={"verdict": "allow"}), mock.patch.object(
+                readiness.capabilities, "invoke",
+                return_value={"status": "failed", "returncode": 2,
+                              "stdout": json.dumps(report), "stderr": ""},
+            ):
+                result = readiness.probe_services(session)
+
+            self.assertEqual(result[0]["status"], "unavailable")
+            self.assertEqual(result[0]["code"], "service-probe-failed")
+            self.assertEqual(result[0]["provider_process_status"], "failed")
+            self.assertEqual(result[0]["provider_status"], "fail")
+            self.assertEqual(result[0]["provider_reason"], "selected Store artifact directory is read-only")
+            self.assertIn("read-only", result[0]["reason"])
+            self.assertEqual(
+                result[0]["provider_components"],
+                {"runtime": {"build_origin": {"status": "matches-embedded-inputs"}}},
+            )
+
     def test_readiness_passes_selected_service_endpoint_to_dependent_provider(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))

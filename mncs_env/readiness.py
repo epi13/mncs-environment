@@ -265,15 +265,38 @@ def probe_services(session, *, bindings: list[dict] | None = None,
                                                   **service_environment,
                                                   "GIT_OPTIONAL_LOCKS": "0",
                                                   "MNCS_ENV_SESSION_ARTIFACT_DIR": str(artifact_directory)})
-                record["code"] = "service-probe-failed"
-                if result["status"] != "ok":
-                    if result["status"] == "timeout":
-                        record["code"] = "service-probe-timeout"
-                    raise ValueError(f"{result['status']}: {result.get('stderr', '')[-1000:]}")
-                record["code"] = "service-response-incompatible"
-                document = json.loads(result["stdout"])
+                process_status = result.get("status", "unknown")
+                process_failed = process_status != "ok"
+                record["code"] = "service-probe-failed" if process_failed else "service-response-incompatible"
+                if process_status == "timeout":
+                    detail = result.get("stderr") or result.get("stdout") or "provider probe timed out"
+                    record["code"] = "service-probe-timeout"
+                    raise ValueError(f"timeout: {detail[-1000:]}")
+                try:
+                    document = json.loads(result.get("stdout", ""))
+                except (TypeError, json.JSONDecodeError) as error:
+                    if process_failed:
+                        detail = result.get("stderr") or result.get("stdout") or str(error)
+                        raise ValueError(f"{process_status}: {detail[-1000:]}") from error
+                    raise ValueError(f"provider response is not valid JSON: {error}") from error
                 if not isinstance(document, dict) or document.get("schema_version") != service["response_schema"]:
+                    if process_failed:
+                        detail = result.get("stderr") or result.get("stdout") or "no provider diagnostic"
+                        raise ValueError(
+                            f"{process_status}: expected provider schema {service['response_schema']}; "
+                            f"{detail[-1000:]}"
+                        )
                     raise ValueError(f"expected provider schema {service['response_schema']}")
+                if process_failed:
+                    # Some provider contracts deliberately emit a structured
+                    # failure document and a nonzero exit code. Preserve that
+                    # provider-owned diagnosis instead of reducing it to an
+                    # empty stderr transport error.
+                    record["provider_process_status"] = process_status
+                    if isinstance(document.get("status"), str):
+                        record["provider_status"] = document["status"]
+                    if isinstance(document.get("reason"), str) and document["reason"]:
+                        record["provider_reason"] = document["reason"][:1000]
                 # Provider diagnostics remain provider-owned. Preserve bounded
                 # structured evidence instead of replacing it with prose.
                 diagnostics = document.get("diagnostics")
@@ -284,10 +307,17 @@ def probe_services(session, *, bindings: list[dict] | None = None,
                         name = "provider_components" if field == "components" else f"provider_{field}"
                         record[name] = document[field]
                 actual = {pointer: _pointer(document, pointer) for pointer in service["ready_when"]}
-                ready = all(actual[key] == expected for key, expected in service["ready_when"].items())
-                record.update(status="ready" if ready else "degraded", code="service-ready" if ready else "service-not-ready",
-                              reason="provider readiness contract satisfied" if ready else "provider readiness predicates not satisfied",
-                              observation=actual)
+                ready = (not process_failed and
+                         all(actual[key] == expected for key, expected in service["ready_when"].items()))
+                if process_failed:
+                    reason = record.get("provider_reason") or result.get("stderr") or "provider exited unsuccessfully"
+                    record.update(status="unavailable", code="service-probe-failed",
+                                  reason=f"{process_status}: {reason[-1000:]}", observation=actual)
+                else:
+                    record.update(status="ready" if ready else "degraded",
+                                  code="service-ready" if ready else "service-not-ready",
+                                  reason="provider readiness contract satisfied" if ready else "provider readiness predicates not satisfied",
+                                  observation=actual)
             except (ValueError, KeyError, OSError) as error:
                 record["reason"] = str(error)
         if service["identity"] == session.snapshot.get("execution_compatibility_service"):

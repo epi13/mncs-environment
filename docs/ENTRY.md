@@ -216,6 +216,10 @@ relocation. Missing selection is diagnostic; no sibling path is inferred.
 Provider diagnostics, selected identity, observed identity, and recovery remain
 structured in service observations. Reconciliation preserves the provider JSON
 response; transport success is separate from subsequent verified readiness.
+Readiness also retains a schema-valid provider failure report when the process
+exits nonzero: the process status, provider status/reason, and bounded component
+evidence stay visible, while the service remains unavailable. Empty stderr does
+not hide a provider's structured stdout diagnosis.
 Forge owns live challenge, process birth/pidfd control, runtime artifact identity,
 Language stream validation, and asynchronous startup. Environment owns none of
 those internal rules. See Forge's `docs/RESIDENT_PROVIDER.md`.
