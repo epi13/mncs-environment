@@ -181,6 +181,121 @@ def test_store_publication_during_pass_is_not_skipped(participant):
         store.close()
 
 
+def test_semantic_cursor_waits_for_owner_success_after_reset(participant):
+    _, owned = runners()
+    coherence.tick(participant, {}, owned)
+    slot = "mncs-language-service:workspace-stream"
+    old = json.dumps({"stream": "old-stream", "cursor": 8}, sort_keys=True)
+    candidate = json.dumps({"stream": "new-stream", "cursor": 23}, sort_keys=True)
+    participant.snapshot["coherence"]["semantic_cursors"] = {slot: old}
+    reset = [{"kind": "provider.changed", "provider": "mncs-language-service",
+              "stream": slot, "reason": "cursor expired", "reset": True}]
+    with patch.object(coherence, "_semantic_events",
+                      return_value=(reset, {slot: candidate}, False)):
+        owned["verification"] = lambda: {"status": "error", "error": "owner unavailable"}
+        _, failed = coherence.tick(participant, {}, owned)
+    assert failed["cursor_disposition"] == "held_for_owner_retry"
+    assert failed["owner_failures"] == ["verification"]
+    assert participant.snapshot["coherence"]["semantic_cursors"] == {slot: old}
+
+    with patch.object(coherence, "_semantic_events",
+                      return_value=(reset, {slot: candidate}, False)):
+        owned["verification"] = lambda: {"summary": {"checked": True}}
+        _, retried = coherence.tick(participant, {}, owned)
+    assert retried.get("owner_failures", []) == []
+    assert participant.snapshot["coherence"]["semantic_cursors"] == {slot: candidate}
+    assert retried["cursor_disposition"] == "reconciled_and_advanced"
+    assert participant.snapshot["coherence"]["stable"] is True
+
+
+def test_semantic_cursor_acknowledges_explicit_owner_no_work(participant):
+    _, owned = runners()
+    coherence.tick(participant, {}, owned)
+    slot = "mncs-language-service:workspace-stream"
+    old = json.dumps({"stream": "stream-1", "cursor": 4}, sort_keys=True)
+    candidate = json.dumps({"stream": "stream-1", "cursor": 5}, sort_keys=True)
+    participant.snapshot["coherence"]["semantic_cursors"] = {slot: old}
+    event = {"kind": "semantic.changed", "stream": slot,
+             "identity": "event-5", "generation": "generation-5"}
+    with patch.object(coherence, "_semantic_events",
+                      return_value=([event], {slot: candidate}, True)):
+        owned["actions"] = lambda: None
+        owned["diagnostics"] = lambda: None
+        owned["family"] = lambda: None
+        _, trace = coherence.tick(participant, {}, owned)
+    assert trace.get("owner_failures", []) == []
+    assert participant.snapshot["coherence"]["semantic_cursors"] == {slot: candidate}
+
+
+def test_store_replay_reset_holds_cursor_until_full_owner_reconciliation(participant):
+    _, owned = runners()
+    coherence.tick(participant, {}, owned)
+    participant.store = SimpleNamespace(generation=lambda: 999)
+    old = participant.snapshot["coherence"].get("store_cursor")
+    candidate = "999"
+    reset = [{"kind": "store.reconcile_required", "candidate_cursor": candidate,
+              "reason": "observation bound exceeded"}]
+    with patch.object(coherence, "_store_events", return_value=(reset, old, True)):
+        owned["verification"] = lambda: {"status": "error", "error": "owner unavailable"}
+        _, failed = coherence.tick(participant, {}, owned)
+    assert len(failed["scheduled"]) == 7
+    assert failed["store_replay"]["disposition"] == "reconciliation_incomplete_or_store_advanced"
+    assert participant.snapshot["coherence"]["store_cursor"] == old
+
+    with patch.object(coherence, "_store_events", return_value=(reset, old, True)):
+        owned["verification"] = lambda: {"summary": {"checked": True}}
+        _, retried = coherence.tick(participant, {}, owned)
+    assert len(retried["scheduled"]) == 7
+    assert retried["store_replay"]["disposition"] == "full_owner_reconciliation_complete"
+    assert participant.snapshot["coherence"]["store_cursor"] == candidate
+
+
+def test_store_snapshot_conflict_replays_semantic_work_until_retry_commits(participant):
+    from mncs_env.session_store import SnapshotConflict
+
+    store = open_store(participant.state_dir, "store")
+    participant.store = store
+    _, owned = runners()
+    try:
+        coherence.tick(participant, {}, owned)
+        slot = "mncs-language-service:workspace-stream"
+        old = json.dumps({"stream": "stream-1", "cursor": 4}, sort_keys=True)
+        candidate = json.dumps({"stream": "stream-1", "cursor": 5}, sort_keys=True)
+        participant.snapshot["coherence"]["semantic_cursors"] = {slot: old}
+        participant.snapshot["snapshot_sequence"] += 1
+        store.save_snapshot(participant.session_id, participant.snapshot)
+        participant.saves = participant.snapshot["snapshot_sequence"]
+        event = {"kind": "semantic.changed", "stream": slot,
+                 "identity": "event-5", "generation": "generation-5"}
+        with patch.object(coherence, "_semantic_events",
+                          return_value=([event], {slot: candidate}, True)):
+            def race_snapshot():
+                competing = store.load_snapshot(participant.session_id)
+                competing["snapshot_sequence"] += 1
+                competing["concurrent_owner_receipt"] = "committed-first"
+                store.save_snapshot(participant.session_id, competing)
+                return {"summary": {"handled": True}}
+
+            owned["verification"] = race_snapshot
+            with pytest.raises(SnapshotConflict):
+                coherence.tick(participant, {}, owned)
+
+        durable = store.load_snapshot(participant.session_id)
+        assert durable["concurrent_owner_receipt"] == "committed-first"
+        assert durable["coherence"]["semantic_cursors"] == {slot: old}
+
+        participant.snapshot = durable
+        participant.saves = durable["snapshot_sequence"]
+        owned["verification"] = lambda: {"summary": {"handled": True}}
+        with patch.object(coherence, "_semantic_events",
+                          return_value=([event], {slot: candidate}, True)):
+            coherence.tick(participant, {}, owned)
+        retried = store.load_snapshot(participant.session_id)
+        assert retried["coherence"]["semantic_cursors"] == {slot: candidate}
+    finally:
+        store.close()
+
+
 def test_unrelated_repository_is_outside_observation(participant, tmp_path):
     _, owned = runners()
     coherence.tick(participant, {}, owned)
@@ -280,6 +395,69 @@ def test_replay_identity_includes_domain_schema():
     assert replay.status == 'ok'
     assert len(replay.events) == 1
     assert replay.events[0].provenance['domain_identity'] == 'same-id'
+
+
+def test_store_replay_prefers_verified_bounded_generation_deltas():
+    from mncs_env import sources
+
+    class Store:
+        def generation(self):
+            return 3
+
+        def domain_bindings_since(self, cursor, *, max_generations):
+            assert cursor == 1
+            assert max_generations == sources.MAX_REPLAY_WALK
+            return (
+                (2, b'claim/1', b'claim:peer'),
+                (3, b'snapshot/1', b'ses_peer:snap:2'),
+                (3, b'event/1', b'ses_self:evt:7'),
+            )
+
+        def domain_bindings_at(self, _generation):
+            raise AssertionError('delta-aware Store replay must not rescan historical generations')
+
+    replay = sources.StoreReplaySource(Store(), 'ses_self:').observe('1')
+    assert replay.status == 'ok'
+    assert [event.kind for event in replay.events] == ['claim.changed', 'session.changed']
+    assert [event.generation for event in replay.events] == ['2', '3']
+
+
+def test_canonical_session_store_forwards_bounded_delta_contract():
+    from mncs_env.session_store import StoreSessionStore
+
+    class Backend:
+        def domain_bindings_since(self, generation, *, max_generations):
+            assert generation == 10
+            assert max_generations == 4096
+            return ((11, b'claim/1', b'claim:peer'),)
+
+    store = StoreSessionStore.__new__(StoreSessionStore)
+    store.backend = Backend()
+    assert store.domain_bindings_since(10, max_generations=4096) == (
+        (11, b'claim/1', b'claim:peer'),
+    )
+
+
+def test_store_replay_ignores_derived_products_and_resolves_claim_repository():
+    from mncs_env import sources
+
+    class Store:
+        def generation(self):
+            return 9
+
+        def domain_bindings_since(self, cursor, *, max_generations):
+            assert cursor == 7
+            return (
+                (8, b'mncs.environment.projection-state/1', b'mncs-compiler:overview:0000000031'),
+                (8, b'mncs.provider-execution-provenance/1', b'projection-receipt:abc'),
+                (9, b'mncs.environment.workspace-claim/2', b'claim:claim:mncs-language-service:0000000009'),
+            )
+
+    result = sources.StoreReplaySource(Store(), 'ses_self:').observe('7')
+    assert result.status == 'ok'
+    assert len(result.events) == 1
+    assert result.events[0].kind == 'claim.changed'
+    assert result.events[0].relations['claim'] == 'mncs-language-service'
 
 
 def mutation_session(tmp_path, root, claims):

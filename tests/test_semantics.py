@@ -57,6 +57,7 @@ def declared_service(workspace=WORKSPACE):
 def capsule_document(*, stream="mnls-stream-1", cursor=7, generation=12):
     return {
         "schema_version": "mncs.language-service.semantic-capsule/1",
+        "status": {"kind": "answered"},
         "stream_identity": stream,
         "current_cursor": cursor,
         "generation": generation,
@@ -168,6 +169,30 @@ class AmbientSemanticsTests(unittest.TestCase):
         self.assertEqual(durable["stream"], "mnls-stream-1")
         self.assertEqual(durable["cursor"], 7)
 
+    def test_empty_stream_baseline_does_not_force_workspace_analysis(self) -> None:
+        session = FakeSession()
+        session.declare(declared_service())
+        session.observe(observation(cursor=0, generation=0, error=0, warning=0,
+                                    fail=0, unknown=0))
+        session.bind(semantics_module.POLL_CAPABILITY)
+        session.bind(semantics_module.CAPSULE_CAPABILITY)
+        adopted = semantics_module.ambient_pass(session)
+        self.assertEqual(adopted["summary"]["adopted"], 1)
+        self.assertEqual(session.invoked, [])
+        durable = session.snapshot["semantics"]["workspaces"][WORKSPACE]
+        self.assertEqual(durable["stream"], "mnls-stream-1")
+        self.assertEqual(durable["cursor"], 0)
+
+        session.snapshot["service_observations"] = [
+            observation(stream="mnls-stream-2", cursor=0, generation=0,
+                        error=0, warning=0, fail=0, unknown=0)]
+        reset = semantics_module.ambient_pass(session)
+        self.assertEqual(reset["summary"]["reset"], 1)
+        self.assertEqual(session.invoked, [])
+        durable = session.snapshot["semantics"]["workspaces"][WORKSPACE]
+        self.assertEqual(durable["stream"], "mnls-stream-2")
+        self.assertEqual(durable["cursor"], 0)
+
     def test_quiet_reentry_compares_snapshots_without_invocation(self) -> None:
         session = FakeSession()
         session.declare(declared_service())
@@ -224,6 +249,37 @@ class AmbientSemanticsTests(unittest.TestCase):
         self.assertEqual(capabilities, [semantics_module.CAPSULE_CAPABILITY])
         durable = session.snapshot["semantics"]["workspaces"][WORKSPACE]
         self.assertEqual(durable["stream"], "mnls-stream-2")
+
+    def test_incomplete_capsule_never_acknowledges_first_contact_or_reset(self) -> None:
+        session = FakeSession()
+        session.declare(declared_service())
+        session.observe(observation())
+        session.bind(semantics_module.POLL_CAPABILITY)
+        session.bind(semantics_module.CAPSULE_CAPABILITY)
+        session.capsule_document = capsule_document()
+        session.capsule_document["status"] = {
+            "kind": "unsupported", "reason": "workspace analysis is incomplete"}
+        session.capsule_document["measured"]["analysis_pending_documents"] = 3
+
+        first = semantics_module.ambient_pass(session)
+        self.assertEqual(first["summary"]["unknown"], 1)
+        self.assertEqual(session.snapshot["semantics"]["workspaces"], {})
+
+        # Establish an acknowledged old epoch, then prove a new epoch cannot
+        # move that durable cursor until its capsule is complete.
+        session.capsule_document = capsule_document()
+        semantics_module.ambient_pass(session)
+        previous = dict(session.snapshot["semantics"]["workspaces"][WORKSPACE])
+        session.snapshot["service_observations"] = [
+            observation(stream="mnls-stream-2", cursor=2, generation=14)]
+        session.capsule_document = capsule_document(stream="mnls-stream-2",
+                                                    cursor=2, generation=14)
+        session.capsule_document["status"] = {
+            "kind": "unsupported", "reason": "workspace analysis is incomplete"}
+        session.capsule_document["measured"]["analysis_pending_documents"] = 3
+        reset = semantics_module.ambient_pass(session)
+        self.assertEqual(reset["summary"]["unknown"], 1)
+        self.assertEqual(session.snapshot["semantics"]["workspaces"][WORKSPACE], previous)
 
     def test_poll_reset_falls_back_to_capsule(self) -> None:
         session = FakeSession()

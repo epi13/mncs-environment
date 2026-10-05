@@ -368,17 +368,11 @@ class StoreBackend:
         from mncs_store.errors import StoreError  # noqa: E402
 
         try:
-            item = next(
-                (
-                    candidate
-                    for candidate in self._store.find_bound_objects(schema, identity)
-                    if candidate.domain_identity == identity
-                ),
-                None,
-            )
+            # Checkpoints and receipts use exact identities. Route them
+            # through Store's deterministic binding lookup so projection
+            # reads do not enumerate every binding to find one object.
+            item = self._store.get_bound_object(schema, identity)
         except StoreError:
-            return None
-        if item is None:
             return None
         try:
             record = json.loads(item.payload.decode("utf-8"))
@@ -491,6 +485,14 @@ class StoreBackend:
         if callable(observe):
             return observe(generation)
         return tuple((item.domain_schema, item.domain_identity) for item in self._store.objects_at(generation))
+
+    def domain_bindings_since(
+        self, generation: int, *, max_generations: int = 128
+    ) -> tuple[tuple[int, bytes, bytes], ...]:
+        observe = getattr(self._store, "domain_bindings_since", None)
+        if not callable(observe):
+            raise RuntimeError("selected Store provider does not expose bounded delta replay")
+        return observe(generation, max_generations=max_generations)
 
     def list_sessions(self) -> list[str]:
         # Session identities come from verified binding metadata; snapshot

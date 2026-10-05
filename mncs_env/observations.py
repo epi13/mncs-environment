@@ -18,6 +18,11 @@ from .persist import write_json
 
 MAX_PATHS = 30000
 CATALOGUE_SCHEMA = "mncs.environment.repository-observation/1"
+TRANSIENT_OBSERVATION_PARTS = frozenset({".worktrees", "__pycache__", ".pytest_cache"})
+
+
+def _is_transient_path(name: str) -> bool:
+    return any(part in TRANSIENT_OBSERVATION_PARTS for part in Path(name).parts)
 
 
 def stamp(path: Path):
@@ -46,8 +51,14 @@ def git_directories(checkout: Path) -> tuple[Path, Path]:
 
 def control_paths(checkout: Path) -> list[Path]:
     directory, common = git_directories(checkout)
-    result = [checkout / ".git", directory / "HEAD", directory / "index",
-              directory / "commondir", common / "packed-refs", common / "config",
+    pointer = checkout / ".git"
+    # Git may rewrite its index and touch the containing .git directory when
+    # status refreshes stat-cache entries. Source file stamps below already
+    # observe the actual worktree change; index bookkeeping is not a provider
+    # or repository-control change and must not fan out to every owner.
+    result = ([] if pointer.is_dir() else [pointer]) + [
+              directory / "HEAD", directory / "commondir",
+              common / "packed-refs", common / "config",
               common / "worktrees", common / "refs", common / "refs/heads",
               common / "info/exclude"]
     head = (directory / "HEAD").read_text().strip()
@@ -65,7 +76,7 @@ def _enumerate(checkout: Path) -> list[str]:
         [workspace_module.git_binary(), "-C", str(checkout), "ls-files",
          "--cached", "--others", "--exclude-standard", "-z"], capture_output=True, timeout=10, check=True, env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"})
     paths = sorted(set(os.fsdecode(value) for value in completed.stdout.split(b"\0") if value))
-    paths = [name for name in paths if not name.startswith(".worktrees/")]
+    paths = [name for name in paths if not _is_transient_path(name)]
     if len(paths) > MAX_PATHS or any(Path(name).is_absolute() or ".." in Path(name).parts for name in paths):
         raise ValueError("repository observation exceeds bounded path contract")
     return paths
@@ -116,6 +127,8 @@ def observe_repository(session, checkout: Path, prior: dict | None) -> tuple[dic
             enumerated = True
             material = _material(checkout, paths)
         for name in sorted(set(material["files"]) | set(previous["files"])):
+            if _is_transient_path(name):
+                continue
             if material["files"].get(name) != previous["files"].get(name):
                 events.append({"kind": "file.changed", "checkout": str(checkout), "path": name})
     payload = {"schema_version": CATALOGUE_SCHEMA, "checkout": str(checkout), "material": material}

@@ -1723,7 +1723,9 @@ def _finish(session, started: str, clock_started: float,
             pending_ids.append(str(record.get("projection")))
             if str(record.get("gate_reason", "")).startswith(
                     ("planner-", "render-", "provider-", "shared-store-",
-                     "projection-state-conflict")):
+                     "projection-state-conflict",
+                     "apply-repo-moved-under-claim",
+                     "apply-repo-unreadable-under-claim")):
                 summary["degraded"] += 1
         elif outcome == "escalated":
             summary["blockers"] += 1

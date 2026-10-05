@@ -256,8 +256,14 @@ def _store_events(session, prior: dict, definition: dict | None = None) -> tuple
         changed = prior.get("file_cursor") not in (None, cursor)
         return ([{"kind": "claim.changed"}, {"kind": "family.changed"}] if changed else [], cursor, True)
     result = sources.StoreReplaySource(session.store, session.session_id + ":").observe(prior.get("store_cursor"))
+    if result.status == "reset":
+        # A bounded Store replay gap is recoverable only after a complete
+        # owner pass. Keep the durable cursor at its acknowledged value and
+        # carry the observed high-water separately as a candidate.
+        return ([{"kind": "store.reconcile_required", "candidate_cursor": result.cursor,
+                  "reason": result.detail}], prior.get("store_cursor"), True)
     if result.status != "ok":
-        return [], result.cursor, False
+        return [], prior.get("store_cursor"), False
     selected = set(_roots(session))
     publications = (definition or {}).get('coherence_publications') or []
     events = []
@@ -490,6 +496,30 @@ def _load_results(session, refs):
     return results, known
 
 
+def _owner_result_failed(value) -> bool:
+    """Whether an owner response says its requested work did not complete.
+
+    Domain verdicts such as a failed test remain completed evidence. Only the
+    provider/invocation envelope blocks acknowledgement of the input event.
+    Environment owner adapters use ``None`` to mean their documented quiet
+    no-work case (for example, diagnostics has no failures to explain); that
+    is a successful no-op, not an invocation failure.
+    """
+    if value is None:
+        return False
+    if not isinstance(value, dict):
+        return True
+    if value.get("ok") is False or isinstance(value.get("error"), str):
+        return True
+    status = str(value.get("status", "")).lower()
+    if status in {"error", "unavailable", "not_run"}:
+        return True
+    invocation = value.get("invocation")
+    return isinstance(invocation, dict) and str(invocation.get("status", "")).lower() in {
+        "error", "unavailable", "not_run"
+    }
+
+
 def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
          now_ms: int | None = None) -> tuple[dict, dict]:
     # Without the native scheduler provider, retain explicit owner recovery.
@@ -505,10 +535,22 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         previous = {}
     observed, events, known, metrics = _observe(session, previous)
     store_events, cursor, store_known = _store_events(session, previous, definition)
-    events.extend(store_events)
+    store_reset = next((item for item in store_events
+                        if item.get("kind") == "store.reconcile_required"), None)
+    events.extend(item for item in store_events
+                  if item.get("kind") != "store.reconcile_required")
     semantic_events, semantic_cursors, semantic_known = _semantic_events(session, previous, definition)
+    prior_semantic_cursors = dict(previous.get("semantic_cursors") or {})
+    reset_candidate_streams = {
+        str(event.get("stream")) for event in semantic_events
+        if event.get("kind") == "provider.changed" and event.get("reset")
+        and event.get("stream")
+        and semantic_cursors.get(str(event.get("stream"))) is not None
+        and semantic_cursors.get(str(event.get("stream")))
+            != prior_semantic_cursors.get(str(event.get("stream")))
+    }
     events.extend(semantic_events)
-    known = known and semantic_known and store_known and (not previous or previous.get("stable") is True)
+    known = known and semantic_known and store_known and store_reset is None and (not previous or previous.get("stable") is True)
     policy, policy_artifacts = _policy_identity(session, previous.get("policy_artifacts", {}))
     if previous and previous.get("policy_identity") != policy:
         known = False
@@ -534,6 +576,16 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
             codes, receipt = previous["current_codes"], previous.get("policy_receipt", {})
         else:
             codes, receipt = _native(session, "route_batch", rows)
+        if store_reset is not None:
+            # A Store cursor overflow has no safe selective interpretation.
+            # Re-run all declared owners against their authoritative current
+            # state before adopting the candidate high-water.
+            codes = [2] * len(names)
+            report["store_replay"] = {
+                "disposition": "full_owner_reconciliation_required",
+                "candidate_cursor": store_reset.get("candidate_cursor"),
+                "reason": store_reset.get("reason", "bounded replay reset"),
+            }
     except (OSError, ValueError, KeyError, subprocess.SubprocessError):
         codes, receipt = [2] * len(names), {}
         report["mode"] = "bounded_reconciliation"
@@ -588,6 +640,33 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         pending = dict(zip(names, next_codes))
         report.setdefault("derived_events", []).extend(emitted)
     report["skipped"] = [{"pass": name, "reason": "current inputs"} for name in names if name not in scheduled]
+    owner_failures = sorted(
+        name for name in scheduled if _owner_result_failed(results.get(name))
+    )
+    if store_reset is not None and (scheduled != set(names) or owner_failures):
+        after_known = False
+        report["store_replay"]["disposition"] = "reconciliation_incomplete_or_store_advanced"
+        if owner_failures:
+            report["store_replay"]["owner_failures"] = owner_failures
+    elif not store_known:
+        after_known = False
+    if semantic_events and owner_failures:
+        # The LS cursor is a single stream acknowledgement shared by all
+        # subscribed owners. Keep the prior durable cursor until every owner
+        # selected for this semantic batch has completed its invocation. A
+        # later tick replays the same source window and retries the failed
+        # owner; successful owners are expected to be idempotent.
+        semantic_cursors = dict(previous.get("semantic_cursors") or {})
+        semantic_known = False
+        report["owner_failures"] = owner_failures
+        report["mode"] = "bounded_reconciliation"
+        report["cursor_disposition"] = "held_for_owner_retry"
+    elif reset_candidate_streams and scheduled == set(names):
+        # The provider reported that its bounded event window no longer
+        # contains the prior cursor. Only a complete successful owner pass
+        # can adopt the exact high-water candidate returned with that reset.
+        semantic_known = True
+        report["cursor_disposition"] = "reconciled_and_advanced"
     # Observation and effects are two phases. A moving checkout cannot be
     # certified current using an after-the-fact catalogue of unseen edits.
     after, intervening, after_known, _ = _observe(session, observed)
@@ -595,17 +674,32 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     # our own effects without discarding a publication racing those effects.
     if callable(getattr(session.store, "generation", None)) and report["scheduled"]:
         raced, checked_cursor, checked_known = _store_events(session, {"store_cursor": cursor}, definition)
-        if checked_known and not raced:
+        raced_reset = next((item for item in raced
+                            if item.get("kind") == "store.reconcile_required"), None)
+        if (store_reset is not None and raced_reset is not None
+                and checked_known
+                and raced_reset.get("candidate_cursor") == store_reset.get("candidate_cursor")
+                and scheduled == set(names) and not owner_failures):
+            cursor = store_reset.get("candidate_cursor")
+            report["store_replay"]["disposition"] = "full_owner_reconciliation_complete"
+            report["cursor_disposition"] = "store_reconciled_and_advanced"
+        elif checked_known and not raced:
             cursor = checked_cursor
         else:
             after_known = False
-            intervening.extend(raced)
+            intervening.extend(item for item in raced
+                               if item.get("kind") != "store.reconcile_required")
+            if store_reset is not None:
+                report["store_replay"]["disposition"] = "reconciliation_incomplete_or_store_advanced"
     stable = after_known and not intervening
     if not stable:
         report["mode"] = "bounded_reconciliation"
         report["pending_events"] = intervening[:32]
     effects = any(not (results.get(name) or {}).get('reused', False) for name in scheduled)
-    if effects or events or previous.get("repositories") != observed["repositories"] or semantic_cursors != previous.get("semantic_cursors", {}) or previous.get('policy_identity') != policy:
+    if (effects or events or store_reset is not None or not store_known
+            or previous.get("repositories") != observed["repositories"]
+            or semantic_cursors != previous.get("semantic_cursors", {})
+            or previous.get('policy_identity') != policy):
         state = {"schema_version": SCHEMA, **observed, "result_refs": _result_refs(session, results),
                  "policy_identity": policy, "policy_artifacts": policy_artifacts,
                  "policy_receipt": receipt, "last_trace": report, "deadlines": deadlines,

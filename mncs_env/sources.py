@@ -21,11 +21,28 @@ from typing import Any
 
 from .identity import digest_hex
 
-#: Maximum observations admitted from one source per cycle.
-MAX_OBSERVATIONS = 100
+#: Maximum observations admitted from one source per cycle. Keep this equal
+#: to the reconciler's per-source emit bound so a provider cursor never moves
+#: past observations that the owner did not durably publish.
+MAX_OBSERVATIONS = 50
+# First contact establishes an authoritative baseline without replaying old
+# Commons ledger entries as new work. The page count is bounded, but a ledger
+# beyond that bound is reported unknown and leaves the consumer cursor
+# untouched so it cannot silently adopt a partial tip.
+MAX_COMMONS_BASELINE_PAGES = 64
 
-#: Maximum Store generations walked in one replay.
-MAX_REPLAY_WALK = 256
+#: Maximum Store generation gap inspected in one replay. Store's canonical
+#: implementation compares the immutable cursor and head snapshots once, so
+#: the bound no longer multiplies a full Store scan per generation.
+MAX_REPLAY_WALK = 4096
+
+# These records are Environment's own durable products. Their Store
+# publications must not recursively invalidate the owners that wrote them.
+# They remain fully readable and verifiable through their owning contracts.
+_DERIVED_STORE_SCHEMAS = {
+    b"mncs.environment.verification-evidence/1",
+    b"mncs.provider-execution-provenance/1",
+}
 
 
 def utcnow() -> str:
@@ -182,20 +199,43 @@ class StoreReplaySource(Source):
             return SourceResult(
                 "reset", [], str(head),
                 f"gap {head - last} exceeds walk bound {MAX_REPLAY_WALK}; re-baselined")
+        delta_at = getattr(self.store, "domain_bindings_since", None)
+        if callable(delta_at):
+            try:
+                deltas = delta_at(last, max_generations=MAX_REPLAY_WALK)
+            except Exception as error:
+                return SourceResult(
+                    "unknown", [], since,
+                    f"bounded Store identity delta unavailable; cursor held: {error}")
+            events: list[Observation] = []
+            seen: set[tuple[bytes, bytes]] = set()
+            for generation, schema, identity in deltas:
+                binding = (bytes(schema), bytes(identity))
+                event = self._classify(binding[1], [], int(generation), binding[0])
+                if event is not None and binding not in seen:
+                    seen.add(binding)
+                    events.append(event)
+                    if len(events) >= MAX_OBSERVATIONS:
+                        return SourceResult(
+                            "reset", [], str(head),
+                            "observation bound exceeded; reconcile before adopting head")
+            return SourceResult(
+                "ok", events, str(head),
+                f"replayed {head - last} generations from committed Store deltas, {len(events)} observations")
         seen: set[tuple[bytes, bytes]] = set()
         events: list[Observation] = []
         baseline = self._objects_at(last)
         if baseline is None:
             return SourceResult(
-                "reset", [], str(head),
-                f"cursor generation {last} unreadable; re-baselined")
+                "unknown", [], since,
+                f"cursor generation {last} unreadable; cursor held")
         previous = {(bytes(getattr(item, "domain_schema", b"")), bytes(item.domain_identity)) for item in baseline}
         for gen in range(last + 1, head + 1):
             objects = self._objects_at(gen)
             if objects is None:
                 return SourceResult(
-                    "reset", [], str(head),
-                    f"generation {gen} unreadable; re-baselined")
+                    "unknown", [], since,
+                    f"generation {gen} unreadable; cursor held")
             current = {(bytes(getattr(item, "domain_schema", b"")), bytes(item.domain_identity)) for item in objects}
             for binding in sorted(current - previous):
                 schema, identity = binding
@@ -218,6 +258,11 @@ class StoreReplaySource(Source):
             text = identity.decode("utf-8", "replace")
         except Exception:
             return None
+        if schema in _DERIVED_STORE_SCHEMAS:
+            return None
+        if (schema == b"mncs.environment.projection-state/1"
+                and text.startswith("mncs-")):
+            return None
         if text.startswith(self.own_prefix):
             return None
         if ":evt:" in text:
@@ -225,6 +270,9 @@ class StoreReplaySource(Source):
         cursor = f"{generation}:{digest_hex({'g': generation, 'i': text, 'schema': schema.hex()})[:12]}"
         moment = utcnow()
         if text.startswith("claim:"):
+            parts = text.split(":")
+            repository = (parts[2] if len(parts) > 2 and parts[1] == "claim"
+                          else parts[1] if len(parts) > 1 else text)
             return Observation(
                 source=self.name, stream="claims", cursor=cursor,
                 identity=observe_identity(self.name, "claims", cursor, text, "claim.changed"),
@@ -232,7 +280,7 @@ class StoreReplaySource(Source):
                 kind="claim.changed", severity="notice",
                 summary=f"claim record changed: {text}",
                 provenance={"domain_identity": text},
-                relations={"claim": text.split(":")[1] if ":" in text else text},
+                relations={"claim": repository},
                 payload={},
             )
         if ":snap:" in text:
@@ -281,6 +329,7 @@ class CommonsSyncSource(Source):
         self.socket_path = str(socket_path) if socket_path else None
 
     def observe(self, since: str | None) -> SourceResult:
+        baseline_adopted = since is None
         try:
             CommonsClient, default_service_root = _load_commons_client()
         except LookupError as error:
@@ -302,20 +351,37 @@ class CommonsSyncSource(Source):
                     # without replaying backlog as new: history predates
                     # observation; sessions catch up on demand.
                     result = {"entries": [], "nextCursor": None, "hasMore": False}
-                    for _ in range(5):
+                    complete = False
+                    for _ in range(MAX_COMMONS_BASELINE_PAGES):
                         page = client.sync(cursor=cursor, limit=MAX_OBSERVATIONS)
-                        if isinstance(page.get("nextCursor"), dict):
-                            cursor = page["nextCursor"]
+                        next_cursor = page.get("nextCursor")
+                        if not isinstance(next_cursor, dict):
+                            return SourceResult(
+                                "unknown", [], since,
+                                "Commons first-contact baseline returned no authoritative cursor")
+                        if page.get("hasMore") and next_cursor == cursor:
+                            return SourceResult(
+                                "unknown", [], since,
+                                "Commons first-contact baseline cursor did not advance")
+                        cursor = next_cursor
                         result = page
                         if not page.get("hasMore"):
+                            complete = True
                             break
+                    if not complete:
+                        return SourceResult(
+                            "unknown", [], since,
+                            f"Commons first-contact baseline exceeds {MAX_COMMONS_BASELINE_PAGES} pages; retry after bounded reconciliation")
                 else:
                     result = client.sync(cursor=cursor, limit=MAX_OBSERVATIONS)
             finally:
                 client.close()
         except Exception as error:
             return SourceResult("unknown", [], since, f"commons sync failed: {error}")
-        entries = result.get("entries", []) if isinstance(result, dict) else []
+        # First contact intentionally adopts the ledger tip. Entries read
+        # while advancing to that tip predate this consumer and are not work.
+        entries = ([] if baseline_adopted else
+                   result.get("entries", []) if isinstance(result, dict) else [])
         next_cursor = result.get("nextCursor") if isinstance(result, dict) else None
         cursor_out = json.dumps(next_cursor, sort_keys=True) if next_cursor else since
         events: list[Observation] = []
@@ -400,9 +466,15 @@ class LanguageServiceSource(Source):
         if since is not None:
             try:
                 saved = json.loads(since)
-                stream = saved.get("stream")
-                after = int(saved.get("cursor", 0))
-            except (TypeError, ValueError):
+                if (not isinstance(saved, dict)
+                        or not isinstance(saved.get("stream"), str)
+                        or not saved.get("stream")
+                        or type(saved.get("cursor")) is not int
+                        or saved["cursor"] < 0):
+                    raise ValueError("invalid stream cursor")
+                stream = saved["stream"]
+                after = saved["cursor"]
+            except (AttributeError, TypeError, ValueError):
                 return SourceResult("reset", [], None, "unparsable cursor; restart sync")
         # Converge the resident to disk truth before polling, mirroring
         # the provider probe: shell-made edits bypass LSP notifications,
@@ -422,25 +494,74 @@ class LanguageServiceSource(Source):
             return SourceResult("unknown", [], since, f"language-service unreachable: {error}")
         if not isinstance(result, dict):
             return SourceResult("unknown", [], since, "malformed poll_events result")
-        if result.get("reset_required"):
-            return SourceResult(
-                "reset", [], None,
-                "provider requires reset (history aged out or stream restarted)")
         current_stream = str(result.get("stream_identity", "") or "")
-        if stream is not None and current_stream != stream:
+        current_cursor = result.get("current_cursor")
+        oldest_cursor = result.get("oldest_cursor")
+        reset_flag = result.get("reset_required")
+        if (not current_stream or type(current_cursor) is not int or current_cursor < 0
+                or type(oldest_cursor) is not int or oldest_cursor < 1
+                or type(reset_flag) is not bool):
+            return SourceResult("unknown", [], since,
+                                "malformed Language Service stream/cursor identity")
+        response_after = result.get("after_cursor")
+        if type(response_after) is not int or response_after != after:
+            return SourceResult("unknown", [], since,
+                                "Language Service poll response does not match requested cursor")
+        reset_required = reset_flag or current_cursor < after
+        if reset_required:
+            # A reset is a request for bounded owner reconciliation. Preserve
+            # the provider's exact high-water candidate so the caller can
+            # acknowledge it only after that reconciliation succeeds. Without
+            # this candidate, expired or restarted streams reset forever; the
+            # old cursor must never be reinterpreted in the new stream.
+            recovery_cursor = json.dumps(
+                {"stream": current_stream, "cursor": current_cursor}, sort_keys=True)
             return SourceResult(
-                "reset", [], None,
-                "stream identity changed; restart sync")
-        current_cursor = int(result.get("current_cursor", after))
-        cursor_out = json.dumps({"stream": current_stream, "cursor": current_cursor},
+                "reset", [], recovery_cursor,
+                f"provider requires bounded semantic reconciliation: stream={current_stream}, "
+                f"current_cursor={current_cursor}, oldest_cursor={oldest_cursor}")
+        if stream is not None and current_stream != stream:
+            recovery_cursor = json.dumps(
+                {"stream": current_stream, "cursor": current_cursor}, sort_keys=True)
+            return SourceResult(
+                "reset", [], recovery_cursor,
+                f"stream identity changed; bounded semantic reconciliation required: "
+                f"stream={current_stream}, current_cursor={current_cursor}")
+        raw_events = result.get("events", [])
+        if not isinstance(raw_events, list) or len(raw_events) > MAX_OBSERVATIONS:
+            return SourceResult("unknown", [], since,
+                                "malformed or over-bound poll_events page")
+        page_cursor = after
+        for item in raw_events:
+            if not isinstance(item, dict) or type(item.get("cursor")) is not int:
+                return SourceResult("unknown", [], since,
+                                    "poll_events returned an invalid event cursor")
+            item_cursor = item["cursor"]
+            if item_cursor <= page_cursor or item_cursor > current_cursor:
+                return SourceResult("unknown", [], since,
+                                    "poll_events event cursors are not strictly ordered")
+            page_cursor = item_cursor
+        if since is not None and current_cursor > after and not raw_events:
+            recovery_cursor = json.dumps(
+                {"stream": current_stream, "cursor": current_cursor}, sort_keys=True)
+            return SourceResult(
+                "reset", [], recovery_cursor,
+                "stream cursor advanced without a replay page; bounded semantic reconciliation required")
+        if (since is not None and raw_events and page_cursor < current_cursor
+                and len(raw_events) < MAX_OBSERVATIONS):
+            recovery_cursor = json.dumps(
+                {"stream": current_stream, "cursor": current_cursor}, sort_keys=True)
+            return SourceResult(
+                "reset", [], recovery_cursor,
+                "replay page ends before the provider high-water; bounded semantic reconciliation required")
+        acknowledged_cursor = current_cursor if since is None or not raw_events else page_cursor
+        cursor_out = json.dumps({"stream": current_stream, "cursor": acknowledged_cursor},
                                 sort_keys=True)
         if since is None:
             return SourceResult("ok", [], cursor_out, "baseline adopted")
         events: list[Observation] = []
-        for item in result.get("events", []) or []:
-            if not isinstance(item, dict):
-                continue
-            cursor = int(item.get("cursor", current_cursor))
+        for item in raw_events:
+            cursor = item["cursor"]
             current_id = item.get("current", {})
             uri = current_id.get("uri", "") if isinstance(current_id, dict) else ""
             identity = current_id.get("identity", "") if isinstance(current_id, dict) else ""
@@ -474,4 +595,7 @@ class LanguageServiceSource(Source):
                     "diagnostics_resolved": (resolved if isinstance(resolved, list) else [])[:20],
                 },
             ))
-        return SourceResult("ok", events, cursor_out, f"{len(events)} semantic events")
+        detail = f"{len(events)} semantic events"
+        if acknowledged_cursor < current_cursor:
+            detail += "; backlog remains"
+        return SourceResult("ok", events, cursor_out, detail)

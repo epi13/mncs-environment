@@ -150,6 +150,23 @@ def _capsule_counts(document: dict[str, Any]) -> dict[str, int]:
             "obligations": int(measured.get("obligations") or 0)}
 
 
+def _capsule_is_complete(document: dict[str, Any]) -> tuple[bool, str | None]:
+    """Only a complete semantic reconciliation can acknowledge a new epoch."""
+    status = document.get("status")
+    if not isinstance(status, dict) or status.get("kind") != "answered":
+        reason = status.get("reason") if isinstance(status, dict) else None
+        return False, str(reason or "semantic capsule did not answer completely")
+    measured = document.get("measured")
+    pending = (int(measured.get("analysis_pending_documents") or 0)
+               if isinstance(measured, dict) else 0)
+    unresolved = document.get("unresolved")
+    if pending:
+        return False, f"semantic capsule has {pending} documents without current analysis"
+    if isinstance(unresolved, list) and unresolved:
+        return False, "semantic capsule reports unresolved workspace state"
+    return True, None
+
+
 def _evaluate_one(session, service: dict[str, Any], observations: dict[str, dict],
                   durable: dict[str, dict]) -> dict[str, Any]:
     """Evaluate one declared workspace. Returns a bounded record."""
@@ -209,12 +226,37 @@ def _evaluate_one(session, service: dict[str, Any], observations: dict[str, dict
         record["reason"] = "semantic-poll/capsule capabilities are not bound"
         return record
     if not isinstance(saved, dict) or saved.get("stream") != stream:
+        if cursor == 0:
+            # A newly established stream with high-water zero has no
+            # semantic changes to replay. Adopt that exact empty window
+            # from the provider's status identity; do not invoke the
+            # workspace-wide capsule, which would force analysis of every
+            # selected source file merely to establish a baseline.
+            record["outcome"] = "adopted" if saved is None else "reset"
+            record["counts"] = {"actionable": 0, "watch": 0, "admitted": 0,
+                                "diagnostics": 0, "changed_subjects": 0,
+                                "obligations": 0}
+            record["baseline"] = "empty-provider-window"
+            durable[workspace] = {
+                "stream": stream,
+                "cursor": 0,
+                "generation": generation,
+                "fingerprint": fingerprint,
+                "observed_at": utcnow(),
+            }
+            return record
         # First contact or stream reset: reconcile through the bounded
         # capsule, never by replaying a foreign cursor.
         document, problem = _invoke_json(session, CAPSULE_CAPABILITY, argv)
         if document is None:
             record["outcome"] = "unknown"
             record["reason"] = problem
+            return record
+        complete, reason = _capsule_is_complete(document)
+        if not complete:
+            record["outcome"] = "unknown"
+            record["reason"] = reason
+            record["cursor_retained"] = int(saved.get("cursor") or 0) if isinstance(saved, dict) else None
             return record
         record["outcome"] = "adopted" if saved is None else "reset"
         record["counts"] = _capsule_counts(document)
@@ -240,6 +282,12 @@ def _evaluate_one(session, service: dict[str, Any], observations: dict[str, dict
         if adopted is None:
             record["outcome"] = "unknown"
             record["reason"] = problem
+            return record
+        complete, reason = _capsule_is_complete(adopted)
+        if not complete:
+            record["outcome"] = "unknown"
+            record["reason"] = reason
+            record["cursor_retained"] = int(saved.get("cursor") or 0)
             return record
         record["outcome"] = "reset"
         record["counts"] = _capsule_counts(adopted)

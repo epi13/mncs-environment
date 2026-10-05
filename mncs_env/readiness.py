@@ -23,6 +23,13 @@ PROBE_BUDGET_SECONDS = 15
 def _valid_argument(value: Any) -> bool:
     if isinstance(value, str):
         return True
+    # The Environment's selected root is a first-class invocation address.
+    # It lets a provider bind its resident service to the exact composed
+    # workspace without embedding an ambient absolute path in the definition.
+    if isinstance(value, dict) and value == {"workspace_root": True}:
+        return True
+    if isinstance(value, dict) and value == {"selected_repository_roots_json": True}:
+        return True
     if not isinstance(value, dict) or set(value) != {"repository", "path"}:
         return False
     relative = value.get("path")
@@ -37,9 +44,36 @@ def resolve_arguments(session, argv: list[Any]) -> list[str]:
     result = []
     for argument in argv:
         if not _valid_argument(argument):
-            raise ValueError("service argument must be a string or a selected repository/path reference")
+            raise ValueError("service argument must be a string, selected repository/path reference, or typed Environment selection reference")
         if isinstance(argument, str):
             result.append(argument)
+            continue
+        if argument == {"workspace_root": True}:
+            selected_root = session.snapshot.get("workspace", {}).get("root")
+            if not isinstance(selected_root, str) or not Path(selected_root).is_absolute():
+                raise ValueError("Environment workspace root is absent or not absolute")
+            result.append(str(Path(selected_root).resolve()))
+            continue
+        if argument == {"selected_repository_roots_json": True}:
+            workspace_root = session.snapshot.get("workspace", {}).get("root")
+            if not isinstance(workspace_root, str) or not Path(workspace_root).is_absolute():
+                raise ValueError("Environment workspace root is absent or not absolute")
+            base = Path(workspace_root).resolve()
+            selected = session.snapshot.get("selected_checkouts")
+            if not isinstance(selected, dict) or not selected:
+                raise ValueError("Environment selected checkout set is absent")
+            roots = []
+            for repository, checkout in sorted(selected.items()):
+                if not isinstance(checkout, dict) or not isinstance(checkout.get("path"), str):
+                    raise ValueError(f"selected checkout has no path: {repository}")
+                path = Path(checkout["path"])
+                if not path.is_absolute():
+                    path = base / path
+                path = path.resolve()
+                if not path.is_dir() or not path.is_relative_to(base):
+                    raise ValueError(f"selected checkout escapes the Environment workspace: {repository}")
+                roots.append(str(path))
+            result.append(json.dumps(roots, ensure_ascii=False, separators=(",", ":")))
             continue
         selected = roots.get(argument["repository"])
         if not selected:

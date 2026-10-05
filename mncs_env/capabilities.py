@@ -332,7 +332,45 @@ def probe_availability(binding: dict[str, Any]) -> dict[str, Any]:
             "verification": "substrate",
             "observed_at": utcnow(),
         }
+    awaitable["availability"]["substrate_key"] = availability_substrate_key(binding)
     return awaitable
+
+
+def availability_substrate_key(binding: dict[str, Any]) -> str:
+    """Cheap exact-path change key for reusing a prior availability probe.
+
+    This is a staleness signal, not build provenance or an executable
+    attestation. Provider/build identities are established by their own
+    receipts and content digests.
+    """
+    address = binding.get("address")
+    raw = address[len("python:"):] if isinstance(address, str) and address.startswith("python:") else address
+    resolved = shutil.which(raw) if isinstance(raw, str) and "/" not in raw else raw
+    paths: dict[str, Any] = {}
+    for label, value in [("address", resolved),
+                         ("toolchain", binding.get("toolchain_address")),
+                         *[(f"fixed-env:{key}", value)
+                           for key, value in sorted((binding.get("fixed_env") or {}).items())]]:
+        if not isinstance(value, str) or not value:
+            paths[label] = value
+            continue
+        path = Path(value)
+        if not path.is_absolute():
+            paths[label] = {"path": value, "resolved": shutil.which(value)}
+            continue
+        try:
+            stat = path.stat()
+            link = path.lstat()
+            paths[label] = {
+                "path": str(path),
+                "stat": [stat.st_dev, stat.st_ino, stat.st_mode, stat.st_size,
+                         stat.st_mtime_ns, stat.st_ctime_ns],
+                "link": [link.st_dev, link.st_ino, link.st_mode,
+                         link.st_mtime_ns, link.st_ctime_ns],
+            }
+        except OSError:
+            paths[label] = {"path": str(path), "missing": True}
+    return digest_hex({"kind": "mncs-capability-substrate-key/1", "paths": paths})
 
 
 def discover_capabilities(

@@ -1740,10 +1740,10 @@ class Session:
         binding_fields = (
                 "contract_revision", "entrypoint", "address", "effects", "toolchain_address",
                 "toolchain_env", "fixed_argv", "fixed_env", "timeout_seconds", "working_directory", "provenance",
-            "provider_root",
+            "provider_root", "event_types",
         )
         report: dict[str, Any] = {
-            "reprobed": 0, "changed": [], "bound": [], "unbound": []
+            "reprobed": 0, "reused": 0, "changed": [], "bound": [], "unbound": []
         }
         for key, binding in current_by_key.items():
             previous = prior_by_key.get(key)
@@ -1772,9 +1772,23 @@ class Session:
         for binding in discovered:
             before = prior_by_key.get((binding.get("provider"), binding.get("capability")), {})
             before_status = before.get("availability", {}).get("status")
-            fresh = capabilities_module.probe_availability(binding)
+            prior_availability = before.get("availability", {})
+            same_contract = before and all(
+                before.get(field) == binding.get(field) for field in binding_fields
+            )
+            same_substrate = (
+                isinstance(prior_availability, dict)
+                and prior_availability.get("substrate_key")
+                == capabilities_module.availability_substrate_key(binding)
+            )
+            if same_contract and same_substrate:
+                fresh = dict(binding)
+                fresh["availability"] = dict(prior_availability)
+                report["reused"] += 1
+            else:
+                fresh = capabilities_module.probe_availability(binding)
+                report["reprobed"] += 1
             new_bindings.append(fresh)
-            report["reprobed"] += 1
             if fresh["availability"]["status"] != before_status:
                 report["changed"].append(binding["capability"])
                 self._emit(

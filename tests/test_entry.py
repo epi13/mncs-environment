@@ -36,15 +36,48 @@ class EntryContractTests(unittest.TestCase):
 
     def test_selected_service_arguments_do_not_depend_on_cwd(self):
         from types import SimpleNamespace
-        context = SimpleNamespace(snapshot={"bindings": [{"provider": "fixture", "provider_root": str(self.project)}]})
+        second = self.base / "second-fixture"
+        second.mkdir()
+        context = SimpleNamespace(snapshot={
+            "workspace": {"root": str(self.base)},
+            "selected_checkouts": {
+                "z-fixture": {"path": str(self.project)},
+                "a-fixture": {"path": str(second)},
+            },
+            "bindings": [{"provider": "fixture", "provider_root": str(self.project)}],
+        })
         with mock.patch("pathlib.Path.cwd", return_value=Path("/tmp")):
             self.assertEqual(readiness.resolve_arguments(context, ["--config", {"repository": "fixture", "path": ".mncs/environment.json"}]),
                              ["--config", str(self.definition)])
+            self.assertEqual(readiness.resolve_arguments(context, ["--workspace", {"workspace_root": True}]),
+                             ["--workspace", str(self.base.resolve())])
+            roots = json.loads(readiness.resolve_arguments(
+                context, [{"selected_repository_roots_json": True}])[0])
+            self.assertEqual(roots, [str(second.resolve()), str(self.project.resolve())])
         for reference in ({"repository": "missing", "path": "config"},
                           {"repository": "fixture", "path": "../config"},
                           {"repository": "fixture", "path": "/ambient/config"}):
             with self.assertRaises(ValueError):
                 readiness.resolve_arguments(context, [reference])
+
+    def test_environment_root_service_argument_requires_selected_root(self):
+        from types import SimpleNamespace
+        context = SimpleNamespace(snapshot={"bindings": []})
+        with self.assertRaisesRegex(ValueError, "workspace root is absent"):
+            readiness.resolve_arguments(context, [{"workspace_root": True}])
+
+    def test_selected_repository_roots_require_exact_contained_checkouts(self):
+        from types import SimpleNamespace
+        context = SimpleNamespace(snapshot={
+            "workspace": {"root": str(self.base)},
+            "selected_checkouts": {"fixture": {"path": str(self.project)}},
+        })
+        self.assertEqual(json.loads(readiness.resolve_arguments(
+            context, [{"selected_repository_roots_json": True}])[0]),
+            [str(self.project.resolve())])
+        context.snapshot["selected_checkouts"]["escape"] = {"path": str(self.base.parent)}
+        with self.assertRaisesRegex(ValueError, "escapes"):
+            readiness.resolve_arguments(context, [{"selected_repository_roots_json": True}])
 
     def test_selected_service_argument_rejects_symlink_escape(self):
         from types import SimpleNamespace

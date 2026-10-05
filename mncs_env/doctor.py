@@ -145,9 +145,33 @@ def _claims_digest(session) -> str:
     return digest_hex({key: live[key] for key in sorted(live)})
 
 
+_READINESS_NEUTRAL_EVENTS = frozenset({
+    # Entry-time owners record these after Doctor has validated the same
+    # workspace. They are execution/evidence traffic, not new health inputs;
+    # provider availability and the resulting workspace state are fingerprinted
+    # independently below. Keeping them out prevents one verification call
+    # from invalidating Doctor on the next otherwise-quiet entry.
+    "capability.invoked",
+    "invocation.completed",
+    "doctor.remediated",
+    "session.resumed",
+    "verification.completed",
+    "verification.deferred",
+    "verification.failed",
+    "verification.verified",
+})
+
+
 def _event_count(session) -> int | str:
+    """Count readiness-relevant session events, not routine owner traffic.
+
+    Unknown event kinds remain invalidating. This is deliberately a narrow
+    exclusion list: a newly introduced event contract cannot silently bypass
+    Doctor freshness until its readiness meaning has been reviewed.
+    """
     try:
-        return len(session._log())
+        return sum(1 for event in session._log()
+                   if event.get("type") not in _READINESS_NEUTRAL_EVENTS)
     except Exception:
         return "unreadable"
 
@@ -209,30 +233,6 @@ def epoch_digest(inputs: dict[str, Any]) -> str:
 
 
 # -- epoch validation ----------------------------------------------------
-
-def _trailing_own_resume(session, baseline: int) -> bool:
-    """Whether the log grew by exactly our own resume marker since baseline.
-
-    `Session.resume` appends one `session.resumed` event before the ambient
-    pass runs. That marker is the caller's own participation evidence, not
-    external change, so it must not invalidate an otherwise valid epoch.
-    Anything else appended (a peer, a handoff, a second marker) invalidates.
-    """
-    try:
-        log = session._log()
-    except Exception:
-        return False
-    if len(log) != baseline + 1:
-        return False
-    last = log[-1]
-    return (
-        last.get("type") == "session.resumed"
-        and isinstance(last.get("payload"), dict)
-        and last["payload"].get("consumer_id") == session.snapshot.get("consumer_id")
-        and "previous_consumer" not in last["payload"]
-        and "handoff_id" not in last["payload"]
-    )
-
 
 def validate_epoch(session, epoch: dict[str, Any]) -> tuple[bool, list[str]]:
     """Compare live inputs against a recorded epoch.
@@ -297,11 +297,8 @@ def validate_epoch(session, epoch: dict[str, Any]) -> tuple[bool, list[str]]:
         note("claims")
     baseline = recorded.get("event_count")
     current = live.get("event_count")
-    if baseline != current and not (
-        isinstance(baseline, int) and _trailing_own_resume(session, baseline)
-    ):
+    if baseline != current:
         note("events")
-    _ = current
     return (not reasons), reasons
 
 

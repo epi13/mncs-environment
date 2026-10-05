@@ -152,7 +152,8 @@ class EpochTests(DoctorFixture):
         self.assertEqual(code, 0, second)
         self.assertTrue(second["entry"]["reused"])
         self.assertFalse(second["doctor"]["reused"])
-        self.assertGreater(second["entry"]["revalidation"]["reprobed"], 0)
+        self.assertEqual(second["entry"]["revalidation"]["reprobed"], 0)
+        self.assertGreater(second["entry"]["revalidation"]["reused"], 0)
 
     def test_epoch_miss_on_manifest_change(self):
         self.ready()
@@ -337,6 +338,25 @@ class ValidationReasonTests(DoctorFixture):
             self.assertEqual(reasons, ["consumer_id"])
             session.snapshot["consumer_id"] = "agent"
             # A bare observation appends exactly one event reason.
+            session.record_observation("adapter.observed", "test-probe", {})
+            valid, reasons = doctor.validate_epoch(session, epoch)
+            self.assertEqual(reasons, ["events"])
+        finally:
+            session.close()
+
+    def test_owner_execution_evidence_does_not_invalidate_doctor_epoch(self):
+        self.ready()
+        _, first = self.enter()
+        session = sessions.Session.open(state_dir=self.state, session_id=first["session_id"],
+                                        backend="file")
+        try:
+            epoch = session.snapshot["doctor"]["epoch"]
+            for kind in ("capability.invoked", "invocation.completed",
+                         "verification.verified", "verification.deferred"):
+                session._emit(kind, "environment", {"fixture": True})
+            valid, reasons = doctor.validate_epoch(session, epoch)
+            self.assertTrue(valid, reasons)
+            # A new, unclassified event remains fail-closed.
             session.record_observation("adapter.observed", "test-probe", {})
             valid, reasons = doctor.validate_epoch(session, epoch)
             self.assertEqual(reasons, ["events"])

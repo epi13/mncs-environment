@@ -6,6 +6,7 @@
     "repositories": [
       "mncs-environment",
       "mncs-language",
+      "mncs-language-service",
       "mncs-compiler",
       "mncs-vm",
       "mncs-test",
@@ -50,12 +51,51 @@
           "--compact"
         ]
       },
+      "reconcile": {
+        "capability": "mncs-doctor:compiler-vm-reconcile",
+        "argv": [
+          "--smoke",
+          "--compact",
+          "--reconcile-builds"
+        ]
+      },
       "response_schema": "mncs.doctor.compiler-vm/1",
       "ready_when": {
         "/status": "pass"
       },
       "required": true,
       "response_max_bytes": 65536
+    },
+    {
+      "identity": "mncs-language-service:resident-workspace",
+      "observation_inputs": [
+        "selected-repositories"
+      ],
+      "observation_max_age_ms": 60000,
+      "probe": {
+        "capability": "mncs-language-service:resident-status",
+        "argv": [
+          "--workspace",
+          {"workspace_root": true},
+          "--repository-roots-json",
+          {"selected_repository_roots_json": true}
+        ]
+      },
+      "reconcile": {
+        "capability": "mncs-language-service:resident-reconcile",
+        "argv": [
+          "--workspace",
+          {"workspace_root": true},
+          "--repository-roots-json",
+          {"selected_repository_roots_json": true}
+        ]
+      },
+      "response_schema": "mncs.language-service.resident-status/1",
+      "ready_when": {
+        "/ready": true
+      },
+      "required": true,
+      "response_max_bytes": 32768
     }
   ],
   "intent": {

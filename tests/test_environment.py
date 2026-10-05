@@ -2031,6 +2031,36 @@ class SourcesTests(unittest.TestCase):
         language = sources.LanguageServiceSource(None)
         self.assertEqual(language.observe(None).status, "unknown")
 
+    def test_commons_first_contact_drains_all_bounded_pages_without_emitting_old_entries(self) -> None:
+        class Client:
+            calls = 0
+
+            @classmethod
+            def connect(cls, _path):
+                return cls()
+
+            def sync(self, cursor=None, limit=100):
+                type(self).calls += 1
+                page = type(self).calls
+                return {"entries": [{"entryDigest": str(page), "entryType": "record"}],
+                        "nextCursor": {"sequence": page},
+                        "hasMore": page < 7}
+
+            def close(self):
+                pass
+
+        with tempfile.TemporaryDirectory() as directory:
+            socket_path = Path(directory) / "commons.sock"
+            socket_path.touch()
+            Client.calls = 0
+            with mock.patch.object(sources, "_load_commons_client",
+                                   return_value=(Client, lambda: directory)):
+                first = sources.CommonsSyncSource(socket_path).observe(None)
+                self.assertEqual(first.status, "ok")
+                self.assertEqual(first.events, [])
+                self.assertEqual(json.loads(first.cursor), {"sequence": 7})
+                self.assertEqual(Client.calls, 7)
+
     def test_language_source_omits_unknown_stream_identity(self) -> None:
         import socket
         import threading
@@ -2112,6 +2142,63 @@ class SourcesTests(unittest.TestCase):
         self.assertEqual(len(polls), 2)
         self.assertNotIn("stream_identity", polls[0])
         self.assertEqual(polls[1].get("stream_identity"), "stream-1")
+
+    def test_language_source_reset_returns_exact_reconciliation_high_water(self) -> None:
+        source = sources.LanguageServiceSource("unused.sock")
+        response = {"stream_identity": "stream-new", "after_cursor": 8,
+                    "current_cursor": 23, "oldest_cursor": 17,
+                    "reset_required": True, "events": []}
+        with mock.patch.object(source, "_call", side_effect=[{}, response]):
+            result = source.observe(json.dumps({"stream": "stream-old", "cursor": 8}))
+        self.assertEqual(result.status, "reset")
+        self.assertEqual(json.loads(result.cursor), {"cursor": 23, "stream": "stream-new"})
+        self.assertIn("oldest_cursor=17", result.detail)
+
+    def test_language_source_acknowledges_only_last_delivered_page_cursor(self) -> None:
+        source = sources.LanguageServiceSource("unused.sock")
+        cursor = json.dumps({"stream": "stream-1", "cursor": 0})
+        first_response = {
+            "stream_identity": "stream-1", "after_cursor": 0,
+            "current_cursor": 80, "oldest_cursor": 1,
+            "reset_required": False,
+            "events": [{"cursor": item, "current": {"uri": f"file:///{item}.mncs",
+                                                       "identity": f"doc-{item}"}}
+                       for item in range(1, 51)],
+        }
+        with mock.patch.object(source, "_call", side_effect=[{}, first_response]):
+            first = source.observe(cursor)
+        self.assertEqual(first.status, "ok")
+        self.assertEqual(json.loads(first.cursor), {"stream": "stream-1", "cursor": 50})
+        self.assertIn("backlog remains", first.detail)
+
+        second_response = {
+            "stream_identity": "stream-1", "after_cursor": 50,
+            "current_cursor": 80, "oldest_cursor": 1,
+            "reset_required": False,
+            "events": [{"cursor": item, "current": {"uri": f"file:///{item}.mncs",
+                                                       "identity": f"doc-{item}"}}
+                       for item in range(51, 81)],
+        }
+        with mock.patch.object(source, "_call", side_effect=[{}, second_response]):
+            second = source.observe(first.cursor)
+        self.assertEqual(second.status, "ok")
+        self.assertEqual(json.loads(second.cursor), {"stream": "stream-1", "cursor": 80})
+        self.assertEqual(len(first.events) + len(second.events), 80)
+
+    def test_language_source_rejects_malformed_or_mismatched_cursor(self) -> None:
+        source = sources.LanguageServiceSource("unused.sock")
+        with mock.patch.object(source, "_call") as call:
+            result = source.observe("[]")
+        self.assertEqual(result.status, "reset")
+        call.assert_not_called()
+
+        response = {"stream_identity": "stream-1", "after_cursor": 3,
+                    "current_cursor": 3, "oldest_cursor": 1,
+                    "reset_required": False, "events": []}
+        with mock.patch.object(source, "_call", side_effect=[{}, response]):
+            result = source.observe(json.dumps({"stream": "stream-1", "cursor": 2}))
+        self.assertEqual(result.status, "unknown")
+        self.assertIn("does not match requested cursor", result.detail)
 
 
 class ReconcilerTests(unittest.TestCase):

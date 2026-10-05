@@ -493,6 +493,13 @@ class StoreSessionStore(SessionStore):
     def domain_bindings_at(self, generation: int) -> tuple[tuple[bytes, bytes], ...]:
         return self.backend.domain_bindings_at(generation)
 
+    def domain_bindings_since(
+        self, generation: int, *, max_generations: int = 128
+    ) -> tuple[tuple[int, bytes, bytes], ...]:
+        """Forward Store's bounded identity delta to Environment replay."""
+        return self.backend.domain_bindings_since(
+            generation, max_generations=max_generations)
+
     def load_snapshot(self, session_id: str) -> dict[str, Any] | None:
         return self.backend.read_snapshot(session_id)
 
