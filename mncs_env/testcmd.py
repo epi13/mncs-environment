@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .capabilities import MAX_OUTPUT_LIMIT_BYTES
+
 REFERENCE_CAPABILITY = "mncs.test-verify/1"
 CANONICAL_VM_CAPABILITY = "mncs-test:canonical-vm-tests"
 EXECUTIONS = {"canonical-vm": CANONICAL_VM_CAPABILITY,
@@ -174,6 +176,7 @@ def run_tests(
             argv.append("--no-store")
     result = session.invoke(
         capability, argv, cwd=checkout, timeout_seconds=timeout_seconds,
+        output_limit_bytes=MAX_OUTPUT_LIMIT_BYTES,
     )
     return {
         "repository": name,

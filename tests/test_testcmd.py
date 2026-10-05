@@ -7,12 +7,13 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from mncs_env import testcmd
+from mncs_env import cli, testcmd
 
 
 class FakeSession:
@@ -126,6 +127,7 @@ class TestCommandTests(unittest.TestCase):
             ["--format", "json", "--max-executions", "4", "--no-store"],
             cwd=str((self.root / "repo-b").resolve()),
             timeout_seconds=30,
+            output_limit_bytes=testcmd.MAX_OUTPUT_LIMIT_BYTES,
         )
         self.assertEqual(result["repository"], "repo-b")
         self.assertEqual(result["report"], "report-text")
@@ -140,7 +142,8 @@ class TestCommandTests(unittest.TestCase):
         result = testcmd.run_tests(session, "repo-b", output_format="json", timeout_seconds=30)
         session.invoke.assert_called_once_with(
             "mncs-test:canonical-vm-tests", ["--format", "json"],
-            cwd=str((self.root / "repo-b").resolve()), timeout_seconds=30)
+            cwd=str((self.root / "repo-b").resolve()), timeout_seconds=30,
+            output_limit_bytes=testcmd.MAX_OUTPUT_LIMIT_BYTES)
         self.assertEqual(result["capability"], "mncs-test:canonical-vm-tests")
         self.assertEqual(result["execution"], "canonical-vm")
 
@@ -152,8 +155,25 @@ class TestCommandTests(unittest.TestCase):
         result = testcmd.run_tests(session, "repo-a", output_format="json", timeout_seconds=30)
         session.invoke.assert_called_once_with(
             "mncs.test-verify/1", ["--format", "json", "--max-executions", "16"],
-            cwd=str((self.root / "repo-a").resolve()), timeout_seconds=30)
+            cwd=str((self.root / "repo-a").resolve()), timeout_seconds=30,
+            output_limit_bytes=testcmd.MAX_OUTPUT_LIMIT_BYTES)
         self.assertEqual(result["execution"], "stage0-reference")
+
+    def test_cli_reports_truncated_provider_evidence_as_failure(self):
+        session = mock.Mock()
+        with mock.patch.object(cli.sessions_module.Session, "resume", return_value=session), \
+             mock.patch.object(cli.testcmd_module, "run_tests", return_value={
+                 "report": "partial", "stderr": "", "truncated": True,
+                 "returncode": 0,
+             }), mock.patch("sys.stdout"), mock.patch("sys.stderr") as stderr:
+            result = cli.cmd_test(SimpleNamespace(
+                state_dir="/state", session="ses_test", persistence="store",
+                checkout="mncs-test", format="json", timeout=60,
+                max_executions=16, no_store=False, execution=None,
+            ))
+        self.assertEqual(result, 4)
+        self.assertIn("truncated", str(stderr.write.call_args_list))
+        session.close.assert_called_once_with()
 
     def test_canonical_lane_fails_closed_without_binding(self):
         self.session.snapshot["bindings"] = [self.session.snapshot["bindings"][0]]

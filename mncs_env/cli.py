@@ -626,6 +626,7 @@ def cmd_test(args: argparse.Namespace) -> int:
     if result.get("truncated"):
         print("warning: provider report was truncated by the capture limit",
               file=sys.stderr)
+        return 4
     returncode = result.get("returncode")
     return returncode if isinstance(returncode, int) else 3
 
