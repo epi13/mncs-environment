@@ -1409,6 +1409,50 @@ class SessionTests(unittest.TestCase):
                 {"runtime": {"build_origin": {"status": "matches-embedded-inputs"}}},
             )
 
+    def test_readiness_preserves_language_service_recovery_descriptor(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            binding = capabilities.bind(
+                provider="mncs-language-service", capability="resident-status",
+                contract_revision="1", entrypoint="status", address="/bin/echo",
+                effects=["read"],
+            )
+            binding["availability"] = {"status": "available"}
+            session.snapshot["bindings"] = [binding]
+            session.snapshot["requirements"] = {
+                "services": [{
+                    "identity": "language-service", "required": True,
+                    "probe": {"capability": "resident-status", "argv": ["status"]},
+                    "response_schema": "mncs.language-service.resident-status/1",
+                    "ready_when": {"/ready": True},
+                }],
+            }
+            recovery = {
+                "schema_version": "mncs.language-service.recovery/1",
+                "disposition": "operator-action-required",
+                "code": "socket-bind-denied",
+                "socket_path": "/workspace/.mncs/mnls-language-service.sock",
+                "automatic_remediation": False,
+                "action": "Permit AF_UNIX bind in the selected host context.",
+            }
+            response = {
+                "schema_version": "mncs.language-service.resident-status/1",
+                "ready": False,
+                "state": "absent",
+                "detail": "no resident socket",
+                "recovery": recovery,
+            }
+            with mock.patch.object(authority, "evaluate", return_value={"verdict": "allow"}), mock.patch.object(
+                readiness.capabilities, "invoke",
+                return_value={"status": "ok", "returncode": 0,
+                              "stdout": json.dumps(response), "stderr": ""},
+            ):
+                result = readiness.probe_services(session)
+
+            self.assertEqual(result[0]["status"], "degraded")
+            self.assertEqual(result[0]["code"], "service-not-ready")
+            self.assertEqual(result[0]["provider_recovery"], recovery)
+
     def test_readiness_passes_selected_service_endpoint_to_dependent_provider(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))
