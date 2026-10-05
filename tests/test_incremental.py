@@ -479,6 +479,33 @@ def test_canonical_session_store_forwards_bounded_delta_contract():
     )
 
 
+def test_store_backend_forwards_provider_owned_reclaim():
+    import pytest
+
+    from mncs_env.store_backend import StoreBackend
+
+    class Provider:
+        def generation_inventory(self, *, keep_last):
+            assert keep_last == 4096
+            return {'head': 5000, 'floor': 768, 'prunable_files': 10}
+
+        def prune_generations(self, *, keep_last, dry_run):
+            assert keep_last == 4096
+            assert dry_run is True
+            return {'head': 5000, 'floor': 768, 'removed_files': 0}
+
+    backend = StoreBackend.__new__(StoreBackend)
+    backend._store = Provider()
+    assert backend.generation_inventory()['prunable_files'] == 10
+    assert backend.reclaim_generations()['removed_files'] == 0
+
+    backend._store = object()
+    with pytest.raises(RuntimeError, match='retention inventory'):
+        backend.generation_inventory()
+    with pytest.raises(RuntimeError, match='generation reclaim'):
+        backend.reclaim_generations()
+
+
 def test_store_replay_ignores_derived_products_and_resolves_claim_repository():
     from mncs_env import sources
 

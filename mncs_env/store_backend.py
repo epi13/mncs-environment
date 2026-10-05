@@ -494,6 +494,22 @@ class StoreBackend:
             raise RuntimeError("selected Store provider does not expose bounded delta replay")
         return observe(generation, max_generations=max_generations)
 
+    def generation_inventory(self, *, keep_last: int = 4096) -> dict[str, Any]:
+        # Retention classification stays provider-owned; Environment only
+        # forwards the request and reports the result.
+        inventory = getattr(self._store, "generation_inventory", None)
+        if not callable(inventory):
+            raise RuntimeError("selected Store provider does not expose retention inventory")
+        return dict(inventory(keep_last=keep_last))
+
+    def reclaim_generations(self, *, keep_last: int = 4096, dry_run: bool = True) -> dict[str, Any]:
+        # Reclamation stays provider-owned; Environment never interprets or
+        # deletes Store generation files itself.
+        reclaim = getattr(self._store, "prune_generations", None)
+        if not callable(reclaim):
+            raise RuntimeError("selected Store provider does not expose generation reclaim")
+        return dict(reclaim(keep_last=keep_last, dry_run=dry_run))
+
     def list_sessions(self) -> list[str]:
         # Session identities come from verified binding metadata; snapshot
         # payloads are never read for a listing.
