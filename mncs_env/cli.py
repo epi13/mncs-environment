@@ -583,15 +583,23 @@ def cmd_invoke(args: argparse.Namespace) -> int:
     except sessions_module.LifecycleError as error:
         return fail(str(error))
     try:
-        result = session.invoke(
-            args.capability, args.argv, cwd=args.cwd, timeout_seconds=args.timeout,
-            output_limit_bytes=args.output_limit_bytes,
-        )
-    except (sessions_module.AuthorityDenied, sessions_module.LifecycleError,
-            capabilities_module.CapabilityError) as error:
-        return fail(str(error), code=3)
-    out(result)
-    return 0 if result["status"] in ("ok", "pending-escalation") else 4
+        try:
+            result = session.invoke(
+                args.capability, args.argv, cwd=args.cwd,
+                timeout_seconds=args.timeout,
+                output_limit_bytes=args.output_limit_bytes,
+            )
+        except (sessions_module.AuthorityDenied, sessions_module.LifecycleError,
+                capabilities_module.CapabilityError) as error:
+            return fail(str(error), code=3)
+        out(result)
+        if result.get("truncated"):
+            print("warning: provider invocation output was truncated by the capture limit",
+                  file=sys.stderr)
+            return 4
+        return 0 if result["status"] in ("ok", "pending-escalation") else 4
+    finally:
+        session.close()
 
 
 def cmd_test(args: argparse.Namespace) -> int:
