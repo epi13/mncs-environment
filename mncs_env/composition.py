@@ -4,6 +4,7 @@ This module neither establishes compiler build origin nor admits executable
 artifacts. Provider declarations, observed bytes and Doctor proofs stay distinct.
 """
 from pathlib import Path
+from . import workspace as workspace_module
 from .observations import observe_artifact
 from .identity import digest_hex
 
@@ -175,6 +176,78 @@ def resolve(selectors, bindings, toolchain, prior=None, *, compatibility_service
                 compatibility['evidence_stale'] = True
     return {'schema_version':'mncs.environment.execution-composition/1', 'identity':identity,
             'roles':roles, 'compatibility':compatibility}
+
+
+def selected_checkout_drift(selectors, bindings, selected_checkouts,
+                            workspace_root: str | Path) -> list[dict]:
+    """Compare role provider bindings with current checkout facts.
+
+    The recorded composition stays immutable. This read-only observation
+    prevents a session bound to one revision from presenting a later checkout
+    as if it were still the selected producer or runtime.
+    """
+    if not isinstance(selected_checkouts, dict):
+        selected_checkouts = {}
+    by_capability = {binding.get("capability"): binding for binding in bindings
+                     if isinstance(binding, dict)}
+    providers = set()
+    for selector in validate(selectors).values():
+        binding = by_capability.get(selector["capability"])
+        if isinstance(binding, dict) and isinstance(binding.get("provider"), str):
+            providers.add(binding["provider"])
+    root = Path(workspace_root)
+    drift = []
+    for provider in sorted(providers):
+        binding = next((item for item in by_capability.values()
+                        if item.get("provider") == provider), {})
+        provenance = binding.get("provenance") or {}
+        checkout = selected_checkouts.get(provider) or provenance.get("checkout")
+        if not isinstance(checkout, dict):
+            drift.append({"provider": provider, "path": None,
+                          "reasons": ["provider-checkout-unselected"],
+                          "selected": None, "observed": None})
+            continue
+        raw_path = checkout.get("path")
+        if not isinstance(raw_path, str) or not raw_path:
+            drift.append({"provider": provider, "path": None,
+                          "reasons": ["selected-checkout-path-unrecorded"],
+                          "selected": {"head": checkout.get("authoritative_head") or checkout.get("head"),
+                                       "branch": checkout.get("branch"),
+                                       "clean": checkout.get("clean")},
+                          "observed": None})
+            continue
+        path = Path(raw_path)
+        if not path.is_absolute():
+            path = root / path
+        facts = workspace_module.quick_repo_facts(path, _refresh=True)
+        reasons = []
+        expected_head = checkout.get("authoritative_head") or checkout.get("head")
+        expected_branch = checkout.get("branch")
+        expected_clean = checkout.get("clean")
+        if facts is None:
+            reasons.append("checkout-unreadable")
+        else:
+            if not isinstance(expected_head, str) or not expected_head:
+                reasons.append("selected-revision-unrecorded")
+            elif facts.get("head") != expected_head:
+                reasons.append("revision-changed")
+            if "branch" in checkout and facts.get("branch") != expected_branch:
+                reasons.append("branch-changed")
+            observed_clean = not bool(facts.get("dirty"))
+            if type(expected_clean) is bool and observed_clean != expected_clean:
+                reasons.append("working-tree-cleanliness-changed")
+        if reasons:
+            drift.append({
+                "provider": provider,
+                "path": str(path.resolve()),
+                "reasons": reasons,
+                "selected": {"head": expected_head, "branch": expected_branch,
+                             "clean": expected_clean},
+                "observed": ({"head": facts.get("head"), "branch": facts.get("branch"),
+                              "clean": observed_clean}
+                             if facts is not None else None),
+            })
+    return drift
 
 
 def validate_compatibility_service(identity, services):

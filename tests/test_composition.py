@@ -101,6 +101,20 @@ def test_missing_role_fails_closed():
     with pytest.raises(ValueError): composition.validate({'compiler':{'command':'ambient'}})
 
 
+def test_selected_role_without_checkout_provenance_is_unproven(tmp_path):
+    executable=tmp_path/'compiler'; executable.write_bytes(b'compiler')
+    selected_binding={
+        'capability':'compiler:artifact', 'binding_id':'compiler-binding',
+        'provider':'mncs-compiler', 'toolchain_address':str(executable),
+    }
+    drift=composition.selected_checkout_drift(
+        {'compiler':{'capability':'compiler:artifact'}}, [selected_binding], {}, tmp_path)
+    assert drift == [{
+        'provider':'mncs-compiler', 'path':None,
+        'reasons':['provider-checkout-unselected'], 'selected':None, 'observed':None,
+    }]
+
+
 def test_selected_binary_replacement_invalidates_epoch_without_git(tmp_path):
     binary=tmp_path/'vm';binary.write_bytes(b'old')
     session=SimpleNamespace(snapshot={'bindings':[{'fixed_env':{'MNCS_VM_BIN':str(binary), 'MNCS_VM_CHECKOUT':str(tmp_path)}}]})

@@ -607,6 +607,40 @@ def resolve_environment(
     return environment
 
 
+def _apply_checkout_drift(readiness: dict[str, Any], execution_stack: dict[str, Any],
+                          drift: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Add live checkout coherence to a read-only health composition."""
+    summary = dict(readiness)
+    stack = dict(execution_stack)
+    if not drift:
+        stack["selection_status"] = "current"
+        return summary, stack
+    unproven = any(
+        reason in {"provider-checkout-unselected", "selected-checkout-path-unrecorded",
+                   "selected-revision-unrecorded", "checkout-unreadable"}
+        for item in drift for reason in item.get("reasons", [])
+    )
+    stack["selection_status"] = "unproven" if unproven else "stale"
+    stack["selection_drift"] = drift
+    compatibility = dict(stack.get("compatibility") or {})
+    compatibility.update(
+        state="unproven",
+        evidence_stale=True,
+        selection_drift=drift,
+        reason=("a selected provider checkout could not be verified"
+                if unproven else
+                "a selected provider checkout no longer matches the bound revision, branch, or cleanliness"),
+    )
+    stack["compatibility"] = compatibility
+    blockers = list(summary.get("blocking", []))
+    prefix = "selected-checkout-unproven" if unproven else "selected-checkout-drift"
+    blockers.extend(f"{prefix}:{item['provider']}" for item in drift)
+    summary["blocking"] = sorted(set(blockers))
+    summary["selection_drift"] = drift
+    summary["status"] = "blocked"
+    return summary, stack
+
+
 class Session:
     """A durable session bound to a session store (snapshot + event log)."""
 
@@ -2074,6 +2108,12 @@ class Session:
         observable only by probing. Any doubt falls through to the live
         path. `live=True` forces full live probes.
         """
+        selected_checkout_drift = composition.selected_checkout_drift(
+            self.snapshot.get("execution_roles", {}),
+            self.snapshot.get("bindings", []),
+            self.snapshot.get("selected_checkouts", {}),
+            self.snapshot.get("workspace", {}).get("root") or ".",
+        )
         if not live:
             from . import doctor as doctor_module
             epoch = self.snapshot.get("doctor", {}).get("epoch") if isinstance(
@@ -2093,6 +2133,8 @@ class Session:
                         )
                         summary = readiness_module.summarize(
                             self.snapshot, bindings=fresh, services=services, live=False)
+                        summary, execution_stack = _apply_checkout_drift(
+                            summary, execution_stack, selected_checkout_drift)
                         summary["observation"] = "epoch"
                         summary["epoch"] = epoch.get("digest")
                         return {"session_id": self.session_id,
@@ -2123,8 +2165,11 @@ class Session:
         snapshot["workspace"] = workspace_module.discover_workspace(
             self.snapshot.get("workspace", {}).get("root", "."),
             repositories=self.snapshot.get("workspace", {}).get("selection"))
+        summary = readiness_module.summarize(snapshot, bindings=fresh, services=services, live=True)
+        summary, execution_stack = _apply_checkout_drift(
+            summary, execution_stack, selected_checkout_drift)
         return {"session_id": self.session_id, "environment_id": self.snapshot.get("environment_id"),
-                "readiness": readiness_module.summarize(snapshot, bindings=fresh, services=services, live=True),
+                "readiness": summary,
                 "execution_stack": execution_stack,
                 "unavailable_capabilities": [{"capability": item["capability"], **item["availability"]}
                                              for item in fresh if item["availability"]["status"] != "available"],

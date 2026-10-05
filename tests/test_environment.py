@@ -1024,6 +1024,86 @@ class ToolchainTests(unittest.TestCase):
 
 
 class SessionTests(unittest.TestCase):
+    def test_health_blocks_when_selected_compiler_checkout_revision_drifts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "mncs-compiler"
+            checkout.mkdir()
+            subprocess.run(["git", "init", "-q", "-b", "main", str(checkout)], check=True)
+            source = checkout / "source.txt"
+            source.write_text("first revision\n")
+            subprocess.run(["git", "-C", str(checkout), "add", "."], check=True)
+            subprocess.run([
+                "git", "-C", str(checkout), "-c", "user.name=Environment Test",
+                "-c", "user.email=environment-test@example.invalid",
+                "commit", "-qm", "first revision",
+            ], check=True)
+            selected_head = subprocess.run(
+                ["git", "-C", str(checkout), "rev-parse", "HEAD"],
+                check=True, capture_output=True, text=True,
+            ).stdout.strip()
+            executable = root / "compiler-producer"
+            executable.write_bytes(b"selected compiler executable")
+            capability = "mncs-compiler:compiler-producer"
+            binding = {
+                "capability": capability,
+                "binding_id": "selected-compiler-binding",
+                "provider": "mncs-compiler",
+                "contract_revision": "1",
+                "toolchain_address": str(executable),
+                "provenance": {"checkout": {
+                    "path": str(checkout), "head": selected_head,
+                    "authoritative_head": selected_head, "branch": "main", "clean": True,
+                }},
+                "availability": {"status": "available", "code": "available"},
+            }
+            selected = {"mncs-compiler": {
+                "path": str(checkout), "head": selected_head,
+                "authoritative_head": selected_head, "branch": "main", "clean": True,
+            }}
+            session = object.__new__(sessions.Session)
+            session.session_id = "selection-drift-proof"
+            session.snapshot = {
+                "environment_id": "environment-proof",
+                "execution_roles": {"compiler": {"capability": capability}},
+                "execution_compatibility_service": None,
+                "execution_stack": {},
+                "bindings": [binding],
+                "selected_checkouts": selected,
+                "toolchain": {},
+                "requirements": {"required_capabilities": [], "services": []},
+                "service_observations": [],
+                "workspace": {"root": str(root), "selection": []},
+            }
+            observed_workspace = {"root": str(root), "scan": {"status": "complete"},
+                                  "repositories": []}
+            patches = (
+                mock.patch.object(sessions.capabilities_module, "probe_availability",
+                                  return_value=binding),
+                mock.patch.object(sessions.readiness_module, "probe_services", return_value=[]),
+                mock.patch.object(sessions.workspace_module, "discover_workspace",
+                                  return_value=observed_workspace),
+                mock.patch.object(sessions.Session, "actions", return_value={}),
+            )
+            with patches[0], patches[1], patches[2], patches[3]:
+                current = session.health(live=True)
+                self.assertEqual(current["execution_stack"]["selection_status"], "current")
+                source.write_text("second revision\n")
+                subprocess.run(["git", "-C", str(checkout), "add", "."], check=True)
+                subprocess.run([
+                    "git", "-C", str(checkout), "-c", "user.name=Environment Test",
+                    "-c", "user.email=environment-test@example.invalid",
+                    "commit", "-qm", "second revision",
+                ], check=True)
+                stale = session.health(live=True)
+            self.assertEqual(stale["execution_stack"]["selection_status"], "stale")
+            self.assertEqual(stale["execution_stack"]["compatibility"]["state"], "unproven")
+            self.assertEqual(stale["readiness"]["status"], "blocked")
+            self.assertIn("selected-checkout-drift:mncs-compiler",
+                          stale["readiness"]["blocking"])
+            self.assertIn("revision-changed",
+                          stale["readiness"]["selection_drift"][0]["reasons"])
+
     def test_effect_target_resolves_repository_only_to_selected_checkout(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -220,6 +220,13 @@ Readiness also retains a schema-valid provider failure report when the process
 exits nonzero: the process status, provider status/reason, and bounded component
 evidence stay visible, while the service remains unavailable. Empty stderr does
 not hide a provider's structured stdout diagnosis.
+
+Health rechecks the selected reference/compiler/runtime checkout revision,
+branch, and recorded clean state, including on a reusable Doctor-epoch path.
+Revision or worktree drift marks the execution selection stale and blocks
+compatibility until Environment reconciliation durably rebinds and verifies
+the providers. Missing checkout provenance stays unproven; health does not
+silently promote the current checkout into the session's selected identity.
 Forge owns live challenge, process birth/pidfd control, runtime artifact identity,
 Language stream validation, and asynchronous startup. Environment owns none of
 those internal rules. See Forge's `docs/RESIDENT_PROVIDER.md`.
