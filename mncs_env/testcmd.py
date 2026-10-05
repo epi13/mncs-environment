@@ -1,11 +1,8 @@
-"""Entered-session test runs through the provider-owned verifier.
+"""Entered-session Test routing across the canonical VM and Stage-0 lanes.
 
-``mncs-env test`` is a thin routing command: it resolves a session checkout,
-invokes the ``mncs.test-verify/1`` capability bound in the session with that
-checkout as its working directory, and streams the provider's report. Test
-semantics, selection, reuse, receipts, and Store admission all live in the
-mncs-test provider; this module owns only checkout resolution and result
-pass-through.
+The selected provider owns test semantics and evidence. Environment chooses
+the explicitly requested provider contract and exact selected checkout; it
+never falls back between execution lanes.
 """
 
 from __future__ import annotations
@@ -14,7 +11,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-TEST_CAPABILITY = "mncs.test-verify/1"
+REFERENCE_CAPABILITY = "mncs.test-verify/1"
+CANONICAL_VM_CAPABILITY = "mncs-test:canonical-vm-tests"
+EXECUTIONS = {"canonical-vm": CANONICAL_VM_CAPABILITY,
+              "stage0-reference": REFERENCE_CAPABILITY}
 
 
 class TestRoutingError(Exception):
@@ -102,26 +102,43 @@ def resolve_checkout(session, repository: str | None) -> tuple[str, str]:
     return repository, str(path)
 
 
-def provider_binding(session) -> dict[str, Any]:
-    """Return the bound verify capability, or explain how to get one."""
+def provider_binding(session, execution: str = "canonical-vm") -> dict[str, Any]:
+    """Return the exact requested provider binding, without backend fallback."""
+    capability = EXECUTIONS.get(execution)
+    if capability is None:
+        raise TestRoutingError(f"unsupported test execution: {execution}",
+                               "test-execution-unknown", execution=execution)
     for binding in session.snapshot.get("bindings", []):
         if not isinstance(binding, dict):
             continue
-        if str(binding.get("capability", "")) != TEST_CAPABILITY:
+        if str(binding.get("capability", "")) != capability:
             continue
         if binding.get("availability", {}).get("status") != "available":
             raise TestRoutingError(
-                f"capability {TEST_CAPABILITY} is not available: "
+                f"capability {capability} is not available: "
                 f"{binding.get('availability', {}).get('reason')}",
-                "test-provider-unavailable", capability=TEST_CAPABILITY,
-                next="reconcile the session or repair the mncs-test checkout",
+                "test-provider-unavailable", capability=capability,
+                next="reconcile the session and repair the selected provider",
             )
         return binding
     raise TestRoutingError(
-        f"session binds no {TEST_CAPABILITY} capability",
-        "test-provider-missing", capability=TEST_CAPABILITY,
-        next="select the mncs-test checkout providing mncs.test-verify/1, then reconcile",
+        f"session binds no {capability} capability",
+        "test-provider-missing", capability=capability,
+        next="select the repository that provides this execution contract, then reconcile",
     )
+
+
+def selected_execution(session, checkout: str) -> str:
+    """Use the canonical provider for its own checkout; keep other targets on Stage-0."""
+    target = Path(checkout).resolve()
+    for binding in session.snapshot.get("bindings", []):
+        if not isinstance(binding, dict) or binding.get("capability") != CANONICAL_VM_CAPABILITY:
+            continue
+        provenance = binding.get("provenance", {})
+        provider_checkout = provenance.get("checkout", {}).get("path") if isinstance(provenance, dict) else None
+        if isinstance(provider_checkout, str) and Path(provider_checkout).resolve() == target:
+            return "canonical-vm"
+    return "stage0-reference"
 
 
 def run_tests(
@@ -132,20 +149,37 @@ def run_tests(
     timeout_seconds: int = 600,
     max_executions: int = 16,
     no_store: bool = False,
+    execution: str | None = None,
 ) -> dict[str, Any]:
-    """Invoke the provider verifier over the resolved checkout."""
+    """Invoke only the requested execution provider over the selected checkout."""
     name, checkout = resolve_checkout(session, repository)
-    binding = provider_binding(session)
-    argv = ["--format", output_format, "--max-executions", str(max_executions)]
-    if no_store:
-        argv.append("--no-store")
+    execution = execution or selected_execution(session, checkout)
+    binding = provider_binding(session, execution)
+    capability = EXECUTIONS[execution]
+    if execution == "canonical-vm":
+        bound_checkout = binding.get("provenance", {}).get("checkout", {}).get("path")
+        if not isinstance(bound_checkout, str) or Path(bound_checkout).resolve() != Path(checkout).resolve():
+            raise TestRoutingError("canonical-vm test contract is bound to its provider checkout",
+                                   "test-canonical-target-mismatch", repository=name,
+                                   provider_checkout=bound_checkout, checkout=checkout,
+                                   next="use the Stage-0 reference lane for this target")
+        if no_store:
+            raise TestRoutingError("--no-store applies only to the Stage-0 reference lane",
+                                   "test-option-not-applicable", option="no_store",
+                                   execution=execution)
+        argv = ["--format", output_format]
+    else:
+        argv = ["--format", output_format, "--max-executions", str(max_executions)]
+        if no_store:
+            argv.append("--no-store")
     result = session.invoke(
-        TEST_CAPABILITY, argv, cwd=checkout, timeout_seconds=timeout_seconds,
+        capability, argv, cwd=checkout, timeout_seconds=timeout_seconds,
     )
     return {
         "repository": name,
         "checkout": checkout,
-        "capability": TEST_CAPABILITY,
+        "execution": execution,
+        "capability": capability,
         "binding_id": result.get("binding_id"),
         "status": result.get("status"),
         "returncode": result.get("returncode"),

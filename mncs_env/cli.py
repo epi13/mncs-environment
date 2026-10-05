@@ -606,7 +606,7 @@ def cmd_test(args: argparse.Namespace) -> int:
             result = testcmd_module.run_tests(
                 session, args.checkout, output_format=args.format,
                 timeout_seconds=args.timeout, max_executions=args.max_executions,
-                no_store=args.no_store,
+                no_store=args.no_store, execution=args.execution,
             )
         except testcmd_module.TestRoutingError as error:
             return fail(str(error), code=3, diagnostics=error.diagnostics)
@@ -1133,17 +1133,20 @@ def build_parser() -> argparse.ArgumentParser:
     invoke.add_argument("argv", nargs="*")
     invoke.set_defaults(func=cmd_invoke)
 
-    test = session_parser("test", "run a checkout's verification obligations natively")
+    test = session_parser("test", "run selected tests through the canonical VM or Stage-0 oracle")
     test.add_argument("--checkout", default=None, required=True,
                       help="repository to verify (must be selected in the session)")
     test.add_argument("--format", choices=("text", "json"), default="text",
                       help="provider report format")
+    test.add_argument("--execution", choices=("canonical-vm", "stage0-reference"),
+                      default=None,
+                      help="default: canonical VM for the checkout that provides it; Stage-0 oracle for other targets")
     test.add_argument("--timeout", type=int, default=600,
                       help="provider execution timeout in seconds")
     test.add_argument("--max-executions", type=int, default=16,
-                      help="native coherence execution budget")
+                      help="Stage-0 reference coherence execution budget")
     test.add_argument("--no-store", action="store_true",
-                      help="skip Store vault admission (file receipts only)")
+                      help="skip Test Store admission (Stage-0 reference lane only)")
     test.set_defaults(func=cmd_test)
 
     events = session_parser("events", "read, subscribe, poll, or observe events")

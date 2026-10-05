@@ -123,10 +123,15 @@ Repositories declare obligations in their obligation inventory:
               "verifier_identity": "mncs-test-runner/0.2.1"}}
 ```
 
-`mncs-test` publishes the execution side: `mncs.test-result/1` runs
-suites and `mncs.test-verification-coherence/1` evaluates reuse. Both
-are invoked through declared descriptors; the selected toolchain is
-honored and no ambient compiler is substituted.
+`mncs-test` publishes distinct execution contracts. `canonical-vm-tests`
+runs the provider's VM-suitable inventory through `mncs-compiler` and
+`mncs-vm`; `mncs.test-verify/1` retains the Stage-0/reference verification
+and reuse lane for other selected repositories and independent comparison.
+`mncs-env test` selects the canonical contract for its provider checkout and
+the reference contract for other targets. `--execution` pins either lane;
+an unavailable selected contract fails closed instead of switching backends.
+Environment binds the exact compiler, VM, Stage-0 library, and provider state
+directory from the selected checkouts.
 
 ## Concurrency
 

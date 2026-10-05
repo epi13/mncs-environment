@@ -12,7 +12,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from mncs_env import testcmd  # noqa: E402
+from mncs_env import testcmd
 
 
 class FakeSession:
@@ -52,7 +52,13 @@ def make_snapshot(root: Path) -> dict:
                 "capability": "mncs.test-verify/1",
                 "provider": "mncs-test",
                 "availability": {"status": "available"},
-            }
+            },
+            {
+                "capability": "mncs-test:canonical-vm-tests",
+                "provider": "mncs-test",
+                "availability": {"status": "available"},
+                "provenance": {"checkout": {"path": str(root / "repo-b")}},
+            },
         ],
     }
 
@@ -88,7 +94,7 @@ class TestCommandTests(unittest.TestCase):
     def test_missing_provider_binding_explains(self):
         self.session.snapshot["bindings"] = []
         with self.assertRaises(testcmd.TestRoutingError) as raised:
-            testcmd.provider_binding(self.session)
+            testcmd.provider_binding(self.session, "stage0-reference")
         self.assertEqual(raised.exception.diagnostics["code"], "test-provider-missing")
 
     def test_unavailable_provider_binding_explains(self):
@@ -97,7 +103,7 @@ class TestCommandTests(unittest.TestCase):
             "reason": "toolchain-missing",
         }
         with self.assertRaises(testcmd.TestRoutingError) as raised:
-            testcmd.provider_binding(self.session)
+            testcmd.provider_binding(self.session, "stage0-reference")
         self.assertEqual(raised.exception.diagnostics["code"], "test-provider-unavailable")
 
     def test_run_passes_checkout_argv_and_shapes_result(self):
@@ -113,7 +119,7 @@ class TestCommandTests(unittest.TestCase):
         }
         result = testcmd.run_tests(
             session, "repo-b", output_format="json", timeout_seconds=30,
-            max_executions=4, no_store=True,
+            max_executions=4, no_store=True, execution="stage0-reference",
         )
         session.invoke.assert_called_once_with(
             "mncs.test-verify/1",
@@ -124,6 +130,37 @@ class TestCommandTests(unittest.TestCase):
         self.assertEqual(result["repository"], "repo-b")
         self.assertEqual(result["report"], "report-text")
         self.assertEqual(result["returncode"], 0)
+        self.assertEqual(result["execution"], "stage0-reference")
+
+    def test_default_run_uses_canonical_vm_without_reference_budget_flags(self):
+        session = mock.Mock()
+        session.snapshot = make_snapshot(self.root)
+        session.invoke.return_value = {"binding_id": "cap_vm", "status": "ok",
+            "returncode": 0, "truncated": False, "stdout": "vm-report", "stderr": ""}
+        result = testcmd.run_tests(session, "repo-b", output_format="json", timeout_seconds=30)
+        session.invoke.assert_called_once_with(
+            "mncs-test:canonical-vm-tests", ["--format", "json"],
+            cwd=str((self.root / "repo-b").resolve()), timeout_seconds=30)
+        self.assertEqual(result["capability"], "mncs-test:canonical-vm-tests")
+        self.assertEqual(result["execution"], "canonical-vm")
+
+    def test_target_without_canonical_provider_keeps_stage0_reference(self):
+        session = mock.Mock()
+        session.snapshot = make_snapshot(self.root)
+        session.invoke.return_value = {"binding_id": "cap_ref", "status": "ok",
+            "returncode": 0, "truncated": False, "stdout": "reference-report", "stderr": ""}
+        result = testcmd.run_tests(session, "repo-a", output_format="json", timeout_seconds=30)
+        session.invoke.assert_called_once_with(
+            "mncs.test-verify/1", ["--format", "json", "--max-executions", "16"],
+            cwd=str((self.root / "repo-a").resolve()), timeout_seconds=30)
+        self.assertEqual(result["execution"], "stage0-reference")
+
+    def test_canonical_lane_fails_closed_without_binding(self):
+        self.session.snapshot["bindings"] = [self.session.snapshot["bindings"][0]]
+        with self.assertRaises(testcmd.TestRoutingError) as raised:
+            testcmd.provider_binding(self.session, "canonical-vm")
+        self.assertEqual(raised.exception.diagnostics["capability"],
+                         "mncs-test:canonical-vm-tests")
 
 
 if __name__ == "__main__":
