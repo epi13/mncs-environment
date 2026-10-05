@@ -511,6 +511,12 @@ def _owner_result_failed(value) -> bool:
         return True
     if value.get("ok") is False or isinstance(value.get("error"), str):
         return True
+    # Owner adapters distinguish a recorded domain outcome (including FAIL,
+    # deferred, or unsafe-to-repair) from work that could not be completed.
+    # Only the former may acknowledge a semantic input cursor.
+    operation_status = value.get("operation_status")
+    if operation_status is not None and operation_status != "complete":
+        return True
     status = str(value.get("status", "")).lower()
     if status in {"error", "unavailable", "not_run"}:
         return True
@@ -533,6 +539,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     previous = session.snapshot.get("coherence") or {}
     if previous.get("schema_version") != SCHEMA:
         previous = {}
+    acknowledged_store_cursor = previous.get("store_cursor")
     observed, events, known, metrics = _observe(session, previous)
     store_events, cursor, store_known = _store_events(session, previous, definition)
     store_reset = next((item for item in store_events
@@ -643,6 +650,8 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     owner_failures = sorted(
         name for name in scheduled if _owner_result_failed(results.get(name))
     )
+    if owner_failures:
+        report["owner_failures"] = owner_failures
     if store_reset is not None and (scheduled != set(names) or owner_failures):
         after_known = False
         report["store_replay"]["disposition"] = "reconciliation_incomplete_or_store_advanced"
@@ -691,12 +700,20 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                                if item.get("kind") != "store.reconcile_required")
             if store_reset is not None:
                 report["store_replay"]["disposition"] = "reconciliation_incomplete_or_store_advanced"
-    stable = after_known and not intervening
+    if store_events and owner_failures and store_reset is None:
+        # A Store event is acknowledged only after every selected owner has
+        # completed. The post-pass replay above still detects concurrent
+        # publications, but the durable cursor returns to its last committed
+        # value so this input is delivered again on the next tick.
+        cursor = acknowledged_store_cursor
+        after_known = False
+        report["store_cursor_disposition"] = "held_for_owner_retry"
+    stable = after_known and not intervening and not owner_failures
     if not stable:
         report["mode"] = "bounded_reconciliation"
         report["pending_events"] = intervening[:32]
     effects = any(not (results.get(name) or {}).get('reused', False) for name in scheduled)
-    if (effects or events or store_reset is not None or not store_known
+    if (effects or events or store_reset is not None or not store_known or owner_failures
             or previous.get("repositories") != observed["repositories"]
             or semantic_cursors != previous.get("semantic_cursors", {})
             or previous.get('policy_identity') != policy):

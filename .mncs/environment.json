@@ -163,7 +163,8 @@
       },
       "response_schema": "mncs.forge.resident-status/1",
       "ready_when": {
-        "/state": "ready"
+        "/state": "ready",
+        "/continuous_consumer/state": "ready"
       },
       "required": false,
       "response_max_bytes": 32768
@@ -189,5 +190,6 @@
     "runtime": {
       "capability": "mncs-vm:vm-runtime"
     }
-  }
+  },
+  "execution_compatibility_service": "mncs-doctor:compiler-vm-coherence"
 }

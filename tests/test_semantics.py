@@ -70,20 +70,25 @@ def capsule_document(*, stream="mnls-stream-1", cursor=7, generation=12):
     }
 
 
-def poll_document(*, stream="mnls-stream-1", cursor=9, reset=False):
+def poll_document(*, stream="mnls-stream-1", cursor=9, after=7, reset=False, events=None):
+    rows = events if events is not None else ([] if reset else [
+        {"cursor": 8, "current_generation": 13,
+         "diagnostics": {"added": ["MNP016"], "resolved": []},
+         "semantic_subjects": [{"identity": "mncs:subject:1"}],
+         "impact_complete": True, "obligations": {"complete": True}},
+        {"cursor": 9, "current_generation": 13,
+         "diagnostics": {"added": [], "resolved": ["MNP016"]},
+         "semantic_subjects": [], "impact_complete": True,
+         "obligations": {"complete": True}},
+    ])
     return {
         "schema_version": "mncs.workspace-event-cursor/2",
         "stream_identity": stream,
+        "after_cursor": after,
         "current_cursor": cursor,
+        "oldest_cursor": 1,
         "reset_required": reset,
-        "events": [] if reset else [
-            {"cursor": 8, "current_generation": 13,
-             "diagnostics": {"added": ["MNP016"], "resolved": []},
-             "semantic_subjects": [{"identity": "mncs:subject:1"}]},
-            {"cursor": 9, "current_generation": 13,
-             "diagnostics": {"added": [], "resolved": ["MNP016"]},
-             "semantic_subjects": []},
-        ],
+        "events": rows,
     }
 
 
@@ -99,6 +104,7 @@ class FakeSession:
         self.invoked: list[tuple[str, list[str]]] = []
         self.poll_document = poll_document()
         self.capsule_document = capsule_document()
+        self.capsule_documents: dict[str, dict] = {}
         self.fail_capabilities: set[str] = set()
 
     def _save(self) -> None:
@@ -128,12 +134,46 @@ class FakeSession:
             return {"status": "ok", "stdout": json.dumps(self.poll_document),
                     "stderr": ""}
         if capability == semantics_module.CAPSULE_CAPABILITY:
-            return {"status": "ok", "stdout": json.dumps(self.capsule_document),
+            workspace = argv[argv.index("--workspace") + 1] if "--workspace" in argv else ""
+            document = self.capsule_documents.get(workspace, self.capsule_document)
+            return {"status": "ok", "stdout": json.dumps(document),
                     "stderr": ""}
         raise AssertionError(f"unexpected capability {capability}")
 
 
 class AmbientSemanticsTests(unittest.TestCase):
+    def test_complete_document_reconciliation_supersedes_only_earlier_same_document_events(self) -> None:
+        uri = "file:///workspace/removed.mncs"
+        incomplete = {
+            "cursor": 1, "current": {"uri": uri},
+            "semantic_subjects": [], "impact_complete": False,
+            "obligations": {"complete": False},
+        }
+        removal = {
+            "cursor": 2, "current": {"uri": uri},
+            "affected_documents": [{"uri": uri}],
+            "semantic_subjects": [{"identity": "mncs:subject:1", "change": "removed"}],
+            "impact_complete": True, "obligations": {"complete": True},
+            "reconciled": True, "removed": True,
+            "supersedes_through_cursor": 1,
+        }
+        document = poll_document(cursor=2, after=0, events=[incomplete, removal])
+        valid, reason, effective, page_cursor, high_water = semantics_module._poll_window(
+            document, "mnls-stream-1", 0)
+        self.assertTrue(valid, reason)
+        self.assertEqual([event["cursor"] for event in effective], [2])
+        self.assertEqual(page_cursor, 2)
+        self.assertEqual(high_water, 2)
+
+        unrelated = dict(removal)
+        unrelated["current"] = {"uri": "file:///workspace/other.mncs"}
+        unrelated["affected_documents"] = [{"uri": "file:///workspace/other.mncs"}]
+        document["events"] = [incomplete, unrelated]
+        valid, reason, _, _, _ = semantics_module._poll_window(
+            document, "mnls-stream-1", 0)
+        self.assertFalse(valid)
+        self.assertEqual(reason, "semantic event impact is incomplete")
+
     def test_undeclared_pass_is_quiet_and_invokes_nothing(self) -> None:
         session = FakeSession()
         outcome = semantics_module.ambient_pass(session)
@@ -149,25 +189,50 @@ class AmbientSemanticsTests(unittest.TestCase):
         outcome = semantics_module.ambient_pass(session)
         summary = outcome["summary"]
         self.assertEqual(summary["degraded"], 1)
+        self.assertEqual(outcome["operation_status"], "retry")
         self.assertEqual(session.invoked, [])
         # Degraded passes never cache their epoch.
         self.assertNotIn("epoch", session.snapshot.get("semantics", {}))
 
-    def test_first_contact_adopts_through_the_bounded_capsule(self) -> None:
+    def test_first_contact_replays_complete_retained_stream_without_capsule(self) -> None:
         session = FakeSession()
         session.declare(declared_service())
         session.observe(observation())
         session.bind(semantics_module.POLL_CAPABILITY)
         session.bind(semantics_module.CAPSULE_CAPABILITY)
+        rows = [{"cursor": cursor, "current_generation": 12,
+                 "diagnostics": {"added": [], "resolved": []},
+                 "semantic_subjects": [{"identity": f"subject:{cursor}"}],
+                 "impact_complete": True, "obligations": {"complete": True}}
+                for cursor in range(1, 8)]
+        session.poll_document = poll_document(cursor=7, after=0, events=rows)
+        session.capsule_document["status"] = {
+            "kind": "unsupported", "reason": "whole-workspace analysis is pending"}
+        session.capsule_document["measured"]["analysis_pending_documents"] = 537
         outcome = semantics_module.ambient_pass(session)
         summary = outcome["summary"]
-        self.assertEqual(summary["adopted"], 1)
-        self.assertEqual(summary["actionable"], 1)
+        self.assertEqual(summary["changed"], 1)
+        self.assertEqual(outcome["operation_status"], "complete")
+        self.assertEqual(summary["semantic_events"], 7)
+        self.assertEqual(summary["semantic_subjects"], 7)
         capabilities = [capability for capability, _ in session.invoked]
-        self.assertEqual(capabilities, [semantics_module.CAPSULE_CAPABILITY])
+        self.assertEqual(capabilities, [semantics_module.POLL_CAPABILITY])
         durable = session.snapshot["semantics"]["workspaces"][WORKSPACE]
         self.assertEqual(durable["stream"], "mnls-stream-1")
         self.assertEqual(durable["cursor"], 7)
+
+    def test_first_contact_capsule_fallback_requires_complete_retained_history(self) -> None:
+        session = FakeSession()
+        session.declare(declared_service())
+        session.observe(observation())
+        session.bind(semantics_module.POLL_CAPABILITY)
+        session.bind(semantics_module.CAPSULE_CAPABILITY)
+        session.poll_document = poll_document(cursor=7, after=0, reset=True, events=[])
+        outcome = semantics_module.ambient_pass(session)
+        self.assertEqual(outcome["summary"]["adopted"], 1)
+        self.assertEqual([cap for cap, _ in session.invoked], [
+            semantics_module.POLL_CAPABILITY, semantics_module.CAPSULE_CAPABILITY])
+        self.assertEqual(session.snapshot["semantics"]["workspaces"][WORKSPACE]["cursor"], 7)
 
     def test_empty_stream_baseline_does_not_force_workspace_analysis(self) -> None:
         session = FakeSession()
@@ -229,6 +294,93 @@ class AmbientSemanticsTests(unittest.TestCase):
         durable = session.snapshot["semantics"]["workspaces"][WORKSPACE]
         self.assertEqual(durable["cursor"], 9)
 
+    def test_incomplete_poll_retains_cursor_until_capsule_reconciles(self) -> None:
+        session = FakeSession()
+        session.declare(declared_service())
+        session.observe(observation())
+        session.bind(semantics_module.POLL_CAPABILITY)
+        session.bind(semantics_module.CAPSULE_CAPABILITY)
+        semantics_module.ambient_pass(session)
+        previous = dict(session.snapshot["semantics"]["workspaces"][WORKSPACE])
+        session.snapshot["service_observations"] = [observation(cursor=9, generation=13)]
+        session.poll_document = poll_document(events=[
+            {"cursor": 8, "current_generation": 13,
+             "diagnostics": {"added": [], "resolved": []},
+             "semantic_subjects": [], "impact_complete": False,
+             "obligations": {"complete": False}},
+            {"cursor": 9, "current_generation": 13,
+             "diagnostics": {"added": [], "resolved": []},
+             "semantic_subjects": [], "impact_complete": True,
+             "obligations": {"complete": True}},
+        ])
+        session.capsule_document = capsule_document(cursor=9, generation=13)
+        session.capsule_document["status"] = {
+            "kind": "unsupported", "reason": "resident analysis is incomplete"}
+        session.capsule_document["measured"]["analysis_pending_documents"] = 3
+
+        blocked = semantics_module.ambient_pass(session)
+        self.assertEqual(blocked["summary"]["unknown"], 1)
+        self.assertEqual(blocked["operation_status"], "retry")
+        self.assertEqual(session.snapshot["semantics"]["workspaces"][WORKSPACE], previous)
+        self.assertEqual(session.snapshot["semantics"]["workspaces"][WORKSPACE]["cursor"], 7)
+
+        session.capsule_document = capsule_document(cursor=9, generation=13)
+        reconciled = semantics_module.ambient_pass(session)
+        self.assertEqual(reconciled["summary"]["reset"], 1)
+        self.assertEqual(session.snapshot["semantics"]["workspaces"][WORKSPACE]["cursor"], 9)
+
+    def test_full_poll_page_acknowledges_only_its_last_event(self) -> None:
+        session = FakeSession()
+        session.declare(declared_service())
+        session.observe(observation())
+        session.bind(semantics_module.POLL_CAPABILITY)
+        session.bind(semantics_module.CAPSULE_CAPABILITY)
+        semantics_module.ambient_pass(session)
+
+        rows = [{"cursor": cursor, "current_generation": 13,
+                 "diagnostics": {"added": [], "resolved": []},
+                 "semantic_subjects": [], "impact_complete": True,
+                 "obligations": {"complete": True}}
+                for cursor in range(8, 40)]
+        session.snapshot["service_observations"] = [observation(cursor=40, generation=13)]
+        session.poll_document = poll_document(cursor=40, after=7, events=rows)
+        first_page = semantics_module.ambient_pass(session)
+        self.assertEqual(first_page["summary"]["changed"], 1)
+        self.assertEqual(session.snapshot["semantics"]["workspaces"][WORKSPACE]["cursor"], 39)
+
+        session.poll_document = poll_document(cursor=40, after=39, events=[
+            {"cursor": 40, "current_generation": 13,
+             "diagnostics": {"added": [], "resolved": []},
+             "semantic_subjects": [], "impact_complete": True,
+             "obligations": {"complete": True}},
+        ])
+        second_page = semantics_module.ambient_pass(session)
+        self.assertEqual(second_page["summary"]["changed"], 1)
+        self.assertEqual(session.snapshot["semantics"]["workspaces"][WORKSPACE]["cursor"], 40)
+
+    def test_old_consumer_cursor_requires_complete_reconciliation(self) -> None:
+        session = FakeSession()
+        session.declare(declared_service())
+        session.observe(observation())
+        session.bind(semantics_module.POLL_CAPABILITY)
+        session.bind(semantics_module.CAPSULE_CAPABILITY)
+        session.snapshot["semantics"] = {"workspaces": {WORKSPACE: {
+            "stream": "mnls-stream-1", "cursor": 7, "generation": 12,
+            "fingerprint": semantics_module._fingerprint(
+                "mnls-stream-1", observation()["provider_observed"]),
+        }}}
+        session.capsule_document["status"] = {
+            "kind": "unsupported", "reason": "resident analysis is incomplete"}
+        session.capsule_document["measured"]["analysis_pending_documents"] = 1
+
+        outcome = semantics_module.ambient_pass(session)
+        self.assertEqual(outcome["operation_status"], "retry")
+        self.assertEqual([capability for capability, _ in session.invoked],
+                         [semantics_module.CAPSULE_CAPABILITY])
+        durable = session.snapshot["semantics"]["workspaces"][WORKSPACE]
+        self.assertNotIn("consumer_protocol", durable)
+        self.assertEqual(durable["cursor"], 7)
+
     def test_stream_change_reconciles_explicitly_through_capsule(self) -> None:
         session = FakeSession()
         session.declare(declared_service())
@@ -246,9 +398,40 @@ class AmbientSemanticsTests(unittest.TestCase):
         summary = outcome["summary"]
         self.assertEqual(summary["reset"], 1)
         capabilities = [capability for capability, _ in session.invoked]
-        self.assertEqual(capabilities, [semantics_module.CAPSULE_CAPABILITY])
+        self.assertEqual(capabilities, [semantics_module.POLL_CAPABILITY,
+                                        semantics_module.CAPSULE_CAPABILITY])
         durable = session.snapshot["semantics"]["workspaces"][WORKSPACE]
         self.assertEqual(durable["stream"], "mnls-stream-2")
+
+    def test_stream_change_replays_complete_retained_new_epoch(self) -> None:
+        session = FakeSession()
+        session.declare(declared_service())
+        session.observe(observation())
+        session.bind(semantics_module.POLL_CAPABILITY)
+        session.bind(semantics_module.CAPSULE_CAPABILITY)
+        semantics_module.ambient_pass(session)
+
+        session.snapshot["service_observations"] = [
+            observation(stream="mnls-stream-2", cursor=2, generation=14)]
+        rows = [{"cursor": cursor, "current_generation": 14,
+                 "diagnostics": {"added": [], "resolved": []},
+                 "semantic_subjects": [{"identity": f"new-epoch:{cursor}"}],
+                 "impact_complete": True, "obligations": {"complete": True}}
+                for cursor in (1, 2)]
+        session.poll_document = poll_document(
+            stream="mnls-stream-2", cursor=2, after=0, events=rows)
+        session.capsule_document["status"] = {
+            "kind": "unsupported", "reason": "whole-workspace analysis is pending"}
+        session.invoked.clear()
+
+        outcome = semantics_module.ambient_pass(session)
+        self.assertEqual(outcome["summary"]["changed"], 1)
+        self.assertEqual(outcome["summary"]["semantic_subjects"], 2)
+        self.assertEqual([cap for cap, _ in session.invoked], [
+            semantics_module.POLL_CAPABILITY])
+        durable = session.snapshot["semantics"]["workspaces"][WORKSPACE]
+        self.assertEqual(durable["stream"], "mnls-stream-2")
+        self.assertEqual(durable["cursor"], 2)
 
     def test_incomplete_capsule_never_acknowledges_first_contact_or_reset(self) -> None:
         session = FakeSession()
@@ -263,6 +446,7 @@ class AmbientSemanticsTests(unittest.TestCase):
 
         first = semantics_module.ambient_pass(session)
         self.assertEqual(first["summary"]["unknown"], 1)
+        self.assertEqual(first["operation_status"], "retry")
         self.assertEqual(session.snapshot["semantics"]["workspaces"], {})
 
         # Establish an acknowledged old epoch, then prove a new epoch cannot
@@ -290,6 +474,7 @@ class AmbientSemanticsTests(unittest.TestCase):
         semantics_module.ambient_pass(session)
         session.snapshot["service_observations"] = [
             observation(cursor=9, generation=13)]
+        session.capsule_document = capsule_document(cursor=9, generation=13)
         session.poll_document = poll_document(reset=True)
         session.invoked.clear()
         outcome = semantics_module.ambient_pass(session)
@@ -327,6 +512,8 @@ class AmbientSemanticsTests(unittest.TestCase):
         session.observe(observation(workspace=other, stream="mnls-stream-9",
                                     cursor=3, generation=4,
                                     identity=second_service["identity"]))
+        session.capsule_documents[other] = capsule_document(
+            stream="mnls-stream-9", cursor=3, generation=4)
         session.bind(semantics_module.POLL_CAPABILITY)
         session.bind(semantics_module.CAPSULE_CAPABILITY)
         outcome = semantics_module.ambient_pass(session)

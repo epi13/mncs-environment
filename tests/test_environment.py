@@ -326,6 +326,18 @@ class WorkspaceTests(unittest.TestCase):
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_forge_readiness_binds_its_language_service_cursor(self) -> None:
+        definition = json.loads((ROOT / ".mncs" / "environment.json").read_text())
+        service = next(
+            item
+            for item in definition["services"]
+            if item.get("identity") == "mncs-forge:resident-workspace"
+        )
+        self.assertEqual(
+            service["ready_when"],
+            {"/state": "ready", "/continuous_consumer/state": "ready"},
+        )
+
     def test_discovers_real_declarations(self) -> None:
         test_root = FAMILY / "mncs-test"
         if not (test_root / ".mncs" / "project.json").is_file():
@@ -1338,11 +1350,14 @@ class SessionTests(unittest.TestCase):
                 readiness.capabilities, "invoke",
                 return_value={"status": "ok", "returncode": 0,
                               "stdout": json.dumps({"schema_version": "mncs.doctor.compiler-vm/1",
-                                                    "status": "pass"})},
+                                                    "status": "pass",
+                                                    "components": {"compiler": {"state": "ready"}}})},
             ) as invoke:
                 result = readiness.probe_services(session)
             self.assertEqual(result[0]["status"], "ready")
             self.assertEqual(result[0]["composition_identity"], "selected-stack-identity")
+            self.assertEqual(result[0]["response_schema"], "mncs.doctor.compiler-vm/1")
+            self.assertEqual(result[0]["provider_components"], {"compiler": {"state": "ready"}})
             self.assertEqual(invoke.call_args.kwargs["output_limit_bytes"], 65536)
             self.assertEqual(invoke.call_args.kwargs["timeout_seconds"], 42)
             environment = invoke.call_args.kwargs["env"]

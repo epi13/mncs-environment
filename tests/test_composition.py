@@ -7,7 +7,7 @@ from mncs_env.capabilities import probe_availability
 
 def binding(path):
     return {'capability':'producer:compile','binding_id':'bound-exact', 'provider':'producer',
-            'contract_revision':'1','toolchain_address':str(path),'provenance':{'checkout':{'path':str(path.parent)},'artifact_contract':{'artifact_schema':'frozen/1'}}}
+            'contract_revision':'1','toolchain_address':str(path),'provenance':{'checkout':{'path':str(path.parent),'head':'selected-head'},'artifact_contract':{'artifact_schema':'frozen/1'}}}
 
 
 def test_roles_are_provider_references_and_byte_observations(tmp_path):
@@ -44,6 +44,49 @@ def test_provider_readiness_is_joined_only_to_current_role_identity(tmp_path):
                               service_observations=evidence)
     assert stale['compatibility']['state']=='unproven'
     assert stale['compatibility']['evidence_stale'] is True
+
+
+def test_doctor_build_receipt_is_joined_to_selected_checkout_and_bytes(tmp_path):
+    import hashlib
+
+    producer=tmp_path/'producer'; producer.write_bytes(b'producer-one')
+    selectors={'compiler':{'capability':'producer:compile'}}
+    service='doctor:compiler-vm-coherence'
+    first=composition.resolve(selectors,[binding(producer)],None,
+                              compatibility_service=service)
+    component={
+        'state':'ready', 'checkout':str(producer.parent),
+        'executable':str(producer),
+        'executable_sha256':hashlib.sha256(producer.read_bytes()).hexdigest(),
+        'build_origin':'locally-observed-compiled-inputs',
+        'producer':{'identity':'sha256:producer-receipt',
+                    'receipt':{'source_revision':'selected-head',
+                               'stage0_revision':'stage0-pin',
+                               'assurance':'provider-owned local build receipt'}},
+        'mismatches':[],
+    }
+    evidence=[{'identity':service,'status':'ready','observed_at':'now',
+               'response_schema':'mncs.doctor.compiler-vm/1',
+               'provider_components':{'compiler':component},
+               'composition_identity':first['identity']}]
+    verified=composition.resolve(selectors,[binding(producer)],None,first,
+                                 compatibility_service=service,
+                                 service_observations=evidence)
+    assert verified['compatibility']['state']=='verified'
+    origin=verified['roles']['compiler']['provider_build_origin']
+    assert origin['state']=='matches-selected-inputs'
+    assert origin['receipt_identity']=='sha256:producer-receipt'
+    assert origin['dependency_revision']=='stage0-pin'
+
+    producer.write_bytes(b'replaced executable')
+    changed=composition.resolve(selectors,[binding(producer)],None,verified,
+                                compatibility_service=service)
+    evidence[0]['composition_identity']=changed['identity']
+    mismatched=composition.resolve(selectors,[binding(producer)],None,changed,
+                                   compatibility_service=service,
+                                   service_observations=evidence)
+    assert mismatched['compatibility']['state']=='unproven'
+    assert mismatched['compatibility']['provider_build_evidence']['compiler']=='mismatch'
 
 
 def test_compatibility_service_must_be_declared():

@@ -181,6 +181,45 @@ def test_store_publication_during_pass_is_not_skipped(participant):
         store.close()
 
 
+def test_store_cursor_waits_for_owner_success(participant):
+    store = open_store(participant.state_dir, 'store')
+    participant.store = store
+    _, owned = runners()
+    try:
+        coherence.tick(participant, {}, owned)
+        previous = participant.snapshot['coherence']['store_cursor']
+        store.write_projection_row('family:change/retry-fixture', 1, {'test': True})
+
+        owned['family'] = lambda: {
+            'summary': {'blockers': 1}, 'operation_status': 'retry'}
+        _, failed = coherence.tick(participant, {}, owned)
+        assert failed['owner_failures'] == ['family']
+        assert failed['store_cursor_disposition'] == 'held_for_owner_retry'
+        assert participant.snapshot['coherence']['store_cursor'] == previous
+        assert participant.snapshot['coherence']['stable'] is False
+
+        owned['family'] = lambda: {'summary': {'checked': True}}
+        _, retried = coherence.tick(participant, {}, owned)
+        assert retried.get('owner_failures', []) == []
+        assert any(event.get('kind') == 'family.changed'
+                   for event in retried['events']), retried
+        assert participant.snapshot['coherence']['store_cursor'] != previous
+    finally:
+        store.close()
+
+
+def test_owner_retry_cannot_leave_quiet_state_stable(participant):
+    _, owned = runners()
+    definition = {'services': [{'observation_inputs': ['selected-repositories'],
+                                'observation_max_age_ms': 1000}]}
+    coherence.tick(participant, definition, owned, now_ms=1000)
+    owned['doctor'] = lambda: {
+        'summary': {'blockers': 1}, 'operation_status': 'retry'}
+    _, failed = coherence.tick(participant, definition, owned, now_ms=2000)
+    assert failed['owner_failures'] == ['doctor']
+    assert participant.snapshot['coherence']['stable'] is False
+
+
 def test_semantic_cursor_waits_for_owner_success_after_reset(participant):
     _, owned = runners()
     coherence.tick(participant, {}, owned)
@@ -192,7 +231,8 @@ def test_semantic_cursor_waits_for_owner_success_after_reset(participant):
               "stream": slot, "reason": "cursor expired", "reset": True}]
     with patch.object(coherence, "_semantic_events",
                       return_value=(reset, {slot: candidate}, False)):
-        owned["verification"] = lambda: {"status": "error", "error": "owner unavailable"}
+        owned["verification"] = lambda: {
+            "summary": {"blockers": 1}, "operation_status": "retry"}
         _, failed = coherence.tick(participant, {}, owned)
     assert failed["cursor_disposition"] == "held_for_owner_retry"
     assert failed["owner_failures"] == ["verification"]
@@ -236,7 +276,8 @@ def test_store_replay_reset_holds_cursor_until_full_owner_reconciliation(partici
     reset = [{"kind": "store.reconcile_required", "candidate_cursor": candidate,
               "reason": "observation bound exceeded"}]
     with patch.object(coherence, "_store_events", return_value=(reset, old, True)):
-        owned["verification"] = lambda: {"status": "error", "error": "owner unavailable"}
+        owned["verification"] = lambda: {
+            "summary": {"blockers": 1}, "operation_status": "retry"}
         _, failed = coherence.tick(participant, {}, owned)
     assert len(failed["scheduled"]) == 7
     assert failed["store_replay"]["disposition"] == "reconciliation_incomplete_or_store_advanced"

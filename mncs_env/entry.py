@@ -152,7 +152,8 @@ def _ambient_verification(session, definition: dict) -> dict | None:
                          "definition-invalid", next="set verification to an object or omit it")
     if knob.get("enabled", True) is False:
         return {"summary": {"enabled": False, "obligations": 0},
-                "reused": False, "evidence": None}
+                "reused": False, "evidence": None,
+                "operation_status": "complete"}
     budget = knob.get("max_executions", verification.DEFAULT_MAX_EXECUTIONS)
     if type(budget) is not int or budget < 1 or budget > verification.MAX_OBLIGATIONS:
         raise EntryError("verification max_executions must be an integer between 1 and 32",
@@ -161,7 +162,8 @@ def _ambient_verification(session, definition: dict) -> dict | None:
     if outcome["summary"].get("obligations", 0) == 0 and outcome["summary"].get("blockers", 0) == 0:
         return None
     return {"summary": outcome["summary"], "reused": outcome["reused"],
-            "evidence": outcome.get("evidence")}
+            "evidence": outcome.get("evidence"),
+            "operation_status": outcome.get("operation_status", "complete")}
 
 
 def _ambient_actions(session, definition: dict) -> dict | None:
@@ -266,7 +268,8 @@ def _ambient_semantics(session, definition: dict) -> dict | None:
     if outcome["summary"].get("declared", 0) == 0:
         return None
     return {"summary": outcome["summary"], "reused": outcome["reused"],
-            "evidence": outcome.get("evidence")}
+            "evidence": outcome.get("evidence"),
+            "operation_status": outcome.get("operation_status", "complete")}
 
 
 def _close_store(store) -> None:

@@ -610,7 +610,8 @@ def ambient_pass(session, *, mode: str = "ambient",
         summary["epoch_reused"] = True
         summary["elapsed_seconds"] = round(time.monotonic() - clock_started, 3)
         return {"summary": summary, "reused": True,
-                "evidence": stored.get("evidence_ref")}
+                "evidence": stored.get("evidence_ref"),
+                "operation_status": "complete"}
     if not obligations:
         # Invalid declarations remain structural blockers. With no admitted
         # obligations there is no verification policy request to execute.
@@ -802,7 +803,8 @@ def _finish(session, started: str, clock_started: float,
     else:
         summary["persisted"] = True
     return {"summary": summary, "reused": False,
-            "evidence": evidence_ref}
+            "evidence": evidence_ref,
+            "operation_status": "retry" if failure is not None else "complete"}
 
 
 def _write_evidence(session, evidence: dict[str, Any],

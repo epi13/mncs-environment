@@ -219,8 +219,14 @@ response; transport success is separate from subsequent verified readiness.
 Forge owns live challenge, process birth/pidfd control, runtime artifact identity,
 Language stream validation, and asynchronous startup. Environment owns none of
 those internal rules. See Forge's `docs/RESIDENT_PROVIDER.md`.
-Compiler build origin remains unproven by checkout HEAD or artifact SHA256.
-The corresponding Commons pressure is `MNCS-TOOLING-9E7E149C94D9`.
+The selected Stage-0, next-generation compiler and VM now expose embedded
+provider-owned receipts over compiled source/dependency inputs, build
+configuration, toolchain executable identities and the resulting executable
+digest. Doctor compares each receipt with the selected executable before
+declaring compiler/VM compatibility. These are local build observations, not
+independent attestations; the old `MNCS-TOOLING-9E7E149C94D9` pressure is
+narrowed to external attestation and reproducible-build verification rather
+than missing local producer identity.
 
 Python remains the process/Git/Store/file transport substrate; native MNCS
 capabilities are invoked through the same session binding interface.

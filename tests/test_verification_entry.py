@@ -14,11 +14,14 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "scripts" / "mncs-env"
 sys.path.insert(0, str(ROOT))
+
+from mncs_env import entry as entry_module  # noqa: E402
 
 COHERENCE_STUB = '''\
 import json
@@ -230,6 +233,20 @@ class VerificationEntryFixture(unittest.TestCase):
 
 
 class EntryWiringTests(VerificationEntryFixture):
+    def test_ambient_verification_preserves_retry_and_completed_domain_outcomes(self):
+        with patch.object(entry_module.verification, "ambient_pass", return_value={
+                "summary": {"obligations": 1, "blockers": 1},
+                "reused": False, "evidence": "ev-retry",
+                "operation_status": "retry"}):
+            result = entry_module._ambient_verification(object(), {})
+            self.assertEqual(result["operation_status"], "retry")
+        with patch.object(entry_module.verification, "ambient_pass", return_value={
+                "summary": {"obligations": 1, "blockers": 1},
+                "reused": False, "evidence": "ev-domain-fail",
+                "operation_status": "complete"}):
+            result = entry_module._ambient_verification(object(), {})
+            self.assertEqual(result["operation_status"], "complete")
+
     def test_first_entry_verifies_and_reentry_is_quiet(self):
         code, payload = self.enter("verify-wiring")
         self.assertEqual(code, 0, payload)

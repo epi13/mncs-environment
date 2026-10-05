@@ -227,7 +227,8 @@ def probe_services(session, *, bindings: list[dict] | None = None,
         call = service["probe"]
         binding = by_id.get(call["capability"])
         record = {"identity": service["identity"], "required": service.get("required", True),
-                  "capability": call["capability"], "status": "unavailable", "code": "service-binding-missing",
+                  "capability": call["capability"], "response_schema": service.get("response_schema"),
+                  "status": "unavailable", "code": "service-binding-missing",
                   "reason": "provider probe capability was not discovered", "observed_at": capabilities.utcnow(),
                   "recovery": service.get("reconcile")}
         if binding is not None:
@@ -278,9 +279,10 @@ def probe_services(session, *, bindings: list[dict] | None = None,
                 diagnostics = document.get("diagnostics")
                 if isinstance(diagnostics, list):
                     record["provider_diagnostics"] = diagnostics[:8]
-                for field in ("selected", "observed", "recovery"):
+                for field in ("selected", "observed", "components", "recovery"):
                     if field in document:
-                        record[f"provider_{field}"] = document[field]
+                        name = "provider_components" if field == "components" else f"provider_{field}"
+                        record[name] = document[field]
                 actual = {pointer: _pointer(document, pointer) for pointer in service["ready_when"]}
                 ready = all(actual[key] == expected for key, expected in service["ready_when"].items())
                 record.update(status="ready" if ready else "degraded", code="service-ready" if ready else "service-not-ready",

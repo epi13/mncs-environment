@@ -28,8 +28,11 @@ corrupt content address or loaded executor replacement fails closed.
 Automation's router consumes no stdlib modules: its admitted compiled closure
 proves that exemption. Generic effective root digests include stdlib bytes when
 an owner declares a stdlib root. Neither this exemption nor a successful build
-establishes Test PASS. The selected prebuilt compiler still lacks a producer
-build receipt; its exact bytes are known, its source build origin is unknown.
+establishes Test PASS. Stage-0, next-generation compiler and VM providers now
+publish local build receipts that bind selected source/dependency inputs,
+configuration, toolchain bytes and executable identity. Those receipts are
+checked by Doctor and provider selection; they are not independent build
+attestations.
 
 Forge's execution extension is `mncs:provider-provenance`. It composes with the
 existing Forge execution-receipt envelope; it is not an Environment receipt
@@ -49,8 +52,22 @@ that connection safely remains a performance pressure.
 LS publishes its event transport in the readiness observation. Environment
 consumes its stream/cursor directly, refreshes disk truth at that boundary,
 and preserves semantic subjects, obligation deltas and impact completeness.
-A wrong stream or reset schedules bounded reconciliation, never cursor-only
-reuse. Owner-declared `coherence_subscriptions` may constrain a pass to a stream,
+The Environment consumer cursor is bound to the LS stream identity. A new
+consumer first replays from cursor zero when the provider retains a complete,
+contiguous event window from cursor one; each event must carry complete impact
+and obligation evidence, or be superseded by a later complete event for the
+same document. The consumer commits only through the last event it processed.
+If retained history has expired, an incomplete event cannot be reconciled, or
+the stream identity changed without a replayable window, Environment requires
+a complete semantic capsule before acknowledging the observed high-water.
+An unsupported/incomplete capsule leaves the durable cursor unchanged and
+reports retry; it does not guess from the provider's current cursor. This lets
+a fresh consumer use an existing complete stream without forcing analysis of
+every lazily analyzed workspace file.
+
+Forge now exposes its own durable stream/cursor health to Environment;
+it preserves the last acknowledged pair until complete retained replay or an
+authoritative reconciliation succeeds. Owner-declared `coherence_subscriptions` may constrain a pass to a stream,
 subjects and obligations. Native Automation admits suppression only with a
 complete subscription AND complete impact/obligation delta. Otherwise broad
 owner reconsideration remains mandatory. These are scheduling facts, never
