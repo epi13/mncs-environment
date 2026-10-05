@@ -152,6 +152,26 @@ def _event_count(session) -> int | str:
         return "unreadable"
 
 
+def _execution_stamps(session) -> dict[str, Any]:
+    """Exact selected substrates invalidate readiness even without a Git change."""
+    paths = set()
+    for binding in session.snapshot.get("bindings", []):
+        for value in [binding.get("toolchain_address"), (binding.get("address") or "").removeprefix("python:"), *binding.get("fixed_env", {}).values()]:
+            if isinstance(value, str) and Path(value).is_absolute() and not Path(value).is_dir():
+                paths.add(value)
+    binary = (session.snapshot.get("toolchain") or {}).get("binary")
+    if binary:
+        paths.add(binary)
+    stamps = {}
+    for path in sorted(paths):
+        try:
+            stat = Path(path).stat()
+            stamps[path] = [stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns]
+        except OSError:
+            stamps[path] = None
+    return stamps
+
+
 def epoch_inputs(session) -> dict[str, Any]:
     """Fingerprint every input that feeds this session's readiness."""
     repos: dict[str, Any] = {}
@@ -177,6 +197,7 @@ def epoch_inputs(session) -> dict[str, Any]:
         "repos": repos,
         "membership": membership,
         "toolchain": _toolchain_facts(session),
+        "execution_composition": _execution_stamps(session),
         "availability": _availability_vector(session),
         "claims": _claims_digest(session),
         "event_count": _event_count(session),
@@ -262,6 +283,8 @@ def validate_epoch(session, epoch: dict[str, Any]) -> tuple[bool, list[str]]:
         note("membership")
     if recorded.get("toolchain") != live.get("toolchain"):
         note("toolchain")
+    if recorded.get("execution_composition") != live.get("execution_composition"):
+        note("execution-composition")
     old_availability = recorded.get("availability", {})
     new_availability = live.get("availability", {})
     if old_availability != new_availability:

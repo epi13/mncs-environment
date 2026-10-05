@@ -1,0 +1,103 @@
+{
+  "roots": [
+    {
+      "root": "mncs-debug/.mncs/cache",
+      "files": 158,
+      "bytes": 2272845525,
+      "largest": [
+        [
+          28770766,
+          "mncs-debug/.mncs/cache/native-applications/fc480106a14845a2b41b823f0028c6b3ba1056367bd550cc8c33ccb222598d17/artifact.json"
+        ],
+        [
+          28770766,
+          "mncs-debug/.mncs/cache/native-applications/f941c81e188f5e8bcc6ad70caecc043c79237074f2cd9640716e1f7187a435d4/artifact.json"
+        ],
+        [
+          28770766,
+          "mncs-debug/.mncs/cache/native-applications/f6ce1cbe3da3e1225fbf2d8e0e98eddf13d0df69bf15ecbd076c5cc7cff83dd6/artifact.json"
+        ]
+      ]
+    },
+    {
+      "root": "mncs-forge/.mncs/cache",
+      "files": 8,
+      "bytes": 479611928,
+      "largest": [
+        [
+          59964137,
+          "mncs-forge/.mncs/cache/native-applications/forge-core-a209b16c1cf396a4969708d0012c73f13a5908db556d4316c9ceb474d7717aae.json"
+        ],
+        [
+          59964137,
+          "mncs-forge/.mncs/cache/native-applications/forge-core-7524ab125077b594cfc0795e02800fff4ca0a32fa55d13fd983da785a6d35326.json"
+        ],
+        [
+          59964137,
+          "mncs-forge/.mncs/cache/native-applications/forge-core-60ef981168f6d621612bfbe79f25dd2a72492419a5e6e2a2dab7858721cd5e24.json"
+        ]
+      ]
+    },
+    {
+      "root": "mncs-automation/.mncs/cache",
+      "files": 10,
+      "bytes": 16979218,
+      "largest": [
+        [
+          6905187,
+          "mncs-automation/.mncs/cache/native-applications/f9a9888b693c3ce25101fc9af77aae15c8648eef0b04573a3784f4fe5195525c/artifact.json"
+        ],
+        [
+          6905187,
+          "mncs-automation/.mncs/cache/native-applications/5a6eb6a7128b1f7a99dfe15b6875e5c980d0903b0f2221da20ba4906ddac71d7/artifact.json"
+        ],
+        [
+          1801945,
+          "mncs-automation/.mncs/cache/native-applications/0e6c1498d4713cbe16c8e63f3c10aaee1100ceb94ce35abc95976542f6c7e215/artifact.json"
+        ]
+      ]
+    },
+    {
+      "root": "mncs-test/native-applications/.mncs",
+      "files": 116,
+      "bytes": 829952230,
+      "largest": [
+        [
+          21436891,
+          "mncs-test/native-applications/.mncs/cache/native-applications/bd0135581bab9c56d172b7bc92183bb98dea6905626782b0213e88807734df54/artifact.json"
+        ],
+        [
+          21436891,
+          "mncs-test/native-applications/.mncs/cache/native-applications/b17ff4910a2ddfa49330bf614cd8b794d75796c64b5792d29e326749d62bea29/artifact.json"
+        ],
+        [
+          21250811,
+          "mncs-test/native-applications/.mncs/toolchains/0220d58b0a27321d/790f8bd5bfdeea6e9632031fd3b9a715c59d7b05ab168dc8bcd2ee388a8d5b5c/artifact.json"
+        ]
+      ]
+    },
+    {
+      "root": "mncs-compiler/.build/probe-cache",
+      "files": 7,
+      "bytes": 45453172,
+      "largest": [
+        [
+          20632913,
+          "mncs-compiler/.build/probe-cache/e90f5a6cb6ea0e95d7f6ca0816480711fdafa9da39484ca3b0ceca4f1f499360.json.gz"
+        ],
+        [
+          16253460,
+          "mncs-compiler/.build/probe-cache/c2c8b4e3d7b479c0642d94151f33fd832699d4da704a2ca5c83605380cdda4be.json.gz"
+        ],
+        [
+          2388914,
+          "mncs-compiler/.build/probe-cache/f4d90e6e7f3ec1d8151356ee75dad9cf29b939cf2d4e61b96085b8922627ba8f.json.gz"
+        ]
+      ]
+    }
+  ],
+  "duplicate_groups": 22,
+  "redundant_payload_bytes": 3111476021,
+  "scope": "exact JSON/GZ files over 100k in the named roots; target builds excluded",
+  "changes": "no legacy cache deletion; canonical reusable artifacts share content-addressed files in explicit caller-selected caches"
+}

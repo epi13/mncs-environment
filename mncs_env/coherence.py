@@ -389,6 +389,9 @@ def _observe(session, prior: dict) -> tuple[dict, list[dict], bool, dict]:
                 path = value.removeprefix("python:")
                 if Path(path).is_absolute():
                     paths.add(Path(path))
+        for value in binding.get("fixed_env", {}).values():
+            if isinstance(value, str) and Path(value).is_absolute() and Path(value).is_file():
+                paths.add(Path(value))
     toolchain = session.snapshot.get("toolchain") or {}
     if toolchain.get("binary"):
         paths.add(Path(toolchain["binary"]))

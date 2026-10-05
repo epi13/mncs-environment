@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import composition
 from . import authority as authority_module
 from . import capabilities as capabilities_module
 from . import claims as claims_module
@@ -394,6 +395,9 @@ def resolve_environment(
         workspace_root, definition=definition
     )
     requirements = readiness_module.validate_requirements(definition)
+    execution_roles = composition.validate(definition.get("execution_roles", {}))
+    execution_compatibility_service = composition.validate_compatibility_service(
+        definition.get("execution_compatibility_service"), requirements.get("services", []))
     repository_selection = workspace_module.repository_selection(definition)
     workspace_view = workspace_module.discover_workspace(resolved_root, repositories=repository_selection)
     scan = workspace_view.get("scan", {})
@@ -579,6 +583,12 @@ def resolve_environment(
         "workspace": workspace_view,
         "selected_checkouts": selected_facts,
         "toolchain": toolchain,
+        "execution_roles": execution_roles,
+        "execution_compatibility_service": execution_compatibility_service,
+        "execution_stack": composition.resolve(
+            execution_roles, bindings, toolchain,
+            compatibility_service=execution_compatibility_service,
+        ),
         "repo_facts": _repo_facts(workspace_view),
         "bindings": bindings,
         "unavailable_capabilities": unavailable,
@@ -704,6 +714,9 @@ class Session:
             "workspace": environment.get("workspace", {}),
             "selected_checkouts": environment.get("selected_checkouts", {}),
             "toolchain": environment.get("toolchain"),
+            "execution_roles": environment.get("execution_roles", {}),
+            "execution_compatibility_service": environment.get("execution_compatibility_service"),
+            "execution_stack": environment.get("execution_stack"),
             "configuration": environment.get("configuration", {}),
             "requirements": environment.get("requirements", {}),
             "service_observations": [],
@@ -1197,6 +1210,7 @@ class Session:
             "workspace": self.snapshot.get("workspace", {}),
             "selected_checkouts": selected_checkouts,
             "toolchain": self.snapshot.get("toolchain"),
+            "execution_stack": self.snapshot.get("execution_stack"),
         })
         if provider is None:
             return {}
@@ -1770,6 +1784,12 @@ class Session:
                     {"capability": binding["capability"], "previous": before_status},
                 )
         self.snapshot["bindings"] = new_bindings
+        selectors = self.snapshot.get("execution_roles", {})
+        self.snapshot["execution_stack"] = composition.resolve(
+            selectors, new_bindings, self.snapshot.get("toolchain"), self.snapshot.get("execution_stack"),
+            compatibility_service=self.snapshot.get("execution_compatibility_service"),
+            service_observations=self.snapshot.get("service_observations", []),
+        )
         holders = claims_module.holders(self.store.read_claims())
         if holders != self.snapshot.get("claim_holders", {}):
             self._emit("adapter.observed", "environment",
@@ -1985,6 +2005,7 @@ class Session:
                          for repo in self.snapshot.get("workspace", {}).get("repositories", [])][:20],
             "project_count": self.snapshot.get("workspace", {}).get("repository_count", 0),
             "toolchain": self.snapshot.get("toolchain"),
+            "execution_stack": self.snapshot.get("execution_stack"),
             "workspace_root": (self.snapshot.get("workspace") or {}).get("root"),
             "work_intent": {
                 "identity": intent.get("identity"),
@@ -2042,6 +2063,12 @@ class Session:
                     if match:
                         fresh = [capabilities_module.probe_availability(binding)
                                  for binding in self.snapshot.get("bindings", [])]
+                        execution_stack = composition.resolve(
+                            self.snapshot.get("execution_roles", {}), fresh,
+                            self.snapshot.get("toolchain"), self.snapshot.get("execution_stack"),
+                            compatibility_service=self.snapshot.get("execution_compatibility_service"),
+                            service_observations=services,
+                        )
                         summary = readiness_module.summarize(
                             self.snapshot, bindings=fresh, services=services, live=False)
                         summary["observation"] = "epoch"
@@ -2049,19 +2076,34 @@ class Session:
                         return {"session_id": self.session_id,
                                 "environment_id": self.snapshot.get("environment_id"),
                                 "readiness": summary,
+                                "execution_stack": execution_stack,
                                 "unavailable_capabilities": [
                                     {"capability": item["capability"], **item["availability"]}
                                     for item in fresh if item["availability"]["status"] != "available"],
                                 "doctor": doctor_module.terse(self),
                                 "actions": self.actions()}
         fresh = [capabilities_module.probe_availability(binding) for binding in self.snapshot.get("bindings", [])]
-        services = readiness_module.probe_services(self, bindings=fresh)
+        selectors = self.snapshot.get("execution_roles", {})
+        prior_stack = self.snapshot.get("execution_stack")
+        selected_service = self.snapshot.get("execution_compatibility_service")
+        current_stack = composition.resolve(
+            selectors, fresh, self.snapshot.get("toolchain"), prior_stack,
+            compatibility_service=selected_service,
+        )
+        services = readiness_module.probe_services(
+            self, bindings=fresh, composition_identity=current_stack.get("identity"))
+        execution_stack = composition.resolve(
+            selectors, fresh, self.snapshot.get("toolchain"), prior_stack,
+            compatibility_service=selected_service,
+            service_observations=services,
+        )
         snapshot = dict(self.snapshot)
         snapshot["workspace"] = workspace_module.discover_workspace(
             self.snapshot.get("workspace", {}).get("root", "."),
             repositories=self.snapshot.get("workspace", {}).get("selection"))
         return {"session_id": self.session_id, "environment_id": self.snapshot.get("environment_id"),
                 "readiness": readiness_module.summarize(snapshot, bindings=fresh, services=services, live=True),
+                "execution_stack": execution_stack,
                 "unavailable_capabilities": [{"capability": item["capability"], **item["availability"]}
                                              for item in fresh if item["availability"]["status"] != "available"],
                 "actions": self.actions()}
@@ -2124,6 +2166,7 @@ class Session:
             "selected_checkouts": self.snapshot.get("selected_checkouts", {}),
             "repo_facts": self.snapshot.get("repo_facts", {}),
             "toolchain": self.snapshot.get("toolchain"),
+            "execution_stack": self.snapshot.get("execution_stack"),
             "claim_holders": self.snapshot.get("claim_holders", {}),
             "unavailable_capabilities": unavailable,
             "bindings": [dict(binding) for binding in self.snapshot.get("bindings", [])],

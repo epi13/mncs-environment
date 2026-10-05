@@ -190,7 +190,7 @@ def descriptor_invocation(
     """
     empty = {"address": None, "toolchain_address": None,
              "toolchain_env": None, "fixed_argv": [],
-             "adapter_library_paths": [], "addressing": "none",
+             "adapter_library_paths": [], "fixed_env": {}, "addressing": "none",
              "detail": None}
 
     def unusable(detail):
@@ -242,6 +242,18 @@ def descriptor_invocation(
             and toolchain_address is None):
         return unusable("toolchain unresolvable in selected closure: %r"
                         % (toolchain,))
+    fixed_env: dict[str, str] = {}
+    declared_toolchains = spec.get("toolchains", {})
+    if not isinstance(declared_toolchains, dict):
+        return unusable("invocation toolchains must be an environment-name mapping")
+    for variable, selection in declared_toolchains.items():
+        if (not isinstance(variable, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]*", variable)
+                or variable in _PROTECTED_TOOLCHAIN_ENV):
+            return unusable("invalid or protected invocation toolchain environment name")
+        selected = _selected_repository_toolchain(selection, workspace, repository_roots)
+        if selected is None:
+            return unusable("composition toolchain unresolvable in selected closure: %r" % (selection,))
+        fixed_env[variable] = selected
     adapter_library_paths: list[str] = []
     raw_roots = spec.get("adapter_library_paths", [])
     if isinstance(raw_roots, list):
@@ -261,7 +273,7 @@ def descriptor_invocation(
                 adapter_library_paths.append(str(candidate_root))
     return {"address": address, "toolchain_address": toolchain_address,
             "toolchain_env": toolchain_env, "fixed_argv": list(fixed_argv),
-            "adapter_library_paths": adapter_library_paths,
+            "adapter_library_paths": adapter_library_paths, "fixed_env": fixed_env,
             "addressing": "descriptor"}
 
 
@@ -278,7 +290,13 @@ def probe_availability(binding: dict[str, Any]) -> dict[str, Any]:
     usable = bool(isinstance(resolved, str) and resolved and Path(resolved).is_file()
                   and os.access(resolved, os.R_OK if python_script else os.X_OK))
     toolchain = binding.get("toolchain_address")
-    if toolchain and not Path(toolchain).exists():
+    missing_composed = [value for value in binding.get("fixed_env", {}).values()
+                        if isinstance(value, str) and Path(value).is_absolute() and not Path(value).exists()]
+    if missing_composed:
+        usable = False
+        reason = f"bound composition substrate is missing: {missing_composed[0]}"
+        code = "toolchain-missing"
+    elif toolchain and not Path(toolchain).exists():
         usable = False
         reason = f"bound toolchain is missing: {toolchain}"
         code = "toolchain-missing"
@@ -585,6 +603,7 @@ def _from_semantic_contracts(
             toolchain_address=declared["toolchain_address"],
             toolchain_env=declared["toolchain_env"],
             fixed_argv=declared["fixed_argv"],
+            fixed_env=declared["fixed_env"],
             effects=[str(effect) for effect in effects],
             event_types=["unknown"],
             provenance={"source": f"{repo.name}/family-semantic-contracts-v1.json",
@@ -656,12 +675,14 @@ def _from_manifest(
             toolchain_address=declared["toolchain_address"],
             toolchain_env=declared["toolchain_env"],
             fixed_argv=declared["fixed_argv"],
+            fixed_env=declared["fixed_env"],
             effects=list(effects),
             event_types=["unknown"],
             provenance={"source": f"{repo.name}/.mncs/project.json",
                         "kind": entry.get("kind"), "stability": entry.get("stability"),
                         "addressing": addressing, "manifest_tests": declared_tests,
-                        "addressing_detail": declared.get("detail")},
+                        "addressing_detail": declared.get("detail"),
+                        "artifact_contract": entry.get("artifact_contract")},
             provider_root=str(repo),
         )
         out.append(record)

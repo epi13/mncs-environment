@@ -88,6 +88,9 @@ def validate_requirements(definition: dict[str, Any]) -> dict[str, Any]:
             not isinstance(pointer, str) or not pointer.startswith("/") for pointer in predicates
         ):
             raise ValueError("service ready_when needs nonempty JSON-pointer/value predicates")
+        response_max = service.get("response_max_bytes", 16384)
+        if type(response_max) is not int or not 1 <= response_max <= capabilities.MAX_OUTPUT_LIMIT_BYTES:
+            raise ValueError("service response_max_bytes exceeds bounded capability output")
         schema = service.get("response_schema")
         if not isinstance(schema, str) or not schema:
             raise ValueError("service response_schema must identify the provider's JSON contract")
@@ -103,7 +106,8 @@ def _pointer(document: Any, pointer: str) -> Any:
     return document
 
 
-def probe_services(session, *, bindings: list[dict] | None = None) -> list[dict[str, Any]]:
+def probe_services(session, *, bindings: list[dict] | None = None,
+                   composition_identity: str | None = None) -> list[dict[str, Any]]:
     """Read-only, bounded provider probes; never start services or write events."""
     by_id = {item["capability"]: item for item in (bindings if bindings is not None else session.snapshot.get("bindings", []))}
     observations = []
@@ -131,9 +135,16 @@ def probe_services(session, *, bindings: list[dict] | None = None) -> list[dict[
                 if remaining <= 0:
                     record["code"] = "service-probe-budget"
                     raise ValueError("entry probe budget exhausted; retry health for a fresh observation")
+                state_root = Path(session.store.state_dir).resolve()
+                artifact_directory = (state_root / "sessions" / session.session_id / "artifacts"
+                                      / capabilities.digest_hex(call["capability"])).resolve()
+                if not artifact_directory.is_relative_to(state_root):
+                    raise ValueError("service artifact directory escapes the Environment state root")
                 result = capabilities.invoke(binding, resolve_arguments(session, call.get("argv", [])), timeout_seconds=min(3.0, remaining),
-                                             output_limit_bytes=16384, env={**session._selected_runtime_environment(binding),
-                                                                                        "GIT_OPTIONAL_LOCKS": "0"})
+                                             output_limit_bytes=service.get("response_max_bytes", 16384),
+                                             env={**session._selected_runtime_environment(binding),
+                                                  "GIT_OPTIONAL_LOCKS": "0",
+                                                  "MNCS_ENV_SESSION_ARTIFACT_DIR": str(artifact_directory)})
                 record["code"] = "service-probe-failed"
                 if result["status"] != "ok":
                     if result["status"] == "timeout":
@@ -158,6 +169,9 @@ def probe_services(session, *, bindings: list[dict] | None = None) -> list[dict[
                               observation=actual)
             except (ValueError, KeyError, OSError) as error:
                 record["reason"] = str(error)
+        if service["identity"] == session.snapshot.get("execution_compatibility_service"):
+            stack = session.snapshot.get("execution_stack") or {}
+            record["composition_identity"] = composition_identity or stack.get("identity")
         observations.append(record)
     return observations
 
@@ -286,6 +300,13 @@ def reconcile_services(session, *, force_recovery: bool = False,
     session.snapshot["service_observations"] = observations
     session.snapshot["service_operations"] = operations
     session.snapshot["last_reconciled_at"] = capabilities.utcnow()
+    from . import composition
+    session.snapshot["execution_stack"] = composition.resolve(
+        session.snapshot.get("execution_roles", {}), session.snapshot.get("bindings", []),
+        session.snapshot.get("toolchain"), session.snapshot.get("execution_stack"),
+        compatibility_service=session.snapshot.get("execution_compatibility_service"),
+        service_observations=observations,
+    )
     session._save()
     return {"operations": operations, "readiness": summarize(session.snapshot)}
 

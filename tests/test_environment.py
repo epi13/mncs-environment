@@ -41,6 +41,7 @@ from mncs_env import (  # noqa: E402
     events,
     identity,
     intent,
+    readiness,
     reconciler,
     rights,
     sessions,
@@ -1286,6 +1287,52 @@ class SessionTests(unittest.TestCase):
                 session.invoke(
                     "echoer", ["hi"],
                     output_limit_bytes=capabilities.MAX_OUTPUT_LIMIT_BYTES + 1)
+
+    def test_readiness_probe_gets_bounded_session_artifact_root(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            binding = capabilities.bind(
+                provider="mncs-doctor", capability="doctor-health",
+                contract_revision="1", entrypoint="health", address="/bin/echo",
+                effects=["read"],
+            )
+            binding["availability"] = {"status": "available"}
+            session.snapshot["bindings"] = [binding]
+            session.snapshot["execution_compatibility_service"] = "doctor-coherence"
+            session.snapshot["execution_stack"] = {"identity": "selected-stack-identity"}
+            session.snapshot["requirements"] = {
+                "services": [{
+                    "identity": "doctor-coherence", "required": True,
+                    "probe": {"capability": "doctor-health", "argv": ["--smoke"]},
+                    "response_schema": "mncs.doctor.compiler-vm/1",
+                    "ready_when": {"/status": "pass"},
+                    "response_max_bytes": 65536,
+                }],
+            }
+            with mock.patch.object(authority, "evaluate", return_value={"verdict": "allow"}), mock.patch.object(
+                readiness.capabilities, "invoke",
+                return_value={"status": "ok", "returncode": 0,
+                              "stdout": json.dumps({"schema_version": "mncs.doctor.compiler-vm/1",
+                                                    "status": "pass"})},
+            ) as invoke:
+                result = readiness.probe_services(session)
+            self.assertEqual(result[0]["status"], "ready")
+            self.assertEqual(result[0]["composition_identity"], "selected-stack-identity")
+            self.assertEqual(invoke.call_args.kwargs["output_limit_bytes"], 65536)
+            environment = invoke.call_args.kwargs["env"]
+            artifact_root = Path(environment["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+            self.assertEqual(artifact_root.parent.parent.parent.name, "sessions")
+            self.assertIn(session.session_id, artifact_root.parts)
+            self.assertFalse(artifact_root.exists(), "a read-only readiness probe must not create its cache")
+
+    def test_readiness_response_limit_is_bounded(self) -> None:
+        service = {
+            "identity": "doctor-coherence", "probe": {"capability": "doctor-health"},
+            "response_schema": "mncs.doctor.compiler-vm/1", "ready_when": {"/status": "pass"},
+            "response_max_bytes": capabilities.MAX_OUTPUT_LIMIT_BYTES + 1,
+        }
+        with self.assertRaisesRegex(ValueError, "response_max_bytes"):
+            readiness.validate_requirements({"services": [service]})
 
     def test_cli_exposes_bounded_output_limit(self) -> None:
         parsed = cli.build_parser().parse_args([

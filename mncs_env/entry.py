@@ -7,7 +7,7 @@ import fcntl
 from contextlib import contextmanager
 from pathlib import Path
 
-from . import actions, coherence as incremental, context_budget, diagnostics, doctor, family, identity, projections, readiness, semantics, sessions, verification, workspace
+from . import composition, actions, coherence as incremental, context_budget, diagnostics, doctor, family, identity, projections, readiness, semantics, sessions, verification, workspace
 from .intent import parse as parse_intent
 from .persist import read_json
 from .session_store import open_store, upgrade_session_store_provider
@@ -302,7 +302,10 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
         budget = context_budget.validate(definition)
     except ValueError as error:
         raise EntryError(str(error), "definition-invalid") from error
-    readiness.validate_requirements(definition)
+    requirements = readiness.validate_requirements(definition)
+    composition.validate(definition.get("execution_roles", {}))
+    composition.validate_compatibility_service(
+        definition.get("execution_compatibility_service"), requirements.get("services", []))
     parse_intent(definition.get("intent", {"goal": definition.get("goal", "unspecified")}))
     definition_id = identity.environment_id(definition)
     with entry_lock(state_dir, backend) as lock:

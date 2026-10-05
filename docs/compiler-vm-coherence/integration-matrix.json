@@ -1,0 +1,351 @@
+{
+  "schema_version": "mncs.integration-inventory/1",
+  "scope": "observed selected and read-only family integration edges; not an exhaustive backend caller count",
+  "consumers": [
+    {
+      "consumer": "mncs-environment",
+      "before": {
+        "compiler": "selected mncs-language",
+        "runtime": "Language CLI/embed",
+        "explicit": true,
+        "artifact_format": "provider-owned artifacts",
+        "identity_source": "exact selected checkout/toolchain binding",
+        "build_origin": "HEAD/executable SHA; build origin unknown",
+        "cache": "Store sessions/provider caches",
+        "process_model": "durable session + capability invocations",
+        "fallback": "unavailable declared invocation is not PATH-substituted",
+        "research_bytecode": false
+      },
+      "after": {
+        "changed": true,
+        "selection": "three independent provider references: reference/compiler/runtime",
+        "health": "provider-owned bounded Doctor smoke service; declarations alone remain unproven",
+        "invalidation": "selected executable stamps invalidate readiness without HEAD changes"
+      },
+      "evidence_paths": [
+        "mncs_env/composition.py",
+        "mncs_env/doctor.py",
+        ".mncs/environment.json"
+      ]
+    },
+    {
+      "consumer": "mncs-compiler",
+      "before": {
+        "compiler": "pinned Stage-0 bootstrap verified SSA",
+        "runtime": "canonical VM / explicit reference / Cranelift",
+        "explicit": true,
+        "artifact_format": "mncs.vm.artifact/1 DAG SSA",
+        "identity_source": "Stage-0 lock + artifact/callable hashes",
+        "build_origin": "artifact had pin; compiler executable build origin incomplete",
+        "cache": "probe-cache v2",
+        "process_model": "retained probe + batch",
+        "fallback": "backend policy fails closed",
+        "research_bytecode": false
+      },
+      "after": {
+        "changed": true,
+        "producer": "provider-owned direct bootstrap emitter request; explicit filesystem roots",
+        "origin": "embedded local build-input receipt, pin, compiler bytes, Rust configuration; no independent attestation or self-hosting claim",
+        "product": "content-addressed artifact/evidence + existing Commons build receipt vocabulary"
+      },
+      "evidence_paths": [
+        "tools/vm_provider.py",
+        "tools/stage0-probe/build.rs",
+        "tools/stage0-probe/src/provider.rs",
+        "tools/vm_emit.rs"
+      ]
+    },
+    {
+      "consumer": "mncs-vm",
+      "before": {
+        "compiler": "compiler-owned emitter via corpus harness",
+        "runtime": "canonical VM",
+        "explicit": true,
+        "artifact_format": "mncs.vm.artifact/1",
+        "identity_source": "sealed artifact/admission identity",
+        "build_origin": "runtime binary exact bytes; source build origin unknown",
+        "cache": "immutable admitted indexes",
+        "process_model": "batch/session/debug",
+        "fallback": "structured refusal",
+        "research_bytecode": false
+      },
+      "after": {
+        "changed": true,
+        "contracts": "describe/admit/serve provider contracts",
+        "execution": "decode/admit/index once, bounded JSONL calls, isolated counters; sealed Test reference validation",
+        "identity": "exact executable SHA + compiler receipt in execution provenance; build origin remains unknown"
+      },
+      "evidence_paths": [
+        "src/bin/mncs-vm.rs",
+        "python/mncs_vm_client/__init__.py"
+      ]
+    },
+    {
+      "consumer": "mncs-language",
+      "before": {
+        "compiler": "Language/reference compiler",
+        "runtime": "Language embed + target backends",
+        "explicit": true,
+        "artifact_format": "Language backend artifacts / compiler facts",
+        "identity_source": "selected checkout and binary; separate compiler bootstrap lock",
+        "build_origin": "existing build-origin pressure",
+        "cache": "compiler/native-application caches",
+        "process_model": "CLI/embed",
+        "fallback": "explicit target choices",
+        "research_bytecode": true
+      },
+      "after": {
+        "changed": false,
+        "role": "semantic/bootstrap/reference authority; selected Language checkout is newer than compiler pinned bootstrap"
+      },
+      "evidence_paths": [
+        "mncs-language/.mncs/project.json",
+        "mncs-compiler/mncs-language.lock.json"
+      ]
+    },
+    {
+      "consumer": "mncs-test",
+      "before": {
+        "compiler": "Language compile --target research-bytecode in retained compatibility first-class path",
+        "runtime": "Language embed",
+        "explicit": true,
+        "artifact_format": "Language backend_artifact JSON",
+        "identity_source": "compiler inventory/callable refs + exact MNCS executable",
+        "build_origin": "provider result/ABI identities",
+        "cache": "retained embed/native-application caches",
+        "process_model": "one retained session + native suite fold",
+        "fallback": "compatibility runner had legacy subprocess paths",
+        "research_bytecode": true
+      },
+      "after": {
+        "changed": true,
+        "canonical": "bin/mncs-test vm and canonical-vm-tests/1 -> direct producer -> one VM session",
+        "authority": "native TestResult/suite folding preserved",
+        "reference": "mncs test remains explicit independent reference lane",
+        "fallback": "canonical lane rejects stale/unsupported producer, grants, explicit legacy suites; no silent fallback"
+      },
+      "evidence_paths": [
+        "tools/vm_transport.py",
+        "tools/mncs_test.py",
+        "bin/mncs-test-vm"
+      ]
+    },
+    {
+      "consumer": "mncs-forge",
+      "before": {
+        "compiler": "Language compiler",
+        "runtime": "implicit mncs-research-bytecode embed",
+        "explicit": false,
+        "artifact_format": "Language backend_artifact JSON",
+        "identity_source": "compiler executable/source/stdlib cache keys",
+        "build_origin": "known prebuilt compiler build-origin pressure",
+        "cache": "native-application hot cache",
+        "process_model": "retained embed/resident",
+        "fallback": "selected Language backend adapter",
+        "research_bytecode": true
+      },
+      "after": {
+        "changed": true,
+        "pure": "explicit compiler + VM composition uses CanonicalVmApplication, retains process across calls",
+        "resident": "composition/executable/client identities participate in resident reuse; inherited unrecorded selectors removed",
+        "host_grants": "explicit Stage-0/embed lane retained until VM host capability providers are selected",
+        "fallback": "incomplete/stale canonical selection refuses; no retry on research bytecode"
+      },
+      "evidence_paths": [
+        "src/mncs_forge/compiler_vm.py",
+        "src/mncs_forge/mncs_native.py",
+        "src/mncs_forge/resident.py"
+      ]
+    },
+    {
+      "consumer": "mncs-debug",
+      "before": {
+        "compiler": "Language source-map compiler; VM dev --compile harness",
+        "runtime": "canonical VM debug --serve; Language native debug policy",
+        "explicit": true,
+        "artifact_format": "source map + artifact + debug stream",
+        "identity_source": "artifact/callable/operation correspondence identities",
+        "build_origin": "compiler mapping authority; producer origin incomplete",
+        "cache": "native debugger policy hot cache",
+        "process_model": "live socket daemon with stored sessions",
+        "fallback": "explicit --compile/--artifact",
+        "research_bytecode": true
+      },
+      "after": {
+        "changed": true,
+        "direct": "--compiler-product validates receipt/files/source map and joins selected SSA operations to compiler spans without recompilation/migration",
+        "scope": "root-module source correspondence; imported/generic operations without compiler correspondence remain unmapped",
+        "policy": "native debugger policy/reference helpers retained"
+      },
+      "evidence_paths": [
+        "mncs_debug/targets.py",
+        "mncs_debug/cli.py",
+        "tests/test_compiler_product.py"
+      ]
+    },
+    {
+      "consumer": "mncs-doctor",
+      "before": {
+        "compiler": "Language toolchain",
+        "runtime": "backend-aware diagnostics + native policy",
+        "explicit": true,
+        "artifact_format": "structured health/check results",
+        "identity_source": "selected runtime and provider facts",
+        "build_origin": "build origin unknown",
+        "cache": "native policy cache",
+        "process_model": "provider diagnostic calls",
+        "fallback": "unknown remains unknown",
+        "research_bytecode": true
+      },
+      "after": {
+        "changed": true,
+        "components": "separate reference / direct producer / runtime / compatibility",
+        "proof": "standalone admission + finite execution + known-answer smoke; corrupt/stale source/producer refused",
+        "optional_backends": "CP-0024/CP-0025 not part of required canonical smoke"
+      },
+      "evidence_paths": [
+        "tools/compiler_vm.py",
+        "tools/fixtures/compiler_vm_smoke.mncs"
+      ]
+    },
+    {
+      "consumer": "mncs-automation",
+      "before": {
+        "compiler": "selected Language CLI",
+        "runtime": "mncs call; backend target explicit where present",
+        "explicit": true,
+        "artifact_format": "wire calls/native applications",
+        "identity_source": "compiler cache content identities + configured toolchain",
+        "build_origin": "Language build-origin limitation",
+        "cache": "native-application/compiler caches",
+        "process_model": "CLI calls and reusable native applications",
+        "fallback": "tool-specific explicit grants",
+        "research_bytecode": true
+      },
+      "after": {
+        "changed": false,
+        "finding": "mixed process/filesystem/grant consumers remain Language-owned contracts; no blanket migration or cache deletion"
+      },
+      "evidence_paths": [
+        "tools/automation/native.py",
+        "tools/automation/targets.py"
+      ]
+    },
+    {
+      "consumer": "mncs-store",
+      "before": {
+        "compiler": "selected Language bootstrap",
+        "runtime": "embed for native storage protocol; native SHA boundary for large inputs",
+        "explicit": true,
+        "artifact_format": "generic domain-schema/identity + opaque payload",
+        "identity_source": "content/binding identities + CAS generations",
+        "build_origin": "selected Store runtime identity",
+        "cache": "native Store application cache; generic chunks",
+        "process_model": "retained storage session",
+        "fallback": "integrity failures refuse",
+        "research_bytecode": true
+      },
+      "after": {
+        "changed": false,
+        "finding": "put_bound_object/get_bound_object can retain frozen VM bytes without understanding SSA; Environment session evidence already uses Store; no new VM storage authority"
+      },
+      "evidence_paths": [
+        "python/mncs_store/embedded.py",
+        "python/mncs_store/session.py"
+      ]
+    },
+    {
+      "consumer": "mncs-language-service",
+      "before": {
+        "compiler": "linked Language ReferenceCompiler crates",
+        "runtime": "Language native filter helper research backend",
+        "explicit": true,
+        "artifact_format": "compiler facts/filter artifacts",
+        "identity_source": "linked crate pin + selected host",
+        "build_origin": "protected dirty campaign; inspected only",
+        "cache": "service indexes/helper products",
+        "process_model": "long-lived language service",
+        "fallback": "compiler-owned source diagnostics",
+        "research_bytecode": true
+      },
+      "after": {
+        "changed": false,
+        "protected": true,
+        "finding": "analysis is semantic Language authority, not execution substitution; filter helper is future provider-composition candidate after owner review"
+      },
+      "evidence_paths": [
+        "crates/service-core/src/analysis.rs",
+        "crates/service-core/src/native_filter.rs"
+      ]
+    },
+    {
+      "consumer": "mncs-harness",
+      "before": {
+        "compiler": "pinned Language toolchain",
+        "runtime": "portable WASM + research conformance",
+        "explicit": true,
+        "artifact_format": "target-specific retained backend artifacts",
+        "identity_source": "Harness manifest/toolchain pins",
+        "build_origin": "backend evidence receipts",
+        "cache": "build artifact directories",
+        "process_model": "broad differential/conformance runner",
+        "fallback": "explicit target selection",
+        "research_bytecode": true
+      },
+      "after": {
+        "changed": false,
+        "finding": "intentional backend differential lane; canonical VM available separately, not a replacement for WASM/Atlas proof"
+      },
+      "evidence_paths": [
+        "scripts/build_mncs_artifacts.py",
+        "src/mncs_harness/mncs_runtime.py"
+      ]
+    },
+    {
+      "consumer": "RAVEL",
+      "before": {
+        "compiler": "Language inventories/semantic-impact facts",
+        "runtime": "native helpers + explicit research differential",
+        "explicit": true,
+        "artifact_format": "verification plans + compiler inventories",
+        "identity_source": "subject/inventory/plan identities",
+        "build_origin": "provider evidence",
+        "cache": "toolchain/native caches",
+        "process_model": "planning/runner adapters",
+        "fallback": "closed on unsupported compiler evidence",
+        "research_bytecode": true
+      },
+      "after": {
+        "changed": false,
+        "finding": "selection policy stays RAVEL-owned; Test accepts existing compiler-owned inventory/plan identities on VM lane"
+      },
+      "evidence_paths": [
+        "src/ravel/impact.py",
+        "tools/ravel_mncs_differential.py"
+      ]
+    },
+    {
+      "consumer": "mncs-fabric",
+      "before": {
+        "compiler": "Language native policy/conformance",
+        "runtime": "explicit backend platform candidates",
+        "explicit": true,
+        "artifact_format": "work items with capability requirements + backend artifacts",
+        "identity_source": "artifact/runtime capability requirements",
+        "build_origin": "placement evidence",
+        "cache": "local work/native products",
+        "process_model": "placement/worker model",
+        "fallback": "explicit supported backend capability selection",
+        "research_bytecode": true
+      },
+      "after": {
+        "changed": false,
+        "finding": "opaque frozen VM artifact fits portable work input; vm-runtime/1 requirement identifies executor; no VM placement semantics added"
+      },
+      "evidence_paths": [
+        "src/mncs_fabric/semantic_conformance.py",
+        "tests/test_mncs_work_item.py"
+      ]
+    }
+  ]
+}
