@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -97,12 +98,14 @@ def validate_requirements(definition: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(services, list) or len(services) > MAX_SERVICES:
         raise ValueError(f"services must be a list of at most {MAX_SERVICES} provider bindings")
     identities = set()
-    for service in services:
+    positions: dict[str, int] = {}
+    for index, service in enumerate(services):
         if not isinstance(service, dict) or not isinstance(service.get("identity"), str) or not service["identity"]:
             raise ValueError("each service needs a stable identity")
         if service["identity"] in identities:
             raise ValueError(f"duplicate service identity: {service['identity']}")
         identities.add(service["identity"])
+        positions[service["identity"]] = index
         if type(service.get("required", True)) is not bool:
             raise ValueError("service required must be a boolean")
         inputs = service.get("observation_inputs")
@@ -148,6 +151,25 @@ def validate_requirements(definition: dict[str, Any]) -> dict[str, Any]:
         schema = service.get("response_schema")
         if not isinstance(schema, str) or not schema:
             raise ValueError("service response_schema must identify the provider's JSON contract")
+    for service in services:
+        environment = service.get("environment_from_service", {})
+        if not isinstance(environment, dict) or len(environment) > 16:
+            raise ValueError("service environment_from_service must be a bounded mapping")
+        for name, reference in environment.items():
+            if not isinstance(name, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{0,127}", name):
+                raise ValueError("service environment reference needs a valid environment name")
+            if (
+                not isinstance(reference, dict)
+                or set(reference) != {"service", "pointer"}
+                or not isinstance(reference.get("service"), str)
+                or reference["service"] not in positions
+                or positions[reference["service"]] >= positions[service["identity"]]
+                or not isinstance(reference.get("pointer"), str)
+                or not reference["pointer"].startswith("/")
+            ):
+                raise ValueError(
+                    "service environment reference must point to an earlier selected service"
+                )
     return {"required_capabilities": sorted(set(required)), "services": services}
 
 
@@ -158,6 +180,38 @@ def _pointer(document: Any, pointer: str) -> Any:
             raise KeyError(pointer)
         document = document[token]
     return document
+
+
+def _service_environment(
+    service: dict[str, Any], observations: list[dict[str, Any]]
+) -> dict[str, str]:
+    """Resolve provider-owned runtime inputs from earlier ready services."""
+    references = service.get("environment_from_service", {})
+    by_identity = {
+        item.get("identity"): item for item in observations if isinstance(item, dict)
+    }
+    result: dict[str, str] = {}
+    for name, reference in references.items():
+        source = by_identity.get(reference["service"])
+        if not isinstance(source, dict) or source.get("status") != "ready":
+            raise ValueError(
+                f"service input {name} requires ready provider {reference['service']}"
+            )
+        value = _pointer(source, reference["pointer"])
+        if isinstance(value, list) and name.endswith("_JSON") and all(
+            isinstance(item, str) for item in value
+        ) and len(value) <= 128:
+            encoded = json.dumps(value, separators=(",", ":"))
+            if len(encoded.encode("utf-8")) > 8192:
+                raise ValueError(f"service input {name} exceeds the environment value bound")
+            result[name] = encoded
+        elif isinstance(value, str) and value and "\x00" not in value:
+            result[name] = value
+        else:
+            raise ValueError(
+                f"service input {name} is not a bounded provider-owned string"
+            )
+    return result
 
 
 def probe_services(session, *, bindings: list[dict] | None = None,
@@ -180,6 +234,11 @@ def probe_services(session, *, bindings: list[dict] | None = None,
             try:
                 if binding.get("availability", {}).get("status") != "available":
                     raise ValueError(binding.get("availability", {}).get("reason", "probe unavailable"))
+                try:
+                    service_environment = _service_environment(service, observations)
+                except ValueError:
+                    record["code"] = "service-input-unavailable"
+                    raise
                 if binding.get("effects") != ["read"] or binding.get("provenance", {}).get("addressing") == "descriptor-fingerprint":
                     record["code"] = "service-probe-not-read-only"
                     raise ValueError("readiness requires an explicitly addressed read-only provider capability")
@@ -202,6 +261,7 @@ def probe_services(session, *, bindings: list[dict] | None = None,
                 result = capabilities.invoke(binding, resolve_arguments(session, call.get("argv", [])), timeout_seconds=timeout_seconds,
                                              output_limit_bytes=service.get("response_max_bytes", 16384),
                                              env={**session._selected_runtime_environment(binding),
+                                                  **service_environment,
                                                   "GIT_OPTIONAL_LOCKS": "0",
                                                   "MNCS_ENV_SESSION_ARTIFACT_DIR": str(artifact_directory)})
                 record["code"] = "service-probe-failed"
@@ -326,6 +386,7 @@ def reconcile_services(session, *, force_recovery: bool = False,
                 timeout_seconds=timeout_seconds,
                 output_limit_bytes=declared[identity].get("response_max_bytes", 16384),
                 effect_target=call.get("effect_target"),
+                env=_service_environment(declared[identity], observations),
             )
             if result.get("status") != "pending-escalation":
                 attempted.add(identity)
@@ -345,6 +406,15 @@ def reconcile_services(session, *, force_recovery: bool = False,
                 operation["retry"] = {"attempts": attempts, "forced": True,
                                       "note": "explicit recovery bypassed suppression"}
             operations.append(operation)
+            if result.get("status") == "ok" and any(
+                isinstance(reference, dict) and reference.get("service") == identity
+                for later in services
+                if later.get("identity") != identity
+                for reference in declared[later["identity"]].get(
+                    "environment_from_service", {}
+                ).values()
+            ):
+                observations = probe_services(session)
         except (AuthorityDenied, LifecycleError, ValueError, OSError) as error:
             # Session authority/lifecycle exceptions carry actionable reasons;
             # a failed optional provider must not discard a durable entry.

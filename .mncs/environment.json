@@ -117,6 +117,24 @@
       "observation_inputs": [
         "selected-repositories"
       ],
+      "environment_from_service": {
+        "MNLS_SERVICE_SOCKET": {
+          "service": "mncs-language-service:resident-workspace",
+          "pointer": "/provider_observed/event_transport/socket"
+        },
+        "MNLS_SERVICE_STREAM_IDENTITY": {
+          "service": "mncs-language-service:resident-workspace",
+          "pointer": "/provider_observed/stream_identity"
+        },
+        "MNLS_SERVICE_WORKSPACE_ROOT": {
+          "service": "mncs-language-service:resident-workspace",
+          "pointer": "/provider_observed/event_transport/workspace"
+        },
+        "MNLS_SERVICE_REPOSITORY_ROOTS_JSON": {
+          "service": "mncs-language-service:resident-workspace",
+          "pointer": "/provider_observed/workspace_repository_roots"
+        }
+      },
       "observation_max_age_ms": 60000,
       "probe_timeout_seconds": 10,
       "reconcile_timeout_seconds": 30,

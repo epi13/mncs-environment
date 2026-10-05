@@ -1351,6 +1351,108 @@ class SessionTests(unittest.TestCase):
             self.assertIn(session.session_id, artifact_root.parts)
             self.assertFalse(artifact_root.exists(), "a read-only readiness probe must not create its cache")
 
+    def test_readiness_passes_selected_service_endpoint_to_dependent_provider(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            services = [
+                {
+                    "identity": "language-service",
+                    "required": True,
+                    "probe": {"capability": "language-status"},
+                    "response_schema": "mncs.language-service.resident-status/1",
+                    "ready_when": {"/ready": True},
+                },
+                {
+                    "identity": "forge-resident",
+                    "required": False,
+                    "probe": {"capability": "forge-status"},
+                    "response_schema": "mncs.forge.resident-status/1",
+                    "ready_when": {"/state": "ready"},
+                    "environment_from_service": {
+                        "MNLS_SERVICE_SOCKET": {
+                            "service": "language-service",
+                            "pointer": "/provider_observed/event_transport/socket",
+                        },
+                        "MNLS_SERVICE_STREAM_IDENTITY": {
+                            "service": "language-service",
+                            "pointer": "/provider_observed/stream_identity",
+                        },
+                        "MNLS_SERVICE_WORKSPACE_ROOT": {
+                            "service": "language-service",
+                            "pointer": "/provider_observed/event_transport/workspace",
+                        },
+                        "MNLS_SERVICE_REPOSITORY_ROOTS_JSON": {
+                            "service": "language-service",
+                            "pointer": "/provider_observed/workspace_repository_roots",
+                        },
+                    },
+                },
+            ]
+            session.snapshot["requirements"] = {"services": services}
+            session.snapshot["bindings"] = [
+                capabilities.probe_availability(
+                    capabilities.bind(
+                        provider="fixture",
+                        capability=capability,
+                        contract_revision="1",
+                        entrypoint=capability,
+                        address="/bin/true",
+                        effects=["read"],
+                    )
+                )
+                for capability in ("language-status", "forge-status")
+            ]
+            language_status = {
+                "schema_version": "mncs.language-service.resident-status/1",
+                "ready": True,
+                "observed": {
+                    "event_transport": {
+                        "socket": "/selected/workspace/.mncs/mnls.sock",
+                        "workspace": "/selected/workspace",
+                    },
+                    "stream_identity": "mnls-stream-selected",
+                    "workspace_repository_roots": ["/selected/workspace/mncs-forge"],
+                },
+            }
+            forge_status = {
+                "schema_version": "mncs.forge.resident-status/1",
+                "state": "ready",
+            }
+            with mock.patch.object(
+                authority, "evaluate", return_value={"verdict": "allow"}
+            ), mock.patch.object(
+                readiness.capabilities,
+                "invoke",
+                side_effect=[
+                    {
+                        "status": "ok",
+                        "returncode": 0,
+                        "stdout": json.dumps(language_status),
+                    },
+                    {
+                        "status": "ok",
+                        "returncode": 0,
+                        "stdout": json.dumps(forge_status),
+                    },
+                ],
+            ) as invoke:
+                result = readiness.probe_services(session)
+
+            self.assertEqual([item["status"] for item in result], ["ready", "ready"])
+            passed_environment = invoke.call_args_list[1].kwargs["env"]
+            self.assertEqual(
+                passed_environment["MNLS_SERVICE_SOCKET"],
+                "/selected/workspace/.mncs/mnls.sock",
+            )
+            self.assertEqual(
+                passed_environment["MNLS_SERVICE_STREAM_IDENTITY"],
+                "mnls-stream-selected",
+            )
+            self.assertEqual(
+                passed_environment["MNLS_SERVICE_REPOSITORY_ROOTS_JSON"],
+                '["/selected/workspace/mncs-forge"]',
+            )
+
     def test_readiness_response_limit_is_bounded(self) -> None:
         service = {
             "identity": "doctor-coherence", "probe": {"capability": "doctor-health"},

@@ -134,6 +134,33 @@ class EntryContractTests(unittest.TestCase):
                 }}
             ]})
 
+    def test_service_environment_reference_requires_an_earlier_selected_service(self):
+        language = {
+            "identity": "language-service",
+            "probe": {"capability": "language-status"},
+            "response_schema": "language/1",
+            "ready_when": {"/ready": True},
+        }
+        forge = {
+            "identity": "forge-resident",
+            "probe": {"capability": "forge-status"},
+            "response_schema": "forge/1",
+            "ready_when": {"/state": "ready"},
+            "environment_from_service": {
+                "MNLS_SERVICE_SOCKET": {
+                    "service": "language-service",
+                    "pointer": "/provider_observed/event_transport/socket",
+                },
+            },
+        }
+        checked = readiness.validate_requirements({"services": [language, forge]})
+        self.assertEqual(
+            checked["services"][1]["environment_from_service"],
+            forge["environment_from_service"],
+        )
+        with self.assertRaisesRegex(ValueError, "earlier selected service"):
+            readiness.validate_requirements({"services": [forge, language]})
+
     def test_invoke_routes_mutation_authority_to_selected_effect_repository(self):
         from types import SimpleNamespace
 

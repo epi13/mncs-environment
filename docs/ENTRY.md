@@ -147,6 +147,25 @@ trusting a service for a different workspace. The response schema must match.
 Environment preserves selected fields, observation times, stable diagnostic
 codes, and recovery addressing; provider domain status stays provider-owned.
 
+A service may declare `environment_from_service` to compose a runtime with an
+earlier ready service's observed contract:
+
+```json
+"environment_from_service": {
+  "MNLS_SERVICE_SOCKET": {
+    "service": "mncs-language-service:resident-workspace",
+    "pointer": "/provider_observed/event_transport/socket"
+  }
+}
+```
+
+The referenced service must precede the consumer in the declaration and be
+ready. Environment resolves the JSON pointer separately for read probes and
+recovery invocations; missing or stale source evidence blocks the dependent
+provider from running. A `_JSON` variable may encode a bounded string list.
+This lets Forge attach to the selected Environment LS stream without embedding
+workspace paths in Forge configuration or starting a duplicate service.
+
 Entry or explicit reconciliation probes first, delegates recovery only for
 nonready services with a recovery declaration, then probes again. Ready
 services are reused. A schema mismatch requires contract repair before
