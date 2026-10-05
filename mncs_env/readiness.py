@@ -126,6 +126,17 @@ def validate_requirements(definition: dict[str, Any]) -> dict[str, Any]:
             argv = call.get("argv", [])
             if not isinstance(argv, list) or any(not _valid_argument(arg) for arg in argv):
                 raise ValueError(f"service {operation}.argv must contain strings or selected repository/path references")
+            target = call.get("effect_target")
+            if target is not None and (
+                operation != "reconcile"
+                or not isinstance(target, dict)
+                or set(target) != {"repository"}
+                or not isinstance(target.get("repository"), str)
+                or not target["repository"]
+            ):
+                raise ValueError(
+                    "service effect_target must name one selected repository on reconcile"
+                )
         predicates = service.get("ready_when")
         if not isinstance(predicates, dict) or not predicates or any(
             not isinstance(pointer, str) or not pointer.startswith("/") for pointer in predicates
@@ -310,9 +321,12 @@ def reconcile_services(session, *, force_recovery: bool = False,
                 continue
             timeout_seconds = min(declared[identity].get("reconcile_timeout_seconds", 10),
                                   max(1, math.ceil(deadline - time.monotonic())))
-            result = session.invoke(call["capability"], resolve_arguments(session, call.get("argv", [])),
-                                    timeout_seconds=timeout_seconds,
-                                    output_limit_bytes=declared[identity].get("response_max_bytes", 16384))
+            result = session.invoke(
+                call["capability"], resolve_arguments(session, call.get("argv", [])),
+                timeout_seconds=timeout_seconds,
+                output_limit_bytes=declared[identity].get("response_max_bytes", 16384),
+                effect_target=call.get("effect_target"),
+            )
             if result.get("status") != "pending-escalation":
                 attempted.add(identity)
             operation = {"identity": identity, "status": result["status"],

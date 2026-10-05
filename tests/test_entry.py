@@ -98,6 +98,42 @@ class EntryContractTests(unittest.TestCase):
             with self.subTest(field=field), self.assertRaisesRegex(ValueError, field):
                 readiness.validate_requirements({"services": [{**service, field: value}]})
 
+    def test_service_reconcile_effect_target_names_a_selected_repository(self):
+        service = {
+            "identity": "forge-resident",
+            "probe": {"capability": "forge-status"},
+            "reconcile": {
+                "capability": "forge-reconcile",
+                "effect_target": {"repository": "mncs-reference-studies"},
+            },
+            "response_schema": "forge.status/1",
+            "ready_when": {"/state": "ready"},
+        }
+        validated = readiness.validate_requirements({"services": [service]})
+        self.assertEqual(
+            validated["services"][0]["reconcile"]["effect_target"],
+            {"repository": "mncs-reference-studies"},
+        )
+        for target in (
+            {"repository": ""},
+            {"repository": "selected", "checkout": "/ambient/path"},
+        ):
+            with self.subTest(target=target), self.assertRaisesRegex(
+                ValueError, "effect_target"
+            ):
+                readiness.validate_requirements({"services": [
+                    {**service, "reconcile": {
+                        "capability": "forge-reconcile", "effect_target": target
+                    }}
+                ]})
+        with self.assertRaisesRegex(ValueError, "effect_target"):
+            readiness.validate_requirements({"services": [
+                {**service, "probe": {
+                    "capability": "forge-status",
+                    "effect_target": {"repository": "selected"},
+                }}
+            ]})
+
     def test_provider_diagnostics_preserve_selection_and_observation(self):
         self.provider.write_text('import json\nprint(json.dumps({"schema_version":"fixture.status/1","ready":False,"diagnostics":[{"code":"SELECTED_PROVIDER_MISSING","message":"build the selected provider"}],"selected":{"checkout":"selected"},"observed":{"checkout":"old"}}))\n')
         self.config["services"][0].pop("reconcile")

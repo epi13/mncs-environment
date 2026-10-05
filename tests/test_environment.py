@@ -1012,6 +1012,30 @@ class ToolchainTests(unittest.TestCase):
 
 
 class SessionTests(unittest.TestCase):
+    def test_effect_target_resolves_repository_only_to_selected_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "mncs-reference-studies"
+            checkout.mkdir()
+            session = make_session(root / "state")
+            session.snapshot["workspace"] = {"root": str(root), "repositories": []}
+            session.snapshot["selected_checkouts"] = {
+                "mncs-reference-studies": {
+                    "path": str(checkout),
+                    "branch": "main",
+                }
+            }
+
+            repository, scope = session._admit_effect_target(
+                "mncs-forge:resident-reconcile",
+                {"repository": "mncs-reference-studies"},
+            )
+
+            self.assertEqual(repository, "mncs-reference-studies")
+            self.assertEqual(scope["kind"], "worktree")
+            self.assertEqual(scope["checkout"], str(checkout))
+            self.assertEqual(scope["branch"], "main")
+
     def test_provision_checkouts_extends_authority_and_binds_exact_provider_checkout(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -1255,10 +1255,11 @@ class Session:
         """Validate an explicit effect target against the session closure.
 
         The target repository must be session-observed (selected, else
-        workspace-discovered) and the checkout must be exactly that
-        checkout: effect writes stay confined to claimed session scope,
-        never to an arbitrary path the caller names. Anything else is
-        denied, never escalated.
+        workspace-discovered). A supplied checkout must be exactly that
+        checkout; a repository-only target resolves to that same observed
+        checkout. Effect writes stay confined to claimed session scope, never
+        to an arbitrary path the caller names. Anything else is denied,
+        never escalated.
         """
         if not isinstance(target, dict):
             raise AuthorityDenied(
@@ -1268,32 +1269,38 @@ class Session:
         if not isinstance(repository, str) or not repository:
             raise AuthorityDenied(
                 f"capability {capability!r} names an effect target without a repository")
-        if not isinstance(checkout, str) or not checkout:
-            raise AuthorityDenied(
-                f"capability {capability!r} names an effect target without a checkout")
         workspace_root = self.snapshot.get("workspace", {}).get("root")
         if not workspace_root:
             raise AuthorityDenied("session has no resolved workspace root")
         root = Path(str(workspace_root)).resolve()
-        raw = Path(checkout)
-        if not raw.is_absolute():
-            raw = root / raw
-        try:
-            resolved = raw.resolve()
-            resolved.relative_to(root)
-        except (OSError, ValueError):
-            raise AuthorityDenied(
-                f"capability {capability!r} effect target escapes the workspace root"
-            ) from None
         expected, branch = self._effect_checkout(repository, root)
         if expected is None:
             raise AuthorityDenied(
                 f"capability {capability!r} effect target {repository!r} "
                 "is not session-observed scope")
-        if expected != resolved:
-            raise AuthorityDenied(
-                f"capability {capability!r} effect target checkout does not match "
-                f"the session-observed checkout for {repository!r}")
+        if checkout is None:
+            # Provider service contracts may name a repository selection;
+            # Environment resolves it to the one checkout observed by this
+            # session instead of accepting a provider-supplied ambient path.
+            resolved = expected
+        else:
+            if not isinstance(checkout, str) or not checkout:
+                raise AuthorityDenied(
+                    f"capability {capability!r} names a malformed effect checkout")
+            raw = Path(checkout)
+            if not raw.is_absolute():
+                raw = root / raw
+            try:
+                resolved = raw.resolve()
+                resolved.relative_to(root)
+            except (OSError, ValueError):
+                raise AuthorityDenied(
+                    f"capability {capability!r} effect target escapes the workspace root"
+                ) from None
+            if expected != resolved:
+                raise AuthorityDenied(
+                    f"capability {capability!r} effect target checkout does not match "
+                    f"the session-observed checkout for {repository!r}")
         scope: dict[str, Any] = {"kind": "worktree", "checkout": str(resolved)}
         wanted = target.get("branch") or branch
         if isinstance(wanted, str) and wanted:
@@ -1343,10 +1350,11 @@ class Session:
         Execution authority (running the provider) stays separate from
         effect authority (mutating state). By default the declared effects
         are checked against the provider's own checkout; pass
-        ``effect_target`` (``{"repository", "checkout", "branch"?}``) when
+        ``effect_target`` (``{"repository", "checkout"?, "branch"?}``) when
         the provider legitimately mutates a different, explicitly claimed
-        target checkout, and the effect check validates that target
-        instead. Invocation records carry both executor and effect target.
+        target checkout. Environment resolves a repository-only target to
+        this session's exact observed checkout. Invocation records carry both
+        executor and effect target.
         """
         output_limit_bytes = capabilities_module.validate_output_limit_bytes(
             output_limit_bytes

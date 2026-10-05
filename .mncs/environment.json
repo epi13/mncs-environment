@@ -138,7 +138,10 @@
             "repository": "mncs-reference-studies",
             "path": "."
           }
-        ]
+        ],
+        "effect_target": {
+          "repository": "mncs-reference-studies"
+        }
       },
       "response_schema": "mncs.forge.resident-status/1",
       "ready_when": {

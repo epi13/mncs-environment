@@ -128,7 +128,11 @@ Providers can be composed declaratively:
       "identity": "provider:resident-service",
       "required": true,
       "probe": {"capability": "provider:status", "argv": []},
-      "reconcile": {"capability": "provider:reconcile", "argv": []},
+      "reconcile": {
+        "capability": "provider:reconcile",
+        "argv": [],
+        "effect_target": {"repository": "selected-consumer"}
+      },
       "response_schema": "provider.service-status/1",
       "ready_when": {"/state": "ready", "/workspace_identity": "expected-workspace"}
     }
@@ -150,6 +154,12 @@ automatic recovery. Recovery uses normal session invocation, including
 provider effects, claims, authority, and result/event provenance. A denied or
 pending escalation cannot start a process. Environment never kills a PID,
 removes a socket, or adopts foreign work as a startup workaround.
+
+When reconciliation changes a selected consumer checkout instead of the
+provider checkout, `effect_target` names that repository. Environment resolves
+it to the exact checkout observed by the current session and checks its claim
+and authority before invocation; provider-supplied ambient paths are not
+accepted.
 
 There are at most 16 service declarations. Each read probe has a three-second
 limit, within a 15-second aggregate probe budget; recovery has ten seconds per
