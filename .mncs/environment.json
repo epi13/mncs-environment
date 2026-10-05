@@ -8,6 +8,7 @@
       "mncs-language",
       "mncs-language-service",
       "mncs-compiler",
+      "mncs-stdlib",
       "mncs-vm",
       "mncs-test",
       "mncs-store",
@@ -74,6 +75,7 @@
         "selected-repositories"
       ],
       "observation_max_age_ms": 60000,
+      "reconcile_timeout_seconds": 600,
       "probe": {
         "capability": "mncs-language-service:resident-status",
         "argv": [
@@ -89,7 +91,9 @@
           "--workspace",
           {"workspace_root": true},
           "--repository-roots-json",
-          {"selected_repository_roots_json": true}
+          {"selected_repository_roots_json": true},
+          "--start-timeout",
+          "600"
         ]
       },
       "response_schema": "mncs.language-service.resident-status/1",
