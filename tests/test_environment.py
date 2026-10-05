@@ -1304,6 +1304,7 @@ class SessionTests(unittest.TestCase):
                 "services": [{
                     "identity": "doctor-coherence", "required": True,
                     "probe": {"capability": "doctor-health", "argv": ["--smoke"]},
+                    "probe_timeout_seconds": 42,
                     "response_schema": "mncs.doctor.compiler-vm/1",
                     "ready_when": {"/status": "pass"},
                     "response_max_bytes": 65536,
@@ -1319,6 +1320,7 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(result[0]["status"], "ready")
             self.assertEqual(result[0]["composition_identity"], "selected-stack-identity")
             self.assertEqual(invoke.call_args.kwargs["output_limit_bytes"], 65536)
+            self.assertEqual(invoke.call_args.kwargs["timeout_seconds"], 42)
             environment = invoke.call_args.kwargs["env"]
             artifact_root = Path(environment["MNCS_ENV_SESSION_ARTIFACT_DIR"])
             self.assertEqual(artifact_root.parent.parent.parent.name, "sessions")

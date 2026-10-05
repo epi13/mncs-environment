@@ -86,6 +86,18 @@ class EntryContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "escapes"):
             readiness.resolve_arguments(context, [{"repository": "fixture", "path": "escape/config"}])
 
+    def test_service_timeouts_are_provider_declared_and_bounded(self):
+        service = {"identity": "fixture", "probe": {"capability": "status"},
+                   "reconcile": {"capability": "start"}, "response_schema": "fixture/1",
+                   "ready_when": {"/ready": True}, "probe_timeout_seconds": 41,
+                   "reconcile_timeout_seconds": 901}
+        validated = readiness.validate_requirements({"services": [service]})
+        self.assertEqual(validated["services"][0]["probe_timeout_seconds"], 41)
+        self.assertEqual(validated["services"][0]["reconcile_timeout_seconds"], 901)
+        for field, value in (("probe_timeout_seconds", 121), ("reconcile_timeout_seconds", 3601)):
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, field):
+                readiness.validate_requirements({"services": [{**service, field: value}]})
+
     def test_provider_diagnostics_preserve_selection_and_observation(self):
         self.provider.write_text('import json\nprint(json.dumps({"schema_version":"fixture.status/1","ready":False,"diagnostics":[{"code":"SELECTED_PROVIDER_MISSING","message":"build the selected provider"}],"selected":{"checkout":"selected"},"observed":{"checkout":"old"}}))\n')
         self.config["services"][0].pop("reconcile")

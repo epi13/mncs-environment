@@ -741,12 +741,17 @@ class RecoveryBackoffTests(DoctorFixture):
     def test_first_failure_attempts_without_consulting_gate(self):
         session = self.broken_session()
         try:
+            session.snapshot["requirements"]["services"][0]["reconcile_timeout_seconds"] = 73
             calls = []
+            def fake_invoke(*args, **kwargs):
+                calls.append((args, kwargs))
+                return {"status": "ok", "stdout": "{}", "stderr": ""}
             with mock.patch.object(session, "invoke",
-                                   side_effect=lambda *a, **k: (calls.append(a), {"status": "ok", "stdout": "{}",
-                                                                                 "stderr": ""})[1]):
+                                   side_effect=fake_invoke):
                 result = readiness.reconcile_services(session, retry_gate=self.refuse_gate)
             self.assertEqual(len(calls), 1)
+            self.assertEqual(calls[0][1]["timeout_seconds"], 73)
+            self.assertEqual(result["operations"][0]["timeout_seconds"], 73)
             self.assertEqual(result["operations"][0]["status"], "ok")
             backoff = session.snapshot["doctor"]["recovery_backoff"]
             self.assertEqual(len(backoff), 1)

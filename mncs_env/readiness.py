@@ -8,6 +8,7 @@ and invokes their reconciliation capabilities under existing session authority.
 from __future__ import annotations
 
 import json
+import math
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +19,8 @@ from . import authority, capabilities
 SCHEMA = "mncs.environment.readiness/1"
 MAX_SERVICES = 16
 PROBE_BUDGET_SECONDS = 15
+MAX_PROBE_BUDGET_SECONDS = 120
+MAX_RECONCILE_BUDGET_SECONDS = 3600
 
 
 def _valid_argument(value: Any) -> bool:
@@ -108,6 +111,12 @@ def validate_requirements(definition: dict[str, Any]) -> dict[str, Any]:
         lease = service.get("observation_max_age_ms")
         if lease is not None and (type(lease) is not int or not 1 <= lease <= 3600000):
             raise ValueError("service observation_max_age_ms must be an integer from 1 to 3600000")
+        probe_timeout = service.get("probe_timeout_seconds", 3)
+        if type(probe_timeout) is not int or not 1 <= probe_timeout <= MAX_PROBE_BUDGET_SECONDS:
+            raise ValueError(f"service probe_timeout_seconds must be an integer from 1 to {MAX_PROBE_BUDGET_SECONDS}")
+        reconcile_timeout = service.get("reconcile_timeout_seconds", 10)
+        if type(reconcile_timeout) is not int or not 1 <= reconcile_timeout <= MAX_RECONCILE_BUDGET_SECONDS:
+            raise ValueError(f"service reconcile_timeout_seconds must be an integer from 1 to {MAX_RECONCILE_BUDGET_SECONDS}")
         for operation in ("probe", "reconcile"):
             call = service.get(operation)
             if call is None and operation == "reconcile":
@@ -145,8 +154,11 @@ def probe_services(session, *, bindings: list[dict] | None = None,
     """Read-only, bounded provider probes; never start services or write events."""
     by_id = {item["capability"]: item for item in (bindings if bindings is not None else session.snapshot.get("bindings", []))}
     observations = []
-    deadline = time.monotonic() + PROBE_BUDGET_SECONDS
-    for service in session.snapshot.get("requirements", {}).get("services", []):
+    services = session.snapshot.get("requirements", {}).get("services", [])
+    requested_probe_budget = sum(service.get("probe_timeout_seconds", 3) for service in services)
+    deadline = time.monotonic() + min(
+        MAX_PROBE_BUDGET_SECONDS, max(PROBE_BUDGET_SECONDS, requested_probe_budget))
+    for service in services:
         call = service["probe"]
         binding = by_id.get(call["capability"])
         record = {"identity": service["identity"], "required": service.get("required", True),
@@ -174,7 +186,9 @@ def probe_services(session, *, bindings: list[dict] | None = None,
                                       / capabilities.digest_hex(call["capability"])).resolve()
                 if not artifact_directory.is_relative_to(state_root):
                     raise ValueError("service artifact directory escapes the Environment state root")
-                result = capabilities.invoke(binding, resolve_arguments(session, call.get("argv", [])), timeout_seconds=min(3.0, remaining),
+                timeout_seconds = min(service.get("probe_timeout_seconds", 3),
+                                      max(1, math.ceil(remaining)))
+                result = capabilities.invoke(binding, resolve_arguments(session, call.get("argv", [])), timeout_seconds=timeout_seconds,
                                              output_limit_bytes=service.get("response_max_bytes", 16384),
                                              env={**session._selected_runtime_environment(binding),
                                                   "GIT_OPTIONAL_LOCKS": "0",
@@ -250,7 +264,11 @@ def reconcile_services(session, *, force_recovery: bool = False,
     from . import retry as retry_module
     observations = probe_services(session)
     operations = []
-    deadline = time.monotonic() + 20
+    services = session.snapshot.get("requirements", {}).get("services", [])
+    requested_budget = sum(service.get("reconcile_timeout_seconds", 10)
+                           for service in services if service.get("reconcile"))
+    deadline = time.monotonic() + min(
+        MAX_RECONCILE_BUDGET_SECONDS, max(20, requested_budget))
     declared = {item["identity"]: item for item in session.snapshot.get("requirements", {}).get("services", [])}
     by_capability = {item["capability"]: item for item in session.snapshot.get("bindings", [])}
     heads = retry_module.checkout_heads(session)
@@ -290,11 +308,15 @@ def reconcile_services(session, *, force_recovery: bool = False,
             if time.monotonic() >= deadline:
                 operations.append({"identity": identity, "status": "deferred", "reason": "reconciliation budget exhausted"})
                 continue
-            result = session.invoke(call["capability"], resolve_arguments(session, call.get("argv", [])), timeout_seconds=min(10, deadline-time.monotonic()),
-                                    output_limit_bytes=16384)
+            timeout_seconds = min(declared[identity].get("reconcile_timeout_seconds", 10),
+                                  max(1, math.ceil(deadline - time.monotonic())))
+            result = session.invoke(call["capability"], resolve_arguments(session, call.get("argv", [])),
+                                    timeout_seconds=timeout_seconds,
+                                    output_limit_bytes=declared[identity].get("response_max_bytes", 16384))
             if result.get("status") != "pending-escalation":
                 attempted.add(identity)
             operation = {"identity": identity, "status": result["status"],
+                         "timeout_seconds": timeout_seconds,
                          "reason": result.get("stderr", "")[-1000:]}
             try:
                 response = json.loads(result.get("stdout", ""))

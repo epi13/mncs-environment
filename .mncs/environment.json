@@ -44,6 +44,8 @@
         "selected-repositories"
       ],
       "observation_max_age_ms": 60000,
+      "probe_timeout_seconds": 60,
+      "reconcile_timeout_seconds": 1800,
       "probe": {
         "capability": "mncs-doctor:compiler-vm-health",
         "argv": [
