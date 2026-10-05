@@ -100,6 +100,29 @@ class StdlibProviderTests(unittest.TestCase):
         repositories = definition["workspace_scope"]["repositories"]
         self.assertIn("mncs-stdlib", repositories)
 
+    def test_default_definition_binds_forge_resident_to_selected_project_root(self) -> None:
+        definition = json.loads(
+            (REAL_ROOT / ".mncs" / "environment.json").read_text(encoding="utf-8")
+        )
+        self.assertIn(
+            "mncs-reference-studies",
+            definition["workspace_scope"]["repositories"],
+        )
+        service = next(
+            item for item in definition["services"]
+            if item["identity"] == "mncs-forge:resident-workspace"
+        )
+        workspace_ref = service["probe"]["argv"][1]
+        self.assertEqual(
+            workspace_ref,
+            {"repository": "mncs-reference-studies", "path": "."},
+        )
+        self.assertEqual(
+            service["reconcile"]["argv"],
+            service["probe"]["argv"],
+        )
+        self.assertEqual(service["response_schema"], "mncs.forge.resident-status/1")
+
     def test_language_service_reconcile_waits_for_its_bounded_startup(self) -> None:
         definition = json.loads(
             (REAL_ROOT / ".mncs" / "environment.json").read_text(encoding="utf-8")

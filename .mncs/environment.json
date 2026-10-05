@@ -13,6 +13,7 @@
       "mncs-test",
       "mncs-store",
       "mncs-forge",
+      "mncs-reference-studies",
       "mncs-automation",
       "mncs-doc",
       "mncs-debug",
@@ -80,18 +81,26 @@
         "capability": "mncs-language-service:resident-status",
         "argv": [
           "--workspace",
-          {"workspace_root": true},
+          {
+            "workspace_root": true
+          },
           "--repository-roots-json",
-          {"selected_repository_roots_json": true}
+          {
+            "selected_repository_roots_json": true
+          }
         ]
       },
       "reconcile": {
         "capability": "mncs-language-service:resident-reconcile",
         "argv": [
           "--workspace",
-          {"workspace_root": true},
+          {
+            "workspace_root": true
+          },
           "--repository-roots-json",
-          {"selected_repository_roots_json": true},
+          {
+            "selected_repository_roots_json": true
+          },
           "--start-timeout",
           "600"
         ]
@@ -101,6 +110,41 @@
         "/ready": true
       },
       "required": true,
+      "response_max_bytes": 32768
+    },
+    {
+      "identity": "mncs-forge:resident-workspace",
+      "observation_inputs": [
+        "selected-repositories"
+      ],
+      "observation_max_age_ms": 60000,
+      "probe_timeout_seconds": 10,
+      "reconcile_timeout_seconds": 30,
+      "probe": {
+        "capability": "mncs-forge:resident-status",
+        "argv": [
+          "--workspace",
+          {
+            "repository": "mncs-reference-studies",
+            "path": "."
+          }
+        ]
+      },
+      "reconcile": {
+        "capability": "mncs-forge:resident-reconcile",
+        "argv": [
+          "--workspace",
+          {
+            "repository": "mncs-reference-studies",
+            "path": "."
+          }
+        ]
+      },
+      "response_schema": "mncs.forge.resident-status/1",
+      "ready_when": {
+        "/state": "ready"
+      },
+      "required": false,
       "response_max_bytes": 32768
     }
   ],

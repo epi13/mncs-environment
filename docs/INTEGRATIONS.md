@@ -21,11 +21,12 @@ reconciliation capabilities using the [entry contract](ENTRY.md). Environment
 verifies the declared provider schema and readiness fields; the provider owns
 startup, process identity, duplicate suppression, and recovery semantics.
 
-The vertical proof invokes Atlas's real context capability. The native
-integration test and agent dogfood invoke `mncs.test-result/1` through its
-selected Language executable and provider-owned wrapper. Store backs durable
-session and claim objects; explicit selections persist Store package routing
-for fresh processes.
+The vertical proof invokes Atlas's real context capability. Test invokes
+`mncs.test-result/1` through its selected provider; VM-suitable tests use the
+direct `mncs-compiler` artifact producer and selected `mncs-vm` runtime, while
+Stage-0 remains an independent reference lane where available. Store backs
+durable session and claim objects; explicit selections persist Store package
+routing for fresh processes.
 
 Forge now publishes checkout-owned resident status/reconciliation/stop/work
 invocation descriptors. The required-resident sample composes them through the
@@ -35,11 +36,19 @@ reconciliation is asynchronous and provider-owned. Neither Forge commands nor
 PID/socket rules are embedded in Environment. See [entry](ENTRY.md) and Forge's
 resident provider contract for responsibilities and Linux platform bounds.
 
+The default development environment binds the Forge project root through its
+selected `mncs-reference-studies` checkout and routes that exact root to Forge's
+resident status and reconciliation capabilities. Forge resolves its own
+configuration with its bounded workspace resolver; Environment neither embeds
+an ambient config path nor interprets Forge configuration.
+
 ## Expected relationships
 
 | MNCS area | Environment needs from it | Environment must not own |
 | --- | --- | --- |
-| `mncs-language` / `mncs-compiler` | callable/compiler/runtime identities, artifact references, diagnostics, execution-facing contracts where appropriate | language semantics, lowering, runtime semantics |
+| `mncs-language` | Stage-0 bootstrap/reference identity and independent semantic oracle where supported | succession to next-generation compiler authority before it is earned |
+| `mncs-compiler` | verified SSA producer, canonical VM artifact emission, build/source provenance | language semantics, VM execution semantics |
+| `mncs-vm` | canonical artifact admission, bounded execution/session, runtime identity and observations | compiler lowering or language semantic authority |
 | Commons | shared identities/contracts/types that are genuinely cross-system | a duplicate private type universe |
 | Forge | build/verification capability bindings, build state/events, produced artifact references | build semantics or verification policy |
 | RAVEL | plan identities, plan state, obligations, admission-relevant state/events | planning semantics or canonical plan construction |
