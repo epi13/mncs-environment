@@ -1438,8 +1438,8 @@ class SessionTests(unittest.TestCase):
             response = {
                 "schema_version": "mncs.language-service.resident-status/1",
                 "ready": False,
-                "state": "absent",
-                "detail": "no resident socket",
+                "state": "unreachable",
+                "detail": "resident socket bind failed: Operation not permitted",
                 "recovery": recovery,
             }
             with mock.patch.object(authority, "evaluate", return_value={"verdict": "allow"}), mock.patch.object(
@@ -1451,6 +1451,9 @@ class SessionTests(unittest.TestCase):
 
             self.assertEqual(result[0]["status"], "degraded")
             self.assertEqual(result[0]["code"], "service-not-ready")
+            self.assertEqual(result[0]["provider_state"], "unreachable")
+            self.assertEqual(result[0]["provider_detail"], response["detail"])
+            self.assertIn("Operation not permitted", result[0]["reason"])
             self.assertEqual(result[0]["provider_recovery"], recovery)
 
     def test_readiness_passes_selected_service_endpoint_to_dependent_provider(self) -> None:

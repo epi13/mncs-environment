@@ -297,6 +297,10 @@ def probe_services(session, *, bindings: list[dict] | None = None,
                         record["provider_status"] = document["status"]
                     if isinstance(document.get("reason"), str) and document["reason"]:
                         record["provider_reason"] = document["reason"][:1000]
+                if isinstance(document.get("state"), str):
+                    record["provider_state"] = document["state"][:128]
+                if isinstance(document.get("detail"), str) and document["detail"]:
+                    record["provider_detail"] = document["detail"][:1000]
                 # Provider diagnostics remain provider-owned. Preserve bounded
                 # structured evidence instead of replacing it with prose.
                 diagnostics = document.get("diagnostics")
@@ -314,9 +318,13 @@ def probe_services(session, *, bindings: list[dict] | None = None,
                     record.update(status="unavailable", code="service-probe-failed",
                                   reason=f"{process_status}: {reason[-1000:]}", observation=actual)
                 else:
+                    detail = record.get("provider_detail")
+                    provider_state = record.get("provider_state")
+                    reason = (f"{provider_state}: {detail}" if provider_state and detail
+                              else detail or "provider readiness predicates not satisfied")
                     record.update(status="ready" if ready else "degraded",
                                   code="service-ready" if ready else "service-not-ready",
-                                  reason="provider readiness contract satisfied" if ready else "provider readiness predicates not satisfied",
+                                  reason="provider readiness contract satisfied" if ready else reason,
                                   observation=actual)
             except (ValueError, KeyError, OSError) as error:
                 record["reason"] = str(error)
