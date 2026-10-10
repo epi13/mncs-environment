@@ -1,0 +1,119 @@
+{
+  "schema_version": "mncs.environment.authenticated-handoff-continuity/1",
+  "recorded_at": "2026-10-10T21:54:14Z",
+  "campaign": {
+    "identity": "cmp_mncs_continuity_20261010",
+    "session_id": "ses_7226fbcfe65820f7",
+    "authenticated_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "context_readback": {
+      "execution": "MNCS Control terminal_exec, workspace scope, bwrap sandbox",
+      "operation": "mncs-env context ses_7226fbcfe65820f7",
+      "result": "read succeeded",
+      "lifecycle": "active",
+      "consumer_id": "codex-process-4",
+      "previous_consumers": [
+        "codex-process-1",
+        "codex-process-2",
+        "codex-process-3"
+      ],
+      "checkpoint_ids": [
+        "chk_d631e38b476320a4",
+        "chk_4ddefa6940fef677",
+        "chk_4882af21cd00ee5c",
+        "chk_c925831dbfbd0fe7"
+      ],
+      "claim_references": [
+        "claim:mncs-control-mcp",
+        "claim:mncs-environment"
+      ],
+      "delivery": {
+        "status": "pending"
+      },
+      "interpretation": "The protected read path reconstructs the campaign capsule in a new CLI process. This readback does not prove a claim transition or a new canonical checkpoint."
+    }
+  },
+  "source_identities": {
+    "mncs_environment": "cb4802d84500b9ec30437b899b1b7b0027827ff2",
+    "mncs_control_mcp": "d3b08e032b29e91106b70a741e1502a3f7638dd7",
+    "mncs_store": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "implementation": {
+    "environment": [
+      "Binds owner-issued handoffs to the authenticated recipient principal, intended consumer, stable request identity, and campaign session.",
+      "Makes handoff creation and acceptance retries recoverable from durable snapshot state.",
+      "Fences ownership change and acceptance in one Store snapshot CAS; a fresh entry discovers only an unambiguous handoff addressed to its authenticated principal and consumer."
+    ],
+    "control": [
+      "Exposes the authenticated Environment principal to the scoped RPC client.",
+      "Admits cross-principal accept only when the current source owner issued the matching pending handoff to the authenticated destination principal and intended consumer."
+    ]
+  },
+  "validation": {
+    "environment_handoff_and_fresh_entry": {
+      "command": "python -m pytest -q tests/test_environment.py tests/test_entry.py -k 'checkpoint_handoff_resume or handoff_validates_recipient or authenticated_cross_principal_handoff or handoff_accept_retry_repairs or competing_handoff_accepts or handoff_retry_repairs_publication or store_entry_discovers_and_accepts_recipient_handoff_in_fresh_process'",
+      "result": "passed",
+      "passed": 7,
+      "deselected": 168,
+      "duration_seconds": 42.76,
+      "store_scope": "isolated test-owned temporary Store; not canonical Environment Store",
+      "covered": [
+        "fresh CLI process discovers and accepts a receiver-bound handoff",
+        "continued session publishes a checkpoint and a new process reads it",
+        "wrong principal is denied",
+        "interrupted handoff event and resume-event publication are repaired",
+        "competing accepts have one Store CAS winner"
+      ]
+    },
+    "control_receiver_admission": {
+      "command": "python -m pytest -q -rA tests/test_environment_rpc.py -k 'accept_requires_current_receiver_bound_owner_handoff'",
+      "result": "passed",
+      "passed": 1
+    },
+    "static_checks": {
+      "environment": "ruff changed sources, ruff import order, compileall, and git diff --check passed",
+      "control": "ruff changed sources, compileall, and git diff --check passed"
+    }
+  },
+  "deployed_service": {
+    "unit": "mncs-control-tunnel.service",
+    "runtime_revision": "d3b08e032b29e91106b70a741e1502a3f7638dd7",
+    "source_revision": "d3b08e032b29e91106b70a741e1502a3f7638dd7",
+    "restart_required": false,
+    "environment_rpc": "ready",
+    "store_mutation": {
+      "state": "direct-filesystem-read-only",
+      "code": "direct-filesystem-read-only"
+    }
+  },
+  "canonical_store_acceptance": {
+    "authorized_mutation_path_tested_under_protected_execution": false,
+    "checkpoint_write_and_fresh_process_readback": false,
+    "canonical_claim_acquire_and_release": false,
+    "unauthorized_publication_and_stale_cas_rejection_on_canonical_store": false,
+    "interruption_recovery_on_canonical_store": false,
+    "status": "unproven; deployed Store owner cannot currently mutate canonical Store under its systemd write boundary",
+    "policy_changed": false,
+    "canonical_store_redirected": false,
+    "agent_direct_store_write_granted": false
+  },
+  "campaign_delivery": {
+    "source_commits_pushed_to_main": [
+      {
+        "repository": "mncs-environment",
+        "revision": "cb4802d84500b9ec30437b899b1b7b0027827ff2",
+        "verified": true
+      },
+      {
+        "repository": "mncs-control-mcp",
+        "revision": "d3b08e032b29e91106b70a741e1502a3f7638dd7",
+        "verified": true
+      }
+    ],
+    "evidence_delivery": "this record is to be committed on mncs-environment main and pushed with the checkpoint"
+  },
+  "next_work": [
+    "Integrate an owner-authorized canonical Store writer into the deployed persistence owner and prove its configured writer boundary without granting agents filesystem access.",
+    "Repeat checkpoint, fresh-process readback, claim acquire/release, denied publication, stale CAS, and service/caller interruption recovery against canonical Store under bwrap.",
+    "Reconcile protected candidate branches and worktrees only after their owning claims authorize the operation."
+  ]
+}
