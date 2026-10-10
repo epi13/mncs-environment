@@ -280,6 +280,31 @@ class RetireTests(unittest.TestCase):
         self.assertTrue(checkout["evidence_relevant"])
         self.assertTrue(target.is_dir())
 
+    def test_inventory_retains_patch_equivalent_evidence_reference(self):
+        candidate = self._worktree("evidence-candidate", "feature/evidence")
+        evidence = candidate / "evidence" / "proof.json"
+        evidence.parent.mkdir()
+        evidence.write_text('{"proof":true}\n')
+        _git(candidate, "add", "evidence/proof.json")
+        _git(candidate, "commit", "-qm", "candidate evidence")
+        _git(self.repo, "worktree", "remove", str(candidate))
+        main_evidence = self.repo / "evidence" / "proof.json"
+        main_evidence.parent.mkdir()
+        main_evidence.write_text('{"proof":true}\n')
+        _git(self.repo, "add", "evidence/proof.json")
+        _git(self.repo, "commit", "-qm", "delivered evidence")
+        _git(self.repo, "push", "-q", "origin", "main")
+        _git(self.repo, "fetch", "-q", "origin")
+        report = retire_module.inventory_repository(
+            self.repo, workspace_root=self.base,
+        )
+        branch = next(row for row in report["branches"]
+                      if row["branch"] == "feature/evidence")
+        self.assertEqual(branch["unique_patch_commit_count"], 0)
+        self.assertEqual(branch["classification"], "merged-and-retained-for-evidence")
+        self.assertFalse(branch["retireable_after_review"])
+        self.assertEqual(branch["evidence_paths_at_tip"], ["evidence/proof.json"])
+
 
 if __name__ == "__main__":
     unittest.main()

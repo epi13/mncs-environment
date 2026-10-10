@@ -528,7 +528,10 @@ def inventory_repository(
                     canonical_is_ancestor = behind_count == 0
                     unique_count = (0 if reachable
                                     else cherry_unique_count(repo, canonical, branch))
-                    if unique_count is not None and unique_count > 0:
+                    # An ancestry-unique commit can still be patch-equivalent
+                    # to a delivered change; inspect its file identity for
+                    # evidence-only branches as well.
+                    if ahead_count > 0:
                         paths_at_tip = _commit_paths(repo, head)
             if reachable is None:
                 topology = {"retireable": False,
@@ -585,7 +588,10 @@ def inventory_repository(
             head_reachable = branch_facts[branch]["canonical_reachable"]
         else:
             head_reachable = bool(head and canonical_ok and is_reachable(repo, head, canonical))
-        evidence_paths = _commit_paths(repo, head) if row.get("detached") and head else []
+        evidence_paths = (
+            _commit_paths(repo, head) if row.get("detached") and head
+            else branch_facts.get(str(branch), {}).get("evidence_paths_at_tip", [])
+        )
         evidence_relevant = any(path == "evidence" or path.startswith("evidence/")
                                 for path in evidence_paths)
         if other_claims:
@@ -607,12 +613,12 @@ def inventory_repository(
                 branch is not None and not branch_ref_exists):
             classification = "orphaned-or-incomplete-ownership-uncertain"
             reason = "Git worktree metadata has no verifiable head or attached branch ref"
-        elif row.get("detached") and evidence_relevant:
-            classification = "detached-but-evidence-relevant"
-            reason = "detached HEAD's tip commit changes tracked evidence paths"
         elif clean is False:
             classification = "uncommitted-work-retained"
             reason = "checkout has uncommitted or untracked files"
+        elif row.get("detached") and evidence_relevant:
+            classification = "detached-but-evidence-relevant"
+            reason = "detached HEAD's tip commit changes tracked evidence paths"
         elif row.get("detached") and not head_reachable:
             classification = "detached-unmerged-requires-review"
             reason = "detached HEAD is not reachable from the canonical ref"
@@ -625,6 +631,9 @@ def inventory_repository(
         elif branch in CANONICAL_BRANCHES:
             classification = "canonical-checkout"
             reason = "canonical branch checkout is retained"
+        elif evidence_relevant and head_reachable:
+            classification = "merged-and-retained-for-evidence"
+            reason = "canonical-reachable tip commit changes tracked evidence paths"
         else:
             assessed = _assess_registered_worktree(
                 repo, raw_path, row, rows, branches, main, canonical, records,
@@ -705,8 +714,12 @@ def inventory_repository(
                                   else "merged-but-checked-out")
                 reason = "tip is canonical-equivalent but remains checked out"
             else:
-                classification = "merged-and-safely-retireable"
-                reason = "merged branch has no checkout or foreign live claim"
+                if evidence_at_tip:
+                    classification = "merged-and-retained-for-evidence"
+                    reason = "canonical-equivalent tip changes tracked evidence paths"
+                else:
+                    classification = "merged-and-safely-retireable"
+                    reason = "merged branch has no checkout or foreign live claim"
         elif unique_count is None:
             classification = "unclassifiable-topology"
             reason = topology["reason"]
@@ -734,9 +747,7 @@ def inventory_repository(
             "unique_patch_commit_count": unique_count,
             "evidence_paths_at_tip": evidence_at_tip,
             "evidence_only_tip": evidence_only_tip,
-            "retireable_after_review": bool(topology["retireable"] and not attached
-                                              and not own_claims and not other_claims
-                                              and branch not in CANONICAL_BRANCHES),
+            "retireable_after_review": classification == "merged-and-safely-retireable",
             "live_claims": own_claims + other_claims,
         })
 
