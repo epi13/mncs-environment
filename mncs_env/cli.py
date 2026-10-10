@@ -965,6 +965,22 @@ def cmd_retire(args: argparse.Namespace) -> int:
             claim_records = store.read_claims()
         finally:
             close_store(store)
+        if args.inventory:
+            if (not args.dry_run or args.prune or args.branch or args.worktree):
+                return fail("--inventory requires --dry-run and cannot be combined with mutation targets")
+            root_value = session.snapshot.get("workspace", {}).get("root")
+            workspace_root = Path(root_value) if isinstance(root_value, str) and root_value else None
+            report = retire_module.inventory_repository(
+                repo, canonical=args.canonical, claim_records=claim_records,
+                requesting_session=args.session, workspace_root=workspace_root,
+                execution_root=args.execution_root,
+            )
+            campaign = session.snapshot.get("campaign", {})
+            if isinstance(campaign, dict):
+                report["campaign_id"] = campaign.get("identity")
+                report["work_intent"] = campaign.get("work_intent")
+            out(report)
+            return 0
         results: list[dict] = []
         if args.prune:
             results.append(retire_module.prune_worktrees(repo, dry_run=args.dry_run))
@@ -1322,6 +1338,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="canonical ref merged branches must reach (default: origin/main)")
     retire.add_argument("--prune", action="store_true",
                         help="drop worktree records whose directories are gone")
+    retire.add_argument("--inventory", action="store_true",
+                        help="emit all branch/worktree dispositions; requires --dry-run")
+    retire.add_argument("--execution-root", type=Path, help=argparse.SUPPRESS)
     retire.add_argument("--dry-run", action="store_true",
                         help="assess only; change nothing")
     retire.set_defaults(func=cmd_retire)

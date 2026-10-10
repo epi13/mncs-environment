@@ -223,6 +223,13 @@ Service `argv` also accepts `{"repository": "mncs-environment", "path":
 roots, reject traversal/symlink escapes, and survive cwd changes and campaign
 relocation. Missing selection is diagnostic; no sibling path is inferred.
 
+`mncs-env retire <session> --repository <checkout> --inventory --dry-run`
+emits a machine-readable inventory of local branches and registered worktrees.
+It reuses the normal retirement checks, includes current claim holders, and
+reports missing or out-of-scope checkout paths without pruning them. Inventory
+is read-only; deletion still requires individually selected targets and a
+separate retirement invocation.
+
 Provider diagnostics, selected identity, observed identity, and recovery remain
 structured in service observations. Reconciliation preserves the provider JSON
 response; transport success is separate from subsequent verified readiness.

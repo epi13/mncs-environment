@@ -189,6 +189,82 @@ class RetireTests(unittest.TestCase):
         self.assertTrue(result["dry_run"])
         self.assertEqual(retire_module.local_branches(self.repo), before)
 
+    def test_inventory_is_read_only_and_classifies_unique_work(self):
+        target = self._worktree("feat", "feature/x")
+        (target / "implementation.txt").write_text("candidate work\n")
+        _git(target, "add", "implementation.txt")
+        _git(target, "commit", "-qm", "candidate implementation")
+        report = retire_module.inventory_repository(
+            self.repo, workspace_root=self.base,
+        )
+        branch = next(row for row in report["branches"] if row["branch"] == "feature/x")
+        checkout = next(row for row in report["worktrees"] if row["path"] == str(target))
+        self.assertEqual(report["schema_version"], "mncs.environment.worktree-inventory/1")
+        self.assertTrue(report["dry_run"])
+        self.assertFalse(report["mutation_performed"])
+        self.assertEqual(branch["classification"], "unmerged-with-unique-commits")
+        self.assertEqual(checkout["classification"], "unmerged-work-requires-review")
+        self.assertEqual(checkout["checkout_identity_basis"], "git-administrative-identity")
+        self.assertTrue(checkout["checkout_identity"].startswith("git-worktree:"))
+        self.assertTrue(target.is_dir())
+        self.assertIn("feature/x", retire_module.local_branches(self.repo))
+
+    def test_inventory_protects_foreign_claim_and_reports_unavailable_scope(self):
+        target = self._worktree("protected", "feature/protected")
+        records = [_claim("ses_foreign", self.name, kind="worktree",
+                          checkout=str(target), branch="feature/protected")]
+        report = retire_module.inventory_repository(
+            self.repo, claim_records=records, requesting_session="ses_current",
+            workspace_root=self.base,
+        )
+        checkout = next(row for row in report["worktrees"] if row["path"] == str(target))
+        self.assertEqual(checkout["classification"], "protected-by-another-consumer")
+        self.assertEqual(checkout["live_claims"][0]["session_id"], "ses_foreign")
+
+        scoped = retire_module.inventory_repository(
+            self.repo, workspace_root=self.base, execution_root=self.base / "unrelated-root",
+        )
+        checkout = next(row for row in scoped["worktrees"] if row["path"] == str(target))
+        self.assertEqual(checkout["classification"], "outside-current-execution-scope")
+        self.assertIsNone(checkout["clean"])
+        self.assertIsNone(checkout["path_available"])
+        original = next(row for row in report["worktrees"] if row["path"] == str(target))
+        self.assertEqual(checkout["checkout_identity"], original["checkout_identity"])
+        self.assertIn("feature/protected", retire_module.local_branches(self.repo))
+
+    def test_inventory_keeps_unchecked_branch_when_any_foreign_repo_claim_is_live(self):
+        retired_candidate = self._worktree("candidate", "feature/candidate")
+        _git(self.repo, "worktree", "remove", str(retired_candidate))
+        foreign_checkout = self._worktree("foreign", "feature/foreign")
+        records = [_claim("ses_foreign", self.name, kind="worktree",
+                          checkout=str(foreign_checkout), branch="feature/foreign")]
+        report = retire_module.inventory_repository(
+            self.repo, claim_records=records, requesting_session="ses_current",
+            workspace_root=self.base,
+        )
+        branch = next(row for row in report["branches"]
+                      if row["branch"] == "feature/candidate")
+        self.assertEqual(branch["classification"], "protected-by-another-consumer")
+        self.assertFalse(branch["retireable_after_review"])
+
+    def test_inventory_identifies_detached_checkout_with_evidence_tip(self):
+        target = self.base / "detached-evidence"
+        added = _git(self.repo, "worktree", "add", "--detach", str(target), "main")
+        self.assertEqual(added.returncode, 0, added.stderr)
+        evidence = target / "evidence" / "proof.json"
+        evidence.parent.mkdir()
+        evidence.write_text("{}\n")
+        _git(target, "add", "evidence/proof.json")
+        _git(target, "commit", "-qm", "retain proof evidence")
+        report = retire_module.inventory_repository(
+            self.repo, workspace_root=self.base,
+        )
+        checkout = next(row for row in report["worktrees"] if row["path"] == str(target))
+        self.assertTrue(checkout["detached"])
+        self.assertEqual(checkout["classification"], "detached-but-evidence-relevant")
+        self.assertTrue(checkout["evidence_relevant"])
+        self.assertTrue(target.is_dir())
+
 
 if __name__ == "__main__":
     unittest.main()
