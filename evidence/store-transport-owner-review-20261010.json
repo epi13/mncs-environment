@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.store-transport-owner-review/1",
+  "recorded_at": "2026-10-10T21:56:22Z",
+  "source_identities": {
+    "mncs_environment": "3f4344a2f2ba889001863d2c1576844627c0389e",
+    "mncs_control_mcp": "d3b08e032b29e91106b70a741e1502a3f7638dd7",
+    "mncs_store": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "owner_review": {
+    "environment_transport": {
+      "owner": "MNCS Control Environment RPC invoking Environment domain operations",
+      "source": "mncs-control-mcp/src/mncs_control_mcp/environment_rpc.py",
+      "status": "existing authenticated bounded Unix-socket transport",
+      "client": "mncs-environment/mncs_env/rpc_client.py",
+      "admission": [
+        "private owner-controlled socket and grant directory",
+        "AF_UNIX peer credentials plus a short-lived Control-issued per-execution bearer grant",
+        "fixed canonical state directory and bounded Environment command allowlist",
+        "granted workspace path mapping and path escape checks",
+        "owner principal check for session operations",
+        "recipient-principal and owner-issued pending-handoff checks for accept",
+        "stable request identity bound to operation digest with concurrent duplicate serialization"
+      ],
+      "store_mutation_status": "direct-filesystem-read-only"
+    },
+    "store_backend": {
+      "source": "mncs-store/python/mncs_store/embedded.py",
+      "implementation": "embedded canonical Store backend with immutable bound objects and atomic generation CAS",
+      "existing_store_daemon_or_service": false,
+      "environment_persistence_routes_through_control": true
+    },
+    "other_local_service": {
+      "service": "mncs-commons.service",
+      "store": "/home/epi13/.local/state/mncs-commons/store",
+      "write_scope": "/home/epi13/.local/state/mncs-commons",
+      "finding": "Commons owns a separate domain Store and has no Environment Store publication contract; it is not a valid Environment writer substitute."
+    }
+  },
+  "deployed_boundary": {
+    "service": "mncs-control-tunnel.service",
+    "unit_source": "mncs-control-mcp/deploy/systemd/mncs-control-tunnel.service",
+    "active": true,
+    "runtime_revision": "d3b08e032b29e91106b70a741e1502a3f7638dd7",
+    "sandbox": {
+      "NoNewPrivileges": true,
+      "PrivateTmp": true,
+      "ProtectSystem": "strict",
+      "ProtectHome": "read-only",
+      "ReadWritePaths": [
+        "/home/epi13/Documents/Projects",
+        "/home/epi13/.config/mncs-control-mcp",
+        "/home/epi13/.config/tunnel-client",
+        "/home/epi13/.local/state/mncs-control-mcp",
+        "/home/epi13/.local/state/tunnel-client",
+        "/home/epi13/.local/share/mncs-control-mcp",
+        "/home/epi13/.local/share/tunnel-client"
+      ],
+      "canonical_environment_store_in_write_paths": false
+    },
+    "live_status": {
+      "environment_rpc": "ready",
+      "store_mutation": "direct-filesystem-read-only",
+      "restart_required": false
+    },
+    "protected_probe": {
+      "canonical_store_path_write": "rejected by the service's read-only mount boundary",
+      "publication_completed": false,
+      "existing_evidence": "evidence/store-continuity-followup-20261010.json"
+    }
+  },
+  "decision": {
+    "no_new_store_daemon_created": true,
+    "no_existing_store_owner_socket_found": true,
+    "no_controlled_service_policy_changed": true,
+    "no_direct_agent_store_access_granted": true,
+    "no_store_redirected": true,
+    "implementation_path": "Extend the existing Control-owned Environment RPC as the mediated transport, retaining Environment validation and Store generation semantics.",
+    "remaining_external_authority": {
+      "action": "Authorize the existing Control service to write only the canonical Environment Store root through an explicit, narrowly scoped service write path while retaining ProtectSystem=strict, ProtectHome=read-only, and NoNewPrivileges=true.",
+      "exact_candidate_path": "/home/epi13/.local/share/mncs-environment/store",
+      "applied": false,
+      "reason": "The campaign instruction prohibits modifying security policy; the active unit currently excludes this path. Without an existing Store writer or that specific service-owned OS permission, canonical publication cannot succeed."
+    }
+  }
+}
