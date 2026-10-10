@@ -1,0 +1,98 @@
+{
+  "schema_version": "mncs.environment.claim-owner-continuity-audit/1",
+  "recorded_at": "2026-10-10T21:19:38Z",
+  "source_identities": {
+    "mncs_environment": "83f7c006adfefe17e43b6c9f3ffbbe462dfe9176",
+    "mncs_control_mcp": "af2c6d851995bc54f22c79c590e499daa457fa98",
+    "mncs_store": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "inspection": {
+    "claims_read_from": "canonical Store through the read-only Environment Store CLI operation",
+    "owner_session_explanation": "read-only claims --explain",
+    "protected_session_context": "queried through authenticated Control RPC; no snapshot was returned",
+    "mutations_performed": false
+  },
+  "authenticated_continuity": {
+    "current_control_principal": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "current_campaign": "cmp_mncs_continuity_20261010",
+    "current_session": "ses_7226fbcfe65820f7",
+    "prior_sessions": [
+      {
+        "session": "ses_d2537acde8b8a875",
+        "context_result": "authority-denied",
+        "diagnostic": "session has no matching authenticated continuation principal",
+        "next": "request an explicit handoff from the recorded owner"
+      },
+      {
+        "session": "ses_95c3aa35b8544042",
+        "context_result": "authority-denied",
+        "diagnostic": "session has no matching authenticated continuation principal",
+        "next": "request an explicit handoff from the recorded owner"
+      },
+      {
+        "session": "ses_43749130b4bd6852",
+        "context_result": "authority-denied",
+        "diagnostic": "session has no matching authenticated continuation principal",
+        "next": "request an explicit handoff from the recorded owner"
+      }
+    ],
+    "interpretation": "Consumer labels and shared account context did not authorize reading or resuming these sessions."
+  },
+  "claim_assessments": [
+    {
+      "claim_id": "claim:mncs-compiler",
+      "version": 63,
+      "owner_session": "ses_d2537acde8b8a875",
+      "consumer": "luna-compiler-self-consumption-admission-20261009",
+      "status": "held",
+      "acquired_at": "2026-10-09T18:13:43Z",
+      "expires_at": "2027-08-03T10:31:10Z",
+      "owner_known": true,
+      "owner_lifecycle": "active",
+      "last_activity_at": "2026-10-09T20:23:20Z",
+      "freshness": "stale",
+      "verdict": "not-recoverable",
+      "reason": "owner session is quiet but the exclusive scope needs a dead owner or TTL expiry"
+    },
+    {
+      "claim_id": "claim:mncs-language",
+      "version": 40,
+      "owner_session": "ses_d2537acde8b8a875",
+      "consumer": "luna-compiler-self-consumption-admission-20261009",
+      "status": "held",
+      "acquired_at": "2026-10-09T18:13:55Z",
+      "expires_at": "2026-10-10T22:53:50Z",
+      "owner_known": true,
+      "owner_lifecycle": "active",
+      "last_activity_at": "2026-10-09T20:23:20Z",
+      "freshness": "stale",
+      "verdict": "not-recoverable",
+      "reason": "owner session is quiet but the exclusive scope needs a dead owner or TTL expiry"
+    },
+    {
+      "claim_id": "claim:mncs-forge",
+      "version": 28,
+      "owner_session": "ses_95c3aa35b8544042",
+      "consumer": "luna-compiler-self-consumption",
+      "status": "held",
+      "acquired_at": "2026-10-09T02:18:31Z",
+      "expires_at": "2027-03-07T23:49:59Z",
+      "owner_known": true,
+      "owner_lifecycle": "active",
+      "last_activity_at": "2026-10-09T03:05:19Z",
+      "freshness": "stale",
+      "verdict": "not-recoverable",
+      "reason": "owner session is quiet but the exclusive scope needs a dead owner or TTL expiry"
+    }
+  ],
+  "decision": {
+    "compiler_language_forge_claims": "retained without transfer, recovery, merge, or retirement",
+    "basis": "authenticated handoff is absent; durable lifecycle says active; last activity is stale; process termination is unconfirmed; exclusive-claim recovery policy denies takeover",
+    "lease_policy_finding": "Two retained claim records expire beyond the currently enforced 168-hour acquisition maximum. They were not shortened or rewritten because they belong to other authenticated sessions.",
+    "next_legitimate_actions": [
+      "accept an explicit handoff from the recorded authenticated owner",
+      "use a verified terminal lifecycle transition from the owner",
+      "allow the recorded claim lease to expire, then re-evaluate repository dirt and ownership before any new claim"
+    ]
+  }
+}
