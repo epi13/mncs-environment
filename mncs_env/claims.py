@@ -21,6 +21,8 @@ recovery is explicit, version-checked against races, and recorded with
 `recovered_from` provenance on both the superseding record and the new
 claim. New leases are bounded to 168 hours; a continuing owner reacquires
 its exact scope instead of extending a lease with an unbounded duration.
+Legacy records that exceed the current maximum keep their recorded expiry;
+inspection flags them without silently transferring or shortening ownership.
 """
 
 from __future__ import annotations
@@ -295,6 +297,33 @@ def _freshness(age: timedelta) -> str:
     return "stale"
 
 
+def _lease_diagnostic(record: dict[str, Any]) -> dict[str, Any]:
+    acquired = _parse_time(record.get("acquired_at"))
+    expires = _parse_time(record.get("expires_at"))
+    if acquired is None or expires is None:
+        return {
+            "acquired_at": record.get("acquired_at"),
+            "expires_at": record.get("expires_at"),
+            "duration_hours": None,
+            "maximum_hours": MAX_TTL_HOURS,
+            "policy": "unverifiable",
+        }
+    duration = (expires - acquired).total_seconds() / 3600
+    if duration <= 0:
+        policy = "invalid-range"
+    elif duration <= MAX_TTL_HOURS:
+        policy = "within-current-maximum"
+    else:
+        policy = "exceeds-current-maximum"
+    return {
+        "acquired_at": acquired.isoformat(timespec="seconds"),
+        "expires_at": expires.isoformat(timespec="seconds"),
+        "duration_hours": round(duration, 3),
+        "maximum_hours": MAX_TTL_HOURS,
+        "policy": policy,
+    }
+
+
 def classify(record: dict[str, Any], owner: dict[str, Any] | None, *,
              now: datetime | None = None) -> dict[str, Any]:
     """Explain one claim record as live/stale/recoverable/not-recoverable.
@@ -315,7 +344,8 @@ def classify(record: dict[str, Any], owner: dict[str, Any] | None, *,
     base = {"claim_id": claim_id, "session_id": holder,
             "owner_known": bool(owner.get("known")),
             "owner_lifecycle": owner.get("lifecycle"),
-            "last_activity_at": owner.get("last_activity_at")}
+            "last_activity_at": owner.get("last_activity_at"),
+            "lease": _lease_diagnostic(record)}
     if status == "released":
         return {**base, "verdict": "released", "freshness": None,
                 "reason": "claim was released; it blocks nothing"}

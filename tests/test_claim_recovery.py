@@ -113,6 +113,32 @@ class ClassifyTests(RecoveryFixture):
         self.assertEqual(verdict["verdict"], "not-recoverable")
         self.assertEqual(verdict["freshness"], "stale")
 
+    def test_legacy_overlong_lease_is_reported_without_changing_expiry(self):
+        now = datetime(2026, 1, 2, 12, tzinfo=timezone.utc)
+        record = {
+            "claim_id": "claim:legacy-overlong",
+            "session_id": "ses_quiet",
+            "status": "held",
+            "acquired_at": "2026-01-01T12:00:00+00:00",
+            "expires_at": "2026-01-10T12:00:00+00:00",
+            "scope": {"kind": "repository", "exclusive": True},
+        }
+        original_expiry = record["expires_at"]
+        owner = {
+            "known": True,
+            "lifecycle": "active",
+            "last_activity_at": "2026-01-02T09:00:00+00:00",
+        }
+
+        verdict = claims.classify(record, owner, now=now)
+
+        self.assertEqual(verdict["verdict"], "not-recoverable")
+        self.assertEqual(verdict["freshness"], "stale")
+        self.assertEqual(verdict["lease"]["duration_hours"], 216.0)
+        self.assertEqual(verdict["lease"]["maximum_hours"], claims.MAX_TTL_HOURS)
+        self.assertEqual(verdict["lease"]["policy"], "exceeds-current-maximum")
+        self.assertEqual(record["expires_at"], original_expiry)
+
     def test_failed_owner_frees_even_exclusive_scope(self):
         self.seed_session("ses_failed", "failed",
                           datetime.now(timezone.utc) - timedelta(minutes=1))
