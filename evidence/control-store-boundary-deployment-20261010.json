@@ -1,0 +1,38 @@
+{
+  "schema_version": "mncs.environment.control-store-boundary-deployment/1",
+  "recorded_at": "2026-10-10T21:27:46Z",
+  "repositories": {
+    "mncs_environment_main": "3db8ce1d499ccc635c11f549b3d5249273ae5ba2",
+    "mncs_control_mcp_main": "2d909eff94d3d7c13161cc54ffc3a264f800b893",
+    "mncs_store_main": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "deployed_control": {
+    "unit": "mncs-control-tunnel.service",
+    "state": "active",
+    "main_pid": 598128,
+    "started_at": "2026-10-10T13:25:25-08:00",
+    "restart_performed_after_push": true
+  },
+  "post_restart_protected_probe": {
+    "execution": "bwrap through MNCS Control terminal_exec with workspace scope",
+    "operation": "automatic mncs-env enter, no explicit workspace or campaign identity",
+    "definition_workspace_resolution": "passed under the workspace grant",
+    "result": "direct-filesystem-read-only",
+    "transport": "mncs-control-environment-rpc",
+    "publication_completed": false,
+    "timed_out": false
+  },
+  "policy": {
+    "ProtectSystem": "strict",
+    "ProtectHome": "read-only",
+    "canonical_store_write_authority": "not present",
+    "policy_changed": false
+  },
+  "validation": {
+    "mncs_control_mcp_full_suite": "passed at source 2d909ef",
+    "changed_file_ruff": "passed",
+    "compileall": "passed",
+    "diff_check": "passed"
+  },
+  "interpretation": "The updated scoped RPC and definition path are active in the deployed Control service. The agent remains isolated from canonical Store, read transport works, and the OS boundary still prevents the service from publishing mutations."
+}
