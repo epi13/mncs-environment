@@ -35,6 +35,7 @@ verification.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -249,6 +250,7 @@ def _assess_registered_worktree(
     branches: dict[str, str], main: Path | None, canonical: str,
     claim_records: list[dict[str, Any]], requesting_session: str | None,
     *, path_available: bool, clean: bool,
+    topology_cache: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Apply the retirement contract to one already observed checkout."""
     if main is not None and _same_path(target, main):
@@ -278,7 +280,8 @@ def _assess_registered_worktree(
         if str(branch) not in branches:
             return {"retireable": False,
                     "reason": f"attached branch {branch} has no local ref"}
-        topology = _branch_topology(repo, str(branch), branches, canonical)
+        topology = ((topology_cache or {}).get(str(branch))
+                    or _branch_topology(repo, str(branch), branches, canonical))
         if not topology["retireable"]:
             return {"retireable": False,
                     "reason": f"attached branch {branch}: {topology['reason']}"}
@@ -357,14 +360,30 @@ def prune_worktrees(repo: Path, *, dry_run: bool = False) -> dict[str, Any]:
 
 
 def _same_path(left: str | Path, right: str | Path) -> bool:
-    return Path(left).resolve(strict=False) == Path(right).resolve(strict=False)
+    return os.path.normcase(os.path.abspath(str(left))) == os.path.normcase(os.path.abspath(str(right)))
 
 
-def _checkout_claims(records: list[dict[str, Any]], repository: str,
-                     checkout: str, branch: str | None) -> list[dict[str, Any]]:
+def _within_root_without_symlinks(path: str | Path, root: str | Path) -> bool:
+    """Check a grant boundary lexically, rejecting symlinked path components."""
+    absolute = Path(os.path.abspath(str(path)))
+    boundary = Path(os.path.abspath(str(root)))
+    try:
+        relative = absolute.relative_to(boundary)
+    except ValueError:
+        return False
+    current = boundary
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():
+            return False
+    return True
+
+
+def _checkout_claims(repository_claims: list[dict[str, Any]], checkout: str,
+                     branch: str | None) -> list[dict[str, Any]]:
     """Return live claims conservatively covering one physical checkout."""
     covered: list[dict[str, Any]] = []
-    for record in _repo_claims(records, repository, None):
+    for record in repository_claims:
         scope = record.get("scope", {})
         kind = scope.get("kind", "repository") if isinstance(scope, dict) else "repository"
         if kind in ("repository", "paths"):
@@ -393,10 +412,12 @@ def _repository_identity(repo: Path, workspace_root: Path | None) -> dict[str, A
     common_relative: str | None = None
     material: dict[str, Any] = {"repository": repo.name}
     if common.returncode == 0:
-        common_path = Path(common.stdout.strip()).resolve(strict=False)
+        common_path = Path(os.path.abspath(common.stdout.strip()))
         if workspace_root is not None:
             try:
-                common_relative = common_path.relative_to(workspace_root.resolve()).as_posix()
+                common_relative = common_path.relative_to(
+                    Path(os.path.abspath(str(workspace_root)))
+                ).as_posix()
             except ValueError:
                 pass
         if common_relative is not None:
@@ -420,7 +441,7 @@ def _worktree_identities(repo: Path, common_identity: str,
     common = _git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
     identities: dict[str, tuple[str, str]] = {}
     if common.returncode == 0:
-        admin_root = Path(common.stdout.strip()).resolve(strict=False) / "worktrees"
+        admin_root = Path(os.path.abspath(common.stdout.strip())) / "worktrees"
         if admin_root.is_dir():
             for admin in sorted(admin_root.iterdir()):
                 gitdir_record = admin / "gitdir"
@@ -428,14 +449,14 @@ def _worktree_identities(repo: Path, common_identity: str,
                     checkout_gitdir = Path(gitdir_record.read_text(encoding="utf-8").strip())
                 except (OSError, UnicodeDecodeError):
                     continue
-                checkout = checkout_gitdir.parent.resolve(strict=False)
+                checkout = Path(os.path.abspath(str(checkout_gitdir.parent)))
                 identity = "git-worktree:" + digest_hex({
                     "git_common_directory_identity": common_identity,
                     "administrative_identity": admin.name,
                 })
                 identities[str(checkout)] = (identity, "git-administrative-identity")
     if main is not None:
-        identities[str(main.resolve(strict=False))] = (
+        identities[str(Path(os.path.abspath(str(main))))] = (
             "git-worktree:" + digest_hex({
                 "git_common_directory_identity": common_identity,
                 "administrative_identity": "main-checkout",
@@ -445,7 +466,7 @@ def _worktree_identities(repo: Path, common_identity: str,
     for row in rows:
         observed = str(row.get("path", ""))
         if not any(_same_path(observed, known) for known in identities):
-            identities[str(Path(observed).resolve(strict=False))] = (
+            identities[str(Path(os.path.abspath(observed)))] = (
                 "git-worktree:" + digest_hex({
                     "git_common_directory_identity": common_identity,
                     "path_observation": observed,
@@ -487,32 +508,86 @@ def inventory_repository(
         repo, common_identity["identity"], rows, main,
     )
     execution_root_resolved = (
-        Path(execution_root).resolve(strict=False) if execution_root is not None else None
+        Path(os.path.abspath(str(execution_root))) if execution_root is not None else None
     )
+
+    branch_facts: dict[str, dict[str, Any]] = {}
+    for branch, head in branches.items():
+        behind_count = ahead_count = unique_count = None
+        reachable: bool | None = None
+        canonical_is_ancestor: bool | None = None
+        paths_at_tip: list[str] = []
+        if canonical_ok:
+            relation = _git(repo, "rev-list", "--left-right", "--count",
+                            f"{canonical}...{branch}")
+            if relation.returncode == 0:
+                values = relation.stdout.split()
+                if len(values) == 2:
+                    behind_count, ahead_count = int(values[0]), int(values[1])
+                    reachable = ahead_count == 0
+                    canonical_is_ancestor = behind_count == 0
+                    unique_count = (0 if reachable
+                                    else cherry_unique_count(repo, canonical, branch))
+                    if unique_count is not None and unique_count > 0:
+                        paths_at_tip = _commit_paths(repo, head)
+            if reachable is None:
+                topology = {"retireable": False,
+                            "reason": f"cannot compare branch with {canonical}"}
+            elif not reachable and unique_count is None:
+                topology = {"retireable": False,
+                            "reason": f"tip is not reachable from {canonical} and patch-equivalence is unmeasurable"}
+            elif unique_count and unique_count > 0:
+                topology = {"retireable": False,
+                            "reason": f"tip carries {unique_count} unique commit(s) not in {canonical}"}
+            else:
+                topology = {"retireable": True, "reason": "merged into " + canonical}
+        else:
+            topology = {"retireable": False,
+                        "reason": f"canonical ref {canonical} does not resolve; refusing to judge"}
+        evidence_at_tip = sorted(
+            path for path in paths_at_tip
+            if path == "evidence" or path.startswith("evidence/")
+        )
+        evidence_only_tip = bool(paths_at_tip) and all(
+            path == "evidence" or path.startswith("evidence/") for path in paths_at_tip
+        )
+        branch_facts[branch] = {
+            "topology": topology,
+            "canonical_reachable": reachable,
+            "canonical_is_ancestor": canonical_is_ancestor,
+            "behind_count": behind_count,
+            "ahead_count": ahead_count,
+            "unique_patch_commit_count": unique_count,
+            "evidence_paths_at_tip": evidence_at_tip,
+            "evidence_only_tip": evidence_only_tip,
+        }
+    topology_cache = {name: facts["topology"] for name, facts in branch_facts.items()}
 
     worktree_state: dict[str, dict[str, Any]] = {}
     for row in rows:
         raw_path = str(row.get("path", ""))
         checkout_path = Path(raw_path)
-        in_scope = execution_root_resolved is None
-        if execution_root_resolved is not None:
-            resolved_path = checkout_path.resolve(strict=False)
-            in_scope = (resolved_path == execution_root_resolved
-                        or execution_root_resolved in resolved_path.parents)
-        exists = in_scope and checkout_path.is_dir()
-        clean: bool | None = worktree_clean(repo, checkout_path) if exists else None
-        head = str(row.get("head") or "")
         branch = row.get("branch")
-        branch_ref_exists = isinstance(branch, str) and branch in branches
-        head_reachable = bool(head and canonical_ok and is_reachable(repo, head, canonical))
-        evidence_paths = _commit_paths(repo, head) if row.get("detached") and head else []
-        evidence_relevant = any(path == "evidence" or path.startswith("evidence/")
-                                for path in evidence_paths)
-        covering = _checkout_claims(records, repo.name, raw_path, branch)
+        covering = _checkout_claims(repository_claims, raw_path, branch)
         own_claims = [item for item in covering
                       if item.get("session_id") == requesting_session]
         other_claims = [item for item in covering
                         if item.get("session_id") != requesting_session]
+        in_scope = execution_root_resolved is None
+        if execution_root_resolved is not None:
+            in_scope = _within_root_without_symlinks(raw_path, execution_root_resolved)
+        ownership_protected = bool(own_claims or other_claims)
+        exists = (in_scope and checkout_path.is_dir()) if not ownership_protected else None
+        clean: bool | None = worktree_clean(repo, checkout_path) if exists else None
+        head = str(row.get("head") or "")
+        branch_ref_exists = isinstance(branch, str) and branch in branches
+        if isinstance(branch, str) and branch in branch_facts:
+            head_reachable = branch_facts[branch]["canonical_reachable"]
+        else:
+            head_reachable = bool(head and canonical_ok and is_reachable(repo, head, canonical))
+        evidence_paths = _commit_paths(repo, head) if row.get("detached") and head else []
+        evidence_relevant = any(path == "evidence" or path.startswith("evidence/")
+                                for path in evidence_paths)
         if other_claims:
             classification = "protected-by-another-consumer"
             reason = "covered by one or more live claims held by other sessions"
@@ -553,12 +628,13 @@ def inventory_repository(
         else:
             assessed = _assess_registered_worktree(
                 repo, raw_path, row, rows, branches, main, canonical, records,
-                requesting_session, path_available=exists, clean=clean is True,
+                requesting_session, path_available=exists is True, clean=clean is True,
+                topology_cache=topology_cache,
             )
             if assessed["retireable"]:
                 classification = "merged-and-safely-retireable"
                 reason = assessed["reason"]
-            elif branch in branches and _branch_topology(repo, str(branch), branches, canonical)["retireable"]:
+            elif branch in branches and topology_cache.get(str(branch), {}).get("retireable"):
                 classification = "merged-but-retained"
                 reason = assessed["reason"]
             else:
@@ -567,7 +643,7 @@ def inventory_repository(
         worktree_state[raw_path] = {
             "classification": classification,
             "clean": clean,
-            "path_available": exists if in_scope else None,
+            "path_available": exists if in_scope and not ownership_protected else None,
             "within_execution_scope": in_scope,
             "head_reachable": head_reachable if canonical_ok else None,
             "branch_ref_exists": branch_ref_exists if branch is not None else None,
@@ -586,7 +662,7 @@ def inventory_repository(
         own_claims: list[dict[str, Any]] = []
         other_claims: list[dict[str, Any]] = []
         for path in attached or [str(repo)]:
-            covering = _checkout_claims(records, repo.name, path, branch)
+            covering = _checkout_claims(repository_claims, path, branch)
             own_claims.extend(item for item in covering
                               if item.get("session_id") == requesting_session)
             other_claims.extend(item for item in covering
@@ -597,32 +673,15 @@ def inventory_repository(
         other_claims = [item for item in repository_claims
                         if item.get("session_id") != requesting_session]
         other_claims = list({str(item.get("claim_id")): item for item in other_claims}.values())
-        topology = _branch_topology(repo, branch, branches, canonical) if canonical_ok else {
-            "retireable": False,
-            "reason": f"canonical ref {canonical} does not resolve; refusing to judge",
-        }
-        reachable = is_reachable(repo, head, canonical) if canonical_ok else False
-        unique_count = (0 if reachable else
-                        cherry_unique_count(repo, canonical, branch) if canonical_ok else None)
-        canonical_is_ancestor = (
-            _git(repo, "merge-base", "--is-ancestor", canonical, branch).returncode == 0
-            if canonical_ok else None
-        )
-        ahead_behind = (_git(repo, "rev-list", "--left-right", "--count",
-                             f"{canonical}...{branch}") if canonical_ok else None)
-        behind_count = ahead_count = None
-        if ahead_behind is not None and ahead_behind.returncode == 0:
-            values = ahead_behind.stdout.split()
-            if len(values) == 2:
-                behind_count, ahead_count = int(values[0]), int(values[1])
-        paths_at_tip = _commit_paths(repo, head)
-        evidence_at_tip = sorted(
-            path for path in paths_at_tip
-            if path == "evidence" or path.startswith("evidence/")
-        )
-        evidence_only_tip = bool(paths_at_tip) and all(
-            path == "evidence" or path.startswith("evidence/") for path in paths_at_tip
-        )
+        facts = branch_facts[branch]
+        topology = facts["topology"]
+        reachable = facts["canonical_reachable"]
+        unique_count = facts["unique_patch_commit_count"]
+        canonical_is_ancestor = facts["canonical_is_ancestor"]
+        behind_count = facts["behind_count"]
+        ahead_count = facts["ahead_count"]
+        evidence_at_tip = facts["evidence_paths_at_tip"]
+        evidence_only_tip = facts["evidence_only_tip"]
         if branch in CANONICAL_BRANCHES:
             classification = "canonical-branch"
             reason = "canonical branch is never retired"
@@ -669,7 +728,7 @@ def inventory_repository(
             "classification": classification,
             "reason": reason,
             "checked_out_at": attached,
-            "canonical_reachable": reachable if canonical_ok else None,
+            "canonical_reachable": reachable,
             "canonical_ahead_count": ahead_count,
             "canonical_behind_count": behind_count,
             "unique_patch_commit_count": unique_count,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -246,6 +247,20 @@ class RetireTests(unittest.TestCase):
                       if row["branch"] == "feature/candidate")
         self.assertEqual(branch["classification"], "protected-by-another-consumer")
         self.assertFalse(branch["retireable_after_review"])
+
+    def test_inventory_does_not_probe_checkouts_already_protected_by_repo_claim(self):
+        records = [_claim("ses_foreign", self.name)]
+        with mock.patch.object(
+            retire_module, "worktree_clean", side_effect=AssertionError("checkout probed")
+        ):
+            report = retire_module.inventory_repository(
+                self.repo, claim_records=records, requesting_session="ses_current",
+                workspace_root=self.base,
+            )
+        self.assertTrue(report["worktrees"])
+        self.assertTrue(all(row["classification"] == "protected-by-another-consumer"
+                            for row in report["worktrees"]))
+        self.assertTrue(all(row["clean"] is None for row in report["worktrees"]))
 
     def test_inventory_identifies_detached_checkout_with_evidence_tip(self):
         target = self.base / "detached-evidence"
