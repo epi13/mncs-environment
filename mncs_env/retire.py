@@ -582,6 +582,14 @@ def inventory_repository(
         ownership_protected = bool(own_claims or other_claims)
         exists = (in_scope and checkout_path.is_dir()) if not ownership_protected else None
         clean: bool | None = worktree_clean(repo, checkout_path) if exists else None
+        if not in_scope:
+            access_disposition = "outside-current-execution-scope"
+        elif ownership_protected:
+            access_disposition = "not-probed-protected"
+        elif not exists:
+            access_disposition = "unavailable-in-current-execution-namespace"
+        else:
+            access_disposition = "available"
         head = str(row.get("head") or "")
         branch_ref_exists = isinstance(branch, str) and branch in branches
         if isinstance(branch, str) and branch in branch_facts:
@@ -654,6 +662,7 @@ def inventory_repository(
             "clean": clean,
             "path_available": exists if in_scope and not ownership_protected else None,
             "within_execution_scope": in_scope,
+            "access_disposition": access_disposition,
             "head_reachable": head_reachable if canonical_ok else None,
             "branch_ref_exists": branch_ref_exists if branch is not None else None,
             "evidence_relevant": evidence_relevant if row.get("detached") else None,
@@ -773,6 +782,7 @@ def inventory_repository(
             "clean": facts["clean"],
             "path_available": facts["path_available"],
             "within_execution_scope": facts["within_execution_scope"],
+            "access_disposition": facts["access_disposition"],
             "canonical_reachable": facts["head_reachable"],
             "branch_ref_exists": facts["branch_ref_exists"],
             "evidence_relevant": facts["evidence_relevant"],
@@ -810,6 +820,9 @@ def inventory_repository(
             "worktree_count": len(worktree_rows),
             "branches_by_classification": counts(branch_rows),
             "worktrees_by_classification": counts(worktree_rows),
+            "worktrees_by_access_disposition": counts([
+                {"classification": row["access_disposition"]} for row in worktree_rows
+            ]),
         },
         "branches": branch_rows,
         "worktrees": worktree_rows,

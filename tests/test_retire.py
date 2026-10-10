@@ -229,6 +229,7 @@ class RetireTests(unittest.TestCase):
         self.assertEqual(checkout["classification"], "outside-current-execution-scope")
         self.assertIsNone(checkout["clean"])
         self.assertIsNone(checkout["path_available"])
+        self.assertEqual(checkout["access_disposition"], "outside-current-execution-scope")
         original = next(row for row in report["worktrees"] if row["path"] == str(target))
         self.assertEqual(checkout["checkout_identity"], original["checkout_identity"])
         self.assertIn("feature/protected", retire_module.local_branches(self.repo))
@@ -261,6 +262,8 @@ class RetireTests(unittest.TestCase):
         self.assertTrue(all(row["classification"] == "protected-by-another-consumer"
                             for row in report["worktrees"]))
         self.assertTrue(all(row["clean"] is None for row in report["worktrees"]))
+        self.assertTrue(all(row["access_disposition"] == "not-probed-protected"
+                            for row in report["worktrees"]))
 
     def test_inventory_identifies_detached_checkout_with_evidence_tip(self):
         target = self.base / "detached-evidence"
