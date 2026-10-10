@@ -2,7 +2,7 @@
   "schema_version": "mncs.environment.candidate-delivery/1",
   "campaign_id": "cmp_mncs_continuity_20261010",
   "session_id": "ses_7226fbcfe65820f7",
-  "observed_at": "2026-10-10T23:04:31Z",
+  "observed_at": "2026-10-10T23:06:48Z",
   "control": {
     "repository_main": "7b90b094dbe2e5333bef604311426e9c38c82cfc",
     "runtime_revision": "7b90b094dbe2e5333bef604311426e9c38c82cfc",
@@ -180,6 +180,41 @@
     "stage_1_proven": false,
     "stage_2_proven": false,
     "unresolved_pressures": ["CP-0011", "CP-0023", "CP-0024", "CP-0025"]
+  },
+  "operational_readiness": {
+    "observed_at": "2026-10-10T23:06:48Z",
+    "sandbox": {
+      "backend": "bwrap",
+      "available": true,
+      "required": true
+    },
+    "environment_persistence": "ready through authenticated Control Environment RPC",
+    "control_integrated_forge_binding": {
+      "health_status": "capability_unavailable",
+      "diagnostic": "project inspection tool returned an MCP error"
+    },
+    "direct_forge_mcp_read_only_probe": {
+      "project_inspect_call": "succeeded",
+      "project_identity": "mncs-forge-development-v3",
+      "mode": "development",
+      "stage": "no_epoch",
+      "active_candidate": false,
+      "evidence_status": "UNKNOWN",
+      "provider_discovery_status": "UNKNOWN",
+      "configured_provider_availability": "AVAILABLE",
+      "configured_provider_status": "UNKNOWN",
+      "native_execution_available": true,
+      "native_binary": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs",
+      "native_binary_modified_at": "2026-10-09T17:41:58.978913+00:00"
+    },
+    "language_service_binding": {
+      "status": "UNKNOWN",
+      "reason": "No dedicated Language Service tool was exposed in the current Control MCP surface; no provider result is asserted."
+    },
+    "system_monitor_binding": {
+      "status": "UNKNOWN",
+      "reason": "No dedicated System Monitor tool was exposed in the current Control MCP surface; no provider result is asserted."
+    }
   },
   "resource_feedback": {
     "end_to_end_compiler_execution_receipt_to_scheduling_decision": "not yet demonstrated",
