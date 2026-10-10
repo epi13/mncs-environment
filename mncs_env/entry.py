@@ -74,9 +74,26 @@ def entry_lock(state_dir: Path | str, backend: str, *, wait_seconds: float = ENT
     except OSError as error:
         if error.errno not in (errno.EACCES, errno.EPERM, errno.EROFS):
             raise
-        raise EntryError("Environment state directory is not writable",
-                         "entry-state-unwritable", state_dir=str(root),
-                         next="pass --state-dir with an explicitly writable directory; reuse that path on subsequent actions") from error
+        if backend == "store" and error.errno == errno.EROFS:
+            raise EntryError(
+                "canonical Store filesystem is read-only to the Environment persistence owner",
+                "direct-filesystem-read-only",
+                transport="store-owner-filesystem",
+                publication_completed=False,
+                next="the authorized persistence owner must receive its configured Store write capability; do not redirect canonical state",
+            ) from error
+        next_action = (
+            "pass --state-dir with an explicitly writable debug path; reuse that path on subsequent actions"
+            if backend == "file"
+            else "inspect the persistence owner's state-directory access; canonical Store operations require the configured owner path"
+        )
+        raise EntryError(
+            "Environment state directory is not writable",
+            "entry-state-unwritable",
+            state_dir=str(root),
+            publication_completed=False,
+            next=next_action,
+        ) from error
     with handle:
         started = time.monotonic()
         while True:

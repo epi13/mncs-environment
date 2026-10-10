@@ -536,7 +536,7 @@ if __name__ == "__main__":
     unittest.main()
 
 
-def test_unwritable_entry_state_reports_explicit_recovery(tmp_path, monkeypatch):
+def test_store_entry_lock_reports_read_only_owner_boundary(tmp_path, monkeypatch):
     import errno
     from mncs_env.entry import EntryError, entry_lock
     def denied(*args, **kwargs):
@@ -544,6 +544,21 @@ def test_unwritable_entry_state_reports_explicit_recovery(tmp_path, monkeypatch)
     monkeypatch.setattr(Path, "open", denied)
     with pytest.raises(EntryError) as raised:
         with entry_lock(tmp_path, "store"):
+            pass
+    assert raised.value.diagnostics["code"] == "direct-filesystem-read-only"
+    assert raised.value.diagnostics["transport"] == "store-owner-filesystem"
+    assert raised.value.diagnostics["publication_completed"] is False
+    assert "write capability" in raised.value.diagnostics["next"]
+
+
+def test_file_entry_lock_keeps_explicit_debug_path_recovery(tmp_path, monkeypatch):
+    import errno
+    from mncs_env.entry import EntryError, entry_lock
+    def denied(*args, **kwargs):
+        raise OSError(errno.EACCES, "access denied")
+    monkeypatch.setattr(Path, "open", denied)
+    with pytest.raises(EntryError) as raised:
+        with entry_lock(tmp_path, "file"):
             pass
     assert raised.value.diagnostics["code"] == "entry-state-unwritable"
     assert "--state-dir" in raised.value.diagnostics["next"]
