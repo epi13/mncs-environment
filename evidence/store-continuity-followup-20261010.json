@@ -1,0 +1,178 @@
+{
+  "schema_version": "mncs.environment.store-continuity-followup/1",
+  "recorded_at": "2026-10-10T21:12:33Z",
+  "source_identities": {
+    "mncs_environment": "dba719f95275cca9b5d27bb62599ab0e2ad76237",
+    "mncs_control_mcp": "af2c6d851995bc54f22c79c590e499daa457fa98",
+    "mncs_store": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "deployment": {
+    "service": "mncs-control-tunnel.service",
+    "active": true,
+    "main_pid": 583680,
+    "runtime_revision": "af2c6d851995bc54f22c79c590e499daa457fa98",
+    "restart_required": false,
+    "authenticated_principal": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "principal_derivation": "Control RPC principal is deterministic from the operating-system UID and configured Environment state root; the active service and continuity campaign resolve to the same principal.",
+    "environment_rpc": "ready",
+    "store_mutation": "direct-filesystem-read-only",
+    "systemd_boundary": {
+      "ProtectSystem": "strict",
+      "ProtectHome": "read-only",
+      "canonical_store_in_ReadWritePaths": false
+    }
+  },
+  "protected_execution": {
+    "backend": "bwrap",
+    "scope": "workspace",
+    "canonical_store_visible_to_client": false,
+    "canonical_store_writable_to_client": false,
+    "automatic_entry": {
+      "operation": "mncs-env enter with no explicit campaign or workspace override",
+      "result": "direct-filesystem-read-only",
+      "publication_completed": false,
+      "diagnostic": "canonical Store filesystem is read-only to the Environment persistence owner",
+      "definition_workspace_resolution": "passed; configured workspace root was preserved within the workspace execution grant"
+    },
+    "checkpoint": {
+      "session": "ses_7226fbcfe65820f7",
+      "result": "direct-filesystem-read-only",
+      "transport": "mncs-control-environment-rpc",
+      "publication_completed": false
+    },
+    "readback_after_rejected_checkpoint": {
+      "operation": "fresh bwrap process used mncs-env context",
+      "exit_code": 0,
+      "campaign_identity": "cmp_mncs_continuity_20261010",
+      "session": "ses_7226fbcfe65820f7",
+      "claim_ids": [
+        "claim:mncs-control-mcp",
+        "claim:mncs-environment"
+      ],
+      "checkpoint_ids": [
+        "chk_d631e38b476320a4",
+        "chk_4ddefa6940fef677",
+        "chk_4882af21cd00ee5c",
+        "chk_c925831dbfbd0fe7"
+      ],
+      "delivery": {
+        "status": "pending"
+      },
+      "interpretation": "The failed checkpoint was not represented as complete; a fresh process still reads the prior durable capsule."
+    }
+  },
+  "canonical_store_read_only_verification": {
+    "passed": true,
+    "generation": 43346,
+    "objects": 43346,
+    "relations": 0,
+    "provenance_records": 0,
+    "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+    "recovery": "RECOVERED_OLD"
+  },
+  "current_claims_read_from_canonical_store": [
+    {
+      "claim_id": "claim:MNCS-Commons",
+      "version": 17,
+      "session": "ses_43749130b4bd6852",
+      "consumer": "luna-compiler-self-consumption",
+      "state": "held"
+    },
+    {
+      "claim_id": "claim:mncs-compiler",
+      "version": 63,
+      "session": "ses_d2537acde8b8a875",
+      "consumer": "luna-compiler-self-consumption-admission-20261009",
+      "state": "held"
+    },
+    {
+      "claim_id": "claim:mncs-control-mcp",
+      "version": 3,
+      "session": "ses_7226fbcfe65820f7",
+      "consumer": "codex-process-2",
+      "state": "held",
+      "campaign_owner": true
+    },
+    {
+      "claim_id": "claim:mncs-environment",
+      "version": 29,
+      "session": "ses_7226fbcfe65820f7",
+      "consumer": "codex-process-2",
+      "state": "held",
+      "campaign_owner": true
+    },
+    {
+      "claim_id": "claim:mncs-forge",
+      "version": 28,
+      "session": "ses_95c3aa35b8544042",
+      "consumer": "luna-compiler-self-consumption",
+      "state": "held"
+    },
+    {
+      "claim_id": "claim:mncs-language",
+      "version": 40,
+      "session": "ses_d2537acde8b8a875",
+      "consumer": "luna-compiler-self-consumption-admission-20261009",
+      "state": "held"
+    },
+    {
+      "claim_id": "claim:mncs-language-service",
+      "version": 35,
+      "session": "ses_43749130b4bd6852",
+      "consumer": "luna-compiler-self-consumption",
+      "state": "held"
+    },
+    {
+      "claim_id": "claim:mncs-reference-studies",
+      "version": 7,
+      "session": "ses_95c3aa35b8544042",
+      "consumer": "luna-compiler-self-consumption",
+      "state": "held"
+    }
+  ],
+  "validation": {
+    "mncs_control_mcp": {
+      "full_pytest": "passed at commit af2c6d8",
+      "environment_rpc_pytest": "passed",
+      "ruff_changed_control_sources": "passed",
+      "compileall": "passed"
+    },
+    "mncs_environment": {
+      "entry_lock_pytest": {
+        "passed": 3,
+        "deselected": 40
+      },
+      "full_pytest": {
+        "passed": 565,
+        "skipped": 46,
+        "tested_before_followup_commit": "dc490bef83fd9f276931a826c5e7b0ada78e1f5d"
+      },
+      "compileall": "passed"
+    }
+  },
+  "campaign_state": {
+    "continuation_identity": "cmp_mncs_continuity_20261010",
+    "session": "ses_7226fbcfe65820f7",
+    "capsule_delivery_status": "pending",
+    "capsule_last_checkpoint": "chk_c925831dbfbd0fe7",
+    "latest_git_commits_after_that_checkpoint": {
+      "mncs_environment": "dba719f95275cca9b5d27bb62599ab0e2ad76237",
+      "mncs_control_mcp": "af2c6d851995bc54f22c79c590e499daa457fa98"
+    },
+    "checkpoint_of_latest_delivery": "not published; deployed Store owner denied mutation"
+  },
+  "candidate_disposition_report": "evidence/candidate-reconciliation-20261010.json",
+  "compiler_worktree_report": "evidence/compiler-worktree-dispositions-20261010.json",
+  "required_external_authority": {
+    "action": "Provide an authorized Store-owning publication capability or narrowly scoped OS write authority to the configured persistence service for canonical Store.",
+    "current_service_policy_must_remain_unchanged_until_authorized": true,
+    "forbidden_workarounds": [
+      "grant the agent direct Store path access",
+      "change permissions",
+      "remove publication lock",
+      "disable confinement",
+      "remount home",
+      "redirect canonical state"
+    ]
+  }
+}
