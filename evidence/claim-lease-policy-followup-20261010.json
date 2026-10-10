@@ -1,0 +1,49 @@
+{
+  "schema_version": "mncs.environment.claim-lease-policy-followup/1",
+  "recorded_at": "2026-10-10T21:22:43Z",
+  "source_identities": {
+    "mncs_environment": "6aa68aad362a89221257829dcad89a66fd33972d",
+    "mncs_control_mcp_runtime": "af2c6d851995bc54f22c79c590e499daa457fa98",
+    "mncs_store": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "execution": {
+    "client": "fresh bwrap process through active MNCS Control terminal execution",
+    "operation": "mncs-env claims ses_7226fbcfe65820f7 --explain claim:mncs-compiler",
+    "exit_code": 0,
+    "canonical_mutation": false,
+    "result": {
+      "claim_id": "claim:mncs-compiler",
+      "session_id": "ses_d2537acde8b8a875",
+      "owner_known": true,
+      "owner_lifecycle": "active",
+      "last_activity_at": "2026-10-09T20:23:20Z",
+      "freshness": "stale",
+      "verdict": "not-recoverable",
+      "reason": "owner session is quiet but the exclusive scope needs a dead owner or TTL expiry",
+      "lease": {
+        "acquired_at": "2026-10-09T18:13:43Z",
+        "expires_at": "2027-08-03T10:31:10Z",
+        "duration_hours": 7144.291,
+        "maximum_hours": 168,
+        "policy": "exceeds-current-maximum"
+      }
+    }
+  },
+  "behavior": {
+    "legacy_expiry": "preserved exactly",
+    "automatic_transfer": false,
+    "automatic_shortening": false,
+    "same_owner_reacquisition": "available only after an authenticated owner continuation or legitimate transfer",
+    "new_lease_acquisition": "bounded to 1..168 hours",
+    "purpose": "Expose legacy overlong lease evidence without treating stale activity as proof of process termination or seizing an exclusive checkout."
+  },
+  "validation": {
+    "tests": {
+      "tests/test_claim_recovery.py": "26 passed",
+      "tests/test_environment.py_claim_or_transfer_selection": "23 passed, 104 deselected"
+    },
+    "ruff": "new diagnostic code passed; full-file Ruff still reports pre-existing broad exception handling and one existing test style diagnostic",
+    "compileall": "passed",
+    "diff_check": "passed"
+  }
+}
