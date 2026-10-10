@@ -2146,23 +2146,68 @@ class Session:
             not isinstance(request_id, str) or not request_id
             or len(request_id) > 160 or "\x00" in request_id
         ):
-            raise ValueError("checkpoint request identity must be bounded nonempty text")
+            raise ValueError(
+                "checkpoint request identity must be bounded nonempty text"
+            )
         sequence = len(self.snapshot.get("checkpoints", [])) + 1
         state_digest = digest_hex(
-            {"intent": self.snapshot.get("intent"), "artifacts": self.snapshot.get("artifacts"),
-             "decisions": self.snapshot.get("decisions"), "heads": self.snapshot.get("workspace_heads")}
+            {
+                "intent": self.snapshot.get("intent"),
+                "artifacts": self.snapshot.get("artifacts"),
+                "decisions": self.snapshot.get("decisions"),
+                "heads": self.snapshot.get("workspace_heads"),
+            }
         )
+        operation_digest = digest_hex({
+            "session_id": self.session_id,
+            "progress": progress,
+            "remaining": list(remaining or []),
+        })
         request_digest = digest_hex({
             "session_id": self.session_id,
             "state_digest": state_digest,
             "progress": progress,
             "remaining": list(remaining or []),
         })
-        identity = "chk_" + digest_hex({
-            "kind": "checkpoint-content", "session": self.session_id,
-            "request_digest": request_digest,
-        })
-        record = self.store.load_checkpoint(self.session_id, identity)
+        # Transport request identities must survive service restarts. A retry
+        # reads the original immutable checkpoint even if the session acquired
+        # new workspace facts after publication. Calls without a request id
+        # retain content-based checkpoint identity.
+        identity = "chk_" + digest_hex(
+            {"kind": "checkpoint-request", "session": self.session_id,
+             "request_id": request_id}
+            if request_id is not None else
+            {"kind": "checkpoint-content", "session": self.session_id,
+             "request_digest": request_digest}
+        )
+        matching_requests = (
+            [item for item in self.store.list_checkpoints(self.session_id)
+             if item.get("request_id") == request_id]
+            if request_id is not None else []
+        )
+        if len(matching_requests) > 1:
+            raise LifecycleError(
+                "checkpoint request identity has multiple durable publications"
+            )
+        existing_request = matching_requests[0] if matching_requests else None
+        if existing_request is not None:
+            existing_operation_digest = existing_request.get("operation_digest")
+            if existing_operation_digest is None:
+                existing_operation_digest = digest_hex({
+                    "session_id": self.session_id,
+                    "progress": existing_request.get("progress", ""),
+                    "remaining": list(existing_request.get("remaining", [])),
+                })
+            if existing_request.get("session_id") != self.session_id or (
+                existing_operation_digest != operation_digest
+            ):
+                raise LifecycleError(
+                    "checkpoint request identity is already bound to "
+                    "conflicting operation"
+                )
+            record = existing_request
+        else:
+            record = self.store.load_checkpoint(self.session_id, identity)
         if record is None:
             record = {
                 "schema_version": CHECKPOINT_SCHEMA,
@@ -2176,16 +2221,25 @@ class Session:
                 "event_cursor": len(self._log()),
                 "artifacts": list(self.snapshot.get("artifacts", [])),
                 "unresolved": list(self.snapshot.get("pressures", [])),
-                "revalidate_on_resume": ["bindings", "workspace-heads", "claims", "authority"],
+                "revalidate_on_resume": [
+                    "bindings", "workspace-heads", "claims", "authority"
+                ],
                 "created_at": utcnow(),
                 "created_by": self.snapshot.get("consumer_id"),
                 "request_id": request_id,
+                "operation_digest": (
+                    operation_digest if request_id is not None else None
+                ),
                 "request_digest": request_digest,
             }
             self.store.save_checkpoint(self.session_id, record)
         elif (record.get("session_id") != self.session_id
-              or record.get("request_digest") != request_digest):
-            raise LifecycleError("checkpoint request identity is bound to conflicting state")
+              or record.get("request_id") != request_id
+              or (request_id is None
+                  and record.get("request_digest") != request_digest)):
+            raise LifecycleError(
+                "checkpoint request identity is bound to conflicting state"
+            )
         self.snapshot.setdefault("checkpoints", []).append(record["identity"])
         self.snapshot["checkpoints"] = list(dict.fromkeys(self.snapshot["checkpoints"]))
         if self.snapshot.get("lifecycle") == "active":

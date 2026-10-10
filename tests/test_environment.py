@@ -2123,6 +2123,48 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(resumed.snapshot["lifecycle"], "active")
             self.assertEqual(resumed.snapshot["checkpoints"][0], record["identity"])
 
+    def test_checkpoint_retry_after_restart_reads_original_operation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            first = session.checkpoint(
+                progress="pause after compiler changes",
+                remaining=["resume validation"],
+                request_id="req_checkpoint_restart_replay",
+            )
+            session.close()
+
+            restarted = sessions.Session.open(
+                state_dir=state, session_id=session.session_id, **FAST
+            )
+            restarted.snapshot["artifacts"].append({"identity": "later-work"})
+            restarted._save()
+            replay = restarted.checkpoint(
+                progress="pause after compiler changes",
+                remaining=["resume validation"],
+                request_id="req_checkpoint_restart_replay",
+            )
+            self.assertEqual(replay["identity"], first["identity"])
+            matching = [record for record in restarted.store.list_checkpoints(
+                restarted.session_id
+            ) if record.get("request_id") == "req_checkpoint_restart_replay"]
+            self.assertEqual(
+                [record["identity"] for record in matching], [first["identity"]]
+            )
+            checkpoint_events = [event for event in restarted._log()
+                                 if event.get("type") == "session.checkpointed"
+                                 and event.get("payload", {}).get("checkpoint_id")
+                                 == first["identity"]]
+            self.assertEqual(len(checkpoint_events), 1)
+            with self.assertRaisesRegex(
+                sessions.LifecycleError, "request identity is already bound"
+            ):
+                restarted.checkpoint(
+                    progress="different operation",
+                    remaining=["resume validation"],
+                    request_id="req_checkpoint_restart_replay",
+                )
+
     def test_authenticated_cross_principal_handoff_is_fenced_and_retryable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)
