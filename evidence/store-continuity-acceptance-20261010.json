@@ -1,0 +1,182 @@
+{
+  "schema_version": "mncs.environment.store-continuity-acceptance/1",
+  "recorded_at": "2026-10-10T20:48:23Z",
+  "campaign": {
+    "identity": "cmp_mncs_continuity_20261010",
+    "environment_session": "ses_7226fbcfe65820f7",
+    "authenticated_control_principal": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "continuation": {
+      "fresh_consumer_reused_session": "ses_59ee769d14010018",
+      "fresh_consumer_label": "auto-final-process-2",
+      "campaign_identity_reused": "cmp_a32ae815b795b090",
+      "basis": "exactly one campaign matched the authenticated principal, campaign definition, and workspace; multiple matches fail with an explicit ambiguity diagnostic"
+    }
+  },
+  "source_identities": {
+    "mncs_environment": "dc490bef83fd9f276931a826c5e7b0ada78e1f5d",
+    "mncs_control_transport_tested": "a350cd3",
+    "mncs_control_deployed": "99d7dcfe878e12e9df91cc59b57cb8879c3c14b2",
+    "mncs_store": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "transport": {
+    "owner": "MNCS Control process hosting the scoped Environment RPC endpoint",
+    "client": "MNCS Environment RPC client",
+    "endpoint_authorization": [
+      "per-execution private bearer grant",
+      "Unix peer credentials",
+      "authenticated Control principal and session ownership checks",
+      "workspace and cwd scope",
+      "operation allowlist",
+      "Store paths and file descriptors are never exposed to the client"
+    ],
+    "retry": {
+      "request_identity": "stable caller-supplied request ID",
+      "deduplication": "serialized replay cache plus durable Environment semantic request identity",
+      "ambiguous_outcome": "readback/reconciliation and same-ID retry return the already-published immutable checkpoint"
+    }
+  },
+  "protected_client_acceptance": {
+    "execution": "production Control server and Sandbox classes, fresh agent CLI calls through bwrap, canonical Store outside the agent namespace",
+    "store_path_in_agent_namespace": {
+      "visible": false,
+      "writable": false,
+      "check": "test ! -e and test ! -w for /home/epi13/.local/share/mncs-environment/store"
+    },
+    "results": {
+      "resume_existing_session": {
+        "passed": true,
+        "session": "ses_7226fbcfe65820f7",
+        "consumer": "codex-process-4",
+        "recovered": [
+          "claim:mncs-control-mcp",
+          "claim:mncs-environment",
+          "repository references"
+        ]
+      },
+      "checkpoint_and_fresh_process_readback": {
+        "passed": true,
+        "fresh_process_readback": true
+      },
+      "claim_acquire_and_release": {
+        "passed": true,
+        "scope": "claim:mncs-environment:paths:be26c9ae2880",
+        "acquired_version": 7,
+        "released": true
+      },
+      "unauthorized_publication": {
+        "passed": true,
+        "target_session": "ses_d2537acde8b8a875",
+        "result": "authority-denied",
+        "store_generation_changed": false
+      },
+      "stale_cas": {
+        "passed": true,
+        "result": "ClaimBatchConflict",
+        "store_generation_changed": false
+      },
+      "caller_interruption_and_retry": {
+        "passed": true,
+        "request_id": "req_acceptance_retry_e0d8f2253906",
+        "caller": "exited after response headers before receiving the response body",
+        "endpoint": "closed and restarted",
+        "fresh_client_retry": "same request ID returned the same checkpoint",
+        "checkpoint": "chk_c925831dbfbd0fe7",
+        "matching_checkpoint_count": 1
+      }
+    },
+    "canonical_store_verification": {
+      "passed": true,
+      "generation": 43346,
+      "objects": 43346,
+      "relations": 0,
+      "provenance_records": 0,
+      "method": "mncs_store EmbeddedStore.verify() on the canonical Store"
+    }
+  },
+  "production_service_boundary": {
+    "active": true,
+    "runtime_revision": "99d7dcfe878e12e9df91cc59b57cb8879c3c14b2",
+    "restart_required": false,
+    "environment_rpc": "ready",
+    "reported_store_mutation": {
+      "state": "direct-filesystem-read-only",
+      "code": "direct-filesystem-read-only"
+    },
+    "sandbox": {
+      "backend": "bwrap",
+      "required": true,
+      "available": true
+    },
+    "systemd_protection": {
+      "ProtectSystem": "strict",
+      "ProtectHome": "read-only",
+      "canonical_store_in_ReadWritePaths": false
+    },
+    "interpretation": "The protected-client end-to-end test passed against a host-side instance of the production Control server. The deployed systemd Control service correctly reports that it cannot mutate canonical Store under its current OS boundary. The test does not establish that this deployed service can publish to canonical Store."
+  },
+  "preexisting_legacy_projection": {
+    "path": "/home/epi13/.local/share/mncs-environment/claims.jsonl",
+    "state": "pre-existing and preserved",
+    "sha256": "1d2c8df7f237f5d20c41203dda51545ab6ffa513b5ec84966256977848dc6de9",
+    "size_bytes": 1462,
+    "mtime": "2026-10-01",
+    "interpretation": "This legacy file projection was not read as canonical Store and was not modified or removed."
+  },
+  "validation": {
+    "mncs_environment": {
+      "full_pytest": {
+        "passed": 565,
+        "skipped": 46,
+        "duration_seconds": 410.31
+      },
+      "campaign_autodiscovery_pytest": {
+        "passed": 2
+      },
+      "targeted_transport_and_claim_pytest": {
+        "passed": 17
+      },
+      "compileall": "passed",
+      "ruff": "new RPC client and changed continuation lines passed; broader repository lint reports existing diagnostics"
+    },
+    "mncs_control_mcp": {
+      "full_pytest": "passed before the status-reporting-only change",
+      "targeted_environment_rpc_pytest_after_status_change": {
+        "passed": 8
+      },
+      "ruff": "passed for changed files",
+      "compileall": "passed",
+      "diff_check": "passed"
+    }
+  },
+  "candidate_and_compiler_state": {
+    "candidate_disposition_report": "evidence/candidate-reconciliation-20261010.json",
+    "worktree_disposition_report": "evidence/compiler-worktree-dispositions-20261010.json",
+    "compiler": {
+      "registered_worktrees": 66,
+      "retireable_in_dry_run": 0,
+      "compiler_claim": "claim:mncs-compiler",
+      "owner_session": "ses_d2537acde8b8a875",
+      "state": "protected; candidate 2b6f381 retained and not reviewed, merged, pushed, or retired"
+    },
+    "language_candidate": {
+      "commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "state": "protected by claim:mncs-language; dirty evidence retained"
+    },
+    "forge_candidate": {
+      "commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "state": "protected by claim:mncs-forge"
+    },
+    "compiler_progress": {
+      "latest_evidence": "mncs-compiler/evidence/SELF-HOST-MATRIX.json",
+      "stage0": "existing evidence remains valid",
+      "complete_flow_and_stage1": "unproven",
+      "compiler_source_changed_in_this_checkpoint": false,
+      "resource_feedback_vertical_slice": "not yet demonstrated"
+    }
+  },
+  "unresolved_authority": {
+    "specific_need": "An existing Store-owning capability or an explicitly authorized narrowly scoped service identity that can write the configured canonical Store root.",
+    "current_owner_status": "No Store writer service or endpoint was found in the inspected service inventory; Control's deployed unit is intentionally read-only for the canonical Store path.",
+    "constraint": "Do not change the current systemd security policy, bypass confinement, change permissions, or use a temporary Store as canonical."
+  }
+}
