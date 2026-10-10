@@ -1,0 +1,2017 @@
+{
+  "decision": "No cleanup or branch integration was performed. All compiler work remains protected by the recorded exclusive claim; dirty and unmerged work is retained.",
+  "recorded_at": "2026-10-10T19:42:34+00:00",
+  "schema_version": "mncs.compiler.worktree-disposition-report/1",
+  "source": {
+    "canonical_retirement_ref": "origin/main",
+    "common_directory": "/home/epi13/Documents/Projects/mncs-compiler/.git",
+    "compiler_claim": {
+      "claim_id": "claim:mncs-compiler",
+      "owner_session_id": "ses_d2537acde8b8a875",
+      "scope": {
+        "branch": null,
+        "checkout": null,
+        "exclusive": true,
+        "kind": "repository",
+        "paths": null,
+        "repository": "mncs-compiler"
+      },
+      "version": 63
+    },
+    "main_revision": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "repository": "/home/epi13/Documents/Projects/mncs-compiler",
+    "store_generation": 43123
+  },
+  "summary": {
+    "accessible_worktrees": 66,
+    "detached_worktrees": 12,
+    "dirty_worktrees": 8,
+    "merged_clean_or_dirty": 65,
+    "registered_worktrees": 66,
+    "retireable_in_dry_run": 0,
+    "unavailable_worktrees": 0,
+    "unmerged_or_diverged": 1
+  },
+  "worktrees": [
+    {
+      "accessible": true,
+      "branch": "main",
+      "detached": false,
+      "dirty_entry_count": 5,
+      "disposition": "main_checkout_dirty",
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 0,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/mncs-compiler",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "main checkout is never retired",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:da2954808cd0af511a0927d22763214dea72c46ac534ce57b3e1f64c7d99ca40"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/compiler-evidence-identity-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "ca9516f32e57cbf1f226460fe8013a3471cebd11",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 117,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-evidence-identity-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/compiler-identity-correction-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "0f3a6aae54bc6480b2fe7937a24251092f4af489",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 118,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-identity-correction-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/probe-telemetry-20261008",
+      "detached": false,
+      "dirty_entry_count": 1,
+      "disposition": "dirty_or_unproven_work_retained",
+      "head": "f92deb2cb5b6113234ca0074a1a7068790729550",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 119,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-probe-telemetry-20261008",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "worktree has uncommitted work",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:90e9b6ad76928bc3a8059ccdb4e6993f3f6106f7d2a82913ed8d581b1c597bea"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/decl-bounded-scan-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "324c0b997edd68472bc4f44a6c08cb02056bc78c",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 86,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/decl-bounded-scan-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/decl-path-early-exit-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "83dfb4a2f57949dc433e0cbf9a4aa94ea2f991c2",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 70,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/decl-path-early-exit-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/evidence-current-delivery-ledger-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "a39a70e35fc934d6410057fcd53843ae38d3e723",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 109,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/evidence-current-delivery-ledger-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": null,
+      "detached": true,
+      "dirty_entry_count": 6,
+      "disposition": "dirty_or_unproven_work_retained",
+      "head": "76ccb18af4e1da9a849f421960ecb9634ca2409d",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 102,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-compiler-run-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "worktree has uncommitted work",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:4320fd7a5693d63a24ff487ca68d86df10709fca451bfbd33e4a9bd92cee9acf"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/flow-hir-prelude-evidence-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "4a1479cc53cd9bc3de8aee3f8debcab1f580c124",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 101,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-evidence-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/flow-measurement-rss-cap-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "76ccb18af4e1da9a849f421960ecb9634ca2409d",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 102,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-measurement-rss-cap-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/flow-profile-resource-evidence-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "369297178d4bf2f4436e722e6db4d34f1935bba6",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 75,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-profile-resource-evidence-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": null,
+      "detached": true,
+      "dirty_entry_count": 2,
+      "disposition": "dirty_or_unproven_work_retained",
+      "head": "581c8154008b56b968a67e85882a6d5eab0a18b3",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 116,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/import-signature-baseline-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "worktree has uncommitted work",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:af1b5eface1a8dab3b18b8f632d641730c987e4b205765fbeb17ee6f25cffcc7"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/import-signature-scan-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "45f84477a2f455cedae645045882f7e5c23bbe9a",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 114,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/import-signature-scan-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lazy-keyword-classification-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "97db51927d017123847735baf13409e94d27dc7f",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 111,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lazy-keyword-classification-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-batched-window-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "5d884cd0d9e17452601324f66abb78b341497310",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 91,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-batched-window-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-head-byte-pair-window-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "2ea01d3af28ca9fc2795a8c7669a48773c110c5c",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 76,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-pair-window-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-head-byte-window-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "c756a15247b1eb184c7685b558f61973f376c144",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 77,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-window-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-initial-window-reuse-20261010",
+      "detached": false,
+      "dirty_entry_count": 1,
+      "disposition": "dirty_or_unproven_work_retained",
+      "head": "7b3829ee1586c178b1bdf606066014a8696bd491",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 68,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-initial-window-reuse-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "worktree has uncommitted work",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:0a839cf4e4807eea5350fdd95ea127cca67d6460a014036eafdd25df02727057"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-keyword-dispatch-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "581c8154008b56b968a67e85882a6d5eab0a18b3",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 116,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-dispatch-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-keyword-windows-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "f5aa9547592694afd11bc28cd8c2da9a17b44ef7",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 81,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-windows-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-proof-20261009",
+      "detached": false,
+      "dirty_entry_count": 1,
+      "disposition": "dirty_or_unproven_work_retained",
+      "head": "b188398f74398de9a8d6a8ba37b32c525bf637b8",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 93,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-proof-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "worktree has uncommitted work",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:90e9b6ad76928bc3a8059ccdb4e6993f3f6106f7d2a82913ed8d581b1c597bea"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-scan-window-arg-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "c88d0675d344c4af212841e667c9af2284b2cf29",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 79,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-scan-window-arg-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-keyword-byte-reuse-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "51bb2dd9c0ef9304f2158634c86805480a8e1588",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 45,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-token-frame-carry-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-trivia-prefix-budget-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "ea87c5c5e97d89d219c22f5d25ed728b0547c649",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 63,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-trivia-prefix-budget-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-window-slide-evidence-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "176c145b4de29caf6a0279b0ebdb194b6ae6e938",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 66,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-window-slide-evidence-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/nested-match-early-exit-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "87127cd6c194a7de9e64238aac10bb3c4de7e061",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 106,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-nested-match-early-exit-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": null,
+      "detached": true,
+      "dirty_entry_count": 0,
+      "disposition": "detached_retained_for_evidence",
+      "head": "422c84460b0af958fab1203ce1c89ba9ed8db89f",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 107,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-runtime-candidate-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": null,
+      "detached": true,
+      "dirty_entry_count": 0,
+      "disposition": "detached_retained_for_evidence",
+      "head": "a110e17d83bcc62bf310768b37fa7186e526ae15",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 96,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-baseline-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/probe-admission-reuse-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "4d957194d967952fd26411807f3862fa1cacb83c",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 94,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-reuse-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/probe-outcome-classification-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "9f55339c502dc86d468bf734764baca05dfc7276",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 110,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-outcome-classification-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/probe-phase-resource-samples-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "901fcadcd525afdd4443970a602885eb5ae32c83",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 99,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-phase-resource-samples-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/project-provider-body-retention-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "85f4886f73eab6699084339ea486d91b5cd95d9c",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 60,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/project-provider-body-retention-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/project-schema-pages-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "d281ad540f6ab87c7c24f2ac52a479d02ce18761",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 112,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/project-schema-pages-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/reference-argument-validation-cache-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "6af2e42a548defe5af25b33711b5ac838583acef",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 47,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/reference-argument-validation-cache-20261010/mncs-compiler",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/runtime-frame-profile-20261008",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "386e618218afbf2d06e2d0daa03e0836f9e1c997",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 120,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/runtime-frame-profile-20261008/mncs-compiler",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/source-initial-byte-window-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "4a44f706918d48b37bd273bde27a8d3029f6a9da",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 53,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": null,
+      "detached": true,
+      "dirty_entry_count": 0,
+      "disposition": "detached_retained_for_evidence",
+      "head": "e05d3ede6a03fb2a02615771954fd2de8e641cb2",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 58,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-baseline-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/source-keyword-local-byte-window-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "10bf2aae7d0e32767e8f5ad98b0200ee04bbbe89",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 49,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-keyword-local-byte-window-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/source-local-byte-window-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "e05d3ede6a03fb2a02615771954fd2de8e641cb2",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 58,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": null,
+      "detached": true,
+      "dirty_entry_count": 0,
+      "disposition": "detached_retained_for_evidence",
+      "head": "85f4886f73eab6699084339ea486d91b5cd95d9c",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 60,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-baseline-control-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/source-page-validation-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "22f771df5b4865623ded5100e09e7a8ad214ed3d",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 82,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-page-validation-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/streaming-probe-cache-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "a110e17d83bcc62bf310768b37fa7186e526ae15",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 96,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/streaming-probe-cache-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/keyword-window4-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "6d3bd95b3b2a508dc2982d9538f04679f8fbb31e",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 85,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/keyword-window4-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/probe-stage0-oracle-skip-20261009",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "5653908ee345ef7b2ed7bcae2a4da71f4ca6a4da",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 75,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/probe-stage0-oracle-skip-20261009",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/common-probe-cache-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "e5bab6bd391379185a1b30a117ed498ce150aa9a",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 24,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-common-probe-cache-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/decl-name-token-reuse-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "dce6adcf9f0778ec9dd398ffdca5044ce879321f",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 27,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-decl-name-reuse-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/decl-scalar-window-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "8d7be4e88afa18c4f6b773d573ab70b0ee240527",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 7,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-decl-scalar-window-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/decl-significant-direct-repeat-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "a852da763f78900a68f3e57c3fcf4568424d8436",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 29,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-delivery-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": null,
+      "detached": true,
+      "dirty_entry_count": 0,
+      "disposition": "detached_retained_for_evidence",
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 22,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-flow-stage0-baseline-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/flow-stage0-pin-profile-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "cae25860b1cd88b811f94b3ffc76e3aefa37adb4",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 18,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-flow-stage0-pin-profile-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": null,
+      "detached": true,
+      "dirty_entry_count": 0,
+      "disposition": "detached_retained_for_evidence",
+      "head": "45eb4f4abee05196db3a60c40eade7cb75ff3c51",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 2,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-flow-wordscan-baseline-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-keyword-global-local-fast-path-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "8f2d8c181dc44384d5c92834481931493b65146d",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 10,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-keyword-global-page-local-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "unmerged_or_diverged_retained",
+      "head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "locked": false,
+      "main_relation": {
+        "ahead": 1,
+        "behind": 14,
+        "merged_into_main": false
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-full-frontier-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "602832610080c838df3d94c9fdbac0fc55753acb",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 5,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-lexer-full-frontier-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-self-ingest-repair-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "78cdd9ece7c192478119d7fc6ed00a60299b95e3",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 6,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-lexer-self-ingest-repair-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-window-inline-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "15d6a5971f19177dbdf33508ad6a847154ef0e12",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 17,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-lexer-window-inline-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": null,
+      "detached": true,
+      "dirty_entry_count": 0,
+      "disposition": "detached_retained_for_evidence",
+      "head": "a1818976da578f60e53aebdd739273e1b4b86b0d",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 48,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-matched-baseline-a181-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": null,
+      "detached": true,
+      "dirty_entry_count": 0,
+      "disposition": "detached_retained_for_evidence",
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 22,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-runtime-boundary-baseline-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": null,
+      "detached": true,
+      "dirty_entry_count": 1,
+      "disposition": "dirty_or_unproven_work_retained",
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 22,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-runtime-boundary-validation-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "worktree has uncommitted work",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:b0684e0f00f36fb0a6575c05068c5376220af595877463719053eaabe33c9afc"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-word-scan-select-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 0,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-session-admission-telemetry-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": null,
+      "detached": true,
+      "dirty_entry_count": 1,
+      "disposition": "dirty_or_unproven_work_retained",
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 22,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-stage0-isolation-baseline-3c-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "worktree has uncommitted work",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:b0684e0f00f36fb0a6575c05068c5376220af595877463719053eaabe33c9afc"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/stage0-language-pin-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "310333c1636a9ec1db918dc14f2df93738c933e0",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 21,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-stage0-language-pin-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-word-scan-inline-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "4ed34b5f2060683045953178cefd31a4da0086d2",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 8,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-word-scan-inline-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-word-scan8-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 0,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-compiler-word-scan8-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-significant-trivia-inline-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "a480a5670c814009801c6d0245ca818d93fa21eb",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 35,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-lexer-significant-trivia-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "accessible": true,
+      "branch": "campaign/lexer-token-result-boundary-20261010",
+      "detached": false,
+      "dirty_entry_count": 0,
+      "disposition": "merged_retained_for_evidence",
+      "head": "dfc1070e9646cacd4228539e269f934d9f9dc784",
+      "locked": false,
+      "main_relation": {
+        "ahead": 0,
+        "behind": 39,
+        "merged_into_main": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "prunable": false,
+      "registered": true,
+      "registered_path": "/tmp/mncs-lexer-token-result-20261010",
+      "retirement_dry_run": {
+        "dry_run": true,
+        "reason": "live claims by other sessions: luna-compiler-self-consumption-admission-20261009",
+        "retireable": false
+      },
+      "status_readable": true,
+      "status_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

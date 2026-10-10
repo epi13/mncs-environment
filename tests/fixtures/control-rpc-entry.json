@@ -1,0 +1,13 @@
+{
+  "name": "control-rpc-entry-proof",
+  "intent": {
+    "goal": "exercise canonical Environment persistence through the Control socket",
+    "repositories": ["mncs-environment"],
+    "forbidden_actions": ["delete"]
+  },
+  "workspace_scope": {"repositories": ["mncs-environment"]},
+  "verification": {"enabled": false},
+  "actions": {"enabled": false},
+  "diagnostics": {"enabled": false},
+  "family": {"enabled": false}
+}

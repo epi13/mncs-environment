@@ -27,6 +27,16 @@ occur before session creation or provider startup. Store failures identify
 the provider and binding/recovery path; Environment never silently switches
 persistence backends.
 
+Inside an MNCS Control protected execution, the CLI uses Control's
+authenticated Environment RPC transport automatically. Control keeps the
+canonical Store path and file descriptors on the host side, admits only the
+Environment CLI operations, and supplies a short-lived per-execution grant
+bound to the scoped workspace. Direct Store filesystem writes remain
+unavailable in the protected namespace. `env_status` and `system_status`
+report whether the Control-owned transport is ready; direct CLI use outside
+that execution reports a structured persistence error instead of switching
+to file persistence.
+
 ## Bounded workspace discovery
 
 A repository root is a valid workspace and discovers itself, including linked
@@ -263,3 +273,8 @@ artifacts before retrying. Serialize mutating commands for one session;
 read-only inspection can run independently. Entry's reuse lock does not
 serialize every subsequent participant. Safe concurrent snapshot convergence
 and durable invocation receipts remain Environment responsibilities.
+
+New claim leases accept 1 to 168 hours (default 24). A continuing owner
+reacquires its exact scope to renew it. Release and explicit transfer publish
+their related claim versions in one generation; retry identities let a
+caller read back an outcome after losing the response.

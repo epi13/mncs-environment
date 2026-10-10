@@ -30,7 +30,6 @@ from . import rights as rights_module
 from . import readiness as readiness_module
 from . import workspace as workspace_module
 from .identity import (
-    checkpoint_id,
     digest_hex,
     environment_id,
     handoff_id,
@@ -678,6 +677,8 @@ class Session:
         environment: dict[str, Any],
         consumer_id: str,
         consumer_kind: str = "agent",
+        campaign_id: str | None = None,
+        authenticated_principal_id: str | None = None,
         backend: str = "store",
         verify_on_open: bool = True,
         store: SessionStore | None = None,
@@ -740,6 +741,38 @@ class Session:
             "environment_digest": digest_hex(environment),
             "consumer_id": consumer_id,
             "consumer_kind": consumer_kind,
+            "authenticated_principal_id": authenticated_principal_id,
+            "campaign": {
+                "identity": campaign_id,
+                "work_intent_id": (environment.get("intent") or {}).get("identity"),
+                "work_intent": {
+                    "goal": (environment.get("intent") or {}).get("goal", ""),
+                    "repositories": list((environment.get("intent") or {}).get("repositories", [])),
+                    "protected_repositories": list(
+                        (environment.get("intent") or {}).get("protected_repositories", [])
+                    ),
+                },
+                "principal_id": authenticated_principal_id,
+                "current_consumer_id": consumer_id,
+                "authorized_consumers": [consumer_id],
+                "session_ids": [session_id],
+                "claim_ids": [],
+                "repository_refs": [
+                    {
+                        "repository": str(name),
+                        "observed_path": selected.get("path"),
+                        "branch": selected.get("branch"),
+                        "head": selected.get("head"),
+                        "clean": selected.get("clean"),
+                    }
+                    for name, selected in sorted(
+                        environment.get("selected_checkouts", {}).items()
+                    )
+                ],
+                "evidence": [],
+                "delivery": {"status": "pending"},
+                "unresolved_pressures": [],
+            },
             "lifecycle": "defined",
             "lifecycle_history": [{"state": "defined", "reason": "session created", "at": utcnow()}],
             "intent": environment.get("intent"),
@@ -781,6 +814,92 @@ class Session:
         instance._emit("session.created", "environment", {"consumer_id": consumer_id})
         instance._save()
         return instance
+
+    def continue_as(self, consumer_id: str, consumer_kind: str = "agent") -> None:
+        """Record an authenticated campaign continuation under a new label.
+
+        The caller must already have matched this session through its
+        authenticated principal and campaign identity. A consumer label by
+        itself never authorizes this transition.
+        """
+        previous = str(self.snapshot.get("consumer_id", ""))
+        if previous == consumer_id and self.snapshot.get("consumer_kind") == consumer_kind:
+            return
+        campaign = dict(self.snapshot.get("campaign") or {})
+        consumers = list(campaign.get("authorized_consumers", []))
+        for value in (previous, consumer_id):
+            if value and value not in consumers:
+                consumers.append(value)
+        campaign["authorized_consumers"] = consumers[-32:]
+        campaign["current_consumer_id"] = consumer_id
+        campaign["claim_ids"] = sorted(
+            str(record.get("claim_id"))
+            for record in claims_module.active_claims(self.store.read_claims()).values()
+            if record.get("session_id") == self.session_id
+        )
+        self.snapshot["campaign"] = campaign
+        self.snapshot["consumer_id"] = consumer_id
+        self.snapshot["consumer_kind"] = consumer_kind
+        self._emit("campaign.continued", "environment", {
+            "campaign_id": campaign.get("identity"),
+            "previous_consumer": previous,
+            "consumer_id": consumer_id,
+            "principal_id": self.snapshot.get("authenticated_principal_id"),
+        })
+        self._save()
+
+    def reconcile_campaign_continuity(self) -> dict[str, Any]:
+        """Rebuild the small campaign projection from immutable session facts."""
+        campaign = dict(self.snapshot.get("campaign") or {})
+        checkpoints = self.store.list_checkpoints(self.session_id)
+        persisted_ids = [str(record["identity"]) for record in checkpoints
+                         if isinstance(record.get("identity"), str)]
+        live_claims = claims_module.active_claims(self.store.read_claims())
+        own_claims = {
+            claim_id: record for claim_id, record in live_claims.items()
+            if record.get("session_id") == self.session_id
+        }
+        claims = sorted(str(record.get("claim_id")) for record in own_claims.values())
+        prior_checkpoints = list(self.snapshot.get("checkpoints", []))
+        prior_claims = list(campaign.get("claim_ids", []))
+        prior_repository_refs = campaign.get("repository_refs", [])
+        checkpoint_ids = list(dict.fromkeys([*prior_checkpoints, *persisted_ids]))
+        missing = sorted(set(prior_checkpoints) - set(persisted_ids))
+        self.snapshot["checkpoints"] = checkpoint_ids
+        campaign["claim_ids"] = claims
+        campaign["work_intent"] = campaign.get("work_intent") or {
+            "goal": (self.snapshot.get("intent") or {}).get("goal", ""),
+            "repositories": list((self.snapshot.get("intent") or {}).get("repositories", [])),
+            "protected_repositories": list(
+                (self.snapshot.get("intent") or {}).get("protected_repositories", [])
+            ),
+        }
+        repository_refs = self._campaign_repository_refs(own_claims)
+        refs_changed = repository_refs != prior_repository_refs
+        campaign["repository_refs"] = repository_refs
+        if missing:
+            pressures = list(campaign.get("unresolved_pressures", []))
+            known = {item.get("identity") for item in pressures if isinstance(item, dict)}
+            for identity in missing:
+                if identity not in known:
+                    pressures.append({"type": "checkpoint-object-unavailable",
+                                      "identity": identity})
+            campaign["unresolved_pressures"] = pressures[-32:]
+        self.snapshot["campaign"] = campaign
+        recovered = sorted(set(checkpoint_ids) - set(prior_checkpoints))
+        if recovered or prior_claims != claims or missing or refs_changed:
+            self._emit("campaign.reconciled", "environment", {
+                "campaign_id": campaign.get("identity"),
+                "recovered_checkpoints": recovered,
+                "unavailable_checkpoints": missing,
+                "claim_ids": claims,
+                "repository_refs_changed": refs_changed,
+            })
+            self._save()
+        return {"recovered_checkpoints": recovered,
+                "unavailable_checkpoints": missing,
+                "claim_ids": claims,
+                "changed": bool(recovered or prior_claims != claims or missing or refs_changed)}
 
     @classmethod
     def open(
@@ -1507,12 +1626,113 @@ class Session:
         self.snapshot["claim_holders"] = grouped
         self.snapshot.setdefault("authority", {})["claim_holders"] = dict(grouped)
 
+    def _campaign_repository_refs(
+        self, live_claims: dict[str, dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Rebuild compact checkout refs from selected paths, claims, and Git."""
+        root_value = (self.snapshot.get("workspace") or {}).get("root")
+        if not isinstance(root_value, str) or not root_value:
+            return list((self.snapshot.get("campaign") or {}).get("repository_refs", []))
+        root = Path(root_value).resolve()
+        candidates: dict[tuple[str, str], Path] = {}
+
+        def add(repository: Any, value: Any) -> None:
+            if (not isinstance(repository, str) or not repository
+                    or not isinstance(value, str) or not value):
+                return
+            path = Path(value)
+            if not path.is_absolute():
+                path = root / path
+            try:
+                resolved = path.resolve()
+                relative = resolved.relative_to(root).as_posix()
+            except (OSError, ValueError):
+                return
+            if path.is_symlink() or not relative or relative == ".":
+                return
+            candidates[(repository, relative)] = resolved
+
+        for repository, selected in (self.snapshot.get("selected_checkouts") or {}).items():
+            if isinstance(selected, dict):
+                add(repository, selected.get("path"))
+        for item in (self.snapshot.get("workspace") or {}).get("repositories", []):
+            if isinstance(item, dict):
+                add(item.get("manifest_repository") or item.get("name"), item.get("path"))
+        for claim in live_claims.values():
+            if claim.get("session_id") != self.session_id:
+                continue
+            repository = str(claim.get("repository", ""))
+            scope = claim.get("scope", {})
+            checkout = scope.get("checkout") if isinstance(scope, dict) else None
+            if isinstance(checkout, str) and checkout:
+                add(repository, checkout)
+                continue
+            selected = (self.snapshot.get("selected_checkouts") or {}).get(repository, {})
+            selected_path = selected.get("path") if isinstance(selected, dict) else None
+            if selected_path:
+                add(repository, selected_path)
+            elif (Path(repository).name == repository and repository not in (".", "..")
+                  and "/" not in repository and "\\" not in repository):
+                add(repository, repository)
+
+        observed: list[dict[str, Any]] = []
+        for (repository, relative), checkout in sorted(candidates.items()):
+            if not checkout.is_dir():
+                continue
+            facts = workspace_module.inspect_repo(checkout, _refresh=True)
+            if facts is None or facts.head is None or facts.git_error:
+                continue
+            common = workspace_module._git(
+                checkout, "rev-parse", "--path-format=absolute", "--git-common-dir"
+            )
+            remote = workspace_module._git(checkout, "config", "--get", "remote.origin.url")
+            common_relative = None
+            common_material: dict[str, Any] = {"repository": repository}
+            if common is not None and common.returncode == 0:
+                common_path = Path(common.stdout.strip()).resolve()
+                try:
+                    common_relative = common_path.relative_to(root).as_posix()
+                except ValueError:
+                    pass
+                if common_relative is not None:
+                    common_material["common_directory"] = common_relative
+            if remote is not None and remote.returncode == 0 and remote.stdout.strip():
+                # Hash the URL before persistence so remote credentials cannot
+                # leak into the campaign capsule.
+                common_material["remote_identity"] = digest_hex(remote.stdout.strip())
+            common_identity = "git-common:" + digest_hex(common_material)
+            observed.append({
+                "repository": repository,
+                "observed_path": relative,
+                "checkout_identity": "checkout:" + digest_hex({
+                    "repository": repository,
+                    "path": relative,
+                    "git_common_directory_identity": common_identity,
+                }),
+                "git_common_directory_relative": common_relative,
+                "git_common_directory_identity": common_identity,
+                "branch": facts.branch,
+                "head": facts.head,
+                "clean": not facts.dirty,
+                "dirty_entry_count": len(facts.dirty_files),
+                "observation": "current",
+            })
+
+        known = {(item.get("repository"), item.get("observed_path")) for item in observed}
+        for item in (self.snapshot.get("campaign") or {}).get("repository_refs", []):
+            if (isinstance(item, dict)
+                    and (item.get("repository"), item.get("observed_path")) not in known):
+                observed.append({**item, "observation": "unavailable_current_namespace"})
+        return sorted(observed, key=lambda item: (
+            str(item.get("repository", "")), str(item.get("observed_path", ""))))[:64]
+
     def acquire_claim(
         self, repository: str, *, basis: str = claims_module.BASIS_EXPLICIT,
         reason: str = "", ttl_hours: int = 24,
         scope: dict[str, Any] | None = None,
         checkout_facts: dict[str, Any] | None = None,
         workspace_root: str | None = None,
+        request_id: str | None = None,
     ) -> dict[str, Any]:
         selected = self.snapshot.get("selected_checkouts", {}).get(repository)
         if selected is not None:
@@ -1547,8 +1767,17 @@ class Session:
             consumer_id=self.snapshot.get("consumer_id", "unknown"),
             basis=basis, reason=reason, ttl_hours=ttl_hours,
             scope=scope, checkout_facts=checkout_facts,
-            workspace_root=workspace_root,
+            workspace_root=workspace_root, request_id=request_id,
         )
+        campaign = dict(self.snapshot.get("campaign") or {})
+        claim_ids = list(campaign.get("claim_ids", []))
+        if record.get("claim_id") not in claim_ids:
+            claim_ids.append(record.get("claim_id"))
+        campaign["claim_ids"] = claim_ids[-64:]
+        campaign["repository_refs"] = self._campaign_repository_refs(
+            claims_module.active_claims(self.store.read_claims())
+        )
+        self.snapshot["campaign"] = campaign
         self._refresh_holders()
         self._emit("lease.acquired", self.snapshot.get("consumer_id", "unknown"),
                    {"repository": repository, "basis": basis,
@@ -1558,13 +1787,29 @@ class Session:
         return record
 
     def release_claim(self, repository: str, reason: str = "",
-                      claim_id: str | None = None) -> bool:
+                      claim_id: str | None = None,
+                      request_id: str | None = None) -> bool:
         released = claims_module.release(
             self.store, session_id=self.session_id, reason=reason,
-            claim_id=claim_id, repository=repository or None)
+            claim_id=claim_id, repository=repository or None,
+            request_id=request_id)
         if not released:
             return False
         self._refresh_holders()
+        campaign = dict(self.snapshot.get("campaign") or {})
+        still_held = {
+            str(record.get("claim_id"))
+            for record in claims_module.active_claims(self.store.read_claims()).values()
+            if record.get("session_id") == self.session_id
+        }
+        campaign["claim_ids"] = [
+            item for item in campaign.get("claim_ids", [])
+            if str(item) in still_held
+        ]
+        campaign["repository_refs"] = self._campaign_repository_refs(
+            claims_module.active_claims(self.store.read_claims())
+        )
+        self.snapshot["campaign"] = campaign
         self._emit("lease.released", self.snapshot.get("consumer_id", "unknown"),
                    {"repository": repository, "claim_id": claim_id,
                     "released": len(released)})
@@ -1572,11 +1817,22 @@ class Session:
         return True
 
     def transfer_claim(self, claim_id: str, to_session: str,
-                       to_consumer: str, reason: str = "") -> dict[str, Any]:
+                       to_consumer: str, reason: str = "",
+                       request_id: str | None = None) -> dict[str, Any]:
         record = claims_module.transfer(
             self.store, claim_id=claim_id, from_session=self.session_id,
-            to_session=to_session, to_consumer=to_consumer, reason=reason)
+            to_session=to_session, to_consumer=to_consumer, reason=reason,
+            request_id=request_id)
         self._refresh_holders()
+        campaign = dict(self.snapshot.get("campaign") or {})
+        campaign["claim_ids"] = [
+            item for item in campaign.get("claim_ids", [])
+            if str(item) != claim_id
+        ]
+        campaign["repository_refs"] = self._campaign_repository_refs(
+            claims_module.active_claims(self.store.read_claims())
+        )
+        self.snapshot["campaign"] = campaign
         self._emit("lease.transferred", self.snapshot.get("consumer_id", "unknown"),
                    {"claim_id": claim_id, "to_session": to_session})
         self._save()
@@ -1858,35 +2114,65 @@ class Session:
 
     # -- checkpoint / handoff / completion ------------------------------------
 
-    def checkpoint(self, *, progress: str = "", remaining: list[str] | None = None) -> dict[str, Any]:
+    def checkpoint(self, *, progress: str = "", remaining: list[str] | None = None,
+                   request_id: str | None = None) -> dict[str, Any]:
+        if request_id is not None and (
+            not isinstance(request_id, str) or not request_id
+            or len(request_id) > 160 or "\x00" in request_id
+        ):
+            raise ValueError("checkpoint request identity must be bounded nonempty text")
         sequence = len(self.snapshot.get("checkpoints", [])) + 1
         state_digest = digest_hex(
             {"intent": self.snapshot.get("intent"), "artifacts": self.snapshot.get("artifacts"),
              "decisions": self.snapshot.get("decisions"), "heads": self.snapshot.get("workspace_heads")}
         )
-        record = {
-            "schema_version": CHECKPOINT_SCHEMA,
-            "identity": checkpoint_id(self.session_id, sequence, state_digest),
+        request_digest = digest_hex({
             "session_id": self.session_id,
-            "sequence": sequence,
+            "state_digest": state_digest,
             "progress": progress,
             "remaining": list(remaining or []),
-            "intent_id": (self.snapshot.get("intent") or {}).get("identity"),
-            "environment_id": self.snapshot.get("environment_id"),
-            "event_cursor": len(self._log()),
-            "artifacts": list(self.snapshot.get("artifacts", [])),
-            "unresolved": list(self.snapshot.get("pressures", [])),
-            "revalidate_on_resume": ["bindings", "workspace-heads", "claims", "authority"],
-            "created_at": utcnow(),
-            "created_by": self.snapshot.get("consumer_id"),
-        }
-        self.store.save_checkpoint(self.session_id, record)
+        })
+        identity = "chk_" + digest_hex({
+            "kind": "checkpoint-content", "session": self.session_id,
+            "request_digest": request_digest,
+        })
+        record = self.store.load_checkpoint(self.session_id, identity)
+        if record is None:
+            record = {
+                "schema_version": CHECKPOINT_SCHEMA,
+                "identity": identity,
+                "session_id": self.session_id,
+                "sequence": sequence,
+                "progress": progress,
+                "remaining": list(remaining or []),
+                "intent_id": (self.snapshot.get("intent") or {}).get("identity"),
+                "environment_id": self.snapshot.get("environment_id"),
+                "event_cursor": len(self._log()),
+                "artifacts": list(self.snapshot.get("artifacts", [])),
+                "unresolved": list(self.snapshot.get("pressures", [])),
+                "revalidate_on_resume": ["bindings", "workspace-heads", "claims", "authority"],
+                "created_at": utcnow(),
+                "created_by": self.snapshot.get("consumer_id"),
+                "request_id": request_id,
+                "request_digest": request_digest,
+            }
+            self.store.save_checkpoint(self.session_id, record)
+        elif (record.get("session_id") != self.session_id
+              or record.get("request_digest") != request_digest):
+            raise LifecycleError("checkpoint request identity is bound to conflicting state")
         self.snapshot.setdefault("checkpoints", []).append(record["identity"])
+        self.snapshot["checkpoints"] = list(dict.fromkeys(self.snapshot["checkpoints"]))
         if self.snapshot.get("lifecycle") == "active":
             self.transition("checkpointed", f"checkpoint {sequence}")
+        events = self._log()
+        if not any(event.get("payload", {}).get("checkpoint_id") == record["identity"]
+                   for event in events):
+            self._emit("session.checkpointed", self.snapshot.get("consumer_id", "unknown"),
+                       {"checkpoint_id": record["identity"],
+                        "progress": record.get("progress", progress),
+                        "request_id": request_id})
+        if self.snapshot.get("lifecycle") == "checkpointed":
             self.transition("active", "resumed after checkpoint")
-        self._emit("session.checkpointed", self.snapshot.get("consumer_id", "unknown"),
-                   {"checkpoint_id": record["identity"], "progress": progress})
         self._save()
         return record
 
@@ -1897,8 +2183,11 @@ class Session:
         notes: list[str] | None = None,
         blockers: list[str] | None = None,
         next_actions: list[str] | None = None,
+        to_authenticated_principal_id: str | None = None,
+        request_id: str | None = None,
     ) -> dict[str, Any]:
-        checkpoint = self.checkpoint(progress="handoff", remaining=next_actions)
+        checkpoint = self.checkpoint(progress="handoff", remaining=next_actions,
+                                     request_id=request_id)
         record = {
             "schema_version": HANDOFF_SCHEMA,
             "identity": handoff_id(checkpoint["identity"], self.snapshot.get("consumer_id", ""), to_consumer),
@@ -1907,6 +2196,8 @@ class Session:
             "from_consumer": self.snapshot.get("consumer_id"),
             "to_consumer": to_consumer,
             "to_consumer_kind": "agent",
+            "from_authenticated_principal_id": self.snapshot.get("authenticated_principal_id"),
+            "to_authenticated_principal_id": to_authenticated_principal_id,
             "notes": list(notes or []),
             "blockers": list(blockers or []),
             "next_actions": list(next_actions or []),
@@ -1922,7 +2213,8 @@ class Session:
         return record
 
     def accept_handoff(self, handoff_id: str, *, consumer_id: str,
-                       consumer_kind: str = "agent") -> dict[str, Any]:
+                       consumer_kind: str = "agent",
+                       authenticated_principal_id: str | None = None) -> dict[str, Any]:
         """Accept a handoff as the intended recipient, revalidating everything.
 
         Rejects unknown handoffs, wrong recipients, and stale assumptions:
@@ -1939,9 +2231,21 @@ class Session:
                 f"handoff {handoff_id} is addressed to {record.get('to_consumer')}, "
                 f"not {consumer_id}"
             )
+        recipient_principal = record.get("to_authenticated_principal_id")
+        if recipient_principal is not None and recipient_principal != authenticated_principal_id:
+            raise LifecycleError("handoff recipient principal does not match authenticated continuation")
+        source_principal = record.get("from_authenticated_principal_id")
+        if (source_principal is not None
+                and self.snapshot.get("authenticated_principal_id") != source_principal):
+            raise LifecycleError("handoff source principal no longer matches the session owner")
         previous = self.snapshot.get("consumer_id")
         self.snapshot["consumer_id"] = consumer_id
         self.snapshot["consumer_kind"] = consumer_kind
+        if authenticated_principal_id is not None:
+            self.snapshot["authenticated_principal_id"] = authenticated_principal_id
+            campaign = dict(self.snapshot.get("campaign") or {})
+            campaign["principal_id"] = authenticated_principal_id
+            self.snapshot["campaign"] = campaign
         self.snapshot["authority"] = dict(self.snapshot.get("authority", {}))
         self.snapshot["authority"]["subject"] = consumer_id
         divergence = self.revalidate()
@@ -2043,6 +2347,42 @@ class Session:
 
         max_capabilities = 20
         session_id = self.session_id
+        campaign = self.snapshot.get("campaign") or {}
+        live_claim_ids = sorted(
+            str(record.get("claim_id"))
+            for record in claims_module.active_claims(self.store.read_claims()).values()
+            if record.get("session_id") == session_id
+        )
+        authorized_consumers = list(campaign.get("authorized_consumers", []))
+        previous_consumers = [
+            value for value in authorized_consumers
+            if value != campaign.get("current_consumer_id")
+        ]
+        continuation = {
+            "identity": campaign.get("identity"),
+            "session_ids": list(campaign.get("session_ids", []))[-8:],
+            "claim_ids": live_claim_ids[-16:],
+            "repositories": [
+                {key: item.get(key) for key in
+                 ("repository", "observed_path", "checkout_identity",
+                  "git_common_directory_identity", "branch", "head", "clean",
+                  "observation")}
+                for item in campaign.get("repository_refs", [])[:16]
+                if isinstance(item, dict)
+            ],
+            "checkpoint_ids": list(self.snapshot.get("checkpoints", []))[-4:],
+            "work_intent": campaign.get("work_intent", {
+                "goal": intent.get("goal", ""),
+            }),
+            "evidence": list(campaign.get("evidence", []))[-8:],
+            "delivery": campaign.get("delivery", {"status": "pending"}),
+            "unresolved_pressures": list(
+                campaign.get("unresolved_pressures", [])
+            )[:12],
+        }
+        if previous_consumers:
+            continuation["previous_consumers"] = previous_consumers[-7:]
+            continuation["previous_consumers_truncated"] = len(previous_consumers) > 7
         return {
             "schema_version": "mncs.environment.entry-context/1",
             "session_id": session_id,
@@ -2057,7 +2397,7 @@ class Session:
             "doctor": self.doctor_summary(),
             "projects": [{"repository": repo.get("manifest_repository") or repo.get("name"),
                           "path": repo.get("path"), "branch": repo.get("branch"),
-                          "dirty": repo.get("dirty"), "head": repo.get("head")}
+                          "dirty": repo.get("dirty")}
                          for repo in self.snapshot.get("workspace", {}).get("repositories", [])][:20],
             "project_count": self.snapshot.get("workspace", {}).get("repository_count", 0),
             "toolchain": self.snapshot.get("toolchain"),
@@ -2067,6 +2407,7 @@ class Session:
                 "identity": intent.get("identity"),
                 "goal": intent.get("goal", ""),
             },
+            "continuation": continuation,
             "writable_repositories": writable,
             "protected_repositories": protected,
             "authority": {

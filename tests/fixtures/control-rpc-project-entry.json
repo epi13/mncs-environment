@@ -1,0 +1,12 @@
+{
+  "name": "control-rpc-project-entry-proof",
+  "intent": {
+    "goal": "exercise canonical Environment persistence from a project-scoped protected process",
+    "repositories": ["mncs-environment"],
+    "forbidden_actions": ["delete"]
+  },
+  "verification": {"enabled": false},
+  "actions": {"enabled": false},
+  "diagnostics": {"enabled": false},
+  "family": {"enabled": false}
+}

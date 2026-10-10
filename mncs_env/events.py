@@ -24,6 +24,7 @@ TYPES = (
     "session.created",
     "session.resumed",
     "session.checkpointed",
+    "campaign.reconciled",
     "session.handed_off",
     "session.completed",
     "session.failed",

@@ -14,6 +14,7 @@ retries, and an identical re-put is an idempotent DUPLICATE.
 from __future__ import annotations
 
 import json
+import errno
 import os
 import sys
 import threading
@@ -71,6 +72,10 @@ def _selected_store_runtime(runtime: dict[str, str] | None, cache_dir: Path | No
 
 class StoreUnavailable(Exception):
     """Raised when the mncs-store consumer surface cannot be loaded."""
+
+    def __init__(self, message: str, *, code: str = "store-unavailable") -> None:
+        self.code = code
+        super().__init__(message)
 
 
 class StoreIntegrityFailure(Exception):
@@ -217,8 +222,16 @@ class StoreBackend:
         # must not eagerly re-verify every unrelated payload. Each
         # publication validates its generation and bindings, reads verify
         # selected objects, and a complete scrub stays explicit via verify().
-        self._store = EmbeddedStore(self.path, session=owner.session,
-                                    verify_on_open=False)
+        try:
+            self._store = EmbeddedStore(self.path, session=owner.session,
+                                        verify_on_open=False)
+        except OSError as error:
+            if error.errno == errno.EROFS:
+                raise StoreUnavailable(
+                    "canonical Store filesystem transport is read-only in this execution",
+                    code="direct-filesystem-read-only",
+                ) from error
+            raise
         self._promotion_owner = owner
 
     # -- low-level put with CAS retry ------------------------------------
@@ -247,6 +260,13 @@ class StoreBackend:
                     payload=payload,
                     expected_generation=generation,
                 )
+            except OSError as error:
+                if error.errno == errno.EROFS:
+                    raise StoreUnavailable(
+                        "canonical Store filesystem transport is read-only in this execution",
+                        code="direct-filesystem-read-only",
+                    ) from error
+                raise
             except StoreError as error:
                 if error.code == StoreResultCode.IDENTITY_CONFLICT:
                     raise
@@ -348,6 +368,45 @@ class StoreBackend:
             payload=payload,
         )
 
+    def put_claim_batch(self, claims: list[dict[str, Any]], *, expected_generation: int):
+        """Publish a related claim transition in one Store generation."""
+        from mncs_store import BoundObjectInput  # noqa: E402
+        from mncs_store.errors import StoreResultCode  # noqa: E402
+
+        if not claims:
+            raise ValueError("claim batch must not be empty")
+        objects = []
+        for claim in claims:
+            claim_id = str(claim.get("claim_id", ""))
+            version = int(claim.get("version", 0))
+            identity = _claim_identity(claim_id, version)
+            payload = json.dumps(claim, ensure_ascii=False, sort_keys=True).encode()
+            descriptor = json.dumps(
+                {"schema": SCHEMA_CLAIM.decode(), "identity": identity.decode()},
+                sort_keys=True,
+            ).encode()
+            objects.append(BoundObjectInput(
+                SCHEMA_CLAIM, identity, descriptor, payload
+            ))
+        self._ensure_writable()
+        try:
+            result = self._store.put_bound_objects(
+                objects, expected_generation=expected_generation
+            )
+        except OSError as error:
+            if error.errno == errno.EROFS:
+                raise StoreUnavailable(
+                    "canonical Store filesystem transport is read-only in this execution",
+                    code="direct-filesystem-read-only",
+                ) from error
+            raise
+        if result.code == StoreResultCode.STALE_GENERATION:
+            from .session_store import ClaimBatchConflict
+            raise ClaimBatchConflict(
+                expected_generation, int(result.observed_generation)
+            )
+        return result
+
     def read_claims(self) -> list[dict[str, Any]]:
         out = []
         for item in self._store.find_bound_objects(SCHEMA_CLAIM):
@@ -379,6 +438,21 @@ class StoreBackend:
         except json.JSONDecodeError:
             return None
         return record if isinstance(record, dict) else None
+
+    def list_checkpoints(self, session_id: str) -> list[dict[str, Any]]:
+        """Read only checkpoint objects bound to one Environment session."""
+        prefix = f"{session_id}:chk:".encode("utf-8")
+        generation = self._store.current_generation
+        identities = [identity for schema, identity in self._store.domain_bindings_at(generation)
+                      if schema == SCHEMA_SNAPSHOT and identity.startswith(prefix)]
+        records = []
+        for identity in sorted(identities):
+            record = self.get_record(SCHEMA_SNAPSHOT, identity)
+            if (isinstance(record, dict) and record.get("session_id") == session_id
+                    and record.get("identity")):
+                records.append(record)
+        return sorted(records, key=lambda record: (int(record.get("sequence", 0)),
+                                                   str(record.get("identity", ""))))
 
     # -- shared projection rows / verification evidence --------------------
 

@@ -1,0 +1,180 @@
+{
+  "candidates": [
+    {
+      "candidate_branch": "campaign/keyword-local-index-delivery-20261010",
+      "candidate_commit": {
+        "author": "epi13",
+        "authored_at": "2026-10-10T05:01:10-08:00",
+        "revision": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+        "subject": "Record lexer keyword optimization delivery"
+      },
+      "candidate_head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "delivery": {
+        "merged": false,
+        "pushed": false,
+        "reason": "preserved under active owner claim",
+        "worktree_retired": false
+      },
+      "dirty_entry_count": 0,
+      "dirty_status_sha256": null,
+      "implementation_or_evidence_review": "not run in this session because another authenticated consumer holds the exclusive repository claim",
+      "main_revision": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_version": 63,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "scope": {
+          "branch": null,
+          "checkout": null,
+          "exclusive": true,
+          "kind": "repository",
+          "paths": null,
+          "repository": "mncs-compiler"
+        },
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "producer_session_or_campaign": "not recorded in the inspected commit metadata; retained evidence must be inspected by the owning campaign",
+      "relationship_to_main": {
+        "ahead": 1,
+        "behind": 14,
+        "candidate_ahead_commits": 1
+      },
+      "repository": "mncs-compiler",
+      "unique_changed_paths": [
+        "evidence/SELF-HOST-MATRIX.json"
+      ],
+      "untracked_evidence": [],
+      "worktree_accessible": true,
+      "worktree_path": "/tmp/mncs-compiler-keyword-local-index-20261010"
+    },
+    {
+      "candidate_branch": "campaign/process-environment-value-bound-20261010",
+      "candidate_commit": {
+        "author": "epi13",
+        "authored_at": "2026-10-10T09:22:44-08:00",
+        "revision": "fc49c0cc6afe388ff8d18341595422cc52225005",
+        "subject": "Add bounded process environment values and quiet compile output"
+      },
+      "candidate_head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "delivery": {
+        "merged": false,
+        "pushed": false,
+        "reason": "preserved under active owner claim",
+        "worktree_retired": false
+      },
+      "dirty_entry_count": 1,
+      "dirty_status_sha256": "sha256:1ca71da5f8383337e71200c1c2415762c827b8cbaff8fc90750b0d1935f84992",
+      "implementation_or_evidence_review": "not run in this session because another authenticated consumer holds the exclusive repository claim",
+      "main_revision": "e8f8a5f8659c71b33cd32c964d4982bec1a9668e",
+      "ownership": {
+        "claim_id": "claim:mncs-language",
+        "claim_version": 40,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "scope": {
+          "branch": null,
+          "checkout": null,
+          "exclusive": true,
+          "kind": "repository",
+          "paths": null,
+          "repository": "mncs-language"
+        },
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "producer_session_or_campaign": "not recorded in the inspected commit metadata; retained evidence must be inspected by the owning campaign",
+      "relationship_to_main": {
+        "ahead": 1,
+        "behind": 0,
+        "candidate_ahead_commits": 1
+      },
+      "repository": "mncs-language",
+      "unique_changed_paths": [
+        "crates/mncs-cli/src/main.rs",
+        "crates/mncs-cli/tests/fixtures/quiet-compile.mncs",
+        "crates/mncs-cli/tests/profile_registry.rs",
+        "crates/mncs-cli/tests/quiet_compile.rs",
+        "crates/mncs-compiler/src/frontend.rs",
+        "crates/mncs-compiler/tests/source_profile_019_sequence_bound.rs",
+        "crates/mncs-model/src/body.rs",
+        "crates/mncs-model/src/capability_gap.rs",
+        "crates/mncs-syntax/src/profile.rs",
+        "crates/mncs-syntax/src/source.rs",
+        "docs/language-capabilities.json",
+        "docs/language-capability-deltas.json",
+        "docs/source-profile-0.18.md",
+        "docs/source-profile-0.19.md",
+        "examples/capability-gaps/process-environment-value-1447.json",
+        "library/std/application.mncs",
+        "library/std/process.mncs",
+        "library/stdlib-bundle.json",
+        "rfcs/0049-machine-native-source-profile-0-19-bounded-sequence-capacity.md",
+        "rfcs/README.md",
+        "scripts/generate_language_capabilities.py",
+        "scripts/test_generate_language_capabilities.py",
+        "spec/README.md",
+        "spec/source-profile-registry.json"
+      ],
+      "untracked_evidence": [
+        {
+          "exists": true,
+          "path": "evidence/campaign-20261010-forge-core-quiet-output.json",
+          "sha256": "sha256:7b1d1a609703ffae19f0834252d68da638d279463e7d24a9e12123c4891efc42",
+          "size_bytes": 7684
+        }
+      ],
+      "worktree_accessible": true,
+      "worktree_path": "/tmp/mncs-language-process-environment-value-bound-20261010"
+    },
+    {
+      "candidate_branch": "campaign/forge-quiet-compile-output-20261010",
+      "candidate_commit": {
+        "author": "epi13",
+        "authored_at": "2026-10-10T09:20:24-08:00",
+        "revision": "608334b703de708ef15c11147b0ee5c624f87ed6",
+        "subject": "Skip discarded Forge compile outputs"
+      },
+      "candidate_head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "delivery": {
+        "merged": false,
+        "pushed": false,
+        "reason": "preserved under active owner claim",
+        "worktree_retired": false
+      },
+      "dirty_entry_count": 0,
+      "dirty_status_sha256": null,
+      "implementation_or_evidence_review": "not run in this session because another authenticated consumer holds the exclusive repository claim",
+      "main_revision": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "ownership": {
+        "claim_id": "claim:mncs-forge",
+        "claim_version": 28,
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "scope": {
+          "branch": null,
+          "checkout": null,
+          "exclusive": true,
+          "kind": "repository",
+          "paths": null,
+          "repository": "mncs-forge"
+        },
+        "state": "protected_by_active_exclusive_repository_claim"
+      },
+      "producer_session_or_campaign": "not recorded in the inspected commit metadata; retained evidence must be inspected by the owning campaign",
+      "relationship_to_main": {
+        "ahead": 1,
+        "behind": 0,
+        "candidate_ahead_commits": 1
+      },
+      "repository": "mncs-forge",
+      "unique_changed_paths": [
+        "src/mncs_forge/mncs_native.py",
+        "tests/test_mncs_native.py"
+      ],
+      "untracked_evidence": [],
+      "worktree_accessible": true,
+      "worktree_path": "/tmp/mncs-forge-quiet-compile-output-20261010"
+    }
+  ],
+  "canonical_store_generation": 43123,
+  "decision": "No candidate was executed, merged, pushed, or retired. Compiler, Language, and Forge claims remain owned by prior sessions; Language also has one untracked evidence file. Continue after owner handoff or authenticated continuation proof.",
+  "recorded_at": "2026-10-10T19:46:38+00:00",
+  "schema_version": "mncs.campaign.candidate-reconciliation/1"
+}

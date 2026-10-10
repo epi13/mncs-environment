@@ -295,7 +295,8 @@ def ambient_tick(session, definition, *, fresh=False, upgraded=False, lock_waite
 
 def enter(*, definition: dict, definition_path: Path | None, workspace_root: str,
           state_dir: Path, backend: str, consumer_id: str, consumer_kind: str,
-          new_session: bool = False) -> dict:
+          new_session: bool = False, campaign_id: str | None = None,
+          authenticated_principal_id: str | None = None) -> dict:
     # Invalid inputs fail before persistence or provider startup.
     state_dir = Path(state_dir).expanduser().resolve()
     if backend not in ("store", "file") or not consumer_id.strip() or not consumer_kind.strip():
@@ -311,9 +312,30 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
         definition.get("execution_compatibility_service"), requirements.get("services", []))
     parse_intent(definition.get("intent", {"goal": definition.get("goal", "unspecified")}))
     definition_id = identity.environment_id(definition)
+    intent = parse_intent(definition.get("intent", {"goal": definition.get("goal", "unspecified")}))
+    requested_campaign_id = campaign_id or definition.get("campaign_id")
+    campaign_id = (
+        requested_campaign_id
+        or "cmp_" + identity.digest_hex({
+            "intent_id": intent["identity"],
+            "definition_id": definition_id,
+            "workspace": str(root),
+        })
+    )
+    if (not isinstance(campaign_id, str) or not campaign_id.strip()
+            or len(campaign_id) > 160 or "\x00" in campaign_id):
+        raise EntryError("campaign identity must be bounded nonempty text", "campaign-identity-invalid")
+    if authenticated_principal_id is not None and (
+        not isinstance(authenticated_principal_id, str)
+        or not authenticated_principal_id.strip()
+        or len(authenticated_principal_id) > 256
+    ):
+        raise EntryError("authenticated Environment principal is invalid", "principal-invalid")
     with entry_lock(state_dir, backend) as lock:
         lock_waited = float(lock.get("waited_seconds", 0.0))
         session = None
+        from . import selection
+
         # One store handle for the whole entry: session matching, resume or
         # creation, and the ambient pass share it instead of each paying
         # the open cost and re-verifying the same state.
@@ -325,16 +347,81 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
             upgraded = False
             has_persistence = (Path(state_dir) / ("store" if backend == "store" else "sessions")).exists()
             if not new_session and has_persistence:
-                from . import selection
-                selector = {'consumer': consumer_id, 'kind': consumer_kind,
-                            'definition': definition_id, 'workspace': str(root)}
+                if authenticated_principal_id is not None and requested_campaign_id is None:
+                    discovery_selector = {
+                        "principal_id": authenticated_principal_id,
+                        "definition": definition_id,
+                        "workspace": str(root),
+                        "campaign_discovery": True,
+                    }
+                    discovered = selection.select(
+                        store,
+                        discovery_selector,
+                        lambda snapshot: (
+                            snapshot.get("provenance", {}).get("definition_id") == definition_id
+                            and snapshot.get("workspace", {}).get("root") == str(root)
+                            and snapshot.get("authenticated_principal_id") == authenticated_principal_id
+                            and snapshot.get("lifecycle") in (
+                                "active", "blocked", "waiting", "checkpointed", "abandoned"
+                            )
+                            and isinstance(snapshot.get("campaign", {}).get("identity"), str)
+                        ),
+                    )
+                    discovered_campaigns = {
+                        str((store.load_snapshot(session_id) or {}).get("campaign", {}).get("identity"))
+                        for session_id in discovered
+                    }
+                    if len(discovered_campaigns) > 1:
+                        raise EntryError(
+                            "multiple durable campaigns match this authenticated consumer and selected environment",
+                            "campaign-continuation-ambiguous",
+                            campaigns=sorted(discovered_campaigns),
+                            sessions=discovered,
+                            next="select the intended campaign identity; Environment will not choose between active campaigns",
+                        )
+                    if discovered_campaigns:
+                        campaign_id = next(iter(discovered_campaigns))
+                selector = ({'campaign_id': campaign_id,
+                             'principal_id': authenticated_principal_id,
+                             'definition': definition_id, 'workspace': str(root)}
+                            if authenticated_principal_id is not None else
+                            {'consumer': consumer_id, 'kind': consumer_kind,
+                             'definition': definition_id, 'workspace': str(root)})
                 def matches_snapshot(snapshot):
-                    return (snapshot.get("consumer_id") == consumer_id
-                            and snapshot.get("consumer_kind") == consumer_kind
+                    common = (
+                        snapshot.get("provenance", {}).get("definition_id") == definition_id
+                        and snapshot.get("workspace", {}).get("root") == str(root)
+                    )
+                    lifecycle = snapshot.get("lifecycle") in (
+                        "active", "blocked", "waiting", "checkpointed", "abandoned"
+                    )
+                    if authenticated_principal_id is not None:
+                        return (common and lifecycle
+                                and snapshot.get("campaign", {}).get("identity") == campaign_id
+                                and snapshot.get("authenticated_principal_id") == authenticated_principal_id)
+                    return (common and lifecycle
+                            and snapshot.get("consumer_id") == consumer_id
+                            and snapshot.get("consumer_kind") == consumer_kind)
+                matches = selection.select(store, selector, matches_snapshot)
+                if authenticated_principal_id is not None:
+                    foreign_owner = selection.select(
+                        store,
+                        {"campaign_id": campaign_id, "definition": definition_id,
+                         "workspace": str(root), "principal_scope": "all"},
+                        lambda snapshot: (
+                            snapshot.get("campaign", {}).get("identity") == campaign_id
                             and snapshot.get("provenance", {}).get("definition_id") == definition_id
                             and snapshot.get("workspace", {}).get("root") == str(root)
-                            and snapshot.get("lifecycle") in ("active", "blocked", "waiting", "checkpointed", "abandoned"))
-                matches = selection.select(store, selector, matches_snapshot)
+                            and snapshot.get("lifecycle") not in ("completed", "failed")
+                            and snapshot.get("authenticated_principal_id") != authenticated_principal_id
+                        ),
+                    )
+                    if foreign_owner:
+                        raise EntryError(
+                            "campaign is owned by a different authenticated principal",
+                            "campaign-owner-conflict", sessions=sorted(foreign_owner),
+                            next="request an explicit handoff from the recorded owner",
+                        )
                 if backend == "store" and len(matches) == 1:
                     upgraded = upgrade_session_store_provider(state_dir, store.load_snapshot(matches[0]))
                 if len(matches) > 1:
@@ -343,8 +430,31 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                 if matches:
                     session = sessions.Session.open(state_dir=state_dir, session_id=matches[0],
                                                       backend=backend, store=store)
+                    session.reconcile_campaign_continuity()
             reused = session is not None
             if session is None:
+                if authenticated_principal_id is not None and not new_session:
+                    # A matching campaign identity that lacks an authenticated
+                    # owner is not silently adopted. Existing label-based
+                    # sessions remain inspectable and need an explicit handoff.
+                    unbound = selection.select(
+                        store,
+                        {"campaign_id": campaign_id, "definition": definition_id,
+                         "workspace": str(root), "principal_scope": "unbound"},
+                        lambda snapshot: (
+                            snapshot.get("campaign", {}).get("identity") == campaign_id
+                            and snapshot.get("provenance", {}).get("definition_id") == definition_id
+                            and snapshot.get("workspace", {}).get("root") == str(root)
+                            and not snapshot.get("authenticated_principal_id")
+                            and snapshot.get("lifecycle") not in ("completed", "failed")
+                        ),
+                    )
+                    if unbound:
+                        raise EntryError(
+                            "campaign exists without authenticated continuation provenance",
+                            "campaign-continuation-unverified", sessions=sorted(unbound),
+                            next="create an explicit handoff through the recorded session owner",
+                        )
                 environment = sessions.resolve_environment(definition=definition, workspace_root=root,
                                                             state_dir=state_dir, consumer_id=consumer_id, backend=backend,
                                                             store=store)
@@ -352,10 +462,19 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                                 "name": definition.get("name"), "definition_id": definition_id}
                 session = sessions.Session.create(state_dir=state_dir, environment=environment,
                                                   consumer_id=consumer_id, consumer_kind=consumer_kind, backend=backend,
+                                                  campaign_id=campaign_id,
+                                                  authenticated_principal_id=authenticated_principal_id,
                                                   store=store)
                 session.transition("resolving", "enter: resolving environment")
                 session.transition("ready", "environment resolved; capability readiness is reported separately")
                 session.transition("active", f"consumer {consumer_id} entered")
+            elif authenticated_principal_id is not None:
+                if session.snapshot.get("authenticated_principal_id") != authenticated_principal_id:
+                    raise EntryError("campaign continuation principal does not match",
+                                     "campaign-owner-conflict")
+                session.continue_as(consumer_id, consumer_kind)
+                if session.snapshot["lifecycle"] in ("checkpointed", "abandoned"):
+                    session.transition("active", "authenticated campaign continuation")
             elif session.snapshot["lifecycle"] in ("checkpointed", "abandoned"):
                 session.transition("active", "re-entered durable work")
             blocks, trace = ambient_tick(session, definition, fresh=not reused,

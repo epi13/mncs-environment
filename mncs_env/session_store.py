@@ -37,6 +37,18 @@ class ClaimVersionConflict(Exception):
         super().__init__(f"claim {claim_id} version {version} already contains different state")
 
 
+class ClaimBatchConflict(Exception):
+    """The claim set advanced before an atomic multi-claim publication."""
+
+    def __init__(self, expected_generation: int, observed_generation: int):
+        self.expected_generation = expected_generation
+        self.observed_generation = observed_generation
+        super().__init__(
+            f"claim publication expected generation {expected_generation}, "
+            f"observed {observed_generation}"
+        )
+
+
 STORE_PROVIDER_SCHEMA = "mncs.environment.session-store-provider/2"
 
 
@@ -267,6 +279,9 @@ class SessionStore:
     def load_checkpoint(self, session_id: str, checkpoint_id: str) -> dict[str, Any] | None:
         raise NotImplementedError
 
+    def list_checkpoints(self, session_id: str) -> list[dict[str, Any]]:
+        raise NotImplementedError
+
     def save_handoff(self, session_id: str, record: dict[str, Any]) -> None:
         raise NotImplementedError
 
@@ -274,6 +289,14 @@ class SessionStore:
         raise NotImplementedError
 
     def put_claim(self, claim: dict[str, Any]) -> None:
+        raise NotImplementedError
+
+    def claim_generation(self) -> int:
+        raise NotImplementedError
+
+    def put_claim_batch(
+        self, claims: list[dict[str, Any]], *, expected_generation: int
+    ) -> None:
         raise NotImplementedError
 
     def read_claims(self) -> list[dict[str, Any]]:
@@ -351,6 +374,18 @@ class FileSessionStore(SessionStore):
         record = read_json(self._directory(session_id) / "checkpoints" / f"{checkpoint_id}.json")
         return record if isinstance(record, dict) else None
 
+    def list_checkpoints(self, session_id: str) -> list[dict[str, Any]]:
+        directory = self._directory(session_id) / "checkpoints"
+        if not directory.is_dir():
+            return []
+        records = []
+        for path in directory.glob("chk_*.json"):
+            record = read_json(path)
+            if isinstance(record, dict) and record.get("session_id") == session_id:
+                records.append(record)
+        return sorted(records, key=lambda record: (int(record.get("sequence", 0)),
+                                                    str(record.get("identity", ""))))
+
     def save_handoff(self, session_id: str, record: dict[str, Any]) -> None:
         write_json(self._directory(session_id) / "handoffs" / f"{record['identity']}.json", record)
 
@@ -366,6 +401,57 @@ class FileSessionStore(SessionStore):
 
     def put_claim(self, claim: dict[str, Any]) -> None:
         append_jsonl(self.state_dir / "claims.jsonl", claim)
+
+    def claim_generation(self) -> int:
+        return len(self.read_claims())
+
+    def put_claim_batch(
+        self, claims: list[dict[str, Any]], *, expected_generation: int
+    ) -> None:
+        """Atomically append a related claim transition in the debug backend."""
+        import json
+        import os
+        import tempfile
+
+        path = self.state_dir / "claims.jsonl"
+        lock = self.state_dir / "claims.lock"
+        with exclusive_file_lock(lock):
+            existing = self.read_claims()
+            observed = len(existing)
+            if observed != expected_generation:
+                raise ClaimBatchConflict(expected_generation, observed)
+            by_version = {
+                (str(row.get("claim_id", "")), int(row.get("version", 0))): row
+                for row in existing
+            }
+            for claim in claims:
+                key = (str(claim.get("claim_id", "")), int(claim.get("version", 0)))
+                prior = by_version.get(key)
+                if prior is not None:
+                    if prior != claim:
+                        raise ClaimVersionConflict(*key)
+                    continue
+                by_version[key] = claim
+            all_records = [*existing, *claims]
+            path.parent.mkdir(parents=True, exist_ok=True)
+            fd, name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                    for record in all_records:
+                        handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(name, path)
+                directory = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+                try:
+                    os.fsync(directory)
+                finally:
+                    os.close(directory)
+            finally:
+                try:
+                    os.unlink(name)
+                except FileNotFoundError:
+                    pass
 
     def read_claims(self) -> list[dict[str, Any]]:
         records = read_jsonl(self.state_dir / "claims.jsonl")
@@ -540,6 +626,9 @@ class StoreSessionStore(SessionStore):
             SCHEMA_SNAPSHOT, self.backend.checkpoint_identity(session_id, checkpoint_id)
         )
 
+    def list_checkpoints(self, session_id: str) -> list[dict[str, Any]]:
+        return self.backend.list_checkpoints(session_id)
+
     def save_handoff(self, session_id: str, record: dict[str, Any]) -> None:
         from .store_backend import SCHEMA_SNAPSHOT
 
@@ -566,6 +655,24 @@ class StoreSessionStore(SessionStore):
             if getattr(getattr(error, "code", None), "name", None) == "IDENTITY_CONFLICT":
                 raise ClaimVersionConflict(str(claim.get("claim_id", "")),
                                            int(claim.get("version", 0))) from error
+            raise
+
+    def claim_generation(self) -> int:
+        return self.backend.generation()
+
+    def put_claim_batch(
+        self, claims: list[dict[str, Any]], *, expected_generation: int
+    ) -> None:
+        try:
+            self.backend.put_claim_batch(
+                claims, expected_generation=expected_generation
+            )
+        except Exception as error:
+            if getattr(getattr(error, "code", None), "name", None) == "IDENTITY_CONFLICT":
+                first = claims[0]
+                raise ClaimVersionConflict(
+                    str(first.get("claim_id", "")), int(first.get("version", 0))
+                ) from error
             raise
 
     def read_claims(self) -> list[dict[str, Any]]:

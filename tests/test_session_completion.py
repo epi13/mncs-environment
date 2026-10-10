@@ -8,6 +8,7 @@ from typing import Any
 
 from mncs_env import claims as claims_module
 from mncs_env import sessions as sessions_module
+from mncs_env.session_store import ClaimBatchConflict
 
 
 def _future(hours: int = 24) -> str:
@@ -69,6 +70,17 @@ class StubStore:
 
     def put_claim(self, claim: dict[str, Any]) -> None:
         self.claim_records.append(dict(claim))
+
+    def claim_generation(self) -> int:
+        return len(self.claim_records)
+
+    def put_claim_batch(
+        self, claims: list[dict[str, Any]], *, expected_generation: int
+    ) -> None:
+        observed = self.claim_generation()
+        if observed != expected_generation:
+            raise ClaimBatchConflict(expected_generation, observed)
+        self.claim_records.extend(dict(claim) for claim in claims)
 
 
 def _session(store: StubStore, session_id: str = "ses_test") -> sessions_module.Session:

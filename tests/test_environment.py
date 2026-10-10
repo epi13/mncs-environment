@@ -194,6 +194,24 @@ class AuthorityTests(unittest.TestCase):
 
 
 class ClaimTests(unittest.TestCase):
+    def test_claim_lease_is_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = open_store(directory, "file")
+            for invalid in (0, -1, 169, True):
+                with self.subTest(ttl_hours=invalid):
+                    with self.assertRaisesRegex(ValueError, "claim TTL"):
+                        claims.acquire(
+                            store, repository="r", session_id="a", consumer_id="a",
+                            basis=claims.BASIS_EXPLICIT, reason="bounded lease",
+                            ttl_hours=invalid,
+                        )
+            record = claims.acquire(
+                store, repository="r", session_id="a", consumer_id="a",
+                basis=claims.BASIS_EXPLICIT, reason="maximum lease",
+                ttl_hours=claims.MAX_TTL_HOURS,
+            )
+            self.assertEqual(record["status"], "held")
+
     def test_acquire_conflict_release(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = open_store(directory, "file")
@@ -211,6 +229,7 @@ class ClaimTests(unittest.TestCase):
             second = claims.acquire(store, repository="r", session_id="b",
                                     consumer_id="b", basis=claims.BASIS_EXPLICIT, reason="now")
             self.assertEqual(second["version"], 3)
+
 
     def test_expired_claim_drops_out(self) -> None:
         stale = {"claim_id": "claim:r", "version": 1, "repository": "r",
@@ -282,6 +301,84 @@ class ClaimTests(unittest.TestCase):
             live = claims.active_claims(store.read_claims())
             self.assertEqual(live[record["claim_id"]]["session_id"], "b")
 
+    def test_transfer_retry_reconciles_lost_response_atomically(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = open_store(directory, "file")
+            record = claims.acquire(store, repository="r", session_id="a",
+                                    consumer_id="a", basis=claims.BASIS_EXPLICIT,
+                                    reason="work")
+
+            class InterruptBeforeCommit:
+                def __getattr__(self, name):
+                    return getattr(store, name)
+
+                def put_claim_batch(self, batch, *, expected_generation):
+                    raise OSError("caller interrupted before atomic generation commit")
+
+            with self.assertRaisesRegex(OSError, "before atomic generation"):
+                claims.transfer(InterruptBeforeCommit(), claim_id=record["claim_id"],
+                                from_session="a", to_session="b", to_consumer="b",
+                                reason="resume", request_id="transfer-before-commit")
+            live = claims.active_claims(store.read_claims())
+            self.assertEqual(live[record["claim_id"]]["session_id"], "a")
+
+            class InterruptAfterCommit:
+                fired = False
+
+                def __getattr__(self, name):
+                    return getattr(store, name)
+
+                def put_claim_batch(self, batch, *, expected_generation):
+                    store.put_claim_batch(batch, expected_generation=expected_generation)
+                    if not self.fired:
+                        self.fired = True
+                        raise OSError("caller interrupted after atomic generation commit")
+
+            interrupted = InterruptAfterCommit()
+            with self.assertRaisesRegex(OSError, "after atomic generation"):
+                claims.transfer(interrupted, claim_id=record["claim_id"],
+                                from_session="a", to_session="b", to_consumer="b",
+                                reason="resume", request_id="transfer-retry-proof")
+            moved = claims.transfer(store, claim_id=record["claim_id"],
+                                    from_session="a", to_session="b", to_consumer="b",
+                                    reason="resume", request_id="transfer-retry-proof")
+            self.assertEqual(moved["session_id"], "b")
+            versions = [row for row in store.read_claims()
+                        if row.get("claim_id") == record["claim_id"]]
+            matching = [row for row in versions
+                        if row.get("provenance", {}).get("transfer_request_id")
+                        == "transfer-retry-proof"]
+            self.assertEqual(len(matching), 2)
+            live = claims.active_claims(versions)
+            self.assertEqual(live[record["claim_id"]]["session_id"], "b")
+
+    def test_concurrent_transfers_fence_competing_recipients(self) -> None:
+        from concurrent.futures import ThreadPoolExecutor
+
+        with tempfile.TemporaryDirectory() as directory:
+            store = open_store(directory, "file")
+            record = claims.acquire(store, repository="r", session_id="a",
+                                    consumer_id="a", basis=claims.BASIS_EXPLICIT,
+                                    reason="work")
+
+            def attempt(recipient: str):
+                try:
+                    return claims.transfer(
+                        store, claim_id=record["claim_id"], from_session="a",
+                        to_session=recipient, to_consumer=recipient,
+                        request_id=f"transfer-{recipient}")
+                except claims.ClaimConflict as error:
+                    return error
+
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                outcomes = list(pool.map(attempt, ("b", "c")))
+            successes = [item for item in outcomes if isinstance(item, dict)]
+            conflicts = [item for item in outcomes if isinstance(item, claims.ClaimConflict)]
+            self.assertEqual(len(successes), 1)
+            self.assertEqual(len(conflicts), 1)
+            live = claims.active_claims(store.read_claims())
+            self.assertEqual(live[record["claim_id"]]["session_id"], successes[0]["session_id"])
+
     def test_liveness_derives_from_activity(self) -> None:
         record = {"status": "held", "expires_at": "2999-01-01T00:00:00+00:00"}
         self.assertEqual(claims.liveness(record, None), "stale")
@@ -302,6 +399,134 @@ class ClaimTests(unittest.TestCase):
                   "expires_at": "2999-01-01T00:00:00+00:00"}
         live = claims.active_claims([legacy])
         self.assertEqual(live["claim:r"]["scope"]["kind"], "repository")
+
+
+class CampaignContinuityTests(unittest.TestCase):
+    def test_owned_claim_rebuilds_portable_repository_capsule(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            root = base / "workspace"
+            checkout = root / "mncs-control-mcp"
+            checkout.mkdir(parents=True)
+
+            def git(*args: str) -> str:
+                completed = subprocess.run(
+                    ["git", "-C", str(checkout), *args], check=True,
+                    text=True, capture_output=True,
+                )
+                return completed.stdout.strip()
+
+            git("init", "-q", "-b", "main")
+            git("config", "user.name", "Environment Test")
+            git("config", "user.email", "environment-test@example.invalid")
+            (checkout / "source.mncs").write_text("module test;\n", encoding="utf-8")
+            git("add", ".")
+            git("commit", "-q", "-m", "test repository identity")
+            head = git("rev-parse", "HEAD")
+
+            state_dir = base / "state"
+            store = open_store(state_dir, "file")
+            environment = {
+                "identity": "env_test_identity",
+                "intent": {
+                    "identity": "intent_test_identity",
+                    "goal": "resume an owned repository campaign",
+                    "repositories": ["mncs-control-mcp"],
+                    "protected_repositories": [],
+                },
+                "workspace": {"root": str(root), "repositories": []},
+                "selected_checkouts": {},
+                "rights": {},
+                "authority": {},
+            }
+            session = sessions.Session.create(
+                state_dir=state_dir, environment=environment,
+                consumer_id="process-one", consumer_kind="agent", backend="file",
+                campaign_id="cmp_test_campaign", authenticated_principal_id="principal-test",
+                store=store,
+            )
+            try:
+                session.acquire_claim(
+                    "mncs-control-mcp", basis=claims.BASIS_EXPLICIT,
+                    reason="test durable campaign checkout association",
+                    workspace_root=str(root),
+                )
+                session.snapshot["campaign"]["repository_refs"] = []
+                session._save()
+                session.close()
+                session = sessions.Session.open(
+                    state_dir=state_dir, session_id=session.session_id, backend="file"
+                )
+                recovered = session.reconcile_campaign_continuity()
+                self.assertTrue(recovered["changed"])
+                continuation = session.context()["continuation"]
+                self.assertEqual(continuation["identity"], "cmp_test_campaign")
+                self.assertEqual(
+                    continuation["work_intent"]["goal"],
+                    "resume an owned repository campaign",
+                )
+                reference = next(
+                    item for item in continuation["repositories"]
+                    if item["repository"] == "mncs-control-mcp"
+                )
+                self.assertEqual(reference["observed_path"], "mncs-control-mcp")
+                self.assertEqual(reference["branch"], "main")
+                self.assertEqual(reference["head"], head)
+                self.assertTrue(reference["clean"])
+                self.assertTrue(reference["git_common_directory_identity"].startswith("git-common:"))
+                self.assertTrue(reference["checkout_identity"].startswith("checkout:"))
+            finally:
+                session.close()
+
+
+class StoreTransportDiagnosticsTests(unittest.TestCase):
+    def test_rpc_client_maps_claim_conflicts_from_environment_cli(self) -> None:
+        from mncs_env import rpc_client
+
+        with tempfile.TemporaryDirectory() as directory:
+            grant = Path(directory) / "grant"
+            grant.write_text("test-grant", encoding="ascii")
+            with mock.patch.dict(os.environ, {
+                "MNCS_ENV_RPC_SOCKET": "/run/test.sock",
+                "MNCS_ENV_RPC_GRANT_FILE": str(grant),
+            }):
+                with mock.patch.object(rpc_client, "_exchange", return_value={
+                    "ok": True,
+                    "result": {
+                        "exit_code": 3,
+                        "stdout": "",
+                        "stderr": json.dumps({
+                            "error": "claim changed concurrently",
+                            "diagnostics": {"code": "claim-conflict"},
+                        }),
+                    },
+                }), redirect_stdout(io.StringIO()) as output:
+                    code = rpc_client.dispatch(["claims", "ses_test", "--acquire", "r"])
+            self.assertEqual(code, 3)
+            self.assertEqual(
+                json.loads(output.getvalue())["diagnostics"]["code"],
+                "publication-conflict",
+            )
+
+    def test_read_only_filesystem_promotion_has_structured_category(self) -> None:
+        import errno
+        from mncs_env.store_backend import StoreBackend, StoreUnavailable
+
+        class ReadOnlyOwner:
+            read_only = True
+            session = object()
+
+        def promote(*_args, **_kwargs):
+            raise OSError(errno.EROFS, "Read-only file system")
+
+        backend = StoreBackend.__new__(StoreBackend)
+        backend._store = ReadOnlyOwner()
+        backend._api = (promote, None, None)
+        backend.path = Path("/canonical/store")
+        backend._promotion_owner = None
+        with self.assertRaises(StoreUnavailable) as raised:
+            backend._ensure_writable()
+        self.assertEqual(raised.exception.code, "direct-filesystem-read-only")
 
 
 class WorkspaceTests(unittest.TestCase):
@@ -1895,6 +2120,34 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(resumed.snapshot["lifecycle"], "active")
             self.assertEqual(resumed.snapshot["checkpoints"][0], record["identity"])
 
+    def test_authenticated_campaign_capsule_survives_fresh_session_object(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            store = open_store(state, "file")
+            environment = sessions.resolve_environment(
+                definition=definition(), workspace_root=ROOT, state_dir=state,
+                consumer_id="agent-first", backend="file", store=store)
+            session = sessions.Session.create(
+                state_dir=state, environment=environment, consumer_id="agent-first",
+                campaign_id="cmp_restart-proof", authenticated_principal_id="principal-test",
+                backend="file", store=store)
+            session.transition("resolving", "test")
+            session.transition("ready", "test")
+            session.transition("active", "test")
+            identity = session.session_id
+
+            resumed = sessions.Session.open(
+                state_dir=state, session_id=identity, backend="file")
+            resumed.continue_as("agent-after-restart", "agent")
+            context = resumed.context()
+            capsule = context["continuation"]
+            self.assertEqual(capsule["identity"], "cmp_restart-proof")
+            self.assertEqual(context["consumer_id"], "agent-after-restart")
+            self.assertIn("agent-first", capsule["previous_consumers"])
+            self.assertIn("agent-after-restart",
+                          resumed.snapshot["campaign"]["authorized_consumers"])
+            self.assertEqual(resumed.snapshot["authenticated_principal_id"], "principal-test")
+
     def test_handoff_validates_recipient(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)
@@ -1969,6 +2222,40 @@ class SessionTests(unittest.TestCase):
             reopened = sessions.Session.resume(state_dir=state, session_id=identity)
             self.assertIn(checkpoint["identity"], reopened.snapshot["checkpoints"])
             self.assertEqual(reopened.snapshot["intent"]["goal"], "test goal")
+
+    def test_checkpoint_request_retry_reads_back_one_immutable_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            first = session.checkpoint(
+                progress="saved", remaining=["continue"], request_id="req_checkpoint-proof")
+            second = session.checkpoint(
+                progress="saved", remaining=["continue"], request_id="req_checkpoint-proof")
+            self.assertEqual(first, second)
+            self.assertEqual(session.snapshot["checkpoints"].count(first["identity"]), 1)
+            events = [item for item in session.store.read_events(session.session_id)
+                      if item.get("type") == "session.checkpointed"
+                      and item.get("payload", {}).get("request_id") == "req_checkpoint-proof"]
+            self.assertEqual(len(events), 1)
+
+    def test_campaign_entry_reconciles_checkpoint_published_before_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            orphan = {
+                "schema_version": "mncs.environment.checkpoint/1",
+                "identity": "chk_interrupted-publication",
+                "session_id": session.session_id,
+                "sequence": 1,
+                "progress": "caller interrupted after checkpoint object publication",
+                "remaining": ["reconcile"],
+                "request_id": "req_interrupted-publication",
+                "request_digest": "source-bound-digest",
+            }
+            session.store.save_checkpoint(session.session_id, orphan)
+            result = session.reconcile_campaign_continuity()
+            self.assertEqual(result["recovered_checkpoints"], [orphan["identity"]])
+            self.assertIn(orphan["identity"], session.snapshot["checkpoints"])
+            self.assertIn("campaign.reconciled",
+                          [event["type"] for event in session.store.read_events(session.session_id)])
 
     def test_file_backend_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -2237,6 +2524,76 @@ class EntryFrictionTests(unittest.TestCase):
             self.assertIn("lifecycle_history", detailed)
             self.assertGreater(detailed["event_count"], 0)
             self.assertGreater(len(json.dumps(detailed)), len(json.dumps(context)))
+
+    def test_authenticated_entry_discovers_unique_campaign_without_campaign_id(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            workspace_root = base / "campaign-root"
+            workspace_root.mkdir()
+            definition_path = base / "environment.json"
+            definition_path.write_text(json.dumps({
+                "name": "durable-campaign-discovery",
+                "intent": {"goal": "resume a campaign without a session or campaign id"},
+            }), encoding="utf-8")
+            state = base / "state"
+            principal = "control-principal-test"
+            env = {"MNCS_ENV_AUTH_PRINCIPAL_ID": principal}
+
+            with mock.patch.dict(os.environ, env):
+                first_code, first, first_error = self._run_cli(
+                    "--persistence", "file", "--state-dir", str(state), "enter",
+                    "--definition", str(definition_path), "--workspace", str(workspace_root),
+                    "--consumer", "first-process", "--campaign-id", "cmp_explicit-continuation-test",
+                )
+                second_code, second, second_error = self._run_cli(
+                    "--persistence", "file", "--state-dir", str(state), "enter",
+                    "--definition", str(definition_path), "--workspace", str(workspace_root),
+                    "--consumer", "restarted-process",
+                )
+
+            self.assertEqual(first_code, 0, first_error)
+            self.assertEqual(second_code, 0, second_error)
+            self.assertEqual(second["session_id"], first["session_id"])
+            self.assertTrue(second["entry"]["reused"])
+            self.assertEqual(second["continuation"]["identity"], "cmp_explicit-continuation-test")
+            self.assertEqual(second["consumer_id"], "restarted-process")
+            self.assertIn("first-process", second["continuation"]["previous_consumers"])
+
+    def test_authenticated_entry_refuses_ambiguous_campaign_discovery(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            workspace_root = base / "campaign-root"
+            workspace_root.mkdir()
+            definition_path = base / "environment.json"
+            definition_path.write_text(json.dumps({
+                "name": "ambiguous-campaign-discovery",
+                "intent": {"goal": "do not guess between campaigns"},
+            }), encoding="utf-8")
+            state = base / "state"
+            env = {"MNCS_ENV_AUTH_PRINCIPAL_ID": "control-principal-test"}
+            with mock.patch.dict(os.environ, env):
+                for campaign_id in ("cmp_discovery_one", "cmp_discovery_two"):
+                    code, _, error = self._run_cli(
+                        "--persistence", "file", "--state-dir", str(state), "enter",
+                        "--definition", str(definition_path), "--workspace", str(workspace_root),
+                        "--consumer", "campaign-setup", "--campaign-id", campaign_id,
+                        "--new-session",
+                    )
+                    self.assertEqual(code, 0, error)
+                code, result, error = self._run_cli(
+                    "--persistence", "file", "--state-dir", str(state), "enter",
+                    "--definition", str(definition_path), "--workspace", str(workspace_root),
+                    "--consumer", "restarted-process",
+                )
+
+            self.assertEqual(code, 2)
+            self.assertEqual(result, {})
+            diagnostic = json.loads(error)
+            self.assertEqual(diagnostic["error"],
+                             "multiple durable campaigns match this authenticated consumer and selected environment")
+            self.assertEqual(diagnostic["diagnostics"]["code"], "campaign-continuation-ambiguous")
+            self.assertEqual(diagnostic["diagnostics"]["campaigns"],
+                             ["cmp_discovery_one", "cmp_discovery_two"])
 
     def test_status_and_context_are_read_only_and_documented(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

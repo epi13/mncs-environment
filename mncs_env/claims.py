@@ -19,7 +19,8 @@ only non-exclusive scopes. Exclusive repository scopes held by a live
 or quiet-but-undead owner still fail closed until TTL expiry. Every
 recovery is explicit, version-checked against races, and recorded with
 `recovered_from` provenance on both the superseding record and the new
-claim.
+claim. New leases are bounded to 168 hours; a continuing owner reacquires
+its exact scope instead of extending a lease with an unbounded duration.
 """
 
 from __future__ import annotations
@@ -49,6 +50,11 @@ TERMINAL_LIFECYCLES = ("completed", "failed")
 
 #: Terminal record status written when a live claim is recovered.
 STATUS_SUPERSEDED = "superseded"
+
+# Exclusive claims remain bounded even if the owner stops renewing. A
+# continuing owner can reacquire its exact scope, while stale consumers can
+# never make a lease effectively permanent with an unbounded TTL.
+MAX_TTL_HOURS = 168
 
 
 def utcnow() -> str:
@@ -478,6 +484,7 @@ def acquire(
     checkout_facts: dict[str, Any] | None = None,
     workspace_root: str | None = None,
     now: datetime | None = None,
+    request_id: str | None = None,
 ) -> dict[str, Any]:
     """Claim a scope; conflicts and unknown-work adoption fail closed.
 
@@ -491,6 +498,8 @@ def acquire(
                BASIS_ADOPTION, BASIS_TRANSFER)
     if basis not in allowed:
         raise ValueError(f"unknown claim basis {basis!r}")
+    if type(ttl_hours) is not int or not 1 <= ttl_hours <= MAX_TTL_HOURS:
+        raise ValueError(f"claim TTL must be an integer from 1 to {MAX_TTL_HOURS} hours")
     resolved = normalize_scope(scope, repository)
     if resolved["kind"] == "worktree":
         from pathlib import Path
@@ -501,7 +510,23 @@ def acquire(
                 raise ValueError("worktree checkout escapes the workspace root")
         if not checkout.is_dir():
             raise ValueError(f"worktree checkout {checkout} is not a directory")
+    if request_id is not None and (
+        not isinstance(request_id, str) or not request_id
+        or len(request_id) > 160 or "\x00" in request_id
+    ):
+        raise ValueError("claim request identity must be bounded nonempty text")
     records = store.read_claims()
+    if request_id is not None:
+        matching = [record for record in records
+                    if record.get("provenance", {}).get("operation_request_id") == request_id]
+        if matching:
+            latest = max(matching, key=lambda record: int(record.get("version", 0)))
+            if (latest.get("status") == "held"
+                    and latest.get("session_id") == session_id
+                    and str(latest.get("repository", "")) == repository
+                    and latest.get("scope") == resolved):
+                return latest
+            raise ClaimConflict("claim request identity is already bound to another transition")
     live = active_claims(records)
     claim_id = claim_identity(repository, resolved)
     conflicts = []
@@ -585,6 +610,8 @@ def acquire(
         "expires_at": (moment + timedelta(hours=ttl_hours)).isoformat(timespec="seconds"),
         "provenance": {"acquired_by": consumer_id},
     }
+    if request_id is not None:
+        record["provenance"]["operation_request_id"] = request_id
     if basis in ADOPTION_BASES:
         record["provenance"]["adopted_head"] = facts.get("head")
         record["provenance"]["adopted_dirty"] = facts.get("dirty")
@@ -610,25 +637,43 @@ def acquire(
 def release(
     store, *, session_id: str, reason: str = "",
     claim_id: str | None = None, repository: str | None = None,
+    request_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Release own held claims by identity (or every own scope on a repo)."""
     if not claim_id and not repository:
         raise ValueError("release needs claim_id or repository")
-    records = store.read_claims()
-    live = active_claims(records)
-    targets = [
-        record for record in live.values()
-        if record.get("session_id") == session_id
-        and (claim_id is None or str(record.get("claim_id")) == claim_id)
-        and (repository is None or str(record.get("repository")) == repository)
-    ]
-    released: list[dict[str, Any]] = []
-    for existing in targets:
-        versions = [
-            int(record.get("version", 0)) for record in records
-            if str(record.get("claim_id", "")) == str(existing.get("claim_id"))
+    import secrets
+
+    from .session_store import ClaimBatchConflict, ClaimVersionConflict
+
+    request_id = request_id or "release_" + secrets.token_hex(16)
+    if not isinstance(request_id, str) or not request_id or len(request_id) > 160 or "\x00" in request_id:
+        raise ValueError("release request identity must be bounded nonempty text")
+    for _ in range(16):
+        generation = store.claim_generation()
+        records = store.read_claims()
+        completed = [record for record in records
+                     if record.get("provenance", {}).get("release_request_id") == request_id]
+        if completed:
+            return completed
+        if store.claim_generation() != generation:
+            continue
+        live = active_claims(records)
+        targets = [
+            record for record in live.values()
+            if record.get("session_id") == session_id
+            and (claim_id is None or str(record.get("claim_id")) == claim_id)
+            and (repository is None or str(record.get("repository")) == repository)
         ]
-        released.append(_record(store, {
+        if not targets:
+            return []
+        released: list[dict[str, Any]] = []
+        for existing in targets:
+            versions = [
+                int(record.get("version", 0)) for record in records
+                if str(record.get("claim_id", "")) == str(existing.get("claim_id"))
+            ]
+            record = {
             "schema_version": SCHEMA,
             "claim_id": str(existing.get("claim_id")),
             "version": (max(versions) + 1) if versions else 1,
@@ -642,45 +687,121 @@ def release(
             "acquired_at": str(existing.get("acquired_at", "")),
             "expires_at": str(existing.get("expires_at", "")),
             "released_at": utcnow(),
-            "provenance": {"released_by": session_id},
-        }))
-    return released
+            "provenance": {"released_by": session_id,
+                           "release_request_id": request_id},
+            }
+            record["identity"] = "clm_" + digest_hex(
+                {key: record[key] for key in sorted(record) if key != "identity"}
+            )
+            released.append(record)
+        try:
+            store.put_claim_batch(released, expected_generation=generation)
+            return released
+        except ClaimBatchConflict:
+            continue
+        except ClaimVersionConflict as error:
+            raise ClaimConflict(str(error)) from error
+    raise ClaimConflict("claim set kept advancing during release; retry after reconciling ownership")
 
 
 def transfer(
     store, *, claim_id: str, from_session: str, to_session: str,
-    to_consumer: str, reason: str = "",
+    to_consumer: str, reason: str = "", request_id: str | None = None,
 ) -> dict[str, Any]:
-    """Explicit ownership transfer: closes the old record, opens the new one."""
-    records = store.read_claims()
-    live = active_claims(records)
-    existing = live.get(claim_id)
-    if existing is None or existing.get("session_id") != from_session:
-        raise ClaimConflict(f"{claim_id} is not held by session {from_session}")
-    release(store, session_id=from_session, claim_id=claim_id,
-            reason=f"transferred to {to_session}: {reason}")
-    versions = [
-        int(record.get("version", 0)) for record in store.read_claims()
-        if str(record.get("claim_id", "")) == claim_id
-    ]
-    now = datetime.now(timezone.utc)
-    try:
-        expires = datetime.fromisoformat(str(existing.get("expires_at", "")))
-    except ValueError:
-        expires = now + timedelta(hours=24)
-    return _record(store, {
-        "schema_version": SCHEMA,
-        "claim_id": claim_id,
-        "version": (max(versions) + 1) if versions else 1,
-        "repository": str(existing.get("repository")),
-        "scope": existing.get("scope", {}),
-        "session_id": to_session,
-        "consumer_id": to_consumer,
-        "basis": BASIS_TRANSFER,
-        "reason": reason,
-        "status": "held",
-        "acquired_at": now.isoformat(timespec="seconds"),
-        "expires_at": expires.isoformat(timespec="seconds"),
-        "provenance": {"transferred_from": from_session,
-                       "transferred_by": from_session},
-    })
+    """Atomically close one owner and open the next under Store CAS.
+
+    The request id makes a retry after a lost response a readback operation:
+    the committed recipient record is returned without creating a second
+    transfer. Store-backed sessions publish both versions in one generation.
+    """
+    import secrets
+
+    from .session_store import ClaimBatchConflict, ClaimVersionConflict
+
+    request_id = request_id or "transfer_" + secrets.token_hex(16)
+    if not isinstance(request_id, str) or not request_id or len(request_id) > 160 or "\x00" in request_id:
+        raise ValueError("transfer request identity must be bounded nonempty text")
+    for _ in range(16):
+        generation = store.claim_generation()
+        records = store.read_claims()
+        # A previous attempt may have committed both records before its
+        # caller was interrupted. Confirm recipient and source exactly.
+        completed = [row for row in records
+                     if row.get("provenance", {}).get("transfer_request_id") == request_id]
+        if completed:
+            received = [row for row in completed
+                        if row.get("status") == "held"
+                        and row.get("session_id") == to_session
+                        and row.get("claim_id") == claim_id]
+            if received:
+                return max(received, key=lambda row: int(row.get("version", 0)))
+            raise ClaimConflict("transfer request identity is already bound to another transition")
+        if store.claim_generation() != generation:
+            continue
+        live = active_claims(records)
+        existing = live.get(claim_id)
+        if existing is None or existing.get("session_id") != from_session:
+            raise ClaimConflict(f"{claim_id} is not held by session {from_session}")
+        versions = [int(row.get("version", 0)) for row in records
+                    if str(row.get("claim_id", "")) == claim_id]
+        latest_version = max(versions, default=0)
+        now = datetime.now(timezone.utc)
+        try:
+            expires = datetime.fromisoformat(str(existing.get("expires_at", "")))
+        except ValueError:
+            expires = now + timedelta(hours=24)
+        release_record = {
+            "schema_version": SCHEMA,
+            "claim_id": claim_id,
+            "version": latest_version + 1,
+            "repository": str(existing.get("repository")),
+            "scope": existing.get("scope", {}),
+            "session_id": from_session,
+            "consumer_id": str(existing.get("consumer_id", "")),
+            "basis": str(existing.get("basis", "")),
+            "reason": f"transferred to {to_session}: {reason}",
+            "status": "released",
+            "acquired_at": str(existing.get("acquired_at", "")),
+            "expires_at": str(existing.get("expires_at", "")),
+            "released_at": now.isoformat(timespec="seconds"),
+            "provenance": {
+                "released_by": from_session,
+                "transferred_to": to_session,
+                "transfer_request_id": request_id,
+                "transferred_from_version": int(existing.get("version", 0)),
+            },
+        }
+        recipient = {
+            "schema_version": SCHEMA,
+            "claim_id": claim_id,
+            "version": latest_version + 2,
+            "repository": str(existing.get("repository")),
+            "scope": existing.get("scope", {}),
+            "session_id": to_session,
+            "consumer_id": to_consumer,
+            "basis": BASIS_TRANSFER,
+            "reason": reason,
+            "status": "held",
+            "acquired_at": now.isoformat(timespec="seconds"),
+            "expires_at": expires.isoformat(timespec="seconds"),
+            "provenance": {
+                "transferred_from": from_session,
+                "transferred_from_version": int(existing.get("version", 0)),
+                "transferred_by": from_session,
+                "transfer_request_id": request_id,
+            },
+        }
+        for record in (release_record, recipient):
+            record["identity"] = "clm_" + digest_hex(
+                {key: record[key] for key in sorted(record) if key != "identity"}
+            )
+        try:
+            store.put_claim_batch(
+                [release_record, recipient], expected_generation=generation
+            )
+            return recipient
+        except ClaimBatchConflict:
+            continue
+        except ClaimVersionConflict as error:
+            raise ClaimConflict(str(error)) from error
+    raise ClaimConflict("claim set kept advancing during transfer; retry after reconciling ownership")

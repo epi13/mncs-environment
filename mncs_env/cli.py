@@ -123,7 +123,11 @@ def cmd_enter(args: argparse.Namespace) -> int:
         result = entry_module.enter(definition=definition, definition_path=definition_path,
                                workspace_root=workspace_root, state_dir=args.state_dir,
                                backend=args.persistence, consumer_id=args.consumer,
-                               consumer_kind=args.consumer_kind, new_session=args.new_session)
+                               consumer_kind=args.consumer_kind, new_session=args.new_session,
+                               campaign_id=args.campaign_id,
+                               authenticated_principal_id=os.environ.get(
+                                   "MNCS_ENV_AUTH_PRINCIPAL_ID"
+                               ))
         out(result)
         return 5 if result["readiness"]["status"] == "blocked" else 0
     except (workspace_module.WorkspaceResolutionError, entry_module.EntryError) as error:
@@ -589,8 +593,8 @@ def cmd_invoke(args: argparse.Namespace) -> int:
                 timeout_seconds=args.timeout,
                 output_limit_bytes=args.output_limit_bytes,
                 effect_target=(
-                    {"repository": args.effect_repository}
-                    if args.effect_repository else None
+                    {"repository": getattr(args, "effect_repository", None)}
+                    if getattr(args, "effect_repository", None) else None
                 ),
             )
         except (sessions_module.AuthorityDenied, sessions_module.LifecycleError,
@@ -734,7 +738,8 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
         )
     except sessions_module.LifecycleError as error:
         return fail(str(error))
-    out(session.checkpoint(progress=args.progress, remaining=args.remaining))
+    out(session.checkpoint(progress=args.progress, remaining=args.remaining,
+                           request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID")))
     return 0
 
 
@@ -751,6 +756,10 @@ def cmd_handoff(args: argparse.Namespace) -> int:
             notes=args.notes,
             blockers=args.blockers,
             next_actions=args.next,
+            to_authenticated_principal_id=os.environ.get(
+                "MNCS_ENV_AUTH_PRINCIPAL_ID"
+            ),
+            request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"),
         )
     )
     return 0
@@ -765,7 +774,10 @@ def cmd_accept(args: argparse.Namespace) -> int:
         return fail(str(error))
     try:
         out(session.accept_handoff(args.handoff, consumer_id=args.consumer,
-                                   consumer_kind=args.consumer_kind))
+                                   consumer_kind=args.consumer_kind,
+                                   authenticated_principal_id=os.environ.get(
+                                       "MNCS_ENV_AUTH_PRINCIPAL_ID"
+                                   )))
     except sessions_module.LifecycleError as error:
         return fail(str(error))
     return 0
@@ -807,8 +819,15 @@ def cmd_claims(args: argparse.Namespace) -> int:
                 state_dir=args.state_dir, session_id=args.session, backend=args.persistence,
                 store=store,
             )
-            out({"released": session.release_claim(
-                args.release, reason=args.reason, claim_id=args.claim_id)})
+            try:
+                out({"released": session.release_claim(
+                    args.release, reason=args.reason, claim_id=args.claim_id,
+                    request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"))})
+            except claims_module.ClaimConflict as error:
+                return fail(str(error), code=3, diagnostics={
+                    "code": "claim-conflict", "publication_completed": False,
+                    "next": "re-read the current claim generation and reconcile ownership",
+                })
             return 0
         if args.transfer_to:
             session = sessions_module.Session.resume(
@@ -820,9 +839,13 @@ def cmd_claims(args: argparse.Namespace) -> int:
             try:
                 out(session.transfer_claim(
                     args.claim_id, args.transfer_to, args.transfer_consumer,
-                    reason=args.reason))
+                    reason=args.reason,
+                    request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID")))
             except claims_module.ClaimConflict as error:
-                return fail(str(error), code=3)
+                return fail(str(error), code=3, diagnostics={
+                    "code": "claim-conflict", "publication_completed": False,
+                    "next": "re-read the current claim generation and reconcile ownership",
+                })
             return 0
         if args.acquire:
             session = sessions_module.Session.resume(
@@ -849,9 +872,13 @@ def cmd_claims(args: argparse.Namespace) -> int:
             basis = claims_module.BASIS_ADOPTION if args.adopt else args.basis
             try:
                 out(session.acquire_claim(args.acquire, basis=basis, reason=args.reason,
-                                          ttl_hours=args.ttl, scope=scope))
+                                          ttl_hours=args.ttl, scope=scope,
+                                          request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID")))
             except claims_module.ClaimConflict as error:
-                return fail(str(error), code=3)
+                return fail(str(error), code=3, diagnostics={
+                    "code": "claim-conflict", "publication_completed": False,
+                    "next": "re-read the current claim generation and reconcile ownership",
+                })
             except claims_module.ClaimAdoptionRequired as error:
                 return fail(f"adoption required: {error}", code=4)
             return 0
@@ -1024,6 +1051,8 @@ def build_parser() -> argparse.ArgumentParser:
     enter.add_argument("--workspace", default=None)
     enter.add_argument("--consumer", default="local-agent")
     enter.add_argument("--consumer-kind", default="agent")
+    enter.add_argument("--campaign-id", default=None,
+                       help="resume a durable campaign identity (authorized Control transport only)")
     enter.add_argument("--new-session", action="store_true", help="create independent work instead of reusing matching work")
     enter.set_defaults(func=cmd_enter)
 
@@ -1250,7 +1279,8 @@ def build_parser() -> argparse.ArgumentParser:
                         choices=(claims_module.BASIS_EXPLICIT, claims_module.BASIS_INTENT_SCOPE,
                                  claims_module.BASIS_RECOVERY, claims_module.BASIS_ADOPTION))
     claims.add_argument("--reason", default="")
-    claims.add_argument("--ttl", type=int, default=24)
+    claims.add_argument("--ttl", type=int, default=24,
+                        help="claim lease in hours (1..168; default 24)")
     claims.add_argument("--explain", default=None,
                         help="explain one claim id as live/stale/recoverable/not-recoverable")
     claims.set_defaults(func=cmd_claims)
@@ -1304,8 +1334,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    actual_argv = list(sys.argv[1:] if argv is None else argv)
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(actual_argv)
+    if os.environ.get("MNCS_ENV_PERSISTENCE_TRANSPORT") == "control-rpc":
+        from . import rpc_client
+        return rpc_client.dispatch(actual_argv)
     args.state_dir = args.state_dir.expanduser().resolve()
     try:
         return args.func(args)
@@ -1319,9 +1353,20 @@ def main(argv: list[str] | None = None) -> int:
             "next": "resume and inspect durable events and invocation artifacts before retrying; serialize mutating commands for this session",
         })
     except (StoreUnavailable, StoreIntegrityFailure) as error:
-        return fail(str(error), diagnostics={"code": "store-unavailable" if isinstance(error, StoreUnavailable) else "store-integrity-failure",
+        store_code = (
+            error.code if isinstance(error, StoreUnavailable)
+            else "store-integrity-failure"
+        )
+        next_step = (
+            "run this operation through the authenticated MNCS Control Environment transport"
+            if store_code == "direct-filesystem-read-only"
+            else "bind the intended Store checkout with MNCS_STORE_PYTHON; inspect Store recovery before retrying"
+        )
+        return fail(str(error), diagnostics={"code": store_code,
                                            "provider": "mncs-store", "state_dir": str(args.state_dir),
-                                           "next": "bind the intended Store checkout with MNCS_STORE_PYTHON; inspect Store recovery before retrying"})
+                                           "publication_completed": False,
+                                           "transport": "direct-filesystem",
+                                           "next": next_step})
     except (OSError, ValueError, sessions_module.LifecycleError) as error:
         return fail(str(error), diagnostics={"code": "environment-command-failed", "command": args.command,
                                            "state_dir": str(args.state_dir), "next": "check configuration and session state; retry entry"})
