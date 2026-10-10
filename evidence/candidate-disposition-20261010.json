@@ -1,0 +1,205 @@
+{
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "candidate_dispositions": [
+    {
+      "candidate_ahead_of_canonical": 1,
+      "candidate_behind_canonical": 14,
+      "candidate_branch": "campaign/keyword-local-index-delivery-20261010",
+      "candidate_commit_subject": "Record lexer keyword optimization delivery",
+      "candidate_head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "canonical_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "canonical_ref": "origin/main",
+      "disposition": "preserve; authenticated owner handoff or authorized claim transfer required",
+      "expected_head_matches": true,
+      "host_read_only_worktree_observation": {
+        "clean": true,
+        "dirty_entries": [],
+        "path_exists": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+        "expires_at": "2027-08-03T10:31:10+00:00",
+        "explanation": {
+          "claim_id": "claim:mncs-compiler",
+          "freshness": "stale",
+          "last_activity_at": "2026-10-09T20:23:20+00:00",
+          "lease": {
+            "acquired_at": "2026-10-09T18:13:43+00:00",
+            "duration_hours": 7144.291,
+            "expires_at": "2027-08-03T10:31:10+00:00",
+            "maximum_hours": 168,
+            "policy": "exceeds-current-maximum"
+          },
+          "owner_known": true,
+          "owner_lifecycle": "active",
+          "reason": "owner session ses_d2537acde8b8a875 is quiet but the exclusive scope needs a dead owner or TTL expiry",
+          "session_id": "ses_d2537acde8b8a875",
+          "verdict": "not-recoverable"
+        },
+        "identity": "clm_5871ad9917e5210d",
+        "scope": {
+          "branch": null,
+          "checkout": null,
+          "exclusive": true,
+          "kind": "repository",
+          "paths": null,
+          "repository": "mncs-compiler"
+        },
+        "session_id": "ses_d2537acde8b8a875"
+      },
+      "registered_worktree_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+      "repository": "mncs-compiler",
+      "tests_run": false,
+      "tip_changed_paths": [
+        "evidence/SELF-HOST-MATRIX.json"
+      ],
+      "unique_patch_commit_count": 0
+    },
+    {
+      "candidate_ahead_of_canonical": 1,
+      "candidate_behind_canonical": 1,
+      "candidate_branch": "campaign/process-environment-value-bound-20261010",
+      "candidate_commit_subject": "Add bounded process environment values and quiet compile output",
+      "candidate_head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "canonical_head": "5e49f34f86b0ea24429ce61889d87403efd3f81c",
+      "canonical_ref": "origin/main",
+      "disposition": "preserve; authenticated owner handoff or authorized claim transfer required",
+      "expected_head_matches": true,
+      "host_read_only_worktree_observation": {
+        "clean": false,
+        "dirty_entries": [
+          "?? evidence/campaign-20261010-forge-core-quiet-output.json"
+        ],
+        "path_exists": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-language",
+        "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+        "expires_at": "2026-10-10T22:53:50+00:00",
+        "explanation": {
+          "claim_id": "claim:mncs-language",
+          "freshness": "stale",
+          "last_activity_at": "2026-10-09T20:23:20+00:00",
+          "lease": {
+            "acquired_at": "2026-10-09T18:13:55+00:00",
+            "duration_hours": 28.665,
+            "expires_at": "2026-10-10T22:53:50+00:00",
+            "maximum_hours": 168,
+            "policy": "within-current-maximum"
+          },
+          "owner_known": true,
+          "owner_lifecycle": "active",
+          "reason": "owner session ses_d2537acde8b8a875 is quiet but the exclusive scope needs a dead owner or TTL expiry",
+          "session_id": "ses_d2537acde8b8a875",
+          "verdict": "not-recoverable"
+        },
+        "identity": "clm_0a8ed881f6356df2",
+        "scope": {
+          "branch": null,
+          "checkout": null,
+          "exclusive": true,
+          "kind": "repository",
+          "paths": null,
+          "repository": "mncs-language"
+        },
+        "session_id": "ses_d2537acde8b8a875"
+      },
+      "registered_worktree_path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+      "repository": "mncs-language",
+      "tests_run": false,
+      "tip_changed_paths": [
+        "crates/mncs-cli/src/main.rs",
+        "crates/mncs-cli/tests/fixtures/quiet-compile.mncs",
+        "crates/mncs-cli/tests/profile_registry.rs",
+        "crates/mncs-cli/tests/quiet_compile.rs",
+        "crates/mncs-compiler/src/frontend.rs",
+        "crates/mncs-compiler/tests/source_profile_019_sequence_bound.rs",
+        "crates/mncs-model/src/body.rs",
+        "crates/mncs-model/src/capability_gap.rs",
+        "crates/mncs-syntax/src/profile.rs",
+        "crates/mncs-syntax/src/source.rs",
+        "docs/language-capabilities.json",
+        "docs/language-capability-deltas.json",
+        "docs/source-profile-0.18.md",
+        "docs/source-profile-0.19.md",
+        "examples/capability-gaps/process-environment-value-1447.json",
+        "library/std/application.mncs",
+        "library/std/process.mncs",
+        "library/stdlib-bundle.json",
+        "rfcs/0049-machine-native-source-profile-0-19-bounded-sequence-capacity.md",
+        "rfcs/README.md",
+        "scripts/generate_language_capabilities.py",
+        "scripts/test_generate_language_capabilities.py",
+        "spec/README.md",
+        "spec/source-profile-registry.json"
+      ],
+      "unique_patch_commit_count": 1
+    },
+    {
+      "candidate_ahead_of_canonical": 1,
+      "candidate_behind_canonical": 0,
+      "candidate_branch": "campaign/forge-quiet-compile-output-20261010",
+      "candidate_commit_subject": "Skip discarded Forge compile outputs",
+      "candidate_head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "canonical_head": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "canonical_ref": "origin/main",
+      "disposition": "preserve; authenticated owner handoff or authorized claim transfer required",
+      "expected_head_matches": true,
+      "host_read_only_worktree_observation": {
+        "clean": true,
+        "dirty_entries": [],
+        "path_exists": true
+      },
+      "ownership": {
+        "claim_id": "claim:mncs-forge",
+        "consumer_id": "luna-compiler-self-consumption",
+        "expires_at": "2027-03-07T23:49:59+00:00",
+        "explanation": {
+          "claim_id": "claim:mncs-forge",
+          "freshness": "stale",
+          "last_activity_at": "2026-10-09T03:05:19+00:00",
+          "lease": {
+            "acquired_at": "2026-10-09T02:18:31+00:00",
+            "duration_hours": 3597.524,
+            "expires_at": "2027-03-07T23:49:59+00:00",
+            "maximum_hours": 168,
+            "policy": "exceeds-current-maximum"
+          },
+          "owner_known": true,
+          "owner_lifecycle": "active",
+          "reason": "owner session ses_95c3aa35b8544042 is quiet but the exclusive scope needs a dead owner or TTL expiry",
+          "session_id": "ses_95c3aa35b8544042",
+          "verdict": "not-recoverable"
+        },
+        "identity": "clm_16b820b3293d873b",
+        "scope": {
+          "branch": null,
+          "checkout": null,
+          "exclusive": true,
+          "kind": "repository",
+          "paths": null,
+          "repository": "mncs-forge"
+        },
+        "session_id": "ses_95c3aa35b8544042"
+      },
+      "registered_worktree_path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+      "repository": "mncs-forge",
+      "tests_run": false,
+      "tip_changed_paths": [
+        "src/mncs_forge/mncs_native.py",
+        "tests/test_mncs_native.py"
+      ],
+      "unique_patch_commit_count": 1
+    }
+  ],
+  "mutations_performed": false,
+  "observed_at": "2026-10-10T22:50:00+00:00",
+  "remote_heads_verified_with_ls_remote": {
+    "compiler": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "forge": "cc2516f073d47739d74e68266d97fd090c53da16",
+    "language": "5e49f34f86b0ea24429ce61889d87403efd3f81c"
+  },
+  "schema_version": "mncs.environment.candidate-disposition/1",
+  "session_id": "ses_7226fbcfe65820f7"
+}
