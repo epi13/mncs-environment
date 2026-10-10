@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -241,10 +242,10 @@ class EntryContractTests(unittest.TestCase):
                      ["-c", "user.name=Entry Test", "-c", "user.email=entry@example.invalid", "commit", "-qm", "fixture"]):
             subprocess.run(["git", "-C", str(self.project), *argv], check=True, capture_output=True)
 
-    def run_cli(self, *argv, cwd=None, backend="file"):
+    def run_cli(self, *argv, cwd=None, backend="file", env=None):
         result = subprocess.run([sys.executable, str(CLI), "--state-dir", str(self.state),
                                  "--persistence", backend, *argv], cwd=cwd or self.project,
-                                capture_output=True, text=True, timeout=30)
+                                capture_output=True, text=True, timeout=30, env=env)
         payload = json.loads(result.stdout or result.stderr)
         return result.returncode, payload
 
@@ -290,6 +291,61 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(code, 0, second)
         self.assertEqual(first["session_id"], second["session_id"])
         self.assertTrue(second["entry"]["reused"])
+
+    def test_store_entry_discovers_and_accepts_recipient_handoff_in_fresh_process(self):
+        self.ready()
+        sender_env = {
+            **os.environ,
+            "MNCS_ENV_AUTH_PRINCIPAL_ID": "ctrl_handoff_source",
+            "MNCS_ENV_RPC_REQUEST_ID": "req_handoff_source_entry",
+        }
+        code, sender = self.run_cli(
+            "enter", "--consumer", "agent", backend="store", env=sender_env
+        )
+        self.assertEqual(code, 0, sender)
+
+        handoff_env = {
+            **os.environ,
+            "MNCS_ENV_AUTH_PRINCIPAL_ID": "ctrl_handoff_source",
+            "MNCS_ENV_RPC_REQUEST_ID": "req_handoff_create",
+        }
+        code, handoff = self.run_cli(
+            "handoff", sender["session_id"], "--consumer", "agent",
+            "--to", "agent", "--to-principal", "ctrl_handoff_receiver",
+            backend="store", env=handoff_env,
+        )
+        self.assertEqual(code, 0, handoff)
+
+        receiver_env = {
+            **os.environ,
+            "MNCS_ENV_AUTH_PRINCIPAL_ID": "ctrl_handoff_receiver",
+            "MNCS_ENV_RPC_REQUEST_ID": "req_handoff_receiver_entry",
+        }
+        code, receiver = self.run_cli(
+            "enter", "--consumer", "agent", backend="store", env=receiver_env
+        )
+        self.assertEqual(code, 0, receiver)
+        self.assertEqual(receiver["session_id"], sender["session_id"])
+        self.assertTrue(receiver["entry"]["reused"])
+        self.assertEqual(receiver["consumer_id"], "agent")
+        self.assertEqual(receiver["lifecycle"], "active")
+        self.assertEqual(
+            receiver["continuation"]["identity"],
+            sender["continuation"]["identity"],
+        )
+
+        code, checkpoint = self.run_cli(
+            "checkpoint", receiver["session_id"], "--progress", "continued after owner handoff",
+            backend="store", env=receiver_env,
+        )
+        self.assertEqual(code, 0, checkpoint)
+        inspect_env = {**receiver_env, "MNCS_ENV_RPC_REQUEST_ID": "req_handoff_inspect"}
+        code, inspected = self.run_cli(
+            "inspect", receiver["session_id"], "--consumer", "agent",
+            backend="store", env=inspect_env,
+        )
+        self.assertEqual(code, 0, inspected)
+        self.assertIn(checkpoint["identity"], inspected["checkpoints"])
 
     def test_subdirectory_entry_and_returned_actions_work_from_unrelated_cwd(self):
         self.ready()

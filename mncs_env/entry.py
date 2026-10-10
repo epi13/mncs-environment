@@ -7,7 +7,22 @@ import fcntl
 from contextlib import contextmanager
 from pathlib import Path
 
-from . import composition, actions, coherence as incremental, context_budget, diagnostics, doctor, family, identity, projections, readiness, semantics, sessions, verification, workspace
+from . import (
+    actions,
+    composition,
+    context_budget,
+    diagnostics,
+    doctor,
+    family,
+    identity,
+    projections,
+    readiness,
+    semantics,
+    sessions,
+    verification,
+    workspace,
+)
+from . import coherence as incremental
 from .intent import parse as parse_intent
 from .persist import read_json
 from .session_store import open_store, upgrade_session_store_provider
@@ -313,7 +328,8 @@ def ambient_tick(session, definition, *, fresh=False, upgraded=False, lock_waite
 def enter(*, definition: dict, definition_path: Path | None, workspace_root: str,
           state_dir: Path, backend: str, consumer_id: str, consumer_kind: str,
           new_session: bool = False, campaign_id: str | None = None,
-          authenticated_principal_id: str | None = None) -> dict:
+          authenticated_principal_id: str | None = None,
+          continuation_request_id: str | None = None) -> dict:
     # Invalid inputs fail before persistence or provider startup.
     state_dir = Path(state_dir).expanduser().resolve()
     if backend not in ("store", "file") or not consumer_id.strip() or not consumer_kind.strip():
@@ -362,8 +378,11 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
         store = open_store(state_dir, backend, store_package_dir=store_package, store_runtime=store_runtime, defer_mutation=True)
         try:
             upgraded = False
+            pending_handoff = None
             has_persistence = (Path(state_dir) / ("store" if backend == "store" else "sessions")).exists()
             if not new_session and has_persistence:
+                discovered_campaigns: set[str] = set()
+                discovered_sessions: list[str] = []
                 if authenticated_principal_id is not None and requested_campaign_id is None:
                     discovery_selector = {
                         "principal_id": authenticated_principal_id,
@@ -388,6 +407,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                         str((store.load_snapshot(session_id) or {}).get("campaign", {}).get("identity"))
                         for session_id in discovered
                     }
+                    discovered_sessions = list(discovered)
                     if len(discovered_campaigns) > 1:
                         raise EntryError(
                             "multiple durable campaigns match this authenticated consumer and selected environment",
@@ -398,6 +418,94 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                         )
                     if discovered_campaigns:
                         campaign_id = next(iter(discovered_campaigns))
+
+                if authenticated_principal_id is not None:
+                    handoff_selector = {
+                        "recipient_principal_id": authenticated_principal_id,
+                        "definition": definition_id,
+                        "workspace": str(root),
+                        "pending_handoff_discovery": True,
+                    }
+                    pending_ids = selection.select(
+                        store,
+                        handoff_selector,
+                        lambda snapshot: (
+                            snapshot.get("provenance", {}).get("definition_id") == definition_id
+                            and snapshot.get("workspace", {}).get("root") == str(root)
+                            and snapshot.get("lifecycle") == "handed_off"
+                            and (
+                                isinstance(snapshot.get("pending_handoff_id"), str)
+                                or ("pending_handoff_id" not in snapshot
+                                    and bool(snapshot.get("handoffs", [])))
+                            )
+                        ),
+                    )
+                    addressed: list[tuple[str, str, dict, dict]] = []
+                    for pending_session_id in pending_ids:
+                        pending_snapshot = store.load_snapshot(pending_session_id) or {}
+                        handoff_identity = pending_snapshot.get("pending_handoff_id")
+                        if not isinstance(handoff_identity, str):
+                            previous_handoffs = pending_snapshot.get("handoffs") or []
+                            handoff_identity = previous_handoffs[-1] if previous_handoffs else None
+                        if not isinstance(handoff_identity, str):
+                            continue
+                        handoff_ids = pending_snapshot.get("handoffs")
+                        if not isinstance(handoff_ids, list) or handoff_identity not in handoff_ids:
+                            continue
+                        handoff_record = store.load_handoff(pending_session_id, handoff_identity)
+                        if not isinstance(handoff_record, dict):
+                            continue
+                        source_principal = pending_snapshot.get("authenticated_principal_id")
+                        pending_campaign = (pending_snapshot.get("campaign") or {}).get("identity")
+                        if (
+                            handoff_record.get("identity") != handoff_identity
+                            or handoff_record.get("session_id") != pending_session_id
+                            or not isinstance(source_principal, str)
+                            or not source_principal
+                            or handoff_record.get("from_authenticated_principal_id") != source_principal
+                            or handoff_record.get("to_authenticated_principal_id") != authenticated_principal_id
+                            or not isinstance(pending_campaign, str)
+                            or (requested_campaign_id is not None
+                                and pending_campaign != requested_campaign_id)
+                        ):
+                            continue
+                        addressed.append((pending_session_id, handoff_identity,
+                                          pending_snapshot, handoff_record))
+                    if len(addressed) > 1:
+                        raise EntryError(
+                            "multiple owner-issued handoffs match this authenticated Environment entry",
+                            "campaign-handoff-ambiguous",
+                            sessions=sorted(item[0] for item in addressed),
+                            campaigns=sorted({str(item[2]["campaign"]["identity"])
+                                              for item in addressed}),
+                            next="select the intended campaign identity; Environment will not choose between handoffs",
+                        )
+                    if addressed:
+                        candidate = addressed[0]
+                        candidate_campaign = str(candidate[2]["campaign"]["identity"])
+                        if (requested_campaign_id is None and discovered_campaigns
+                                and candidate_campaign not in discovered_campaigns):
+                            raise EntryError(
+                                "an existing campaign and an owner-issued handoff both match this Environment",
+                                "campaign-continuation-ambiguous",
+                                campaigns=sorted((*discovered_campaigns, candidate_campaign)),
+                                sessions=sorted((*discovered_sessions, candidate[0])),
+                                next="select the intended campaign identity; Environment will not choose between continuations",
+                            )
+                        if (candidate[3].get("to_consumer") != consumer_id
+                                or candidate[3].get("to_consumer_kind", "agent") != consumer_kind):
+                            raise EntryError(
+                                "the pending handoff is addressed to a different consumer identity",
+                                "campaign-handoff-recipient-mismatch",
+                                session_id=candidate[0],
+                                handoff_id=candidate[1],
+                                consumer_id=candidate[3].get("to_consumer"),
+                                consumer_kind=candidate[3].get("to_consumer_kind", "agent"),
+                                next="enter with the consumer identity named by the owner-issued handoff",
+                            )
+                        pending_handoff = candidate
+                        if requested_campaign_id is None:
+                            campaign_id = candidate_campaign
                 selector = ({'campaign_id': campaign_id,
                              'principal_id': authenticated_principal_id,
                              'definition': definition_id, 'workspace': str(root)}
@@ -434,17 +542,59 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                         ),
                     )
                     if foreign_owner:
-                        raise EntryError(
-                            "campaign is owned by a different authenticated principal",
-                            "campaign-owner-conflict", sessions=sorted(foreign_owner),
-                            next="request an explicit handoff from the recorded owner",
-                        )
-                if backend == "store" and len(matches) == 1:
-                    upgraded = upgrade_session_store_provider(state_dir, store.load_snapshot(matches[0]))
+                        unexpected_owners = [
+                            session_id for session_id in foreign_owner
+                            if pending_handoff is None or session_id != pending_handoff[0]
+                        ]
+                        if unexpected_owners:
+                            raise EntryError(
+                                "campaign is owned by a different authenticated principal",
+                                "campaign-owner-conflict", sessions=sorted(unexpected_owners),
+                                next="request an explicit handoff from the recorded owner",
+                            )
                 if len(matches) > 1:
                     raise EntryError("multiple matching sessions exist; resume a specific session or use --new-session",
                                      "entry-session-ambiguous", sessions=sorted(matches), next="resume <session> --revalidate")
-                if matches:
+                if pending_handoff is not None and matches:
+                    raise EntryError(
+                        "an existing session and an owner-issued handoff both match this campaign",
+                        "campaign-continuation-ambiguous",
+                        campaigns=[campaign_id],
+                        sessions=sorted((*matches, pending_handoff[0])),
+                        next="select the intended session; Environment will not choose between continuations",
+                    )
+                selected_session_id = (
+                    pending_handoff[0] if pending_handoff is not None
+                    else matches[0] if len(matches) == 1 else None
+                )
+                if backend == "store" and selected_session_id is not None:
+                    upgraded = upgrade_session_store_provider(
+                        state_dir, store.load_snapshot(selected_session_id)
+                    )
+                if pending_handoff is not None:
+                    session_id, handoff_identity, _, _ = pending_handoff
+                    session = sessions.Session.open(
+                        state_dir=state_dir, session_id=session_id,
+                        backend=backend, store=store,
+                    )
+                    try:
+                        session.accept_handoff(
+                            handoff_identity,
+                            consumer_id=consumer_id,
+                            consumer_kind=consumer_kind,
+                            authenticated_principal_id=authenticated_principal_id,
+                            request_id=continuation_request_id,
+                        )
+                    except sessions.LifecycleError as error:
+                        raise EntryError(
+                            f"owner-issued handoff could not be accepted: {error}",
+                            "campaign-handoff-rejected",
+                            session_id=session_id,
+                            handoff_id=handoff_identity,
+                            next="reconcile the current handoff and session owner before retrying",
+                        ) from error
+                    session.reconcile_campaign_continuity()
+                elif matches:
                     session = sessions.Session.open(state_dir=state_dir, session_id=matches[0],
                                                       backend=backend, store=store)
                     session.reconcile_campaign_continuity()
@@ -494,7 +644,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                     session.transition("active", "authenticated campaign continuation")
             elif session.snapshot["lifecycle"] in ("checkpointed", "abandoned"):
                 session.transition("active", "re-entered durable work")
-            blocks, trace = ambient_tick(session, definition, fresh=not reused,
+            blocks, _trace = ambient_tick(session, definition, fresh=not reused,
                 upgraded=upgraded, lock_waited=lock_waited)
             remediation = blocks["doctor"]
             result = session.context()

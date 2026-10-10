@@ -21,13 +21,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import composition
 from . import authority as authority_module
 from . import capabilities as capabilities_module
 from . import claims as claims_module
+from . import composition
 from . import events as events_module
-from . import rights as rights_module
 from . import readiness as readiness_module
+from . import rights as rights_module
 from . import workspace as workspace_module
 from .identity import (
     digest_hex,
@@ -38,8 +38,8 @@ from .identity import (
 )
 from .intent import parse as parse_intent
 from .session_store import (
-    SessionStore,
     SequenceTaken,
+    SessionStore,
     open_store,
     store_provider_from_environment,
     write_session_store_provider,
@@ -799,6 +799,8 @@ class Session:
             "pressures": [],
             "checkpoints": [],
             "handoffs": [],
+            "pending_handoff_id": None,
+            "accepted_handoffs": [],
             "completion": None,
             "created_at": utcnow(),
             "updated_at": utcnow(),
@@ -887,7 +889,31 @@ class Session:
             campaign["unresolved_pressures"] = pressures[-32:]
         self.snapshot["campaign"] = campaign
         recovered = sorted(set(checkpoint_ids) - set(prior_checkpoints))
-        if recovered or prior_claims != claims or missing or refs_changed:
+        events = self._log()
+        resumed_handoffs = {
+            event.get("payload", {}).get("handoff_id")
+            for event in events if event.get("type") == "session.resumed"
+        }
+        repaired_acceptance = False
+        for accepted in self.snapshot.get("accepted_handoffs", []):
+            if not isinstance(accepted, dict):
+                continue
+            handoff_identity = accepted.get("handoff_id")
+            if not isinstance(handoff_identity, str) or handoff_identity in resumed_handoffs:
+                continue
+            result = accepted.get("result") or {}
+            self._emit("session.resumed", str(accepted.get("consumer_id", "unknown")), {
+                "previous_consumer": accepted.get("previous_consumer"),
+                "handoff_id": handoff_identity,
+                "authenticated_principal_id": accepted.get("authenticated_principal_id"),
+                "source_authenticated_principal_id": accepted.get(
+                    "source_authenticated_principal_id"
+                ),
+                "revalidation": result.get("divergence", {}),
+            })
+            resumed_handoffs.add(handoff_identity)
+            repaired_acceptance = True
+        if recovered or prior_claims != claims or missing or refs_changed or repaired_acceptance:
             self._emit("campaign.reconciled", "environment", {
                 "campaign_id": campaign.get("identity"),
                 "recovered_checkpoints": recovered,
@@ -2186,35 +2212,131 @@ class Session:
         to_authenticated_principal_id: str | None = None,
         request_id: str | None = None,
     ) -> dict[str, Any]:
+        if (not isinstance(to_consumer, str) or not to_consumer.strip()
+                or len(to_consumer) > 256 or "\x00" in to_consumer):
+            raise ValueError("handoff consumer identity must be bounded nonempty text")
+        if to_authenticated_principal_id is not None and (
+            not isinstance(to_authenticated_principal_id, str)
+            or not to_authenticated_principal_id.strip()
+            or len(to_authenticated_principal_id) > 256
+            or "\x00" in to_authenticated_principal_id
+        ):
+            raise ValueError("handoff principal identity must be bounded nonempty text")
+        if request_id is not None and (
+            not isinstance(request_id, str) or not request_id
+            or len(request_id) > 160 or "\x00" in request_id
+        ):
+            raise ValueError("handoff request identity must be bounded nonempty text")
+        notes = list(notes or [])
+        blockers = list(blockers or [])
+        next_actions = list(next_actions or [])
+
+        def request_digest(checkpoint_identity: str, source_principal: str | None) -> str:
+            return digest_hex({
+                "session_id": self.session_id,
+                "checkpoint_id": checkpoint_identity,
+                "from_consumer": self.snapshot.get("consumer_id", ""),
+                "from_authenticated_principal_id": source_principal,
+                "to_consumer": to_consumer,
+                "to_authenticated_principal_id": to_authenticated_principal_id,
+                "notes": notes,
+                "blockers": blockers,
+                "next_actions": next_actions,
+            })
+
+        if self.snapshot.get("lifecycle") == "handed_off":
+            pending_id = self.snapshot.get("pending_handoff_id")
+            existing = (
+                self.store.load_handoff(self.session_id, pending_id)
+                if isinstance(pending_id, str) else None
+            )
+            if isinstance(existing, dict):
+                expected_digest = request_digest(
+                    str(existing.get("checkpoint_id", "")),
+                    self.snapshot.get("authenticated_principal_id"),
+                )
+                legacy_match = (
+                    request_id is None
+                    and "request_digest" not in existing
+                    and existing.get("to_consumer") == to_consumer
+                    and existing.get("to_authenticated_principal_id") == to_authenticated_principal_id
+                    and existing.get("notes", []) == notes
+                    and existing.get("blockers", []) == blockers
+                    and existing.get("next_actions", []) == next_actions
+                )
+                if (
+                    existing.get("request_digest") == expected_digest
+                    and existing.get("request_id") == request_id
+                ) or legacy_match:
+                    events = self._log()
+                    if not any(event.get("type") == "handoff.created"
+                               and event.get("payload", {}).get("handoff_id") == pending_id
+                               for event in events):
+                        self._emit("handoff.created", self.snapshot.get("consumer_id", "unknown"), {
+                            "handoff_id": pending_id, "to_consumer": to_consumer,
+                        })
+                        self._save()
+                    return existing
+            raise LifecycleError("a different owner-issued handoff is already pending")
+        if self.snapshot.get("lifecycle") != "active":
+            raise LifecycleError("only an active session can create a handoff")
+
         checkpoint = self.checkpoint(progress="handoff", remaining=next_actions,
                                      request_id=request_id)
+        source_principal = self.snapshot.get("authenticated_principal_id")
+        handoff_history = self.snapshot.get("handoffs", [])
+        if not isinstance(handoff_history, list):
+            raise LifecycleError("session handoff history is malformed")
+        identity_sequence = len(handoff_history) + 1
+        record_identity = handoff_id(
+            checkpoint["identity"], self.snapshot.get("consumer_id", ""),
+            to_consumer, to_authenticated_principal_id, identity_sequence,
+        )
+        record_digest = request_digest(checkpoint["identity"], source_principal)
         record = {
             "schema_version": HANDOFF_SCHEMA,
-            "identity": handoff_id(checkpoint["identity"], self.snapshot.get("consumer_id", ""), to_consumer),
+            "identity": record_identity,
             "checkpoint_id": checkpoint["identity"],
             "session_id": self.session_id,
             "from_consumer": self.snapshot.get("consumer_id"),
             "to_consumer": to_consumer,
             "to_consumer_kind": "agent",
-            "from_authenticated_principal_id": self.snapshot.get("authenticated_principal_id"),
+            "from_authenticated_principal_id": source_principal,
             "to_authenticated_principal_id": to_authenticated_principal_id,
-            "notes": list(notes or []),
-            "blockers": list(blockers or []),
-            "next_actions": list(next_actions or []),
+            "notes": notes,
+            "blockers": blockers,
+            "next_actions": next_actions,
+            "request_id": request_id,
+            "request_digest": record_digest,
             "created_at": utcnow(),
         }
-        self.store.save_handoff(self.session_id, record)
-        self.snapshot.setdefault("handoffs", []).append(record["identity"])
+        existing = self.store.load_handoff(self.session_id, record_identity)
+        if existing is not None:
+            if (existing.get("request_id") != request_id
+                    or existing.get("request_digest") != record_digest):
+                raise LifecycleError("handoff identity is already bound to conflicting request state")
+            record = existing
+        else:
+            self.store.save_handoff(self.session_id, record)
+        handoff_history = self.snapshot.setdefault("handoffs", [])
+        if record["identity"] not in handoff_history:
+            handoff_history.append(record["identity"])
+        self.snapshot["pending_handoff_id"] = record["identity"]
         if self.snapshot.get("lifecycle") == "active":
             self.transition("handed_off", f"handoff to {to_consumer}")
-        self._emit("handoff.created", self.snapshot.get("consumer_id", "unknown"),
-                   {"handoff_id": record["identity"], "to_consumer": to_consumer})
-        self._save()
+        events = self._log()
+        if not any(event.get("type") == "handoff.created"
+                   and event.get("payload", {}).get("handoff_id") == record["identity"]
+                   for event in events):
+            self._emit("handoff.created", self.snapshot.get("consumer_id", "unknown"),
+                       {"handoff_id": record["identity"], "to_consumer": to_consumer})
+            self._save()
         return record
 
     def accept_handoff(self, handoff_id: str, *, consumer_id: str,
                        consumer_kind: str = "agent",
-                       authenticated_principal_id: str | None = None) -> dict[str, Any]:
+                       authenticated_principal_id: str | None = None,
+                       request_id: str | None = None) -> dict[str, Any]:
         """Accept a handoff as the intended recipient, revalidating everything.
 
         Rejects unknown handoffs, wrong recipients, and stale assumptions:
@@ -2232,13 +2354,63 @@ class Session:
                 f"not {consumer_id}"
             )
         recipient_principal = record.get("to_authenticated_principal_id")
-        if recipient_principal is not None and recipient_principal != authenticated_principal_id:
+        if recipient_principal != authenticated_principal_id:
             raise LifecycleError("handoff recipient principal does not match authenticated continuation")
         source_principal = record.get("from_authenticated_principal_id")
+
+        request_digest = digest_hex({
+            "session_id": self.session_id,
+            "handoff_id": handoff_id,
+            "consumer_id": consumer_id,
+            "consumer_kind": consumer_kind,
+            "authenticated_principal_id": authenticated_principal_id,
+        })
+        request_id = request_id or "hacc_" + request_digest
+        if (not isinstance(request_id, str) or not request_id
+                or len(request_id) > 160 or "\x00" in request_id):
+            raise ValueError("handoff acceptance request identity must be bounded nonempty text")
+        accepted_handoffs = list(self.snapshot.get("accepted_handoffs", []))
+        accepted = next((item for item in accepted_handoffs
+                         if isinstance(item, dict) and item.get("handoff_id") == handoff_id), None)
+        if accepted is not None:
+            if (accepted.get("request_id") != request_id
+                    or accepted.get("request_digest") != request_digest
+                    or accepted.get("consumer_id") != consumer_id
+                    or accepted.get("authenticated_principal_id") != authenticated_principal_id
+                    or accepted.get("source_authenticated_principal_id") != source_principal):
+                raise LifecycleError(f"handoff {handoff_id} was already accepted by another continuation")
+            result = dict(accepted.get("result") or {})
+            events = self._log()
+            if not any(event.get("type") == "session.resumed"
+                       and event.get("payload", {}).get("handoff_id") == handoff_id
+                       for event in events):
+                self._emit("session.resumed", consumer_id, {
+                    "previous_consumer": accepted.get("previous_consumer"),
+                    "handoff_id": handoff_id,
+                    "revalidation": result.get("divergence", {}),
+                })
+                self._save()
+            return result
         if (source_principal is not None
                 and self.snapshot.get("authenticated_principal_id") != source_principal):
             raise LifecycleError("handoff source principal no longer matches the session owner")
+        if self.snapshot.get("lifecycle") != "handed_off":
+            raise LifecycleError("handoff is not pending in the session lifecycle")
+        pending_handoff_id = self.snapshot.get("pending_handoff_id")
+        handoff_history = self.snapshot.get("handoffs")
+        legacy_pending = (
+            "pending_handoff_id" not in self.snapshot
+            and isinstance(handoff_history, list)
+            and handoff_history[-1:] == [handoff_id]
+        )
+        if pending_handoff_id != handoff_id and not legacy_pending:
+            raise LifecycleError("handoff is not the session's current pending transfer")
+
         previous = self.snapshot.get("consumer_id")
+        # Revalidation occurs while the sender still owns the session. The
+        # recipient and fencing record are committed together in the next
+        # immutable snapshot revision.
+        divergence = self.revalidate()
         self.snapshot["consumer_id"] = consumer_id
         self.snapshot["consumer_kind"] = consumer_kind
         if authenticated_principal_id is not None:
@@ -2248,15 +2420,35 @@ class Session:
             self.snapshot["campaign"] = campaign
         self.snapshot["authority"] = dict(self.snapshot.get("authority", {}))
         self.snapshot["authority"]["subject"] = consumer_id
-        divergence = self.revalidate()
-        if self.snapshot.get("lifecycle") == "handed_off":
-            self.transition("active", f"handoff {handoff_id} accepted by {consumer_id} (was {previous})")
+        campaign = dict(self.snapshot.get("campaign") or {})
+        consumers = list(campaign.get("authorized_consumers", []))
+        for value in (previous, consumer_id):
+            if value and value not in consumers:
+                consumers.append(value)
+        campaign["authorized_consumers"] = consumers[-32:]
+        campaign["current_consumer_id"] = consumer_id
+        self.snapshot["campaign"] = campaign
+        result = {"previous_consumer": previous, "consumer_id": consumer_id,
+                  "handoff_id": handoff_id, "divergence": divergence}
+        accepted_handoffs.append({
+            "handoff_id": handoff_id,
+            "request_id": request_id,
+            "request_digest": request_digest,
+            "consumer_id": consumer_id,
+            "authenticated_principal_id": authenticated_principal_id,
+            "source_authenticated_principal_id": source_principal,
+            "previous_consumer": previous,
+            "result": result,
+            "accepted_at": utcnow(),
+        })
+        self.snapshot["accepted_handoffs"] = accepted_handoffs[-64:]
+        self.snapshot["pending_handoff_id"] = None
+        self.transition("active", f"handoff {handoff_id} accepted by {consumer_id} (was {previous})")
         self._emit("session.resumed", consumer_id,
                    {"previous_consumer": previous, "handoff_id": handoff_id,
                     "revalidation": divergence})
         self._save()
-        return {"previous_consumer": previous, "consumer_id": consumer_id,
-                "handoff_id": handoff_id, "divergence": divergence}
+        return result
 
     def _release_own_claims(self, reason: str) -> dict[str, Any]:
         """Release every live claim held by this session.

@@ -127,6 +127,9 @@ def cmd_enter(args: argparse.Namespace) -> int:
                                campaign_id=args.campaign_id,
                                authenticated_principal_id=os.environ.get(
                                    "MNCS_ENV_AUTH_PRINCIPAL_ID"
+                               ),
+                               continuation_request_id=os.environ.get(
+                                   "MNCS_ENV_RPC_REQUEST_ID"
                                ))
         out(result)
         return 5 if result["readiness"]["status"] == "blocked" else 0
@@ -756,8 +759,8 @@ def cmd_handoff(args: argparse.Namespace) -> int:
             notes=args.notes,
             blockers=args.blockers,
             next_actions=args.next,
-            to_authenticated_principal_id=os.environ.get(
-                "MNCS_ENV_AUTH_PRINCIPAL_ID"
+            to_authenticated_principal_id=(
+                args.to_principal or os.environ.get("MNCS_ENV_AUTH_PRINCIPAL_ID")
             ),
             request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"),
         )
@@ -777,7 +780,8 @@ def cmd_accept(args: argparse.Namespace) -> int:
                                    consumer_kind=args.consumer_kind,
                                    authenticated_principal_id=os.environ.get(
                                        "MNCS_ENV_AUTH_PRINCIPAL_ID"
-                                   )))
+                                   ),
+                                   request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID")))
     except sessions_module.LifecycleError as error:
         return fail(str(error))
     return 0
@@ -1241,6 +1245,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     handoff = session_parser("handoff", "hand off to another consumer")
     handoff.add_argument("--to", required=True)
+    handoff.add_argument(
+        "--to-principal", default=None,
+        help="authenticated Control principal receiving the handoff (defaults to this principal)",
+    )
     handoff.add_argument("--notes", nargs="*", default=[])
     handoff.add_argument("--blockers", nargs="*", default=[])
     handoff.add_argument("--next", nargs="*", default=[])

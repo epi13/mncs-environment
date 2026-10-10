@@ -57,14 +57,25 @@ def checkpoint_id(session_id: str, sequence: int, state_digest: str) -> str:
     )
 
 
-def handoff_id(checkpoint_id_value: str, from_consumer: str, to_consumer: str) -> str:
+def handoff_id(
+    checkpoint_id_value: str,
+    from_consumer: str,
+    to_consumer: str,
+    to_authenticated_principal_id: str | None = None,
+    handoff_sequence: int | None = None,
+) -> str:
+    material = {
+        "kind": "handoff",
+        "checkpoint": checkpoint_id_value,
+        "from": from_consumer,
+        "to": to_consumer,
+    }
+    if to_authenticated_principal_id is not None:
+        material["to_principal"] = to_authenticated_principal_id
+    if handoff_sequence is not None:
+        material["sequence"] = int(handoff_sequence)
     return "hff_" + digest_hex(
-        {
-            "kind": "handoff",
-            "checkpoint": checkpoint_id_value,
-            "from": from_consumer,
-            "to": to_consumer,
-        }
+        material
     )
 
 

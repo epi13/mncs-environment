@@ -16,8 +16,10 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout
 from unittest import mock
 from pathlib import Path
@@ -49,6 +51,7 @@ from mncs_env import (  # noqa: E402
     workspace,
 )
 from mncs_env.session_store import (  # noqa: E402
+    SnapshotConflict,
     open_store,
     store_provider_from_environment,
     write_session_store_provider,
@@ -2119,6 +2122,194 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(accepted["previous_consumer"], "tester")
             self.assertEqual(resumed.snapshot["lifecycle"], "active")
             self.assertEqual(resumed.snapshot["checkpoints"][0], record["identity"])
+
+    def test_authenticated_cross_principal_handoff_is_fenced_and_retryable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            session.snapshot["authenticated_principal_id"] = "ctrl_source"
+            session.snapshot["campaign"]["principal_id"] = "ctrl_source"
+            session._save()
+            handoff = session.handoff(
+                to_consumer="agent-receiver",
+                to_authenticated_principal_id="ctrl_receiver",
+                request_id="req_handoff_checkpoint",
+            )
+
+            receiver = sessions.Session.open(
+                state_dir=state, session_id=session.session_id, **FAST
+            )
+            with self.assertRaisesRegex(
+                sessions.LifecycleError, "recipient principal does not match"
+            ):
+                receiver.accept_handoff(
+                    handoff["identity"], consumer_id="agent-receiver",
+                    authenticated_principal_id="ctrl_impostor",
+                )
+
+            accepted = receiver.accept_handoff(
+                handoff["identity"], consumer_id="agent-receiver",
+                authenticated_principal_id="ctrl_receiver",
+                request_id="req_accept_handoff",
+            )
+            self.assertEqual(accepted["previous_consumer"], "tester")
+            self.assertEqual(receiver.snapshot["authenticated_principal_id"], "ctrl_receiver")
+            self.assertEqual(receiver.snapshot["lifecycle"], "active")
+            self.assertIsNone(receiver.snapshot["pending_handoff_id"])
+
+            restarted = sessions.Session.open(
+                state_dir=state, session_id=session.session_id, **FAST
+            )
+            self.assertEqual(
+                restarted.accept_handoff(
+                    handoff["identity"], consumer_id="agent-receiver",
+                    authenticated_principal_id="ctrl_receiver",
+                    request_id="req_accept_handoff",
+                ),
+                accepted,
+            )
+            with self.assertRaisesRegex(sessions.LifecycleError, "already accepted"):
+                restarted.accept_handoff(
+                    handoff["identity"], consumer_id="agent-receiver",
+                    authenticated_principal_id="ctrl_receiver",
+                    request_id="req_accept_handoff_again",
+                )
+
+    def test_handoff_accept_retry_repairs_missing_resume_event(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            handoff = session.handoff(to_consumer="agent-b")
+            receiver = sessions.Session.open(
+                state_dir=state, session_id=session.session_id, **FAST
+            )
+            emit = receiver._emit
+
+            def interrupt_resume_event(event_type, producer, payload=None, causes=None):
+                if event_type == "session.resumed":
+                    raise RuntimeError("simulated process interruption after owner fence")
+                return emit(event_type, producer, payload, causes)
+
+            receiver._emit = interrupt_resume_event
+            with self.assertRaisesRegex(RuntimeError, "simulated process interruption"):
+                receiver.accept_handoff(
+                    handoff["identity"], consumer_id="agent-b",
+                    request_id="req_interrupted_accept",
+                )
+
+            restarted = sessions.Session.open(
+                state_dir=state, session_id=session.session_id, **FAST
+            )
+            restarted.reconcile_campaign_continuity()
+            accepted = restarted.accept_handoff(
+                handoff["identity"], consumer_id="agent-b",
+                request_id="req_interrupted_accept",
+            )
+            resumed = [event for event in restarted._log()
+                       if event.get("type") == "session.resumed"
+                       and event.get("payload", {}).get("handoff_id") == handoff["identity"]]
+            self.assertEqual(len(resumed), 1)
+            self.assertEqual(accepted["consumer_id"], "agent-b")
+
+    def test_handoff_retry_repairs_publication_and_later_handoff_gets_new_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            session.snapshot["authenticated_principal_id"] = "ctrl_source"
+            session.snapshot["campaign"]["principal_id"] = "ctrl_source"
+            session._save()
+            emit = session._emit
+
+            def interrupt_handoff_event(event_type, producer, payload=None, causes=None):
+                if event_type == "handoff.created":
+                    raise RuntimeError("simulated process interruption after handoff fence")
+                return emit(event_type, producer, payload, causes)
+
+            session._emit = interrupt_handoff_event
+            with self.assertRaisesRegex(RuntimeError, "after handoff fence"):
+                session.handoff(
+                    to_consumer="agent-receiver",
+                    to_authenticated_principal_id="ctrl_receiver",
+                    request_id="req_handoff_creation",
+                )
+
+            restarted = sessions.Session.resume(
+                state_dir=state, session_id=session.session_id, **FAST
+            )
+            recovered = restarted.handoff(
+                to_consumer="agent-receiver",
+                to_authenticated_principal_id="ctrl_receiver",
+                request_id="req_handoff_creation",
+            )
+            created_events = [event for event in restarted._log()
+                              if event.get("type") == "handoff.created"
+                              and event.get("payload", {}).get("handoff_id") == recovered["identity"]]
+            self.assertEqual(len(created_events), 1)
+
+            restarted.accept_handoff(
+                recovered["identity"], consumer_id="agent-receiver",
+                authenticated_principal_id="ctrl_receiver",
+                request_id="req_handoff_acceptance",
+            )
+            next_owner = sessions.Session.open(
+                state_dir=state, session_id=session.session_id, **FAST
+            )
+            later = next_owner.handoff(
+                to_consumer="agent-receiver",
+                to_authenticated_principal_id="ctrl_receiver",
+                request_id="req_handoff_after_acceptance",
+            )
+            self.assertNotEqual(later["identity"], recovered["identity"])
+
+    def test_competing_handoff_accepts_have_one_store_cas_winner(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            session.snapshot["authenticated_principal_id"] = "ctrl_source"
+            session.snapshot["campaign"]["principal_id"] = "ctrl_source"
+            session._save()
+            handoff = session.handoff(
+                to_consumer="agent-receiver",
+                to_authenticated_principal_id="ctrl_receiver",
+            )
+            first = sessions.Session.open(
+                state_dir=state, session_id=session.session_id, **FAST
+            )
+            second = sessions.Session.open(
+                state_dir=state, session_id=session.session_id, **FAST
+            )
+            start = threading.Barrier(2)
+
+            def accept(candidate, request_id):
+                start.wait(timeout=10)
+                try:
+                    candidate.accept_handoff(
+                        handoff["identity"], consumer_id="agent-receiver",
+                        authenticated_principal_id="ctrl_receiver",
+                        request_id=request_id,
+                    )
+                    return "accepted"
+                except SnapshotConflict:
+                    return "snapshot-conflict"
+
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                outcomes = list(pool.map(
+                    lambda item: accept(*item),
+                    ((first, "req_competing_accept_one"),
+                     (second, "req_competing_accept_two")),
+                ))
+            first.close()
+            second.close()
+
+            reread = sessions.Session.open(
+                state_dir=state, session_id=session.session_id, **FAST
+            )
+            self.assertEqual(outcomes.count("accepted"), 1, outcomes)
+            self.assertEqual(reread.snapshot["authenticated_principal_id"], "ctrl_receiver")
+            self.assertEqual(
+                [item["handoff_id"] for item in reread.snapshot["accepted_handoffs"]],
+                [handoff["identity"]],
+            )
 
     def test_authenticated_campaign_capsule_survives_fresh_session_object(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
