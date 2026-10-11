@@ -1,0 +1,139 @@
+{
+  "schema_version": "mncs.environment.canonical-claim-transfer-restart-replay/1",
+  "identity": "ev_canonical_claim_transfer_restart_replay_20261011",
+  "recorded_at": "2026-10-11",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "main",
+    "commit": "9e4ceea8a7a4ddb80d0327a97b57d9bef4891037",
+    "remote_ref": "origin/main",
+    "remote_head": "9e4ceea8a7a4ddb80d0327a97b57d9bef4891037",
+    "claims_source_sha256": "5b93393549aef2b92732136ab42e27fac140f3368e1e1e5a43ba16bf3f43125a",
+    "transfer_tests_sha256": "4b93d698c95571f00c8856ca6a016abb7be573177f9e35d1415fa1ba7c667b63"
+  },
+  "control": {
+    "repository": "mncs-control-mcp",
+    "main_revision": "a4cbf4e82881248256e064514dae950ed5c12316",
+    "service_unit": "mncs-control-tunnel.service"
+  },
+  "execution_boundary": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "transport": "per-execution authenticated Control Environment RPC grant",
+    "canonical_store_root": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_path_visible_to_client": false,
+    "direct_canonical_store_filesystem_access": false
+  },
+  "transfer_test": {
+    "repository_claim": "claim:mncs-environment",
+    "source_session_id": "ses_7226fbcfe65820f7",
+    "source_consumer_id": "local-agent",
+    "recipient_session_id": "ses_f0e6e64390bb5843",
+    "recipient_consumer_id": "mncs-transfer-recovery-proof",
+    "recipient_campaign_id": "cmp_claim_transfer_recovery_20261011",
+    "authorization": "The active source session explicitly transferred only its own Environment repository claim to a fresh same-principal test session. The Control, Compiler, Forge, and other repository claims were not changed.",
+    "caller_interruption": {
+      "request_id": "req_claim_transfer_service_restart_20261011",
+      "operation": "claims ses_7226fbcfe65820f7 --claim-id claim:mncs-environment --transfer-to ses_f0e6e64390bb5843 --transfer-consumer mncs-transfer-recovery-proof",
+      "request_sent": true,
+      "caller_read_response": false,
+      "payload_bytes": 444,
+      "bwrap_exit_code": 0
+    },
+    "readback_before_service_restart": {
+      "fresh_project_bwrap_process": true,
+      "source_session_lifecycle": "active",
+      "source_claim_ids": ["claim:mncs-control-mcp"],
+      "single_foreign_claim_owner": {
+        "claim_id": "claim:mncs-environment",
+        "session_id": "ses_f0e6e64390bb5843",
+        "consumer_id": "mncs-transfer-recovery-proof",
+        "status": "held",
+        "version": 31,
+        "effective_expires_at": "2026-10-12T19:38:47+00:00",
+        "workspace_related": true
+      },
+      "recipient_claim_diagnostic": {
+        "owner_known": true,
+        "owner_lifecycle": "active",
+        "verdict": "live",
+        "session_id": "ses_f0e6e64390bb5843"
+      }
+    },
+    "service_restart": {
+      "operation": "systemctl --user restart mncs-control-tunnel.service",
+      "before": {
+        "main_pid": 1417047,
+        "invocation_id": "7bfa1168a202419fa62eefe3316886ec",
+        "active": true
+      },
+      "after": {
+        "main_pid": 1423698,
+        "invocation_id": "f28a902b63644dbd812d25e5b82814f2",
+        "active": true,
+        "substate": "running",
+        "exit_status": 0
+      },
+      "timing": "The service restarted after canonical claim readback, before replay."
+    },
+    "same_request_replay": {
+      "request_id": "req_claim_transfer_service_restart_20261011",
+      "fresh_project_bwrap_process": true,
+      "exit_code": 0,
+      "returned_claim_id": "claim:mncs-environment",
+      "returned_version": 31,
+      "returned_identity": "clm_38fcc58a898bffbe",
+      "returned_session_id": "ses_f0e6e64390bb5843",
+      "returned_status": "held",
+      "returned_transfer_request_id": "req_claim_transfer_service_restart_20261011",
+      "same_live_owner_as_pre_restart_readback": true
+    },
+    "restore_original_owner": {
+      "request_id": "req_claim_transfer_restore_owner_20261011",
+      "exit_code": 0,
+      "returned_claim_id": "claim:mncs-environment",
+      "returned_version": 33,
+      "returned_identity": "clm_545ce73595e24c40",
+      "returned_session_id": "ses_7226fbcfe65820f7",
+      "returned_consumer_id": "local-agent",
+      "returned_status": "held"
+    },
+    "readback_after_restore": {
+      "source_session_id": "ses_7226fbcfe65820f7",
+      "source_lifecycle": "active",
+      "source_claim_ids": ["claim:mncs-control-mcp", "claim:mncs-environment"],
+      "recipient_session_id": "ses_f0e6e64390bb5843",
+      "recipient_claim_ids": [],
+      "current_environment_claim_owner": "ses_7226fbcfe65820f7",
+      "current_environment_claim_verdict": "live"
+    }
+  },
+  "temporary_session_lifecycle": {
+    "session_id": "ses_f0e6e64390bb5843",
+    "last_observed_lifecycle": "active",
+    "claims_after_restore": [],
+    "close_attempt": {
+      "operation": "complete",
+      "environment_diagnostic_code": "operation-unavailable",
+      "cause_code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+      "reported_status": "unknown",
+      "publication_completed": false,
+      "exit_code": 3
+    },
+    "disposition": "Retained as an active, claim-free test session because Control does not expose the lifecycle close operation; no completion was inferred."
+  },
+  "focused_tests": {
+    "command": "python3 -B -m pytest -q tests/test_environment.py -k 'transfer_retry_reconciles_lost_response_atomically or concurrent_transfers_fence_competing_recipients or transfer_preserves_bounded_deadline_for_legacy_lease or old_transfer_retry_does_not_return_a_superseded_recipient'",
+    "result": "4 passed, 150 deselected in 0.27s"
+  },
+  "result": "PASS_FOR_CANONICAL_CLAIM_TRANSFER_CALLER_DISCONNECT_AND_POST_PUBLICATION_SERVICE_RESTART_REPLAY",
+  "limitations": [
+    "Control restarted only after the first caller-disconnect transfer had been read back. This does not kill the service inside the Store-commit-to-response-write window.",
+    "The same stable request replay returned the same canonical claim version and identity after restart; claim history was not read through direct Store filesystem access.",
+    "The temporary recipient session remains active and claim-free because lifecycle completion is not exposed through the current Control Environment operation contract."
+  ]
+}
