@@ -17,8 +17,9 @@ a live session claim on the target scope, and refuses unknown work.
 
 Summaries are terse by construction (`repaired/reconciled/degraded/
 blockers` plus escalation ids). Full evidence lives in the session
-artifact directory and is retrievable on demand, never forced into the
-working context.
+artifact directory for the file backend and as an immutable Store object
+for the canonical backend. It is retrievable on demand, never forced into
+the working context.
 """
 
 from __future__ import annotations
@@ -39,6 +40,7 @@ from .persist import read_json, write_json
 DOCTOR_SCHEMA = "mncs.environment.doctor/2"
 EPOCH_SCHEMA = "mncs.environment.doctor-epoch/2"
 EVIDENCE_SCHEMA = "mncs.environment.doctor-evidence/1"
+STORE_EVIDENCE_SCHEMA = b"mncs.environment.doctor-evidence/1"
 
 #: File-side epoch freshness for the no-store fast path (`status --terse`).
 FILESIDE_EPOCH_TTL_SECONDS = 60
@@ -452,8 +454,6 @@ def record_epoch(session, *, repairs: list[dict[str, Any]],
                     "reused": reused})
     doctor.update({"schema_version": DOCTOR_SCHEMA, "epoch": epoch,
                    "history": history[-MAX_HISTORY:]})
-    session.snapshot["doctor"] = doctor
-    session._save()
     fileside = {"schema_version": EPOCH_SCHEMA, "digest": digest,
                 "session_id": session.session_id,
                 "workspace_root": inputs.get("workspace_root"),
@@ -466,7 +466,6 @@ def record_epoch(session, *, repairs: list[dict[str, Any]],
                 "remaining_truncated": terse["remaining_truncated"],
                 "unavailable": terse["unavailable"],
                 "readiness": terse["readiness"], "validated_at": now}
-    write_json(_epoch_file(session), fileside)
     evidence = {"schema_version": EVIDENCE_SCHEMA, "session_id": session.session_id,
                 "digest": digest, "validated_at": now, "reused": reused,
                 "summary": terse["summary"], "remaining": terse["remaining"],
@@ -474,7 +473,34 @@ def record_epoch(session, *, repairs: list[dict[str, Any]],
                 "classification": classify_unavailable(session.snapshot.get("bindings", [])),
                 "operations": operations or [], "revalidation": revalidation or {},
                 "readiness": readiness_module.summarize(session.snapshot)}
-    write_json(_evidence_file(session), evidence)
+    store = session.store
+    put_record = getattr(store, "put_record", None)
+    get_record = getattr(store, "get_record", None)
+    if callable(put_record) and callable(get_record):
+        # A Store-backed session must not depend on sidecar writes next to
+        # the canonical Store. Persist the detailed Doctor evidence as one
+        # immutable Environment object and bind it from the snapshot.
+        identity = (f"{session.session_id}:doctor:"
+                    f"{digest_hex(evidence, length=64)}").encode("utf-8")
+        existing = get_record(STORE_EVIDENCE_SCHEMA, identity)
+        if existing is None:
+            try:
+                put_record(STORE_EVIDENCE_SCHEMA, identity, evidence)
+            except Exception:
+                existing = get_record(STORE_EVIDENCE_SCHEMA, identity)
+                if existing != evidence:
+                    raise
+        elif existing != evidence:
+            raise ValueError("Doctor evidence identity resolved to different Store content")
+        doctor["evidence_ref"] = {
+            "schema": STORE_EVIDENCE_SCHEMA.decode("ascii"),
+            "identity": identity.decode("utf-8"),
+        }
+    session.snapshot["doctor"] = doctor
+    session._save()
+    if not (callable(put_record) and callable(get_record)):
+        write_json(_epoch_file(session), fileside)
+        write_json(_evidence_file(session), evidence)
     return {"digest": digest, "validated_at": now, "summary": terse["summary"],
             "remaining": terse["remaining"],
             "remaining_truncated": terse["remaining_truncated"],
@@ -496,12 +522,28 @@ def terse(session) -> dict[str, Any]:
 
 
 def evidence(session) -> dict[str, Any]:
-    """Full evidence trail: snapshot history plus the evidence artifact."""
+    """Full evidence trail: snapshot history plus its immutable artifact."""
     doctor = session.snapshot.get("doctor", {})
-    payload = read_json(_evidence_file(session))
+    reference = doctor.get("evidence_ref") if isinstance(doctor, dict) else None
+    payload = None
+    artifact = str(_evidence_file(session))
+    if (isinstance(reference, dict)
+            and reference.get("schema") == STORE_EVIDENCE_SCHEMA.decode("ascii")
+            and isinstance(reference.get("identity"), str)):
+        get_record = getattr(session.store, "get_record_strict",
+                             session.store.get_record)
+        payload = get_record(
+            STORE_EVIDENCE_SCHEMA, reference["identity"].encode("utf-8"))
+        if payload is None:
+            from .store_backend import StoreIntegrityFailure
+            raise StoreIntegrityFailure(
+                "Doctor snapshot references a missing immutable evidence record")
+        artifact = f"mncs-store:{reference['identity']}"
+    else:
+        payload = read_json(_evidence_file(session))
     return {"session_id": session.session_id, "history": doctor.get("history", []),
             "epoch": doctor.get("epoch", {}).get("digest"),
-            "artifact": str(_evidence_file(session)),
+            "artifact": artifact,
             "evidence": payload if isinstance(payload, dict) else None}
 
 
@@ -915,6 +957,7 @@ def family_plan(session, function: str, facts: list[int]) -> tuple[bool, Any]:
     """
     import os
     import subprocess
+
     from . import family
     selected = _repo_paths(session)
     root = os.environ.get('MNCS_DOCTOR_ROOT') or selected.get('mncs-doctor')

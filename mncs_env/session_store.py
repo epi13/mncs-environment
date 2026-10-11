@@ -11,8 +11,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .persist import (
+    append_jsonl,
+    exclusive_file_lock,
+    read_json,
+    read_jsonl,
+    write_json,
+)
 from .toolchain import selected_stdlib_root
-from .persist import append_jsonl, exclusive_file_lock, read_json, read_jsonl, write_json
 
 
 class SequenceTaken(Exception):
@@ -151,10 +157,19 @@ def store_provider_from_environment(environment: dict[str, Any]) -> dict[str, An
 def write_session_store_provider(
     state_dir: Path | str, session_id: str, binding: dict[str, Any]
 ) -> None:
-    """Persist Store package routing outside Store so a fresh process can reopen it."""
+    """Persist Store bootstrap routing under the configured Store root.
+
+    This small bootstrap record selects the package used to open the Store;
+    it lives beside Store metadata so the persistence owner can write it
+    without granting access to the parent Environment state directory.
+    """
     payload = {**binding, "session_id": session_id}
-    path = Path(state_dir) / "sessions" / session_id / "store-provider.json"
+    root = Path(state_dir).expanduser().resolve()
+    path = root / "store" / "environment" / "sessions" / session_id / "store-provider.json"
+    legacy_path = root / "sessions" / session_id / "store-provider.json"
     existing = read_json(path)
+    if existing is None:
+        existing = read_json(legacy_path)
     if existing is not None and existing != payload:
         raise ValueError(f"session {session_id} already has a different Store provider binding")
     write_json(path, payload)
@@ -167,8 +182,12 @@ def upgrade_session_store_provider(state_dir: Path | str, snapshot: dict[str, An
     the current Store schema remains the only runtime implementation.
     """
     session_id = snapshot["session_id"]
-    path = Path(state_dir) / "sessions" / session_id / "store-provider.json"
+    root = Path(state_dir).expanduser().resolve()
+    path = root / "store" / "environment" / "sessions" / session_id / "store-provider.json"
+    legacy_path = root / "sessions" / session_id / "store-provider.json"
     prior = read_json(path)
+    if prior is None:
+        prior = read_json(legacy_path)
     if not isinstance(prior, dict) or prior.get("schema_version") != "mncs.environment.session-store-provider/1":
         return False
     selected = store_provider_from_environment(snapshot)
@@ -183,8 +202,12 @@ def upgrade_session_store_provider(state_dir: Path | str, snapshot: dict[str, An
 
 
 def _session_store_provider(state_dir: Path | str, session_id: str) -> dict[str, Any] | None:
-    path = Path(state_dir) / "sessions" / session_id / "store-provider.json"
+    root = Path(state_dir).expanduser().resolve()
+    path = root / "store" / "environment" / "sessions" / session_id / "store-provider.json"
+    legacy_path = root / "sessions" / session_id / "store-provider.json"
     payload = read_json(path)
+    if payload is None:
+        payload = read_json(legacy_path)
     if payload is None:
         return None
     if (
@@ -563,6 +586,18 @@ class StoreSessionStore(SessionStore):
 
     def get_record(self, schema: bytes, identity: bytes):
         return self.backend.get_record(schema, identity)
+
+    def get_record_strict(self, schema: bytes, identity: bytes):
+        """Read one Store binding without hiding integrity/provider failures."""
+        getter = getattr(self.backend, "get_record_strict", None)
+        if not callable(getter):
+            from .store_backend import StoreUnavailable
+
+            raise StoreUnavailable(
+                "selected Store provider does not expose strict bound-record reads",
+                code="provider-operation-unsupported",
+            )
+        return getter(schema, identity)
 
     def put_record(self, schema: bytes, identity: bytes, record: dict):
         return self.backend.put_record(schema, identity, record)

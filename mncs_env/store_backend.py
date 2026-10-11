@@ -13,8 +13,8 @@ retries, and an identical re-put is an idempotent DUPLICATE.
 
 from __future__ import annotations
 
-import json
 import errno
+import json
 import os
 import sys
 import threading
@@ -439,6 +439,26 @@ class StoreBackend:
             return None
         return record if isinstance(record, dict) else None
 
+    def get_record_strict(self, schema: bytes, identity: bytes) -> dict[str, Any] | None:
+        """Read one bound record, preserving integrity and provider failures."""
+        _, StoreError, StoreResultCode = self._api
+        try:
+            item = self._store.get_bound_object(schema, identity)
+        except StoreError as error:
+            if (error.code == StoreResultCode.DENIED
+                    and error.message == "Store object binding is not current"):
+                return None
+            if error.code == StoreResultCode.INTEGRITY_FAILURE:
+                raise StoreIntegrityFailure(str(error)) from error
+            raise
+        try:
+            record = json.loads(item.payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise StoreIntegrityFailure("Store record payload is not valid UTF-8 JSON") from error
+        if not isinstance(record, dict):
+            raise StoreIntegrityFailure("Store record payload is not a JSON object")
+        return record
+
     def list_checkpoints(self, session_id: str) -> list[dict[str, Any]]:
         """Read only checkpoint objects bound to one Environment session."""
         prefix = f"{session_id}:chk:".encode("utf-8")
@@ -490,8 +510,9 @@ class StoreBackend:
 
     def write_projection_row(self, projection_id: str, version: int,
                              row: dict[str, Any]) -> None:
-        from .projection_store import ProjectionConflict  # noqa: E402
         from mncs_store.errors import StoreResultCode  # noqa: E402
+
+        from .projection_store import ProjectionConflict  # noqa: E402
 
         payload = json.dumps(row, ensure_ascii=False,
                              sort_keys=True).encode()
@@ -513,8 +534,9 @@ class StoreBackend:
 
     def write_evidence(self, evidence_id: str,
                        record: dict[str, Any]) -> dict[str, Any]:
-        from .projection_store import EvidenceConflict  # noqa: E402
         from mncs_store.errors import StoreResultCode  # noqa: E402
+
+        from .projection_store import EvidenceConflict  # noqa: E402
 
         payload = json.dumps(record, ensure_ascii=False,
                              sort_keys=True).encode()

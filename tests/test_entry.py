@@ -8,9 +8,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
-import pytest
 from pathlib import Path
 from unittest import mock
+
+import pytest
 
 from mncs_env import capabilities, cli, entry, readiness, sessions, workspace
 
@@ -570,22 +571,25 @@ class EntryContractTests(unittest.TestCase):
                     "revision": "original", "runtime_environment": {"MNCS_BIN": "selected-runtime"}}
         prior = {key: value for key, value in selected.items() if key != "runtime_environment"}
         prior.update(schema_version="mncs.environment.session-store-provider/1", session_id=session_id)
-        path = self.state / "sessions" / session_id / "store-provider.json"
-        path.parent.mkdir(parents=True)
-        path.write_text(json.dumps(prior))
+        legacy_path = self.state / "sessions" / session_id / "store-provider.json"
+        new_path = (self.state / "store" / "environment" / "sessions"
+                    / session_id / "store-provider.json")
+        legacy_path.parent.mkdir(parents=True)
+        legacy_path.write_text(json.dumps(prior))
         snapshot = {"session_id": session_id}
         with mock.patch.object(session_store, "store_provider_from_environment", return_value=selected):
             self.assertTrue(session_store.upgrade_session_store_provider(self.state, snapshot))
             self.assertFalse(session_store.upgrade_session_store_provider(self.state, snapshot))
-        upgraded = json.loads(path.read_text())
+        upgraded = json.loads(new_path.read_text())
         self.assertEqual(upgraded["runtime_environment"], selected["runtime_environment"])
         self.assertEqual(upgraded["revision"], "original")
         prior["checkout"] = str(self.base / "foreign-store")
-        path.write_text(json.dumps(prior))
+        new_path.unlink()
+        legacy_path.write_text(json.dumps(prior))
         with mock.patch.object(session_store, "store_provider_from_environment", return_value=selected):
             with self.assertRaisesRegex(ValueError, "does not match"):
                 session_store.upgrade_session_store_provider(self.state, snapshot)
-        self.assertEqual(json.loads(path.read_text()), prior)
+        self.assertEqual(json.loads(legacy_path.read_text()), prior)
 
 
 if __name__ == "__main__":
@@ -594,6 +598,7 @@ if __name__ == "__main__":
 
 def test_store_entry_lock_reports_read_only_owner_boundary(tmp_path, monkeypatch):
     import errno
+
     from mncs_env.entry import EntryError, entry_lock
     def denied(*args, **kwargs):
         raise OSError(errno.EROFS, "read-only filesystem")
@@ -607,8 +612,18 @@ def test_store_entry_lock_reports_read_only_owner_boundary(tmp_path, monkeypatch
     assert "write capability" in raised.value.diagnostics["next"]
 
 
+def test_store_entry_lock_uses_only_the_configured_store_root(tmp_path):
+    from mncs_env.entry import entry_lock
+
+    with entry_lock(tmp_path, "store"):
+        lock = tmp_path / "store" / "entry-store.lock"
+        assert lock.is_file()
+        assert not (tmp_path / "entry-store.lock").exists()
+
+
 def test_file_entry_lock_keeps_explicit_debug_path_recovery(tmp_path, monkeypatch):
     import errno
+
     from mncs_env.entry import EntryError, entry_lock
     def denied(*args, **kwargs):
         raise OSError(errno.EACCES, "access denied")
@@ -622,6 +637,7 @@ def test_file_entry_lock_keeps_explicit_debug_path_recovery(tmp_path, monkeypatc
 
 def test_selected_store_runtime_suppresses_ambient_artifact_and_restores_process(monkeypatch):
     import os
+
     from mncs_env.store_backend import _selected_store_runtime
     monkeypatch.setenv("MNCS_STORE_ARTIFACT", "/ambient/unselected-artifact")
     runtime = {"MNCS_STORE_ROOT": "/selected/store", "MNCS_LANGUAGE_ROOT": "/selected/language",
@@ -634,6 +650,7 @@ def test_selected_store_runtime_suppresses_ambient_artifact_and_restores_process
 
 def test_selected_store_uses_explicit_writable_derived_cache(tmp_path, monkeypatch):
     import os
+
     from mncs_env.store_backend import _selected_store_runtime
     monkeypatch.setenv("MNCS_STORE_ARTIFACT_CACHE", "/unwritable/ambient-cache")
     runtime = {"MNCS_STORE_ROOT": "/selected/store", "MNCS_LANGUAGE_ROOT": "/selected/language",
@@ -644,9 +661,10 @@ def test_selected_store_uses_explicit_writable_derived_cache(tmp_path, monkeypat
 
 
 def test_snapshot_collision_is_an_environment_conflict(monkeypatch):
+    from types import SimpleNamespace
+
     from mncs_env.session_store import SnapshotConflict
     from mncs_env.store_backend import StoreBackend
-    from types import SimpleNamespace
 
     class Error(Exception):
         code = 7
@@ -689,6 +707,7 @@ def test_read_only_open_defers_store_mutation(tmp_path, monkeypatch):
 def test_read_snapshot_verifies_only_the_latest_revision_payload():
     import json as json_module
     from types import SimpleNamespace
+
     from mncs_env.store_backend import SCHEMA_SNAPSHOT, StoreBackend
 
     payload_reads = []
@@ -720,6 +739,7 @@ def test_read_snapshot_verifies_only_the_latest_revision_payload():
 def test_read_snapshot_falls_back_to_older_decodable_revision():
     import json as json_module
     from types import SimpleNamespace
+
     from mncs_env.store_backend import SCHEMA_SNAPSHOT, StoreBackend
 
     class StubStore:
@@ -743,6 +763,7 @@ def test_read_snapshot_falls_back_to_older_decodable_revision():
 
 def test_read_snapshot_propagates_payload_integrity_failure():
     from types import SimpleNamespace
+
     from mncs_env.store_backend import SCHEMA_SNAPSHOT, StoreBackend
 
     class IntegrityFailure(Exception):
@@ -786,9 +807,10 @@ def test_list_sessions_reads_binding_metadata_only():
 
 
 def test_cli_snapshot_conflict_reports_possible_completed_effects(monkeypatch, capsys):
+    from types import SimpleNamespace
+
     from mncs_env import cli
     from mncs_env.session_store import SnapshotConflict
-    from types import SimpleNamespace
     def collision(args):
         raise SnapshotConflict("session", 4)
     args = SimpleNamespace(state_dir=Path("/tmp/state"), command="invoke", func=collision)

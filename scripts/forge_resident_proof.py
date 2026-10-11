@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fresh-agent proof over real selected Forge, Language Service, Test and Store.
 
-Git clones and copying existing binaries are test setup, never provider
+Git clones and selected-revision runtime builds are test setup, never provider
 discovery. All service operations run through Environment's declared bindings.
 The owned campaign is retained on failure for diagnosis.
 """
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -19,6 +20,41 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 CLI = ROOT / "scripts/mncs-env"
+
+
+def language_abi_is_usable(campaign: Path) -> tuple[bool, list[str]]:
+    """Check that the selected CLI accepts Forge source and library inputs."""
+    language = campaign / "mncs-language"
+    native = campaign / "mncs-forge/src/mncs_forge/resources/native"
+    environment = dict(os.environ)
+    environment["MNCS_LIBRARY_PATH"] = os.pathsep.join(
+        (str(language / "library"), str(native))
+    )
+    try:
+        result = subprocess.run(
+            [str(language / "target/release/mncs"), "abi",
+             str(native / "forge/core.mncs")],
+            cwd=campaign, env=environment, capture_output=True, text=True,
+            timeout=90,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return False, [type(error).__name__]
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return False, ["invalid-json"]
+    diagnostics = payload.get("diagnostics", [])
+    codes = ([str(item.get("code", "unknown")) for item in diagnostics
+             if isinstance(item, dict)] if isinstance(diagnostics, list) else
+             ["invalid-diagnostics"])
+    valid = (result.returncode == 0 and not codes
+             and isinstance(payload.get("functions"), dict))
+    return valid, codes
+
+
+def compiler_probe_observation(checkout: Path) -> dict:
+    return run([sys.executable, "tools/vm_provider.py", "inspect"],
+               cwd=checkout, timeout=60)
 
 
 def run(argv, *, cwd=Path("/tmp"), codes=(0,), timeout=120):
@@ -41,15 +77,76 @@ def main():
     config = campaign / "mncs-environment/.mncs/forge.toml"
     success = False
     try:
-        for name in ("mncs-environment", "mncs-language", "mncs-store", "mncs-test", "mncs-forge", "mncs-language-service"):
+        for name in ("mncs-environment", "mncs-language", "mncs-store", "mncs-test", "mncs-forge", "mncs-language-service", "mncs-compiler", "mncs-vm"):
             source = ROOT if name == "mncs-environment" else args.forge_checkout if name == "mncs-forge" else args.family_root / name
             subprocess.run(["git", "clone", "--shared", "-q", str(source), str(campaign / name)], check=True)
         for name, relatives in (("mncs-language", ("target/release/mncs", "target/release/libmncs_embed.so")),
-                                ("mncs-language-service", ("target/debug/mnls-language-service-host",))):
+                                ("mncs-language-service", ("target/debug/mnls-language-service-host",)),
+                                ("mncs-compiler", (".bootstrap/target/release/mncs-compiler-stage0-probe",)),
+                                ("mncs-vm", ("target/debug/mncs-vm",))):
             for relative in relatives:
                 target = campaign / name / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(args.family_root / name / relative, target)
+        compiler = campaign / "mncs-compiler"
+        bootstrap_source = args.family_root / "mncs-compiler/.bootstrap"
+        bootstrap_revision = (bootstrap_source / "revision").read_text().strip()
+        language_lock = json.loads(
+            (compiler / "mncs-language.lock.json").read_text())
+        if bootstrap_revision != language_lock.get("revision"):
+            raise AssertionError(
+                "selected Compiler bootstrap source does not match its language lock"
+            )
+        shutil.copytree(
+            bootstrap_source, compiler / ".bootstrap",
+            ignore=shutil.ignore_patterns("target"), dirs_exist_ok=True,
+        )
+        compiler_observation = compiler_probe_observation(compiler)
+        if (compiler_observation.get("state") != "ready"
+                or compiler_observation.get("mismatches")):
+            environment = dict(os.environ)
+            environment["CARGO_TARGET_DIR"] = str(
+                compiler / ".bootstrap/target")
+            build = subprocess.run(
+                ["cargo", "build", "--offline", "--manifest-path",
+                 "tools/stage0-probe/Cargo.toml", "--release"],
+                cwd=compiler, env=environment, capture_output=True, text=True,
+                timeout=360,
+            )
+            if build.returncode != 0:
+                raise AssertionError(
+                    "selected Stage-0 probe did not match source and the bounded "
+                    f"offline rebuild failed: {build.stderr[-2000:]}"
+                )
+            compiler_observation = compiler_probe_observation(compiler)
+        if (compiler_observation.get("state") != "ready"
+                or compiler_observation.get("mismatches")):
+            raise AssertionError(
+                "selected Stage-0 Compiler producer is not current: "
+                f"{compiler_observation.get('mismatches')}"
+            )
+        print("PASS selected Compiler probe/source receipt coherence")
+        compatible, abi_diagnostics = language_abi_is_usable(campaign)
+        if not compatible:
+            build = subprocess.run(
+                ["cargo", "build", "--offline", "--manifest-path",
+                 campaign / "mncs-language/Cargo.toml", "-p", "mncs-cli",
+                 "-p", "mncs-embed", "--release"],
+                cwd=campaign / "mncs-language", capture_output=True, text=True,
+                timeout=360,
+            )
+            if build.returncode != 0:
+                raise AssertionError(
+                    "selected Language runtime does not match its source and "
+                    f"the bounded offline rebuild failed: {build.stderr[-2000:]}"
+                )
+            compatible, abi_diagnostics = language_abi_is_usable(campaign)
+        if not compatible:
+            raise AssertionError(
+                "selected Language runtime did not produce valid Forge ABI "
+                f"metadata: {abi_diagnostics}"
+            )
+        print("PASS selected Language runtime/source ABI coherence")
         definition = campaign / "mncs-environment/.mncs/environment.json"
         definition.write_text((ROOT / "samples/forge-resident.environment.json").read_text())
         # The sample is relative to samples/, while the local entry definition

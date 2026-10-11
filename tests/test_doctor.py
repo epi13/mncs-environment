@@ -301,6 +301,35 @@ class EpochTests(DoctorFixture):
         self.assertEqual(evidence["evidence"]["schema_version"],
                          "mncs.environment.doctor-evidence/1")
 
+    def test_store_doctor_evidence_is_immutable_and_sidecar_free(self):
+        self.ready()
+        code, context = self.enter(backend="store")
+        self.assertEqual(code, 0, context)
+        session_id = context["session_id"]
+        code, projection_status = self.run_cli(
+            "projections", session_id, backend="store")
+        self.assertEqual(code, 0, projection_status)
+        self.assertTrue(projection_status["evidence"].startswith("mncs-store:"))
+
+        code, projection = self.run_cli(
+            "projections", session_id, "--evidence", backend="store")
+        self.assertEqual(code, 0, projection)
+        self.assertEqual(projection["evidence"]["schema_version"],
+                         "mncs.environment.projections/1")
+
+        code, evidence = self.run_cli(
+            "doctor", session_id, "--evidence", backend="store")
+        self.assertEqual(code, 0, evidence)
+        self.assertEqual(evidence["evidence"]["session_id"], session_id)
+        self.assertTrue(evidence["artifact"].startswith("mncs-store:"))
+        self.assertEqual(
+            evidence["evidence"]["schema_version"],
+            "mncs.environment.doctor-evidence/1",
+        )
+        sidecars = self.state / "sessions" / session_id
+        self.assertFalse((sidecars / "doctor-epoch.json").exists())
+        self.assertFalse((sidecars / "doctor-evidence.json").exists())
+
     def test_concurrent_sessions_are_isolated(self):
         self.ready()
         _, first = self.enter()

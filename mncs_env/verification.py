@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from . import capabilities as capabilities_module
+from . import evidence_store
 from . import workspace as workspace_module
 from .identity import digest_hex
 
@@ -605,7 +606,9 @@ def ambient_pass(session, *, mode: str = "ambient",
     epoch_inputs = _epoch_inputs(session, obligations, measured, invalid)
     epoch = digest_hex(epoch_inputs)
     stored = session.snapshot.get("verification_epoch") or {}
-    if stored.get("epoch") == epoch and mode == "ambient":
+    if (stored.get("epoch") == epoch and mode == "ambient"
+            and evidence_store.cacheable(
+                session, "verification", stored.get("evidence_ref"))):
         summary = dict(stored.get("summary") or {})
         summary["epoch_reused"] = True
         summary["elapsed_seconds"] = round(time.monotonic() - clock_started, 3)
@@ -809,6 +812,9 @@ def _finish(session, started: str, clock_started: float,
 
 def _write_evidence(session, evidence: dict[str, Any],
                     mode: str) -> str:
+    stored = evidence_store.publish(session, "verification", evidence)
+    if stored is not None:
+        return stored
     directory = _artifact_directory(session, "evidence")
     ref = f"verification-{mode}-{digest_hex(evidence['finished_at'])[:12]}.json"
     path = directory / ref
@@ -869,6 +875,9 @@ def read_evidence(session) -> dict[str, Any]:
     """Full verification evidence for explicit inspection."""
     stored = session.snapshot.get("verification_epoch") or {}
     ref = stored.get("evidence_ref", "")
+    if evidence_store.is_store_reference(ref):
+        return {"evidence": evidence_store.read(session, "verification", ref),
+                "history": session.snapshot.get("verification_history") or []}
     if not ref or not ref.startswith("sessions/"):
         return {"evidence": None, "history": session.snapshot.get(
             "verification_history") or []}

@@ -135,8 +135,22 @@ class ClassifyTests(RecoveryFixture):
         self.assertEqual(verdict["verdict"], "not-recoverable")
         self.assertEqual(verdict["freshness"], "stale")
         self.assertEqual(verdict["lease"]["duration_hours"], 216.0)
+        self.assertEqual(verdict["lease"]["effective_duration_hours"], 168.0)
+        self.assertEqual(verdict["lease"]["effective_expires_at"],
+                         "2026-01-08T12:00:00+00:00")
         self.assertEqual(verdict["lease"]["maximum_hours"], claims.MAX_TTL_HOURS)
         self.assertEqual(verdict["lease"]["policy"], "exceeds-current-maximum")
+        self.assertIn("claim:legacy-overlong",
+                      claims.active_claims([record], now=now))
+
+        bounded_expiry = claims._effective_expiry(record)
+        after_bounded_expiry = bounded_expiry + timedelta(seconds=1)
+        expired_verdict = claims.classify(record, owner, now=after_bounded_expiry)
+        self.assertEqual(expired_verdict["verdict"], "expired")
+        self.assertIn("bounded maximum", expired_verdict["reason"])
+        self.assertEqual(claims.liveness(record, owner["last_activity_at"],
+                                         now=after_bounded_expiry), "expired")
+        self.assertEqual(claims.active_claims([record], now=after_bounded_expiry), {})
         self.assertEqual(record["expires_at"], original_expiry)
 
     def test_failed_owner_frees_even_exclusive_scope(self):
@@ -169,6 +183,46 @@ class ClassifyTests(RecoveryFixture):
 
 
 class AcquireRecoveryTests(RecoveryFixture):
+    def test_bounded_legacy_lease_stops_blocking_after_maximum(self):
+        now = datetime.now(timezone.utc)
+        self.seed_session("ses_old", "active", now - timedelta(minutes=2))
+        self.seed_session("ses_new", "active", now)
+        acquired = now - timedelta(hours=claims.MAX_TTL_HOURS + 1)
+        legacy = claims._record(self.store, {
+            "schema_version": claims.SCHEMA,
+            "claim_id": "claim:r",
+            "version": 1,
+            "repository": "r",
+            "scope": claims.normalize_scope(None, "r"),
+            "session_id": "ses_old",
+            "consumer_id": "ses_old",
+            "basis": claims.BASIS_EXPLICIT,
+            "reason": "legacy overlong hold",
+            "status": "held",
+            "acquired_at": acquired.isoformat(timespec="seconds"),
+            "expires_at": (now + timedelta(days=365)).isoformat(
+                timespec="seconds"),
+            "provenance": {"acquired_by": "ses_old"},
+        })
+        self.assertEqual(
+            claims.explain(legacy, self.store)["verdict"], "expired")
+
+        acquired_claim = claims.acquire(
+            self.store, repository="r", session_id="ses_new",
+            consumer_id="ses_new", basis=claims.BASIS_EXPLICIT,
+            reason="bounded lease elapsed",
+        )
+
+        self.assertEqual(acquired_claim["version"], 2)
+        history = [row for row in self.store.read_claims()
+                   if row.get("claim_id") == legacy["claim_id"]]
+        self.assertEqual([row["version"] for row in history], [1, 2])
+        self.assertEqual(history[0]["expires_at"], legacy["expires_at"])
+        self.assertEqual(
+            claims.active_claims(self.store.read_claims())["claim:r"]["session_id"],
+            "ses_new",
+        )
+
     def test_live_owner_blocks_recovery_with_explanation(self):
         self.seed_session("ses_live", "active",
                           datetime.now(timezone.utc) - timedelta(minutes=1))
@@ -344,7 +398,8 @@ class AcquireRecoveryTests(RecoveryFixture):
         def renewing_read():
             reads["count"] += 1
             if reads["count"] == 2:
-                # Owner renews between the recovery plan and its CAS write.
+                # Owner renews after the contender reads generation but
+                # before its stable claim snapshot.
                 claims.acquire(self.store, repository="r", session_id="ses_owner",
                                consumer_id="ses_owner", basis=claims.BASIS_EXPLICIT,
                                reason="renew",
@@ -359,42 +414,79 @@ class AcquireRecoveryTests(RecoveryFixture):
                                    reason="raced recovery")
         finally:
             self.store.read_claims = real_read  # type: ignore[method-assign]
-        self.assertIn("changed during recovery", str(raised.exception))
+        self.assertIn("live", str(raised.exception))
         latest = claims._latest_by_identity(self.store.read_claims())
         by_id = {item["claim_id"]: item for item in latest.values()}
         self.assertEqual(by_id[victim["claim_id"]]["session_id"], "ses_owner")
         self.assertEqual(by_id[victim["claim_id"]]["status"], "held")
 
-    def test_interrupted_recovery_leaves_scope_acquirable(self):
+    def test_interrupted_recovery_before_commit_keeps_victim_and_retries(self):
         self.seed_session("ses_dead", "completed",
                           datetime.now(timezone.utc) - timedelta(minutes=5))
         victim = self.acquire_paths("ses_dead", ["out/gen.json"])
         self.seed_session("ses_new", "active", datetime.now(timezone.utc))
-        writes = {"count": 0}
-        real_put = self.store.put_claim
+        real_batch = self.store.put_claim_batch
 
-        def crashing_put(record):
-            writes["count"] += 1
-            if record.get("status") == "held" and record.get("basis") == claims.BASIS_RECOVERY:
-                raise RuntimeError("crash before final acquire write")
-            return real_put(record)
+        def crashing_batch(batch, *, expected_generation):
+            raise RuntimeError("crash before atomic recovery commit")
 
-        self.store.put_claim = crashing_put  # type: ignore[method-assign]
+        self.store.put_claim_batch = crashing_batch  # type: ignore[method-assign]
         try:
-            with self.assertRaises(RuntimeError):
+            with self.assertRaisesRegex(RuntimeError, "before atomic recovery"):
                 self.acquire_paths("ses_new", ["out/gen.json"],
-                                   basis=claims.BASIS_RECOVERY, reason="doomed")
+                                   basis=claims.BASIS_RECOVERY, reason="doomed",
+                                   request_id="recover-before-commit")
         finally:
-            self.store.put_claim = real_put  # type: ignore[method-assign]
-        # Victim superseded, no new holder: plain acquire now succeeds.
-        plain = self.acquire_paths("ses_new", ["out/gen.json"],
-                                   basis=claims.BASIS_EXPLICIT, reason="retry")
-        self.assertEqual(plain["status"], "held")
+            self.store.put_claim_batch = real_batch  # type: ignore[method-assign]
+        self.assertEqual(
+            claims.active_claims(self.store.read_claims())[victim["claim_id"]][
+                "session_id"],
+            "ses_dead",
+        )
+        recovered = self.acquire_paths(
+            "ses_new", ["out/gen.json"], basis=claims.BASIS_RECOVERY,
+            reason="retry", request_id="recover-before-commit")
+        self.assertEqual(recovered["status"], "held")
         history = [item for item in self.store.read_claims()
                    if item["claim_id"] == victim["claim_id"]]
         self.assertEqual([item["status"] for item in
                           sorted(history, key=lambda item: item["version"])],
                          ["held", "superseded", "held"])
+
+    def test_interrupted_recovery_after_commit_reads_back_same_claim(self):
+        self.seed_session("ses_dead", "completed",
+                          datetime.now(timezone.utc) - timedelta(minutes=5))
+        victim = self.acquire_paths("ses_dead", ["out/gen.json"])
+        self.seed_session("ses_new", "active", datetime.now(timezone.utc))
+        real_batch = self.store.put_claim_batch
+        interrupted = {"done": False}
+
+        def commit_then_interrupt(batch, *, expected_generation):
+            real_batch(batch, expected_generation=expected_generation)
+            if not interrupted["done"]:
+                interrupted["done"] = True
+                raise RuntimeError("caller interrupted after atomic recovery commit")
+
+        self.store.put_claim_batch = commit_then_interrupt  # type: ignore[method-assign]
+        try:
+            with self.assertRaisesRegex(RuntimeError, "after atomic recovery"):
+                self.acquire_paths("ses_new", ["out/gen.json"],
+                                   basis=claims.BASIS_RECOVERY, reason="handoff",
+                                   request_id="recover-after-commit")
+        finally:
+            self.store.put_claim_batch = real_batch  # type: ignore[method-assign]
+
+        recovered = self.acquire_paths(
+            "ses_new", ["out/gen.json"], basis=claims.BASIS_RECOVERY,
+            reason="handoff", request_id="recover-after-commit")
+        history = [item for item in self.store.read_claims()
+                   if item["claim_id"] == victim["claim_id"]]
+        self.assertEqual(recovered["version"], 3)
+        self.assertEqual([item["version"] for item in history], [1, 2, 3])
+        self.assertEqual(
+            [item["status"] for item in history],
+            ["held", "superseded", "held"],
+        )
 
     def test_claims_explain_reports_verdict(self):
         self.seed_session("ses_dead", "failed",

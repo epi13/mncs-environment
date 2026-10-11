@@ -30,9 +30,10 @@ from typing import Any
 
 from . import capabilities as capabilities_module
 from . import claims as claims_module
+from . import evidence_store
+from . import projection_sources as semantic_sources
 from . import projection_store as store_module
 from . import projection_verification as verification_module
-from . import projection_sources as semantic_sources
 from . import workspace as workspace_module
 from .identity import digest_hex
 from .persist import read_json, write_json
@@ -1126,7 +1127,9 @@ def ambient_pass(session, *, mode: str = "ambient",
     epoch_inputs['structure'] = {name: {k: v for k, v in info.items() if k != 'roles'} for name, info in structure.items()}
     epoch = digest_hex(epoch_inputs)
     stored = session.snapshot.get("projection_epoch") or {}
-    if stored.get("epoch") == epoch and mode == "ambient":
+    if (stored.get("epoch") == epoch and mode == "ambient"
+            and evidence_store.cacheable(
+                session, "projections", stored.get("evidence_ref"))):
         summary = dict(stored.get("summary") or {})
         summary["epoch_reused"] = True
         summary['reconciled'] = 0
@@ -1772,6 +1775,9 @@ def _finish(session, started: str, clock_started: float,
 
 def _write_evidence(session, evidence: dict[str, Any],
                     mode: str) -> str:
+    stored = evidence_store.publish(session, "projections", evidence)
+    if stored is not None:
+        return stored
     directory = _artifact_directory(session, "evidence")
     ref = f"projection-{mode}-{digest_hex(evidence['finished_at'])[:12]}.json"
     path = directory / ref
@@ -1833,6 +1839,9 @@ def read_evidence(session) -> dict[str, Any]:
     """Full projection evidence for explicit inspection."""
     stored = session.snapshot.get("projection_epoch") or {}
     ref = stored.get("evidence_ref", "")
+    if evidence_store.is_store_reference(ref):
+        return {"evidence": evidence_store.read(session, "projections", ref),
+                "history": session.snapshot.get("projection_history") or []}
     if not ref or not ref.startswith("sessions/"):
         return {"evidence": None, "history": session.snapshot.get(
             "projection_history") or []}

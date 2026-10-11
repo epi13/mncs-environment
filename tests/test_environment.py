@@ -21,6 +21,7 @@ import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout
+from datetime import datetime, timedelta, timezone
 from unittest import mock
 from pathlib import Path
 
@@ -304,6 +305,41 @@ class ClaimTests(unittest.TestCase):
             live = claims.active_claims(store.read_claims())
             self.assertEqual(live[record["claim_id"]]["session_id"], "b")
 
+    def test_transfer_preserves_bounded_deadline_for_legacy_lease(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = open_store(directory, "file")
+            now = datetime.now(timezone.utc)
+            acquired = now - timedelta(hours=12)
+            record = claims._record(store, {
+                "schema_version": claims.SCHEMA,
+                "claim_id": "claim:r",
+                "version": 1,
+                "repository": "r",
+                "scope": claims.normalize_scope(None, "r"),
+                "session_id": "a",
+                "consumer_id": "a",
+                "basis": claims.BASIS_EXPLICIT,
+                "reason": "legacy overlong fixture",
+                "status": "held",
+                "acquired_at": acquired.isoformat(timespec="seconds"),
+                "expires_at": (now + timedelta(hours=1000)).isoformat(
+                    timespec="seconds"),
+                "provenance": {"acquired_by": "a"},
+            })
+            expected_expiry = acquired + timedelta(hours=claims.MAX_TTL_HOURS)
+
+            moved = claims.transfer(store, claim_id=record["claim_id"],
+                                    from_session="a", to_session="b",
+                                    to_consumer="b", reason="handoff")
+
+            self.assertEqual(moved["session_id"], "b")
+            self.assertEqual(moved["expires_at"],
+                             expected_expiry.isoformat(timespec="seconds"))
+            self.assertLessEqual(
+                claims._lease_diagnostic(moved)["effective_duration_hours"],
+                claims.MAX_TTL_HOURS,
+            )
+
     def test_transfer_retry_reconciles_lost_response_atomically(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = open_store(directory, "file")
@@ -354,6 +390,28 @@ class ClaimTests(unittest.TestCase):
             self.assertEqual(len(matching), 2)
             live = claims.active_claims(versions)
             self.assertEqual(live[record["claim_id"]]["session_id"], "b")
+
+    def test_old_transfer_retry_does_not_return_a_superseded_recipient(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = open_store(directory, "file")
+            record = claims.acquire(store, repository="r", session_id="a",
+                                    consumer_id="a", basis=claims.BASIS_EXPLICIT,
+                                    reason="work")
+            claims.transfer(store, claim_id=record["claim_id"],
+                            from_session="a", to_session="b", to_consumer="b",
+                            reason="first handoff", request_id="first-transfer")
+            claims.transfer(store, claim_id=record["claim_id"],
+                            from_session="b", to_session="c", to_consumer="c",
+                            reason="continuation", request_id="second-transfer")
+
+            with self.assertRaisesRegex(claims.ClaimConflict,
+                                        "recipient no longer holds"):
+                claims.transfer(store, claim_id=record["claim_id"],
+                                from_session="a", to_session="b", to_consumer="b",
+                                reason="first handoff", request_id="first-transfer")
+
+            latest = claims.active_claims(store.read_claims())[record["claim_id"]]
+            self.assertEqual(latest["session_id"], "c")
 
     def test_concurrent_transfers_fence_competing_recipients(self) -> None:
         from concurrent.futures import ThreadPoolExecutor
@@ -3328,8 +3386,8 @@ class SelectedStoreProviderTests(unittest.TestCase):
                 Path(str(opened.call_args.kwargs["store_package_dir"])).resolve(),
                 (checkout / "python").resolve(),
             )
-            marker = json.loads((state_dir / "sessions" / session.session_id
-                                 / "store-provider.json").read_text(encoding="utf-8"))
+            marker = json.loads((state_dir / "store" / "environment" / "sessions"
+                                 / session.session_id / "store-provider.json").read_text(encoding="utf-8"))
             self.assertEqual(marker["revision"], "abc123")
             self.assertEqual(marker["python_package"], str((checkout / "python").resolve()))
             session.close()

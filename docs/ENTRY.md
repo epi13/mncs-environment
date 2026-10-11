@@ -37,6 +37,15 @@ report whether the Control-owned transport is ready; direct CLI use outside
 that execution reports a structured persistence error instead of switching
 to file persistence.
 
+On the host, the Control service receives write access only to the configured
+canonical Store root. Its systemd boundary remains `ProtectSystem=strict`,
+`ProtectHome=read-only`, and `NoNewPrivileges=yes`. Environment checkpoints,
+claims, snapshots, Store-provider bootstrap records, Doctor evidence, and
+coherence evidence use immutable Store records. The agent does not receive a
+general path proxy or a filesystem grant to Store. Store-backed entry locks
+also live under that configured root; file-debug locks remain under their
+explicit state directory.
+
 ## Bounded workspace discovery
 
 A repository root is a valid workspace and discovers itself, including linked
@@ -71,6 +80,10 @@ checking the same selected checkout, preserving session identity and history.
 Read-only inspection never performs that upgrade; re-enter first when older
 bootstrap metadata needs recovery.
 
+For Store sessions, the small provider bootstrap record lives under
+`store/environment/sessions/<session>/`; the former state-directory location
+is read only as a migration source. It is not another persistence authority.
+
 ## Work reuse and continuation
 
 Entry matches the canonical definition identity, resolved workspace root,
@@ -94,6 +107,12 @@ Entry returns `mncs.environment.entry-context/1`: identities, lifecycle,
 consumer, configuration source, state directory/backend, workspace root,
 bounded project and capability summaries, authority, toolchain observation,
 readiness, recovery operations, and whether prior work was reused.
+When a campaign matches the authenticated continuation authority, the
+response also includes a compact campaign capsule with prior Environment
+sessions, checkpoints, claims, repository checkout identities, branch heads,
+delivery state, and unresolved pressures. It is reconstructed from
+Environment and Git records; a consumer label by itself does not authorize
+continuation.
 
 `actions.*.argv` is directly executable and preserves the current interpreter,
 CLI path, state root, backend, and session. It works from another directory and
@@ -282,6 +301,11 @@ serialize every subsequent participant. Safe concurrent snapshot convergence
 and durable invocation receipts remain Environment responsibilities.
 
 New claim leases accept 1 to 168 hours (default 24). A continuing owner
-reacquires its exact scope to renew it. Release and explicit transfer publish
-their related claim versions in one generation; retry identities let a
-caller read back an outcome after losing the response.
+reacquires its exact scope to renew it. Older records retain their original
+expiry in history, while an overlong lease stops blocking at acquisition plus
+168 hours; inspectors expose that effective deadline. Session activity alone
+does not renew a claim. Release and explicit transfer publish their related
+claim versions in one generation. Acquisition and recovery publish their
+ownership transition in one generation as well, so an interrupted recovery
+leaves either the prior owner or the admitted successor. Retry identities let
+a caller read back an outcome after losing the response.

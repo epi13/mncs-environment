@@ -3,7 +3,7 @@
   "workspace_root": "../..",
   "workspace_scope": {
     "kind": "workspace",
-    "repositories": ["mncs-environment", "mncs-language", "mncs-store", "mncs-test", "mncs-forge", "mncs-language-service"]
+    "repositories": ["mncs-environment", "mncs-language", "mncs-store", "mncs-test", "mncs-forge", "mncs-language-service", "mncs-compiler", "mncs-vm"]
   },
   "intent": {
     "goal": "develop Environment with the selected resident Forge and native MNCS tools",

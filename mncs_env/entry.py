@@ -83,9 +83,15 @@ def entry_lock(state_dir: Path | str, backend: str, *, wait_seconds: float = ENT
     import time
 
     root = Path(state_dir).expanduser().resolve()
+    lock_root = root / "store" if backend == "store" else root
     try:
         root.mkdir(parents=True, exist_ok=True)
-        handle = (root / f"entry-{backend}.lock").open("a")
+        if backend == "store":
+            # The persistence service is granted the configured Store root,
+            # not its parent state directory. Keep this ephemeral
+            # coordination file inside that owner-controlled boundary.
+            lock_root.mkdir(parents=True, exist_ok=True)
+        handle = (lock_root / f"entry-{backend}.lock").open("a")
     except OSError as error:
         if error.errno not in (errno.EACCES, errno.EPERM, errno.EROFS):
             raise
