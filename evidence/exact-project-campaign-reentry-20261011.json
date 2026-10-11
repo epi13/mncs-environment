@@ -1,0 +1,65 @@
+{
+  "schema_version": "mncs.environment.campaign-reentry-evidence/1",
+  "identity": "ev_env_exact_project_campaign_reentry_20261011",
+  "recorded_at": "2026-10-11T10:59:33Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "implementation_head": "2e60d66f81bed67821989b0d683d3415838e8cfa",
+  "entry": {
+    "command": "scripts/mncs-env enter --definition tests/fixtures/control-rpc-entry.json --campaign-id cmp_mncs_continuity_20261010",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "exit_code": 0,
+    "definition_id": "env_f31ee034e8e1fdcb",
+    "definition_source": "tests/fixtures/control-rpc-entry.json",
+    "definition_scope": ["mncs-environment"],
+    "entry_reused": true,
+    "session_id": "ses_7226fbcfe65820f7",
+    "lifecycle": "active",
+    "control_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "campaign_consumer_id": "codex-process-1",
+    "session_consumer_label": "local-agent"
+  },
+  "fresh_process_readback": {
+    "command": "scripts/mncs-env context ses_7226fbcfe65820f7",
+    "sandbox_backend": "bwrap",
+    "exit_code": 0,
+    "campaign_identity": "cmp_mncs_continuity_20261010",
+    "campaign_state_checkpoint_id": "chk_96e303cd871d06d0",
+    "latest_checkpoint_id": "chk_96e303cd871d06d0",
+    "campaign_evidence_count": 45,
+    "claim_ids": ["claim:mncs-control-mcp", "claim:mncs-environment"],
+    "readiness": {
+      "status": "degraded",
+      "available_count": 2,
+      "unavailable_count": 0,
+      "unknown_count": 1,
+      "blocking_count": 0
+    },
+    "environment_checkout": {
+      "repository": "mncs-environment",
+      "branch": "main",
+      "head": "2e60d66f81bed67821989b0d683d3415838e8cfa",
+      "clean": true
+    }
+  },
+  "canonical_checkpoint_preceding_reentry": {
+    "identity": "chk_96e303cd871d06d0",
+    "sequence": 78,
+    "request_id": "req_6bccab670627df516487917040f0cd563fcf1b41",
+    "recorded_by_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "campaign_evidence_count": 45,
+    "delivery_status": "partial",
+    "environment_delivery_head": "2e60d66f81bed67821989b0d683d3415838e8cfa"
+  },
+  "other_context": {
+    "session_id": "ses_b4b2d283542220b0",
+    "modified": false,
+    "adopted": false
+  },
+  "result": "AUTHORIZED_SESSION_REUSED_AND_READ_BACK",
+  "limitations": [
+    "Campaign lookup still reports two matching Environment contexts until the context selection rule can prove a unique exact definition. This re-entry explicitly used the definition recorded by the authorized target session.",
+    "The Environment capability ambient-projection-coherence remains UNKNOWN because its public manifest has no invocation descriptor.",
+    "This evidence covers authenticated Environment session and campaign checkpoint publication/readback, not every Store mutation class or the full Store acceptance matrix."
+  ]
+}
