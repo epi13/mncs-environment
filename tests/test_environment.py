@@ -764,6 +764,31 @@ class CampaignContinuityTests(unittest.TestCase):
 
 
 class StoreTransportDiagnosticsTests(unittest.TestCase):
+    def test_campaign_checkpoint_conflict_has_structured_publication_diagnostic(self) -> None:
+        from mncs_env import cli as cli_module
+
+        args = cli_module.build_parser().parse_args([
+            "checkpoint", "ses_checkpoint_conflict", "--progress", "stale",
+            "--campaign-base-checkpoint", "chk_old",
+        ])
+        session = mock.Mock()
+        session.checkpoint.side_effect = sessions.CampaignStateConflict(
+            "chk_old", "chk_current"
+        )
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with mock.patch.object(
+            cli_module.sessions_module.Session, "resume", return_value=session
+        ), redirect_stdout(stdout), redirect_stderr(stderr):
+            code = cli_module.cmd_checkpoint(args)
+
+        self.assertEqual(code, 3)
+        self.assertEqual(stdout.getvalue(), "")
+        diagnostic = json.loads(stderr.getvalue())["diagnostics"]
+        self.assertEqual(diagnostic["code"], "publication-conflict")
+        self.assertEqual(diagnostic["conflict_kind"], "campaign-state-base-checkpoint")
+        self.assertEqual(diagnostic["current_checkpoint"], "chk_current")
+        self.assertFalse(diagnostic["publication_completed"])
+
     def test_rpc_client_maps_claim_conflicts_from_environment_cli(self) -> None:
         from mncs_env import rpc_client
 
@@ -2968,13 +2993,25 @@ class SessionTests(unittest.TestCase):
             )
             self.assertEqual(retry, first)
             self.assertEqual(len(session.store.list_checkpoints(session.session_id)), 1)
-            with self.assertRaises(sessions.LifecycleError):
+            with self.assertRaises(sessions.CampaignStateConflict) as stale:
                 session.checkpoint(
                     progress="stale writer",
                     request_id="req_campaign_stale_state",
                     campaign_base_checkpoint="none",
                     campaign_delivery={"status": "pending", "repositories": []},
                 )
+            self.assertEqual(
+                stale.exception.diagnostics["code"], "publication-conflict"
+            )
+            self.assertEqual(
+                stale.exception.diagnostics["supplied_base_checkpoint"], "none"
+            )
+            self.assertEqual(
+                stale.exception.diagnostics["current_checkpoint"], first["identity"]
+            )
+            self.assertFalse(
+                stale.exception.diagnostics["publication_completed"]
+            )
             self.assertEqual(len(session.store.list_checkpoints(session.session_id)), 1)
             with self.assertRaises(sessions.LifecycleError):
                 session.checkpoint(

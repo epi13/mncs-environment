@@ -87,6 +87,24 @@ class LifecycleError(Exception):
     """Raised for illegal session transitions or corrupted session state."""
 
 
+class CampaignStateConflict(LifecycleError):
+    """Raised when an optimistic campaign-state checkpoint is stale."""
+
+    def __init__(self, supplied_checkpoint: str, current_checkpoint: str):
+        super().__init__(
+            "campaign state changed since the supplied base checkpoint; "
+            "read the capsule and retry with its current campaign state checkpoint"
+        )
+        self.diagnostics = {
+            "code": "publication-conflict",
+            "conflict_kind": "campaign-state-base-checkpoint",
+            "supplied_base_checkpoint": supplied_checkpoint,
+            "current_checkpoint": current_checkpoint,
+            "publication_completed": False,
+            "next": "read the authenticated continuation capsule and retry with its current campaign state checkpoint",
+        }
+
+
 class AuthorityDenied(Exception):
     """Raised when session authority denies a requested action."""
 
@@ -2765,8 +2783,8 @@ class Session:
                 if latest_campaign_record is not None else "none"
             )
             if campaign_base_checkpoint != latest_campaign_id:
-                raise LifecycleError(
-                    "campaign state changed since the supplied base checkpoint; read the capsule and retry with its current campaign state checkpoint"
+                raise CampaignStateConflict(
+                    str(campaign_base_checkpoint), str(latest_campaign_id)
                 )
             if latest_campaign_record is not None:
                 prior_state = latest_campaign_record["campaign_state"]

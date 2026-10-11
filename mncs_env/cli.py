@@ -764,11 +764,18 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
         if len(raw.encode("utf-8")) > sessions_module.CAMPAIGN_STATE_INPUT_MAX_BYTES:
             raise ValueError("campaign delivery JSON exceeds the bounded publication size")
         campaign_delivery = json.loads(raw)
-    out(session.checkpoint(progress=args.progress, remaining=args.remaining,
-                           request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"),
-                           campaign_evidence=campaign_evidence,
-                           campaign_delivery=campaign_delivery,
-                           campaign_base_checkpoint=args.campaign_base_checkpoint))
+    try:
+        checkpoint = session.checkpoint(
+            progress=args.progress,
+            remaining=args.remaining,
+            request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"),
+            campaign_evidence=campaign_evidence,
+            campaign_delivery=campaign_delivery,
+            campaign_base_checkpoint=args.campaign_base_checkpoint,
+        )
+    except sessions_module.CampaignStateConflict as error:
+        return fail(str(error), code=3, diagnostics=error.diagnostics)
+    out(checkpoint)
     return 0
 
 
