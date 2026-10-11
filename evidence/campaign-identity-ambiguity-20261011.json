@@ -1,0 +1,82 @@
+{
+  "schema_version": "mncs.environment.campaign-identity-ambiguity-proof/1",
+  "identity": "ev_environment_campaign_identity_ambiguity_20261011",
+  "recorded_at": "2026-10-11T23:24:31Z",
+  "owner": "mncs-environment",
+  "project": "mncs-environment",
+  "protected_execution": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "network": false,
+    "command": "python3 -m mncs_env.cli continuation",
+    "control_job_id": "term-bb00c20e583dc746e00c819a",
+    "started_at": "2026-10-11T23:23:30.507457Z",
+    "completed_at": "2026-10-11T23:23:38.847796Z",
+    "exit_code": 0,
+    "response_schema": "mncs.control.campaign-continuation/2",
+    "status": "ambiguous-campaigns",
+    "selected_campaign_id": null,
+    "selected_session_id": null,
+    "campaigns_count": 3,
+    "campaign_statuses": [
+      {
+        "campaign_id": "cmp_a32ae815b795b090",
+        "status": "ready",
+        "session_id": "ses_59ee769d14010018",
+        "consumer_id": "auto-final-process-2",
+        "work_intent": "exercise canonical Environment persistence from a project-scoped protected process",
+        "checkpoint_count": 0,
+        "claim_count": 0,
+        "evidence_count": 0
+      },
+      {
+        "campaign_id": "cmp_mncs_continuity_20261010",
+        "status": "context-conflict",
+        "sessions": [
+          {
+            "session_id": "ses_7226fbcfe65820f7",
+            "consumer_id": "local-agent",
+            "lifecycle": "active",
+            "latest_checkpoint": "chk_4b5f2f1d0b10bf9e",
+            "claim_ids": ["claim:mncs-environment"],
+            "evidence_count": 105,
+            "work_intent": "exercise canonical Environment persistence through the Control socket"
+          },
+          {
+            "session_id": "ses_b4b2d283542220b0",
+            "consumer_id": "local-agent",
+            "lifecycle": "active",
+            "latest_checkpoint": null,
+            "claim_ids": [],
+            "evidence_count": 0,
+            "work_intent": "improve mncs-environment through a persistent, discoverable MNCS work context"
+          }
+        ]
+      },
+      {
+        "campaign_id": "cmp_store-rpc-acceptance-20261010",
+        "status": "ready",
+        "session_id": "ses_5029230ac9f126ef",
+        "consumer_id": "mncs-store-rpc-acceptance",
+        "latest_checkpoint": "chk_f985623c748f7d3c",
+        "claim_count": 0,
+        "evidence_count": 0,
+        "work_intent": ""
+      }
+    ],
+    "next": "select the intended campaign identity; Control will not choose between campaigns"
+  },
+  "interpretation": {
+    "owner_boundary": "Environment owns campaign identity, session lifecycle, and claim authority. Control returns a project-scoped read-only projection.",
+    "result": "Project scope alone finds three durable campaign identities. The current campaign is recoverable with its known identity, but a new process without a task-bound campaign selector cannot prove which of the three the user intends.",
+    "safety": "No campaign, session, or claim was selected, adopted, transferred, or mutated by this read-only query.",
+    "required_recovery": "Bind the authenticated task continuation to a campaign identity or present these bounded choices for explicit user selection. Preserve ambiguous-campaigns until that proof exists."
+  },
+  "source_revisions": {
+    "mncs-environment": "85b0e2ba2f8192797f36713fcac55d2c37bb1b08",
+    "mncs-control-mcp": "ef31b364ab524b0d1a5fb20cc38bad32d0f4f99c"
+  },
+  "limitations": [
+    "This observation validates that ambiguity is surfaced without taking ownership. It does not prove automatic campaign selection from user task intent."
+  ]
+}
