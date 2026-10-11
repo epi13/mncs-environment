@@ -1,0 +1,98 @@
+{
+  "schema_version": "mncs.environment.claim-liveness-revalidation/1",
+  "identity": "ev_environment_foreign_claim_liveness_20261011",
+  "recorded_at": "2026-10-11T21:50:26Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "observer_session_id": "ses_7226fbcfe65820f7",
+  "observer_consumer_id": "local-agent",
+  "source": {
+    "repository": "mncs-environment",
+    "revision": "f5069486a61fe6942c811118d2a29ac06d966ffa",
+    "files": {
+      "mncs_env/claims.py": "ea0bbdb5dd2bf08ef1ead7c448b99dd5a57a77a1d734a0a30c377fb523e1bdd3",
+      "mncs_env/sessions.py": "2871355efeabb82baff39516b6a49beea8ef936da2c6dbaea150c24ab12d83f5"
+    }
+  },
+  "observation": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "transport": "authenticated Control Environment RPC to canonical Store",
+    "operation": "mncs-env claims <authorized-session> --explain <claim-id>",
+    "session_authorized": true,
+    "ownership_transition_performed": false,
+    "foreign_claims": [
+      {
+        "claim_id": "claim:mncs-compiler",
+        "version": 63,
+        "repository": "mncs-compiler",
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "owner_known": true,
+        "owner_lifecycle": "active",
+        "last_activity_at": "2026-10-09T20:23:20+00:00",
+        "freshness": "stale",
+        "lease": {
+          "acquired_at": "2026-10-09T18:13:43+00:00",
+          "stored_expires_at": "2027-08-03T10:31:10+00:00",
+          "maximum_hours": 168,
+          "effective_expires_at": "2026-10-16T18:13:43+00:00",
+          "policy": "exceeds-current-maximum"
+        },
+        "verdict": "not-recoverable",
+        "reason": "owner session is quiet but the exclusive scope needs a dead owner or TTL expiry"
+      },
+      {
+        "claim_id": "claim:mncs-forge",
+        "version": 28,
+        "repository": "mncs-forge",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "owner_known": true,
+        "owner_lifecycle": "active",
+        "last_activity_at": "2026-10-09T03:05:19+00:00",
+        "freshness": "stale",
+        "lease": {
+          "acquired_at": "2026-10-09T02:18:31+00:00",
+          "stored_expires_at": "2027-03-07T23:49:59+00:00",
+          "maximum_hours": 168,
+          "effective_expires_at": "2026-10-16T02:18:31+00:00",
+          "policy": "exceeds-current-maximum"
+        },
+        "verdict": "not-recoverable",
+        "reason": "owner session is quiet but the exclusive scope needs a dead owner or TTL expiry"
+      },
+      {
+        "claim_id": "claim:mncs-reference-studies",
+        "version": 7,
+        "repository": "mncs-reference-studies",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "owner_known": true,
+        "owner_lifecycle": "active",
+        "last_activity_at": "2026-10-09T03:05:19+00:00",
+        "freshness": "stale",
+        "lease": {
+          "acquired_at": "2026-10-09T02:18:43+00:00",
+          "stored_expires_at": "2027-03-07T23:47:38+00:00",
+          "maximum_hours": 168,
+          "effective_expires_at": "2026-10-16T02:18:43+00:00",
+          "policy": "exceeds-current-maximum"
+        },
+        "verdict": "not-recoverable",
+        "reason": "owner session is quiet but the exclusive scope needs a dead owner or TTL expiry"
+      }
+    ]
+  },
+  "disposition": {
+    "compiler_checkout": "protected-by-another-consumer",
+    "forge_checkout": "protected-by-another-consumer",
+    "reference_studies_checkout": "protected-by-another-consumer",
+    "takeover_or_claim_release": false,
+    "recovery_policy": "await authoritative owner lifecycle termination or each effective lease expiry, then revalidate Store generation and claims before recovery"
+  },
+  "limits": [
+    "Stale event activity does not prove the owner process terminated. The user-visible single-agent report is contextual evidence and does not supersede durable owner lifecycle or the exclusive claim.",
+    "This records Environment's persisted liveness and effective lease classification; it does not establish whether a model process exists outside the current execution namespace.",
+    "The protected MCP terminal request timed out. The observation used the same Control Sandbox and Environment RPC implementation in a test-owned host process against the canonical Store; no ownership record was changed."
+  ],
+  "result": "PASS_READ_ONLY_REVALIDATION"
+}
