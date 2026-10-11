@@ -1,0 +1,51 @@
+{
+  "schema_version": "mncs.environment.rpc-ambiguity-request-identity-proof/1",
+  "identity": "ev_environment_rpc_ambiguity_request_identity_20261011",
+  "recorded_at": "2026-10-11T16:49:30Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "change": {
+    "repository": "mncs-environment",
+    "commit": "a5af7b0d639f8d2c3a46f9a611750a60c7ec1087",
+    "files": [
+      {
+        "path": "mncs_env/rpc_client.py",
+        "sha256": "cb0b1e4306a8e8559fc8c3f335575f2a7ed63aab0f5f1e86d871465e33ac2969",
+        "behavior": "Attach the caller's stable request identity whenever Control or Environment returns a structured ambiguous-publication result."
+      },
+      {
+        "path": "tests/test_environment.py",
+        "sha256": "ed855cc2b8eeaa9503964892bede0e759332e831c94b041dcef2bd475d60d9c7",
+        "coverage": [
+          "Control reports an operation is still being reconciled",
+          "Environment returns an ambiguous publication diagnostic"
+        ]
+      }
+    ]
+  },
+  "validation": {
+    "unit_command": "PYTHONPATH=. python3 -m pytest -q tests/test_environment.py -k 'rpc_client_' --tb=short",
+    "unit_result": "9 passed, 153 deselected",
+    "static_checks": [
+      "ruff check --select F401,F821,F822,F823 mncs_env/rpc_client.py: passed",
+      "ruff check --select F821,F822,F823 tests/test_environment.py: passed",
+      "python3 -m py_compile mncs_env/rpc_client.py tests/test_environment.py: passed",
+      "git diff --check: passed"
+    ],
+    "protected_integration": {
+      "repository": "mncs-control-mcp",
+      "commit": "5f5c43716ea3b039213b83457c1313038f8e1516",
+      "path": "tests/test_sandbox_terminal.py",
+      "test": "test_project_bwrap_reconciles_checkpoint_after_control_rpc_restart",
+      "sandbox_backend": "bwrap",
+      "scope": "project",
+      "store": "isolated test-owned Store",
+      "result": "passed; pytest exit code 0 after Environment commit a5af7b0"
+    }
+  },
+  "canonical_store": {
+    "mutated_by_these_tests": false,
+    "canonical_commit_before_response_service_failure": "not proven by this artifact",
+    "earlier_canonical_caller_interruption": "ev_canonical_caller_interruption_reconcile_20261011 remains the separate proof for caller termination after durable publication, fresh readback, and same-request retry"
+  },
+  "result": "PASS_WITH_CANONICAL_SERVICE_INTERRUPTION_LIMITATION"
+}
