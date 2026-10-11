@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.claim-transfer-session-retry-proof/1",
+  "identity": "ev_claim_transfer_session_retry_20261011",
+  "recorded_at": "2026-10-11T08:20:32Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "campaign_checkpoint_before": {
+    "identity": "chk_29cc02afd6d54f9e",
+    "sequence": 56
+  },
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "campaign/claim-transfer-session-retry-20261011",
+    "commit": "eb6de77",
+    "remote_base": "38c6e7b340af516b3a7fad675af1499076026517",
+    "changed_files": [
+      {
+        "path": "mncs_env/sessions.py",
+        "sha256": "73980a869514231c3493231689baed16238b3f824533f717f6622f9c0762b4c8"
+      },
+      {
+        "path": "tests/test_store_claim_transfer.py",
+        "sha256": "c6df5a5fdf7c9a7f80c5237942d5936628dffaab92b94f730008edd5f1239935"
+      },
+      {
+        "path": "tests/test_doctor.py",
+        "sha256": "f708e5876f89198d1f70ffa697f83d15136e45222cd6f5a095067db58b03ca6b"
+      },
+      {
+        "path": "tests/test_entry.py",
+        "sha256": "1e1cce5ae0c6193af8184ff432dd81b6fbf6d487b28cef2bf028535eaf2809ff"
+      }
+    ]
+  },
+  "change": {
+    "owner": "mncs-environment",
+    "behavior": "Session.transfer_claim correlates the durable lease.transferred event with the Store transfer request identity and avoids appending the same transition again when a caller retries after the claim batch and event are durable but the sender snapshot save failed.",
+    "provenance": "The event includes the stable transfer_request_id already admitted and recorded by the atomic claims transfer operation.",
+    "authority": "No claim authority or filesystem permission was broadened. Test fixtures that request claim acquisition now declare writable intent; a no-authority entry test continues to assert denial."
+  },
+  "verification": {
+    "full_suite": {
+      "command": "python3 -m pytest tests/ -q",
+      "result": "619 passed, 46 skipped in 518.81s"
+    },
+    "focused_suite": {
+      "command": "python3 -m pytest tests/test_entry.py tests/test_doctor.py tests/test_store_claim_transfer.py -q",
+      "result": "97 passed in 88.51s"
+    },
+    "checks": [
+      "python3 -m py_compile mncs_env/sessions.py tests/test_store_claim_transfer.py tests/test_entry.py tests/test_doctor.py: passed",
+      "ruff check --select F401,F821,F822,F823 mncs_env/sessions.py tests/test_store_claim_transfer.py tests/test_entry.py tests/test_doctor.py: passed",
+      "git diff --check: passed"
+    ],
+    "interruption_case": {
+      "test": "test_session_transfer_retry_after_snapshot_failure_emits_one_transition",
+      "store": "isolated test-owned Store under pytest temporary directory",
+      "interruption_point": "after atomic claim transfer and transfer-event persistence, before sender snapshot publication",
+      "retry_request_id": "req_transfer_session_snapshot_retry",
+      "fresh_store_instance_reopen": true,
+      "same_transfer_record_returned": true,
+      "transfer_events_after_retry": 1,
+      "exclusive_owner_after_retry": "recipient session only",
+      "sender_campaign_claim_removed": true,
+      "recipient_campaign_claim_reconciled": true
+    },
+    "existing_transfer_coverage": [
+      "test_transfer_process_crash_recovers_atomic_owner",
+      "test_concurrent_store_transfers_admit_one_recipient"
+    ]
+  },
+  "canonical_environment": {
+    "canonical_store_transport": "authenticated Environment RPC through MNCS Control",
+    "canonical_store_root_directly_visible_to_agent": false,
+    "canonical_checkpoint_and_claim_roundtrip_evidence": "ev_canonical_claim_authority_roundtrip_20261011",
+    "this_change_exercised_against_canonical_store": false
+  },
+  "result": "PASS_ISOLATED_STORE_RECOVERY",
+  "limits": [
+    "The new session-level retry regression uses an isolated test-owned Store and does not itself constitute a canonical Store transfer test.",
+    "Existing crash-boundary and competing-recipient tests cover the atomic claims transfer protocol; this new test covers retry after the durable transfer when snapshot publication fails.",
+    "Canonical Store service-process termination and restart during publication remain unproven.",
+    "The duplicate Environment session for this campaign remains retained and untouched; this evidence applies to the selected authenticated session."
+  ]
+}
