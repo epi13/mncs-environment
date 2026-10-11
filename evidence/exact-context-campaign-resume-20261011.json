@@ -1,0 +1,86 @@
+{
+  "schema_version": "mncs.environment.campaign-continuation-resume-proof/1",
+  "identity": "ev_exact_context_campaign_resume_20261011",
+  "recorded_at": "2026-10-11T06:47:30Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "continuation": {
+    "authenticated_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "current_consumer_id": "codex-process-1",
+    "previous_consumers": [
+      "codex-process-2",
+      "codex-process-3",
+      "codex-process-4"
+    ],
+    "definition_id": "env_f31ee034e8e1fdcb",
+    "workspace_root": "/home/epi13/Documents/Projects",
+    "entry_reused_existing_session": true,
+    "new_session_created": false
+  },
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "main",
+    "commit": "e3bf59d94e7c1a4ac56e183672c0c94502f55183",
+    "remote_ref": "origin/main",
+    "test_command": "python3 -m pytest -q tests/test_environment.py",
+    "test_result": "149 passed in 262.90s",
+    "implementation_lint": "ruff check mncs_env/entry.py: passed",
+    "control_repository_commit": "b65dcc8f02d08500f17360f66794a55f201cec03"
+  },
+  "protected_execution": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "transport": "authenticated Environment RPC through MNCS Control",
+    "canonical_store_root_directly_visible_to_caller": false,
+    "entry_request_id": "req_mncs_live_campaign_auto_entry_20261011d",
+    "entry_exit_code": 0,
+    "entry_command": "python3 -B -m mncs_env.cli enter --definition tests/fixtures/control-rpc-entry.json --consumer codex-process-1 --campaign-id cmp_mncs_continuity_20261010",
+    "entry_lifecycle": "active"
+  },
+  "fresh_process_readback": {
+    "transport": "authenticated Environment RPC through MNCS Control",
+    "inspect_request_id": "req_mncs_live_campaign_fresh_inspect_20261011e",
+    "inspect_exit_code": 0,
+    "session_id": "ses_7226fbcfe65820f7",
+    "lifecycle": "active",
+    "consumer_id": "codex-process-1",
+    "event_count": 227,
+    "checkpoint_count": 48,
+    "latest_campaign_checkpoint_id": "chk_92de481d574a59de",
+    "active_claims": [
+      {
+        "repository": "mncs-control-mcp",
+        "claim_id": "claim:mncs-control-mcp",
+        "owner_session_id": "ses_7226fbcfe65820f7",
+        "recorded_acquiring_consumer_id": "codex-process-2"
+      },
+      {
+        "repository": "mncs-environment",
+        "claim_id": "claim:mncs-environment",
+        "owner_session_id": "ses_7226fbcfe65820f7",
+        "recorded_acquiring_consumer_id": "codex-process-2"
+      }
+    ]
+  },
+  "same_campaign_other_context": {
+    "session_id": "ses_b4b2d283542220b0",
+    "definition_id": "env_1ea3af15c7464177",
+    "lifecycle": "active",
+    "checkpoint_count": 0,
+    "claim_count": 0,
+    "auto_selected": false
+  },
+  "store_policy_evidence": {
+    "identity": "ev_canonical_store_path_grant_20261011",
+    "path": "evidence/canonical-store-path-grant-acceptance-20261011.json",
+    "caller_direct_write_access": false,
+    "owner_transport_publication": "PASS"
+  },
+  "result": "PASS",
+  "limits": [
+    "This proves exact-context automatic resume for one selected project and same-principal duplicate campaign context; it does not reconcile or adopt the other session.",
+    "The existing claim records retain the consumer identity that acquired them; their session owner remains the resumed durable session.",
+    "Compiler Stage-1/Stage-2 succession and compiler resource-feedback integration remain unproven."
+  ]
+}
