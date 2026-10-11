@@ -911,6 +911,14 @@ def cmd_claims(args: argparse.Namespace) -> int:
                 })
             except claims_module.ClaimAdoptionRequired as error:
                 return fail(f"adoption required: {error}", code=4)
+            except sessions_module.AuthorityDenied as error:
+                return fail(str(error), code=3, diagnostics={
+                    "code": "authority-denied",
+                    "action": "claim-acquire",
+                    "repository": args.acquire,
+                    "publication_completed": False,
+                    "next": "enter an Environment whose effective writable scope includes this repository",
+                })
             return 0
         records = store.read_claims()
         if args.explain:

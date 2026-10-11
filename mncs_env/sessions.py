@@ -2211,6 +2211,31 @@ class Session:
         workspace_root: str | None = None,
         request_id: str | None = None,
     ) -> dict[str, Any]:
+        # A claim is an Environment-owned lease request. The caller must
+        # already have effective write intent for its repository; merely
+        # knowing a repository alias must not let a session reserve another
+        # campaign's scope. Preserve idempotent readback after an ambiguous
+        # publication even if the session's authority has since changed.
+        prior_request = (
+            any(
+                record.get("provenance", {}).get("operation_request_id") == request_id
+                for record in self.store.read_claims()
+            )
+            if request_id is not None
+            else False
+        )
+        if not prior_request:
+            authority = self.snapshot.get("authority") or {}
+            writable = authority.get("writable", [])
+            protected = authority.get("protected_repositories", [])
+            if repository in protected:
+                raise AuthorityDenied(
+                    f"claim denied: {repository} is protected in this Environment session"
+                )
+            if not isinstance(writable, list) or repository not in writable:
+                raise AuthorityDenied(
+                    f"claim denied: {repository} is outside this Environment session's writable authority"
+                )
         selected = self.snapshot.get("selected_checkouts", {}).get(repository)
         if selected is not None:
             if scope and scope.get("kind") == "worktree":

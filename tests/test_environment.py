@@ -234,6 +234,84 @@ class ClaimTests(unittest.TestCase):
                                     consumer_id="b", basis=claims.BASIS_EXPLICIT, reason="now")
             self.assertEqual(second["version"], 3)
 
+    def test_environment_claim_requests_require_effective_writable_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            state = base / "state"
+            workspace_root = base / "workspace"
+            workspace_root.mkdir()
+            store = open_store(state, "file")
+            environment = sessions.resolve_environment(
+                definition=definition(intent={
+                    "goal": "exercise effective claim authority",
+                    "repositories": ["repo-allowed", "repo-protected"],
+                    "protected_repositories": ["repo-protected"],
+                }),
+                workspace_root=workspace_root,
+                state_dir=state,
+                consumer_id="claim-authority-test",
+                store=store,
+            )
+            session = sessions.Session.create(
+                state_dir=state,
+                environment=environment,
+                consumer_id="claim-authority-test",
+                backend="file",
+                store=store,
+            )
+            session.transition("resolving", "claim authority test")
+            session.transition("ready", "claim authority test")
+            session.transition("active", "claim authority test")
+            session_id = session.session_id
+            session.close()
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = cli.main([
+                    "--persistence", "file", "--state-dir", str(state),
+                    "claims", session_id, "--acquire", "repo-outside-scope",
+                    "--reason", "must fail before claim publication",
+                ])
+            self.assertEqual(code, 3)
+            self.assertEqual(stdout.getvalue(), "")
+            denied = json.loads(stderr.getvalue())
+            self.assertEqual(denied["diagnostics"]["code"], "authority-denied")
+            self.assertEqual(denied["diagnostics"]["action"], "claim-acquire")
+            self.assertFalse(denied["diagnostics"]["publication_completed"])
+
+            store = open_store(state, "file")
+            self.assertEqual(store.read_claims(), [])
+            session = sessions.Session.open(
+                state_dir=state, session_id=session_id, backend="file", store=store
+            )
+            with self.assertRaisesRegex(
+                sessions.AuthorityDenied, "repo-protected is protected"
+            ):
+                session.acquire_claim("repo-protected", reason="protected target")
+            claim = session.acquire_claim(
+                "repo-allowed", scope={"kind": "paths", "paths": ["src/unit.mncs"]},
+                reason="authorized scoped claim", request_id="claim-authority-acquire",
+            )
+            self.assertEqual(claim["status"], "held")
+            self.assertEqual(claim["scope"]["paths"], ["src/unit.mncs"])
+            claim_record_count = len(store.read_claims())
+            session.snapshot["authority"]["writable"] = []
+            session._save()
+            retried = session.acquire_claim(
+                "repo-allowed", scope={"kind": "paths", "paths": ["src/unit.mncs"]},
+                reason="retry the same authorized publication",
+                request_id="claim-authority-acquire",
+            )
+            self.assertEqual(retried["identity"], claim["identity"])
+            self.assertEqual(len(store.read_claims()), claim_record_count)
+            self.assertTrue(session.release_claim(
+                "repo-allowed", claim_id=claim["claim_id"],
+                request_id="claim-authority-release",
+            ))
+            self.assertEqual(claims.active_claims(store.read_claims()), {})
+            session.close()
+
 
     def test_expired_claim_drops_out(self) -> None:
         stale = {"claim_id": "claim:r", "version": 1, "repository": "r",
@@ -572,7 +650,10 @@ class CampaignContinuityTests(unittest.TestCase):
                 "workspace": {"root": str(root), "repositories": []},
                 "selected_checkouts": {},
                 "rights": {},
-                "authority": {},
+                "authority": {
+                    "writable": ["mncs-control-mcp"],
+                    "protected_repositories": [],
+                },
             }
             session = sessions.Session.create(
                 state_dir=state_dir, environment=environment,
@@ -2263,7 +2344,11 @@ class SessionTests(unittest.TestCase):
 
     def test_revalidate_preserves_scoped_claim_holders(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            session = make_session(Path(directory))
+            session = make_session(
+                Path(directory),
+                intent={"goal": "preserve an authorized scoped claim",
+                        "repositories": ["mncs-compiler"]},
+            )
             scope = {"kind": "paths", "paths": ["src/compiler/project.mncs"]}
             claim = session.acquire_claim(
                 "mncs-compiler", scope=scope, reason="test exact scoped claim")
@@ -2378,7 +2463,11 @@ class SessionTests(unittest.TestCase):
             root = Path(directory)
             checkout = root / "worktrees" / "campaign"
             checkout.mkdir(parents=True)
-            session = make_session(root)
+            session = make_session(
+                root,
+                intent={"goal": "adopt a selected campaign checkout",
+                        "repositories": ["mncs-store"]},
+            )
             session.snapshot["workspace"]["root"] = str(root)
             session.snapshot["selected_checkouts"] = {"mncs-store": {
                 "path": "worktrees/campaign", "branch": "campaign/store",
