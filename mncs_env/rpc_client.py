@@ -91,8 +91,11 @@ def dispatch(argv: list[str]) -> int:
         if not response.get("ok"):
             error = response.get("error") or {}
             code = str(error.get("code", "ENVIRONMENT_RPC_REJECTED"))
+            details = error.get("details")
+            details = details if isinstance(details, dict) else {}
             category = {
                 "ENVIRONMENT_AUTHORITY_DENIED": "authority-denied",
+                "ENVIRONMENT_OPERATION_UNAVAILABLE": "operation-unavailable",
                 "ENVIRONMENT_PUBLICATION_CONFLICT": "publication-conflict",
                 "ENVIRONMENT_STORE_CORRUPTION": "store-corruption",
                 "ENVIRONMENT_DIRECT_READ_ONLY": "direct-filesystem-read-only",
@@ -100,8 +103,19 @@ def dispatch(argv: list[str]) -> int:
                 "ENVIRONMENT_PERSISTENCE_UNAVAILABLE": "persistence-service-unavailable",
                 "ENVIRONMENT_UNAVAILABLE": "persistence-service-unavailable",
             }.get(code, "publication-rejected")
-            return _fail(category, str(error.get("message", code)),
-                         str((error.get("details") or {}).get("next", "inspect the structured Environment diagnostic")))
+            domain_details = None
+            if code == "ENVIRONMENT_OPERATION_UNAVAILABLE":
+                domain_details = {
+                    key: details[key] for key in ("operation", "status")
+                    if isinstance(details.get(key), str)
+                }
+            return _fail(
+                category,
+                str(error.get("message", code)),
+                str(details.get("next", "inspect the structured Environment diagnostic")),
+                cause_code=code if domain_details is not None else None,
+                domain_details=domain_details,
+            )
         result = response.get("result") or {}
         stdout = result.get("stdout", "")
         stderr = result.get("stderr", "")
