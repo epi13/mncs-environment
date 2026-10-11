@@ -336,14 +336,16 @@ def _validate_campaign_identity(store, *, campaign_id: str,
                                 definition_id: str, workspace_root: Path,
                                 selected_session_id: str | None,
                                 pending_handoff: tuple | None) -> None:
-    """Refuse to create a parallel live session under an existing campaign id.
+    """Refuse parallel campaign sessions unless entry selected one exact context.
 
     A campaign identity is durable across consumer restarts. If it already
     names live work in another Environment definition or workspace, silently
     creating a new session would split its ownership record and can resume the
-    wrong authority. The existing session id and its exact context are
-    returned so the caller can resume that recorded Environment or choose a
-    distinct campaign identity for independent work.
+    wrong authority. A unique session already selected by the authenticated
+    principal, campaign, definition, and workspace remains resumable when
+    unrelated same-principal sessions use other contexts. Duplicate exact
+    contexts remain ambiguous, and the existing session id and context are
+    returned so the caller can choose the intended continuation.
     """
     if authenticated_principal_id is None:
         return
@@ -437,6 +439,14 @@ def _validate_campaign_identity(store, *, campaign_id: str,
             next="request an explicit owner-issued handoff; Environment will not adopt another principal's campaign",
         )
     if len(live) > 1:
+        exact_context = [
+            session_id for session_id, snapshot in snapshots.items()
+            if snapshot.get("provenance", {}).get("definition_id") == definition_id
+            and snapshot.get("workspace", {}).get("root") == str(workspace_root)
+        ]
+        if (len(exact_context) == 1
+                and selected_session_id == exact_context[0]):
+            return
         raise EntryError(
             "multiple live Environment sessions share this campaign identity",
             "campaign-continuation-ambiguous",

@@ -3116,6 +3116,107 @@ class EntryFrictionTests(unittest.TestCase):
     """Entry safety and context-shape regressions use only temporary state."""
 
     @staticmethod
+    def _campaign_identity_store(contexts: dict[str, tuple[str, str, str]]) -> object:
+        class MemoryStore:
+            def __init__(self, snapshots: dict[str, dict]):
+                self.snapshots = snapshots
+
+            def list_sessions(self) -> list[str]:
+                return sorted(self.snapshots)
+
+            def load_snapshot(self, session_id: str) -> dict:
+                return self.snapshots[session_id]
+
+        snapshots = {
+            session_id: {
+                "campaign": {"identity": "cmp_exact-context-test"},
+                "lifecycle": "active",
+                "authenticated_principal_id": principal,
+                "provenance": {"definition_id": definition_id},
+                "workspace": {"root": root},
+                "consumer_id": f"consumer-{session_id}",
+                "checkpoints": [],
+            }
+            for session_id, (principal, definition_id, root) in contexts.items()
+        }
+        return MemoryStore(snapshots)
+
+    @staticmethod
+    def _campaign_observations(_store: object, _snapshot: dict,
+                               _session_id: str) -> dict:
+        return {
+            "claim_ids": [], "latest_checkpoint": None,
+            "campaign_state": None, "foreign_claims_count": 0,
+        }
+
+    def test_selected_unique_exact_context_resumes_alongside_other_same_principal_context(self) -> None:
+        from mncs_env import entry as entry_module
+
+        root = Path("/workspace/mncs-environment")
+        store = self._campaign_identity_store({
+            "ses_exact": ("principal-test", "env-exact", str(root)),
+            "ses_other_context": ("principal-test", "env-other", "/workspace/mncs-forge"),
+        })
+        with mock.patch.object(
+            entry_module.sessions, "continuation_observations",
+            side_effect=self._campaign_observations,
+        ):
+            entry_module._validate_campaign_identity(
+                store, campaign_id="cmp_exact-context-test",
+                authenticated_principal_id="principal-test",
+                definition_id="env-exact", workspace_root=root,
+                selected_session_id="ses_exact", pending_handoff=None,
+            )
+
+    def test_duplicate_exact_context_remains_ambiguous_even_when_one_is_selected(self) -> None:
+        from mncs_env import entry as entry_module
+
+        root = Path("/workspace/mncs-environment")
+        store = self._campaign_identity_store({
+            "ses_exact_a": ("principal-test", "env-exact", str(root)),
+            "ses_exact_b": ("principal-test", "env-exact", str(root)),
+            "ses_other_context": ("principal-test", "env-other", "/workspace/mncs-forge"),
+        })
+        with mock.patch.object(
+            entry_module.sessions, "continuation_observations",
+            side_effect=self._campaign_observations,
+        ), self.assertRaises(entry_module.EntryError) as raised:
+            entry_module._validate_campaign_identity(
+                store, campaign_id="cmp_exact-context-test",
+                authenticated_principal_id="principal-test",
+                definition_id="env-exact", workspace_root=root,
+                selected_session_id="ses_exact_a", pending_handoff=None,
+            )
+
+        self.assertEqual(
+            raised.exception.diagnostics["code"],
+            "campaign-continuation-ambiguous",
+        )
+
+    def test_exact_context_selection_does_not_override_foreign_campaign_owner(self) -> None:
+        from mncs_env import entry as entry_module
+
+        root = Path("/workspace/mncs-environment")
+        store = self._campaign_identity_store({
+            "ses_exact": ("principal-test", "env-exact", str(root)),
+            "ses_foreign": ("different-principal", "env-other", "/workspace/mncs-forge"),
+        })
+        with mock.patch.object(
+            entry_module.sessions, "continuation_observations",
+            side_effect=self._campaign_observations,
+        ), self.assertRaises(entry_module.EntryError) as raised:
+            entry_module._validate_campaign_identity(
+                store, campaign_id="cmp_exact-context-test",
+                authenticated_principal_id="principal-test",
+                definition_id="env-exact", workspace_root=root,
+                selected_session_id="ses_exact", pending_handoff=None,
+            )
+
+        self.assertEqual(
+            raised.exception.diagnostics["code"], "campaign-owner-conflict"
+        )
+
+    @staticmethod
     def _campaign_definition(path: Path) -> dict:
         definition = {
             "name": "mncs-compiler-campaign",
