@@ -1,0 +1,79 @@
+{
+  "schema_version": "mncs.environment.forge-provider-live-status/1",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "observed_at": "2026-10-11T22:42:18+00:00",
+  "observations": {
+    "provider_registry": {
+      "operation": "mncs_forge_providers_list",
+      "configured_count": 1,
+      "registry_status": "UNKNOWN",
+      "required_capabilities": [
+        "evidence-change-impact",
+        "artifact-manifest-identity",
+        "mncs-assurance-graph-impact",
+        "mncs-record-dispatch"
+      ],
+      "provider": {
+        "provider_id": "mncs-project-micro-verifiers",
+        "declared_identity": "mncs-project-micro-verifiers-v0.1",
+        "availability": "AVAILABLE",
+        "status": "UNKNOWN",
+        "descriptor_present": false,
+        "expected_executable_identity": null,
+        "executable_identity": "sha256:327ec22f2773e207fb6f8fce86bfed766cd4016c629d594c38d3870496fdac46",
+        "last_probe_result": null,
+        "probe_stale": false,
+        "limitations": [
+          "project-owned non-normative development provider",
+          "does not establish conformance, independence, custody, certification, or promotion"
+        ]
+      },
+      "policy_note": "Availability alone is not analysis evidence; a recognized explicit capability probe is required before a capability can satisfy policy."
+    },
+    "execution_receipt_bindings": {
+      "operation": "mncs_forge_execution_receipts_list",
+      "count": 0,
+      "execution_receipts": []
+    },
+    "compiler_experiments": {
+      "operation": "mncs_forge_compiler_experiments_list",
+      "count": 0,
+      "experiments": [],
+      "interpretation": "observation_only_not_assurance_or_conformance"
+    }
+  },
+  "ownership": {
+    "foreign_exclusive_claims": [
+      {
+        "repository": "mncs-forge",
+        "claim_id": "claim:mncs-forge",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "version": 28,
+        "expires_at": "2026-10-16T02:18:31+00:00"
+      },
+      {
+        "repository": "mncs-reference-studies",
+        "claim_id": "claim:mncs-reference-studies",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "version": 7,
+        "expires_at": "2026-10-16T02:18:43+00:00"
+      }
+    ],
+    "provider_probe_invoked": false,
+    "provider_probe_reason": "The configured provider executable is in mncs-reference-studies under a foreign exclusive claim; its status remains UNKNOWN until the owner authorizes the probe or an authenticated handoff establishes scope.",
+    "repository_mutations": 0
+  },
+  "resource_feedback": {
+    "forge_execution_receipts": 0,
+    "monitor_receipt_ingestion_tests": "passed in the earlier preflight report",
+    "real_compiler_execution": false,
+    "subsequent_automation_decision": false,
+    "status": "incomplete"
+  },
+  "limitations": [
+    "No explicit Forge provider probe was performed, so registry status remains UNKNOWN.",
+    "An empty identity-bound receipt list does not prove that no unbound receipt exists elsewhere.",
+    "The compiler resource-feedback vertical slice has not been demonstrated."
+  ]
+}
