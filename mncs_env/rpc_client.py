@@ -103,6 +103,19 @@ def dispatch(argv: list[str]) -> int:
             code = str(error.get("code", "ENVIRONMENT_RPC_REJECTED"))
             details = error.get("details")
             details = details if isinstance(details, dict) else {}
+            if request_may_have_been_sent:
+                # A restarted Control process does not retain the old
+                # per-sandbox grant. Its rejection proves only that this
+                # retry was not admitted; the first request may already have
+                # committed in Store. Preserve the request identity so a new
+                # authorized process can read back or safely retry it.
+                return _fail(
+                    "publication-outcome-ambiguous",
+                    "Control rejected the retry after the original request may have been delivered",
+                    "read back the target Environment object before retrying with this request identity",
+                    cause_code=code,
+                    request_id=request["request_id"],
+                )
             category = {
                 "ENVIRONMENT_AUTHORITY_DENIED": "authority-denied",
                 "ENVIRONMENT_OPERATION_UNAVAILABLE": "operation-unavailable",
@@ -136,6 +149,18 @@ def dispatch(argv: list[str]) -> int:
         exit_code = int(result.get("exit_code", 1))
         if exit_code != 0:
             failed = _cli_error(stderr) or _cli_error(stdout)
+            if request_may_have_been_sent:
+                diagnostics = failed.get("diagnostics") if failed is not None else None
+                diagnostics = diagnostics if isinstance(diagnostics, dict) else {}
+                raw_code = diagnostics.get("code")
+                return _fail(
+                    "publication-outcome-ambiguous",
+                    "Control returned an error while retrying a request that may already have published",
+                    "read back the target Environment object before retrying with this request identity",
+                    cause_code=(raw_code if isinstance(raw_code, str)
+                                else "ENVIRONMENT_RETRY_ERROR"),
+                    request_id=request["request_id"],
+                )
             if failed is not None:
                 diagnostics = failed.get("diagnostics")
                 diagnostics = diagnostics if isinstance(diagnostics, dict) else {}
