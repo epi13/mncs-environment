@@ -1,0 +1,128 @@
+{
+  "schema_version": "mncs.environment.claim-transfer-test-session-completion-readback/1",
+  "identity": "ev_claim_transfer_test_session_completed_20261011",
+  "recorded_at": "2026-10-11T19:15:27Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_main_commit": "b74bd85a5f4174201270cce89a59bfe4d31b2e2a",
+    "control_repository": "mncs-control-mcp",
+    "control_main_commit": "03957b673019ff183d0f674677670f73e08e2af2",
+    "control_environment_rpc_sha256": "7de50d5c590745b00a58ebf5801cfcc9f22d3c4fd7806f1aa660b7f5aff9db37"
+  },
+  "observation": {
+    "transport": "MNCS Control terminal_exec authenticated Environment RPC",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "protected_commands": [
+      {
+        "command": "python3 -m mncs_env.cli context ses_f0e6e64390bb5843",
+        "exit_code": 0,
+        "completed_at": "2026-10-11T19:14:42.244484Z"
+      },
+      {
+        "command": "python3 -m mncs_env.cli inspect ses_f0e6e64390bb5843",
+        "exit_code": 0,
+        "completed_at": "2026-10-11T19:14:48.842723Z"
+      }
+    ],
+    "direct_store_filesystem_access": false
+  },
+  "completed_test_session": {
+    "session_id": "ses_f0e6e64390bb5843",
+    "consumer_id": "mncs-transfer-recovery-proof",
+    "campaign_id": "cmp_claim_transfer_recovery_20261011",
+    "definition_id": "env_f31ee034e8e1fdcb",
+    "lifecycle": "completed",
+    "event_count": 5,
+    "latest_event": {
+      "causes": [],
+      "identity": "evt_eb5c70493ffd01b9",
+      "observed_at": "2026-10-11T13:40:15+00:00",
+      "payload": {
+        "authenticated_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+        "claims_released": [],
+        "outcome": "rpc completion proof",
+        "request_digest": "6e935195af94f237",
+        "request_id": "req_945ff2f523ccf83dc5399694bace907454c545a0",
+        "requested_by_consumer_id": "local-agent"
+      },
+      "producer": "local-agent",
+      "provider_type": null,
+      "schema_version": "mncs.environment.event/1",
+      "sequence": 5,
+      "session_id": "ses_f0e6e64390bb5843",
+      "type": "session.completed"
+    },
+    "completion": {
+      "at": "2026-10-11T13:40:14+00:00",
+      "claims_release_error": null,
+      "claims_released": [],
+      "outcome": "rpc completion proof",
+      "request_digest": "6e935195af94f237",
+      "request_id": "req_945ff2f523ccf83dc5399694bace907454c545a0",
+      "requested_by": {
+        "consumer_id": "local-agent",
+        "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+      },
+      "summary": "completed through authenticated Environment RPC from project Bwrap"
+    },
+    "checkpoint_count": 0,
+    "own_claim_ids": []
+  },
+  "prior_transfer_evidence": {
+    "identity": "ev_canonical_claim_transfer_restart_replay_20261011",
+    "path": "evidence/canonical-claim-transfer-restart-replay-20261011.json",
+    "disposition_at_that_read": "active and claim-free because completion was then reported unavailable",
+    "reconciliation": "This later protected readback supersedes only the temporary recipient session disposition. The prior report remains an accurate record of its earlier observation."
+  },
+  "main_campaign_readback": {
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "status": "context-conflict",
+    "context_count": 2,
+    "preserved_active_sessions": [
+      {
+        "session_id": "ses_7226fbcfe65820f7",
+        "lifecycle": "active",
+        "definition_id": "env_f31ee034e8e1fdcb",
+        "checkpoint_count": 4,
+        "claim_ids": [
+          "claim:mncs-environment"
+        ]
+      },
+      {
+        "session_id": "ses_b4b2d283542220b0",
+        "lifecycle": "active",
+        "definition_id": "env_1ea3af15c7464177",
+        "checkpoint_count": 0,
+        "claim_ids": []
+      }
+    ],
+    "main_environment_claim": {
+      "basis": "transfer",
+      "claim_id": "claim:mncs-environment",
+      "expires_at": "2026-10-12T19:38:47+00:00",
+      "repository": "mncs-environment",
+      "scope": {
+        "branch": null,
+        "checkout": null,
+        "exclusive": true,
+        "kind": "repository",
+        "paths": null,
+        "repository": "mncs-environment"
+      },
+      "status": "held",
+      "version": 33
+    },
+    "campaign_state_checkpoint_id": "chk_d211c3025665e24f",
+    "campaign_state_sequence": 125,
+    "note": "No claim, session, or campaign-context transition was performed during this readback."
+  },
+  "result": "PASS_FOR_AUTHENTICATED_COMPLETION_AND_TERMINAL_STATE_RECONCILIATION",
+  "limitations": [
+    "This readback does not remove the second active Environment definition; campaign continuation remains context-conflict.",
+    "Compiler and Forge claims remain owned by their recorded consumers and were not changed."
+  ]
+}
