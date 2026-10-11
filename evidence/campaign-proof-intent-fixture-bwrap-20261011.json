@@ -1,0 +1,53 @@
+{
+  "schema_version": "mncs.environment.campaign-proof-bwrap/1",
+  "identity": "ev_campaign_proof_intent_fixture_bwrap_20261011",
+  "recorded_at": "2026-10-11T12:53:45Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "main",
+    "commit": "2daa09fc7ff930e83cf50e214310e2490f4ec139",
+    "file": "scripts/campaign_proofs.py",
+    "sha256": "88abbf61e1336d08b7a655bac3cd2231918c1666d30ca6bc25408b4220939ae9"
+  },
+  "execution": {
+    "command": "python3 -B -u scripts/campaign_proofs.py",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "cwd": "/workspace/mncs-environment",
+    "network": false,
+    "duration_seconds": 56.077,
+    "temporary_store_directories": true,
+    "canonical_store_used": false
+  },
+  "result": {
+    "status": "PASS",
+    "passed": 17,
+    "skipped": 0,
+    "failed": 0,
+    "proofs": [
+      "two-agent.conflict",
+      "two-agent.authority-deny",
+      "two-agent.handoff",
+      "bypass.no-claim-no-exec",
+      "bypass.claim-executes",
+      "bypass.release-revokes",
+      "restart.resume",
+      "restart.missed-event-once",
+      "health.shape",
+      "idle.noop",
+      "resource.bounded",
+      "context.bounded",
+      "context.ack-advances",
+      "reuse.resume",
+      "language.live-delta",
+      "language.dedup",
+      "memory.untouched"
+    ]
+  },
+  "limits": [
+    "This proves the campaign proof harness runs under project Bwrap; its isolated temporary Stores do not demonstrate canonical Store publication.",
+    "The two-agent authority and bypass fixtures declare proof-repo in their session intent; production default-deny authority is unchanged."
+  ]
+}
