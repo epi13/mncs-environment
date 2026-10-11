@@ -15,10 +15,11 @@ identical re-put is idempotent.
 from __future__ import annotations
 
 import json
+import re
 import shlex
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from . import authority as authority_module
@@ -55,6 +56,14 @@ MAX_EMIT_RETRIES = 16
 CONTINUATION_MAX_CHECKPOINT_REMAINING = 8
 CONTINUATION_MAX_FOREIGN_CLAIMS = 12
 CONTINUATION_MAX_CLAIM_PATHS = 4
+CAMPAIGN_EVIDENCE_MAX = 32
+CAMPAIGN_DELIVERY_REPOSITORIES_MAX = 16
+CAMPAIGN_STATE_INPUT_MAX_BYTES = 7168
+
+_CAMPAIGN_REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
+_CAMPAIGN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$")
+_GIT_OBJECT_ID_PATTERN = re.compile(r"^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$")
+_SHA256_PATTERN = re.compile(r"^[0-9a-fA-F]{64}$")
 
 # Allowed lifecycle transitions. Every transition records a reason; an
 # illegal transition raises LifecycleError. Completion paths below match
@@ -122,6 +131,243 @@ def _bounded_capsule_text(value: Any, limit: int) -> str | None:
     if len(value) <= limit:
         return value
     return value[:limit - 1] + "…"
+
+
+def _campaign_text(value: Any, field: str, limit: int) -> str:
+    if (not isinstance(value, str) or not value or len(value) > limit
+            or "\x00" in value or any(ord(char) < 32 or ord(char) == 127
+                                      for char in value)):
+        raise ValueError(f"campaign {field} must be bounded nonempty text")
+    return value
+
+
+def _campaign_commit(value: Any, field: str, *, required: bool = True) -> str | None:
+    if value is None and not required:
+        return None
+    if not isinstance(value, str) or not _GIT_OBJECT_ID_PATTERN.fullmatch(value):
+        raise ValueError(f"campaign {field} must be a full Git object identity")
+    return value.lower()
+
+
+def normalize_campaign_evidence(value: Any) -> list[dict[str, str]]:
+    """Validate durable evidence pointers without treating them as verified.
+
+    Each pointer names immutable source bytes by repository, full commit, and
+    repository-relative path. Environment records who supplied the pointer;
+    the owning system remains responsible for validating the referenced
+    artifact itself.
+    """
+    if not isinstance(value, list) or len(value) > CAMPAIGN_EVIDENCE_MAX:
+        raise ValueError(
+            f"campaign evidence must be a list of at most {CAMPAIGN_EVIDENCE_MAX} references"
+        )
+    normalized: list[dict[str, str]] = []
+    identities: set[str] = set()
+    for item in value:
+        if not isinstance(item, dict):
+            raise ValueError("campaign evidence references must be objects")
+        allowed = {"identity", "repository", "commit", "path", "sha256"}
+        if set(item) - allowed or not {"identity", "repository", "commit", "path"} <= set(item):
+            raise ValueError(
+                "campaign evidence references require identity, repository, commit, and path"
+            )
+        identity = _campaign_text(item["identity"], "evidence identity", 160)
+        if not _CAMPAIGN_ID_PATTERN.fullmatch(identity):
+            raise ValueError("campaign evidence identity contains unsupported characters")
+        if identity in identities:
+            raise ValueError(f"duplicate campaign evidence identity: {identity}")
+        identities.add(identity)
+        repository = _campaign_text(item["repository"], "evidence repository", 120)
+        if not _CAMPAIGN_REPOSITORY_PATTERN.fullmatch(repository):
+            raise ValueError("campaign evidence repository identity is invalid")
+        commit = _campaign_commit(item["commit"], "evidence commit")
+        path = _campaign_text(item["path"], "evidence path", 512)
+        parts = path.split("/")
+        pure_path = PurePosixPath(path)
+        if ("\\" in path or pure_path.is_absolute() or path.startswith("~")
+                or any(part in ("", ".", "..") for part in parts)):
+            raise ValueError("campaign evidence path must be a normalized repository-relative path")
+        record = {
+            "identity": identity,
+            "repository": repository,
+            "commit": str(commit),
+            "path": path,
+        }
+        if "sha256" in item:
+            digest = item["sha256"]
+            if not isinstance(digest, str) or not _SHA256_PATTERN.fullmatch(digest):
+                raise ValueError("campaign evidence sha256 must contain 64 hexadecimal characters")
+            record["sha256"] = digest.lower()
+        normalized.append(record)
+    encoded = json.dumps(normalized, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":")).encode("utf-8")
+    if len(encoded) > CAMPAIGN_STATE_INPUT_MAX_BYTES:
+        raise ValueError("campaign evidence exceeds the bounded publication size")
+    return normalized
+
+
+def normalize_campaign_delivery(value: Any) -> dict[str, Any]:
+    """Validate a compact delivery report; it is a recorded claim, not proof."""
+    if not isinstance(value, dict):
+        raise ValueError("campaign delivery must be an object")
+    allowed = {"schema_version", "status", "repositories", "reason"}
+    if set(value) - allowed:
+        raise ValueError("campaign delivery contains unsupported fields")
+    if value.get("schema_version", "mncs.environment.campaign-delivery/1") != (
+        "mncs.environment.campaign-delivery/1"
+    ):
+        raise ValueError("unsupported campaign delivery schema")
+    overall = value.get("status")
+    if overall not in ("pending", "partial", "delivered", "blocked"):
+        raise ValueError("campaign delivery status must be pending, partial, delivered, or blocked")
+    repositories = value.get("repositories", [])
+    if (not isinstance(repositories, list)
+            or len(repositories) > CAMPAIGN_DELIVERY_REPOSITORIES_MAX):
+        raise ValueError(
+            "campaign delivery repositories must be a bounded list of repository records"
+        )
+    normalized_repositories: list[dict[str, str]] = []
+    seen_repositories: set[str] = set()
+    allowed_repository_fields = {
+        "repository", "branch", "head", "status", "remote_ref", "remote_head",
+        "evidence_identity", "reason",
+    }
+    for item in repositories:
+        if not isinstance(item, dict) or set(item) - allowed_repository_fields:
+            raise ValueError("campaign delivery repository records contain unsupported fields")
+        repository = _campaign_text(item.get("repository"), "delivery repository", 120)
+        if not _CAMPAIGN_REPOSITORY_PATTERN.fullmatch(repository):
+            raise ValueError("campaign delivery repository identity is invalid")
+        if repository in seen_repositories:
+            raise ValueError(f"duplicate campaign delivery repository: {repository}")
+        seen_repositories.add(repository)
+        status = item.get("status")
+        if status not in ("pending", "committed", "merged", "pushed", "retained", "blocked"):
+            raise ValueError("campaign repository delivery status is invalid")
+        record: dict[str, str] = {"repository": repository, "status": status}
+        branch = item.get("branch")
+        if branch is not None:
+            branch = _campaign_text(branch, "delivery branch", 200)
+            if (branch.startswith("-") or branch.startswith("/") or branch.endswith("/")
+                    or ".." in branch or "@{" in branch or "\\" in branch
+                    or any(char.isspace() for char in branch)):
+                raise ValueError("campaign delivery branch is not a safe Git ref name")
+            record["branch"] = branch
+        head = _campaign_commit(item.get("head"), "delivery head", required=False)
+        if head is not None:
+            record["head"] = head
+        remote_ref = item.get("remote_ref")
+        if remote_ref is not None:
+            remote_ref = _campaign_text(remote_ref, "delivery remote ref", 256)
+            if (remote_ref.startswith(("/", "~")) or "://" in remote_ref
+                    or "@" in remote_ref or "\\" in remote_ref
+                    or any(part in ("", ".", "..") for part in remote_ref.split("/"))
+                    or any(char.isspace() for char in remote_ref)):
+                raise ValueError("campaign delivery remote ref must be a repository ref, not a path or URL")
+            record["remote_ref"] = remote_ref
+        remote_head = _campaign_commit(
+            item.get("remote_head"), "delivery remote head", required=False
+        )
+        if remote_head is not None:
+            record["remote_head"] = remote_head
+        evidence_identity = item.get("evidence_identity")
+        if evidence_identity is not None:
+            evidence_identity = _campaign_text(
+                evidence_identity, "delivery evidence identity", 160
+            )
+            if not _CAMPAIGN_ID_PATTERN.fullmatch(evidence_identity):
+                raise ValueError("campaign delivery evidence identity is invalid")
+            record["evidence_identity"] = evidence_identity
+        reason = item.get("reason")
+        if reason is not None:
+            record["reason"] = _campaign_text(reason, "delivery reason", 320)
+        if status in ("committed", "merged", "pushed", "retained") and (
+            not record.get("branch") or not record.get("head")
+        ):
+            raise ValueError(f"{status} campaign delivery requires a branch and full head")
+        if status == "pushed" and not (
+            record.get("remote_ref") and record.get("remote_head")
+        ):
+            raise ValueError("pushed campaign delivery requires remote_ref and remote_head")
+        normalized_repositories.append(record)
+    normalized_repositories.sort(key=lambda item: item["repository"])
+    if overall == "delivered" and (
+        not normalized_repositories
+        or any(item["status"] not in ("pushed", "retained")
+               for item in normalized_repositories)
+    ):
+        raise ValueError("delivered campaign status requires every repository to be pushed or retained")
+    normalized: dict[str, Any] = {
+        "schema_version": "mncs.environment.campaign-delivery/1",
+        "status": overall,
+        "repositories": normalized_repositories,
+    }
+    if "reason" in value:
+        normalized["reason"] = _campaign_text(value["reason"], "delivery reason", 320)
+    encoded = json.dumps(normalized, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":")).encode("utf-8")
+    if len(encoded) > CAMPAIGN_STATE_INPUT_MAX_BYTES:
+        raise ValueError("campaign delivery exceeds the bounded publication size")
+    return normalized
+
+
+def _latest_campaign_state_checkpoint(
+    checkpoints: list[dict[str, Any]], campaign_identity: str | None,
+) -> dict[str, Any] | None:
+    candidates = [record for record in checkpoints
+                  if isinstance(record, dict) and isinstance(record.get("campaign_state"), dict)]
+    if not candidates:
+        return None
+    for record in candidates:
+        state = record["campaign_state"]
+        if (state.get("schema_version") != "mncs.environment.campaign-state/1"
+                or state.get("campaign_identity") != campaign_identity
+                or record.get("campaign_state_digest") != digest_hex(state)):
+            raise LifecycleError("campaign state checkpoint failed identity or digest validation")
+        try:
+            evidence = normalize_campaign_evidence(state.get("evidence"))
+            delivery = normalize_campaign_delivery(state.get("delivery"))
+        except ValueError as error:
+            raise LifecycleError(f"campaign state checkpoint is invalid: {error}") from error
+        if evidence != state.get("evidence") or delivery != state.get("delivery"):
+            raise LifecycleError("campaign state checkpoint is not canonically normalized")
+        provenance = state.get("recorded_by")
+        if (not isinstance(provenance, dict)
+                or not isinstance(provenance.get("consumer_id"), str)
+                or (provenance.get("principal_id") is not None
+                    and not isinstance(provenance.get("principal_id"), str))):
+            raise LifecycleError("campaign state checkpoint lacks Environment provenance")
+    candidates.sort(key=lambda record: (
+        int(record.get("sequence", 0)), str(record.get("created_at", "")),
+        str(record.get("identity", "")),
+    ))
+    latest_sequence = int(candidates[-1].get("sequence", 0))
+    same_sequence = [record for record in candidates
+                     if int(record.get("sequence", 0)) == latest_sequence]
+    digests = {record.get("campaign_state_digest") for record in same_sequence}
+    if len(digests) > 1:
+        raise LifecycleError(
+            "conflicting campaign state checkpoints share one sequence; reconcile before updating"
+        )
+    return candidates[-1]
+
+
+def _project_campaign_state(
+    campaign: dict[str, Any], checkpoint: dict[str, Any] | None,
+) -> bool:
+    if checkpoint is None:
+        return False
+    state = checkpoint["campaign_state"]
+    values = {
+        "evidence": state["evidence"],
+        "delivery": state["delivery"],
+        "state_checkpoint_id": checkpoint["identity"],
+        "state_recorded_at": state.get("recorded_at"),
+        "state_provenance": state["recorded_by"],
+    }
+    changed = any(campaign.get(key) != value for key, value in values.items())
+    campaign.update(values)
+    return changed
 
 
 def continuation_observations(
@@ -257,12 +503,46 @@ def continuation_observations(
             ),
         }
 
+    campaign_state_record = _latest_campaign_state_checkpoint(
+        checkpoints, campaign.get("identity")
+    )
+    campaign_state_projection = None
+    if campaign_state_record is not None:
+        state = campaign_state_record["campaign_state"]
+        evidence = state["evidence"]
+        delivery = state["delivery"]
+        delivery_repositories = delivery.get("repositories", [])
+        campaign_state_projection = {
+            "checkpoint_id": campaign_state_record["identity"],
+            "recorded_at": _bounded_capsule_text(state.get("recorded_at"), 64),
+            "recorded_by": {
+                "consumer_id": _bounded_capsule_text(
+                    state["recorded_by"].get("consumer_id"), 160
+                ),
+                "principal_id": _bounded_capsule_text(
+                    state["recorded_by"].get("principal_id"), 160
+                ),
+            },
+            "evidence": evidence[-8:],
+            "evidence_count": len(evidence),
+            "evidence_truncated": len(evidence) > 8,
+            "delivery": {
+                **{key: value for key, value in delivery.items()
+                   if key != "repositories"},
+                "repositories": delivery_repositories[:CAMPAIGN_DELIVERY_REPOSITORIES_MAX],
+                "repositories_count": len(delivery_repositories),
+                "repositories_truncated": len(delivery_repositories)
+                > CAMPAIGN_DELIVERY_REPOSITORIES_MAX,
+            },
+        }
+
     return {
         "claim_ids": own_claim_ids[-16:],
         "foreign_claims": [item[1] for item in foreign[:CONTINUATION_MAX_FOREIGN_CLAIMS]],
         "foreign_claims_count": len(foreign),
         "foreign_claims_truncated": len(foreign) > CONTINUATION_MAX_FOREIGN_CLAIMS,
         "latest_checkpoint": latest_checkpoint,
+        "campaign_state": campaign_state_projection,
     }
 
 
@@ -1021,6 +1301,12 @@ class Session:
         prior_repository_refs = campaign.get("repository_refs", [])
         checkpoint_ids = list(dict.fromkeys([*prior_checkpoints, *persisted_ids]))
         missing = sorted(set(prior_checkpoints) - set(persisted_ids))
+        campaign_state_record = _latest_campaign_state_checkpoint(
+            checkpoints, campaign.get("identity")
+        )
+        campaign_state_changed = _project_campaign_state(
+            campaign, campaign_state_record
+        )
         self.snapshot["checkpoints"] = checkpoint_ids
         campaign["claim_ids"] = claims
         campaign["work_intent"] = campaign.get("work_intent") or {
@@ -1067,19 +1353,30 @@ class Session:
             })
             resumed_handoffs.add(handoff_identity)
             repaired_acceptance = True
-        if recovered or prior_claims != claims or missing or refs_changed or repaired_acceptance:
+        if (recovered or prior_claims != claims or missing or refs_changed
+                or repaired_acceptance or campaign_state_changed):
             self._emit("campaign.reconciled", "environment", {
                 "campaign_id": campaign.get("identity"),
                 "recovered_checkpoints": recovered,
                 "unavailable_checkpoints": missing,
                 "claim_ids": claims,
                 "repository_refs_changed": refs_changed,
+                "campaign_state_checkpoint_id": (
+                    campaign_state_record.get("identity")
+                    if campaign_state_record else None
+                ),
             })
             self._save()
         return {"recovered_checkpoints": recovered,
                 "unavailable_checkpoints": missing,
                 "claim_ids": claims,
-                "changed": bool(recovered or prior_claims != claims or missing or refs_changed)}
+                "campaign_state_checkpoint_id": (
+                    campaign_state_record.get("identity")
+                    if campaign_state_record else None
+                ),
+                "campaign_state_changed": campaign_state_changed,
+                "changed": bool(recovered or prior_claims != claims or missing
+                                or refs_changed or campaign_state_changed)}
 
     @classmethod
     def open(
@@ -2300,7 +2597,10 @@ class Session:
     # -- checkpoint / handoff / completion ------------------------------------
 
     def checkpoint(self, *, progress: str = "", remaining: list[str] | None = None,
-                   request_id: str | None = None) -> dict[str, Any]:
+                   request_id: str | None = None,
+                   campaign_evidence: list[dict[str, Any]] | None = None,
+                   campaign_delivery: dict[str, Any] | None = None,
+                   campaign_base_checkpoint: str | None = None) -> dict[str, Any]:
         if request_id is not None and (
             not isinstance(request_id, str) or not request_id
             or len(request_id) > 160 or "\x00" in request_id
@@ -2308,7 +2608,43 @@ class Session:
             raise ValueError(
                 "checkpoint request identity must be bounded nonempty text"
             )
-        sequence = len(self.snapshot.get("checkpoints", [])) + 1
+        if not isinstance(progress, str) or len(progress) > 4096 or "\x00" in progress:
+            raise ValueError("checkpoint progress must be bounded text")
+        if (not isinstance(remaining, (list, type(None)))
+                or (remaining is not None and (len(remaining) > 32
+                    or any(not isinstance(item, str) or len(item) > 1024
+                           or "\x00" in item for item in remaining)))):
+            raise ValueError("checkpoint remaining items must be a bounded text list")
+        remaining_values = list(remaining or [])
+        campaign_update_requested = (
+            campaign_evidence is not None or campaign_delivery is not None
+        )
+        if campaign_update_requested and campaign_base_checkpoint is None:
+            raise ValueError(
+                "campaign metadata updates require --campaign-base-checkpoint from the current capsule (use 'none' initially)"
+            )
+        if campaign_base_checkpoint is not None and (
+            not isinstance(campaign_base_checkpoint, str)
+            or not campaign_base_checkpoint
+            or len(campaign_base_checkpoint) > 160
+            or "\x00" in campaign_base_checkpoint
+        ):
+            raise ValueError("campaign base checkpoint identity is invalid")
+        normalized_evidence = (
+            normalize_campaign_evidence(campaign_evidence)
+            if campaign_evidence is not None else None
+        )
+        normalized_delivery = (
+            normalize_campaign_delivery(campaign_delivery)
+            if campaign_delivery is not None else None
+        )
+        campaign_update = None
+        if campaign_update_requested:
+            campaign_update = {
+                "base_checkpoint": campaign_base_checkpoint,
+                "evidence": normalized_evidence,
+                "delivery": normalized_delivery,
+            }
         state_digest = digest_hex(
             {
                 "intent": self.snapshot.get("intent"),
@@ -2320,18 +2656,21 @@ class Session:
         operation_digest = digest_hex({
             "session_id": self.session_id,
             "progress": progress,
-            "remaining": list(remaining or []),
+            "remaining": remaining_values,
+            **({"campaign_update": campaign_update}
+               if campaign_update_requested else {}),
         })
         request_digest = digest_hex({
             "session_id": self.session_id,
             "state_digest": state_digest,
             "progress": progress,
-            "remaining": list(remaining or []),
+            "remaining": remaining_values,
+            **({"campaign_update": campaign_update}
+               if campaign_update_requested else {}),
         })
-        # Transport request identities must survive service restarts. A retry
+        # Transport request identities survive service restarts. A retry
         # reads the original immutable checkpoint even if the session acquired
-        # new workspace facts after publication. Calls without a request id
-        # retain content-based checkpoint identity.
+        # new workspace facts after publication.
         identity = "chk_" + digest_hex(
             {"kind": "checkpoint-request", "session": self.session_id,
              "request_id": request_id}
@@ -2339,8 +2678,18 @@ class Session:
             {"kind": "checkpoint-content", "session": self.session_id,
              "request_digest": request_digest}
         )
+        checkpoint_records = self.store.list_checkpoints(self.session_id)
+
+        def checkpoint_sequence(item: dict[str, Any]) -> int:
+            try:
+                return int(item.get("sequence", 0))
+            except (TypeError, ValueError):
+                return 0
+
+        sequence = max((checkpoint_sequence(item) for item in checkpoint_records),
+                       default=0) + 1
         matching_requests = (
-            [item for item in self.store.list_checkpoints(self.session_id)
+            [item for item in checkpoint_records
              if item.get("request_id") == request_id]
             if request_id is not None else []
         )
@@ -2367,15 +2716,84 @@ class Session:
             record = existing_request
         else:
             record = self.store.load_checkpoint(self.session_id, identity)
+        if record is not None and campaign_update_requested:
+            if not isinstance(record.get("campaign_state"), dict):
+                raise LifecycleError(
+                    "checkpoint request identity has no durable campaign state"
+                )
+        campaign_identity = None
+        campaign_evidence_value: list[dict[str, str]] | None = None
+        campaign_delivery_value: dict[str, Any] | None = None
+        if record is None and campaign_update_requested:
+            campaign = dict(self.snapshot.get("campaign") or {})
+            campaign_identity = campaign.get("identity")
+            if (not isinstance(campaign_identity, str)
+                    or not _CAMPAIGN_ID_PATTERN.fullmatch(campaign_identity)):
+                raise LifecycleError(
+                    "durable campaign metadata requires an Environment campaign identity"
+                )
+            latest_campaign_record = _latest_campaign_state_checkpoint(
+                checkpoint_records, campaign_identity
+            )
+            latest_campaign_id = (
+                latest_campaign_record.get("identity")
+                if latest_campaign_record is not None else "none"
+            )
+            if campaign_base_checkpoint != latest_campaign_id:
+                raise LifecycleError(
+                    "campaign state changed since the supplied base checkpoint; read the capsule and retry with its current campaign state checkpoint"
+                )
+            if latest_campaign_record is not None:
+                prior_state = latest_campaign_record["campaign_state"]
+                campaign_evidence_value = prior_state["evidence"]
+                campaign_delivery_value = prior_state["delivery"]
+            else:
+                try:
+                    campaign_evidence_value = normalize_campaign_evidence(
+                        campaign.get("evidence", [])
+                    )
+                    campaign_delivery_value = normalize_campaign_delivery(
+                        campaign.get("delivery", {"status": "pending"})
+                    )
+                except ValueError as error:
+                    raise LifecycleError(
+                        f"existing campaign projection is invalid: {error}"
+                    ) from error
+            if normalized_evidence is not None:
+                prior_by_identity = {
+                    item["identity"]: item for item in campaign_evidence_value
+                }
+                new_by_identity = {
+                    item["identity"]: item for item in normalized_evidence
+                }
+                if any(new_by_identity.get(key) != item
+                       for key, item in prior_by_identity.items()):
+                    raise LifecycleError(
+                        "campaign evidence updates must retain every prior immutable reference"
+                    )
+                campaign_evidence_value = normalized_evidence
+            if normalized_delivery is not None:
+                campaign_delivery_value = normalized_delivery
+            evidence_ids = {
+                item["identity"] for item in campaign_evidence_value
+            }
+            if any(item.get("evidence_identity") not in evidence_ids
+                   for item in campaign_delivery_value.get("repositories", [])
+                   if item.get("evidence_identity") is not None):
+                raise ValueError(
+                    "campaign delivery references an evidence identity absent from campaign evidence"
+                )
         if record is None:
+            created_at = utcnow()
             record = {
                 "schema_version": CHECKPOINT_SCHEMA,
                 "identity": identity,
                 "session_id": self.session_id,
                 "sequence": sequence,
                 "progress": progress,
-                "remaining": list(remaining or []),
+                "remaining": remaining_values,
                 "intent_id": (self.snapshot.get("intent") or {}).get("identity"),
+                "campaign_identity": (self.snapshot.get("campaign") or {}).get("identity"),
                 "environment_id": self.snapshot.get("environment_id"),
                 "event_cursor": len(self._log()),
                 "artifacts": list(self.snapshot.get("artifacts", [])),
@@ -2383,14 +2801,33 @@ class Session:
                 "revalidate_on_resume": [
                     "bindings", "workspace-heads", "claims", "authority"
                 ],
-                "created_at": utcnow(),
+                "created_at": created_at,
                 "created_by": self.snapshot.get("consumer_id"),
+                "created_by_principal_id": self.snapshot.get(
+                    "authenticated_principal_id"
+                ),
                 "request_id": request_id,
                 "operation_digest": (
                     operation_digest if request_id is not None else None
                 ),
                 "request_digest": request_digest,
             }
+            if campaign_update_requested:
+                campaign_state = {
+                    "schema_version": "mncs.environment.campaign-state/1",
+                    "campaign_identity": campaign_identity,
+                    "evidence": campaign_evidence_value,
+                    "delivery": campaign_delivery_value,
+                    "recorded_at": created_at,
+                    "recorded_by": {
+                        "consumer_id": self.snapshot.get("consumer_id"),
+                        "principal_id": self.snapshot.get(
+                            "authenticated_principal_id"
+                        ),
+                    },
+                }
+                record["campaign_state"] = campaign_state
+                record["campaign_state_digest"] = digest_hex(campaign_state)
             self.store.save_checkpoint(self.session_id, record)
         elif (record.get("session_id") != self.session_id
               or record.get("request_id") != request_id
@@ -2401,6 +2838,10 @@ class Session:
             )
         self.snapshot.setdefault("checkpoints", []).append(record["identity"])
         self.snapshot["checkpoints"] = list(dict.fromkeys(self.snapshot["checkpoints"]))
+        if isinstance(record.get("campaign_state"), dict):
+            campaign = dict(self.snapshot.get("campaign") or {})
+            _project_campaign_state(campaign, record)
+            self.snapshot["campaign"] = campaign
         if self.snapshot.get("lifecycle") == "active":
             self.transition("checkpointed", f"checkpoint {sequence}")
         events = self._log()
@@ -2409,6 +2850,11 @@ class Session:
             self._emit("session.checkpointed", self.snapshot.get("consumer_id", "unknown"),
                        {"checkpoint_id": record["identity"],
                         "progress": record.get("progress", progress),
+                        "campaign_state_checkpoint_id": (
+                            record["identity"]
+                            if isinstance(record.get("campaign_state"), dict)
+                            else None
+                        ),
                         "request_id": request_id})
         if self.snapshot.get("lifecycle") == "checkpointed":
             self.transition("active", "resumed after checkpoint")
@@ -2761,6 +3207,17 @@ class Session:
             value for value in authorized_consumers
             if value != campaign.get("current_consumer_id")
         ]
+        persisted_campaign_state = observations.get("campaign_state")
+        campaign_evidence = (
+            persisted_campaign_state.get("evidence", [])
+            if isinstance(persisted_campaign_state, dict)
+            else list(campaign.get("evidence", []))[-8:]
+        )
+        campaign_delivery = (
+            persisted_campaign_state.get("delivery")
+            if isinstance(persisted_campaign_state, dict)
+            else campaign.get("delivery", {"status": "pending"})
+        )
         continuation = {
             "identity": campaign.get("identity"),
             "session_ids": list(campaign.get("session_ids", []))[-8:],
@@ -2777,12 +3234,28 @@ class Session:
             "work_intent": campaign.get("work_intent", {
                 "goal": intent.get("goal", ""),
             }),
-            "evidence": list(campaign.get("evidence", []))[-8:],
-            "delivery": campaign.get("delivery", {"status": "pending"}),
+            "evidence": campaign_evidence,
+            "delivery": campaign_delivery,
             "unresolved_pressures": list(
                 campaign.get("unresolved_pressures", [])
             )[:12],
         }
+        if isinstance(persisted_campaign_state, dict):
+            continuation["campaign_state_checkpoint_id"] = (
+                persisted_campaign_state.get("checkpoint_id")
+            )
+            continuation["campaign_state_recorded_at"] = (
+                persisted_campaign_state.get("recorded_at")
+            )
+            continuation["campaign_state_provenance"] = (
+                persisted_campaign_state.get("recorded_by")
+            )
+            continuation["evidence_count"] = persisted_campaign_state.get(
+                "evidence_count", len(campaign_evidence)
+            )
+            continuation["evidence_truncated"] = persisted_campaign_state.get(
+                "evidence_truncated", False
+            )
         if observations["foreign_claims_count"]:
             continuation.update({
                 "foreign_claims": observations["foreign_claims"],

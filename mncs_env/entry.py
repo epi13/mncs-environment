@@ -387,7 +387,12 @@ def _validate_campaign_identity(store, *, campaign_id: str,
             claim_ids = []
         if not isinstance(pressures, list):
             pressures = []
-        delivery = campaign.get("delivery", {"status": "pending"})
+        persisted_campaign_state = observations.get("campaign_state")
+        delivery = (
+            persisted_campaign_state.get("delivery")
+            if isinstance(persisted_campaign_state, dict)
+            else campaign.get("delivery", {"status": "pending"})
+        )
         if not isinstance(delivery, dict):
             delivery = {"status": "unknown"}
         result = {
@@ -404,6 +409,11 @@ def _validate_campaign_identity(store, *, campaign_id: str,
         }
         if observations["latest_checkpoint"] is not None:
             result["latest_checkpoint"] = observations["latest_checkpoint"]
+        if isinstance(persisted_campaign_state, dict):
+            result["campaign_state_checkpoint_id"] = persisted_campaign_state.get(
+                "checkpoint_id"
+            )
+            result["evidence"] = persisted_campaign_state.get("evidence", [])
         if observations["foreign_claims_count"]:
             result.update({
                 "foreign_claims": observations["foreign_claims"],

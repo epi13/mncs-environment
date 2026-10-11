@@ -140,6 +140,30 @@ from the capsule, while the claim identity remains the durable reference to
 that exact scope. Claim summaries include counts and truncation flags when
 claims are present, so the consumer can request full inspection when needed.
 
+Campaign evidence pointers and delivery reports can be published with the
+Environment checkpoint command. Evidence pointers bind a stable identity to a
+repository, full Git commit, and repository-relative artifact path, with an
+optional SHA-256. Delivery reports name repository branches, commits, and
+remote refs. Environment stores the supplied records in the immutable
+checkpoint with the authenticated principal and consumer that supplied them;
+the pointers and delivery statuses are recorded claims, not verification of
+the referenced artifact or remote state. A subsequent entry reconstructs the
+campaign projection from that checkpoint if the session snapshot was not
+updated before a process interruption.
+
+Campaign metadata updates use optimistic concurrency. Copy the
+`campaign_state_checkpoint_id` from the current capsule into
+`--campaign-base-checkpoint`, or use `none` before the first campaign metadata
+publication. The evidence JSON is a cumulative list; existing immutable
+identities cannot be removed or rebound. For example:
+
+```sh
+mncs-env checkpoint "$SESSION" --progress "delivery verified" \
+  --campaign-base-checkpoint chk_current \
+  --campaign-evidence-json '[{"identity":"ev_env_delivery","repository":"mncs-environment","commit":"FULL_GIT_COMMIT","path":"evidence/delivery.json"}]' \
+  --campaign-delivery-json '{"status":"delivered","repositories":[{"repository":"mncs-environment","branch":"main","head":"FULL_GIT_COMMIT","status":"pushed","remote_ref":"origin/main","remote_head":"FULL_GIT_COMMIT","evidence_identity":"ev_env_delivery"}]}'
+```
+
 `actions.*.argv` is directly executable and preserves the current interpreter,
 CLI path, state root, backend, and session. It works from another directory and
 with paths containing spaces. `next_commands` contains the canonical next

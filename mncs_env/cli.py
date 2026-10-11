@@ -741,8 +741,23 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
         )
     except sessions_module.LifecycleError as error:
         return fail(str(error))
+    campaign_evidence = None
+    if args.campaign_evidence_json is not None:
+        raw = args.campaign_evidence_json
+        if len(raw.encode("utf-8")) > sessions_module.CAMPAIGN_STATE_INPUT_MAX_BYTES:
+            raise ValueError("campaign evidence JSON exceeds the bounded publication size")
+        campaign_evidence = json.loads(raw)
+    campaign_delivery = None
+    if args.campaign_delivery_json is not None:
+        raw = args.campaign_delivery_json
+        if len(raw.encode("utf-8")) > sessions_module.CAMPAIGN_STATE_INPUT_MAX_BYTES:
+            raise ValueError("campaign delivery JSON exceeds the bounded publication size")
+        campaign_delivery = json.loads(raw)
     out(session.checkpoint(progress=args.progress, remaining=args.remaining,
-                           request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID")))
+                           request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"),
+                           campaign_evidence=campaign_evidence,
+                           campaign_delivery=campaign_delivery,
+                           campaign_base_checkpoint=args.campaign_base_checkpoint))
     return 0
 
 
@@ -1257,6 +1272,18 @@ def build_parser() -> argparse.ArgumentParser:
     checkpoint = session_parser("checkpoint", "persist a checkpoint")
     checkpoint.add_argument("--progress", default="")
     checkpoint.add_argument("--remaining", nargs="*", default=[])
+    checkpoint.add_argument(
+        "--campaign-base-checkpoint", default=None,
+        help="campaign state checkpoint from the current capsule, or 'none' initially",
+    )
+    checkpoint.add_argument(
+        "--campaign-evidence-json", default=None,
+        help="bounded JSON list of cumulative repository/commit/path evidence references",
+    )
+    checkpoint.add_argument(
+        "--campaign-delivery-json", default=None,
+        help="bounded JSON delivery report; recorded with the checkpoint and its provenance",
+    )
     checkpoint.set_defaults(func=cmd_checkpoint)
 
     handoff = session_parser("handoff", "hand off to another consumer")

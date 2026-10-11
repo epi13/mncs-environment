@@ -2670,6 +2670,169 @@ class SessionTests(unittest.TestCase):
                       and item.get("payload", {}).get("request_id") == "req_checkpoint-proof"]
             self.assertEqual(len(events), 1)
 
+    def test_campaign_evidence_and_delivery_are_checkpointed_and_reconstructed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state_dir = Path(directory)
+            session = make_session(state_dir)
+            session.snapshot["campaign"]["identity"] = "cmp_durable_evidence_test"
+            session.snapshot["authenticated_principal_id"] = "principal-test"
+            session._save()
+            commit = "a" * 40
+            evidence = [{
+                "identity": "ev_environment_delivery",
+                "repository": "mncs-environment",
+                "commit": commit,
+                "path": "evidence/campaign-delivery.json",
+                "sha256": "b" * 64,
+            }]
+            delivery = {
+                "status": "delivered",
+                "repositories": [{
+                    "repository": "mncs-environment",
+                    "branch": "main",
+                    "head": commit,
+                    "status": "pushed",
+                    "remote_ref": "origin/main",
+                    "remote_head": commit,
+                    "evidence_identity": "ev_environment_delivery",
+                }],
+            }
+            checkpoint = session.checkpoint(
+                progress="Environment delivery recorded",
+                request_id="req_campaign_state_delivery",
+                campaign_base_checkpoint="none",
+                campaign_evidence=evidence,
+                campaign_delivery=delivery,
+            )
+            self.assertEqual(
+                checkpoint["campaign_state"]["recorded_by"],
+                {"consumer_id": "tester", "principal_id": "principal-test"},
+            )
+            self.assertEqual(session.snapshot["campaign"]["delivery"]["status"], "delivered")
+
+            reopened = sessions.Session.open(
+                state_dir=state_dir, session_id=session.session_id, **FAST
+            )
+            capsule = reopened.context()["continuation"]
+            self.assertEqual(capsule["evidence"], evidence)
+            self.assertEqual(capsule["delivery"]["status"], "delivered")
+            self.assertEqual(capsule["campaign_state_checkpoint_id"], checkpoint["identity"])
+            self.assertEqual(
+                capsule["campaign_state_provenance"],
+                {"consumer_id": "tester", "principal_id": "principal-test"},
+            )
+
+            # Simulate interruption after the immutable checkpoint was stored
+            # but before its campaign projection reached the session snapshot.
+            snapshot = reopened.snapshot
+            snapshot["campaign"]["evidence"] = []
+            snapshot["campaign"]["delivery"] = {"status": "pending"}
+            snapshot["campaign"].pop("state_checkpoint_id", None)
+            snapshot["campaign"].pop("state_recorded_at", None)
+            snapshot["campaign"].pop("state_provenance", None)
+            snapshot["snapshot_sequence"] += 1
+            reopened.store.save_snapshot(reopened.session_id, snapshot)
+            interrupted = sessions.Session.open(
+                state_dir=state_dir, session_id=session.session_id, **FAST
+            )
+            reconciliation = interrupted.reconcile_campaign_continuity()
+            self.assertTrue(reconciliation["campaign_state_changed"])
+            self.assertEqual(
+                interrupted.snapshot["campaign"]["state_checkpoint_id"],
+                checkpoint["identity"],
+            )
+            self.assertEqual(interrupted.snapshot["campaign"]["evidence"], evidence)
+            self.assertEqual(interrupted.snapshot["campaign"]["delivery"]["status"], "delivered")
+
+    def test_campaign_checkpoint_retry_is_stable_and_stale_base_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            session.snapshot["campaign"]["identity"] = "cmp_checkpoint_cas_test"
+            session._save()
+            evidence = [{
+                "identity": "ev_first",
+                "repository": "mncs-environment",
+                "commit": "c" * 40,
+                "path": "evidence/first.json",
+            }]
+            first = session.checkpoint(
+                progress="publish campaign metadata",
+                request_id="req_campaign_first_state",
+                campaign_base_checkpoint="none",
+                campaign_evidence=evidence,
+            )
+            retry = session.checkpoint(
+                progress="publish campaign metadata",
+                request_id="req_campaign_first_state",
+                campaign_base_checkpoint="none",
+                campaign_evidence=evidence,
+            )
+            self.assertEqual(retry, first)
+            self.assertEqual(len(session.store.list_checkpoints(session.session_id)), 1)
+            with self.assertRaises(sessions.LifecycleError):
+                session.checkpoint(
+                    progress="stale writer",
+                    request_id="req_campaign_stale_state",
+                    campaign_base_checkpoint="none",
+                    campaign_delivery={"status": "pending", "repositories": []},
+                )
+            self.assertEqual(len(session.store.list_checkpoints(session.session_id)), 1)
+            with self.assertRaises(sessions.LifecycleError):
+                session.checkpoint(
+                    progress="attempt to remove evidence",
+                    request_id="req_campaign_remove_evidence",
+                    campaign_base_checkpoint=first["identity"],
+                    campaign_evidence=[],
+                )
+            self.assertEqual(len(session.store.list_checkpoints(session.session_id)), 1)
+
+    def test_campaign_metadata_recovery_after_snapshot_write_interruption(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state_dir = Path(directory)
+            session = make_session(state_dir)
+            session.snapshot["campaign"]["identity"] = "cmp_campaign_crash_test"
+            session._save()
+            evidence = [{
+                "identity": "ev_crash_recovery",
+                "repository": "mncs-environment",
+                "commit": "d" * 40,
+                "path": "evidence/recovered.json",
+            }]
+            with mock.patch.object(
+                session.store, "save_snapshot", side_effect=OSError("injected interruption")
+            ):
+                with self.assertRaisesRegex(OSError, "injected interruption"):
+                    session.checkpoint(
+                        progress="crash after immutable publication",
+                        request_id="req_campaign_crash_recovery",
+                        campaign_base_checkpoint="none",
+                        campaign_evidence=evidence,
+                    )
+            checkpoints = session.store.list_checkpoints(session.session_id)
+            self.assertEqual(len(checkpoints), 1)
+            self.assertIn("campaign_state", checkpoints[0])
+            restarted = sessions.Session.open(
+                state_dir=state_dir, session_id=session.session_id, **FAST
+            )
+            result = restarted.reconcile_campaign_continuity()
+            self.assertEqual(
+                result["campaign_state_checkpoint_id"], checkpoints[0]["identity"]
+            )
+            self.assertEqual(restarted.snapshot["campaign"]["evidence"], evidence)
+
+    def test_campaign_evidence_rejects_unverifiable_or_path_escaping_references(self) -> None:
+        for reference in (
+            {"identity": "ev_bad_path", "repository": "mncs-environment",
+             "commit": "a" * 40, "path": "../outside.json"},
+            {"identity": "ev_bad_commit", "repository": "mncs-environment",
+             "commit": "short", "path": "evidence/file.json"},
+            {"identity": "ev_host_path", "repository": "mncs-environment",
+             "commit": "a" * 40, "path": "/home/agent/private.json"},
+        ):
+            with self.subTest(reference=reference):
+                with self.assertRaises(ValueError):
+                    sessions.normalize_campaign_evidence([reference])
+
     def test_campaign_entry_reconciles_checkpoint_published_before_snapshot(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))
