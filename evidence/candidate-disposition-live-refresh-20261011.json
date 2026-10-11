@@ -1,0 +1,169 @@
+{
+  "schema_version": "mncs.environment.candidate-disposition-refresh/1",
+  "identity": "ev_candidate_dispositions_live_refresh_20261011",
+  "recorded_at": "2026-10-11T06:30:37Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "source": {
+    "repository": "mncs-environment",
+    "revision": "adc7ac59674c00bf3cd96897bf5ed37ef2883aa4",
+    "branch": "main",
+    "origin_main": "adc7ac59674c00bf3cd96897bf5ed37ef2883aa4",
+    "working_tree_before_evidence": "clean"
+  },
+  "observation": {
+    "method": "Read-only Git refs, merge-base and ancestry counts, commit trees, patch identity, registered worktree paths, physical directory checks, and per-checkout Git status.",
+    "execution_context": "workspace shell; candidate checkout paths were traversable here",
+    "campaign_session_id": "ses_7226fbcfe65820f7",
+    "campaign_base_checkpoint_id": "chk_a74006724bcac140",
+    "mutations": 0,
+    "tests_rerun": 0,
+    "retirement_attempted": false
+  },
+  "candidates": [
+    {
+      "repository": "mncs-compiler",
+      "main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "origin_main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "commit_parent": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+      "merge_base_with_main": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+      "main_only_commits": 14,
+      "candidate_only_commits": 1,
+      "candidate_commit": {
+        "subject": "Record lexer keyword optimization delivery",
+        "author": "epi13",
+        "changed_paths": [
+          "evidence/SELF-HOST-MATRIX.json"
+        ],
+        "campaign_identity_in_matrix": "lexer_keyword_local_index_campaign_20261010"
+      },
+      "checkout": {
+        "registered_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+        "directory_exists": true,
+        "head_matches_ref": true,
+        "status": "clean"
+      },
+      "comparison": {
+        "implementation_commit": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+        "implementation_commit_is_ancestor_of_main": true,
+        "candidate_campaign_matrix_entry_matches_main": true,
+        "candidate_delivery_matrix_entry_matches_main": true
+      },
+      "claim": {
+        "identity": "claim:mncs-compiler",
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "version": 63,
+        "status": "held",
+        "exclusive": true
+      },
+      "disposition": "The implementation and both delivery-ledger records are already present on main. The candidate-only commit is a redundant evidence-ledger update on a branch behind current main. Retain the clean registered checkout under the foreign exclusive claim; do not merge or retire it in this campaign."
+    },
+    {
+      "repository": "mncs-language",
+      "main_head": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "origin_main_head": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "branch": "campaign/process-environment-value-bound-20261010",
+      "head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "merge_base_with_main": "e8f8a5f8659c71b33cd32c964d4982bec1a9668e",
+      "main_only_commits": 2,
+      "candidate_only_commits": 1,
+      "candidate_commit": {
+        "subject": "Add bounded process environment values and quiet compile output",
+        "author": "epi13",
+        "capability_gap_identity": "MNCS-LANG-ENV-VALUE-1447",
+        "changed_path_count": 24
+      },
+      "comparison": {
+        "candidate_patch_id": "d59075fdf3391a828010e8e1b8dde48edb869e0e",
+        "equivalent_main_commit": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+        "main_patch_id": "d59075fdf3391a828010e8e1b8dde48edb869e0e",
+        "candidate_to_main_tree_difference": [
+          "docs/mncs-badge.json"
+        ]
+      },
+      "checkout": {
+        "registered_path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+        "directory_exists": true,
+        "head_matches_ref": true,
+        "status": "untracked evidence path present",
+        "untracked_paths": [
+          "evidence/campaign-20261010-forge-core-quiet-output.json"
+        ],
+        "untracked_content_inspected": false
+      },
+      "claim_and_authority": {
+        "foreign_claim_observed": false,
+        "campaign_write_authority": "not available"
+      },
+      "disposition": "The exact implementation patch is already on origin/main as commit 7cfd996. Preserve the separate candidate checkout and its untracked Forge-related evidence path; no Language mutation or retirement is authorized."
+    },
+    {
+      "repository": "mncs-forge",
+      "main_head": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "origin_main_head": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "branch": "campaign/forge-quiet-compile-output-20261010",
+      "head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "main_is_ancestor_of_candidate": true,
+      "main_only_commits": 0,
+      "candidate_only_commits": 1,
+      "candidate_commit": {
+        "subject": "Skip discarded Forge compile outputs",
+        "author": "epi13",
+        "changed_paths": [
+          "src/mncs_forge/mncs_native.py",
+          "tests/test_mncs_native.py"
+        ],
+        "change_summary": "Pass --quiet and --omit-result when Forge consumes only backend.json; add a focused adapter invocation regression."
+      },
+      "dependency": {
+        "repository": "mncs-language",
+        "main_revision": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+        "supports_required_compile_flags": true
+      },
+      "checkout": {
+        "registered_path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+        "directory_exists": true,
+        "head_matches_ref": true,
+        "status": "clean"
+      },
+      "claim": {
+        "identity": "claim:mncs-forge",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "version": 28,
+        "status": "held",
+        "exclusive": true
+      },
+      "verification": {
+        "candidate_test_present": true,
+        "candidate_tests_rerun": false,
+        "reason": "The exclusive Forge claim remains owned by another session; this campaign preserved the candidate and made no checkout mutation."
+      },
+      "disposition": "Useful unmerged one-commit implementation with a focused regression and a satisfied Language dependency. Retain unchanged until the Forge owner authorizes delivery or valid recovery."
+    }
+  ],
+  "protected_compiler_main_work": {
+    "observed_untracked_paths": [
+      ".worktrees/",
+      "evidence/campaign-20261006-imported-nominal-ssa.json",
+      "evidence/campaign-20261006-pressure-suite-results.json",
+      "evidence/campaign-20261006-project-results.json"
+    ],
+    "disposition": "preserved without inspection, staging, or cleanup"
+  },
+  "summary": {
+    "candidate_checkouts_physically_present": 3,
+    "candidate_checkouts_clean": 2,
+    "candidate_checkouts_with_untracked_content": 1,
+    "equivalent_deliveries_already_on_main": 2,
+    "useful_unmerged_candidates": 1,
+    "branches_deleted": 0,
+    "worktrees_removed": 0
+  },
+  "result": "PASS_WITH_PROTECTED_CANDIDATES_RETAINED",
+  "limitations": [
+    "The Compiler and Forge exclusive scopes remain held by their recorded owners. No merge, push, test execution, claim transfer, or retirement was attempted in those repositories.",
+    "Language write authority is not available to this campaign. Its untracked Forge-related evidence file was not opened or modified.",
+    "Git commit authorship is visible, but these candidate commits do not bind themselves to an Environment session identity."
+  ]
+}
