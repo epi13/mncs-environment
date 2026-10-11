@@ -1,0 +1,121 @@
+{
+  "schema_version": "mncs.environment.project-capsule-entry-selection-proof/1",
+  "identity": "ev_env_project_capsule_entry_selection_20261011",
+  "observed_at": "2026-10-11T11:19:17Z",
+  "control_source": {
+    "repository": "mncs-control-mcp",
+    "commit": "9aa3089cdfb2efe935ea6bc15d806ea6d9bac30d",
+    "evidence_identity": "ev_control_project_reference_capsule_20261011",
+    "evidence_path": "evidence/project-reference-capsule-20261011.json",
+    "evidence_sha256": "a88512d091d05d7df31c1a41ecf3b1b21476e201a9d4f8ddb8b3b5f324e5db55"
+  },
+  "execution_boundary": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "direct_canonical_store_access": false,
+    "persistence_transport": "authenticated Control Environment RPC"
+  },
+  "definition": {
+    "repository": "mncs-environment",
+    "path": "tests/fixtures/control-rpc-entry.json",
+    "identity": "env_f31ee034e8e1fdcb"
+  },
+  "project_scoped_discovery": {
+    "command": "python3 -m mncs_env.cli continuation",
+    "project": "mncs-control-mcp",
+    "campaign_id_supplied": false,
+    "session_id_supplied": false,
+    "status": "context-conflict",
+    "campaign_id_discovered": "cmp_mncs_continuity_20261010",
+    "continuations": [
+      {
+        "session_id": "ses_7226fbcfe65820f7",
+        "definition_id": "env_f31ee034e8e1fdcb",
+        "lifecycle": "active",
+        "project_reference": {
+          "status": "linked",
+          "basis": [
+            "campaign.repository_refs",
+            "active_claim.repository"
+          ]
+        }
+      },
+      {
+        "session_id": "ses_b4b2d283542220b0",
+        "definition_id": "env_1ea3af15c7464177",
+        "lifecycle": "active",
+        "project_reference": {
+          "status": "same_campaign_only",
+          "basis": []
+        }
+      }
+    ],
+    "ownership_mutation": "none"
+  },
+  "unscoped_entry_safety": {
+    "command": "python3 -m mncs_env.cli enter --definition tests/fixtures/control-rpc-entry.json",
+    "project": "mncs-environment",
+    "campaign_id_supplied": false,
+    "session_id_supplied": false,
+    "exit_code": 2,
+    "publication_completed": false,
+    "diagnostic": "campaign-continuation-ambiguous",
+    "candidate_campaigns": [
+      "cmp_mncs_continuity_20261010",
+      "cmp_store-rpc-acceptance-20261010"
+    ],
+    "candidate_sessions": [
+      "ses_5029230ac9f126ef",
+      "ses_7226fbcfe65820f7"
+    ],
+    "effect": "Environment refused to choose between two campaigns sharing the same authenticated definition and workspace."
+  },
+  "selected_reentry": {
+    "command": "python3 -m mncs_env.cli enter --definition tests/fixtures/control-rpc-entry.json --campaign-id cmp_mncs_continuity_20261010",
+    "campaign_id_source": "authenticated project-scoped continuation capsule",
+    "session_id_supplied": false,
+    "exit_code": 0,
+    "entry_reused": true,
+    "session_id": "ses_7226fbcfe65820f7",
+    "lifecycle": "active",
+    "claims_preserved": [
+      "claim:mncs-control-mcp",
+      "claim:mncs-environment"
+    ],
+    "evidence_count": 47,
+    "secondary_session_adopted": false
+  },
+  "fresh_process_readback": {
+    "command": "python3 -m mncs_env.cli context ses_7226fbcfe65820f7",
+    "session_id": "ses_7226fbcfe65820f7",
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "lifecycle": "active",
+    "campaign_session_ids": [
+      "ses_7226fbcfe65820f7"
+    ],
+    "claim_ids": [
+      "claim:mncs-control-mcp",
+      "claim:mncs-environment"
+    ],
+    "campaign_state_checkpoint_id": "chk_10fa78f166e46995",
+    "evidence_count": 47,
+    "control_main_head": "9aa3089cdfb2efe935ea6bc15d806ea6d9bac30d"
+  },
+  "canonical_campaign_checkpoint": {
+    "identity": "chk_abace4c1b0199d37",
+    "sequence": 81,
+    "session_id": "ses_7226fbcfe65820f7",
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "evidence_count": 47,
+    "delivery_status": "partial"
+  },
+  "interpretation": [
+    "Project-scoped lookup recovers the campaign identity and labels each same-campaign session with its persisted project-link basis.",
+    "Definition-only entry correctly refuses to choose when multiple campaigns match; the caller selects the repository-linked campaign identity from the capsule.",
+    "Selected entry reused the existing authorized session without a session ID and preserved both owned claims; the same_campaign_only session was not adopted or modified."
+  ],
+  "limitations": [
+    "Selection between multiple same-definition campaigns remains explicit by design.",
+    "This proof does not establish a claim transfer or recovery from another consumer."
+  ]
+}
