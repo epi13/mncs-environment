@@ -1,0 +1,120 @@
+{
+  "schema_version": "mncs.environment.session-capability-revalidation-proof/1",
+  "identity": "ev_session_capability_claims_revalidation_20261011",
+  "recorded_at": "2026-10-11T07:51:52Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "control_repository": {
+      "branch": "main",
+      "commit": "cedef8c67144e48a85f682926b9387c798d1e3e7",
+      "remote_ref": "origin/main",
+      "change": "session-authorized read-only capabilities operation exposed through Control Environment RPC"
+    },
+    "environment_repository": {
+      "branch": "main",
+      "commit": "57db1d6fbe1ff53b6d56b3d4e5c1320218083e64",
+      "remote_ref": "origin/main",
+      "change": "authenticated canonical Store and campaign continuation client"
+    },
+    "tests": {
+      "control_full_suite": "PYTHONPATH=src python3 -m pytest tests/ -q passed; one skipped",
+      "control_focused_rpc_suite": "PYTHONPATH=src python3 -m pytest tests/test_environment_rpc.py -q passed",
+      "control_lint_and_diff": "ruff check changed Control source and tests; git diff --check: passed",
+      "environment_full_suite": "python3 -m pytest tests/ -q: 153 passed in 255.38s on implementation commit a5a9efd045c5977e1b67f584b15630c3707cf152"
+    }
+  },
+  "protected_execution": {
+    "sandbox_backend": "bwrap",
+    "project": "mncs-environment",
+    "persistence_transport": "control-rpc",
+    "canonical_store_root_visible_to_caller": false,
+    "principal_bound_to_session": true
+  },
+  "resume_revalidation": {
+    "command": "python3 -m mncs_env.cli resume ses_7226fbcfe65820f7 --consumer codex-process-1 --revalidate",
+    "exit_code": 0,
+    "session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "codex-process-1",
+    "lifecycle": "active",
+    "reprobed_bindings": 3,
+    "changed_bindings": 0,
+    "workspace_scan": "complete",
+    "current_checkout": {
+      "repository": "mncs-environment",
+      "branch": "main",
+      "head": "57db1d6fbe1ff53b6d56b3d4e5c1320218083e64",
+      "clean": true
+    },
+    "claim_transfers_or_releases": 0
+  },
+  "current_environment_bindings": {
+    "selected_repositories": ["mncs-environment"],
+    "capability_count": 3,
+    "bindings": [
+      {
+        "capability": "mncs-environment:ambient-projection-coherence",
+        "status": "unavailable",
+        "code": "provider-invocation-undeclared",
+        "verification": "substrate"
+      },
+      {
+        "capability": "mncs-environment:workspace-discovery",
+        "status": "available",
+        "code": "executable-present",
+        "verification": "substrate",
+        "limit": "provider readiness not yet verified"
+      },
+      {
+        "capability": "mncs-environment:workspace-readiness",
+        "status": "available",
+        "code": "executable-present",
+        "verification": "substrate",
+        "limit": "provider readiness not yet verified"
+      }
+    ],
+    "forge_and_language_bindings": "not selected in this Environment session; no readiness claim made for either repository"
+  },
+  "claim_readback": {
+    "selected_session": "ses_7226fbcfe65820f7",
+    "live_claims": [
+      {
+        "claim_id": "claim:mncs-control-mcp",
+        "repository": "mncs-control-mcp",
+        "verdict": "live",
+        "owner_session_id": "ses_7226fbcfe65820f7",
+        "owner_lifecycle": "active",
+        "expires_at": "2026-10-12T19:38:55+00:00"
+      },
+      {
+        "claim_id": "claim:mncs-environment",
+        "repository": "mncs-environment",
+        "verdict": "live",
+        "owner_session_id": "ses_7226fbcfe65820f7",
+        "owner_lifecycle": "active",
+        "expires_at": "2026-10-12T19:38:47+00:00"
+      }
+    ],
+    "released_claims": [
+      "claim:mncs-language",
+      "claim:mncs-environment:paths:12438ec6e21c",
+      "claim:mncs-environment:paths:807ecb365562",
+      "claim:mncs-environment:paths:8a6c3d64fd9f",
+      "claim:mncs-environment:paths:be26c9ae2880"
+    ],
+    "mutation": "none; claims were queried by exact identity and were not modified"
+  },
+  "campaign_continuity": {
+    "checkpoint_before_refresh": "chk_bbb8b14f0e604f34",
+    "checkpoint_sequence_before_refresh": 55,
+    "same_campaign_duplicate_session": "ses_b4b2d283542220b0",
+    "duplicate_session_disposition": "retained and untouched",
+    "context_conflict": "two Environment definitions remain associated with cmp_mncs_continuity_20261010; exact session and definition selected by authenticated continuation"
+  },
+  "result": "PASS_WITH_SCOPED_READINESS_LIMITATION",
+  "limits": [
+    "Forge and Language capability readiness was not queried because this session selected only mncs-environment.",
+    "Ambient projection coherence remains unavailable until its owner publishes an invocation descriptor.",
+    "Workspace discovery and readiness are marked available from executable presence; provider execution was not verified by this capability inventory."
+  ]
+}
