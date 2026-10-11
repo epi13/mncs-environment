@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.candidate-disposition/1",
+  "observed_at": "2026-10-11T04:30:38Z",
+  "observation_method": "read-only Git ref, ancestry, diff, worktree registration, and checkout status queries",
+  "changes_made_to_candidate_repositories": false,
+  "candidate_dispositions": [
+    {
+      "repository": "mncs-compiler",
+      "main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "candidate_branch": "campaign/keyword-local-index-delivery-20261010",
+      "candidate_head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "main_only_commits": 14,
+      "candidate_only_commits": 1,
+      "candidate_delta_paths": [
+        "evidence/SELF-HOST-MATRIX.json"
+      ],
+      "registered_candidate_worktree": true,
+      "candidate_checkout_status": "clean",
+      "owner_claim": {
+        "claim_id": "claim:mncs-compiler",
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "version": 63,
+        "status": "held"
+      },
+      "classification": "protected_by_active_owner; evidence_only_candidate_delta; retained",
+      "disposition": "no test, merge, push, adoption, or retirement attempted"
+    },
+    {
+      "repository": "mncs-language",
+      "main_head": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "candidate_branch": "campaign/process-environment-value-bound-20261010",
+      "candidate_head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "main_only_commits": 2,
+      "candidate_only_commits": 1,
+      "candidate_delta_paths_count": 24,
+      "registered_candidate_worktree": true,
+      "candidate_tracked_changes": false,
+      "candidate_untracked_paths": [
+        "evidence/campaign-20261010-forge-core-quiet-output.json"
+      ],
+      "owner_claim": {
+        "status": "no active Language claim observed in the current Environment capsule"
+      },
+      "classification": "useful_unmerged_candidate; untracked_evidence_preserved; delivery_waits_for_Language_write_authority",
+      "disposition": "no test, merge, push, adoption, cleanup, or retirement attempted"
+    },
+    {
+      "repository": "mncs-forge",
+      "main_head": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "candidate_branch": "campaign/forge-quiet-compile-output-20261010",
+      "candidate_head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "main_only_commits": 0,
+      "candidate_only_commits": 1,
+      "candidate_delta_paths": [
+        "src/mncs_forge/mncs_native.py",
+        "tests/test_mncs_native.py"
+      ],
+      "registered_candidate_worktree": true,
+      "candidate_checkout_status": "clean",
+      "owner_claim": {
+        "claim_id": "claim:mncs-forge",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "version": 28,
+        "status": "held"
+      },
+      "classification": "protected_by_active_owner; useful_unmerged_implementation; retained",
+      "disposition": "no test, merge, push, adoption, or retirement attempted"
+    }
+  ],
+  "compiler_main_checkout": {
+    "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "branch": "main",
+    "worktree_status": "dirty_untracked",
+    "registered_worktrees": 66,
+    "branch_checkouts": 54,
+    "detached_checkouts": 12,
+    "untracked_paths_observed": [
+      ".worktrees/",
+      "evidence/campaign-20261006-imported-nominal-ssa.json",
+      "evidence/campaign-20261006-pressure-suite-results.json",
+      "evidence/campaign-20261006-project-results.json"
+    ],
+    "disposition": "preserved; contents not opened or altered; no cleanup performed"
+  },
+  "retirement": {
+    "performed": false,
+    "reason": "all three candidate worktrees are retained; two are protected by active exclusive claims and Language delivery lacks Environment write authority"
+  }
+}
