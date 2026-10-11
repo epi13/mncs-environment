@@ -1,0 +1,77 @@
+{
+  "schema_version": "mncs.environment.exact-claim-readback-proof/1",
+  "identity": "ev_environment_exact_claim_query_20261011",
+  "recorded_at": "2026-10-11",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "owner": "mncs-environment",
+  "change": {
+    "repository": "mncs-environment",
+    "branch": "campaign/claim-history-exact-query-20261011",
+    "commit": "822ab5503d026660f2951d8ca1623abe6ab9f982",
+    "base_main": "aa809b299ad411551187ba998fdf2f5f10a57fda",
+    "files": {
+      "mncs_env/cli.py": "db5420584dae9276a36fbf821396f829f9de58402c91cbf65a50f06f027be56d",
+      "tests/test_environment.py": "57f9242fe45185ae68a27ea9867e21de08ccbce9301559bcd7756d7b6e567724"
+    },
+    "behavior": "For read-only `mncs-env claims SESSION --claim-id ID`, return only the latest exact matching claim record with its existing live annotation. Acquire, release, and transfer command paths are unchanged. No Store backend or authority behavior changed."
+  },
+  "canonical_store_readback": {
+    "command": "python3 -B -m mncs_env.cli claims ses_7226fbcfe65820f7 --claim-id claim:mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "transport": "authenticated Control Environment RPC",
+    "canonical_store_root": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_path_visible_to_client": false,
+    "direct_store_filesystem_access": false,
+    "exit_code": 0,
+    "output_truncated": false,
+    "returned_record_count": 1,
+    "record": {
+      "claim_id": "claim:mncs-environment",
+      "version": 33,
+      "identity": "clm_545ce73595e24c40",
+      "session_id": "ses_7226fbcfe65820f7",
+      "status": "held",
+      "live": true
+    }
+  },
+  "verification": {
+    "baseline_before_change": {
+      "command": "python3 -m pytest tests/ -q",
+      "result": "622 passed, 46 skipped in 521.71s"
+    },
+    "real_provider_vertical_proof_before_change": {
+      "command": "python3 scripts/vertical_proof.py",
+      "result": "PASS: real Atlas invocation, protected-scope denial, checkpoint, fresh-process resume, handoff, and completion"
+    },
+    "focused_tests_after_change": [
+      {
+        "command": "python3 -B -m pytest -q tests/test_environment.py -k 'claim_id_inspection_returns_only_latest_matching_record or environment_claim_requests_require_effective_writable_scope or acquire_conflict_release'",
+        "result": "3 passed, 152 deselected"
+      },
+      {
+        "command": "python3 -B -m pytest -q tests/test_environment.py -k claim",
+        "result": "28 passed, 127 deselected"
+      }
+    ],
+    "static_checks": {
+      "py_compile": "python3 -B -m py_compile mncs_env/cli.py tests/test_environment.py: passed",
+      "ruff": "ruff check --select E4,E7,E9,F mncs_env/cli.py: passed",
+      "diff_check": "git diff --check: passed"
+    },
+    "lint_limit": "File-wide linting of tests/test_environment.py still reports pre-existing unused imports and a pre-existing unused local outside the changed lines; these were left untouched."
+  },
+  "readiness": {
+    "status": "verified-on-canonical-store-through-protected-transport",
+    "preserved_invariants": [
+      "Environment remains the owner of claim interpretation and authorization.",
+      "Store remains the canonical persistence authority.",
+      "The client receives no direct canonical Store path access.",
+      "Inspection returns one exact latest record instead of an over-limit all-claims history response."
+    ],
+    "scope_limit": "This readback does not independently prove Control termination during an in-flight Store-to-response window; the separate claim-transfer evidence records caller disconnect and post-publication service restart replay."
+  }
+}
