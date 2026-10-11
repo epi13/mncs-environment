@@ -939,6 +939,68 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
         )
         self.assertEqual(exchange.call_args_list[1].args[2]["request_id"], request_id)
 
+    def test_rpc_client_retains_identity_for_control_reconciliation_ambiguity(self) -> None:
+        from mncs_env import rpc_client
+
+        request_id = "req_control_reconciliation_pending"
+        with tempfile.TemporaryDirectory() as directory:
+            grant = Path(directory) / "grant"
+            grant.write_text("test-grant", encoding="ascii")
+            with mock.patch.dict(os.environ, {
+                "MNCS_ENV_RPC_SOCKET": "/run/test.sock",
+                "MNCS_ENV_RPC_GRANT_FILE": str(grant),
+                "MNCS_ENV_RPC_REQUEST_ID": request_id,
+            }), mock.patch.object(rpc_client, "_exchange", return_value={
+                "ok": False,
+                "error": {
+                    "code": "ENVIRONMENT_PUBLICATION_AMBIGUOUS",
+                    "message": "matching Environment request is still being reconciled",
+                },
+            }), redirect_stdout(io.StringIO()) as output:
+                code = rpc_client.dispatch(["checkpoint", "ses_test", "--progress", "proof"])
+
+        self.assertEqual(code, 3)
+        diagnostic = json.loads(output.getvalue())["diagnostics"]
+        self.assertEqual(diagnostic["code"], "publication-outcome-ambiguous")
+        self.assertIsNone(diagnostic["publication_completed"])
+        self.assertEqual(diagnostic["request_id"], request_id)
+
+    def test_rpc_client_preserves_identity_for_environment_ambiguity_diagnostic(self) -> None:
+        from mncs_env import rpc_client
+
+        request_id = "req_environment_reconciliation_pending"
+        response = {
+            "ok": True,
+            "result": {
+                "exit_code": 3,
+                "stdout": "",
+                "stderr": json.dumps({
+                    "error": "checkpoint outcome needs reconciliation",
+                    "diagnostics": {
+                        "code": "publication-outcome-ambiguous",
+                        "publication_completed": None,
+                    },
+                }),
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            grant = Path(directory) / "grant"
+            grant.write_text("test-grant", encoding="ascii")
+            with mock.patch.dict(os.environ, {
+                "MNCS_ENV_RPC_SOCKET": "/run/test.sock",
+                "MNCS_ENV_RPC_GRANT_FILE": str(grant),
+                "MNCS_ENV_RPC_REQUEST_ID": request_id,
+            }), mock.patch.object(
+                rpc_client, "_exchange", return_value=response,
+            ), redirect_stdout(io.StringIO()) as output:
+                code = rpc_client.dispatch(["checkpoint", "ses_test", "--progress", "proof"])
+
+        self.assertEqual(code, 3)
+        diagnostic = json.loads(output.getvalue())["diagnostics"]
+        self.assertEqual(diagnostic["code"], "publication-outcome-ambiguous")
+        self.assertIsNone(diagnostic["publication_completed"])
+        self.assertEqual(diagnostic["request_id"], request_id)
+
     def test_rpc_client_reports_unexposed_operation_as_unknown(self) -> None:
         from mncs_env import rpc_client
 

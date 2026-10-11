@@ -125,6 +125,10 @@ def dispatch(argv: list[str]) -> int:
                 str(details.get("next", "inspect the structured Environment diagnostic")),
                 cause_code=code if domain_details is not None else None,
                 domain_details=domain_details,
+                request_id=(
+                    request["request_id"]
+                    if category == "publication-outcome-ambiguous" else None
+                ),
             )
         result = response.get("result") or {}
         stdout = result.get("stdout", "")
@@ -140,6 +144,7 @@ def dispatch(argv: list[str]) -> int:
                     "publication-conflict": "publication-conflict",
                     "session-snapshot-conflict": "publication-conflict",
                     "claim-conflict": "publication-conflict",
+                    "publication-outcome-ambiguous": "publication-outcome-ambiguous",
                     "claim-adoption-required": "authority-denied",
                     "store-integrity-failure": "store-corruption",
                     "store-unavailable": "persistence-service-unavailable",
@@ -156,6 +161,10 @@ def dispatch(argv: list[str]) -> int:
                     str(diagnostics.get("next", "inspect the structured Environment diagnostic")),
                     cause_code=raw_code or None,
                     domain_details=_domain_diagnostic_details(raw_code, diagnostics),
+                    request_id=(
+                        request["request_id"]
+                        if category == "publication-outcome-ambiguous" else None
+                    ),
                 )
                 return exit_code
         if stdout:
