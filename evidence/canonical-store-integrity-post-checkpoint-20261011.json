@@ -1,0 +1,44 @@
+{
+  "schema_version": "mncs.environment.canonical-store-integrity/1",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "observed_at": "2026-10-11T22:46:40+00:00",
+  "execution": {
+    "command": "python -m mncs_env.cli store --session ses_7226fbcfe65820f7 --verify",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "persistence_transport": "mncs-control-environment-rpc",
+    "direct_store_filesystem_write_grant": false,
+    "terminal_job_id": "term-b76c0edfd7d21673628eee9d",
+    "exit_code": 0,
+    "timed_out": false,
+    "duration_seconds": 138.5
+  },
+  "verification": {
+    "ok": true,
+    "generation": 45222,
+    "objects": 45224,
+    "recovery": "RECOVERED_OLD",
+    "chunk_size": 65536,
+    "fanout": 31,
+    "relations": 0,
+    "provenance_records": 0,
+    "commit_feed": "4d430100000000000000b0a60000b0a800000000000000008389f0716f91a534a42dc71ab52a8eb6043e69cde8fd9b4fb44839dce59a7cbd"
+  },
+  "verification_artifact": {
+    "sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+    "backend": "mncs-research-bytecode",
+    "toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs"
+  },
+  "continuity_base": {
+    "checkpoint_id": "chk_71676846809cd251",
+    "checkpoint_sequence": 149,
+    "campaign_evidence_references": 102
+  },
+  "limitations": [
+    "This run verified canonical Store integrity through the authenticated Control Environment RPC from project Bwrap; it did not grant or use direct agent write access to the Store directory.",
+    "The verifier reported RECOVERED_OLD while validating the current generation; this report preserves that recovery result without recasting it as corruption."
+  ]
+}
