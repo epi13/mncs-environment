@@ -1,0 +1,59 @@
+{
+  "schema_version": "mncs.environment.campaign-evidence-capacity/1",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "change": {
+    "repository": "mncs-environment",
+    "commit": "d79365e6d44f58d73821062824947416396156f3",
+    "main_pushed": true,
+    "source": "mncs_env/sessions.py",
+    "test": "tests/test_campaign_metadata_bounds.py",
+    "evidence_reference_limit": {
+      "previous": 96,
+      "current": 128
+    },
+    "normalized_campaign_state_size_limit_bytes": 32768
+  },
+  "verification": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "network": false,
+    "source_identity": "d79365e6d44f58d73821062824947416396156f3",
+    "commands": [
+      {
+        "command": "python -m pytest -q tests/test_campaign_metadata_bounds.py",
+        "result": "pass",
+        "passed": 2
+      },
+      {
+        "command": "python -m pytest -q tests/test_environment.py -k 'campaign_evidence_and_delivery or campaign_checkpoint_retry or campaign_metadata_recovery or campaign_entry_reconciles'",
+        "result": "pass",
+        "passed": 4,
+        "deselected": 164
+      },
+      {
+        "command": "python -m compileall -q mncs_env/sessions.py tests/test_campaign_metadata_bounds.py",
+        "result": "pass"
+      },
+      {
+        "command": "git diff --check",
+        "result": "pass"
+      }
+    ],
+    "boundary_behavior": {
+      "accepts": 128,
+      "rejects": 129,
+      "retains_utf8_size_rejection": true
+    }
+  },
+  "continuity": {
+    "prior_checkpoint": "chk_261fb64ffa9a92e7",
+    "prior_sequence": 146,
+    "prior_evidence_references": 96,
+    "failed_over_limit_append_published": false,
+    "next_checkpoint_pending": true
+  },
+  "limitations": [
+    "Canonical Store operation remains mediated through Control RPC; this change only raises the bounded Environment campaign evidence reference count.",
+    "The overall campaign delivery remains partial pending the real compiler resource-feedback execution and subsequent Automation decision."
+  ]
+}
