@@ -1,0 +1,58 @@
+{
+  "schema_version": "mncs.environment.campaign-claim-owner-observation/1",
+  "identity": "ev_env_claim_owner_continuity_20261011",
+  "recorded_at": "2026-10-11T15:35:16Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "observation": {
+    "sandbox_backend": "bwrap",
+    "sandbox_scope": "project",
+    "read_transport": "authenticated Environment RPC over Control",
+    "control_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "current_authority_subject": "codex-process-1",
+    "current_writable_repositories": [
+      "mncs-environment"
+    ]
+  },
+  "claims": [
+    {
+      "claim_id": "claim:mncs-control-mcp",
+      "version": 3,
+      "status": "held",
+      "freshness": "active",
+      "repository": "mncs-control-mcp",
+      "session_id": "ses_7226fbcfe65820f7",
+      "consumer_id": "codex-process-2",
+      "basis": "explicit-adoption",
+      "expires_at": "2026-10-12T19:38:55+00:00",
+      "owner_lifecycle": "active",
+      "last_session_activity_at": "2026-10-11T15:31:48+00:00",
+      "classification": "live",
+      "reason": "The durable session has recent activity. Environment does not prove whether the earlier consumer process is still running."
+    },
+    {
+      "claim_id": "claim:mncs-environment",
+      "version": 33,
+      "status": "held",
+      "freshness": "active",
+      "repository": "mncs-environment",
+      "session_id": "ses_7226fbcfe65820f7",
+      "consumer_id": "local-agent",
+      "basis": "transfer",
+      "expires_at": "2026-10-12T19:38:47+00:00",
+      "owner_lifecycle": "active",
+      "classification": "live",
+      "reason": "The current campaign session owns the Environment repository claim."
+    }
+  ],
+  "actions": {
+    "control_claim_recovered_or_transferred": false,
+    "control_repository_modified": false,
+    "basis": "The Control claim is live and owned by a different consumer identity. The current session's effective writable repository list excludes Control. No authenticated handoff or terminal process-lifecycle proof was present in this inspection."
+  },
+  "recovery_requirement": "Use an authenticated campaign handoff or owner-approved continuation with exact claim version fencing; alternatively wait for the bounded lease and re-evaluate owner lifecycle. A user statement about visible agent count is not process-lifecycle proof.",
+  "limitations": [
+    "The Environment liveness classifier derives activity from the durable session event stream, not an operating-system process probe.",
+    "The observation does not establish that codex-process-2 exists or has terminated."
+  ]
+}
