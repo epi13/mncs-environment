@@ -1,0 +1,68 @@
+{
+  "schema_version": "mncs.environment.rpc-post-send-recovery-proof/1",
+  "identity": "ev_environment_rpc_post_send_recovery_20261011",
+  "recorded_at": "2026-10-11T16:42:26Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "change": {
+    "repository": "mncs-environment",
+    "commit": "a7d6878b8da212124532640c4afce3ede07c36b1",
+    "paths": [
+      {
+        "path": "mncs_env/rpc_client.py",
+        "sha256": "d6cd1d2c86bb3d0ce113f0f649656f5c6f3040e89210cd706a8df9cbca312b69",
+        "purpose": "Keep a request ambiguous after a possible delivery even when the retry connection is refused; expose the stable request identity for readback and safe replay."
+      },
+      {
+        "path": "tests/test_environment.py",
+        "sha256": "cff4fde1858e31fbec920d525ee4a6a41a074f09d2c7500538edf10bd75f0f17",
+        "purpose": "Cover pre-send service unavailability, post-send restart ambiguity, and retry with one stable request identity."
+      }
+    ]
+  },
+  "integration_test": {
+    "repository": "mncs-control-mcp",
+    "commit": "5f5c43716ea3b039213b83457c1313038f8e1516",
+    "path": "tests/test_sandbox_terminal.py",
+    "sha256": "6809cc075587d914662707e83480c228f1b13797db3dd789f44d7b3708912e3e",
+    "test": "test_project_bwrap_reconciles_checkpoint_after_control_rpc_restart",
+    "execution": {
+      "sandbox_backend": "bwrap",
+      "scope": "project",
+      "project": "mncs-environment",
+      "store": "test-owned isolated Store root",
+      "store_root_visible_to_caller": false,
+      "steps": [
+        "enter an authenticated Environment session through the Control RPC",
+        "publish one checkpoint, then stop the test RPC service after dispatch and before response delivery",
+        "confirm the caller reports publication-outcome-ambiguous with the original request identity",
+        "start a new RPC service instance over the same isolated Store and issue a fresh execution grant",
+        "retry the identical checkpoint request with the original identity",
+        "inspect from a fresh protected process and confirm exactly one checkpoint identity"
+      ],
+      "result": "passed; pytest exit code 0"
+    }
+  },
+  "validation": {
+    "environment_command": "PYTHONPATH=. python3 -m pytest -q tests/test_environment.py -k 'rpc_client_keeps_restart_window or rpc_client_reports_first_connect or rpc_client_retries_after_disconnect or rpc_client_maps_claim_conflicts or checkpoint_request_retry_reads_back_one_immutable_checkpoint' --tb=short",
+    "environment_result": "5 passed, 155 deselected",
+    "control_command": "PYTHONPATH=src python3 -m pytest -q tests/test_sandbox_terminal.py::test_project_bwrap_reconciles_checkpoint_after_control_rpc_restart --tb=short",
+    "control_result": "passed; Bwrap child ran in project scope",
+    "static_checks": "git diff --check and python3 -m compileall -q src tests/test_sandbox_terminal.py passed"
+  },
+  "canonical_store_status": {
+    "canonical_store_mutated_by_this_test": false,
+    "canonical_store_interruption_proof": "not claimed by this artifact",
+    "related_canonical_service_evidence": {
+      "repository": "mncs-environment",
+      "path": "evidence/canonical-control-service-restart-replay-20261011.json",
+      "identity": "ev_control_service_restart_replay_20261011",
+      "limitation": "that canonical restart followed a completed publication response; it does not prove service loss between commit and response"
+    },
+    "remaining_acceptance": "Run a commit-before-response interruption against the deployed owner service and canonical Store when the service can be safely interrupted; retain the existing separate canonical caller-interruption and same-request replay proofs."
+  },
+  "authority": {
+    "Control_repository_scope": "authorized by the user for the narrow protected project continuation and RPC test change",
+    "Environment_repository_scope": "current campaign session owns the Environment claim",
+    "repository_merge_or_publish": "not performed; Environment publication escalation remains in force"
+  }
+}
