@@ -1,0 +1,2651 @@
+{
+  "schema_version": "mncs.environment.compiler-worktree-reconciliation/1",
+  "identity": "ev_compiler_worktree_host_reconciliation_20261011",
+  "observed_at": "2026-10-11T22:14:30.723003+00:00",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "source": {
+    "owner": "MNCS Environment",
+    "repository": "mncs-compiler",
+    "execution_context": "host agent shell, outside protected project Bwrap",
+    "main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "origin_main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "commands": [
+      "git worktree list --porcelain",
+      "git status --porcelain=v1",
+      "git merge-base --is-ancestor <head> origin/main",
+      "git rev-list --left-right --count origin/main...<head>",
+      "git for-each-ref refs/heads/campaign/",
+      "git cherry -v origin/main campaign/keyword-local-index-delivery-20261010"
+    ],
+    "mutation_performed": false
+  },
+  "summary": {
+    "registered_worktree_count": 66,
+    "physically_available_in_host_namespace": 66,
+    "campaign_branch_ref_count": 61,
+    "worktree_classification_counts": {
+      "dirty-or-unproven-preserve": 8,
+      "merged-clean-owner-review": 57,
+      "patch-equivalent-unmerged-clean-protected": 1
+    },
+    "branch_classification_counts": {
+      "ancestor-of-origin-main": 60,
+      "patch-equivalent-unmerged-protected": 1
+    },
+    "retirement_count": 0,
+    "cleanup_or_branch_deletion_performed": false
+  },
+  "ownership_review": {
+    "claim_id": "claim:mncs-compiler",
+    "claim_version": 63,
+    "owner_session_id": "ses_d2537acde8b8a875",
+    "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+    "status": "held",
+    "live": true,
+    "freshness": "stale",
+    "owner_lifecycle": "active",
+    "recovery_verdict": "not-recoverable",
+    "last_activity_at": "2026-10-09T20:23:20+00:00",
+    "effective_expires_at": "2026-10-16T18:13:43+00:00",
+    "observed_via": {
+      "service": "MNCS Control protected terminal with Environment RPC",
+      "command": "python -m mncs_env.cli claims ses_7226fbcfe65820f7 --explain claim:mncs-compiler",
+      "current_campaign_session": "ses_7226fbcfe65820f7",
+      "sandbox_backend": "bwrap",
+      "observed_at": "2026-10-11T22:14:52Z"
+    },
+    "reason": "The owner session is quiet, but the exclusive repository scope requires a confirmed dead owner or effective TTL expiry. No transfer, recovery, or adoption was attempted."
+  },
+  "candidate_reconciliation": {
+    "repository": "mncs-compiler",
+    "branch": "campaign/keyword-local-index-delivery-20261010",
+    "commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+    "worktree_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+    "actual_git_relation": "not_an_ancestor_of_origin_main; one commit ahead and fourteen behind",
+    "patch_relation": "candidate's only unique commit is patch-equivalent to origin/main",
+    "changed_paths": [
+      "evidence/SELF-HOST-MATRIX.json"
+    ],
+    "unique_patch_commit_count": 0,
+    "delivery_status": "patch_equivalent_on_origin_main",
+    "tests": "not run in this turn; candidate is protected by active repository claim and contains no source patch absent from origin/main",
+    "merge_push_or_retirement": "not attempted; authenticated owner release/recovery is still absent"
+  },
+  "namespace_observations": {
+    "host_agent_shell": {
+      "available_worktree_paths": 66,
+      "total_worktree_paths": 66
+    },
+    "protected_project_bwrap_reference": {
+      "evidence_path": "evidence/compiler-worktree-disposition-project-bwrap-20261011.json",
+      "note": "The protected project scan treated paths outside its execution scope as unavailable to that process. Host visibility here does not establish visibility in Bwrap or authorization to mutate those paths."
+    }
+  },
+  "worktrees": [
+    {
+      "registered_path": "/home/epi13/Documents/Projects/mncs-compiler",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "main",
+      "detached": false,
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 4,
+      "status_samples": [
+        "?? .worktrees/",
+        "?? evidence/campaign-20261006-imported-nominal-ssa.json",
+        "?? evidence/campaign-20261006-pressure-suite-results.json",
+        "?? evidence/campaign-20261006-project-results.json"
+      ],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 0,
+      "classification": "dirty-or-unproven-preserve",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:5723684c6b39fd3480a452d0"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-evidence-identity-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/compiler-evidence-identity-20261009",
+      "detached": false,
+      "head": "ca9516f32e57cbf1f226460fe8013a3471cebd11",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 117,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:623440bd3ed826ab76862839"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-identity-correction-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/compiler-identity-correction-20261009",
+      "detached": false,
+      "head": "0f3a6aae54bc6480b2fe7937a24251092f4af489",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 118,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:7740b0ed30312414c989371e"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-probe-telemetry-20261008",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/probe-telemetry-20261008",
+      "detached": false,
+      "head": "f92deb2cb5b6113234ca0074a1a7068790729550",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 1,
+      "status_samples": [
+        "?? .bootstrap"
+      ],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 119,
+      "classification": "dirty-or-unproven-preserve",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:d927b3610805f950968b0664"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/decl-bounded-scan-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/decl-bounded-scan-20261009",
+      "detached": false,
+      "head": "324c0b997edd68472bc4f44a6c08cb02056bc78c",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 86,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:c6ca803c6468254a1b3a8be2"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/decl-path-early-exit-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/decl-path-early-exit-20261009",
+      "detached": false,
+      "head": "83dfb4a2f57949dc433e0cbf9a4aa94ea2f991c2",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 70,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:2bc6fd8452de768512c289b9"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/evidence-current-delivery-ledger-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/evidence-current-delivery-ledger-20261009",
+      "detached": false,
+      "head": "a39a70e35fc934d6410057fcd53843ae38d3e723",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 109,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:e8443adccb463c72184fe9f0"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-compiler-run-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": null,
+      "detached": true,
+      "head": "76ccb18af4e1da9a849f421960ecb9634ca2409d",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 6,
+      "untracked_entry_count": 0,
+      "status_samples": [
+        " M mncs-language.lock.json",
+        " M src/compiler/lexer.mncs",
+        " M tools/measure_compiler_probe.py",
+        " M tools/probe_compiler_module_frontier.py",
+        " M tools/stage0-probe/src/main.rs",
+        " M tools/test_measure_compiler_probe.py"
+      ],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 102,
+      "classification": "dirty-or-unproven-preserve",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:4be597a2344f0688031012c7"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-evidence-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/flow-hir-prelude-evidence-20261009",
+      "detached": false,
+      "head": "4a1479cc53cd9bc3de8aee3f8debcab1f580c124",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 101,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:2d58a37c689d9e77ab4d63bf"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-measurement-rss-cap-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/flow-measurement-rss-cap-20261009",
+      "detached": false,
+      "head": "76ccb18af4e1da9a849f421960ecb9634ca2409d",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 102,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:8fd4328fce15c959dccf8325"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-profile-resource-evidence-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/flow-profile-resource-evidence-20261009",
+      "detached": false,
+      "head": "369297178d4bf2f4436e722e6db4d34f1935bba6",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 75,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:2aa5aa27e0aa04a31203f2da"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/import-signature-baseline-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": null,
+      "detached": true,
+      "head": "581c8154008b56b968a67e85882a6d5eab0a18b3",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 1,
+      "untracked_entry_count": 1,
+      "status_samples": [
+        " M src/compiler/decl.mncs",
+        "?? .bootstrap"
+      ],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 116,
+      "classification": "dirty-or-unproven-preserve",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:005b56728a87f83713c05cad"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/import-signature-scan-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/import-signature-scan-20261009",
+      "detached": false,
+      "head": "45f84477a2f455cedae645045882f7e5c23bbe9a",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 114,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:71aa0d395ee8b8732b5db122"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lazy-keyword-classification-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lazy-keyword-classification-20261009",
+      "detached": false,
+      "head": "97db51927d017123847735baf13409e94d27dc7f",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 111,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:d5d1441fee5484f4582cc4a9"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-batched-window-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-batched-window-20261009",
+      "detached": false,
+      "head": "5d884cd0d9e17452601324f66abb78b341497310",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 91,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:e9fcad642ef2febe963b856a"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-pair-window-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-head-byte-pair-window-20261009",
+      "detached": false,
+      "head": "2ea01d3af28ca9fc2795a8c7669a48773c110c5c",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 76,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:b4adb272e204b28b7db9743f"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-window-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-head-byte-window-20261009",
+      "detached": false,
+      "head": "c756a15247b1eb184c7685b558f61973f376c144",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 77,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:11d1fb516237d87f2ce5af3d"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-initial-window-reuse-20261010",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-initial-window-reuse-20261010",
+      "detached": false,
+      "head": "7b3829ee1586c178b1bdf606066014a8696bd491",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 1,
+      "untracked_entry_count": 0,
+      "status_samples": [
+        " M src/compiler/lexer.mncs"
+      ],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 68,
+      "classification": "dirty-or-unproven-preserve",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:3f0804873d90e07d927dd727"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-dispatch-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-keyword-dispatch-20261009",
+      "detached": false,
+      "head": "581c8154008b56b968a67e85882a6d5eab0a18b3",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 116,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:e20bbbc79b15def8a9e061fb"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-windows-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-keyword-windows-20261009",
+      "detached": false,
+      "head": "f5aa9547592694afd11bc28cd8c2da9a17b44ef7",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 81,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:616f9a1f98dd6b9e465eef90"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-proof-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-proof-20261009",
+      "detached": false,
+      "head": "b188398f74398de9a8d6a8ba37b32c525bf637b8",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 1,
+      "status_samples": [
+        "?? .bootstrap"
+      ],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 93,
+      "classification": "dirty-or-unproven-preserve",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:9140ac0523129a431ee27eb8"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-scan-window-arg-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-scan-window-arg-20261009",
+      "detached": false,
+      "head": "c88d0675d344c4af212841e667c9af2284b2cf29",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 79,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:87a01e9a410a0de95d8bd96b"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-token-frame-carry-20261010",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-keyword-byte-reuse-20261010",
+      "detached": false,
+      "head": "51bb2dd9c0ef9304f2158634c86805480a8e1588",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 45,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:de67ab4a4a65b4b7fb0c1a5a"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-trivia-prefix-budget-20261010",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-trivia-prefix-budget-20261010",
+      "detached": false,
+      "head": "ea87c5c5e97d89d219c22f5d25ed728b0547c649",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 63,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:10e5982b6ef49526539d271b"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-window-slide-evidence-20261010",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-window-slide-evidence-20261010",
+      "detached": false,
+      "head": "176c145b4de29caf6a0279b0ebdb194b6ae6e938",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 66,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:4f42e5e68d5ca7e4ba0e968e"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-nested-match-early-exit-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/nested-match-early-exit-20261009",
+      "detached": false,
+      "head": "87127cd6c194a7de9e64238aac10bb3c4de7e061",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 106,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:c1910ae0e021b059c5690fbc"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-runtime-candidate-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": null,
+      "detached": true,
+      "head": "422c84460b0af958fab1203ce1c89ba9ed8db89f",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 107,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:fe08448b0b4dc83aaafd022d"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-baseline-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": null,
+      "detached": true,
+      "head": "a110e17d83bcc62bf310768b37fa7186e526ae15",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 96,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:a5df7a229be04030c25f762b"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-reuse-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/probe-admission-reuse-20261009",
+      "detached": false,
+      "head": "4d957194d967952fd26411807f3862fa1cacb83c",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 94,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:fc1c04185c7ea42866011101"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-outcome-classification-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/probe-outcome-classification-20261009",
+      "detached": false,
+      "head": "9f55339c502dc86d468bf734764baca05dfc7276",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 110,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:8720330dd5376e4552734b39"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-phase-resource-samples-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/probe-phase-resource-samples-20261009",
+      "detached": false,
+      "head": "901fcadcd525afdd4443970a602885eb5ae32c83",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 99,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:6c059f6ae85fc55d16693e00"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/project-provider-body-retention-20261010",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/project-provider-body-retention-20261010",
+      "detached": false,
+      "head": "85f4886f73eab6699084339ea486d91b5cd95d9c",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 60,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:ee98da7d799a1274ef1bf68e"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/project-schema-pages-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/project-schema-pages-20261009",
+      "detached": false,
+      "head": "d281ad540f6ab87c7c24f2ac52a479d02ce18761",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 112,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:64f5f6037fc6a1c1e9387afe"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/reference-argument-validation-cache-20261010/mncs-compiler",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/reference-argument-validation-cache-20261010",
+      "detached": false,
+      "head": "6af2e42a548defe5af25b33711b5ac838583acef",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 47,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:121ebdcc6f7aa77e111093d4"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/runtime-frame-profile-20261008/mncs-compiler",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/runtime-frame-profile-20261008",
+      "detached": false,
+      "head": "386e618218afbf2d06e2d0daa03e0836f9e1c997",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 120,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:917aa157cf0802e2d2b1ff59"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-20261010",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/source-initial-byte-window-20261010",
+      "detached": false,
+      "head": "4a44f706918d48b37bd273bde27a8d3029f6a9da",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 53,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:e424365dfa5c8fa1266232ac"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-baseline-20261010",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": null,
+      "detached": true,
+      "head": "e05d3ede6a03fb2a02615771954fd2de8e641cb2",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 58,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:cdebce036d4d872b22855347"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-keyword-local-byte-window-20261010",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/source-keyword-local-byte-window-20261010",
+      "detached": false,
+      "head": "10bf2aae7d0e32767e8f5ad98b0200ee04bbbe89",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 49,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:2856c1a4af4da651345aefef"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-20261010",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/source-local-byte-window-20261010",
+      "detached": false,
+      "head": "e05d3ede6a03fb2a02615771954fd2de8e641cb2",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 58,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:7753f498285fd4e5c49f7a7b"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-baseline-control-20261010",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": null,
+      "detached": true,
+      "head": "85f4886f73eab6699084339ea486d91b5cd95d9c",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 60,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:77032fc851f30782c59b61b4"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-page-validation-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/source-page-validation-20261009",
+      "detached": false,
+      "head": "22f771df5b4865623ded5100e09e7a8ad214ed3d",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 82,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:9d4bb835463d294dac57391c"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/streaming-probe-cache-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/streaming-probe-cache-20261009",
+      "detached": false,
+      "head": "a110e17d83bcc62bf310768b37fa7186e526ae15",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 96,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:18259fe8fc6b7553234ffecf"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/keyword-window4-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/keyword-window4-20261009",
+      "detached": false,
+      "head": "6d3bd95b3b2a508dc2982d9538f04679f8fbb31e",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 85,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:6873ae1febecfeec74a49129"
+    },
+    {
+      "registered_path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/probe-stage0-oracle-skip-20261009",
+      "path_location": "workspace",
+      "physical_path_available": true,
+      "branch": "campaign/probe-stage0-oracle-skip-20261009",
+      "detached": false,
+      "head": "5653908ee345ef7b2ed7bcae2a4da71f4ca6a4da",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 75,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:44d90c6e811487814500d98d"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-common-probe-cache-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/common-probe-cache-20261010",
+      "detached": false,
+      "head": "e5bab6bd391379185a1b30a117ed498ce150aa9a",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 24,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:1c442aa5c05db11eb49e7d6f"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-decl-name-reuse-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/decl-name-token-reuse-20261010",
+      "detached": false,
+      "head": "dce6adcf9f0778ec9dd398ffdca5044ce879321f",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 27,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:14fc047842043486ebbafdaf"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-decl-scalar-window-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/decl-scalar-window-20261010",
+      "detached": false,
+      "head": "8d7be4e88afa18c4f6b773d573ab70b0ee240527",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 7,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:fc7c63b5c67999a8d6686b78"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-delivery-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/decl-significant-direct-repeat-20261010",
+      "detached": false,
+      "head": "a852da763f78900a68f3e57c3fcf4568424d8436",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 29,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:1528c06f1ea2e3bd6e7e5fd7"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-flow-stage0-baseline-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": null,
+      "detached": true,
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 22,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:81b485f33042f93263b43742"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-flow-stage0-pin-profile-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/flow-stage0-pin-profile-20261010",
+      "detached": false,
+      "head": "cae25860b1cd88b811f94b3ffc76e3aefa37adb4",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 18,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:f8356a4b47cba15a18ee1d23"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-flow-wordscan-baseline-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": null,
+      "detached": true,
+      "head": "45eb4f4abee05196db3a60c40eade7cb75ff3c51",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 2,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:c8b5afaab1a8aee072bb4f3b"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-keyword-global-page-local-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-keyword-global-local-fast-path-20261010",
+      "detached": false,
+      "head": "8f2d8c181dc44384d5c92834481931493b65146d",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 10,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:e01ff46b521c7fd25ac15c37"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "detached": false,
+      "head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": false,
+      "ahead_of_origin_main": 1,
+      "behind_origin_main": 14,
+      "classification": "patch-equivalent-unmerged-clean-protected",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:5c90f6fe8e41236c05c702ac",
+      "patch_equivalent_to_origin_main": true,
+      "patch_equivalence_evidence": "git cherry -v origin/main campaign/keyword-local-index-delivery-20261010 returned '- 2b6f381...'"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-lexer-full-frontier-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-full-frontier-20261010",
+      "detached": false,
+      "head": "602832610080c838df3d94c9fdbac0fc55753acb",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 5,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:1419e7c1020b5ef000a44e07"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-lexer-self-ingest-repair-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-self-ingest-repair-20261010",
+      "detached": false,
+      "head": "78cdd9ece7c192478119d7fc6ed00a60299b95e3",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 6,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:1bc4e09c1d0a735e6c9decd8"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-lexer-window-inline-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-window-inline-20261010",
+      "detached": false,
+      "head": "15d6a5971f19177dbdf33508ad6a847154ef0e12",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 17,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:444bb8d4bcee7f1de1ad5d90"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-matched-baseline-a181-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": null,
+      "detached": true,
+      "head": "a1818976da578f60e53aebdd739273e1b4b86b0d",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 48,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:6bf9a45dda1e1dda6cc49531"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-runtime-boundary-baseline-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": null,
+      "detached": true,
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 22,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:3806ef1d6915e07d210625e3"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-runtime-boundary-validation-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": null,
+      "detached": true,
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 1,
+      "untracked_entry_count": 0,
+      "status_samples": [
+        " M mncs-language.lock.json"
+      ],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 22,
+      "classification": "dirty-or-unproven-preserve",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:8fb744165a8138e2575129bb"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-session-admission-telemetry-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-word-scan-select-20261010",
+      "detached": false,
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 0,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:c0b1a98f2c919d500c8393c7"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-stage0-isolation-baseline-3c-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": null,
+      "detached": true,
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 1,
+      "untracked_entry_count": 0,
+      "status_samples": [
+        " M mncs-language.lock.json"
+      ],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 22,
+      "classification": "dirty-or-unproven-preserve",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:c3ae84a62d37467eae14bc72"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-stage0-language-pin-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/stage0-language-pin-20261010",
+      "detached": false,
+      "head": "310333c1636a9ec1db918dc14f2df93738c933e0",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 21,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:5fd739b23288501747be3a6a"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-word-scan-inline-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-word-scan-inline-20261010",
+      "detached": false,
+      "head": "4ed34b5f2060683045953178cefd31a4da0086d2",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 8,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:88e09a88882ad18703b63111"
+    },
+    {
+      "registered_path": "/tmp/mncs-compiler-word-scan8-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-word-scan8-20261010",
+      "detached": false,
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 0,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:e52d1551e62d1a0e27a5786b"
+    },
+    {
+      "registered_path": "/tmp/mncs-lexer-significant-trivia-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-significant-trivia-inline-20261010",
+      "detached": false,
+      "head": "a480a5670c814009801c6d0245ca818d93fa21eb",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 35,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:3e5c81b2d99c26df755526ad"
+    },
+    {
+      "registered_path": "/tmp/mncs-lexer-token-result-20261010",
+      "path_location": "outside-workspace",
+      "physical_path_available": true,
+      "branch": "campaign/lexer-token-result-boundary-20261010",
+      "detached": false,
+      "head": "dfc1070e9646cacd4228539e269f934d9f9dc784",
+      "checkout_locked": false,
+      "prunable_reason": null,
+      "status_error": null,
+      "tracked_dirty_count": 0,
+      "untracked_entry_count": 0,
+      "status_samples": [],
+      "status_truncated": false,
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 39,
+      "classification": "merged-clean-owner-review",
+      "retirement": "withheld; repository-wide claim and owner release/recovery required",
+      "checkout_identity": "checkout:8ffc919a120634d30a0133ad"
+    }
+  ],
+  "branches": [
+    {
+      "branch": "campaign/backend-independent-frontend-cache-20261009",
+      "head": "3707c08b0d7ad27cd17587344367491430e917be",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 108,
+      "checked_out_paths": [],
+      "checkout_observations": [],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/common-probe-cache-20261010",
+      "head": "e5bab6bd391379185a1b30a117ed498ce150aa9a",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 24,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-common-probe-cache-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-common-probe-cache-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/compiler-evidence-identity-20261009",
+      "head": "ca9516f32e57cbf1f226460fe8013a3471cebd11",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 117,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/compiler-evidence-identity-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/compiler-evidence-identity-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/compiler-identity-correction-20261009",
+      "head": "0f3a6aae54bc6480b2fe7937a24251092f4af489",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 118,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/compiler-identity-correction-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/compiler-identity-correction-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/compiler-probe-telemetry-20261008",
+      "head": "00e941c93a6bf37ca30cd68d6097cb9683dce130",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 123,
+      "checked_out_paths": [],
+      "checkout_observations": [],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/decl-bounded-scan-20261009",
+      "head": "324c0b997edd68472bc4f44a6c08cb02056bc78c",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 86,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/decl-bounded-scan-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/decl-bounded-scan-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/decl-name-token-reuse-20261010",
+      "head": "dce6adcf9f0778ec9dd398ffdca5044ce879321f",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 27,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-decl-name-reuse-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-decl-name-reuse-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/decl-path-early-exit-20261009",
+      "head": "83dfb4a2f57949dc433e0cbf9a4aa94ea2f991c2",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 70,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/decl-path-early-exit-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/decl-path-early-exit-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/decl-path-evidence-identity-fix-20261010",
+      "head": "7b3829ee1586c178b1bdf606066014a8696bd491",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 68,
+      "checked_out_paths": [],
+      "checkout_observations": [],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/decl-path-resource-evidence-20261010",
+      "head": "cbe7eefec90eed81b410c86daabe0f95f2230cec",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 69,
+      "checked_out_paths": [],
+      "checkout_observations": [],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/decl-scalar-window-20261010",
+      "head": "8d7be4e88afa18c4f6b773d573ab70b0ee240527",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 7,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-decl-scalar-window-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-decl-scalar-window-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/decl-significant-direct-repeat-20261010",
+      "head": "a852da763f78900a68f3e57c3fcf4568424d8436",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 29,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-delivery-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-delivery-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/evidence-current-delivery-ledger-20261009",
+      "head": "a39a70e35fc934d6410057fcd53843ae38d3e723",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 109,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/evidence-current-delivery-ledger-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/evidence-current-delivery-ledger-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/flow-hir-prelude-evidence-20261009",
+      "head": "4a1479cc53cd9bc3de8aee3f8debcab1f580c124",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 101,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-evidence-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-evidence-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/flow-measurement-rss-cap-20261009",
+      "head": "76ccb18af4e1da9a849f421960ecb9634ca2409d",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 102,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/flow-measurement-rss-cap-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/flow-measurement-rss-cap-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/flow-profile-resource-evidence-20261009",
+      "head": "369297178d4bf2f4436e722e6db4d34f1935bba6",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 75,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/flow-profile-resource-evidence-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/flow-profile-resource-evidence-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/flow-runtime-profile-capture-20261009",
+      "head": "422c84460b0af958fab1203ce1c89ba9ed8db89f",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 107,
+      "checked_out_paths": [],
+      "checkout_observations": [],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/flow-stage0-pin-profile-20261010",
+      "head": "cae25860b1cd88b811f94b3ffc76e3aefa37adb4",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 18,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-flow-stage0-pin-profile-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-flow-stage0-pin-profile-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/import-signature-scan-20261009",
+      "head": "45f84477a2f455cedae645045882f7e5c23bbe9a",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 114,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/import-signature-scan-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/import-signature-scan-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/keyword-local-index-20261010",
+      "head": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 14,
+      "checked_out_paths": [],
+      "checkout_observations": [],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "ancestor_of_origin_main": false,
+      "ahead_of_origin_main": 1,
+      "behind_origin_main": 14,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-keyword-local-index-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "patch-equivalent-unmerged-protected",
+      "retirement": "withheld; compiler repository claim v63 remains held",
+      "patch_equivalent_to_origin_main": true,
+      "unique_patch_commit_count": 0
+    },
+    {
+      "branch": "campaign/keyword-window4-20261009",
+      "head": "6d3bd95b3b2a508dc2982d9538f04679f8fbb31e",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 85,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/keyword-window4-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/keyword-window4-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lazy-keyword-classification-20261009",
+      "head": "97db51927d017123847735baf13409e94d27dc7f",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 111,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/lazy-keyword-classification-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/lazy-keyword-classification-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-batched-window-20261009",
+      "head": "5d884cd0d9e17452601324f66abb78b341497310",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 91,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/lexer-batched-window-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/lexer-batched-window-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-full-frontier-20261010",
+      "head": "602832610080c838df3d94c9fdbac0fc55753acb",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 5,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-lexer-full-frontier-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-lexer-full-frontier-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-head-byte-pair-window-20261009",
+      "head": "2ea01d3af28ca9fc2795a8c7669a48773c110c5c",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 76,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-pair-window-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-pair-window-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-head-byte-window-20261009",
+      "head": "c756a15247b1eb184c7685b558f61973f376c144",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 77,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-window-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-window-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-initial-window-reuse-20261010",
+      "head": "7b3829ee1586c178b1bdf606066014a8696bd491",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 68,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/lexer-initial-window-reuse-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/lexer-initial-window-reuse-20261010",
+          "available": true,
+          "dirty": true,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-keyword-byte-reuse-20261010",
+      "head": "51bb2dd9c0ef9304f2158634c86805480a8e1588",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 45,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/lexer-token-frame-carry-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/lexer-token-frame-carry-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-keyword-dispatch-20261009",
+      "head": "581c8154008b56b968a67e85882a6d5eab0a18b3",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 116,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-dispatch-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-dispatch-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-keyword-global-local-fast-path-20261010",
+      "head": "8f2d8c181dc44384d5c92834481931493b65146d",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 10,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-keyword-global-page-local-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-keyword-global-page-local-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-keyword-windows-20261009",
+      "head": "f5aa9547592694afd11bc28cd8c2da9a17b44ef7",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 81,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-windows-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-windows-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-proof-20261009",
+      "head": "b188398f74398de9a8d6a8ba37b32c525bf637b8",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 93,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/lexer-proof-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/lexer-proof-20261009",
+          "available": true,
+          "dirty": true,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-scan-window-arg-20261009",
+      "head": "c88d0675d344c4af212841e667c9af2284b2cf29",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 79,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/lexer-scan-window-arg-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/lexer-scan-window-arg-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-self-ingest-repair-20261010",
+      "head": "78cdd9ece7c192478119d7fc6ed00a60299b95e3",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 6,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-lexer-self-ingest-repair-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-lexer-self-ingest-repair-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-significant-trivia-inline-20261010",
+      "head": "a480a5670c814009801c6d0245ca818d93fa21eb",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 35,
+      "checked_out_paths": [
+        "/tmp/mncs-lexer-significant-trivia-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-lexer-significant-trivia-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-token-result-boundary-20261010",
+      "head": "dfc1070e9646cacd4228539e269f934d9f9dc784",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 39,
+      "checked_out_paths": [
+        "/tmp/mncs-lexer-token-result-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-lexer-token-result-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-trivia-prefix-budget-20261010",
+      "head": "ea87c5c5e97d89d219c22f5d25ed728b0547c649",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 63,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/lexer-trivia-prefix-budget-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/lexer-trivia-prefix-budget-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-window-inline-20261010",
+      "head": "15d6a5971f19177dbdf33508ad6a847154ef0e12",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 17,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-lexer-window-inline-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-lexer-window-inline-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-window-slide-evidence-20261010",
+      "head": "176c145b4de29caf6a0279b0ebdb194b6ae6e938",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 66,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/lexer-window-slide-evidence-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/lexer-window-slide-evidence-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-word-prefix-count-20261010",
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 0,
+      "checked_out_paths": [],
+      "checkout_observations": [],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-word-scan-inline-20261010",
+      "head": "4ed34b5f2060683045953178cefd31a4da0086d2",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 8,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-word-scan-inline-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-word-scan-inline-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-word-scan-select-20261010",
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 0,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-session-admission-telemetry-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-session-admission-telemetry-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/lexer-word-scan8-20261010",
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 0,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-word-scan8-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-word-scan8-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/nested-match-early-exit-20261009",
+      "head": "87127cd6c194a7de9e64238aac10bb3c4de7e061",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 106,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-nested-match-early-exit-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-nested-match-early-exit-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/probe-admission-reuse-20261009",
+      "head": "4d957194d967952fd26411807f3862fa1cacb83c",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 94,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/probe-admission-reuse-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-reuse-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/probe-outcome-classification-20261009",
+      "head": "9f55339c502dc86d468bf734764baca05dfc7276",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 110,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/probe-outcome-classification-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/probe-outcome-classification-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/probe-phase-resource-samples-20261009",
+      "head": "901fcadcd525afdd4443970a602885eb5ae32c83",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 99,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/probe-phase-resource-samples-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/probe-phase-resource-samples-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/probe-stage0-oracle-skip-20261009",
+      "head": "5653908ee345ef7b2ed7bcae2a4da71f4ca6a4da",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 75,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/probe-stage0-oracle-skip-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/probe-stage0-oracle-skip-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/probe-telemetry-20261008",
+      "head": "f92deb2cb5b6113234ca0074a1a7068790729550",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 119,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/compiler-probe-telemetry-20261008"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/compiler-probe-telemetry-20261008",
+          "available": true,
+          "dirty": true,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/project-provider-body-retention-20261010",
+      "head": "85f4886f73eab6699084339ea486d91b5cd95d9c",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 60,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/project-provider-body-retention-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/project-provider-body-retention-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/project-schema-pages-20261009",
+      "head": "d281ad540f6ab87c7c24f2ac52a479d02ce18761",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 112,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/project-schema-pages-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/project-schema-pages-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/reference-argument-validation-cache-20261010",
+      "head": "6af2e42a548defe5af25b33711b5ac838583acef",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 47,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/reference-argument-validation-cache-20261010/mncs-compiler"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/reference-argument-validation-cache-20261010/mncs-compiler",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/runtime-frame-profile-20261008",
+      "head": "386e618218afbf2d06e2d0daa03e0836f9e1c997",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 120,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/runtime-frame-profile-20261008/mncs-compiler"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/runtime-frame-profile-20261008/mncs-compiler",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/session-admission-telemetry-20261010",
+      "head": "45eb4f4abee05196db3a60c40eade7cb75ff3c51",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 2,
+      "checked_out_paths": [],
+      "checkout_observations": [],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/source-initial-byte-window-20261010",
+      "head": "4a44f706918d48b37bd273bde27a8d3029f6a9da",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 53,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/source-keyword-local-byte-window-20261010",
+      "head": "10bf2aae7d0e32767e8f5ad98b0200ee04bbbe89",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 49,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/source-keyword-local-byte-window-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/source-keyword-local-byte-window-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/source-local-byte-window-20261010",
+      "head": "e05d3ede6a03fb2a02615771954fd2de8e641cb2",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 58,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/source-page-validation-20261009",
+      "head": "22f771df5b4865623ded5100e09e7a8ad214ed3d",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 82,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/source-page-validation-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/source-page-validation-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/stage0-language-pin-20261010",
+      "head": "310333c1636a9ec1db918dc14f2df93738c933e0",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 21,
+      "checked_out_paths": [
+        "/tmp/mncs-compiler-stage0-language-pin-20261010"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/tmp/mncs-compiler-stage0-language-pin-20261010",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    },
+    {
+      "branch": "campaign/streaming-probe-cache-20261009",
+      "head": "a110e17d83bcc62bf310768b37fa7186e526ae15",
+      "ancestor_of_origin_main": true,
+      "ahead_of_origin_main": 0,
+      "behind_origin_main": 96,
+      "checked_out_paths": [
+        "/home/epi13/Documents/Projects/.worktrees/streaming-probe-cache-20261009"
+      ],
+      "checkout_observations": [
+        {
+          "path": "/home/epi13/Documents/Projects/.worktrees/streaming-probe-cache-20261009",
+          "available": true,
+          "dirty": false,
+          "status_error": null
+        }
+      ],
+      "classification": "merged-clean-or-dirty-owner-review",
+      "retirement": "withheld; compiler repository claim v63 remains held"
+    }
+  ]
+}
