@@ -857,6 +857,88 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
                 "publication-conflict",
             )
 
+    def test_rpc_client_keeps_restart_window_ambiguous_after_retry_connect_refused(self) -> None:
+        from mncs_env import rpc_client
+
+        request_id = "req_control_restart_window"
+        with tempfile.TemporaryDirectory() as directory:
+            grant = Path(directory) / "grant"
+            grant.write_text("test-grant", encoding="ascii")
+            with mock.patch.dict(os.environ, {
+                "MNCS_ENV_RPC_SOCKET": "/run/test.sock",
+                "MNCS_ENV_RPC_GRANT_FILE": str(grant),
+                "MNCS_ENV_RPC_REQUEST_ID": request_id,
+            }), mock.patch.object(
+                rpc_client,
+                "_exchange",
+                side_effect=[
+                    ConnectionError("response lost after request delivery"),
+                    rpc_client._RequestNotSent("Control restarted before retry"),
+                ],
+            ) as exchange, redirect_stdout(io.StringIO()) as output:
+                code = rpc_client.dispatch(["checkpoint", "ses_test", "--progress", "proof"])
+
+        self.assertEqual(code, 3)
+        self.assertEqual(exchange.call_count, 2)
+        self.assertTrue(all(
+            call.args[2]["request_id"] == request_id
+            for call in exchange.call_args_list
+        ))
+        diagnostic = json.loads(output.getvalue())["diagnostics"]
+        self.assertEqual(diagnostic["code"], "publication-outcome-ambiguous")
+        self.assertIsNone(diagnostic["publication_completed"])
+        self.assertEqual(diagnostic["request_id"], request_id)
+        self.assertIn("read back", diagnostic["next"])
+
+    def test_rpc_client_reports_first_connect_refusal_as_definite_unavailability(self) -> None:
+        from mncs_env import rpc_client
+
+        with tempfile.TemporaryDirectory() as directory:
+            grant = Path(directory) / "grant"
+            grant.write_text("test-grant", encoding="ascii")
+            with mock.patch.dict(os.environ, {
+                "MNCS_ENV_RPC_SOCKET": "/run/test.sock",
+                "MNCS_ENV_RPC_GRANT_FILE": str(grant),
+                "MNCS_ENV_RPC_REQUEST_ID": "req_before_connect",
+            }), mock.patch.object(
+                rpc_client, "_exchange",
+                side_effect=rpc_client._RequestNotSent("Control is unavailable"),
+            ) as exchange, redirect_stdout(io.StringIO()) as output:
+                code = rpc_client.dispatch(["checkpoint", "ses_test", "--progress", "proof"])
+
+        self.assertEqual(code, 3)
+        exchange.assert_called_once()
+        diagnostic = json.loads(output.getvalue())["diagnostics"]
+        self.assertEqual(diagnostic["code"], "persistence-service-unavailable")
+        self.assertFalse(diagnostic["publication_completed"])
+
+    def test_rpc_client_retries_after_disconnect_with_same_request_identity(self) -> None:
+        from mncs_env import rpc_client
+
+        request_id = "req_same_identity_after_disconnect"
+        response = {"ok": True, "result": {"exit_code": 0, "stdout": "ok\n", "stderr": ""}}
+        with tempfile.TemporaryDirectory() as directory:
+            grant = Path(directory) / "grant"
+            grant.write_text("test-grant", encoding="ascii")
+            with mock.patch.dict(os.environ, {
+                "MNCS_ENV_RPC_SOCKET": "/run/test.sock",
+                "MNCS_ENV_RPC_GRANT_FILE": str(grant),
+                "MNCS_ENV_RPC_REQUEST_ID": request_id,
+            }), mock.patch.object(
+                rpc_client, "_exchange",
+                side_effect=[ConnectionError("response lost"), response],
+            ) as exchange, redirect_stdout(io.StringIO()) as output:
+                code = rpc_client.dispatch(["checkpoint", "ses_test", "--progress", "proof"])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(output.getvalue(), "ok\n")
+        self.assertEqual(exchange.call_count, 2)
+        self.assertEqual(
+            exchange.call_args_list[0].args[2]["request_id"],
+            exchange.call_args_list[1].args[2]["request_id"],
+        )
+        self.assertEqual(exchange.call_args_list[1].args[2]["request_id"], request_id)
+
     def test_rpc_client_reports_unexposed_operation_as_unknown(self) -> None:
         from mncs_env import rpc_client
 

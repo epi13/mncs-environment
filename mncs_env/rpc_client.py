@@ -80,13 +80,23 @@ def dispatch(argv: list[str]) -> int:
         "cwd": os.getcwd(),
         "request_id": request_id,
     }
+    request_may_have_been_sent = False
     for _ in range(2):
         try:
             response = _exchange(socket_path, grant, request)
         except _RequestNotSent as error:
-            return _fail("persistence-service-unavailable", str(error),
-                         "check the Control Environment publication endpoint")
+            if not request_may_have_been_sent:
+                return _fail("persistence-service-unavailable", str(error),
+                             "check the Control Environment publication endpoint")
+            # A previous attempt may already have reached Environment. A
+            # later connection refusal cannot prove that the operation was
+            # rejected, especially when Control restarted between attempts.
+            continue
         except (OSError, ConnectionError, TimeoutError, ValueError, TypeError):
+            # These failures can happen after request bytes were delivered
+            # but before a complete response arrived. Keep the outcome
+            # ambiguous even if the next connection cannot be established.
+            request_may_have_been_sent = True
             continue
         if not response.get("ok"):
             error = response.get("error") or {}
@@ -153,9 +163,12 @@ def dispatch(argv: list[str]) -> int:
         if stderr:
             print(stderr, end="" if stderr.endswith("\n") else "\n", file=sys.stderr)
         return exit_code
-    return _fail("publication-outcome-ambiguous",
-                 "Control did not return a result after the request was sent; retry with a fresh reconciliation read",
-                 f"request_id={request['request_id']}")
+    return _fail(
+        "publication-outcome-ambiguous",
+        "Control did not return a result after the request may have been sent",
+        "read back the target Environment object before retrying with this request identity",
+        request_id=request["request_id"],
+    )
 
 
 def _fail(
@@ -165,6 +178,7 @@ def _fail(
     *,
     cause_code: str | None = None,
     domain_details: dict[str, Any] | None = None,
+    request_id: str | None = None,
 ) -> int:
     diagnostics: dict[str, Any] = {
         "code": category,
@@ -176,6 +190,8 @@ def _fail(
         diagnostics["cause_code"] = cause_code[:160]
     if domain_details:
         diagnostics["domain_details"] = domain_details
+    if request_id is not None:
+        diagnostics["request_id"] = request_id[:160]
     print(json.dumps({
         "error": message,
         "diagnostics": diagnostics,
