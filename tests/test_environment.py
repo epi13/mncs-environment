@@ -711,6 +711,106 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
                 "publication-conflict",
             )
 
+    def test_rpc_client_preserves_bounded_campaign_continuation_choices(self) -> None:
+        from mncs_env import rpc_client
+
+        continuations = [
+            {
+                "session_id": f"ses_candidate_{index}",
+                "lifecycle": "active",
+                "consumer_id": f"consumer_{index}",
+                "claim_ids": [f"claim:{index}"],
+                "repositories": [{"repository": "mncs-environment", "head": "abc"}],
+            }
+            for index in range(10)
+        ]
+        failed = {
+            "error": "multiple live Environment sessions share this campaign identity",
+            "diagnostics": {
+                "code": "campaign-continuation-ambiguous",
+                "campaign_id": "cmp_restart_test",
+                "sessions": [f"ses_candidate_{index}" for index in range(24)],
+                "continuations": continuations,
+                "next": "resume the intended recorded session",
+                "credential": "must not cross the Environment RPC boundary",
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            grant = Path(directory) / "grant"
+            grant.write_text("test-grant", encoding="ascii")
+            with mock.patch.dict(os.environ, {
+                "MNCS_ENV_RPC_SOCKET": "/run/test.sock",
+                "MNCS_ENV_RPC_GRANT_FILE": str(grant),
+            }):
+                with mock.patch.object(rpc_client, "_exchange", return_value={
+                    "ok": True,
+                    "result": {
+                        "exit_code": 2,
+                        "stdout": "",
+                        "stderr": json.dumps(failed),
+                    },
+                }), redirect_stdout(io.StringIO()) as output:
+                    code = rpc_client.dispatch(["enter"])
+
+        self.assertEqual(code, 2)
+        result = json.loads(output.getvalue())
+        diagnostics = result["diagnostics"]
+        details = diagnostics["domain_details"]
+        self.assertEqual(diagnostics["code"], "publication-rejected")
+        self.assertEqual(diagnostics["cause_code"], "campaign-continuation-ambiguous")
+        self.assertEqual(details["cause_code"], "campaign-continuation-ambiguous")
+        self.assertEqual(details["campaign_id"], "cmp_restart_test")
+        self.assertEqual(len(details["sessions"]), rpc_client.MAX_DIAGNOSTIC_ITEMS)
+        self.assertTrue(details["sessions_truncated"])
+        self.assertEqual(len(details["continuations"]), 8)
+        self.assertTrue(details["continuations_truncated"])
+        self.assertNotIn("credential", json.dumps(result))
+
+    def test_campaign_continuation_diagnostics_have_a_total_size_bound(self) -> None:
+        from mncs_env import rpc_client
+
+        detail = {
+            "code": "campaign-continuation-ambiguous",
+            "campaign_id": "cmp_restart_test",
+            "sessions": ["ses_left", "ses_right"],
+            "continuations": [
+                {"session_id": f"ses_{index}", "extra": {
+                    f"field_{field}": "x" * 512 for field in range(32)
+                }}
+                for index in range(8)
+            ],
+        }
+        bounded = rpc_client._domain_diagnostic_details(
+            "campaign-continuation-ambiguous", detail
+        )
+
+        self.assertIsNotNone(bounded)
+        self.assertLessEqual(
+            len(json.dumps(bounded, separators=(",", ":")).encode()),
+            rpc_client.MAX_DOMAIN_DIAGNOSTIC_BYTES,
+        )
+        self.assertTrue(bounded["details_truncated"])
+        self.assertNotIn("continuations", bounded)
+        self.assertEqual(bounded["sessions"], ["ses_left", "ses_right"])
+
+    def test_foreign_campaign_diagnostics_do_not_forward_session_ids(self) -> None:
+        from mncs_env import rpc_client
+
+        bounded = rpc_client._domain_diagnostic_details(
+            "campaign-owner-conflict",
+            {
+                "code": "campaign-owner-conflict",
+                "campaign_id": "cmp_foreign_owner",
+                "sessions": ["ses_foreign_owner"],
+                "continuation": {"session_id": "ses_foreign_owner"},
+            },
+        )
+
+        self.assertEqual(bounded, {
+            "cause_code": "campaign-owner-conflict",
+            "campaign_id": "cmp_foreign_owner",
+        })
+
     def test_read_only_filesystem_promotion_has_structured_category(self) -> None:
         import errno
         from mncs_env.store_backend import StoreBackend, StoreUnavailable

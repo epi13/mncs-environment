@@ -13,6 +13,9 @@ from pathlib import Path
 from typing import Any
 
 MAX_FRAME = 2 * 1024 * 1024
+MAX_DOMAIN_DIAGNOSTIC_BYTES = 32 * 1024
+MAX_DIAGNOSTIC_ITEMS = 16
+MAX_DIAGNOSTIC_TEXT = 512
 
 
 class _RequestNotSent(OSError):
@@ -122,8 +125,13 @@ def dispatch(argv: list[str]) -> int:
                     "campaign-continuation-unverified": "authority-denied",
                 }.get(raw_code, "publication-rejected")
                 message = str(failed.get("error", "Environment operation was rejected"))
-                _fail(category, message,
-                      str(diagnostics.get("next", "inspect the structured Environment diagnostic")))
+                _fail(
+                    category,
+                    message,
+                    str(diagnostics.get("next", "inspect the structured Environment diagnostic")),
+                    cause_code=raw_code or None,
+                    domain_details=_domain_diagnostic_details(raw_code, diagnostics),
+                )
                 return exit_code
         if stdout:
             print(stdout, end="" if stdout.endswith("\n") else "\n")
@@ -135,17 +143,111 @@ def dispatch(argv: list[str]) -> int:
                  f"request_id={request['request_id']}")
 
 
-def _fail(category: str, message: str, next_step: str) -> int:
+def _fail(
+    category: str,
+    message: str,
+    next_step: str,
+    *,
+    cause_code: str | None = None,
+    domain_details: dict[str, Any] | None = None,
+) -> int:
+    diagnostics: dict[str, Any] = {
+        "code": category,
+        "transport": "mncs-control-environment-rpc",
+        "publication_completed": False if category != "publication-outcome-ambiguous" else None,
+        "next": next_step,
+    }
+    if cause_code:
+        diagnostics["cause_code"] = cause_code[:160]
+    if domain_details:
+        diagnostics["domain_details"] = domain_details
     print(json.dumps({
         "error": message,
-        "diagnostics": {
-            "code": category,
-            "transport": "mncs-control-environment-rpc",
-            "publication_completed": False if category != "publication-outcome-ambiguous" else None,
-            "next": next_step,
-        },
+        "diagnostics": diagnostics,
     }, ensure_ascii=False))
     return 3
+
+
+def _domain_diagnostic_details(
+    cause_code: str, diagnostics: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Retain bounded Environment-owned continuation details on rejected entry.
+
+    Control's transport classification stays in ``diagnostics.code`` while
+    the original Environment reason and its compact continuation choices stay
+    available to an authenticated caller. Arbitrary CLI diagnostic fields
+    are not forwarded.
+    """
+    if not cause_code.startswith("campaign-"):
+        return None
+    allowed = (
+        "campaign_id", "session_id", "sessions", "campaigns", "continuation",
+        "continuations", "handoff_id", "consumer_id", "consumer_kind",
+        "lifecycle", "definition_id", "workspace", "workspace_root",
+    )
+    if cause_code in {
+        "campaign-owner-conflict", "campaign-continuation-unverified",
+    }:
+        # These diagnostics may point at a session whose principal is not the
+        # authenticated caller. Keep the reason and campaign identity without
+        # forwarding foreign session identifiers or their continuation data.
+        allowed = ("campaign_id",)
+    result: dict[str, Any] = {"cause_code": cause_code[:160]}
+    for key in allowed:
+        if key not in diagnostics:
+            continue
+        value = diagnostics[key]
+        if key in {"sessions", "campaigns"}:
+            if not isinstance(value, list):
+                continue
+            result[key] = [
+                item[:160] for item in value[:MAX_DIAGNOSTIC_ITEMS]
+                if isinstance(item, str)
+            ]
+            result[f"{key}_truncated"] = len(value) > MAX_DIAGNOSTIC_ITEMS
+            continue
+        if key == "continuations":
+            if not isinstance(value, list):
+                continue
+            result[key] = [
+                _bounded_diagnostic_value(item)
+                for item in value[:8]
+                if isinstance(item, dict)
+            ]
+            result["continuations_truncated"] = len(value) > 8
+            continue
+        result[key] = _bounded_diagnostic_value(value)
+
+    encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":")).encode()
+    if len(encoded) > MAX_DOMAIN_DIAGNOSTIC_BYTES:
+        minimal_keys = (
+            "cause_code", "campaign_id", "session_id", "sessions",
+            "sessions_truncated", "campaigns", "campaigns_truncated",
+        )
+        result = {key: result[key] for key in minimal_keys if key in result}
+        result["details_truncated"] = True
+    return result
+
+
+def _bounded_diagnostic_value(value: Any, *, depth: int = 0) -> Any:
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, str):
+        return value[:MAX_DIAGNOSTIC_TEXT]
+    if depth >= 5:
+        return "[truncated]"
+    if isinstance(value, list):
+        return [
+            _bounded_diagnostic_value(item, depth=depth + 1)
+            for item in value[:MAX_DIAGNOSTIC_ITEMS]
+        ]
+    if isinstance(value, dict):
+        result: dict[str, Any] = {}
+        for key, item in list(value.items())[:32]:
+            if isinstance(key, str):
+                result[key[:128]] = _bounded_diagnostic_value(item, depth=depth + 1)
+        return result
+    return str(value)[:MAX_DIAGNOSTIC_TEXT]
 
 
 def _cli_error(value: Any) -> dict[str, Any] | None:
