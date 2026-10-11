@@ -1,0 +1,247 @@
+{
+  "schema_version": "mncs.environment.campaign-continuity-delivery/1",
+  "recorded_at": "2026-10-11T00:45:45Z",
+  "campaign": {
+    "identity": "cmp_mncs_continuity_20261010",
+    "environment_session": "ses_7226fbcfe65820f7",
+    "authenticated_control_principal": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "consumer": "codex-process-1",
+    "latest_checkpoint": {
+      "identity": "chk_8db544c2588a8862",
+      "sequence": 15,
+      "request_id": "req_campaign_checkpoint_claim_recovery_20261011"
+    },
+    "continuation_proof": {
+      "fresh_entry_request_id": "req_campaign_repair_missing_projection_evidence_20261011",
+      "same_session_reused": true,
+      "same_campaign_reused": true,
+      "previous_consumers": [
+        "codex-process-2",
+        "codex-process-3",
+        "codex-process-4"
+      ],
+      "fresh_context_request_id": "req_campaign_context_final_20261011",
+      "fresh_context_session": "ses_7226fbcfe65820f7",
+      "campaign_capsule_returned": true,
+      "checkpoints_returned": [
+        "chk_0a52c8e48a3de547",
+        "chk_580fadfad7221817",
+        "chk_e2a353e71a28c7a6",
+        "chk_165e0fd3c81318f7"
+      ],
+      "claims_returned": [
+        "claim:mncs-control-mcp",
+        "claim:mncs-environment"
+      ],
+      "repository_head_and_checkout_identities_returned": true
+    }
+  },
+  "delivery": {
+    "repository": "mncs-environment",
+    "branch": "main",
+    "implementation_commit": "c7c9f1fd9ed9b07e44bd150048bf0cf0f4cdde1e",
+    "parent": "1c6737534849346d4a42b1d293bbcf051e55cefd",
+    "remote": "origin/main",
+    "remote_head_after_push": "c7c9f1fd9ed9b07e44bd150048bf0cf0f4cdde1e",
+    "push_status": "PUSHED",
+    "merge_mode": "FAST_FORWARD",
+    "worktree_clean_after_delivery": true
+  },
+  "store_transport": {
+    "owner": "MNCS Control service hosting the authenticated Environment RPC",
+    "user_authorization": "Add only the canonical Environment Store root to mncs-control-tunnel.service ReadWritePaths.",
+    "service": {
+      "unit": "mncs-control-tunnel.service",
+      "user_service_active": true,
+      "protect_system": "strict",
+      "protect_home": "read-only",
+      "no_new_privileges": true,
+      "added_read_write_path": "/home/epi13/.local/share/mncs-environment/store",
+      "agent_direct_store_path_visible": false,
+      "agent_direct_store_path_writable": false
+    },
+    "canonical_verification": {
+      "passed": true,
+      "generation": 43501,
+      "object_count": 43501,
+      "recovery": "RECOVERED_OLD",
+      "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+      "toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs"
+    },
+    "protected_operations": {
+      "checkpoint_and_fresh_process_readback": {
+        "passed": true,
+        "checkpoint": "chk_165e0fd3c81318f7",
+        "sequence": 14,
+        "request_id": "req_canonical_interrupted_checkpoint_20261010",
+        "retry_returned_same_checkpoint": true,
+        "matching_checkpoint_count": 1
+      },
+      "claim_acquire_and_release": {
+        "passed": true,
+        "claim": "claim:mncs-environment:paths:12438ec6e21c",
+        "acquired_version": 1,
+        "acquire_request_id": "req_canonical_claim_test_acquire_20261010",
+        "release_request_id": "req_canonical_claim_test_release_20261010"
+      },
+      "unauthorized_publication": {
+        "passed": true,
+        "target_session": "ses_d2537acde8b8a875",
+        "result": "authority-denied",
+        "publication_completed": false,
+        "canonical_generation_changed": false
+      },
+      "stale_cas": {
+        "passed": true,
+        "result": "ClaimBatchConflict",
+        "canonical_generation_changed": false
+      },
+      "caller_interruption": {
+        "passed": true,
+        "caller_exit": 124,
+        "request_id": "req_canonical_interrupted_checkpoint_20261010",
+        "same_id_retry_reconciled": true
+      },
+      "service_process_restart": {
+        "passed_in_control_transport_harness": true,
+        "systemd_unit_restarted_during_this_acceptance": false,
+        "prior_evidence": "evidence/store-continuity-acceptance-20261010.json"
+      }
+    },
+    "environment_evidence": {
+      "projection_store_reference": "mncs-store:ses_7226fbcfe65820f7:projections:9d1e95e9ae31d18c39b87ebefdf8bddd3240db76d250a758faa7b30fee38d1c9",
+      "doctor_evidence_store_reference": "Store-bound immutable Environment evidence object",
+      "protected_entry_persisted_projection_reference": true,
+      "fresh_process_readback_test": "tests/test_doctor.py::EpochTests::test_store_doctor_evidence_is_immutable_and_sidecar_free",
+      "rpc_readback_limit": "Control does not expose projections --evidence; that call returned authority-denied and did not mutate Store."
+    },
+    "authority_model": "Control authenticates the scoped Environment request; Environment validates session, campaign, claim, and operation authority; StoreBackend publishes immutable records and CAS claim batches. The agent receives no arbitrary Store path or descriptor."
+  },
+  "environment_changes": {
+    "bounded_legacy_claim_leases": "Existing overlong expiry values remain historical data; enforcement caps them at acquired_at plus 168 hours.",
+    "atomic_claim_transitions": "Acquire/recovery, release, and transfer publish related claim versions in one Store generation CAS batch.",
+    "transfer_retry_fencing": "A retry does not report a historical recipient claim as held after a later transfer or release.",
+    "store_evidence": "Doctor, projection, action, diagnostic, and verification evidence use owner-namespaced immutable Store records with strict readback.",
+    "store_entry_lock": "Store-backed entry coordination stays inside the configured Store root; the file-debug lock remains in its state directory.",
+    "provider_bootstrap": "Store runtime routing metadata is written under the configured Store root with the former state-directory path retained as read-only migration input.",
+    "forge_resident_proof": "The proof selects Compiler and VM checkouts and validates exact Compiler source receipt and Language ABI before invoking providers."
+  },
+  "validation": {
+    "environment_full_pytest": {
+      "passed": 590,
+      "skipped": 46,
+      "failed": 0,
+      "duration_seconds": 496.22
+    },
+    "focused_store_claim_and_owner_tests": {
+      "passed": 76,
+      "deselected": 284
+    },
+    "campaign_proofs": {
+      "passed": 17,
+      "skipped": 0,
+      "failed": 0
+    },
+    "environment_vertical_proof": "PASS: protected write denial, checkpoint, fresh-process resume, authenticated handoff, and completion.",
+    "python_compile": "passed",
+    "git_diff_check": "passed",
+    "new_evidence_module_ruff": "passed",
+    "changed_import_block_ruff": "passed"
+  },
+  "ownership_and_candidates": {
+    "campaign_claims": [
+      "claim:mncs-control-mcp",
+      "claim:mncs-environment"
+    ],
+    "environment_claim_status": "live; owned by the current campaign session ses_7226fbcfe65820f7",
+    "effective_writable_repositories": [
+      "mncs-environment"
+    ],
+    "candidate_comparison_method": "Temporary bare repositories fetched current remote main and candidate refs; no candidate refs, worktrees, indexes, or files were changed.",
+    "candidate_dispositions": [
+      {
+        "repository": "mncs-compiler",
+        "branch": "campaign/keyword-local-index-delivery-20261010",
+        "candidate_head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+        "remote_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+        "ahead": 1,
+        "behind": 14,
+        "worktree": "clean",
+        "claim": "claim:mncs-compiler",
+        "claim_owner_session": "ses_d2537acde8b8a875",
+        "effective_lease_expiry": "2026-10-16T18:13:43Z",
+        "owner_liveness": "stale activity; Environment classifies the session as active and claim as not-recoverable",
+        "disposition": "retain; no test, merge, push, or retirement"
+      },
+      {
+        "repository": "mncs-language",
+        "branch": "campaign/process-environment-value-bound-20261010",
+        "candidate_head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+        "remote_main": "12b29d6482599465698b78c87a21c63d3adeceb6",
+        "ahead": 1,
+        "behind": 3,
+        "untracked": [
+          "evidence/campaign-20261010-forge-core-quiet-output.json"
+        ],
+        "latest_claim_explanation": "released; no candidate work was modified",
+        "disposition": "retain dirty evidence; no test, merge, push, or retirement because this session has no Language write authority"
+      },
+      {
+        "repository": "mncs-forge",
+        "branch": "campaign/forge-quiet-compile-output-20261010",
+        "candidate_head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+        "remote_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+        "ahead": 1,
+        "behind": 0,
+        "worktree": "clean",
+        "claim": "claim:mncs-forge",
+        "claim_owner_session": "ses_95c3aa35b8544042",
+        "effective_lease_expiry": "2026-10-16T02:18:31Z",
+        "owner_liveness": "stale activity; Environment classifies the session as active and claim as not-recoverable",
+        "disposition": "retain; no test, merge, push, or retirement"
+      }
+    ],
+    "compiler_worktree_inventory": {
+      "prior_report": "evidence/compiler-worktree-dispositions-20261010.json",
+      "captured_store_generation": 43123,
+      "registered": 66,
+      "detached": 12,
+      "dirty": 8,
+      "retireable_in_dry_run": 0,
+      "current_turn_cleanup": "none"
+    }
+  },
+  "compiler_frontier": {
+    "source_record": "mncs-compiler/evidence/SELF-HOST-MATRIX.json",
+    "matrix_evidence_updated_at": "2026-10-10T15:53:22Z",
+    "stage0_revision": "e8f8a5f8659c71b33cd32c964d4982bec1a9668e",
+    "existing_delivered_matched_result": {
+      "campaign": "flow_word_scan_inline_fast_path_campaign_20261010",
+      "backend": "reference_interpreter",
+      "step_budget": 100000,
+      "matched_mean_execution_reduction_percent": 6.626,
+      "complete_flow_compilation": false
+    },
+    "whole_flow_frontier": "A 1M-step reference run ended budget_exhausted inside decl::parse_unit_mode; complete project result was not returned.",
+    "stage1_claimed": false,
+    "stage2_claimed": false,
+    "unresolved_pressures": [
+      "CP-0011",
+      "CP-0023",
+      "CP-0024",
+      "CP-0025"
+    ],
+    "resident_language_abi": "The fresh Forge proof detected mncs.std.process.v1 source profile 0.19 while the selected Compiler bootstrap supports profiles through 0.18; readiness did not pass."
+  },
+  "resource_integration": {
+    "status": "NOT_PROVEN",
+    "required_vertical_slice": "Compiler intent -> Forge admission -> process telemetry -> System Monitor receipt -> Store evidence -> Automation scheduling decision",
+    "reason": "This Environment session is writable only for mncs-environment. Compiler and Forge have active exclusive claims owned by other sessions; their work cannot be taken over from stale activity alone."
+  },
+  "next_work": [
+    "Obtain an authenticated handoff or legitimate recovery proof for the Compiler and Forge exclusive claims before changing or testing those repositories.",
+    "Reconcile the Language candidate through an authorized Language claim and inspect its retained untracked evidence before delivery.",
+    "Complete the Forge resource-receipt to Automation scheduling vertical slice under the owning repository scopes.",
+    "Continue the exact Stage-0 matched compiler frontier; do not claim Stage-1 or Stage-2 without succession evidence."
+  ]
+}
