@@ -1,0 +1,96 @@
+{
+  "schema_version": "mncs.environment.canonical-control-pre-response-restart-replay/1",
+  "identity": "ev_control_pre_response_restart_replay_20261011",
+  "observed_at": "2026-10-11T12:05:20Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "persistence_owner": "MNCS Environment through the authenticated MNCS Control persistence RPC",
+    "control_repository": "mncs-control-mcp",
+    "control_main_revision": "79a669d09a13215c25587d07d8281673c09f7f7f",
+    "environment_main_revision": "0c706935e8f886c3876681474ea915b94570ed8d",
+    "prior_store_policy_evidence": "ev_canonical_store_path_grant_20261011"
+  },
+  "restricted_execution": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "direct_canonical_store_path_visible": false,
+    "visibility_check": {
+      "command": "test ! -e /home/epi13/.local/share/mncs-environment/store",
+      "exit_code": 0
+    },
+    "transport": "per-execution authenticated Control Environment RPC grant"
+  },
+  "interrupted_publication": {
+    "operation": "Environment checkpoint",
+    "request_id": "req_control_pre_response_restart_20261011",
+    "request": {
+      "session_id": "ses_7226fbcfe65820f7",
+      "progress": "Canonical checkpoint caller closed before response; publication is reconciled after Control service restart",
+      "remaining_count": 8
+    },
+    "first_caller": {
+      "action": "sent one framed authenticated RPC request and closed its Unix socket without reading",
+      "request_sent": true,
+      "caller_read_response": false,
+      "payload_bytes": 1216,
+      "sandbox_backend": "bwrap",
+      "network": false
+    },
+    "publication_readback_before_restart": {
+      "command": "python3 -B -m mncs_env.cli context ses_7226fbcfe65820f7",
+      "sandbox_backend": "bwrap",
+      "network": false,
+      "exit_code": 0,
+      "checkpoint_id": "chk_fbae50d06ab1b50f",
+      "checkpoint_sequence": 88,
+      "campaign_state_checkpoint_id": "chk_bcc2a6f39cd41466",
+      "lifecycle": "active",
+      "claim_ids": [
+        "claim:mncs-control-mcp",
+        "claim:mncs-environment"
+      ]
+    }
+  },
+  "service_restart_and_retry": {
+    "service_unit": "mncs-control-tunnel.service",
+    "restart_command": "systemctl --user restart mncs-control-tunnel.service",
+    "restart_exit_code": 0,
+    "state_after_restart": "active",
+    "invocation_id_after_restart": "f11fbf9b51b645d4a5309bd51a0d70ed",
+    "main_pid_after_restart": 1406438,
+    "retry": {
+      "operation": "same checkpoint arguments and stable request identity from a fresh project Bwrap execution grant",
+      "request_id": "req_control_pre_response_restart_20261011",
+      "sandbox_backend": "bwrap",
+      "network": false,
+      "exit_code": 0,
+      "returned_checkpoint_id": "chk_fbae50d06ab1b50f",
+      "returned_sequence": 88,
+      "same_identity_as_pre_restart_publication": true
+    },
+    "fresh_process_readback": {
+      "command": "python3 -B -m mncs_env.cli context ses_7226fbcfe65820f7",
+      "sandbox_backend": "bwrap",
+      "network": false,
+      "exit_code": 0,
+      "lifecycle": "active",
+      "latest_checkpoint_id": "chk_fbae50d06ab1b50f",
+      "latest_checkpoint_sequence": 88,
+      "checkpoint_identity_occurrences_in_recent_capsule": 1,
+      "campaign_state_checkpoint_id": "chk_bcc2a6f39cd41466",
+      "claim_ids": [
+        "claim:mncs-control-mcp",
+        "claim:mncs-environment"
+      ]
+    }
+  },
+  "result": "PASS_FOR_CANONICAL_CHECKPOINT_PUBLICATION_WITH_CALLER_DISCONNECT_AND_CONTROL_RESTART_REPLAY",
+  "limitations": [
+    "The caller closed its socket before reading and Control restarted after publication readback; this does not inject process termination inside the server's response-write window.",
+    "This exercises checkpoint publication and retry through canonical Store; claim-transfer interruption across a service restart remains unproven.",
+    "The operation adds one durable checkpoint to the active campaign session and preserves its existing campaign-state checkpoint and claims."
+  ]
+}
