@@ -1960,6 +1960,11 @@ class Session:
             workspace["selected_checkouts"] = self.snapshot["selected_checkouts"]
         self.snapshot["workspace"] = workspace
         self.snapshot["repo_facts"] = _repo_facts(workspace)
+        campaign = dict(self.snapshot.get("campaign") or {})
+        campaign["repository_refs"] = self._campaign_repository_refs(
+            claims_module.active_claims(self.store.read_claims())
+        )
+        self.snapshot["campaign"] = campaign
         self._save()
         return events
 

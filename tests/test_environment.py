@@ -463,6 +463,76 @@ class ClaimTests(unittest.TestCase):
 
 
 class CampaignContinuityTests(unittest.TestCase):
+    def test_workspace_observation_refreshes_campaign_repository_head(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            root = base / "workspace"
+            checkout = root / "mncs-environment"
+            checkout.mkdir(parents=True)
+
+            def git(*args: str) -> str:
+                completed = subprocess.run(
+                    ["git", "-C", str(checkout), *args], check=True,
+                    text=True, capture_output=True,
+                )
+                return completed.stdout.strip()
+
+            git("init", "-q", "-b", "main")
+            git("config", "user.name", "Environment Test")
+            git("config", "user.email", "environment-test@example.invalid")
+            source = checkout / "source.mncs"
+            source.write_text("module first;\n", encoding="utf-8")
+            git("add", ".")
+            git("commit", "-q", "-m", "first campaign head")
+            first_head = git("rev-parse", "HEAD")
+
+            session = make_session(base / "state")
+            try:
+                repo = {
+                    "name": "mncs-environment", "manifest_repository": "mncs-environment",
+                    "path": str(checkout), "head": first_head, "branch": "main",
+                    "dirty": False, "dirty_files": [], "dirty_truncated": False,
+                }
+                workspace_view = {"root": str(root), "repositories": [repo]}
+                session.snapshot["workspace"] = workspace_view
+                session.snapshot["selected_checkouts"] = {
+                    "mncs-environment": {
+                        "path": str(checkout), "head": first_head,
+                        "branch": "main", "clean": True,
+                    },
+                }
+                campaign = dict(session.snapshot.get("campaign") or {})
+                campaign["repository_refs"] = session._campaign_repository_refs({})
+                session.snapshot["campaign"] = campaign
+                reference = session.snapshot["campaign"]["repository_refs"][0]
+                self.assertEqual(reference["head"], first_head)
+
+                source.write_text("module second;\n", encoding="utf-8")
+                git("add", ".")
+                git("commit", "-q", "-m", "advance campaign head")
+                current_head = git("rev-parse", "HEAD")
+                current_repo = {**repo, "head": current_head}
+                observed_workspace = {
+                    "root": str(root), "repositories": [current_repo],
+                    "scan": {"status": "complete"},
+                }
+                with mock.patch.object(
+                    sessions.workspace_module, "discover_workspace",
+                    return_value=observed_workspace,
+                ):
+                    session.observe_workspace(root)
+
+                current = next(
+                    item for item in session.context()["continuation"]["repositories"]
+                    if item["repository"] == "mncs-environment"
+                )
+                self.assertEqual(current["head"], current_head)
+                self.assertEqual(current["branch"], "main")
+                self.assertTrue(current["clean"])
+                self.assertEqual(current["observation"], "current")
+            finally:
+                session.close()
+
     def test_owned_claim_rebuilds_portable_repository_capsule(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
