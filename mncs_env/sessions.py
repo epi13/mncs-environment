@@ -2734,6 +2734,7 @@ class Session:
         selected_workspace = (
             workspace_root or self.snapshot.get("workspace", {}).get("root")
         )
+        workspace_root = selected_workspace
         workspace_root_value = str(selected_workspace) if selected_workspace else None
         if workspace_root_value:
             self.observe_workspace(
