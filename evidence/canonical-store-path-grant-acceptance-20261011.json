@@ -1,0 +1,64 @@
+{
+  "schema_version": "mncs.environment.canonical-store-path-grant-proof/1",
+  "identity": "ev_canonical_store_path_grant_20261011",
+  "recorded_at": "2026-10-11T04:37:45Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "environment_consumer_id": "codex-process-1",
+  "source": {
+    "repository": "mncs-environment",
+    "commit": "47d1fda3dc8fd246dc33a6831a213ae9247c775e",
+    "working_tree_before_evidence": "clean",
+    "control_repository_commit": "7b90b094dbe2e5333bef604311426e9c38c82cfc"
+  },
+  "policy": {
+    "unit": "user/mncs-control-tunnel.service",
+    "unit_file": "/home/epi13/.config/systemd/user/mncs-control-tunnel.service",
+    "unit_file_sha256": "b1b56bf1eea0c16c40b48200361c98fc77d0a1dc6c35d18d2bbfc8e29064a285",
+    "grant_was_already_present": true,
+    "active_state": "active",
+    "sub_state": "running",
+    "protect_system": "strict",
+    "protect_home": "read-only",
+    "no_new_privileges": true,
+    "read_write_paths": [
+      "/home/epi13/Documents/Projects",
+      "/home/epi13/.config/mncs-control-mcp",
+      "/home/epi13/.config/tunnel-client",
+      "/home/epi13/.local/state/mncs-control-mcp",
+      "/home/epi13/.local/state/tunnel-client",
+      "/home/epi13/.local/share/mncs-control-mcp",
+      "/home/epi13/.local/share/tunnel-client",
+      "/home/epi13/.local/share/mncs-environment/store"
+    ],
+    "canonical_store_root": "/home/epi13/.local/share/mncs-environment/store",
+    "policy_change_performed": false
+  },
+  "protected_caller": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "canonical_store_path_exists": false,
+    "canonical_store_path_readable": false,
+    "canonical_store_path_writable": false
+  },
+  "publication": {
+    "transport": "authenticated Environment persistence RPC through MNCS Control tunnel",
+    "persistence_backend": "store",
+    "checkpoint_identity": "chk_f8a7e35f89990e7d",
+    "checkpoint_sequence": 35,
+    "checkpoint_request_id": "req_1f39b75410538d4c8487c4182af839ffe8398679",
+    "checkpoint_request_digest": "bffa7cf79defbd70",
+    "fresh_process_readback": true,
+    "readback_session_id": "ses_7226fbcfe65820f7",
+    "readback_campaign_state_checkpoint_id": "chk_c12c4de9b44d8e64",
+    "readback_persistence_backend": "store",
+    "exclusive_claims_unchanged": true,
+    "source_owner_repositories_untouched": true
+  },
+  "result": "PASS",
+  "limits": [
+    "The exact Store-root ReadWritePaths entry was already present and active, so this acceptance step made no systemd policy edit or restart.",
+    "The protected caller retains no direct Store path visibility or filesystem write access."
+  ]
+}
