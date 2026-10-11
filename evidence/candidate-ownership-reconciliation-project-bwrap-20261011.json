@@ -1,0 +1,147 @@
+{
+  "schema_version": "mncs.environment.candidate-ownership-reconciliation/1",
+  "identity": "ev_env_candidate_ownership_reconciliation_20261011",
+  "recorded_at": "2026-10-11 10:41:38 UTC",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "observation": {
+    "transport": "authenticated Environment claim reads and MNCS Control terminal execution",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "projects": [
+      "mncs-compiler",
+      "mncs-language",
+      "mncs-forge",
+      "mncs-environment"
+    ],
+    "network": false,
+    "mutation_performed": false,
+    "worktree_inventory_evidence": "ev_env_compiler_worktree_project_bwrap_20261011",
+    "inventory_summary": {
+      "compiler_local_branch_count": 62,
+      "compiler_registered_worktree_count": 66,
+      "noncanonical_branches_protected": 61,
+      "protected_worktrees": 66,
+      "retireable_branches": 0,
+      "retireable_worktrees": 0
+    }
+  },
+  "repository_heads": {
+    "mncs-compiler": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "mncs-language": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+    "mncs-forge": "cc2516f073d47739d74e68266d97fd090c53da16",
+    "mncs-environment": "d72bcefca870b9849925e52d397722552d5fbcda"
+  },
+  "compiler_matrix": {
+    "path": "evidence/SELF-HOST-MATRIX.json",
+    "sha256": "1e82d83d8c8bdc9195f37dae6397e2daddc61fbcff928e584250e0a927447e72",
+    "identity_ledger_updated_at": "2026-10-10T15:53:22Z",
+    "latest_delivered_flow_frontier": {
+      "evidence_path": "evidence/campaign-20261010-flow-word-scan-inline-fast-path.json",
+      "evidence_sha256": "b5a48c573eed4af75f9a8f4a8b4bfd9d4933d1a0158b843b889c10a781242768",
+      "tested_candidate_head": "45eb4f4abee05196db3a60c40eade7cb75ff3c51",
+      "implementation_commit": "bd4a0cf9a9b1bfba41180d32a2be18234cfb0851",
+      "matched_100k_function_execution_improvement_percent": 6.626,
+      "matched_1m_function_execution_improvement_percent": 6.628,
+      "matched_1m_child_cpu_improvement_percent": 5.926,
+      "matched_1m_child_wall_improvement_percent": 5.876,
+      "8m_status": "budget_exhausted",
+      "complete_compiler_result": false,
+      "stage1_claimed": false,
+      "stage2_claimed": false
+    }
+  },
+  "candidates": [
+    {
+      "repository": "mncs-compiler",
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "parent": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+      "current_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "parent_is_current_main_ancestor": true,
+      "current_main_is_candidate_ancestor": false,
+      "candidate_is_current_main_ancestor": false,
+      "ahead_of_current_main": 1,
+      "behind_current_main": 14,
+      "commit_changed_paths": [
+        "evidence/SELF-HOST-MATRIX.json"
+      ],
+      "classification": "unmerged stale evidence update; protected",
+      "worktree_state": "unknown; outside project scope and protected by the repository claim",
+      "claim": {
+        "claim_id": "claim:mncs-compiler",
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "owner_lifecycle": "active",
+        "freshness": "stale",
+        "verdict": "not-recoverable",
+        "effective_expires_at": "2026-10-16T18:13:43+00:00",
+        "reason": "exclusive scope needs a dead owner or effective lease expiry"
+      },
+      "action": "retain branch and worktree; no tests, merge, claim recovery, or retirement"
+    },
+    {
+      "repository": "mncs-language",
+      "branch": "campaign/process-environment-value-bound-20261010",
+      "commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "parent": "e8f8a5f8659c71b33cd32c964d4982bec1a9668e",
+      "current_main": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "parent_is_current_main_ancestor": true,
+      "current_main_is_candidate_ancestor": false,
+      "candidate_is_current_main_ancestor": false,
+      "ahead_of_current_main": 1,
+      "behind_current_main": 2,
+      "commit_changed_path_count": 24,
+      "current_tree_delta": [
+        "M docs/mncs-badge.json"
+      ],
+      "current_main_has_candidate_source_and_test_bytes": true,
+      "classification": "unmerged docs-only delta; candidate source implementation already matches current main",
+      "candidate_testing": "prior campaign evidence records current-main focused tests passing 3/3; not rerun in this read-only review",
+      "worktree_state": "unknown; candidate checkout not probed",
+      "claim": {
+        "claim_id": "claim:mncs-language",
+        "owner_session_id": "ses_7226fbcfe65820f7",
+        "verdict": "released"
+      },
+      "action": "retain candidate; docs-only delivery awaits Language write scope"
+    },
+    {
+      "repository": "mncs-forge",
+      "branch": "campaign/forge-quiet-compile-output-20261010",
+      "commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "parent": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "current_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "parent_is_current_main_ancestor": true,
+      "current_main_is_candidate_ancestor": true,
+      "candidate_is_current_main_ancestor": false,
+      "ahead_of_current_main": 1,
+      "behind_current_main": 0,
+      "commit_changed_paths": [
+        "src/mncs_forge/mncs_native.py",
+        "tests/test_mncs_native.py"
+      ],
+      "classification": "fast-forward candidate; protected by another consumer",
+      "worktree_state": "unknown; outside current project scope and protected by the repository claim",
+      "claim": {
+        "claim_id": "claim:mncs-forge",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "owner_lifecycle": "active",
+        "freshness": "stale",
+        "verdict": "not-recoverable",
+        "effective_expires_at": "2026-10-16T02:18:31+00:00",
+        "reason": "exclusive scope needs a dead owner or effective lease expiry"
+      },
+      "action": "retain branch and worktree; no tests, merge, claim recovery, or retirement"
+    }
+  ],
+  "verified_tests_this_review": [],
+  "integrity_notes": [
+    "Compiler branch tree differences include evidence paths added by 14 later main commits; the candidate commit itself changes only SELF-HOST-MATRIX.json.",
+    "No branch ref was force-updated and no checkout, worktree, or evidence file was deleted."
+  ],
+  "result": "READ_ONLY_RECONCILIATION_COMPLETE",
+  "limitations": [
+    "Compiler and Forge candidate delivery require an owner-issued handoff, confirmed dead lifecycle, or effective lease expiry.",
+    "Language source/test changes are on current main, but its remaining badge documentation delta was not delivered without Language write scope.",
+    "Candidate worktree dirty state remains UNKNOWN where the registered checkout was outside the authorized project scope."
+  ]
+}
