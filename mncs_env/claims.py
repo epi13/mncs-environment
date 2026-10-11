@@ -785,6 +785,11 @@ def transfer(
     The request id makes a retry after a lost response a readback operation:
     the committed recipient record is returned without creating a second
     transfer. Store-backed sessions publish both versions in one generation.
+    A transfer moves ownership of the same bounded lease, so its original
+    acquisition time and deadline remain stable. The session-level transfer
+    event records when the transition was observed; the immutable claim batch
+    stays byte-stable when the same request is retried after an interrupted
+    publish.
     """
     import secrets
 
@@ -828,7 +833,14 @@ def transfer(
         now = datetime.now(timezone.utc)
         expires = _effective_expiry(existing)
         if expires is None:
-            expires = now + timedelta(hours=24)
+            acquired = _parse_time(existing.get("acquired_at"))
+            if acquired is None:
+                raise ClaimConflict(
+                    f"{claim_id} has no stable lease origin; renew it before transfer"
+                )
+            expires = acquired + timedelta(hours=MAX_TTL_HOURS)
+        if expires <= now:
+            raise ClaimConflict(f"{claim_id} expired before transfer publication")
         release_record = {
             "schema_version": SCHEMA,
             "claim_id": claim_id,
@@ -842,7 +854,6 @@ def transfer(
             "status": "released",
             "acquired_at": str(existing.get("acquired_at", "")),
             "expires_at": str(existing.get("expires_at", "")),
-            "released_at": now.isoformat(timespec="seconds"),
             "provenance": {
                 "released_by": from_session,
                 "transferred_to": to_session,
@@ -861,7 +872,11 @@ def transfer(
             "basis": BASIS_TRANSFER,
             "reason": reason,
             "status": "held",
-            "acquired_at": now.isoformat(timespec="seconds"),
+            # Transfer moves the current owner of the same bounded lease; it
+            # does not restart that lease. Keeping its original start and
+            # deadline also makes the batch payload stable when a caller
+            # retries the same request after an interrupted Store publish.
+            "acquired_at": str(existing.get("acquired_at", "")),
             "expires_at": expires.isoformat(timespec="seconds"),
             "provenance": {
                 "transferred_from": from_session,

@@ -320,4 +320,8 @@ does not renew a claim. Release and explicit transfer publish their related
 claim versions in one generation. Acquisition and recovery publish their
 ownership transition in one generation as well, so an interrupted recovery
 leaves either the prior owner or the admitted successor. Retry identities let
-a caller read back an outcome after losing the response.
+a caller read back an outcome after losing the response. Transfer preserves the
+source claim's lease start and deadline instead of restarting the lease; the
+owning session event records when the transfer was observed. This keeps the
+immutable claim batch identical when the same request is retried after an
+interrupted Store publication.
