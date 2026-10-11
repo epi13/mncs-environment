@@ -1,0 +1,124 @@
+{
+  "schema_version": "mncs.environment.continuity-service-restart/1",
+  "identity": "ev_control_rpc_runtime_restart_continuation_20261011",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "observed_at": "2026-10-11T15:56:58Z",
+  "environment_source": {
+    "repository": "mncs-environment",
+    "branch": "campaign/projection-evidence-invocation-20261011",
+    "head_before_evidence": "9baa29eab47e8582a54827db76540d79a3fc3868",
+    "evidence_capacity_source_commit": "25f0ec3",
+    "campaign_evidence_maximum": 96
+  },
+  "control_runtime": {
+    "repository": "mncs-control-mcp",
+    "branch": "main",
+    "head": "b3138c837bc082a6d4cc5501490b8101f631e815",
+    "unit": "mncs-control-tunnel.service",
+    "protected_execution_backend": "bwrap",
+    "hardening_after_restart": {
+      "ProtectSystem": "strict",
+      "ProtectHome": "read-only",
+      "NoNewPrivileges": true,
+      "ReadWritePaths": [
+        "/home/epi13/.local/share/mncs-environment/store"
+      ]
+    }
+  },
+  "before_restart": {
+    "service_pid": 1565705,
+    "service_started_at_local": "2026-10-11T06:24:37-08:00",
+    "campaign_source_change_at_local": "2026-10-11T07:04:41-08:00",
+    "operation": "mncs-env continuation --campaign-id cmp_mncs_continuity_20261010",
+    "observed_at": "2026-10-11T15:41:49Z",
+    "exit_code": 3,
+    "diagnostic": {
+      "category": "publication-rejected",
+      "cause": "campaign state checkpoint is invalid: campaign evidence must be a list of at most 64 references",
+      "publication_completed": false
+    },
+    "interpretation": "The running Control runtime reported the former 64-reference limit after the Environment source had raised it to 96. This is consistent with a service process retaining an older imported Environment package."
+  },
+  "restart": {
+    "command": "systemctl --user restart mncs-control-tunnel.service",
+    "exit_code": 0,
+    "new_service_pid": 1604393,
+    "started_at_local": "2026-10-11T07:49:20-08:00",
+    "active": true,
+    "hardening_preserved": true
+  },
+  "after_restart": {
+    "operation": "mncs-env continuation --campaign-id cmp_mncs_continuity_20261010",
+    "request_id": "req_continuation_read_cmp_mncs_continuity_20261011a",
+    "execution_scope": "mncs-environment project Bwrap",
+    "exit_code": 0,
+    "duration_seconds": 7.684,
+    "schema_version": "mncs.control.campaign-continuation/2",
+    "status": "context-conflict",
+    "campaigns_count": 1,
+    "continuations_count": 2,
+    "continuations": [
+      {
+        "session_id": "ses_7226fbcfe65820f7",
+        "lifecycle": "active",
+        "definition_id": "env_f31ee034e8e1fdcb",
+        "consumer_id": "local-agent",
+        "current_campaign_consumer": "local-agent",
+        "work_intent": "exercise canonical Environment persistence through the Control socket",
+        "workspace_root": "/home/epi13/Documents/Projects",
+        "project_reference_status": "linked",
+        "evidence_count": 70,
+        "evidence_truncated": false,
+        "latest_checkpoint_id": "chk_1757f6ef75602ec0",
+        "latest_checkpoint_sequence": 104,
+        "claim_ids": [
+          "claim:mncs-environment"
+        ]
+      },
+      {
+        "session_id": "ses_b4b2d283542220b0",
+        "lifecycle": "active",
+        "definition_id": "env_1ea3af15c7464177",
+        "consumer_id": "codex-process-1",
+        "current_campaign_consumer": "codex-process-1",
+        "work_intent": "improve mncs-environment through a persistent, discoverable MNCS work context",
+        "workspace_root": "/home/epi13/Documents/Projects",
+        "project_reference_status": "linked",
+        "evidence_count": 0,
+        "evidence_truncated": false,
+        "checkpoint_ids": [],
+        "claim_ids": []
+      }
+    ],
+    "selection_decision": "Neither active Environment session was automatically selected: their definitions and work intents differ. Both remain intact."
+  },
+  "protected_store_boundary": {
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "checked_inside_project_bwrap_at": "2026-10-11T15:56:58Z",
+    "exists": false,
+    "readable": false,
+    "writable": false,
+    "direct_store_mutation": "none"
+  },
+  "claim_ownership": {
+    "claim_id": "claim:mncs-control-mcp",
+    "session_id": "ses_7226fbcfe65820f7",
+    "version": 3,
+    "owner_consumer_id": "codex-process-2",
+    "owner_lifecycle": "active",
+    "freshness": "live",
+    "last_activity_at": "2026-10-11T15:36:02Z",
+    "effective_expires_at": "2026-10-12T19:38:55Z",
+    "current_campaign_consumer": "local-agent",
+    "process_termination_proven": false,
+    "claim_transfer_or_repository_mutation": "none"
+  },
+  "result": {
+    "continuation_lookup": "available after restarting the stale Control runtime",
+    "campaign_state": "reported without adopting either conflicting session",
+    "outstanding": [
+      "Resolve the two active Environment contexts through an authenticated session selection or handoff.",
+      "Transfer claim:mncs-control-mcp only after authenticated ownership transfer or authoritative lifecycle proof."
+    ]
+  }
+}
