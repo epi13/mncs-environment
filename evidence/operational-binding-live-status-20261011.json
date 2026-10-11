@@ -1,0 +1,171 @@
+{
+  "schema_version": "mncs.environment.operational-binding-live-status/1",
+  "identity": "ev_operational_binding_live_status_20261011",
+  "observed_at": "2026-10-11T22:31:03Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "source": {
+    "owner": "mncs-environment",
+    "campaign_session": "ses_7226fbcfe65820f7",
+    "environment_rpc_transport": "MNCS Control authenticated Environment RPC",
+    "mutations_outside_environment_evidence": false
+  },
+  "canonical_store": {
+    "operation": "python -m mncs_env.cli store --session ses_7226fbcfe65820f7 --verify",
+    "boundary": {
+      "sandbox_backend": "bwrap",
+      "project": "mncs-environment",
+      "scope": "project",
+      "network": false,
+      "canonical_store_path_visible_to_client": false,
+      "canonical_store_path_writable_by_client": false,
+      "persistence_transport": "authenticated Environment RPC to configured canonical Store through MNCS Control"
+    },
+    "observed_at": "2026-10-11T22:30:02.709890Z",
+    "exit_code": 0,
+    "status": "passed",
+    "generation": 45197,
+    "objects_verified": 45199,
+    "relations": 0,
+    "provenance_records": 0,
+    "recovery": "RECOVERED_OLD",
+    "evidence": "canonical Store was read and integrity-verified after campaign checkpoint sequence 146"
+  },
+  "environment": {
+    "live_health": {
+      "command": "python -m mncs_env.cli health ses_7226fbcfe65820f7 --live",
+      "observed_at": "2026-10-11T22:27:07+00:00",
+      "status": "degraded",
+      "available_count": 3,
+      "unavailable_count": 0,
+      "unknown_count": 1,
+      "blocking": [],
+      "unknown_capabilities": [
+        {
+          "capability": "mncs-environment:ambient-projection-coherence",
+          "status": "unknown",
+          "code": "provider-invocation-undeclared",
+          "reason": "Environment has no invocation descriptor; source fingerprints alone are not commands."
+        }
+      ]
+    },
+    "persistence_from_control_status": {
+      "observation_window_utc": [
+        "2026-10-11T22:28:20Z",
+        "2026-10-11T22:29:03Z"
+      ],
+      "provider": "mncs-control-environment-rpc",
+      "available": true,
+      "state": "ready",
+      "authorization": "per-execution grant and peer credentials",
+      "store_mutation": "owner-write-path-available"
+    }
+  },
+  "doctor": {
+    "command": "python -m mncs_env.cli doctor --evidence ses_7226fbcfe65820f7",
+    "observation_window_utc": [
+      "2026-10-11 22:31:01 UTC",
+      "2026-10-11 22:31:02 UTC"
+    ],
+    "exit_code": 3,
+    "status": "unknown",
+    "error": "Environment operation is not exposed by Control",
+    "diagnostic": {
+      "code": "operation-unavailable",
+      "transport": "mncs-control-environment-rpc",
+      "publication_completed": false,
+      "next": "use an exposed Environment operation or extend the Control operation contract",
+      "cause_code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+      "domain_details": {
+        "operation": "doctor",
+        "status": "unknown"
+      }
+    },
+    "interpretation": "The read-only evidence request is not exposed by the current Control Environment operation contract. No Doctor remediation was run and no successful Doctor readiness is claimed."
+  },
+  "control": {
+    "server_revision": "a336e446d4ea704ad917f243933e9e653bf0f448",
+    "restart_required": false,
+    "environment_persistence": "ready",
+    "protected_sandbox": {
+      "backend": "bwrap",
+      "available": true,
+      "required": true
+    },
+    "observation_window_utc": [
+      "2026-10-11T22:28:20Z",
+      "2026-10-11T22:29:03Z"
+    ]
+  },
+  "forge": {
+    "control_system_status": {
+      "status": "probe_timed_out",
+      "reachable": null,
+      "diagnostic": "Forge MCP health probe timed out after 30 seconds.",
+      "observation_window_utc": [
+        "2026-10-11T22:28:20Z",
+        "2026-10-11T22:29:03Z"
+      ]
+    },
+    "provider_list": {
+      "configured_count": 1,
+      "provider_id": "mncs-project-micro-verifiers",
+      "availability": "AVAILABLE",
+      "status": "UNKNOWN",
+      "last_probe_result": null,
+      "observation_at": "2026-10-11T22:25:02Z"
+    },
+    "project_inspect": {
+      "result": "tool_error",
+      "diagnostic": "maximum recursion depth exceeded",
+      "status": "unknown",
+      "interpretation": "A failed inspect operation does not establish Forge readiness."
+    },
+    "execution_receipts": {
+      "count": 0,
+      "observed_at": "2026-10-11T22:25:02Z"
+    },
+    "compiler_experiments": {
+      "count": 0,
+      "interpretation": "observation_only_not_assurance_or_conformance",
+      "observed_at": "2026-10-11T22:25:02Z"
+    },
+    "repository_claim": {
+      "claim_id": "claim:mncs-forge",
+      "owner_session": "ses_95c3aa35b8544042",
+      "version": 28,
+      "owner_lifecycle": "active",
+      "recovery_verdict": "not-recoverable"
+    }
+  },
+  "language_service": {
+    "current_main": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+    "focused_tests": {
+      "source_revision": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "status": "passed",
+      "evidence": "evidence/candidate-delivery-live-reconciliation-20261011.json",
+      "test_count": 8
+    },
+    "direct_live_service_probe": "not performed in this status pass",
+    "interpretation": "Focused repository tests establish those test results only; they do not establish a live Language Service binding."
+  },
+  "automation": {
+    "current_session_writable_repositories": [
+      "mncs-environment"
+    ],
+    "automation_scope_authorized": false,
+    "resource_feedback_readiness": "preflight only"
+  },
+  "execution_mutations": {
+    "compiler_execution_performed": false,
+    "forge_execution_performed": false,
+    "automation_decision_performed": false,
+    "foreign_claim_or_worktree_mutated": false
+  },
+  "unresolved": [
+    "Expose a read-only Doctor evidence operation through an owner-authorized Control contract before claiming Doctor readiness.",
+    "Investigate the Forge MCP probe timeout and provider UNKNOWN with Forge owner authority.",
+    "Add the pending mncs-automation repository scope before changing Automation scheduling law.",
+    "Obtain Compiler owner handoff or confirmed owner lifecycle facts before a new compiler execution under that exclusive claim.",
+    "Perform a direct Language Service binding probe through its authorized interface."
+  ]
+}
