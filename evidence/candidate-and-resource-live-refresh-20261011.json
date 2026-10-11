@@ -1,0 +1,177 @@
+{
+  "schema_version": "mncs.environment.candidate-resource-live-refresh/1",
+  "identity": "ev_candidate_resource_live_refresh_20261011",
+  "observed_at": "2026-10-11T08:39:56Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "observer": "codex-process-1",
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "main",
+    "head": "f641b8c4537065bdf560a93cada18dc546b9edb2",
+    "remote_head": "f641b8c4537065bdf560a93cada18dc546b9edb2"
+  },
+  "compiler_worktree_inventory": {
+    "evidence_identity": "ev_compiler_worktree_live_disposition_20261011",
+    "path": "evidence/compiler-worktree-disposition-live-20261011.json",
+    "sha256": "44ec7ade65492065c50c1a32d99077d3981d72ba3c1eced672fdd9fbaa4e0d96",
+    "main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "registered_worktrees": 66,
+    "physical_status_counts": {
+      "present": 66
+    },
+    "checkout_state_counts": {
+      "clean": 58,
+      "dirty": 8
+    },
+    "topology_counts": {
+      "main_head": 3,
+      "merged_ancestor_of_main": 62,
+      "diverged": 1
+    },
+    "disposition_counts": {
+      "protected_by_another_consumer": 66
+    },
+    "safe_retirements": 0,
+    "dirty_main_checkout_entries": [
+      "?? .worktrees/",
+      "?? evidence/campaign-20261006-imported-nominal-ssa.json",
+      "?? evidence/campaign-20261006-pressure-suite-results.json",
+      "?? evidence/campaign-20261006-project-results.json"
+    ]
+  },
+  "candidate_dispositions": {
+    "mncs-compiler": {
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "main_ahead_commits": 14,
+      "candidate_ahead_commits": 1,
+      "worktree_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+      "worktree_state": "clean",
+      "candidate_only_change": "evidence/SELF-HOST-MATRIX.json",
+      "exclusive_claim": {
+        "claim_id": "claim:mncs-compiler",
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "owner_lifecycle": "active",
+        "freshness": "stale",
+        "verdict": "not-recoverable",
+        "effective_expires_at": "2026-10-16T18:13:43+00:00"
+      },
+      "disposition": "protected_by_another_consumer; preserve candidate and main dirty evidence; no test, merge, push, or retirement performed"
+    },
+    "mncs-language": {
+      "branch": "campaign/process-environment-value-bound-20261010",
+      "commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "main": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "origin_main": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "main_ahead_commits": 2,
+      "candidate_ahead_commits": 1,
+      "candidate_patch_id": "d59075fdf3391a828010e8e1b8dde48edb869e0e",
+      "main_delivery_patch_id": "d59075fdf3391a828010e8e1b8dde48edb869e0e",
+      "implementation_delivered_by_patch_equivalent_main_commit": true,
+      "current_main_test": {
+        "command": "cargo test -p mncs-cli --test quiet_compile",
+        "result": "3 passed, 0 failed"
+      },
+      "candidate_worktree": {
+        "path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+        "state": "dirty_untracked_evidence",
+        "untracked_evidence_path": "evidence/campaign-20261010-forge-core-quiet-output.json",
+        "untracked_evidence_sha256": "7b1d1a609703ffae19f0834252d68da638d279463e7d24a9e12123c4891efc42",
+        "candidate_claim": "released",
+        "campaign_language_write_authority": "not present"
+      },
+      "candidate_measurement_observation": {
+        "evidence_status": "untracked and retained in the Language candidate worktree; not adopted or committed by this campaign",
+        "workload": "mncs-forge core backend compile; file-only output compared with default duplicate result output",
+        "candidate_mean_wall_seconds": 50.224,
+        "baseline_wall_seconds": 53.885,
+        "wall_reduction_percent": 6.79,
+        "candidate_mean_cpu_seconds": 49.805,
+        "baseline_cpu_seconds": 53.65,
+        "cpu_reduction_percent": 7.17,
+        "backend_artifact_sha256_equal_before_and_after_output_change": true,
+        "interpretation": "Measured reduction is output serialization and duplicate-file work; semantic compiler work was not faster. The report does not prove Forge receipt correlation or scheduling feedback."
+      },
+      "disposition": "implementation is on remote main; preserve the dirty evidence path and do not retire or modify the Language worktree"
+    },
+    "mncs-forge": {
+      "branch": "campaign/forge-quiet-compile-output-20261010",
+      "commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "main_ahead_commits": 0,
+      "candidate_ahead_commits": 1,
+      "worktree_path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+      "worktree_state": "clean",
+      "candidate_change": "src/mncs_forge/mncs_native.py and tests/test_mncs_native.py",
+      "exclusive_claim": {
+        "claim_id": "claim:mncs-forge",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "owner_lifecycle": "active",
+        "freshness": "stale",
+        "verdict": "not-recoverable",
+        "effective_expires_at": "2026-10-16T02:18:31+00:00"
+      },
+      "disposition": "protected_by_another_consumer; preserve clean candidate; no test, merge, push, or retirement performed"
+    }
+  },
+  "live_resource_services": {
+    "control_system_status": {
+      "observed_via": "mncs_control_system_status",
+      "sandbox": "bwrap required and available",
+      "environment_persistence": {
+        "provider": "mncs-control-environment-rpc",
+        "available": true,
+        "state": "ready",
+        "authorization": "per-execution-grant-and-peer-credentials",
+        "store_mutation": "owner-write-path-available"
+      },
+      "forge_mcp": {
+        "configured": true,
+        "reachable": false,
+        "status": "mcp_initialization_failed",
+        "diagnostic": "Forge MCP health probe timed out after 30 seconds",
+        "available_operations": []
+      },
+      "control_server": {
+        "runtime_revision": "cedef8c67144e48a85f682926b9387c798d1e3e7",
+        "restart_required": false
+      },
+      "fabric": {
+        "present_workers": 0,
+        "available_workers": 0,
+        "known_nodes_available": 0
+      }
+    },
+    "experimental_reference_studies_forge_surface": {
+      "project_root": "/home/epi13/Documents/Projects/mncs-reference-studies",
+      "execution_receipt_bindings": 0,
+      "continuous_status_counts": {
+        "FAIL": 0,
+        "PASS": 0,
+        "UNKNOWN": 2
+      },
+      "active_job": null,
+      "deferred_jobs": 2,
+      "blocking_attention_event": "Language Service event ingress failed: timed out",
+      "relation_to_mncs_forge_product_service": "separate development-control-plane surface; its presence does not prove the configured product Forge MCP is available"
+    }
+  },
+  "resource_feedback_vertical_slice": {
+    "compiler_work_identity": "Language measurement references Forge core input and exact compiler build/source identities, but the report remains untracked in the Language candidate checkout.",
+    "forge_admission_and_child_execution": "No new execution submitted; configured Forge MCP is unreachable.",
+    "system_monitor_correlation": "No new correlated receipt readback demonstrated.",
+    "store_evidence": "Existing canonical Store route is ready; no Forge receipt was available to retain.",
+    "automation_decision": "No subsequent scheduling decision grounded in this measurement was produced.",
+    "status": "incomplete"
+  },
+  "result": "CANDIDATE_DISPOSITION_REFRESHED_RESOURCE_LOOP_INCOMPLETE",
+  "mutations_to_compiler_language_forge_automation_or_system_monitor": false,
+  "unresolved": [
+    "Compiler and Forge repository claims remain with persisted active owners and cannot be recovered before authenticated transfer, terminal lifecycle evidence, or bounded lease expiry.",
+    "The Language measurement report needs publication through Language owner authority to become durable owning-repository evidence.",
+    "Forge MCP must recover through its owner-controlled service path before an end-to-end resource receipt and subsequent scheduling decision can be produced.",
+    "Compiler Stage-1 and Stage-2 remain unproven."
+  ]
+}
