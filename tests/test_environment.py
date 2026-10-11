@@ -1075,6 +1075,45 @@ class WorkspaceTests(unittest.TestCase):
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_projection_evidence_capability_is_session_pinned_read_only(self) -> None:
+        manifest = json.loads((ROOT / ".mncs" / "project.json").read_text())
+        coherence = next(
+            item for item in manifest["contracts"]["provides"]
+            if item.get("contract") == "ambient-projection-coherence"
+        )
+        self.assertNotIn("invocation", coherence)
+        contract = next(
+            item for item in manifest["contracts"]["provides"]
+            if item.get("contract") == "projection-evidence-inspection"
+        )
+        self.assertEqual(contract["effects"], ["read"])
+        self.assertEqual(contract["invocation"], {
+            "kind": "executable",
+            "path": "scripts/mncs-env",
+            "fixed_argv": ["projections", "--evidence", "{session_id}"],
+        })
+        for source in contract["fingerprint_sources"]:
+            self.assertTrue((ROOT / source).is_file(), source)
+
+        bound = capabilities.bind_session_context(
+            {"fixed_argv": ["projections", "--evidence", "{session_id}"]},
+            [], session_id="ses_test_bound",
+        )
+        self.assertEqual(
+            bound["fixed_argv"],
+            ["projections", "--evidence", "ses_test_bound"],
+        )
+        with self.assertRaises(capabilities.CapabilityError):
+            capabilities.bind_session_context(
+                {"fixed_argv": ["projections", "--evidence", "{session_id}"]},
+                ["ses_other"], session_id="ses_test_bound",
+            )
+        with self.assertRaises(capabilities.CapabilityError):
+            capabilities.bind_session_context(
+                {"fixed_argv": ["projections", "--evidence", "--session={session_id}"]},
+                [], session_id="ses_test_bound",
+            )
+
     def test_forge_readiness_binds_its_language_service_cursor(self) -> None:
         definition = json.loads((ROOT / ".mncs" / "environment.json").read_text())
         service = next(
@@ -1826,6 +1865,29 @@ class ToolchainTests(unittest.TestCase):
 
 
 class SessionTests(unittest.TestCase):
+    def test_session_bound_invocation_uses_the_active_session_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-environment",
+                capability="session-evidence",
+                contract_revision="1",
+                entrypoint="echo",
+                address="/bin/echo",
+                effects=["read"],
+                fixed_argv=["{session_id}"],
+            ))
+            session.snapshot["bindings"].append(binding)
+
+            result = session.invoke("session-evidence", [])
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["stdout"].strip(), session.session_id)
+            with self.assertRaisesRegex(
+                capabilities.CapabilityError, "no caller arguments"
+            ):
+                session.invoke("session-evidence", ["ses_other"])
+
     def test_health_blocks_when_selected_compiler_checkout_revision_drifts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

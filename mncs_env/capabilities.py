@@ -53,6 +53,41 @@ class CapabilityError(ValueError):
     """Raised for unusable capability declarations or invocations."""
 
 
+SESSION_ID_ARG = "{session_id}"
+
+
+def bind_session_context(
+    binding: dict[str, Any], argv: list[str], *, session_id: str,
+) -> dict[str, Any]:
+    """Resolve an exact session argument in a fixed invocation contract.
+
+    Session-bound invocations pin their target to the already-authorized
+    Environment session and accept no caller-supplied arguments. This keeps a
+    capability from turning a session identity supplied by its caller into a
+    cross-session read selector.
+    """
+    fixed_argv = binding.get("fixed_argv", [])
+    if not isinstance(fixed_argv, list):
+        raise CapabilityError("fixed_argv must be a list")
+    marked = [item for item in fixed_argv
+              if isinstance(item, str) and SESSION_ID_ARG in item]
+    if not marked:
+        return binding
+    if marked != [SESSION_ID_ARG]:
+        raise CapabilityError(
+            f"{SESSION_ID_ARG} must occupy one complete fixed_argv item"
+        )
+    if not session_id:
+        raise CapabilityError("session-bound invocation requires an Environment session")
+    if argv:
+        raise CapabilityError("session-bound invocation accepts no caller arguments")
+    resolved = dict(binding)
+    resolved["fixed_argv"] = [
+        session_id if item == SESSION_ID_ARG else item for item in fixed_argv
+    ]
+    return resolved
+
+
 def validate_output_limit_bytes(value: int) -> int:
     """Validate an explicit, bounded capability-output capture window."""
     if type(value) is not int or value < 1 or value > MAX_OUTPUT_LIMIT_BYTES:

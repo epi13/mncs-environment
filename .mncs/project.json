@@ -52,6 +52,34 @@
         "kind": "semantic-projection-lifecycle-and-interpretation",
         "stability": "experimental",
         "output_scope": "explicit projection declarations; canonical subjects; Store provenance; native reconciliation"
+      },
+      {
+        "contract": "projection-evidence-inspection",
+        "version": "1",
+        "kind": "read-only-projection-evidence-inspection",
+        "effects": [
+          "read"
+        ],
+        "fingerprint_sources": [
+          "mncs_env/cli.py",
+          "mncs_env/projections.py",
+          "mncs_env/evidence_store.py",
+          "mncs_env/session_store.py",
+          "mncs_env/store_backend.py",
+          "mncs_env/rpc_client.py",
+          "scripts/mncs-env"
+        ],
+        "invocation": {
+          "kind": "executable",
+          "path": "scripts/mncs-env",
+          "fixed_argv": [
+            "projections",
+            "--evidence",
+            "{session_id}"
+          ]
+        },
+        "stability": "experimental",
+        "output_scope": "read-only recorded projection evidence and history for the authorized Environment session"
       }
     ],
     "consumes": [

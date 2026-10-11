@@ -2015,6 +2015,9 @@ class Session:
             output_limit_bytes
         )
         binding = self._binding(capability)
+        binding = capabilities_module.bind_session_context(
+            binding, argv, session_id=self.session_id,
+        )
         state_root = self.store.state_dir.resolve()
         artifact_directory = (
             state_root / "sessions" / self.session_id / "artifacts"
