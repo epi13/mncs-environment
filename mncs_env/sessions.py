@@ -2316,11 +2316,42 @@ class Session:
     def release_claim(self, repository: str, reason: str = "",
                       claim_id: str | None = None,
                       request_id: str | None = None) -> bool:
+        normalized_repository = repository or None
+        request_digest = (
+            claims_module._release_request_digest(
+                session_id=self.session_id, reason=reason, claim_id=claim_id,
+                repository=normalized_repository,
+            )
+            if request_id is not None else None
+        )
+        if request_id is not None:
+            prior_noop = next((event for event in self._log()
+                               if (event.get("type") == "lease.release_noop"
+                                   or event.get("provider_type") == "lease.release_noop")
+                               and event.get("payload", {}).get("request_id")
+                               == request_id), None)
+            if prior_noop is not None:
+                if prior_noop.get("payload", {}).get("request_digest") != request_digest:
+                    raise claims_module.ClaimConflict(
+                        "claim release request identity is already bound to another payload")
+                return False
         released = claims_module.release(
             self.store, session_id=self.session_id, reason=reason,
-            claim_id=claim_id, repository=repository or None,
+            claim_id=claim_id, repository=normalized_repository,
             request_id=request_id)
         if not released:
+            if request_id is not None:
+                self._emit(
+                    "lease.release_noop",
+                    self.snapshot.get("consumer_id", "unknown"),
+                    {
+                        "repository": normalized_repository,
+                        "claim_id": claim_id,
+                        "request_id": request_id,
+                        "request_digest": request_digest,
+                    },
+                )
+                self._save()
             return False
         self._refresh_holders()
         campaign = dict(self.snapshot.get("campaign") or {})
@@ -2337,9 +2368,27 @@ class Session:
             claims_module.active_claims(self.store.read_claims())
         )
         self.snapshot["campaign"] = campaign
-        self._emit("lease.released", self.snapshot.get("consumer_id", "unknown"),
-                   {"repository": repository, "claim_id": claim_id,
-                    "released": len(released)})
+        release_event_exists = (
+            request_id is not None
+            and any(
+                event.get("type") == "lease.released"
+                and event.get("payload", {}).get("request_id") == request_id
+                for event in self._log()
+            )
+        )
+        if not release_event_exists:
+            payload = {
+                "repository": repository,
+                "claim_id": claim_id,
+                "released": len(released),
+            }
+            if request_id is not None:
+                payload["request_id"] = request_id
+                payload["request_digest"] = request_digest
+            self._emit(
+                "lease.released", self.snapshot.get("consumer_id", "unknown"),
+                payload,
+            )
         self._save()
         return True
 

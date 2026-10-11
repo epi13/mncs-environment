@@ -45,6 +45,7 @@ TYPES = (
     "authority.escalated",
     "lease.acquired",
     "lease.released",
+    "lease.release_noop",
     "checkpoint.created",
     "handoff.created",
     "pressure.recorded",

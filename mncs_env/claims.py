@@ -59,6 +59,45 @@ STATUS_SUPERSEDED = "superseded"
 MAX_TTL_HOURS = 168
 
 
+def _operation_digest(operation: str, **payload: Any) -> str:
+    return digest_hex({"operation": operation, "payload": payload})
+
+
+def _acquire_request_digest(
+    *, repository: str, session_id: str, consumer_id: str, basis: str,
+    ttl_hours: int, scope: dict[str, Any],
+    checkout_facts: dict[str, Any],
+) -> str:
+    # ``reason`` is descriptive provenance, not an effect selector. Replaying
+    # the same operation identity may improve its note without republishing a
+    # different lease; the original committed reason remains authoritative.
+    return _operation_digest(
+        "claim-acquire/1", repository=repository, session_id=session_id,
+        consumer_id=consumer_id, basis=basis,
+        ttl_hours=ttl_hours, scope=scope, checkout_facts=checkout_facts,
+    )
+
+
+def _release_request_digest(
+    *, session_id: str, reason: str, claim_id: str | None,
+    repository: str | None,
+) -> str:
+    return _operation_digest(
+        "claim-release/1", session_id=session_id, reason=reason,
+        claim_id=claim_id, repository=repository,
+    )
+
+
+def _transfer_request_digest(
+    *, claim_id: str, from_session: str, to_session: str,
+    to_consumer: str, reason: str,
+) -> str:
+    return _operation_digest(
+        "claim-transfer/1", claim_id=claim_id, from_session=from_session,
+        to_session=to_session, to_consumer=to_consumer, reason=reason,
+    )
+
+
 def utcnow() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -579,6 +618,12 @@ def acquire(
         or len(request_id) > 160 or "\x00" in request_id
     ):
         raise ValueError("claim request identity must be bounded nonempty text")
+    facts = checkout_facts or {}
+    request_digest = _acquire_request_digest(
+        repository=repository, session_id=session_id, consumer_id=consumer_id,
+        basis=basis, ttl_hours=ttl_hours, scope=resolved,
+        checkout_facts=facts,
+    )
     from .session_store import ClaimBatchConflict, ClaimVersionConflict
 
     claim_id = claim_identity(repository, resolved)
@@ -594,6 +639,16 @@ def acquire(
             if matching:
                 requested = max(
                     matching, key=lambda record: int(record.get("version", 0)))
+                provenance = requested.get("provenance", {})
+                prior_digest = provenance.get("operation_request_digest")
+                if prior_digest is not None:
+                    if prior_digest != request_digest:
+                        raise ClaimConflict(
+                            "claim request identity is already bound to another payload")
+                elif (requested.get("consumer_id") != consumer_id
+                      or requested.get("basis") != basis):
+                    raise ClaimConflict(
+                        "claim request identity is already bound to another transition")
                 latest = _latest_by_identity(records).get(
                     str(requested.get("claim_id", "")))
                 if (latest is not None
@@ -644,7 +699,6 @@ def acquire(
                 suffix = ""
             raise ClaimConflict(
                 _conflict_text(claim_id, other_id, other, reason_) + suffix)
-        facts = checkout_facts or {}
         dirty = bool(facts.get("dirty")) or bool(facts.get("foreign_signals"))
         if dirty and basis not in ADOPTION_BASES and not any(
             other.get("session_id") == session_id for other in live.values()
@@ -684,6 +738,7 @@ def acquire(
         }
         if request_id is not None:
             record["provenance"]["operation_request_id"] = request_id
+            record["provenance"]["operation_request_digest"] = request_digest
         if basis in ADOPTION_BASES:
             record["provenance"]["adopted_head"] = facts.get("head")
             record["provenance"]["adopted_dirty"] = facts.get("dirty")
@@ -726,12 +781,31 @@ def release(
     request_id = request_id or "release_" + secrets.token_hex(16)
     if not isinstance(request_id, str) or not request_id or len(request_id) > 160 or "\x00" in request_id:
         raise ValueError("release request identity must be bounded nonempty text")
+    request_digest = _release_request_digest(
+        session_id=session_id, reason=reason, claim_id=claim_id,
+        repository=repository,
+    )
     for _ in range(16):
         generation = store.claim_generation()
         records = store.read_claims()
         completed = [record for record in records
                      if record.get("provenance", {}).get("release_request_id") == request_id]
         if completed:
+            for record in completed:
+                provenance = record.get("provenance", {})
+                prior_digest = provenance.get("release_request_digest")
+                if prior_digest is not None:
+                    if prior_digest != request_digest:
+                        raise ClaimConflict(
+                            "claim release request identity is already bound to another payload")
+                elif (record.get("session_id") != session_id
+                      or (claim_id is not None
+                          and str(record.get("claim_id")) != claim_id)
+                      or (repository is not None
+                          and str(record.get("repository")) != repository)
+                      or record.get("reason") != reason):
+                    raise ClaimConflict(
+                        "claim release request identity is already bound to another transition")
             return completed
         if store.claim_generation() != generation:
             continue
@@ -751,21 +825,24 @@ def release(
                 if str(record.get("claim_id", "")) == str(existing.get("claim_id"))
             ]
             record = {
-            "schema_version": SCHEMA,
-            "claim_id": str(existing.get("claim_id")),
-            "version": (max(versions) + 1) if versions else 1,
-            "repository": str(existing.get("repository")),
-            "scope": existing.get("scope", {}),
-            "session_id": session_id,
-            "consumer_id": str(existing.get("consumer_id", "")),
-            "basis": str(existing.get("basis", "")),
-            "reason": reason,
-            "status": "released",
-            "acquired_at": str(existing.get("acquired_at", "")),
-            "expires_at": str(existing.get("expires_at", "")),
-            "released_at": utcnow(),
-            "provenance": {"released_by": session_id,
-                           "release_request_id": request_id},
+                "schema_version": SCHEMA,
+                "claim_id": str(existing.get("claim_id")),
+                "version": (max(versions) + 1) if versions else 1,
+                "repository": str(existing.get("repository")),
+                "scope": existing.get("scope", {}),
+                "session_id": session_id,
+                "consumer_id": str(existing.get("consumer_id", "")),
+                "basis": str(existing.get("basis", "")),
+                "reason": reason,
+                "status": "released",
+                "acquired_at": str(existing.get("acquired_at", "")),
+                "expires_at": str(existing.get("expires_at", "")),
+                "released_at": utcnow(),
+                "provenance": {
+                    "released_by": session_id,
+                    "release_request_id": request_id,
+                    "release_request_digest": request_digest,
+                },
             }
             record["identity"] = "clm_" + digest_hex(
                 {key: record[key] for key in sorted(record) if key != "identity"}
@@ -803,6 +880,10 @@ def transfer(
     request_id = request_id or "transfer_" + secrets.token_hex(16)
     if not isinstance(request_id, str) or not request_id or len(request_id) > 160 or "\x00" in request_id:
         raise ValueError("transfer request identity must be bounded nonempty text")
+    request_digest = _transfer_request_digest(
+        claim_id=claim_id, from_session=from_session, to_session=to_session,
+        to_consumer=to_consumer, reason=reason,
+    )
     for _ in range(16):
         generation = store.claim_generation()
         records = store.read_claims()
@@ -811,13 +892,40 @@ def transfer(
         completed = [row for row in records
                      if row.get("provenance", {}).get("transfer_request_id") == request_id]
         if completed:
+            for row in completed:
+                prior_digest = row.get("provenance", {}).get(
+                    "transfer_request_digest")
+                if prior_digest is not None and prior_digest != request_digest:
+                    raise ClaimConflict(
+                        "transfer request identity is already bound to another payload")
+            matching_claim = [row for row in completed
+                              if str(row.get("claim_id", "")) == claim_id]
             received = [row for row in completed
                         if row.get("status") == "held"
                         and row.get("session_id") == to_session
                         and row.get("claim_id") == claim_id]
-            if received:
+            released = [row for row in completed
+                        if row.get("status") == "released"
+                        and row.get("session_id") == from_session
+                        and row.get("claim_id") == claim_id]
+            if len(completed) != 2 or len(matching_claim) != 2:
+                raise ClaimConflict(
+                    "transfer request identity is already bound to another transition")
+            if received and released:
                 committed = max(received,
                                 key=lambda row: int(row.get("version", 0)))
+                source = released[0]
+                if (committed.get("consumer_id") != to_consumer
+                        or committed.get("basis") != BASIS_TRANSFER
+                        or committed.get("reason") != reason
+                        or committed.get("provenance", {}).get("transferred_from")
+                        != from_session
+                        or source.get("reason")
+                        != f"transferred to {to_session}: {reason}"
+                        or source.get("provenance", {}).get("transferred_to")
+                        != to_session):
+                    raise ClaimConflict(
+                        "transfer request identity is already bound to another transition")
                 latest = _latest_by_identity(records).get(claim_id)
                 if (latest is not None
                         and latest.get("identity") == committed.get("identity")):
@@ -863,6 +971,7 @@ def transfer(
                 "released_by": from_session,
                 "transferred_to": to_session,
                 "transfer_request_id": request_id,
+                "transfer_request_digest": request_digest,
                 "transferred_from_version": int(existing.get("version", 0)),
             },
         }
@@ -888,6 +997,7 @@ def transfer(
                 "transferred_from_version": int(existing.get("version", 0)),
                 "transferred_by": from_session,
                 "transfer_request_id": request_id,
+                "transfer_request_digest": request_digest,
             },
         }
         for record in (release_record, recipient):

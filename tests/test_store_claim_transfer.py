@@ -274,6 +274,153 @@ def test_concurrent_store_transfers_admit_one_recipient(tmp_path: Path) -> None:
             store.close()
 
 
+def test_claim_request_identity_rejects_changed_acquire_release_and_transfer_payloads(
+    tmp_path: Path,
+) -> None:
+    state_dir = tmp_path / "environment-state"
+    store, source = _seed_store(state_dir)
+    request_id = "req_operation_payload_binding"
+    try:
+        acquired = claims.acquire(
+            store,
+            repository="mncs-independent-fixture",
+            session_id=SOURCE_SESSION,
+            consumer_id="consumer_transfer_source",
+            basis=claims.BASIS_EXPLICIT,
+            reason="acquire payload",
+            request_id=request_id,
+        )
+        replayed = claims.acquire(
+            store,
+            repository="mncs-independent-fixture",
+            session_id=SOURCE_SESSION,
+            consumer_id="consumer_transfer_source",
+            basis=claims.BASIS_EXPLICIT,
+            reason="acquire payload",
+            request_id=request_id,
+        )
+        assert replayed == acquired
+        with pytest.raises(claims.ClaimConflict, match="another payload"):
+            claims.acquire(
+                store,
+                repository="mncs-independent-fixture",
+                session_id=SOURCE_SESSION,
+                consumer_id="consumer_transfer_source",
+                basis=claims.BASIS_EXPLICIT,
+                reason="acquire payload",
+                ttl_hours=48,
+                request_id=request_id,
+            )
+
+        released = claims.release(
+            store, session_id=SOURCE_SESSION, repository="mncs-independent-fixture",
+            reason="release payload", request_id=request_id,
+        )
+        replayed_release = claims.release(
+            store, session_id=SOURCE_SESSION, repository="mncs-independent-fixture",
+            reason="release payload", request_id=request_id,
+        )
+        assert replayed_release == released
+        with pytest.raises(claims.ClaimConflict, match="another payload"):
+            claims.release(
+                store, session_id=SOURCE_SESSION,
+                repository="mncs-independent-fixture", reason="changed release payload",
+                request_id=request_id,
+            )
+
+        transfer_id = "req_transfer_payload_binding"
+        moved = _transfer_after_restart(store, source["claim_id"], transfer_id)
+        replayed_transfer = _transfer_after_restart(store, source["claim_id"], transfer_id)
+        assert replayed_transfer == moved
+        with pytest.raises(claims.ClaimConflict, match="another payload"):
+            claims.transfer(
+                store,
+                claim_id=source["claim_id"],
+                from_session=SOURCE_SESSION,
+                to_session=RECIPIENT_SESSION,
+                to_consumer="different-recipient-label",
+                reason="continue after interrupted publication",
+                request_id=transfer_id,
+            )
+    finally:
+        store.close()
+
+
+def test_session_claim_release_retry_after_snapshot_failure_emits_once(
+    tmp_path: Path,
+) -> None:
+    state_dir = tmp_path / "environment-state"
+    store, source = _seed_store(state_dir)
+    _seed_session(store, SOURCE_SESSION, "consumer_transfer_source", [source["claim_id"]])
+    session = sessions.Session(store, SOURCE_SESSION)
+
+    def interrupted_save() -> None:
+        raise OSError("caller interrupted after claim release publication")
+
+    session._save = interrupted_save
+    with pytest.raises(OSError, match="after claim release publication"):
+        session.release_claim(
+            "mncs-environment-test-fixture",
+            reason="session claim release retry",
+            request_id="req_session_claim_release_retry",
+        )
+
+    resumed = sessions.Session.open(
+        state_dir=state_dir, session_id=SOURCE_SESSION, store=store,
+    )
+    try:
+        assert resumed.release_claim(
+            "mncs-environment-test-fixture",
+            reason="session claim release retry",
+            request_id="req_session_claim_release_retry",
+        )
+        release_events = [
+            event for event in store.read_events(SOURCE_SESSION)
+            if event.get("type") == "lease.released"
+            and event.get("payload", {}).get("request_id")
+            == "req_session_claim_release_retry"
+        ]
+        assert len(release_events) == 1
+        assert not claims.active_claims(store.read_claims())
+        assert source["claim_id"] not in resumed.snapshot["campaign"]["claim_ids"]
+    finally:
+        resumed.close()
+        store.close()
+
+
+def test_noop_release_request_is_durable_and_cannot_release_later_claim(
+    tmp_path: Path,
+) -> None:
+    state_dir = tmp_path / "environment-state"
+    store = open_store(state_dir, "store", verify_on_open=False, defer_mutation=False)
+    _seed_session(store, SOURCE_SESSION, "consumer_transfer_source")
+    session = sessions.Session(store, SOURCE_SESSION)
+    request_id = "req_noop_claim_release_identity"
+    try:
+        assert not session.release_claim(
+            "mncs-later-fixture", reason="no claim yet", request_id=request_id,
+        )
+        later = claims.acquire(
+            store,
+            repository="mncs-later-fixture",
+            session_id=SOURCE_SESSION,
+            consumer_id="consumer_transfer_source",
+            basis=claims.BASIS_EXPLICIT,
+            reason="later acquisition",
+        )
+        assert not session.release_claim(
+            "mncs-later-fixture", reason="no claim yet", request_id=request_id,
+        )
+        with pytest.raises(claims.ClaimConflict, match="another payload"):
+            session.release_claim(
+                "mncs-other-fixture", reason="changed no-op payload",
+                request_id=request_id,
+            )
+        assert claims.active_claims(store.read_claims())[later["claim_id"]]["session_id"] == SOURCE_SESSION
+    finally:
+        store.close()
+
+
 def test_session_transfer_retry_after_snapshot_failure_emits_one_transition(
     tmp_path: Path,
 ) -> None:
