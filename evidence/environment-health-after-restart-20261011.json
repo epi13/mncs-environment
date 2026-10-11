@@ -1,0 +1,81 @@
+{
+  "doctor_operation": {
+    "agent_category": "operation-unavailable",
+    "argv": [
+      "python3",
+      "-B",
+      "-m",
+      "mncs_env.cli",
+      "doctor",
+      "ses_7226fbcfe65820f7",
+      "--evidence"
+    ],
+    "control_rpc_code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+    "exit_code": 3,
+    "next": "extend the Control operation contract before requesting Doctor evidence through project RPC",
+    "publication_completed": false,
+    "status": "unknown"
+  },
+  "execution_boundary": {
+    "canonical_store_path_visible": false,
+    "direct_store_write_access": false,
+    "persistence_transport": "authenticated Control Environment RPC",
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project"
+  },
+  "health_command": {
+    "argv": [
+      "python3",
+      "-B",
+      "-m",
+      "mncs_env.cli",
+      "health",
+      "ses_7226fbcfe65820f7"
+    ],
+    "available_count": 2,
+    "blocking": [],
+    "doctor_epoch": null,
+    "execution_stack_compatibility": "unproven",
+    "exit_code": 0,
+    "last_reconciled_at": "2026-10-11T11:15:48+00:00",
+    "observation": "live",
+    "readiness_status": "degraded",
+    "required_unavailable": [],
+    "required_unknown": [],
+    "services": [],
+    "unavailable_count": 0,
+    "unknown_count": 1
+  },
+  "identity": "ev_env_health_after_restart_20261011",
+  "interpretation": "Environment reports degraded readiness and preserves the undeclared capability as UNKNOWN. The unsupported Doctor operation is rejected explicitly; neither is reported as PASS.",
+  "mutation": "none",
+  "observed_at": "2026-10-11T11:43:22Z",
+  "schema_version": "mncs.environment.project-health-observation/1",
+  "session": {
+    "campaign_identity": "cmp_mncs_continuity_20261010",
+    "campaign_state_checkpoint_id": "chk_9a279fad5ecb14b1",
+    "claim_ids": [
+      "claim:mncs-control-mcp",
+      "claim:mncs-environment"
+    ],
+    "identity": "ses_7226fbcfe65820f7",
+    "lifecycle": "active"
+  },
+  "source": {
+    "control_main": "9aa3089cdfb2efe935ea6bc15d806ea6d9bac30d",
+    "control_repository": "mncs-control-mcp",
+    "main": "e2933ff3bcce8417d4f8a2d55736ebd0b0de3365",
+    "repository": "mncs-environment"
+  },
+  "unknown_capability": {
+    "code": "provider-invocation-undeclared",
+    "entrypoint": "undeclared",
+    "identity": "mncs-environment:ambient-projection-coherence",
+    "interpretation": "The owning provider has no authorized invocation descriptor; source fingerprints are not treated as commands.",
+    "observed_at": "2026-10-11T11:42:14+00:00",
+    "provider": "mncs-environment",
+    "source": "mncs-environment/.mncs/project.json",
+    "status": "unknown"
+  }
+}
