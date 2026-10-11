@@ -1,0 +1,65 @@
+{
+  "schema_version": "mncs.environment.exclusive-claim-liveness-audit/1",
+  "identity": "ev_exclusive_claim_liveness_audit_20261011",
+  "recorded_at": "2026-10-11T08:24:47Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "main",
+    "commit": "0b42cb96bc3db6ce894159b3c8ada60d2e5a0a37",
+    "remote_ref": "origin/main",
+    "protected_read_transport": "authenticated Environment RPC through MNCS Control",
+    "sandbox_backend": "bwrap",
+    "canonical_store_root_visible_to_caller": false,
+    "commands": [
+      "python3 -m mncs_env.cli claims ses_7226fbcfe65820f7 --explain claim:mncs-compiler",
+      "python3 -m mncs_env.cli claims ses_7226fbcfe65820f7 --explain claim:mncs-forge"
+    ]
+  },
+  "assessment": {
+    "compiler": {
+      "claim_id": "claim:mncs-compiler",
+      "owner_session_id": "ses_d2537acde8b8a875",
+      "owner_session_known": true,
+      "persisted_owner_lifecycle": "active",
+      "last_activity_at": "2026-10-09T20:23:20+00:00",
+      "freshness": "stale",
+      "verdict": "not-recoverable",
+      "scope_exclusive": true,
+      "recorded_expires_at": "2027-08-03T10:31:10+00:00",
+      "effective_expires_at": "2026-10-16T18:13:43+00:00",
+      "maximum_effective_lease_hours": 168,
+      "reason": "Persisted owner session remains active and its exclusive claim is still before the bounded lease expiry."
+    },
+    "forge": {
+      "claim_id": "claim:mncs-forge",
+      "owner_session_id": "ses_95c3aa35b8544042",
+      "owner_session_known": true,
+      "persisted_owner_lifecycle": "active",
+      "last_activity_at": "2026-10-09T03:05:19+00:00",
+      "freshness": "stale",
+      "verdict": "not-recoverable",
+      "scope_exclusive": true,
+      "recorded_expires_at": "2027-03-07T23:49:59+00:00",
+      "effective_expires_at": "2026-10-16T02:18:31+00:00",
+      "maximum_effective_lease_hours": 168,
+      "reason": "Persisted owner session remains active and its exclusive claim is still before the bounded lease expiry."
+    }
+  },
+  "liveness_interpretation": {
+    "persisted_session_lifecycle_proves_os_process_alive": false,
+    "absence_from_current_execution_namespace_used_as_dead_owner_proof": false,
+    "claim_transfer_or_recovery_performed": false,
+    "safe_next_actions": [
+      "Accept an authenticated handoff or transfer from the recorded owner.",
+      "Recover only after Environment records a terminal owner lifecycle or the bounded exclusive lease has expired, subject to current scope and claim generation checks."
+    ]
+  },
+  "result": "PENDING_OWNER_AUTHORITY_PRESERVED",
+  "limits": [
+    "A stale event timestamp describes Environment activity; it does not prove the operating-system process has terminated.",
+    "Both owners remain recorded active, and this execution namespace cannot establish their host process lifecycle. Neither exclusive claim was changed.",
+    "The legacy recorded TTLs are capped by the existing 168-hour effective maximum. The compiler and Forge claims stop blocking at their exact effective expiry if no authorized renewal or transfer is published."
+  ]
+}
