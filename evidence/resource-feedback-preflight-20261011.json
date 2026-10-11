@@ -1,0 +1,145 @@
+{
+  "schema_version": "mncs.environment.resource-feedback-preflight/1",
+  "identity": "ev_resource_feedback_preflight_20261011",
+  "observed_at": "2026-10-11T22:24:25Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "owner": "mncs-environment",
+  "observation_scope": "read-only capability and integration preflight; no cross-owner source mutation",
+  "repository_heads": {
+    "mncs-automation": {
+      "main": "b28781a2840e4aba90648e7b109474a35c184757",
+      "origin_main": "b28781a2840e4aba90648e7b109474a35c184757",
+      "working_tree": "clean"
+    },
+    "mncs-system-monitor": {
+      "main": "336eb1cdf77b5c92d6e7ac7d0e861d24031a45b4",
+      "origin_main": "336eb1cdf77b5c92d6e7ac7d0e861d24031a45b4",
+      "working_tree": "clean_after_tests"
+    },
+    "mncs-forge": {
+      "main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "origin_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "working_tree": "clean"
+    }
+  },
+  "verified_monitor_ingestion": {
+    "owner": "mncs-system-monitor",
+    "source_head": "336eb1cdf77b5c92d6e7ac7d0e861d24031a45b4",
+    "contract": "mncs-execution-receipt/0.1-experimental",
+    "behavior": "Forge envelope ingestion retains declared resource envelope and observations while keeping operational outcome UNKNOWN separate from semantic PASS/FAIL.",
+    "protected_tests": [
+      {
+        "command": "cargo test --locked -p mncs-execution-correlation",
+        "sandbox_backend": "bwrap",
+        "project": "mncs-system-monitor",
+        "network": true,
+        "passed": 20,
+        "failed": 0,
+        "duration_seconds": 5.78
+      },
+      {
+        "command": "cargo test --locked --offline -p mncs-system-monitor --test correlation_smoke",
+        "sandbox_backend": "bwrap",
+        "project": "mncs-system-monitor",
+        "network": false,
+        "passed": 4,
+        "failed": 0,
+        "includes": "json_ingests_forge_receipt_and_keeps_operational_facts_separate"
+      }
+    ],
+    "limits": [
+      "These tests validate receipt ingestion and correlation contracts, not an actual compiler execution.",
+      "The first offline attempt could not resolve the pinned mncs-tui-host Git dependency; a same-project Bwrap retry fetched the locked revision, then the CLI smoke suite passed offline."
+    ]
+  },
+  "current_forge_receipt_state": {
+    "read_only_queries": [
+      {
+        "operation": "mncs_forge_execution_receipts_list",
+    "observed_at": "2026-10-11T22:25:02Z",
+        "count": 0,
+        "note": "The binding registry returned no identity-bound execution receipts."
+      },
+      {
+        "operation": "mncs_forge_compiler_experiments_list",
+    "observed_at": "2026-10-11T22:25:02Z",
+        "count": 0,
+        "interpretation": "observation_only_not_assurance_or_conformance"
+      }
+    ],
+    "no_forge_execution_or_binding_created": true,
+    "interpretation": "This reports an empty binding registry at query time; it does not prove that no unbound execution receipts exist elsewhere."
+  },
+  "automation_contract": {
+    "owner": "mncs-automation",
+    "source_head": "b28781a2840e4aba90648e7b109474a35c184757",
+    "conditions": [
+      "test-verdict",
+      "path-changed"
+    ],
+    "targets": [
+      "mncs-test",
+      "mncs-call",
+      "doctor",
+      "environment-reconcile"
+    ],
+    "resource_condition_or_forge_target_present": false,
+    "design_boundary": "Automation owns eligibility and reconsideration law; execution stays with its owning service. Do not add a second scheduler.",
+    "automation_claim": {
+      "claim_id": "claim:mncs-automation",
+      "query_result": "released",
+      "former_owner_session": "ses_322d17faee5f2e03",
+      "owner_lifecycle": "completed",
+      "effective_expires_at": "2026-10-06T22:49:49+00:00",
+      "observed_at": "2026-10-11T22:23:21.150895Z"
+    },
+    "authorized_session_scope": {
+      "session_id": "ses_7226fbcfe65820f7",
+      "writable_repositories": [
+        "mncs-environment"
+      ],
+      "automation_repository_in_scope": false,
+      "user_scope_request": "narrow mncs-automation writable scope request remains unanswered"
+    }
+  },
+  "foreign_ownership": {
+    "compiler_claim": {
+      "claim_id": "claim:mncs-compiler",
+      "version": 63,
+      "session_id": "ses_d2537acde8b8a875",
+      "owner_lifecycle": "active",
+      "recovery_verdict": "not-recoverable",
+      "effective_expires_at": "2026-10-16T18:13:43+00:00"
+    },
+    "forge_claim": {
+      "claim_id": "claim:mncs-forge",
+      "version": 28,
+      "session_id": "ses_95c3aa35b8544042",
+      "owner_lifecycle": "active",
+      "recovery_verdict": "not-recoverable",
+      "effective_expires_at": "2026-10-16T02:18:31+00:00"
+    },
+    "source_or_claim_mutations_performed": false
+  },
+  "resource_feedback_status": {
+    "resource_intent_to_forge_admission": "not_exercised",
+    "actual_compiler_execution": "not_exercised",
+    "system_monitor_ingestion_contract": "verified_by_24_bwrap_tests",
+    "canonical_store_receipt_publication": "not_exercised_for_a_new_execution",
+    "automation_reconsideration_decision": "not_exercised",
+    "subsequent_compiler_execution": "not_exercised",
+    "result": "preflight_only_integration_not_complete",
+    "prerequisites": [
+      "Authorize mncs-automation in this session's writable repository scope.",
+      "Obtain an authorized Compiler claim handoff or confirmed owner lifecycle fact.",
+      "Use an existing Forge execution capability without modifying the claimed Forge checkout."
+    ]
+  },
+  "source_changes_performed": {
+    "mncs-environment": "evidence report only in this campaign",
+    "mncs-automation": "none",
+    "mncs-system-monitor": "none",
+    "mncs-forge": "none",
+    "mncs-compiler": "none"
+  }
+}
