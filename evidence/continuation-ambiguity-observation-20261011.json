@@ -1,0 +1,88 @@
+{
+  "schema_version": "mncs.environment.continuation-ambiguity-observation/1",
+  "identity": "ev_environment_continuation_ambiguity_20261011",
+  "recorded_at": "2026-10-11T22:06:56Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "observer_session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_revision_before_evidence": "43aad18e2921072f070b0407be52b3dd16d34d84",
+    "control_repository": "mncs-control-mcp",
+    "control_revision": "a336e446d4ea704ad917f243933e9e653bf0f448"
+  },
+  "execution": {
+    "transport": "authenticated MNCS Control Environment RPC",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false
+  },
+  "automatic_entry_attempt": {
+    "command": "python3 -B -m mncs_env.cli enter",
+    "exit_code": 2,
+    "publication_completed": false,
+    "diagnostic": "campaign-continuation-ambiguous",
+    "candidate_campaigns": [
+      "cmp_mncs_continuity_20261010",
+      "cmp_store-rpc-acceptance-20261010"
+    ],
+    "candidate_sessions": [
+      "ses_7226fbcfe65820f7",
+      "ses_5029230ac9f126ef"
+    ],
+    "session_or_claim_transition": false
+  },
+  "candidate_comparison": {
+    "shared_facts": {
+      "authenticated_project": "mncs-environment",
+      "definition_id": "env_f31ee034e8e1fdcb",
+      "workspace_root": "/home/epi13/Documents/Projects",
+      "work_intent_identity": "int_8475157f281c835f",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "work_intent_repositories": [
+        "mncs-environment"
+      ],
+      "lifecycle": "active"
+    },
+    "continuing_campaign": {
+      "campaign_id": "cmp_mncs_continuity_20261010",
+      "session_id": "ses_7226fbcfe65820f7",
+      "consumer_id": "local-agent",
+      "checkpoint_id": "chk_84491cdf7c4cc53f",
+      "evidence_count": 92,
+      "claim_ids": [
+        "claim:mncs-control-mcp",
+        "claim:mncs-environment"
+      ]
+    },
+    "other_active_campaign": {
+      "campaign_id": "cmp_store-rpc-acceptance-20261010",
+      "session_id": "ses_5029230ac9f126ef",
+      "consumer_id": "mncs-store-rpc-acceptance",
+      "evidence_count": 0,
+      "claim_ids": []
+    },
+    "interpretation": "Both sessions authenticate to the same Control principal and have identical project, workspace, and work-intent facts. The durable campaign identities differ, so those facts do not authorize Environment to choose either session."
+  },
+  "explicit_continuation": {
+    "command": "python3 -B -m mncs_env.cli continuation --campaign-id cmp_mncs_continuity_20261010",
+    "status": "ready",
+    "selection_basis": "authenticated-project-environment-definition",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "entry_command": "python3 -B -m mncs_env.cli enter --campaign-id cmp_mncs_continuity_20261010",
+    "entry_exit_code": 0,
+    "fresh_inspect_session_id": "ses_7226fbcfe65820f7",
+    "fresh_inspect_lifecycle": "active",
+    "other_campaign_changed": false
+  },
+  "evidence_correction": {
+    "prior_artifact": "evidence/protected-campaign-entry-restart-20261011.json",
+    "prior_identity": "ev_environment_protected_campaign_entry_restart_20261011",
+    "clarification": "canonical-store-path-grant-acceptance-20261011.json proves canonical checkpoint publication; canonical-claim-authority-roundtrip-20261011.json separately proves authorized claim acquire/release and unauthorized-target rejection. The prior artifact referenced both mechanisms with imprecise wording; its immutable bytes are retained unchanged."
+  },
+  "result": "SAFE_AMBIGUITY_AND_EXPLICIT_RESUME_PASS",
+  "remaining": [
+    "A fresh no-argument entry still needs a task-level campaign discriminator when multiple active campaign identities share the same authenticated principal, project, workspace, and work-intent identity.",
+    "The current user request and durable campaign capsule identify cmp_mncs_continuity_20261010 for this continuation. The other active, claim-free session remains untouched."
+  ]
+}
