@@ -1564,6 +1564,43 @@ class CapabilityTests(unittest.TestCase):
             binding, ["-c", "echo $DEMO_TOOL"], env={"DEMO_TOOL": "/other"})
         self.assertIn("/other", override["stdout"])
 
+    def test_live_health_reports_unknown_separately_from_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            binding = capabilities.probe_availability(capabilities.bind(
+                provider="p", capability="c", contract_revision="1",
+                entrypoint="undeclared", address=None))
+            session = object.__new__(sessions.Session)
+            session.session_id = "unknown-capability-health"
+            session.snapshot = {
+                "environment_id": "environment-test",
+                "bindings": [binding],
+                "execution_roles": {}, "execution_stack": {}, "toolchain": {},
+                "execution_compatibility_service": None,
+                "workspace": {"root": directory, "selection": []},
+                "requirements": {"required_capabilities": [], "services": []},
+                "service_observations": [],
+            }
+            observed_workspace = {
+                "root": directory, "scan": {"status": "complete"},
+                "repositories": [],
+            }
+            with (mock.patch.object(sessions.composition, "selected_checkout_drift",
+                                    return_value=[]),
+                  mock.patch.object(sessions.composition, "resolve", return_value={}),
+                  mock.patch.object(sessions.capabilities_module, "probe_availability",
+                                    return_value=binding),
+                  mock.patch.object(sessions.readiness_module, "probe_services",
+                                    return_value=[]),
+                  mock.patch.object(sessions.workspace_module, "discover_workspace",
+                                    return_value=observed_workspace),
+                  mock.patch.object(sessions.Session, "actions", return_value={})):
+                health = session.health(live=True)
+
+            self.assertEqual(health["readiness"]["status"], "degraded")
+            self.assertEqual(health["readiness"]["unknown_count"], 1)
+            self.assertEqual(health["unavailable_capabilities"], [])
+            self.assertEqual(health["unknown_capabilities"][0]["status"], "unknown")
+
 
 class CampaignSelectionTests(unittest.TestCase):
     def test_provider_capability_selects_exact_clean_checkout_closure(self) -> None:

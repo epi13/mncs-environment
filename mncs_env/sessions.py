@@ -946,7 +946,13 @@ def resolve_environment(
         {"provider": binding["provider"], "capability": binding["capability"],
          "reason": binding["availability"]["reason"]}
         for binding in bindings
-        if binding["availability"]["status"] != "available"
+        if binding["availability"]["status"] == "unavailable"
+    ]
+    unknown = [
+        {"provider": binding["provider"], "capability": binding["capability"],
+         "reason": binding["availability"]["reason"]}
+        for binding in bindings
+        if binding["availability"]["status"] == "unknown"
     ]
     owns_store = store is None
     backend_store = store
@@ -1043,6 +1049,7 @@ def resolve_environment(
         "repo_facts": _repo_facts(workspace_view),
         "bindings": bindings,
         "unavailable_capabilities": unavailable,
+        "unknown_capabilities": unknown,
         "intent": intent,
         "protected_repositories": protected,
         "authority": authority_context,
@@ -3445,7 +3452,10 @@ class Session:
                                 "execution_stack": execution_stack,
                                 "unavailable_capabilities": [
                                     {"capability": item["capability"], **item["availability"]}
-                                    for item in fresh if item["availability"]["status"] != "available"],
+                                    for item in fresh if item["availability"]["status"] == "unavailable"],
+                                "unknown_capabilities": [
+                                    {"capability": item["capability"], **item["availability"]}
+                                    for item in fresh if item["availability"]["status"] == "unknown"],
                                 "doctor": doctor_module.terse(self),
                                 "actions": self.actions()}
         fresh = [capabilities_module.probe_availability(binding) for binding in self.snapshot.get("bindings", [])]
@@ -3474,7 +3484,9 @@ class Session:
                 "readiness": summary,
                 "execution_stack": execution_stack,
                 "unavailable_capabilities": [{"capability": item["capability"], **item["availability"]}
-                                             for item in fresh if item["availability"]["status"] != "available"],
+                                             for item in fresh if item["availability"]["status"] == "unavailable"],
+                "unknown_capabilities": [{"capability": item["capability"], **item["availability"]}
+                                         for item in fresh if item["availability"]["status"] == "unknown"],
                 "actions": self.actions()}
 
     def reconcile(self) -> dict[str, Any]:
