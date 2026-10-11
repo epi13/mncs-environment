@@ -3189,51 +3189,305 @@ class Session:
         self._save()
         return result
 
-    def _release_own_claims(self, reason: str) -> dict[str, Any]:
+    def _release_own_claims(
+        self, reason: str, *, request_id: str | None = None,
+    ) -> dict[str, Any]:
         """Release every live claim held by this session.
 
         Terminal sessions must not pin scopes until TTL expiry: a
         finished agent's claims would otherwise block the next agent
         for up to 24h. Release failures never block the terminal
         transition itself (TTL expiry remains the backstop); they are
-        recorded on the completion payload instead.
+        recorded on the completion payload instead. When ``request_id`` is
+        supplied, each repository release is independently idempotent so a
+        retry can recover after any subset of claim publications committed.
         """
         released: list[str] = []
         error: str | None = None
         try:
-            live = claims_module.active_claims(self.store.read_claims())
-            repositories = sorted({
+            records = self.store.read_claims()
+            live = claims_module.active_claims(records)
+            repositories = {
                 str(record.get("repository", ""))
                 for record in live.values()
                 if record.get("session_id") == self.session_id
                 and record.get("repository")
-            })
-            for repository in repositories:
-                for record in claims_module.release(
+            }
+            if request_id is not None:
+                repositories.update(
+                    str(record.get("repository", ""))
+                    for record in records
+                    if record.get("session_id") == self.session_id
+                    and record.get("repository")
+                    and record.get("provenance", {}).get("release_request_id")
+                    == "completion-release-" + digest_hex({
+                        "session_id": self.session_id,
+                        "request_id": request_id,
+                        "repository": str(record.get("repository", "")),
+                    })
+                )
+            for repository in sorted(repositories):
+                release_request_id = (
+                    "completion-release-" + digest_hex({
+                        "session_id": self.session_id,
+                        "request_id": request_id,
+                        "repository": repository,
+                    })
+                    if request_id is not None else None
+                )
+                repository_releases = claims_module.release(
                     self.store, session_id=self.session_id,
                     reason=reason, repository=repository,
-                ):
-                    released.append(str(record.get("claim_id", "")))
+                    request_id=release_request_id,
+                )
+                released.extend(repository_releases)
+                if request_id is not None and repository_releases:
+                    events = self._log()
+                    already_emitted = any(
+                        event.get("type") == "lease.released"
+                        and event.get("payload", {}).get("release_request_id")
+                        == release_request_id
+                        for event in events
+                    )
+                    if not already_emitted:
+                        self._emit(
+                            "lease.released",
+                            self.snapshot.get("consumer_id", "unknown"),
+                            {
+                                "released": sorted({
+                                    str(record.get("claim_id", ""))
+                                    for record in repository_releases
+                                }),
+                                "reason": reason,
+                                "request_id": request_id,
+                                "release_request_id": release_request_id,
+                                "repository": repository,
+                            },
+                        )
         except Exception as exc:  # noqa: BLE001 - recorded, never raised
             error = f"{type(exc).__name__}: {exc}"
         if released:
             self._refresh_holders()
-            self._emit("lease.released", self.snapshot.get("consumer_id", "unknown"),
-                       {"released": released, "reason": reason})
-        return {"released": released, "error": error}
+            if request_id is None:
+                self._emit(
+                    "lease.released", self.snapshot.get("consumer_id", "unknown"),
+                    {
+                        "released": sorted({
+                            str(record.get("claim_id", "")) for record in released
+                        }),
+                        "reason": reason,
+                    },
+                )
+        return {"released": sorted({
+            str(record.get("claim_id", "")) for record in released
+        }), "error": error}
 
-    def complete(self, *, outcome: str, summary: str = "") -> dict[str, Any]:
-        if self.snapshot.get("lifecycle") not in ("active", "checkpointed", "waiting", "blocked"):
-            raise LifecycleError("only a live session can complete")
-        self.transition("completed", outcome)
-        claims_report = self._release_own_claims(f"session completed: {outcome}")
-        self.snapshot["completion"] = {"outcome": outcome, "summary": summary, "at": utcnow(),
-                                       "claims_released": claims_report["released"],
-                                       "claims_release_error": claims_report["error"]}
-        self._emit("session.completed", self.snapshot.get("consumer_id", "unknown"),
-                   {"outcome": outcome, "claims_released": claims_report["released"]})
+    def complete(
+        self,
+        *,
+        outcome: str | None = None,
+        summary: str | None = None,
+        request_id: str | None = None,
+        authenticated_principal_id: str | None = None,
+        consumer_id: str | None = None,
+        retry_pending: bool = False,
+    ) -> dict[str, Any]:
+        """Complete a session with a durable, replayable request identity.
+
+        The intent is saved before the terminal transition. A retry after a
+        process or service interruption can therefore finish claim release
+        and the completion record without creating a second terminal result.
+        """
+        if authenticated_principal_id is not None and (
+            not isinstance(authenticated_principal_id, str)
+            or not authenticated_principal_id.strip()
+            or len(authenticated_principal_id) > 256
+            or "\x00" in authenticated_principal_id
+        ):
+            raise ValueError("completion principal identity is invalid")
+        session_principal = self.snapshot.get("authenticated_principal_id")
+        if (authenticated_principal_id is not None
+                and session_principal != authenticated_principal_id):
+            raise LifecycleError(
+                "completion principal does not match the authenticated session owner"
+            )
+
+        if retry_pending:
+            source = self.snapshot.get("completion_pending")
+            if not isinstance(source, dict):
+                source = self.snapshot.get("completion")
+            if not isinstance(source, dict):
+                raise LifecycleError("there is no interrupted completion to reconcile")
+            requested_by = source.get("requested_by")
+            if not isinstance(requested_by, dict):
+                raise LifecycleError("stored completion requester provenance is invalid")
+            if (authenticated_principal_id is not None
+                    and requested_by.get("principal_id")
+                    != authenticated_principal_id):
+                raise LifecycleError(
+                    "completion recovery principal does not match the original request"
+                )
+            outcome = source.get("outcome")
+            summary = source.get("summary", "")
+            request_id = source.get("request_id")
+            request_digest = source.get("request_digest")
+            requested_consumer = requested_by.get("consumer_id")
+            if (not isinstance(outcome, str) or not outcome.strip()
+                    or len(outcome) > 256 or "\x00" in outcome):
+                raise LifecycleError("stored completion outcome is invalid")
+            if (not isinstance(summary, str) or len(summary) > 4096
+                    or "\x00" in summary):
+                raise LifecycleError("stored completion summary is invalid")
+            if request_id is not None and (
+                not isinstance(request_id, str) or not request_id
+                or len(request_id) > 160 or "\x00" in request_id
+            ):
+                raise LifecycleError("stored completion request identity is invalid")
+            if (requested_by.get("principal_id") != session_principal
+                    or not isinstance(requested_consumer, str)
+                    or not requested_consumer.strip()
+                    or len(requested_consumer) > 256
+                    or "\x00" in requested_consumer):
+                raise LifecycleError("stored completion requester provenance is invalid")
+            expected_digest = digest_hex({
+                "session_id": self.session_id,
+                "request_id": request_id,
+                "outcome": outcome,
+                "summary": summary,
+                "principal_id": session_principal,
+            })
+            if request_digest != expected_digest:
+                raise LifecycleError(
+                    "stored completion request identity failed integrity validation"
+                )
+        else:
+            if (not isinstance(outcome, str) or not outcome.strip()
+                    or len(outcome) > 256 or "\x00" in outcome):
+                raise ValueError("completion outcome must be bounded nonempty text")
+            if (summary is None):
+                summary = ""
+            if (not isinstance(summary, str) or len(summary) > 4096
+                    or "\x00" in summary):
+                raise ValueError("completion summary must be bounded text")
+            if request_id is not None and (
+                not isinstance(request_id, str) or not request_id
+                or len(request_id) > 160 or "\x00" in request_id
+            ):
+                raise ValueError("completion request identity must be bounded nonempty text")
+            requested_consumer = (
+                consumer_id if consumer_id is not None
+                else self.snapshot.get("consumer_id", "unknown")
+            )
+            if (not isinstance(requested_consumer, str)
+                    or not requested_consumer.strip()
+                    or len(requested_consumer) > 256
+                    or "\x00" in requested_consumer):
+                raise ValueError("completion consumer identity is invalid")
+            requested_by = {
+                "principal_id": session_principal,
+                "consumer_id": requested_consumer,
+            }
+            request_digest = digest_hex({
+                "session_id": self.session_id,
+                "request_id": request_id,
+                "outcome": outcome,
+                "summary": summary,
+                "principal_id": session_principal,
+            })
+
+        assert isinstance(outcome, str)
+        assert isinstance(summary, str)
+        assert isinstance(request_digest, str)
+        completion_request_identity = request_id or "complete_" + request_digest
+
+        existing_completion = self.snapshot.get("completion")
+        lifecycle = self.snapshot.get("lifecycle")
+        if lifecycle == "completed" and isinstance(existing_completion, dict):
+            if existing_completion.get("request_digest") != request_digest:
+                raise LifecycleError(
+                    "session was completed by a different request identity"
+                )
+            if existing_completion.get("claims_release_error"):
+                claims_report = self._release_own_claims(
+                    f"session completed: {outcome}",
+                    request_id=completion_request_identity,
+                )
+                combined_released = sorted(set(
+                    existing_completion.get("claims_released", [])
+                ) | set(claims_report["released"]))
+                if (combined_released != existing_completion.get("claims_released", [])
+                        or claims_report["error"]
+                        != existing_completion.get("claims_release_error")):
+                    existing_completion["claims_released"] = combined_released
+                    existing_completion["claims_release_error"] = claims_report["error"]
+                    existing_completion["claims_reconciled_at"] = utcnow()
+                    self.snapshot["completion"] = existing_completion
+                    self._save()
+            return dict(existing_completion)
+
+        live_lifecycles = ("active", "checkpointed", "waiting", "blocked")
+        pending = self.snapshot.get("completion_pending")
+        if isinstance(pending, dict):
+            if pending.get("request_digest") != request_digest:
+                raise LifecycleError(
+                    "a different completion request is pending; retry it with --retry-pending"
+                )
+            requested_by = pending.get("requested_by", requested_by)
+            request_id = pending.get("request_id")
+        else:
+            if lifecycle not in live_lifecycles:
+                raise LifecycleError("only a live session can complete")
+            pending = {
+                "request_id": request_id,
+                "request_digest": request_digest,
+                "outcome": outcome,
+                "summary": summary,
+                "requested_by": requested_by,
+                "requested_at": utcnow(),
+            }
+            self.snapshot["completion_pending"] = pending
+            self._save()
+
+        if self.snapshot.get("lifecycle") in live_lifecycles:
+            self.transition("completed", outcome)
+        elif self.snapshot.get("lifecycle") != "completed":
+            raise LifecycleError("session cannot recover completion from its current lifecycle")
+
+        claims_report = self._release_own_claims(
+            f"session completed: {outcome}",
+            request_id=completion_request_identity,
+        )
+        completion = {
+            "outcome": outcome,
+            "summary": summary,
+            "at": pending.get("requested_at", utcnow()),
+            "request_id": request_id,
+            "request_digest": request_digest,
+            "requested_by": requested_by,
+            "claims_released": claims_report["released"],
+            "claims_release_error": claims_report["error"],
+        }
+        self.snapshot["completion"] = completion
+        self.snapshot.pop("completion_pending", None)
+        events = self._log()
+        if not any(
+            event.get("type") == "session.completed"
+            and event.get("payload", {}).get("request_digest") == request_digest
+            for event in events
+        ):
+            self._emit(
+                "session.completed", str(requested_by.get("consumer_id", "unknown")),
+                {
+                    "outcome": outcome,
+                    "claims_released": claims_report["released"],
+                    "request_id": request_id,
+                    "request_digest": request_digest,
+                    "authenticated_principal_id": requested_by.get("principal_id"),
+                    "requested_by_consumer_id": requested_by.get("consumer_id"),
+                },
+            )
         self._save()
-        return self.snapshot["completion"]
+        return completion
 
     def fail(self, *, reason: str) -> dict[str, Any]:
         if self.snapshot.get("lifecycle") not in (
@@ -3323,6 +3577,36 @@ class Session:
                 campaign.get("unresolved_pressures", [])
             )[:12],
         }
+        pending_completion = self.snapshot.get("completion_pending")
+        completion = self.snapshot.get("completion")
+        recovery_record = (
+            pending_completion if isinstance(pending_completion, dict) else None
+        )
+        recovery_state = "pending"
+        if recovery_record is None and (
+            isinstance(completion, dict)
+            and completion.get("claims_release_error")
+        ):
+            recovery_record = completion
+            recovery_state = "claim-release-pending"
+        if recovery_record is not None:
+            requested_by = recovery_record.get("requested_by")
+            requested_by = requested_by if isinstance(requested_by, dict) else {}
+            continuation["completion_recovery"] = {
+                "state": recovery_state,
+                "request_id": recovery_record.get("request_id"),
+                "requested_by": {
+                    "principal_id": requested_by.get("principal_id"),
+                    "consumer_id": requested_by.get("consumer_id"),
+                },
+                "claim_release_error": (
+                    str(recovery_record.get("claims_release_error", ""))[:256]
+                    if recovery_state == "claim-release-pending" else None
+                ),
+                "next": (
+                    f"mncs-env complete {session_id} --retry-pending"
+                ),
+            }
         if isinstance(persisted_campaign_state, dict):
             continuation["campaign_state_checkpoint_id"] = (
                 persisted_campaign_state.get("checkpoint_id")

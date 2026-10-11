@@ -243,7 +243,13 @@ readiness are observations, not permission to modify a checkout.
 ./scripts/mncs-env resume <session> --revalidate
 ./scripts/mncs-env handoff <session> --to other-consumer --next ...
 ./scripts/mncs-env complete <session> --outcome "..."
+./scripts/mncs-env complete <session> --retry-pending
 ```
+
+Completion publishes its request intent before changing lifecycle or releasing
+claims. If publication is interrupted, retry the same RPC request identity or
+use `--retry-pending` from the authenticated session owner to reconcile the
+stored completion and any incomplete claim releases.
 
 Use the returned `actions.*.argv` directly when changing directories or using
 an isolated state root: each action preserves the executable, state directory,

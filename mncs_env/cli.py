@@ -17,24 +17,24 @@ from pathlib import Path
 
 from . import actions as actions_module
 from . import capabilities as capabilities_module
+from . import claims as claims_module
 from . import diagnostics as diagnostics_module
 from . import doctor as doctor_module
+from . import entry as entry_module
 from . import family as family_module
 from . import netcheck as netcheck_module
+from . import pressures as pressures_module
 from . import projections as projections_module
 from . import resources as resources_module
 from . import retire as retire_module
-from . import verification as verification_module
-from . import entry as entry_module
-from . import claims as claims_module
-from . import pressures as pressures_module
 from . import rights as rights_module
 from . import sessions as sessions_module
 from . import testcmd as testcmd_module
+from . import verification as verification_module
 from . import workspace as workspace_module
 from .persist import read_json
-from .session_store import open_store, SnapshotConflict
-from .store_backend import StoreUnavailable, StoreIntegrityFailure
+from .session_store import SnapshotConflict, open_store
+from .store_backend import StoreIntegrityFailure, StoreUnavailable
 
 DEFAULT_STATE_DIR = Path.home() / ".local" / "share" / "mncs-environment"
 
@@ -822,15 +822,29 @@ def cmd_accept(args: argparse.Namespace) -> int:
 
 def cmd_complete(args: argparse.Namespace) -> int:
     try:
-        session = sessions_module.Session.resume(
+        session = sessions_module.Session.open(
             state_dir=args.state_dir, session_id=args.session, backend=args.persistence
         )
     except sessions_module.LifecycleError as error:
         return fail(str(error))
-    try:
-        out(session.complete(outcome=args.outcome, summary=args.summary))
-    except sessions_module.LifecycleError as error:
-        return fail(str(error))
+    with closing(session):
+        try:
+            result = session.complete(
+                outcome=args.outcome,
+                summary=args.summary,
+                request_id=(
+                    None if args.retry_pending
+                    else os.environ.get("MNCS_ENV_RPC_REQUEST_ID")
+                ),
+                authenticated_principal_id=os.environ.get(
+                    "MNCS_ENV_AUTH_PRINCIPAL_ID"
+                ),
+                consumer_id=args.consumer,
+                retry_pending=args.retry_pending,
+            )
+        except (sessions_module.LifecycleError, ValueError) as error:
+            return fail(str(error), code=3)
+        out(result)
     return 0
 
 
@@ -1344,7 +1358,12 @@ def build_parser() -> argparse.ArgumentParser:
     accept.set_defaults(func=cmd_accept)
 
     complete = session_parser("complete", "complete a session")
-    complete.add_argument("--outcome", required=True)
+    completion_mode = complete.add_mutually_exclusive_group(required=True)
+    completion_mode.add_argument("--outcome")
+    completion_mode.add_argument(
+        "--retry-pending", action="store_true",
+        help="reconcile a previously interrupted completion using its stored request identity",
+    )
     complete.add_argument("--summary", default="")
     complete.set_defaults(func=cmd_complete)
 
