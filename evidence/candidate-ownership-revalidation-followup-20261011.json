@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.candidate-ownership-followup/1",
+  "identity": "ev_candidate_ownership_followup_20261011",
+  "recorded_at": "2026-10-11T07:26:00Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "prior_full_disposition": "evidence/candidate-ownership-revalidation-20261011.json",
+  "observer": {
+    "authenticated_consumer": "codex-process-1",
+    "environment_repository_head": "cf45f098147c7d48af79ec750b4f6ad90f8b4159",
+    "environment_claim_id": "claim:mncs-environment",
+    "environment_claim_version": 29
+  },
+  "candidate_revalidation": [
+    {
+      "repository": "mncs-compiler",
+      "main_and_origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "candidate_commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "candidate_is_ancestor_of_main": false,
+      "worktree": "/tmp/mncs-compiler-keyword-local-index-20261010",
+      "worktree_status": "clean",
+      "claim_id": "claim:mncs-compiler",
+      "claim_version": 63,
+      "owner_session_id": "ses_d2537acde8b8a875",
+      "claim_freshness": "stale",
+      "owner_lifecycle": "active",
+      "effective_expires_at": "2026-10-16T18:13:43+00:00",
+      "recovery_verdict": "not-recoverable",
+      "owner_inspection": "authority-denied; explicit handoff from recorded owner required"
+    },
+    {
+      "repository": "mncs-forge",
+      "main_and_origin_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "candidate_commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "candidate_is_ancestor_of_main": false,
+      "worktree": "/tmp/mncs-forge-quiet-compile-output-20261010",
+      "worktree_status": "clean",
+      "claim_id": "claim:mncs-forge",
+      "claim_version": 28,
+      "owner_session_id": "ses_95c3aa35b8544042",
+      "claim_freshness": "stale",
+      "owner_lifecycle": "active",
+      "effective_expires_at": "2026-10-16T02:18:31+00:00",
+      "recovery_verdict": "not-recoverable"
+    },
+    {
+      "repository": "mncs-language",
+      "main_and_origin_main": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "candidate_commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "candidate_is_ancestor_of_main": false,
+      "worktree": "/tmp/mncs-language-process-environment-value-bound-20261010",
+      "worktree_status": "dirty_untracked",
+      "untracked_path": "evidence/campaign-20261010-forge-core-quiet-output.json",
+      "campaign_delivery": "pending; Language repository write authority unavailable"
+    }
+  ],
+  "campaign_continuation": {
+    "lookup_status": "context-conflict",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "selected_definition_id": "env_f31ee034e8e1fdcb",
+    "other_session_id": "ses_b4b2d283542220b0",
+    "other_session_lifecycle": "active",
+    "other_session_checkpoint_count": 0,
+    "other_session_claim_count": 0,
+    "other_session_modified": false
+  },
+  "worktree_inventory": {
+    "compiler_registered_worktrees": 66,
+    "prior_machine_disposition_report": "evidence/compiler-worktree-dispositions-20261010.json",
+    "prior_dry_run_retireable": 0,
+    "cleanup_performed": false
+  },
+  "actions": {
+    "candidate_tests_rerun": false,
+    "candidate_merge_or_push": false,
+    "worktree_retirement": false,
+    "reason": "Compiler and Forge owners remain active with unexpired effective claims; Language delivery lacks repository write authority; no candidate state was changed."
+  },
+  "result": "READ_ONLY_REVALIDATION_COMPLETE"
+}
