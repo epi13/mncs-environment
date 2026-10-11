@@ -1,0 +1,84 @@
+{
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "campaign_state_before_probe": {
+    "checkpoint_evidence_count": 87,
+    "checkpoint_id": "chk_0e15a26b6853bff5",
+    "session_id": "ses_7226fbcfe65820f7"
+  },
+  "execution": {
+    "mutating_probe": false,
+    "network": false,
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project"
+  },
+  "identity": "ev_environment_operational_provider_readiness_20261011",
+  "interpretation": {
+    "environment": "Live readiness is degraded with one unknown capability because its provider invocation is undeclared; unavailable capabilities and required blockers are empty.",
+    "scope": "This records current observable provider state. It does not claim that Store verification or ambient projection coherence is operational.",
+    "store": "Control reported operation-unavailable, publication_completed=false, and domain status unknown. No verification success was inferred and no direct filesystem fallback was attempted."
+  },
+  "owner": "mncs-environment",
+  "probes": {
+    "environment_health": {
+      "exit_code": 0,
+      "operation": "./scripts/mncs-env health ses_7226fbcfe65820f7",
+      "readiness": {
+        "available_count": 3,
+        "blocking": [],
+        "last_reconciled_at": "2026-10-11T20:29:48+00:00",
+        "observation": "live",
+        "required_unavailable": [],
+        "required_unknown": [],
+        "schema_version": "mncs.environment.readiness/1",
+        "scope": "declared requirements and discovered capabilities in the selected workspace",
+        "services": [],
+        "status": "degraded",
+        "unavailable_count": 0,
+        "unknown_count": 1,
+        "verification": "provider probes for declared services; executable substrate for other capabilities"
+      },
+      "services": [],
+      "unavailable_capabilities": [],
+      "unknown_capabilities": [
+        {
+          "capability": "mncs-environment:ambient-projection-coherence",
+          "code": "provider-invocation-undeclared",
+          "observed_at": "2026-10-11T21:19:22+00:00",
+          "reason": "mncs-environment must publish an invocation descriptor for mncs-environment:ambient-projection-coherence; source fingerprints are not commands",
+          "status": "unknown",
+          "substrate_key": "55b6cc6255a4902d",
+          "verification": "substrate"
+        }
+      ]
+    },
+    "store_verify": {
+      "diagnostic": {
+        "diagnostics": {
+          "cause_code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+          "code": "operation-unavailable",
+          "domain_details": {
+            "operation": "store",
+            "status": "unknown"
+          },
+          "next": "use an exposed Environment operation or extend the Control operation contract",
+          "publication_completed": false,
+          "transport": "mncs-control-environment-rpc"
+        },
+        "error": "Environment operation is not exposed by Control"
+      },
+      "exit_code": 3,
+      "operation": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify"
+    }
+  },
+  "recorded_at": "2026-10-11T21:19:22.935184+00:00",
+  "schema_version": "mncs.environment.operational-provider-readiness-proof/1",
+  "source": {
+    "files": {
+      "mncs_env/cli.py": "59c6eebb7ce8433fcd833e0e96380e4ec936f8f4a5283a7a1463fe8ea7ffafa4",
+      "mncs_env/entry.py": "1a02eb750df227a3d6f6029cb82a50cbb99cc974bc36204f17781cf95d4a8165"
+    },
+    "repository": "mncs-environment",
+    "revision": "f4dc7a4879b8e5107c10881d645a5fef24b4a849"
+  }
+}
