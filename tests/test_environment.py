@@ -1536,6 +1536,22 @@ class CapabilityTests(unittest.TestCase):
                                   entrypoint="undeclared", address=None))
             self.assertEqual(plain["availability"]["code"],
                              "provider-invocation-undeclared")
+            self.assertEqual(plain["availability"]["status"], "unknown")
+            readiness_summary = readiness.summarize({
+                "bindings": [plain], "requirements": {"required_capabilities": []},
+                "workspace": {"scan": {"status": "complete"}},
+            })
+            self.assertEqual(readiness_summary["status"], "degraded")
+            self.assertEqual(readiness_summary["available_count"], 0)
+            self.assertEqual(readiness_summary["unavailable_count"], 0)
+            self.assertEqual(readiness_summary["unknown_count"], 1)
+            self.assertIn("capability.unknown", events.TYPES)
+            required_summary = readiness.summarize({
+                "bindings": [plain], "requirements": {"required_capabilities": ["c"]},
+                "workspace": {"scan": {"status": "complete"}},
+            })
+            self.assertEqual(required_summary["status"], "blocked")
+            self.assertEqual(required_summary["required_unknown"], ["c"])
 
     def test_toolchain_env_exported(self) -> None:
         binding = capabilities.probe_availability(

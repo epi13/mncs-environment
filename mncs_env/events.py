@@ -38,6 +38,7 @@ TYPES = (
     "capability.unbound",
     "capability.available",
     "capability.unavailable",
+    "capability.unknown",
     "capability.invoked",
     "invocation.completed",
     "authority.denied",

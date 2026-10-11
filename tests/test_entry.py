@@ -549,7 +549,9 @@ class EntryContractTests(unittest.TestCase):
         bindings = capabilities.discover_capabilities(self.project)
         binding = next(item for item in bindings if item["capability"] == "fixture:evidence")
         self.assertIsNone(binding["address"])
-        self.assertEqual(capabilities.probe_availability(binding)["availability"]["status"], "unavailable")
+        probed = capabilities.probe_availability(binding)
+        self.assertEqual(probed["availability"]["status"], "unknown")
+        self.assertEqual(probed["availability"]["code"], "provider-invocation-undeclared")
 
     def test_selected_toolchain_loss_does_not_fall_back_to_fingerprint_or_path(self):
         (self.project / ".mncs" / "project.json").write_text(json.dumps({

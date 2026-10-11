@@ -316,9 +316,14 @@ def probe_availability(binding: dict[str, Any]) -> dict[str, Any]:
     else:
         reason = f"invocation substrate present at {address}; provider readiness not yet verified"
         code = "executable-present"
+    availability_status = (
+        "available" if usable else
+        "unknown" if code == "provider-invocation-undeclared" else
+        "unavailable"
+    )
     if usable:
         awaitable["availability"] = {
-            "status": "available",
+            "status": availability_status,
             "reason": reason,
             "code": code,
             "verification": "substrate",
@@ -326,7 +331,7 @@ def probe_availability(binding: dict[str, Any]) -> dict[str, Any]:
         }
     else:
         awaitable["availability"] = {
-            "status": "unavailable",
+            "status": availability_status,
             "reason": reason,
             "code": code,
             "verification": "substrate",

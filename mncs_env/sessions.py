@@ -2639,9 +2639,14 @@ class Session:
             new_bindings.append(fresh)
             if fresh["availability"]["status"] != before_status:
                 report["changed"].append(binding["capability"])
+                status = fresh["availability"]["status"]
+                event_type = {
+                    "available": "capability.available",
+                    "unavailable": "capability.unavailable",
+                    "unknown": "capability.unknown",
+                }.get(status, "capability.unknown")
                 self._emit(
-                    "capability.available" if fresh["availability"]["status"] == "available"
-                    else "capability.unavailable",
+                    event_type,
                     "environment",
                     {"capability": binding["capability"], "previous": before_status},
                 )
@@ -3253,6 +3258,7 @@ class Session:
         )
         available: list[dict[str, Any]] = []
         unavailable = 0
+        unknown = 0
         for binding in self.snapshot.get("bindings", []):
             availability = binding.get("availability") or {}
             if availability.get("status") == "available":
@@ -3261,6 +3267,8 @@ class Session:
                     "provider": binding.get("provider"),
                     "contract_revision": binding.get("contract_revision"),
                 })
+            elif availability.get("status") == "unknown":
+                unknown += 1
             else:
                 unavailable += 1
 
@@ -3374,6 +3382,7 @@ class Session:
                 "available": available[:max_capabilities],
                 "available_count": len(available),
                 "unavailable_count": unavailable,
+                "unknown_count": unknown,
                 "truncated": len(available) > max_capabilities,
             },
             "actions": self.actions(),
@@ -3508,7 +3517,16 @@ class Session:
                 "reason": (binding.get("availability") or {}).get("reason"),
             }
             for binding in self.snapshot.get("bindings", [])
-            if (binding.get("availability") or {}).get("status") != "available"
+            if (binding.get("availability") or {}).get("status") == "unavailable"
+        ]
+        unknown = [
+            {
+                "provider": binding.get("provider"),
+                "capability": binding.get("capability"),
+                "reason": (binding.get("availability") or {}).get("reason"),
+            }
+            for binding in self.snapshot.get("bindings", [])
+            if (binding.get("availability") or {}).get("status") == "unknown"
         ]
         return {
             "session_id": self.session_id,
@@ -3529,6 +3547,7 @@ class Session:
             "execution_stack": self.snapshot.get("execution_stack"),
             "claim_holders": self.snapshot.get("claim_holders", {}),
             "unavailable_capabilities": unavailable,
+            "unknown_capabilities": unknown,
             "bindings": [dict(binding) for binding in self.snapshot.get("bindings", [])],
             "binding_toolchains": [
                 {

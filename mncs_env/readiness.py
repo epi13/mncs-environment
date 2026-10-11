@@ -343,7 +343,14 @@ def summarize(snapshot: dict[str, Any], *, bindings: list[dict] | None = None,
     by_id = {item["capability"]: item for item in bindings}
     required = snapshot.get("requirements", {}).get("required_capabilities", [])
     missing = [name for name in required if by_id.get(name, {}).get("availability", {}).get("status") != "available"]
-    unavailable = [item["capability"] for item in bindings if item.get("availability", {}).get("status") != "available"]
+    required_unknown = [name for name in required
+                        if by_id.get(name, {}).get("availability", {}).get("status")
+                        in (None, "unknown")]
+    unavailable = [item["capability"] for item in bindings
+                   if item.get("availability", {}).get("status") == "unavailable"]
+    unknown = [item["capability"] for item in bindings
+               if item.get("availability", {}).get("status") == "unknown"]
+    unavailable_or_unknown = unavailable + unknown
     blocking = missing + [item["identity"] for item in services if item.get("required") and item["status"] != "ready"]
     observed_ids = {item["identity"] for item in services}
     blocking.extend(item["identity"] for item in snapshot.get("requirements", {}).get("services", [])
@@ -351,11 +358,16 @@ def summarize(snapshot: dict[str, Any], *, bindings: list[dict] | None = None,
     scan = snapshot.get("workspace", {}).get("scan", {})
     if scan.get("status") != "complete":
         blocking.append("workspace-scan-incomplete")
-    status = "blocked" if blocking else "degraded" if unavailable or not bindings or any(item["status"] != "ready" for item in services) else "ready"
+    degraded = (unavailable_or_unknown or not bindings
+                or any(item["status"] != "ready" for item in services))
+    status = "blocked" if blocking else "degraded" if degraded else "ready"
     return {"schema_version": SCHEMA, "status": status, "observation": "live" if live else "snapshot",
             "scope": "declared requirements and discovered capabilities in the selected workspace",
-            "available_count": len(bindings) - len(unavailable), "unavailable_count": len(unavailable),
-            "required_unavailable": missing, "blocking": blocking, "services": services,
+            "available_count": sum(item.get("availability", {}).get("status") == "available"
+                                    for item in bindings),
+            "unavailable_count": len(unavailable), "unknown_count": len(unknown),
+            "required_unavailable": missing, "required_unknown": required_unknown,
+            "blocking": blocking, "services": services,
             "verification": "provider probes for declared services; executable substrate for other capabilities",
             "last_reconciled_at": snapshot.get("last_reconciled_at")}
 

@@ -58,6 +58,7 @@ EVENT_CLASSES = {
     "capability.unbound": ("diagnostics", "a bound capability was removed"),
     "capability.available": ("provider", "a capability changed availability"),
     "capability.unavailable": ("provider", "a capability changed availability"),
+    "capability.unknown": ("provider", "a capability has no verified invocation contract"),
     "session.checkpointed": ("progress", "a checkpoint bounds prior work"),
     "handoff.created": ("coordination", "a handoff names a new consumer"),
     "session.resumed": ("progress", "participation resumed"),
