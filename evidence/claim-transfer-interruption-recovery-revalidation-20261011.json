@@ -1,0 +1,50 @@
+{
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "covered_scenarios": [
+    "child process interruption before batch publication",
+    "child process interruption before generation publication",
+    "child process interruption after generation publication",
+    "child process interruption after head publication",
+    "concurrent competing transfers admit one recipient",
+    "request identity rejects a changed transfer payload",
+    "session transfer retry after sender snapshot failure emits one transition",
+    "claim recovery scenarios in tests/test_claim_recovery.py"
+  ],
+  "execution": {
+    "canonical_store_used": false,
+    "network": false,
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "store_kind": "temporary test-owned EmbeddedStore"
+  },
+  "identity": "ev_environment_claim_transfer_recovery_revalidation_20261011",
+  "limitation": "This rerun verifies transfer atomicity and crash recovery against isolated temporary Stores. Canonical transport acceptance is separate and remains evidenced by canonical-store-path-grant-acceptance-20261011.json.",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-11T21:28:53.304651+00:00",
+  "schema_version": "mncs.environment.claim-transfer-recovery-proof/1",
+  "source": {
+    "files": {
+      "mncs_env/claims.py": "ea0bbdb5dd2bf08ef1ead7c448b99dd5a57a77a1d734a0a30c377fb523e1bdd3",
+      "tests/test_claim_recovery.py": "5a2322ad6977accbd7473ee8ed8ef72ed31b7cc4528358561f42a8b432deca12",
+      "tests/test_store_claim_transfer.py": "b79f4fb1ce3262d05b95087e90fd4edd6502ad5cfd170cf958fe3a4cee3ac432"
+    },
+    "repository": "mncs-environment",
+    "revision": "94d2dd20e721cc640fdfd2c4c4b6413a321cd9f5"
+  },
+  "transfer_protocol": {
+    "atomicity": "One Store put_claim_batch publishes the source release record and recipient held record under the same expected claim generation.",
+    "conflict": "Generation/version conflicts retry boundedly; competing transfers cannot both become the active owner.",
+    "provenance": "Both records preserve the source version, request identity/digest, source and recipient sessions, reason, scope, and original lease acquisition/deadline.",
+    "retry": "Stable transfer request identity binds the exact payload. A retry reads back and validates the paired committed records without appending a second transfer."
+  },
+  "validation": {
+    "command": "PYTHONPATH=.:../mncs-store/python python3 -m pytest -q tests/test_store_claim_transfer.py tests/test_claim_recovery.py",
+    "completed_at": "2026-10-11T21:28:30.702462Z",
+    "duration_seconds": 33.35,
+    "exit_code": 0,
+    "result": "passed",
+    "started_at": "2026-10-11T21:27:56.969461Z",
+    "test_count": 37
+  }
+}
