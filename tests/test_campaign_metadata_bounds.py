@@ -28,15 +28,15 @@ def _reference(index: int, *, path: str | None = None) -> dict[str, str]:
 def test_campaign_evidence_allows_growth_past_previous_transport_limit() -> None:
     references = [
         _reference(index, path=f"evidence/{'x' * 80}_{index:02d}.json")
-        for index in range(64)
+        for index in range(96)
     ]
     encoded = json.dumps(references, sort_keys=True, separators=(",", ":")).encode()
 
     assert len(encoded) > 8192
     assert len(encoded) <= CAMPAIGN_STATE_INPUT_MAX_BYTES
-    assert len(normalize_campaign_evidence(references)) == 64
-    with pytest.raises(ValueError, match="at most 64 references"):
-        normalize_campaign_evidence([*references, _reference(64)])
+    assert len(normalize_campaign_evidence(references)) == 96
+    with pytest.raises(ValueError, match="at most 96 references"):
+        normalize_campaign_evidence([*references, _reference(96)])
 
 
 def test_campaign_evidence_remains_bounded_by_normalized_utf8_size() -> None:
