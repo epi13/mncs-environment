@@ -1,0 +1,36 @@
+{
+  "schema_version": "mncs.environment.canonical-checkpoint-idempotent-retry/1",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "retry_observed_at": "2026-10-11T22:50:15+00:00",
+  "fresh_readback_at": "2026-10-11T22:50:37+00:00",
+  "execution": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "persistence_transport": "mncs-control-environment-rpc",
+    "direct_store_filesystem_write_grant": false
+  },
+  "retry": {
+    "request_id": "req_campaign_store_integrity_checkpoint_20261011",
+    "base_checkpoint_id": "chk_71676846809cd251",
+    "returned_checkpoint_id": "chk_f55f68c18e053834",
+    "returned_sequence": 150,
+    "returned_evidence_references": 103,
+    "exit_code": 0,
+    "interpretation": "The same caller-stable request identity returned the original durable checkpoint after a separate protected process retry; no new checkpoint was created."
+  },
+  "separate_process_readback": {
+    "checkpoint_id": "chk_f55f68c18e053834",
+    "sequence": 150,
+    "evidence_references": 103,
+    "evidence_truncated": false,
+    "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+  },
+  "result": {
+    "idempotent_retry": true,
+    "duplicate_authoritative_state": false,
+    "campaign_state_changed": false
+  }
+}
