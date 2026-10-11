@@ -113,6 +113,7 @@ def dispatch(argv: list[str]) -> int:
                 diagnostics = diagnostics if isinstance(diagnostics, dict) else {}
                 raw_code = str(diagnostics.get("code", ""))
                 category = {
+                    "publication-conflict": "publication-conflict",
                     "session-snapshot-conflict": "publication-conflict",
                     "claim-conflict": "publication-conflict",
                     "claim-adoption-required": "authority-denied",
@@ -178,6 +179,16 @@ def _domain_diagnostic_details(
     available to an authenticated caller. Arbitrary CLI diagnostic fields
     are not forwarded.
     """
+    if (cause_code == "publication-conflict"
+            and diagnostics.get("conflict_kind") == "campaign-state-base-checkpoint"):
+        result = {"cause_code": cause_code}
+        for key in (
+            "conflict_kind", "supplied_base_checkpoint", "current_checkpoint",
+        ):
+            value = diagnostics.get(key)
+            if isinstance(value, str):
+                result[key] = value[:MAX_DIAGNOSTIC_TEXT]
+        return result
     if not cause_code.startswith("campaign-"):
         return None
     allowed = (

@@ -817,6 +817,47 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
                 "publication-conflict",
             )
 
+    def test_rpc_client_preserves_campaign_checkpoint_conflict_version(self) -> None:
+        from mncs_env import rpc_client
+
+        with tempfile.TemporaryDirectory() as directory:
+            grant = Path(directory) / "grant"
+            grant.write_text("test-grant", encoding="ascii")
+            with mock.patch.dict(os.environ, {
+                "MNCS_ENV_RPC_SOCKET": "/run/test.sock",
+                "MNCS_ENV_RPC_GRANT_FILE": str(grant),
+            }), mock.patch.object(rpc_client, "_exchange", return_value={
+                "ok": True,
+                "result": {
+                    "exit_code": 3,
+                    "stdout": "",
+                    "stderr": json.dumps({
+                        "error": "campaign state changed",
+                        "diagnostics": {
+                            "code": "publication-conflict",
+                            "conflict_kind": "campaign-state-base-checkpoint",
+                            "supplied_base_checkpoint": "chk_old",
+                            "current_checkpoint": "chk_current",
+                            "publication_completed": False,
+                        },
+                    }),
+                },
+            }), redirect_stdout(io.StringIO()) as output:
+                code = rpc_client.dispatch([
+                    "checkpoint", "ses_test", "--campaign-base-checkpoint", "chk_old",
+                ])
+
+        self.assertEqual(code, 3)
+        diagnostics = json.loads(output.getvalue())["diagnostics"]
+        self.assertEqual(diagnostics["code"], "publication-conflict")
+        self.assertEqual(diagnostics["cause_code"], "publication-conflict")
+        self.assertEqual(
+            diagnostics["domain_details"]["supplied_base_checkpoint"], "chk_old"
+        )
+        self.assertEqual(
+            diagnostics["domain_details"]["current_checkpoint"], "chk_current"
+        )
+
     def test_rpc_client_preserves_bounded_campaign_continuation_choices(self) -> None:
         from mncs_env import rpc_client
 
