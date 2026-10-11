@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.protected-campaign-reentry-proof/1",
+  "identity": "ev_environment_protected_exact_context_reentry_20261011",
+  "recorded_at": "2026-10-11T19:09:12Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_commit": "d66b2adac244a40133d5b85aafeb2cc94e881c8f",
+    "environment_entry_source": {
+      "path": "mncs_env/entry.py",
+      "sha256": "1a02eb750df227a3d6f6029cb82a50cbb99cc974bc36204f17781cf95d4a8165"
+    },
+    "control_repository": "mncs-control-mcp",
+    "control_commit": "03957b673019ff183d0f674677670f73e08e2af2",
+    "control_sources": [
+      {
+        "path": "src/mncs_control_mcp/environment_sessions.py",
+        "sha256": "6cfd67975e7a78df2e5277dd97e78ad33ab67018534c9a9455285abef53c64ce"
+      },
+      {
+        "path": "src/mncs_control_mcp/environment_rpc.py",
+        "sha256": "7de50d5c590745b00a58ebf5801cfcc9f22d3c4fd7806f1aa660b7f5aff9db37"
+      }
+    ]
+  },
+  "protected_entry": {
+    "execution_tool": "MNCS Control terminal_exec",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "command": "python -m mncs_env.cli enter --definition tests/fixtures/control-rpc-entry.json --consumer local-agent --consumer-kind agent --campaign-id cmp_mncs_continuity_20261010",
+    "session_id_argument_supplied": false,
+    "exit_code": 0,
+    "authenticated_transport": "per-execution Control Environment RPC grant and Control-owned principal",
+    "returned_session_id": "ses_7226fbcfe65820f7",
+    "returned_consumer_id": "local-agent",
+    "returned_lifecycle": "active",
+    "returned_definition_id": "env_f31ee034e8e1fdcb",
+    "entry_reused_existing_session": true,
+    "revalidation": {
+      "reprobed": 4,
+      "reused": 0,
+      "bound": [],
+      "changed": [],
+      "unbound": []
+    },
+    "store_visibility_guard": {
+      "command": "python probe for exists/readable/writable on /home/epi13/.local/share/mncs-environment/store",
+      "exists": false,
+      "readable": false,
+      "writable": false,
+      "exit_code": 0
+    }
+  },
+  "fresh_process_readback": {
+    "context_exit_code": 0,
+    "session_id": "ses_7226fbcfe65820f7",
+    "campaign_state_checkpoint_id": "chk_4a7426a8fabac815",
+    "latest_checkpoint_sequence": 123,
+    "campaign_evidence_count": 77,
+    "active_claim_ids": [
+      "claim:mncs-control-mcp",
+      "claim:mncs-environment"
+    ],
+    "project_continuation_exit_code": 0,
+    "project_continuation_status": "context-conflict",
+    "same_campaign_contexts": [
+      {
+        "session_id": "ses_7226fbcfe65820f7",
+        "consumer_id": "local-agent",
+        "lifecycle": "active",
+        "definition_id": "env_f31ee034e8e1fdcb",
+        "checkpoint_count": 4,
+        "claim_ids": ["claim:mncs-environment"]
+      },
+      {
+        "session_id": "ses_b4b2d283542220b0",
+        "consumer_id": "local-agent",
+        "lifecycle": "active",
+        "definition_id": "env_1ea3af15c7464177",
+        "checkpoint_count": 0,
+        "claim_ids": []
+      }
+    ]
+  },
+  "result": "PASS_FOR_AUTHENTICATED_EXACT_CONTEXT_RESUME_WITH_OTHER_CONTEXT_PRESERVED",
+  "limits": [
+    "Campaign-level discovery still reports context-conflict because the second session remains active under a different Environment definition.",
+    "The second session was not marked terminated, adopted, or mutated. Entry succeeded by selecting the unique session matching the authenticated project definition and workspace.",
+    "This proves campaign session continuation and canonical checkpoint readback, not protected provider invocation artifact publication."
+  ]
+}
