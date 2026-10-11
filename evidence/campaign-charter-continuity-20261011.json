@@ -1,0 +1,96 @@
+{
+  "schema_version": "mncs.environment.campaign-charter/1",
+  "identity": "ev_mncs_campaign_charter_continuity_20261011",
+  "recorded_at": "2026-10-11T09:30:07Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "source": {
+    "kind": "user-directed MNCS engineering campaign",
+    "request_title": "MNCS — Permanent Store Access, Campaign Continuity, and Compiler Development",
+    "date": "2026-10-11"
+  },
+  "objective": "Make MNCS a comfortable, coherent, machine-native development environment where agents can continue long-running authorized work without reconstructing state, identity, tools, or context. Preserve correctness, ownership, provenance, and authority while providing reliable mediated access to canonical Store, durable campaign/session/claim/worktree continuity, safe Git reconciliation, continued compiler self-consumption, and resource-aware scheduling.",
+  "workstreams": [
+    {
+      "owner": "mncs-environment and the existing Control persistence owner",
+      "intent": "Publish authorized Environment checkpoints, claims, and evidence to canonical Store from the protected agent environment without giving the agent direct Store filesystem write access. Preserve authentication, owner admission, immutable generations, CAS, stable retry identities, readback, and explicit ambiguity diagnostics."
+    },
+    {
+      "owner": "mncs-environment with MNCS Control",
+      "intent": "Persist campaign identity and enough compact, verifiable session, claim, checkout, checkpoint, evidence, delivery, and pending-work context for an authorized new process to resume safely. Distinguish resume, handoff, transfer, recovery, adoption, and competing ownership."
+    },
+    {
+      "owner": "owning repositories through Environment reconciliation",
+      "intent": "Classify candidate branches and registered worktrees from actual Git state, retain evidence and unproven work, deliver only authorized verified changes, and retire only states proven safe."
+    },
+    {
+      "owner": "mncs-compiler and its existing language/runtime dependencies",
+      "intent": "Continue from current evidence toward parse, check, proof, CFG, verified SSA, executable artifact, Stage-1, and Stage-2, advancing only stages supported by reproducible proof while improving bounded execution efficiency."
+    },
+    {
+      "owner": "compiler, Forge, System Monitor, Store, Automation, and Environment",
+      "intent": "Complete a bounded resource-feedback path from compiler work identity and dependencies through Forge admission and execution, System Monitor observation, immutable Store evidence, and an Automation scheduling decision grounded in retained measurements."
+    }
+  ],
+  "acceptance": [
+    "A normally protected agent can checkpoint a session and acquire or release an authorized claim against canonical Store over an owner-controlled authenticated transport while the canonical Store path is not directly writable from the agent namespace.",
+    "A fresh process resumes the same authorized campaign/session and receives a compact continuation capsule with latest checkpoint progress and pending work, without choosing among conflicting contexts or taking over another active owner.",
+    "Interrupted publication and claim transfer are reconciled under Store concurrency semantics without duplicate authority or simultaneous exclusive owners.",
+    "Candidate repositories and worktrees have current, evidence-backed dispositions; only authorized verified deliverables are merged and pushed; dirty, foreign, inaccessible, or uncertain work remains protected.",
+    "Compiler succession claims follow the current self-host matrix and identity ledger; no Stage-1 or Stage-2 claim is made without exact proof.",
+    "At least one real bounded compiler execution retains resource intent and execution telemetry, and a subsequent scheduling or admission decision cites those measurements."
+  ],
+  "current_continuity_observation": {
+    "campaign_session": "ses_7226fbcfe65820f7",
+    "authorized_consumer": "codex-process-1",
+    "selected_context": {
+      "definition_id": "env_f31ee034e8e1fdcb",
+      "workspace_root": "/home/epi13/Documents/Projects",
+      "entry_definition": "tests/fixtures/control-rpc-entry.json"
+    },
+    "conflicting_same_campaign_session": {
+      "session_id": "ses_b4b2d283542220b0",
+      "lifecycle": "active",
+      "checkpoints": 0,
+      "claims": 0,
+      "disposition": "preserved; no process-termination proof or owner transfer was established"
+    },
+    "project_scoped_continuation": "Control returned both exact session/context capsules and a fresh read-only Git observation; it did not select or mutate either session.",
+    "foreign_exclusive_claims": [
+      {
+        "repository": "mncs-compiler",
+        "session_id": "ses_d2537acde8b8a875",
+        "version": 63,
+        "disposition": "preserved; explicit owner handoff or valid recovery is required"
+      },
+      {
+        "repository": "mncs-forge",
+        "session_id": "ses_95c3aa35b8544042",
+        "version": 28,
+        "disposition": "preserved; explicit owner handoff or valid recovery is required"
+      },
+      {
+        "repository": "mncs-reference-studies",
+        "session_id": "ses_95c3aa35b8544042",
+        "version": 7,
+        "disposition": "preserved; explicit owner handoff or valid recovery is required"
+      }
+    ]
+  },
+  "verified_evidence": [
+    "evidence/canonical-store-path-grant-acceptance-20261011.json",
+    "evidence/project-scoped-canonical-continuity-20261011.json",
+    "evidence/claim-transfer-store-crash-proof-20261011.json",
+    "evidence/compiler-worktree-disposition-live-20261011.json",
+    "evidence/candidate-and-resource-live-refresh-20261011.json",
+    "mncs-compiler/evidence/SELF-HOST-MATRIX.json"
+  ],
+  "readiness": {
+    "canonical_store_transport_and_restart_readback": "PASS; see canonical-store-path-grant acceptance evidence",
+    "project_scoped_session_resume": "PASS for the checkpointed session through Control RPC",
+    "campaign_context_selection": "UNRESOLVED; two active same-campaign definitions are preserved and require exact-context reconciliation",
+    "candidate_delivery": "PARTIAL; some worktrees are retained as merged evidence, while Compiler and Forge ownership remains with recorded sessions",
+    "compiler_succession": "INCOMPLETE; complete Flow compilation and Stage-1/Stage-2 remain unproven",
+    "resource_feedback_loop": "INCOMPLETE; actual compiler execution receipt and subsequent Automation decision remain to be integrated"
+  },
+  "authority_boundary": "This charter records intent and observed campaign state; it does not grant repository write authority, claim takeover, session termination, campaign adoption, merge, push, or worktree deletion. Git, canonical Store, Environment, and each domain owner remain authoritative for their records and permissions."
+}
