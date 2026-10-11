@@ -1,0 +1,51 @@
+{
+  "schema_version": "mncs.environment.canonical-caller-interruption-proof/1",
+  "identity": "ev_canonical_caller_interruption_reconcile_20261011",
+  "recorded_at": "2026-10-11T07:23:20Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "main",
+    "commit": "f4ad6463fd4ceba6d1183aea8e94c0140dbb38b0",
+    "remote_ref": "origin/main",
+    "test_command": "python3 -m pytest -q tests/test_environment.py",
+    "test_result": "152 passed in 254.23s"
+  },
+  "protected_execution": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "transport": "authenticated Environment persistence RPC through MNCS Control",
+    "canonical_store_root_directly_visible_to_caller": false,
+    "store_policy_evidence": "ev_canonical_store_path_grant_20261011"
+  },
+  "caller_interruption": {
+    "terminal_job_id": "term-5f2c445ceca265b4e10fbe69",
+    "caller_exit_code": -9,
+    "caller_received_publication_response": false,
+    "request_id": "req_mncs_canonical_caller_termination_20261011a",
+    "request_operation": "session checkpoint",
+    "checkpoint_id_found_by_fresh_process_before_retry": "chk_379a6ef2000cb327",
+    "checkpoint_sequence": 52,
+    "created_at": "2026-10-11T07:22:49+00:00",
+    "pre_test_checkpoint_count": 51,
+    "post_termination_readback_checkpoint_count": 52,
+    "post_termination_event_count": 246
+  },
+  "stable_retry": {
+    "request_id": "req_mncs_canonical_caller_termination_20261011a",
+    "retry_exit_code": 0,
+    "retry_returned_checkpoint_id": "chk_379a6ef2000cb327",
+    "operation_digest": "15bca48bc35a7415",
+    "original_created_at_returned": "2026-10-11T07:22:49+00:00",
+    "fresh_readback_checkpoint_count_after_retry": 52,
+    "duplicate_authoritative_checkpoint_created": false
+  },
+  "result": "PASS",
+  "limits": [
+    "This demonstrates canonical caller-process termination after durable publication, fresh-process reconciliation, and idempotent retry without duplicate checkpoint state.",
+    "It does not simulate termination before the owner service receives a request, owner-service restart during publication, or canonical claim-transfer interruption.",
+    "Service and transfer interruption tests remain limited to isolated EmbeddedStore integration evidence."
+  ]
+}
