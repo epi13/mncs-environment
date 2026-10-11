@@ -2181,6 +2181,13 @@ class SessionTests(unittest.TestCase):
         ])
         self.assertEqual(parsed.output_limit_bytes, 131072)
 
+    def test_campaign_continuation_cli_is_project_scoped_and_read_only(self) -> None:
+        parsed = cli.build_parser().parse_args([
+            "continuation", "--campaign-id", "cmp_fixture",
+        ])
+        self.assertEqual(parsed.command, "continuation")
+        self.assertEqual(parsed.campaign_id, "cmp_fixture")
+
     def test_invocation_environment_uses_selected_store_and_language_toolchains(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "workspace"

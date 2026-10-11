@@ -142,6 +142,17 @@ def cmd_enter(args: argparse.Namespace) -> int:
                                            "next": "inspect provider-owned rights claims for the selected workspace"})
 
 
+def cmd_campaign_continuation(_args: argparse.Namespace) -> int:
+    return fail(
+        "project-scoped campaign continuation requires the authenticated Control transport",
+        diagnostics={
+            "code": "persistence-service-unavailable",
+            "transport": "mncs-control-environment-rpc",
+            "next": "run this command through the MNCS Control protected execution path",
+        },
+    )
+
+
 def close_store(store) -> None:
     close = getattr(store, "close", None)
     if callable(close):
@@ -1090,6 +1101,16 @@ def build_parser() -> argparse.ArgumentParser:
                        help="resume a durable campaign identity (authorized Control transport only)")
     enter.add_argument("--new-session", action="store_true", help="create independent work instead of reusing matching work")
     enter.set_defaults(func=cmd_enter)
+
+    continuation = sub.add_parser(
+        "continuation",
+        help="discover the authenticated campaign capsule for this protected project",
+    )
+    continuation.add_argument(
+        "--campaign-id", default=None,
+        help="select one durable campaign when the project has multiple continuations",
+    )
+    continuation.set_defaults(func=cmd_campaign_continuation)
 
     def session_parser(name: str, help_text: str):
         parser_ = sub.add_parser(name, parents=[common], help=help_text)
