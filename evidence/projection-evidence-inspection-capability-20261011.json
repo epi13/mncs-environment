@@ -1,0 +1,92 @@
+{
+  "schema_version": "mncs.environment.session-bound-capability-evidence/1",
+  "identity": "ev_env_session_bound_projection_evidence_20261011",
+  "recorded_at": "2026-10-11T15:30:32Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "implementation": {
+    "repository": "mncs-environment",
+    "branch": "campaign/projection-evidence-invocation-20261011",
+    "commit": "0f54a9c66b2b2098a293ac3b60f2f681504cab81",
+    "base_ref": "origin/main",
+    "base_commit": "ad402a275f23736ae53d801591f03a991b359297",
+    "source_paths": [
+      ".mncs/project.json",
+      "mncs_env/capabilities.py",
+      "mncs_env/sessions.py",
+      "tests/test_environment.py"
+    ]
+  },
+  "contract": {
+    "identity": "mncs-environment:projection-evidence-inspection",
+    "version": "1",
+    "effects": [
+      "read"
+    ],
+    "fixed_argv": [
+      "projections",
+      "--evidence",
+      "{session_id}"
+    ],
+    "session_binding": "Environment replaces the exact whole-argument placeholder with the resumed session identity and rejects caller-supplied argv for session-bound bindings.",
+    "unknown_semantic_contract": "ambient-projection-coherence remains undeclared for invocation and therefore UNKNOWN."
+  },
+  "verification": {
+    "sandbox_backend": "bwrap",
+    "sandbox_scope": "project",
+    "network": false,
+    "command": "PYTHONPATH=tests python -m unittest test_environment.CapabilityTests test_environment.SessionTests.test_session_bound_invocation_uses_the_active_session_identity",
+    "exit_code": 0,
+    "passed": 21,
+    "failed": 0,
+    "checks": [
+      "The capability declares read effects and a fixed session placeholder.",
+      "Invocation substitutes the active Environment session identity.",
+      "Caller-supplied alternate session arguments and partial placeholders are rejected."
+    ],
+    "diff_check": "PASS"
+  },
+  "restricted_environment": {
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "visible_inside_project_bwrap": false,
+    "readable_inside_project_bwrap": false,
+    "writable_inside_project_bwrap": false,
+    "persistence": "store",
+    "checkpoint_transport": "authenticated Environment RPC over the Control socket"
+  },
+  "live_state": {
+    "capability_discovery": {
+      "projection_evidence_inspection": "available at executable-substrate level; provider readiness remains unverified",
+      "ambient_projection_coherence": "UNKNOWN: provider-invocation-undeclared"
+    },
+    "health": {
+      "status": "degraded",
+      "available_count": 3,
+      "unavailable_count": 0,
+      "unknown_count": 1,
+      "blocking_count": 0
+    },
+    "invocation_attempt": {
+      "command": "scripts/mncs-env invoke ses_7226fbcfe65820f7 mncs-environment:projection-evidence-inspection",
+      "sandbox_backend": "bwrap",
+      "exit_code": 3,
+      "diagnostic_code": "operation-unavailable",
+      "cause_code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+      "control_operation": "invoke",
+      "publication_completed": false,
+      "interpretation": "Control does not currently expose Environment invoke. No provider process ran; no operation was claimed complete."
+    }
+  },
+  "delivery": {
+    "branch_head": "0f54a9c66b2b2098a293ac3b60f2f681504cab81",
+    "remote_main_head": "ad402a275f23736ae53d801591f03a991b359297",
+    "branch_relation": "one commit ahead of origin/main",
+    "status": "committed",
+    "merge_and_publish_authority": "Environment context marks merge and publish as escalation-required; no merge or push was performed."
+  },
+  "limitations": [
+    "This proves the Environment contract, session pinning, and restrictive-boundary discovery only. It does not prove the new provider command can be invoked through Control.",
+    "Control needs a narrowly authorized read path before projection evidence can be consumed by an external protected agent.",
+    "The independent ambient projection lifecycle capability remains UNKNOWN."
+  ]
+}
