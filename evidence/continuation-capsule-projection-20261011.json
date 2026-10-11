@@ -1,0 +1,137 @@
+{
+  "schema_version": "mncs.environment.continuation-capsule-proof/1",
+  "recorded_at": "2026-10-11T03:51:40Z",
+  "source": {
+    "repository": "mncs-environment",
+    "commit": "b3231236db537125c0059478772d645123da9ccd",
+    "branch": "main",
+    "origin_main": "b3231236db537125c0059478772d645123da9ccd",
+    "working_tree_clean": true,
+    "files": {
+      "mncs_env/claims.py": "5b93393549aef2b92732136ab42e27fac140f3368e1e1e5a43ba16bf3f43125a",
+      "mncs_env/sessions.py": "55a88d39766627cf42bb051e715add7196a8507ff07d02a8eaf18706c6d45a3a",
+      "mncs_env/entry.py": "c35fabe59ec3e1b6904124be9549bb1bc2db80e615c728e68f356bc7e85255e1",
+      "tests/test_environment.py": "62bf37145155a48152b4525beabab31cfd295d813bb29600067dcb34519e6faa",
+      "docs/ENTRY.md": "a94e1a769e116bf47f50fcc2b5682e00b1e54e2712537dce2caed2e4f768b8f0"
+    }
+  },
+  "change": {
+    "owner": "mncs-environment",
+    "summary": "Entry context now reads the latest durable checkpoint and bounded foreign claim summaries from Store. Claims outside the selected checkout remain visible, workspace relevance is explicit, worktree host paths are omitted, and effective lease expiry comes from Claims. Empty summaries are omitted to preserve the compact context budget.",
+    "authority": "The session retains writable authority for mncs-environment only. Foreign exclusive claims were observed and left unchanged."
+  },
+  "verification": {
+    "full_environment_suite": {
+      "command": "python3 -m pytest tests/ -q",
+      "result": "PASS",
+      "passed": 602,
+      "skipped": 46,
+      "failed": 0,
+      "duration_seconds": 514.41
+    },
+    "focused_regressions_after_final_projection_change": {
+      "result": "PASS",
+      "passed": 3,
+      "tests": [
+        "EntryFrictionTests.test_valid_campaign_entry_is_compact_and_uses_isolated_state",
+        "CampaignContinuityTests.test_continuation_capsule_projects_latest_checkpoint_and_foreign_claim",
+        "EntryFrictionTests.test_explicit_campaign_identity_cannot_start_under_changed_definition"
+      ]
+    },
+    "vertical_proof": {
+      "result": "PASS",
+      "resolved_environment": "renv_04d53a3d6b68449d",
+      "proof_session": "ses_ac4a332b827ec6b8",
+      "checkpoint": "chk_afeb3ef875aff1ef",
+      "proof_handoff": "hff_c7e575d250f8d68a",
+      "protected_write_denial": "passed",
+      "fresh_process_resume_and_handoff": "passed"
+    },
+    "project_scoped_bwrap_full_suite_attempt": {
+      "command": "python3 -m pytest tests/ -q",
+      "sandbox_backend": "bwrap",
+      "scope": "project",
+      "result": "SCOPE_MISMATCH",
+      "passed": 484,
+      "failed": 118,
+      "skipped": 46,
+      "duration_seconds": 336.91,
+      "predominant_failure": "Environment RPC rejected test fixture client cwd values outside the project execution grant (client cwd escapes its scoped sandbox root).",
+      "used_as_source_suite_verdict": false
+    }
+  },
+  "protected_canonical_store_readback": {
+    "sandbox_backend": "bwrap",
+    "project": "mncs-environment",
+    "persistence": "store",
+    "transport": "authenticated Control Environment RPC",
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_path_visible": false,
+    "canonical_store_path_writable": false,
+    "direct_store_write_attempted": false,
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "session_id": "ses_7226fbcfe65820f7",
+    "resume_revalidation_bindings_reprobed": 3,
+    "writable_repositories": [
+      "mncs-environment"
+    ],
+    "checkpoint": {
+      "identity": "chk_23265ec52fff5a54",
+      "sequence": 28,
+      "request_id": "req_d63b11ad052bd0228f450ebf7dae837922f55591",
+      "published": true,
+      "read_in_new_protected_process": true,
+      "remaining_count": 3,
+      "remaining_truncated": false
+    },
+    "foreign_claims": [
+      {
+        "claim_id": "claim:mncs-compiler",
+        "repository": "mncs-compiler",
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "version": 63,
+        "effective_expires_at": "2026-10-16T18:13:43+00:00",
+        "exclusive": true
+      },
+      {
+        "claim_id": "claim:mncs-forge",
+        "repository": "mncs-forge",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "version": 28,
+        "effective_expires_at": "2026-10-16T02:18:31+00:00",
+        "exclusive": true
+      },
+      {
+        "claim_id": "claim:mncs-reference-studies",
+        "repository": "mncs-reference-studies",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "version": 7,
+        "effective_expires_at": "2026-10-16T02:18:43+00:00",
+        "exclusive": true
+      }
+    ],
+    "environment_checkout": {
+      "branch": "main",
+      "head": "b3231236db537125c0059478772d645123da9ccd",
+      "clean": true,
+      "observation": "current"
+    }
+  },
+  "prior_canonical_transport_acceptance": {
+    "evidence_repository": "mncs-control-mcp",
+    "evidence_path": "../mncs-control-mcp/evidence/canonical-store-rpc-path-acceptance-20261010.json",
+    "result": "PASS",
+    "covers": [
+      "checkpoint and fresh-process readback",
+      "claim acquire and release",
+      "unauthorized publication denial",
+      "stale CAS rejection",
+      "caller interruption and stable retry",
+      "service restart harness reconciliation"
+    ]
+  },
+  "limitations": [
+    "The broad full-suite run under a project-scoped bwrap grant is incompatible with test fixtures that invoke Environment from temporary working directories outside that grant. The specific canonical Store path and fresh-process capsule readback succeeded through the normal protected RPC route.",
+    "Compiler and Forge claims remain owned by their recorded sessions. The capsule exposes their exact claim references and effective lease bounds; it grants no takeover authority."
+  ]
+}
