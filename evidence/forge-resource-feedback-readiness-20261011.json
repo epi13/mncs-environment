@@ -1,0 +1,66 @@
+{
+  "automation_feedback_status": "not_proven",
+  "compiler_execution_status": "no current Forge job; no receipt-linked compiler measurement was observed",
+  "execution_receipts": {
+    "count": 0,
+    "identities": [],
+    "interpretation": "No Forge receipt currently binds a compiler execution to retained System Monitor measurements and an Automation decision."
+  },
+  "execution_state": {
+    "active_job": null,
+    "blocking_attention_events": [
+      {
+        "generation": 127,
+        "reason": "Language Service event ingress failed: timed out",
+        "tier": "incremental"
+      }
+    ],
+    "counts": {
+      "FAIL": 0,
+      "PASS": 0,
+      "UNKNOWN": 2
+    },
+    "deferred_jobs": 2,
+    "resource_exhaustion_events": 0,
+    "verification_tier": "edit-time"
+  },
+  "identity": "ev_forge_resource_feedback_readiness_20261011",
+  "interpretation": "Forge confinement is configured and no resource exhaustion is reported. The resource-feedback vertical slice remains incomplete because there are no execution receipts and the required verifier provider remains UNKNOWN; no scheduling decision can yet be tied to retained telemetry.",
+  "mutation": "none",
+  "observed_at": "2026-10-11T11:45:16Z",
+  "provider_status": {
+    "availability": "AVAILABLE",
+    "capabilities": [
+      "evidence-change-impact",
+      "artifact-manifest-identity",
+      "mncs-assurance-graph-impact",
+      "mncs-record-dispatch"
+    ],
+    "descriptor": null,
+    "last_probe_result": null,
+    "limitation": "Availability alone is not analysis evidence; an explicit capability probe is required.",
+    "probe_stale": false,
+    "provider_id": "mncs-project-micro-verifiers",
+    "required": true,
+    "status": "UNKNOWN"
+  },
+  "resource_envelope": {
+    "active_jobs": 0,
+    "concurrency_max": 1,
+    "identity": "781b9a28e3b0abe025b374ebf7b092516514c1ef297d0881342c9cd5c6646d90",
+    "mechanism": "systemd-user-service+cgroup-v2",
+    "memory_high_bytes": 2147483648,
+    "memory_max_bytes": 4294967296,
+    "memory_swap_max_bytes": 0,
+    "output_limit_bytes": 1048576,
+    "process_count_max": 64,
+    "runtime_max_seconds": 600.0,
+    "state": "protected"
+  },
+  "schema_version": "mncs.environment.resource-feedback-readiness-observation/1",
+  "source": {
+    "main": "cc2516f073d47739d74e68266d97fd090c53da16",
+    "observation_surface": "Forge read-only MCP status and receipt tools",
+    "repository": "mncs-forge"
+  }
+}
