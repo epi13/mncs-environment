@@ -2343,6 +2343,11 @@ class Session:
             self.store, claim_id=claim_id, from_session=self.session_id,
             to_session=to_session, to_consumer=to_consumer, reason=reason,
             request_id=request_id)
+        provenance = record.get("provenance")
+        transfer_request_id = (
+            provenance.get("transfer_request_id")
+            if isinstance(provenance, dict) else None
+        )
         self._refresh_holders()
         campaign = dict(self.snapshot.get("campaign") or {})
         campaign["claim_ids"] = [
@@ -2353,8 +2358,28 @@ class Session:
             claims_module.active_claims(self.store.read_claims())
         )
         self.snapshot["campaign"] = campaign
-        self._emit("lease.transferred", self.snapshot.get("consumer_id", "unknown"),
-                   {"claim_id": claim_id, "to_session": to_session})
+        transfer_event_exists = False
+        if isinstance(transfer_request_id, str):
+            for event in self._log():
+                payload = event.get("payload")
+                if not isinstance(payload, dict):
+                    continue
+                if ((event.get("type") == "lease.transferred"
+                     or event.get("provider_type") == "lease.transferred")
+                        and payload.get("claim_id") == claim_id
+                        and payload.get("to_session") == to_session
+                        and payload.get("transfer_request_id") == transfer_request_id):
+                    transfer_event_exists = True
+                    break
+        if not transfer_event_exists:
+            self._emit(
+                "lease.transferred", self.snapshot.get("consumer_id", "unknown"),
+                {
+                    "claim_id": claim_id,
+                    "to_session": to_session,
+                    "transfer_request_id": transfer_request_id,
+                },
+            )
         self._save()
         return record
 

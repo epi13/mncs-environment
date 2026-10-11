@@ -78,7 +78,7 @@ class DoctorFixture(unittest.TestCase):
         ]}
         self.manifest.write_text(json.dumps(self.contracts))
         self.config = {"name": "fixture-entry", "workspace_root": "..",
-                       "intent": {"goal": "exercise doctor contracts", "repositories": []},
+                       "intent": {"goal": "exercise doctor contracts", "repositories": ["fixture"]},
                        "required_capabilities": ["fixture.status/1"],
                        "services": [{"identity": "fixture-service", "required": True,
                                      "probe": {"capability": "fixture.status/1"},
@@ -236,6 +236,8 @@ class EpochTests(DoctorFixture):
         self.assertIn("fixture.status/1", health["readiness"]["required_unavailable"])
 
     def test_provider_runtime_state_change_is_detected_despite_valid_epoch(self):
+        self.config["intent"]["repositories"] = []
+        self.definition.write_text(json.dumps(self.config))
         self.ready()
         _, first = self.enter()
         # service-state.json is gitignored: no fingerprinted input changes,
@@ -665,6 +667,10 @@ class RemediationEffectScopeTests(DoctorFixture):
         # provider checkout (fixture) and the target checkout are selected.
         config = json.loads(self.definition.read_text())
         config["workspace_root"] = "../.."
+        repositories = list(config.get("intent", {}).get("repositories", []))
+        if "target" not in repositories:
+            repositories.append("target")
+        config.setdefault("intent", {})["repositories"] = repositories
         self.definition.write_text(json.dumps(config))
         return target
 

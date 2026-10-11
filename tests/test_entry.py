@@ -256,6 +256,15 @@ class EntryContractTests(unittest.TestCase):
     def ready(self):
         (self.project / "service-state.json").write_text(json.dumps({"ready": True, "starts": 0}))
 
+    def authorize_fixture_writes(self):
+        self.config["intent"]["repositories"] = ["fixture"]
+        self.definition.write_text(json.dumps(self.config))
+        subprocess.run(["git", "-C", str(self.project), "add", ".mncs/environment.json"],
+                       check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(self.project), "-c", "user.name=Entry Test",
+                        "-c", "user.email=entry@example.invalid", "commit", "-m",
+                        "authorize fixture writes"], check=True, capture_output=True)
+
     def test_clean_entry_reports_identity_project_config_and_probe(self):
         self.ready()
         code, context = self.enter()
@@ -380,12 +389,26 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(first["entry"]["operations"][0]["status"], "pending-escalation")
         self.assertFalse((self.project / "service-state.json").exists())
         claim_code, claim = self.run_cli("claims", first["session_id"], "--acquire", "fixture", "--reason", "start fixture service")
-        self.assertEqual(claim_code, 0, claim)
+        self.assertEqual(claim_code, 3, claim)
+        self.assertEqual(claim["diagnostics"]["code"], "authority-denied")
+        self.assertFalse(claim["diagnostics"]["publication_completed"])
         code, recovered = self.enter()
-        self.assertEqual(code, 0, recovered)
-        self.assertEqual(recovered["readiness"]["status"], "ready")
+        self.assertEqual(code, 5, recovered)
+        self.assertEqual(recovered["readiness"]["status"], "blocked")
         self.assertEqual(recovered["session_id"], first["session_id"])
-        self.enter()
+        self.assertFalse((self.project / "service-state.json").exists())
+
+    def test_authorized_entry_reconciles_missing_service_once(self):
+        self.authorize_fixture_writes()
+        code, first = self.enter()
+        self.assertEqual(code, 0, first)
+        self.assertEqual(first["readiness"]["status"], "ready")
+        self.assertEqual(first["entry"]["operations"][0]["status"], "ok")
+        self.assertEqual(first["authority"]["writable"], ["fixture"])
+        self.assertEqual(json.loads((self.project / "service-state.json").read_text())["starts"], 1)
+        code, second = self.enter()
+        self.assertEqual(code, 0, second)
+        self.assertEqual(second["session_id"], first["session_id"])
         self.assertEqual(json.loads((self.project / "service-state.json").read_text())["starts"], 1)
 
     def test_health_is_live_read_only_and_schema_mismatch_is_actionable(self):
@@ -539,6 +562,7 @@ class EntryContractTests(unittest.TestCase):
         self.assertIsNone(binding["address"])
 
     def test_schema_mismatch_does_not_restart_an_existing_service(self):
+        self.authorize_fixture_writes()
         self.ready()
         _, first = self.enter()
         self.run_cli("claims", first["session_id"], "--acquire", "fixture", "--reason", "fixture recovery")
@@ -762,8 +786,6 @@ def test_read_snapshot_falls_back_to_older_decodable_revision():
 
 
 def test_read_snapshot_propagates_payload_integrity_failure():
-    from types import SimpleNamespace
-
     from mncs_env.store_backend import SCHEMA_SNAPSHOT, StoreBackend
 
     class IntegrityFailure(Exception):

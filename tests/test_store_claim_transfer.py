@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from mncs_env import claims
+from mncs_env import claims, sessions
 from mncs_env.session_store import open_store
 
 SOURCE_SESSION = "ses_transfer_source"
@@ -48,6 +48,28 @@ def _transfer_after_restart(store, claim_id: str, request_id: str) -> dict:
         reason="continue after interrupted publication",
         request_id=request_id,
     )
+
+
+def _seed_session(store, session_id: str, consumer_id: str,
+                  claim_ids: list[str] | None = None) -> None:
+    store.save_snapshot(session_id, {
+        "schema_version": "mncs.environment.session/5",
+        "session_id": session_id,
+        "consumer_id": consumer_id,
+        "consumer_kind": "agent",
+        "lifecycle": "active",
+        "snapshot_sequence": 1,
+        "campaign": {
+            "identity": "cmp_transfer_recovery_test",
+            "claim_ids": list(claim_ids or []),
+            "repository_refs": [],
+        },
+        "workspace": {},
+        "selected_checkouts": {},
+        "authority": {},
+        "checkpoints": [],
+        "accepted_handoffs": [],
+    })
 
 
 @pytest.mark.parametrize(
@@ -250,3 +272,53 @@ def test_concurrent_store_transfers_admit_one_recipient(tmp_path: Path) -> None:
     finally:
         for store in stores:
             store.close()
+
+
+def test_session_transfer_retry_after_snapshot_failure_emits_one_transition(
+    tmp_path: Path,
+) -> None:
+    state_dir = tmp_path / "environment-state"
+    store, source = _seed_store(state_dir)
+    _seed_session(store, SOURCE_SESSION, "consumer_transfer_source", [source["claim_id"]])
+    _seed_session(store, RECIPIENT_SESSION, RECIPIENT_CONSUMER)
+    sender = sessions.Session(store, SOURCE_SESSION)
+    request_id = "req_transfer_session_snapshot_retry"
+
+    def interrupted_snapshot_save() -> None:
+        raise OSError("caller interrupted before sender snapshot publication")
+
+    sender._save = interrupted_snapshot_save
+    with pytest.raises(OSError, match="before sender snapshot publication"):
+        sender.transfer_claim(
+            source["claim_id"], RECIPIENT_SESSION, RECIPIENT_CONSUMER,
+            reason="session-level recovery proof", request_id=request_id,
+        )
+    sender.close()
+
+    reopened = open_store(
+        state_dir, "store", verify_on_open=False, defer_mutation=False
+    )
+    try:
+        resumed_sender = sessions.Session(reopened, SOURCE_SESSION)
+        moved = resumed_sender.transfer_claim(
+            source["claim_id"], RECIPIENT_SESSION, RECIPIENT_CONSUMER,
+            reason="session-level recovery proof", request_id=request_id,
+        )
+        assert moved["session_id"] == RECIPIENT_SESSION
+        transfer_events = [
+            event for event in reopened.read_events(SOURCE_SESSION)
+            if (event.get("type") == "lease.transferred"
+                or event.get("provider_type") == "lease.transferred")
+            and event.get("payload", {}).get("transfer_request_id") == request_id
+        ]
+        assert len(transfer_events) == 1
+        active = claims.active_claims(reopened.read_claims())
+        assert active[source["claim_id"]]["session_id"] == RECIPIENT_SESSION
+        assert source["claim_id"] not in resumed_sender.snapshot["campaign"]["claim_ids"]
+
+        resumed_recipient = sessions.Session(reopened, RECIPIENT_SESSION)
+        reconciled = resumed_recipient.reconcile_campaign_continuity()
+        assert reconciled["claim_ids"] == [source["claim_id"]]
+        assert resumed_recipient.snapshot["campaign"]["claim_ids"] == [source["claim_id"]]
+    finally:
+        reopened.close()
