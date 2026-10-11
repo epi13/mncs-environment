@@ -12,12 +12,16 @@ import os
 import subprocess
 from pathlib import Path
 
+from . import evidence_store
 from . import workspace as workspace_module
 from .identity import digest_hex
 from .persist import write_json
+from .store_backend import StoreUnavailable
 
 MAX_PATHS = 30000
 CATALOGUE_SCHEMA = "mncs.environment.repository-observation/1"
+REPOSITORY_CATALOGUE_OWNER = "repository-observation"
+LIBRARY_CATALOGUE_OWNER = "library-observation"
 TRANSIENT_OBSERVATION_PARTS = frozenset({".worktrees", "__pycache__", ".pytest_cache"})
 
 
@@ -75,7 +79,7 @@ def _enumerate(checkout: Path) -> list[str]:
     completed = subprocess.run(
         [workspace_module.git_binary(), "-C", str(checkout), "ls-files",
          "--cached", "--others", "--exclude-standard", "-z"], capture_output=True, timeout=10, check=True, env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"})
-    paths = sorted(set(os.fsdecode(value) for value in completed.stdout.split(b"\0") if value))
+    paths = sorted({os.fsdecode(value) for value in completed.stdout.split(b"\0") if value})
     paths = [name for name in paths if not _is_transient_path(name)]
     if len(paths) > MAX_PATHS or any(Path(name).is_absolute() or ".." in Path(name).parts for name in paths):
         raise ValueError("repository observation exceeds bounded path contract")
@@ -91,8 +95,18 @@ def _material(checkout: Path, paths: list[str]) -> dict:
             "control": {str(path): stamp(path) for path in control_paths(checkout)}}
 
 
-def _catalogue(session, payload: dict) -> dict:
+def _catalogue(session, payload: dict,
+               owner: str = REPOSITORY_CATALOGUE_OWNER) -> dict:
     identity = digest_hex(payload, length=64)
+    if hasattr(getattr(session, "store", None), "backend"):
+        reference = evidence_store.publish(session, owner, payload)
+        if reference is None:
+            raise StoreUnavailable(
+                "Store-backed repository observations require immutable evidence publication",
+                code="provider-operation-unsupported",
+            )
+        return {"identity": identity, "reference": reference,
+                "checkout": payload["checkout"]}
     path = session.state_dir / "sessions" / session.session_id / "observation-catalogues" / (identity + ".json")
     try:
         current = json.loads(path.read_text())
@@ -103,15 +117,32 @@ def _catalogue(session, payload: dict) -> dict:
     return {"identity": identity, "artifact": str(path), "checkout": payload["checkout"]}
 
 
+def _load_catalogue(session, prior: dict, owner: str, expected_directory: Path) -> dict:
+    reference = prior.get("reference")
+    if evidence_store.is_store_reference(reference):
+        return evidence_store.read(session, owner, reference)
+    # Older Store snapshots retained derived catalogues as file-side caches.
+    # Read them only for migration; every changed/new catalogue is published
+    # through Store below. File-debug sessions continue to use their explicit
+    # local projection.
+    artifact = prior.get("artifact")
+    if not isinstance(artifact, str):
+        raise TypeError("observation catalogue has no durable reference")
+    path = Path(artifact)
+    if not path.resolve().is_relative_to(expected_directory.resolve()):
+        raise ValueError("observation catalogue escapes session artifacts")
+    value = json.loads(path.read_text())
+    if not isinstance(value, dict):
+        raise TypeError("observation catalogue is not an object")
+    return value
+
+
 def observe_repository(session, checkout: Path, prior: dict | None) -> tuple[dict, list[dict], dict]:
     checkout = checkout.resolve()
     old = None
     if prior:
-        path = Path(prior["artifact"])
         expected = session.state_dir / "sessions" / session.session_id / "observation-catalogues"
-        if not path.resolve().is_relative_to(expected.resolve()):
-            raise ValueError("observation catalogue escapes session artifacts")
-        old = json.loads(path.read_text())
+        old = _load_catalogue(session, prior, REPOSITORY_CATALOGUE_OWNER, expected)
         if digest_hex(old, length=64) != prior["identity"] or old.get("checkout") != str(checkout):
             raise ValueError("corrupt or misbound repository catalogue")
     enumerated = old is None
@@ -133,7 +164,8 @@ def observe_repository(session, checkout: Path, prior: dict | None) -> tuple[dic
                 events.append({"kind": "file.changed", "checkout": str(checkout), "path": name})
     payload = {"schema_version": CATALOGUE_SCHEMA, "checkout": str(checkout), "material": material}
     # Byte-identical observations produce no file writes and no Store changes.
-    return (_catalogue(session, payload) if old is None or material != old["material"] else prior,
+    return (_catalogue(session, payload, REPOSITORY_CATALOGUE_OWNER)
+            if old is None or material != old["material"] else prior,
             events, {"metadata_paths": sum(len(value) for value in material.values()),
                      "enumerated": enumerated})
 
@@ -164,11 +196,8 @@ def observe_library(session, root: Path, prior: dict | None = None) -> dict:
     root = root.resolve()
     old = None
     if prior:
-        path = Path(prior["artifact"])
         expected = session.state_dir / "sessions" / session.session_id / "observation-catalogues"
-        if not path.resolve().is_relative_to(expected.resolve()):
-            raise ValueError("library catalogue escapes session artifacts")
-        old = json.loads(path.read_text())
+        old = _load_catalogue(session, prior, LIBRARY_CATALOGUE_OWNER, expected)
         if digest_hex(old, length=64) != prior["identity"] or old["checkout"] != str(root):
             raise ValueError("corrupt library catalogue")
     material = old.get("material", {}) if old else {}
@@ -188,6 +217,7 @@ def observe_library(session, root: Path, prior: dict | None = None) -> dict:
     artifacts = {name: observe_artifact(root / name, material.get("files", {}).get(name)) for name in sorted(files)}
     payload = {"schema_version": "mncs.environment.library-observation/1", "checkout": str(root),
                "material": {"files": artifacts, "directories": directories}}
-    ref = _catalogue(session, payload) if not old or payload != old else dict(prior)
+    ref = (_catalogue(session, payload, LIBRARY_CATALOGUE_OWNER)
+           if not old or payload != old else dict(prior))
     ref["content_identity"] = "sha256:" + digest_hex({name: value.get("artifact_identity") for name, value in artifacts.items()}, length=64)
     return ref

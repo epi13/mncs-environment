@@ -331,6 +331,129 @@ def ambient_tick(session, definition, *, fresh=False, upgraded=False, lock_waite
     return incremental.tick(session, definition, runners, fresh=fresh)
 
 
+def _validate_campaign_identity(store, *, campaign_id: str,
+                                authenticated_principal_id: str | None,
+                                definition_id: str, workspace_root: Path,
+                                selected_session_id: str | None,
+                                pending_handoff: tuple | None) -> None:
+    """Refuse to create a parallel live session under an existing campaign id.
+
+    A campaign identity is durable across consumer restarts. If it already
+    names live work in another Environment definition or workspace, silently
+    creating a new session would split its ownership record and can resume the
+    wrong authority. The existing session id and its exact context are
+    returned so the caller can resume that recorded Environment or choose a
+    distinct campaign identity for independent work.
+    """
+    if authenticated_principal_id is None:
+        return
+    from . import selection
+
+    live = selection.select(
+        store,
+        {"campaign_identity": campaign_id, "campaign_continuation": True},
+        lambda snapshot: (
+            (snapshot.get("campaign") or {}).get("identity") == campaign_id
+            and snapshot.get("lifecycle") not in ("completed", "failed")
+        ),
+    )
+    if not live:
+        return
+    snapshots = {session_id: store.load_snapshot(session_id) or {}
+                 for session_id in live}
+
+    def continuation(session_id: str) -> dict:
+        snapshot = snapshots[session_id]
+        campaign = snapshot.get("campaign") or {}
+        repositories = []
+        repository_refs = campaign.get("repository_refs", [])
+        if not isinstance(repository_refs, list):
+            repository_refs = []
+        for item in repository_refs[:16]:
+            if isinstance(item, dict):
+                repositories.append({key: item.get(key) for key in (
+                    "repository", "checkout_identity", "git_common_directory_identity",
+                    "branch", "head", "clean", "observation",
+                )})
+        checkpoint_ids = snapshot.get("checkpoints", [])
+        claim_ids = campaign.get("claim_ids", [])
+        pressures = campaign.get("unresolved_pressures", [])
+        if not isinstance(checkpoint_ids, list):
+            checkpoint_ids = []
+        if not isinstance(claim_ids, list):
+            claim_ids = []
+        if not isinstance(pressures, list):
+            pressures = []
+        delivery = campaign.get("delivery", {"status": "pending"})
+        if not isinstance(delivery, dict):
+            delivery = {"status": "unknown"}
+        return {
+            "session_id": session_id,
+            "lifecycle": snapshot.get("lifecycle"),
+            "consumer_id": snapshot.get("consumer_id"),
+            "definition_id": snapshot.get("provenance", {}).get("definition_id"),
+            "workspace_root": snapshot.get("workspace", {}).get("root"),
+            "checkpoint_ids": checkpoint_ids[-4:],
+            "claim_ids": claim_ids[-16:],
+            "repositories": repositories,
+            "delivery": delivery,
+            "unresolved_pressures": pressures[:8],
+        }
+
+    handoff_session = pending_handoff[0] if pending_handoff is not None else None
+    foreign = [
+        session_id for session_id, snapshot in snapshots.items()
+        if snapshot.get("authenticated_principal_id") != authenticated_principal_id
+        and session_id != handoff_session
+    ]
+    if foreign:
+        raise EntryError(
+            "campaign identity has live work owned by another authenticated principal",
+            "campaign-owner-conflict",
+            campaign_id=campaign_id,
+            sessions=sorted(foreign),
+            next="request an explicit owner-issued handoff; Environment will not adopt another principal's campaign",
+        )
+    if len(live) > 1:
+        raise EntryError(
+            "multiple live Environment sessions share this campaign identity",
+            "campaign-continuation-ambiguous",
+            campaign_id=campaign_id,
+            sessions=live,
+            continuations=[continuation(session_id) for session_id in live],
+            next="resume the intended recorded session or assign a distinct campaign identity to independent work",
+        )
+    only = live[0]
+    if selected_session_id == only or handoff_session == only:
+        return
+    prior = snapshots[only]
+    prior_definition = prior.get("provenance", {}).get("definition_id")
+    prior_workspace = prior.get("workspace", {}).get("root")
+    if prior_definition != definition_id or prior_workspace != str(workspace_root):
+        raise EntryError(
+            "campaign identity already belongs to live work in a different Environment definition or workspace",
+            "campaign-context-mismatch",
+            campaign_id=campaign_id,
+            session_id=only,
+            lifecycle=prior.get("lifecycle"),
+            definition_id=prior_definition,
+            workspace=prior_workspace,
+            continuation=continuation(only),
+            next=(f"resume {only} --revalidate in its recorded Environment, or choose a new campaign identity "
+                  "for work under the changed definition or workspace"),
+        )
+    raise EntryError(
+        "campaign identity already has a live session that this entry did not select",
+        "campaign-session-active",
+        campaign_id=campaign_id,
+        session_id=only,
+        lifecycle=prior.get("lifecycle"),
+        continuation=continuation(only),
+        next=(f"resume {only} --revalidate, or choose a new campaign identity "
+              "for independent work"),
+    )
+
+
 def enter(*, definition: dict, definition_path: Path | None, workspace_root: str,
           state_dir: Path, backend: str, consumer_id: str, consumer_kind: str,
           new_session: bool = False, campaign_id: str | None = None,
@@ -385,6 +508,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
         try:
             upgraded = False
             pending_handoff = None
+            selected_session_id = None
             has_persistence = (Path(state_dir) / ("store" if backend == "store" else "sessions")).exists()
             if not new_session and has_persistence:
                 discovered_campaigns: set[str] = set()
@@ -424,6 +548,52 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                         )
                     if discovered_campaigns:
                         campaign_id = next(iter(discovered_campaigns))
+                    else:
+                        # Intent identity is stable across definition changes.
+                        # Reuse it to find the prior campaign, then let the
+                        # campaign-context guard explain whether that exact
+                        # Environment can still be resumed. Do not silently
+                        # create a second campaign because a definition moved.
+                        intent_selector = {
+                            "principal_id": authenticated_principal_id,
+                            "work_intent_id": intent["identity"],
+                            "workspace": str(root),
+                            "campaign_intent_discovery": True,
+                        }
+                        intent_sessions = selection.select(
+                            store,
+                            intent_selector,
+                            lambda snapshot: (
+                                snapshot.get("authenticated_principal_id")
+                                == authenticated_principal_id
+                                and (snapshot.get("intent") or {}).get("identity")
+                                == intent["identity"]
+                                and snapshot.get("workspace", {}).get("root")
+                                == str(root)
+                                and snapshot.get("lifecycle") not in (
+                                    "completed", "failed",
+                                )
+                                and isinstance(
+                                    (snapshot.get("campaign") or {}).get("identity"),
+                                    str,
+                                )
+                            ),
+                        )
+                        intent_campaigns = {
+                            str((store.load_snapshot(session_id) or {})
+                                .get("campaign", {}).get("identity"))
+                            for session_id in intent_sessions
+                        }
+                        if len(intent_campaigns) > 1:
+                            raise EntryError(
+                                "multiple live campaigns match this authenticated work intent",
+                                "campaign-continuation-ambiguous",
+                                campaigns=sorted(intent_campaigns),
+                                sessions=sorted(intent_sessions),
+                                next="select the intended campaign identity; Environment will not choose between continuations",
+                            )
+                        if intent_campaigns:
+                            campaign_id = next(iter(intent_campaigns))
 
                 if authenticated_principal_id is not None:
                     handoff_selector = {
@@ -573,6 +743,13 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                     pending_handoff[0] if pending_handoff is not None
                     else matches[0] if len(matches) == 1 else None
                 )
+                _validate_campaign_identity(
+                    store, campaign_id=campaign_id,
+                    authenticated_principal_id=authenticated_principal_id,
+                    definition_id=definition_id, workspace_root=root,
+                    selected_session_id=selected_session_id,
+                    pending_handoff=pending_handoff,
+                )
                 if backend == "store" and selected_session_id is not None:
                     upgraded = upgrade_session_store_provider(
                         state_dir, store.load_snapshot(selected_session_id)
@@ -604,6 +781,15 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                     session = sessions.Session.open(state_dir=state_dir, session_id=matches[0],
                                                       backend=backend, store=store)
                     session.reconcile_campaign_continuity()
+            elif has_persistence:
+                # Independent-session entry still requires a distinct durable
+                # campaign identity while same-campaign work is live.
+                _validate_campaign_identity(
+                    store, campaign_id=campaign_id,
+                    authenticated_principal_id=authenticated_principal_id,
+                    definition_id=definition_id, workspace_root=root,
+                    selected_session_id=None, pending_handoff=None,
+                )
             reused = session is not None
             if session is None:
                 if authenticated_principal_id is not None and not new_session:

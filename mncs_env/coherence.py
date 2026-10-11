@@ -16,7 +16,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from . import observations, sources, workspace
+from . import evidence_store, observations, sources
 from .identity import digest_hex
 from .persist import write_json
 
@@ -209,7 +209,7 @@ def _file_events(session, events: list[dict]) -> list[dict]:
     files = [event for event in events if event["kind"] == "file.changed"]
     if not files:
         return [event for event in events if event['kind'] != 'file.changed']
-    from . import projections, projection_sources
+    from . import projection_sources, projections
     root = Path(session.snapshot['workspace']['root'])
     declarations, _ = projections.discover_selected_declarations(session, root)
     targets = {(d['checkout'], d['output']): d for d in declarations}
@@ -468,6 +468,18 @@ def _result_refs(session, results):
     refs = {}
     for name, block in results.items():
         identity = digest_hex(block, length=64)
+        owner = f"incremental-coherence:{name}"
+        if hasattr(getattr(session, "store", None), "backend"):
+            reference = evidence_store.publish(session, owner, {"block": block})
+            if reference is None:
+                from .store_backend import StoreUnavailable
+
+                raise StoreUnavailable(
+                    "Store-backed coherence results require immutable evidence publication",
+                    code="provider-operation-unsupported",
+                )
+            refs[name] = {"identity": identity, "reference": reference}
+            continue
         path = session.state_dir / "sessions" / session.session_id / "coherence-results" / (identity + ".json")
         try:
             current = json.loads(path.read_text())
@@ -484,10 +496,15 @@ def _load_results(session, refs):
     expected = session.state_dir / "sessions" / session.session_id / "coherence-results"
     for name, ref in refs.items():
         try:
-            path = Path(ref["artifact"])
-            if not path.resolve().is_relative_to(expected.resolve()):
-                raise ValueError("coherence result escapes session artifacts")
-            block = json.loads(path.read_text())["block"]
+            reference = ref.get("reference")
+            if evidence_store.is_store_reference(reference):
+                owner = f"incremental-coherence:{name}"
+                block = evidence_store.read(session, owner, reference)["block"]
+            else:
+                path = Path(ref["artifact"])
+                if not path.resolve().is_relative_to(expected.resolve()):
+                    raise ValueError("coherence result escapes session artifacts")
+                block = json.loads(path.read_text())["block"]
             if digest_hex(block, length=64) != ref["identity"]:
                 raise ValueError("corrupt coherence result")
             results[name] = block
@@ -678,7 +695,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         report["cursor_disposition"] = "reconciled_and_advanced"
     # Observation and effects are two phases. A moving checkout cannot be
     # certified current using an after-the-fact catalogue of unseen edits.
-    after, intervening, after_known, _ = _observe(session, observed)
+    _after, intervening, after_known, _ = _observe(session, observed)
     # A replay, rather than sampling the latest generation, can acknowledge
     # our own effects without discarding a publication racing those effects.
     if callable(getattr(session.store, "generation", None)) and report["scheduled"]:

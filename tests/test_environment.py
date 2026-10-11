@@ -2886,6 +2886,96 @@ class EntryFrictionTests(unittest.TestCase):
             self.assertEqual(diagnostic["diagnostics"]["campaigns"],
                              ["cmp_discovery_one", "cmp_discovery_two"])
 
+    def test_explicit_campaign_identity_cannot_start_under_changed_definition(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            workspace_root = base / "campaign-root"
+            workspace_root.mkdir()
+            definition_path = base / "environment.json"
+            original = {
+                "name": "campaign-definition-before-restart",
+                "intent": {"goal": "continue one authenticated campaign safely"},
+            }
+            definition_path.write_text(json.dumps(original), encoding="utf-8")
+            state = base / "state"
+            principal = "control-principal-test"
+            campaign_id = "cmp_definition-change-test"
+            env = {"MNCS_ENV_AUTH_PRINCIPAL_ID": principal}
+
+            with mock.patch.dict(os.environ, env):
+                first_code, first, first_error = self._run_cli(
+                    "--persistence", "file", "--state-dir", str(state), "enter",
+                    "--definition", str(definition_path), "--workspace", str(workspace_root),
+                    "--consumer", "first-process", "--campaign-id", campaign_id,
+                )
+                changed = dict(original, name="campaign-definition-after-restart")
+                definition_path.write_text(json.dumps(changed), encoding="utf-8")
+                second_code, second, second_error = self._run_cli(
+                    "--persistence", "file", "--state-dir", str(state), "enter",
+                    "--definition", str(definition_path), "--workspace", str(workspace_root),
+                    "--consumer", "restarted-process", "--campaign-id", campaign_id,
+                )
+            with mock.patch.dict(os.environ, {"MNCS_ENV_AUTH_PRINCIPAL_ID": "other-principal"}):
+                foreign_code, foreign, foreign_error = self._run_cli(
+                    "--persistence", "file", "--state-dir", str(state), "enter",
+                    "--definition", str(definition_path), "--workspace", str(workspace_root),
+                    "--consumer", "foreign-process", "--campaign-id", campaign_id,
+                )
+
+            self.assertEqual(first_code, 0, first_error)
+            self.assertEqual(second_code, 2)
+            self.assertEqual(second, {})
+            diagnostic = json.loads(second_error)
+            self.assertEqual(diagnostic["diagnostics"]["code"],
+                             "campaign-context-mismatch")
+            self.assertEqual(diagnostic["diagnostics"]["session_id"],
+                             first["session_id"])
+            self.assertIn(first["session_id"], diagnostic["diagnostics"]["next"])
+            self.assertEqual(foreign_code, 2)
+            self.assertEqual(foreign, {})
+            self.assertEqual(json.loads(foreign_error)["diagnostics"]["code"],
+                             "campaign-owner-conflict")
+            session_dirs = list((state / "sessions").glob("ses_*"))
+            self.assertEqual([path.name for path in session_dirs], [first["session_id"]])
+
+    def test_work_intent_discovers_campaign_across_definition_change(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            workspace_root = base / "campaign-root"
+            workspace_root.mkdir()
+            definition_path = base / "environment.json"
+            intent = {"goal": "same durable campaign intent across a definition update"}
+            definition_path.write_text(json.dumps({
+                "name": "campaign-intent-before-restart", "intent": intent,
+            }), encoding="utf-8")
+            state = base / "state"
+            env = {"MNCS_ENV_AUTH_PRINCIPAL_ID": "control-principal-test"}
+
+            with mock.patch.dict(os.environ, env):
+                first_code, first, first_error = self._run_cli(
+                    "--persistence", "file", "--state-dir", str(state), "enter",
+                    "--definition", str(definition_path), "--workspace", str(workspace_root),
+                    "--consumer", "first-process",
+                )
+                definition_path.write_text(json.dumps({
+                    "name": "campaign-intent-after-restart", "intent": intent,
+                }), encoding="utf-8")
+                second_code, second, second_error = self._run_cli(
+                    "--persistence", "file", "--state-dir", str(state), "enter",
+                    "--definition", str(definition_path), "--workspace", str(workspace_root),
+                    "--consumer", "restarted-process",
+                )
+
+            self.assertEqual(first_code, 0, first_error)
+            self.assertEqual(second_code, 2)
+            self.assertEqual(second, {})
+            diagnostic = json.loads(second_error)["diagnostics"]
+            self.assertEqual(diagnostic["code"], "campaign-context-mismatch")
+            self.assertEqual(diagnostic["session_id"], first["session_id"])
+            self.assertEqual(diagnostic["continuation"]["session_id"], first["session_id"])
+            session_dirs = list((state / "sessions").glob("ses_*"))
+            self.assertEqual([path.name for path in session_dirs], [first["session_id"]])
+
     def test_status_and_context_are_read_only_and_documented(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

@@ -41,10 +41,13 @@ On the host, the Control service receives write access only to the configured
 canonical Store root. Its systemd boundary remains `ProtectSystem=strict`,
 `ProtectHome=read-only`, and `NoNewPrivileges=yes`. Environment checkpoints,
 claims, snapshots, Store-provider bootstrap records, Doctor evidence, and
-coherence evidence use immutable Store records. The agent does not receive a
-general path proxy or a filesystem grant to Store. Store-backed entry locks
-also live under that configured root; file-debug locks remain under their
-explicit state directory.
+coherence evidence use immutable Store records. Incremental repository
+catalogues and cached owner-pass results are also Store evidence references;
+older file-side cache references may be read during migration, while new
+Store-backed writes never require `state_dir/sessions` access. The agent does
+not receive a general path proxy or a filesystem grant to Store. Store-backed
+entry locks also live under that configured root; file-debug locks remain
+under their explicit state directory.
 
 ## Bounded workspace discovery
 
@@ -93,7 +96,16 @@ Terminal and handed-off sessions are not implicitly reused. `--new-session`
 explicitly creates independent work. Multiple matches return
 `entry-session-ambiguous` and require `resume <session> --revalidate` or
 independent entry. Changed definitions establish new work rather than silently
-changing a prior session's authority.
+changing a prior session's authority. An authenticated campaign identity is
+checked against all live sessions before creation. When no campaign identity
+is supplied, a unique live campaign with the same authenticated principal,
+work-intent identity, and workspace is discovered even if its definition
+changed. If that campaign belongs to a different definition or workspace,
+entry returns `campaign-context-mismatch` with a compact continuation capsule
+instead of creating a second session under the same campaign. Resume it in its
+recorded Environment, or choose a distinct campaign identity for independent
+work. Another principal's live campaign remains protected unless its owner
+issues a handoff.
 
 Entry and `reconcile` use a nonblocking process lock per state directory and
 backend. A concurrent operation returns `entry-busy`, with a retry action.
