@@ -192,6 +192,15 @@ retained session opening. A raw precompiled override cannot bypass selected
 source/compiler artifact preparation; standalone Store callers retain their
 explicit bootstrap override. The caller environment is restored after opening.
 
+Store-backed capability invocations receive a private temporary artifact
+directory. Environment restores that capability's last bundle from an
+immutable, content-addressed Store record keyed by session, capability, and
+binding, then publishes the bounded result through the strict Store record
+provider operation. Providers receive no Store path or descriptor. File-backed
+debug sessions keep their explicit state-directory sidecar behavior. Symlinks,
+special files, and output trees beyond the file, depth, and byte limits are
+rejected before a completion event is recorded.
+
 Selected Store preparation and invocations share a derived artifact cache under
 `STATE_DIR/provider-cache/mncs-store`. Environment supplies writable transport
 storage; Store owns source/compiler-bound keys and validates cache contents.

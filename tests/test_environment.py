@@ -8,6 +8,8 @@ persistence, CAS-safe sequences, and restart/resume.
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import io
 import json
 import os
@@ -41,6 +43,7 @@ from mncs_env import (  # noqa: E402
     capabilities,
     claims,
     cli,
+    evidence_store,
     events,
     identity,
     intent,
@@ -2487,6 +2490,10 @@ class SessionTests(unittest.TestCase):
             with self.assertRaises(sessions.AuthorityDenied):
                 session.invoke("guarded", ["-c", f"echo planted > {canary}"])
             self.assertFalse(canary.exists())
+            self.assertFalse(
+                (state / "sessions" / session.session_id).exists(),
+                "a denied capability must not create a session-side artifact directory",
+            )
 
     def test_allow_executes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -2500,32 +2507,155 @@ class SessionTests(unittest.TestCase):
 
     def test_session_invoke_forwards_bounded_output_limit(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            session = make_session(Path(directory))
+            state = Path(directory)
+            session = make_session(state)
             binding = capabilities.probe_availability(
                 capabilities.bind(provider="p", capability="echoer", contract_revision="1",
                                   entrypoint="e", address="/bin/echo", effects=["read"]))
             session.snapshot["bindings"].append(binding)
+            observed_directories: list[Path] = []
+
+            def invoke(_binding, _argv, **kwargs):
+                artifact_directory = Path(
+                    kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"]
+                )
+                observed_directories.append(artifact_directory)
+                nested = artifact_directory / "nested"
+                nested.mkdir()
+                (nested / "result.bin").write_bytes(b"provider artifact\x00bytes")
+                return {"status": "ok", "returncode": 0, "stdout": "ok", "stderr": ""}
+
             with mock.patch.object(
                 sessions.capabilities_module, "invoke",
-                return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
+                side_effect=invoke,
             ) as invoke:
                 result = session.invoke("echoer", ["hi"], output_limit_bytes=131072)
             self.assertEqual(result["status"], "ok")
             self.assertEqual(invoke.call_args.kwargs["output_limit_bytes"], 131072)
-            artifact_directory = Path(
-                invoke.call_args.kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"]
+            artifact_directory = observed_directories[0]
+            self.assertFalse(artifact_directory.exists(), "Store-backed scratch is removed after publication")
+            self.assertFalse(artifact_directory.is_relative_to(state.resolve()))
+            self.assertFalse((state / "sessions" / session.session_id).exists())
+            artifact_reference = result["artifact_store_ref"]
+            self.assertTrue(artifact_reference.startswith("mncs-store:"))
+            stored = evidence_store.read(
+                session, "capability-invocation-artifacts", artifact_reference,
             )
-            self.assertTrue(artifact_directory.is_dir())
-            self.assertEqual(artifact_directory.parent.parent.parent.name, "sessions")
-            self.assertIn(session.session_id, artifact_directory.parts)
+            self.assertEqual(stored["capability"], "echoer")
+            self.assertEqual(stored["files"][0]["path"], "nested/result.bin")
+            self.assertEqual(
+                base64.b64decode(stored["files"][0]["content_base64"]),
+                b"provider artifact\x00bytes",
+            )
             self.assertEqual(
                 session.snapshot["artifacts"][-1]["artifact_directory"],
-                str(artifact_directory),
+                None,
+            )
+            self.assertEqual(
+                session.snapshot["artifacts"][-1]["artifact_store_ref"],
+                artifact_reference,
             )
             with self.assertRaises(capabilities.CapabilityError):
                 session.invoke(
                     "echoer", ["hi"],
                     output_limit_bytes=capabilities.MAX_OUTPUT_LIMIT_BYTES + 1)
+
+    def test_session_invoke_restores_store_artifacts_after_process_reopen(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            session_id = session.session_id
+            binding = capabilities.probe_availability(
+                capabilities.bind(provider="p", capability="artifact-cache",
+                                  contract_revision="1", entrypoint="cache",
+                                  address="/bin/echo", effects=["read"]),
+            )
+            session.snapshot["bindings"].append(binding)
+            session._save()
+
+            def first_call(_binding, _argv, **kwargs):
+                root = Path(kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+                (root / "cache.json").write_text('{"generation":1}', encoding="utf-8")
+                return {"status": "ok", "returncode": 0, "stdout": "first", "stderr": ""}
+
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke", side_effect=first_call,
+            ):
+                first = session.invoke("artifact-cache", [])
+            first_reference = first["artifact_store_ref"]
+            session.close()
+
+            # A fresh Environment process reopens the Store and materializes
+            # the exact prior cache into a new private scratch directory.
+            reopened = sessions.Session.open(
+                state_dir=state, session_id=session_id, backend="store",
+                verify_on_open=False,
+            )
+            observed_directories: list[Path] = []
+
+            def second_call(_binding, _argv, **kwargs):
+                root = Path(kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+                observed_directories.append(root)
+                self.assertEqual(
+                    (root / "cache.json").read_text(encoding="utf-8"),
+                    '{"generation":1}',
+                )
+                (root / "cache.json").write_text('{"generation":2}', encoding="utf-8")
+                return {"status": "ok", "returncode": 0, "stdout": "second", "stderr": ""}
+
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke", side_effect=second_call,
+            ):
+                second = reopened.invoke("artifact-cache", [])
+            self.assertNotEqual(second["artifact_store_ref"], first_reference)
+            self.assertFalse(observed_directories[0].exists())
+            stored = evidence_store.read(
+                reopened, "capability-invocation-artifacts", second["artifact_store_ref"],
+            )
+            self.assertEqual(
+                stored["files"][0]["sha256"],
+                hashlib.sha256(b'{"generation":2}').hexdigest(),
+            )
+            self.assertFalse((state / "sessions" / session_id).exists())
+            reopened.close()
+
+    def test_session_invoke_rejects_symlinked_artifact_output(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            secret = state / "outside.txt"
+            secret.write_text("must stay outside Store", encoding="utf-8")
+            session = make_session(state)
+            binding = capabilities.probe_availability(
+                capabilities.bind(provider="p", capability="symlink-output",
+                                  contract_revision="1", entrypoint="output",
+                                  address="/bin/echo", effects=["read"]),
+            )
+            session.snapshot["bindings"].append(binding)
+            observed_directories: list[Path] = []
+
+            def invoke(_binding, _argv, **kwargs):
+                artifact_directory = Path(
+                    kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"]
+                )
+                observed_directories.append(artifact_directory)
+                (artifact_directory / "escaped.txt").symlink_to(secret)
+                return {"status": "ok", "returncode": 0, "stdout": "ok", "stderr": ""}
+
+            with (
+                mock.patch.object(
+                    sessions.capabilities_module, "invoke", side_effect=invoke,
+                ),
+                self.assertRaises(
+                    sessions.invocation_artifacts_module.InvocationArtifactError,
+                ),
+            ):
+                session.invoke("symlink-output", [])
+            self.assertEqual(secret.read_text(encoding="utf-8"), "must stay outside Store")
+            self.assertFalse(observed_directories[0].exists())
+            self.assertFalse((state / "sessions" / session.session_id).exists())
+            events = session.store.read_events(session.session_id)
+            self.assertTrue(any(event["type"] == "capability.invoked" for event in events))
+            self.assertFalse(any(event["type"] == "invocation.completed" for event in events))
 
     def test_readiness_probe_gets_bounded_session_artifact_root(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

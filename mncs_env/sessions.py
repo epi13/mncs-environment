@@ -27,6 +27,7 @@ from . import capabilities as capabilities_module
 from . import claims as claims_module
 from . import composition
 from . import events as events_module
+from . import invocation_artifacts as invocation_artifacts_module
 from . import readiness as readiness_module
 from . import rights as rights_module
 from . import workspace as workspace_module
@@ -2095,17 +2096,6 @@ class Session:
         binding = capabilities_module.bind_session_context(
             binding, argv, session_id=self.session_id,
         )
-        state_root = self.store.state_dir.resolve()
-        artifact_directory = (
-            state_root / "sessions" / self.session_id / "artifacts"
-            / digest_hex(capability)
-        ).resolve()
-        if not artifact_directory.is_relative_to(state_root):
-            raise LifecycleError("session artifact directory escapes the Environment state root")
-        artifact_directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-        invocation_env = dict(env or {})
-        invocation_env.update(self._selected_runtime_environment(binding))
-        invocation_env["MNCS_ENV_SESSION_ARTIFACT_DIR"] = str(artifact_directory)
         if binding.get("availability", {}).get("status") != "available":
             raise AuthorityDenied(
                 f"capability {capability!r} is not available: "
@@ -2159,21 +2149,34 @@ class Session:
                 raise AuthorityDenied(effect_verdict["reason"])
             if effect_verdict["verdict"] == "escalate":
                 return self._pending(capability, argv, required, effect_verdict["reason"])
-        self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
-                   {"capability": capability, "argv": argv, "executor": executor,
-                    "effect_target": admitted_effect_target})
-        result = capabilities_module.invoke(
-            binding, argv, cwd=cwd, timeout_seconds=timeout_seconds,
-            output_limit_bytes=output_limit_bytes, env=invocation_env)
+        with invocation_artifacts_module.InvocationArtifactWorkspace(
+            self, capability, binding.get("binding_id")
+        ) as artifact_workspace:
+            invocation_env = dict(env or {})
+            invocation_env.update(self._selected_runtime_environment(binding))
+            invocation_env["MNCS_ENV_SESSION_ARTIFACT_DIR"] = str(artifact_workspace.path)
+            self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
+                       {"capability": capability, "argv": argv, "executor": executor,
+                        "effect_target": admitted_effect_target})
+            result = capabilities_module.invoke(
+                binding, argv, cwd=cwd, timeout_seconds=timeout_seconds,
+                output_limit_bytes=output_limit_bytes, env=invocation_env)
+            artifact_fields = artifact_workspace.publish()
+        result.update({
+            key: artifact_fields[key]
+            for key in ("artifact_store_ref", "artifact_file_count", "artifact_byte_count")
+        })
         self.snapshot.setdefault("artifacts", []).append(
             {"kind": "invocation-result", "capability": capability,
+             "binding_id": binding.get("binding_id"),
              "status": result["status"], "executor": executor,
              "effect_target": admitted_effect_target,
-             "artifact_directory": str(artifact_directory), "at": utcnow()}
+             **artifact_fields, "at": utcnow()}
         )
         self._emit("invocation.completed", binding.get("provider", "unknown"),
                    {"capability": capability, "status": result["status"],
-                    "returncode": result["returncode"]})
+                    "returncode": result["returncode"],
+                    "artifact_store_ref": artifact_fields.get("artifact_store_ref")})
         self._save()
         return result
 
