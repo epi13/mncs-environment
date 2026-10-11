@@ -1,0 +1,53 @@
+{
+  "schema_version": "mncs.environment.canonical-store-post-checkpoint-integrity-proof/1",
+  "identity": "ev_environment_canonical_store_post_checkpoint_integrity_20261011",
+  "recorded_at": "2026-10-11T23:35:54Z",
+  "owner": "mncs-environment",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "source_revisions": {
+    "mncs-environment": "61b2a2b2b1e7182849ead268a00668cc7aad79e7",
+    "mncs-control-mcp": "ef31b364ab524b0d1a5fb20cc38bad32d0f4f99c",
+    "mncs-store": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "campaign_checkpoint": {
+    "identity": "chk_b288d867a3ab1709",
+    "sequence": 153,
+    "readback_process": "fresh protected terminal invocation",
+    "evidence_count": 106,
+    "evidence_truncated": false
+  },
+  "protected_execution": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "command": "python3 -m mncs_env.cli store --session ses_7226fbcfe65820f7 --verify",
+    "exit_code": 0,
+    "duration_seconds": 119.038,
+    "transport": "authenticated Control Environment RPC",
+    "canonical_store_root": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_redirected": false,
+    "client_direct_store_write": false
+  },
+  "verification": {
+    "ok": true,
+    "generation": 45257,
+    "objects": 45259,
+    "relations": 0,
+    "provenance_records": 0,
+    "recovery": "RECOVERED_OLD",
+    "commit_feed": "4d430100000000000000b0c90000b0cb00000000000000007c03322dc0f6aa86f81772de95c8d5c2debd5dbfff5bc2f31816a224da00d2b7",
+    "chunk_size": 65536,
+    "fanout": 31,
+    "artifact": {
+      "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+      "backend": "mncs-research-bytecode",
+      "toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs"
+    }
+  },
+  "result": "PASS",
+  "limits": [
+    "This read-only verification proves the canonical Store integrity state after campaign checkpoint 153. Checkpoint and claim mutation proofs remain in their separate Environment acceptance records."
+  ]
+}
