@@ -1,0 +1,165 @@
+{
+  "schema_version": "mncs.environment.protected-project-campaign-reentry/1",
+  "identity": "ev_environment_project_scoped_campaign_reentry_20261011",
+  "recorded_at": "2026-10-11T20:32:10Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "owner": "mncs-environment",
+  "sources": [
+    {
+      "repository": "mncs-environment",
+      "revision": "9b51e36175fa41ea0995f5416384339bd2e028cb",
+      "files": [
+        {
+          "path": ".mncs/project-environment.json",
+          "sha256": "9bfa2806ca68f8a440a73922d1289e63da6c9ce03c53223d92eb9dbba92d3839"
+        }
+      ]
+    },
+    {
+      "repository": "mncs-control-mcp",
+      "revision": "45bb846295f5a0f64a6f134d3ac9373a982ac4ae",
+      "files": [
+        {
+          "path": "src/mncs_control_mcp/environment_rpc.py",
+          "sha256": "9405f4bc5d674b50a92f76d7591d02ee0a11b0431fac28fa95674fefb64ba621"
+        },
+        {
+          "path": "tests/test_environment_rpc.py",
+          "sha256": "91f631f484b04f06cb225151aee7435e977b234242509e11b520e0aed6bbc29c"
+        },
+        {
+          "path": "docs/SECURITY.md",
+          "sha256": "15c222e8917686acae9356bb19d4685b56df170e71d879ed8fbf64136f4cce68"
+        }
+      ]
+    }
+  ],
+  "project_definition": {
+    "path": ".mncs/project-environment.json",
+    "identity": "env_f31ee034e8e1fdcb",
+    "repository_selection": ["mncs-environment"],
+    "matches_existing_campaign_definition": true
+  },
+  "control_service": {
+    "unit": "mncs-control-tunnel.service",
+    "active_after_restart": true,
+    "runtime_revision": "45bb846295f5a0f64a6f134d3ac9373a982ac4ae",
+    "restart_required": false,
+    "environment_persistence": "ready",
+    "store_mutation": "owner-write-path-available",
+    "hardening": {
+      "ProtectSystem": "strict",
+      "ProtectHome": "read-only",
+      "NoNewPrivileges": true,
+      "ReadWritePaths_includes_canonical_store": true
+    }
+  },
+  "protected_execution": {
+    "backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "canonical_store_path_visible": false,
+    "canonical_store_path_writable": false,
+    "path_check": {
+      "observed_at": "2026-10-11T20:29:06Z",
+      "method": "os.path.exists and os.access(W_OK)",
+      "exit_code": 0
+    }
+  },
+  "entry_attempts": [
+    {
+      "command": "./scripts/mncs-env enter",
+      "definition_argument_supplied": false,
+      "campaign_id_supplied": false,
+      "started_at": "2026-10-11T20:29:14.826217Z",
+      "completed_at": "2026-10-11T20:29:28.334746Z",
+      "exit_code": 2,
+      "result": "rejected-without-mutation",
+      "diagnostic": "campaign-continuation-ambiguous",
+      "publication_completed": false,
+      "candidate_campaign_count": 3
+    },
+    {
+      "command": "./scripts/mncs-env enter --campaign-id cmp_mncs_continuity_20261010",
+      "definition_argument_supplied": false,
+      "campaign_id_source": "authenticated project continuation capsule",
+      "started_at": "2026-10-11T20:29:40.114294Z",
+      "completed_at": "2026-10-11T20:30:01.185623Z",
+      "exit_code": 0,
+      "result": "existing-session-reused",
+      "session_id": "ses_7226fbcfe65820f7",
+      "consumer_id": "local-agent",
+      "lifecycle": "active",
+      "entry_reused": true,
+      "environment_id": "renv_ef518b3ade5d6337"
+    }
+  ],
+  "fresh_process_readback": {
+    "command": "./scripts/mncs-env inspect ses_7226fbcfe65820f7 --consumer local-agent",
+    "started_at": "2026-10-11T20:32:04.650238Z",
+    "completed_at": "2026-10-11T20:32:10.829102Z",
+    "exit_code": 0,
+    "session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "local-agent",
+    "lifecycle": "active",
+    "environment_id": "renv_ef518b3ade5d6337",
+    "event_count": 536,
+    "checkpoint_count": 132,
+    "latest_checkpoint_id": "chk_2195827bc6a3deb4",
+    "active_claims": [
+      {
+        "claim_id": "claim:mncs-environment",
+        "identity": "clm_545ce73595e24c40",
+        "consumer_id": "local-agent",
+        "session_id": "ses_7226fbcfe65820f7",
+        "status": "held",
+        "version": 33,
+        "expires_at": "2026-10-12T19:38:47+00:00"
+      },
+      {
+        "claim_id": "claim:mncs-control-mcp",
+        "identity": "clm_badf19cac70d388e",
+        "consumer_id": "codex-process-2",
+        "session_id": "ses_7226fbcfe65820f7",
+        "status": "held",
+        "version": 3,
+        "expires_at": "2026-10-12T19:38:55+00:00"
+      }
+    ]
+  },
+  "continuation_capsule": {
+    "observed_at": "2026-10-11T20:32:04Z",
+    "status": "context-conflict",
+    "contexts_count": 2,
+    "selected_session": {
+      "session_id": "ses_7226fbcfe65820f7",
+      "definition_id": "env_f31ee034e8e1fdcb",
+      "lifecycle": "active",
+      "claim_ids": ["claim:mncs-environment"],
+      "evidence_count": 83
+    },
+    "retained_alternate_context": {
+      "session_id": "ses_b4b2d283542220b0",
+      "definition_id": "env_1ea3af15c7464177",
+      "lifecycle": "active",
+      "claim_ids": [],
+      "checkpoint_ids": [],
+      "evidence_count": 0
+    },
+    "interpretation": "The exact selected project definition resumed by campaign identity. Environment kept the second active definition visible and did not adopt, complete, or transfer it."
+  },
+  "validation": {
+    "focused_project_scope_cases": "4 passed",
+    "tests_test_environment_rpc": "27 passed",
+    "ruff": "passed",
+    "py_compile": "passed",
+    "git_diff_check": "passed",
+    "project_definition_identity_check": "env_f31ee034e8e1fdcb matches tests/fixtures/control-rpc-entry.json"
+  },
+  "limitations": [
+    "Entry without a campaign ID remains ambiguous while three same-principal campaigns match; the continuation capsule supplies the durable campaign choices.",
+    "The campaign still has two active Environment definition contexts and reports context-conflict until their legitimate owners reconcile them.",
+    "This proves authorized project-scoped campaign entry and readback, not compiler resource scheduling or Stage-1/Stage-2 succession."
+  ]
+}
