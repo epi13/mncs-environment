@@ -1,0 +1,119 @@
+{
+  "execution_boundary": {
+    "canonical_store_path_visible": false,
+    "direct_canonical_store_write_access": false,
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "service_unit": "mncs-control-tunnel.service",
+    "transport": "authenticated Control Environment RPC to canonical Store",
+    "unit_configuration_changed": false,
+    "unit_policy": {
+      "NoNewPrivileges": true,
+      "ProtectHome": "read-only",
+      "ProtectSystem": "strict",
+      "canonical_store_in_ReadWritePaths": true
+    }
+  },
+  "fresh_process_readback": {
+    "campaign_state_checkpoint_id": "chk_348af35600341958",
+    "checkpoint_ids": [
+      "chk_10fa78f166e46995",
+      "chk_abace4c1b0199d37",
+      "chk_348af35600341958",
+      "chk_696bf68b3aec127f"
+    ],
+    "claim_ids": [
+      "claim:mncs-control-mcp",
+      "claim:mncs-environment"
+    ],
+    "command": "python3 -B -m mncs_env.cli context ses_7226fbcfe65820f7",
+    "exit_code": 0,
+    "lifecycle": "active",
+    "replayed_checkpoint_occurrences": 1,
+    "session_id": "ses_7226fbcfe65820f7"
+  },
+  "identity": "ev_control_service_restart_replay_20261011",
+  "observed_at": "2026-10-11T11:37:10Z",
+  "publication": {
+    "campaign_identity": "cmp_mncs_continuity_20261010",
+    "checkpoint_identity": "chk_696bf68b3aec127f",
+    "command": "python3 -B -m mncs_env.cli checkpoint ses_7226fbcfe65820f7 --progress <bounded> --remaining <bounded>",
+    "created_by_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "first_publication_exit_code": 0,
+    "first_publication_observed_at": "2026-10-11T11:29:36+00:00",
+    "request_id": "req_control_restart_reconcile_20261011",
+    "sequence": 83,
+    "session_id": "ses_7226fbcfe65820f7"
+  },
+  "recovery_scope": {
+    "not_proven": "Control service killed after Store commit but before sending its first response; canonical claim-transfer interruption/restart",
+    "proven": "canonical immutable checkpoint request identity survives Control process restart and same-ID replay returns the original object; a new project-scoped process reads it once",
+    "separate_caller_interruption_proof": "ev_canonical_caller_interruption_reconcile_20261011"
+  },
+  "related_canonical_evidence": [
+    {
+      "identity": "ev_canonical_store_path_grant_20261011",
+      "path": "evidence/canonical-store-path-grant-acceptance-20261011.json",
+      "repository": "mncs-environment",
+      "sha256": "960cd2590f0aadcf55b014d9fcc0b3d389ac9cc946ea288b9cb2aace5005cc93"
+    },
+    {
+      "identity": "ev_canonical_claim_authority_roundtrip_20261011",
+      "path": "evidence/canonical-claim-authority-roundtrip-20261011.json",
+      "repository": "mncs-environment",
+      "sha256": "231f964bed8fe0da31be1de901eb773172fa487f0382e83a21b15e787e7f68c9"
+    },
+    {
+      "identity": "ev_canonical_campaign_cas_retry_20261011",
+      "path": "evidence/canonical-campaign-cas-retry-20261011.json",
+      "repository": "mncs-environment",
+      "sha256": "55e23aeacbfd0d58250b51a67c2f97a4467aa4b04f0af84a2615f458869c1814"
+    },
+    {
+      "identity": "ev_canonical_caller_interruption_reconcile_20261011",
+      "path": "evidence/canonical-caller-interruption-reconcile-20261011.json",
+      "repository": "mncs-environment",
+      "sha256": "1eb2d45325272b8a62e3ab08ac66f22e42367db4e97894b12b1f094c2e12de15"
+    },
+    {
+      "identity": "ev_claim_transfer_session_retry_20261011",
+      "path": "evidence/claim-transfer-session-retry-20261011.json",
+      "repository": "mncs-environment",
+      "sha256": "6dd81ed4011d240331cd19f4ec492d11d06c39c94bfa859a5f422e842735b1ec"
+    },
+    {
+      "identity": "ev_env_project_capsule_entry_selection_20261011",
+      "path": "evidence/project-capsule-entry-selection-20261011.json",
+      "repository": "mncs-environment",
+      "sha256": "8a8094a702abe1e5528b005ddad48eefc24d71ccbab1d1cc02b8bfeffa736419"
+    }
+  ],
+  "same_request_replay": {
+    "duplicate_checkpoint_created": false,
+    "exit_code": 0,
+    "fresh_project_bwrap_process": true,
+    "returned_campaign_identity": "cmp_mncs_continuity_20261010",
+    "returned_checkpoint_identity": "chk_696bf68b3aec127f",
+    "returned_request_digest": "9c7d9a3d47998376",
+    "returned_sequence": 83,
+    "returned_session_id": "ses_7226fbcfe65820f7",
+    "same_request_id": true
+  },
+  "schema_version": "mncs.environment.canonical-control-restart-replay-proof/1",
+  "service_restart": {
+    "active_after_restart": true,
+    "exit_code": 0,
+    "main_pid_after": 1377233,
+    "main_pid_before": 1362695,
+    "operation": "systemctl --user restart mncs-control-tunnel.service",
+    "restart_interruption_timing": "after the first publication response had completed",
+    "substate_after_restart": "running"
+  },
+  "source": {
+    "control_main": "9aa3089cdfb2efe935ea6bc15d806ea6d9bac30d",
+    "control_repository": "mncs-control-mcp",
+    "environment_main": "6353d24d3911bca95300e2f1f49286f38fbfbeea",
+    "environment_repository": "mncs-environment"
+  }
+}
