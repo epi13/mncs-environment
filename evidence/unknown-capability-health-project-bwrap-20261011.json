@@ -1,0 +1,96 @@
+{
+  "schema_version": "mncs.environment.capability-health-evidence/1",
+  "identity": "ev_env_unknown_capability_health_20261011",
+  "recorded_at": "2026-10-11T10:55:59Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "repository": {
+    "identity": "mncs-environment",
+    "branch": "main",
+    "head": "f0cc2b126361526aa6e5c2febf9b09d33a5dc6fb",
+    "remote_ref": "origin/main",
+    "pushed": true,
+    "implementation_commits": [
+      "e2ede389ad95b6357b8d5d529171165ff59e6e36",
+      "f0cc2b126361526aa6e5c2febf9b09d33a5dc6fb"
+    ]
+  },
+  "source_identities": [
+    {"path": "mncs_env/capabilities.py", "sha256": "13d33411dd307c3318d9c0ea5a492ee7c1333b920e1e759a60e897fb2ab87b7c"},
+    {"path": "mncs_env/readiness.py", "sha256": "0dbc415c3c3d7170605f73b3cb57eb0239a3e679e84ef489d8afa94d1a7d12fc"},
+    {"path": "mncs_env/sessions.py", "sha256": "2bf13edf8e043578639191902afc3c8644f671e5b673c8e9a958eadcdced075e"},
+    {"path": "mncs_env/events.py", "sha256": "b79389615c9e9778d19c82a69cbe0d326fa0c6516b30069184df46fc34563329"},
+    {"path": "mncs_env/briefing.py", "sha256": "1012dc0e83f708001fbe4edfa74e6b2481630ef379fc07c3d6195f98068199a0"},
+    {"path": "tests/test_environment.py", "sha256": "4b93d698c95571f00c8856ca6a016abb7be573177f9e35d1415fa1ba7c667b63"},
+    {"path": "tests/test_entry.py", "sha256": "c3becf3ce09c8699383cf7a0313a8e9420344850ad9948bb35e213f9ee5b34bf"}
+  ],
+  "behavior": {
+    "undeclared_invocation_status": "unknown",
+    "explicitly_unresolvable_invocation_status": "unavailable",
+    "required_unknown_blocks_readiness": true,
+    "unknown_is_counted_as_available": false,
+    "lifecycle_event": "capability.unknown",
+    "health_fields": ["unavailable_capabilities", "unknown_capabilities"]
+  },
+  "validation": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "targeted_regressions": {
+      "command": "python3 -B -m pytest -q tests/test_environment.py tests/test_entry.py -k 'fingerprint_evidence_is_discoverable_but_never_a_guessed_invocation or unresolvable_invocation_names_its_cause or probe_marks_availability'",
+      "passed": 3,
+      "failed": 0
+    },
+    "health_field_regressions": {
+      "environment_tests_passed": 2,
+      "entry_tests_passed": 1,
+      "failed": 0
+    },
+    "doctor_suite_before_health_field_split": {"passed": 45, "failed": 0},
+    "broader_suite_before_stale_expectation_update": {
+      "passed": 243,
+      "failed": 1,
+      "failure": "The no-invocation fixture still expected unavailable; its assertion was updated to unknown and the test passed in the focused rerun."
+    },
+    "ruff": {
+      "diagnostics_in_changed_lines": 0,
+      "existing_diagnostics_in_touched_files": 48
+    },
+    "diff_check": "passed"
+  },
+  "live_protected_execution": {
+    "command": "scripts/mncs-env health ses_7226fbcfe65820f7 --live",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "exit_code": 0,
+    "session_id": "ses_7226fbcfe65820f7",
+    "readiness": {
+      "status": "degraded",
+      "available_count": 2,
+      "unavailable_count": 0,
+      "unknown_count": 1,
+      "blocking_count": 0
+    },
+    "unknown_capability": "mncs-environment:ambient-projection-coherence",
+    "unknown_reason_code": "provider-invocation-undeclared",
+    "unavailable_capabilities": [],
+    "unknown_capabilities_count": 1,
+    "store_mutation": false
+  },
+  "continuity": {
+    "campaign_checkpoint_base": "chk_9262fa49d5b74800",
+    "campaign_evidence_count_before": 44,
+    "campaign_session": "ses_7226fbcfe65820f7",
+    "second_context_session": "ses_b4b2d283542220b0",
+    "second_context_modified": false,
+    "entry_attempt": {
+      "campaign_id": "cmp_mncs_continuity_20261010",
+      "result": "rejected",
+      "code": "publication-rejected",
+      "reason": "configured Environment workspace root exceeds the execution grant"
+    }
+  },
+  "limitations": [
+    "The Environment contract advertises ambient projection coherence without a provider invocation descriptor; this implementation reports the operation as UNKNOWN and does not fabricate an executable path.",
+    "The campaign remains context-conflicted between two Environment definitions. The broader workspace definition is outside this project's execution grant, so it was not entered through this project-scoped execution.",
+    "The read-only health observation is not a canonical Store publication acceptance test."
+  ]
+}
