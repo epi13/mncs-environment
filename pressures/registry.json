@@ -308,5 +308,17 @@
     "desired_contract": "Drop spool writers and output/directory handles at tool completion/error/cancellation; retain durable paths or bounded data, not open files; repeat hundreds of mixed tools under a low FD limit and prove post-operation baseline, including async completion.",
     "effect": "OPEN: active Spark session can read/edit but cannot reliably spawn commands. Environment resource visibility is delivered; the external runtime lifetime defect is not fixed.",
     "workaround": "Read-only mncs-env resources exposes headroom; do not raise limits, reclaim agent resources or restart it automatically."
+  },
+  {
+    "schema_version": "mncs.environment.pressure/1",
+    "identity": "prs_332e1fdf4f4bf2ec",
+    "title": "Control does not expose Environment session completion",
+    "description": "The canonical mncs-env complete command is available, but the authenticated project-scoped Control Environment RPC rejects complete as operation-unavailable. The canonical claim-transfer restart proof therefore leaves its fresh recipient session active after returning the claim.",
+    "owner": "mncs-control-mcp (authenticated Environment RPC operation contract)",
+    "evidence": "evidence/canonical-claim-transfer-restart-replay-20261011.json; project Bwrap `mncs-env complete ses_f0e6e64390bb5843 --outcome completed ...` returned ENVIRONMENT_OPERATION_UNAVAILABLE with status unknown and publication_completed=false.",
+    "why_not_local": "Environment owns session lifecycle semantics, while Control owns authenticated project-grant operation admission. Reaching around Control to write canonical Store state would bypass the authorized persistence transport.",
+    "desired_contract": "Expose an authenticated, session-scoped completion operation through Control for an Environment session authorized to the project grant. Preserve Environment lifecycle validation, exact principal and session provenance, idempotent request identity, and structured conflict or ambiguous-publication diagnostics.",
+    "effect": "A claim-free proof session remains reported active after its work ends, and consumers cannot record lifecycle completion through the normal restricted execution path.",
+    "workaround": "Keep the recipient session active and claim-free; return its claim to the original owner and preserve UNKNOWN for lifecycle completion."
   }
 ]
