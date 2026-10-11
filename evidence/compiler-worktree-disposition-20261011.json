@@ -1,0 +1,1314 @@
+{
+  "branch_checkouts": 54,
+  "candidate_refs": [
+    {
+      "candidate_branch": "campaign/keyword-local-index-delivery-20261010",
+      "candidate_head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "candidate_only_commits": 1,
+      "checkout_status": "unavailable_current_namespace",
+      "claim": {
+        "claim_id": "claim:mncs-compiler",
+        "exclusive": true,
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "status": "held",
+        "version": 63
+      },
+      "disposition": "retain; no test, merge, push, adoption, or retirement performed",
+      "expected_head_matches": true,
+      "main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "main_only_commits": 14,
+      "registered_worktree_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+      "repository": "mncs-compiler"
+    },
+    {
+      "candidate_branch": "campaign/process-environment-value-bound-20261010",
+      "candidate_head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "candidate_only_commits": 1,
+      "checkout_status": "unavailable_current_namespace",
+      "claim": {
+        "status": "no_foreign_claim_observed",
+        "write_authority": "not_available"
+      },
+      "disposition": "retain; no test, merge, push, adoption, or retirement performed",
+      "expected_head_matches": true,
+      "main_head": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "main_only_commits": 2,
+      "registered_worktree_path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+      "repository": "mncs-language"
+    },
+    {
+      "candidate_branch": "campaign/forge-quiet-compile-output-20261010",
+      "candidate_head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "candidate_only_commits": 1,
+      "checkout_status": "unavailable_current_namespace",
+      "claim": {
+        "claim_id": "claim:mncs-forge",
+        "exclusive": true,
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "status": "held",
+        "version": 28
+      },
+      "disposition": "retain; no test, merge, push, adoption, or retirement performed",
+      "expected_head_matches": true,
+      "main_head": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "main_only_commits": 0,
+      "registered_worktree_path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+      "repository": "mncs-forge"
+    }
+  ],
+  "detached_checkouts": 12,
+  "dry_run": {
+    "branches_deleted": 0,
+    "files_deleted": 0,
+    "mutations": 0,
+    "performed": true,
+    "retirement_attempted": false
+  },
+  "main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+  "observation_method": "read-only Git refs, worktree registrations, object ancestry, and status where visible in the protected workspace mount",
+  "observed_at": "2026-10-11T05:27:43.821606+00:00",
+  "observed_by": {
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "campaign_state_checkpoint_id": "chk_d7a179d6984dd953",
+    "consumer_id": "codex-process-1",
+    "environment_session_id": "ses_7226fbcfe65820f7"
+  },
+  "origin_main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+  "prior_candidate_observation": {
+    "commit": "47d1fda3dc8fd246dc33a6831a213ae9247c775e",
+    "identity": "ev_candidate_dispositions_20261011",
+    "path": "evidence/candidate-disposition-refresh-20261011.json",
+    "repository": "mncs-environment",
+    "sha256": "86eff4e9667971e77662111edd5100c72f43ef6f58a2c737038c76fa5d6d835a"
+  },
+  "registered_worktrees": 66,
+  "repository": "mncs-compiler",
+  "repository_claim": {
+    "campaign_state_checkpoint_id": "chk_d7a179d6984dd953",
+    "claim_id": "claim:mncs-compiler",
+    "observed_via_environment_campaign": "cmp_mncs_continuity_20261010",
+    "owner_consumer_id": "luna-compiler-self-consumption-admission-20261009",
+    "owner_session_id": "ses_d2537acde8b8a875",
+    "scope": {
+      "exclusive": true,
+      "kind": "repository"
+    },
+    "status": "held",
+    "version": 63
+  },
+  "repository_identity": {
+    "basis": "SHA-256 of normalized origin identity and Git object format; origin URL not retained",
+    "value": "sha256:920fae7b6e2266c627c63b7b5dc18092c489b5ccfa60d20d7331551897ebfd78"
+  },
+  "schema_version": "mncs.environment.worktree-disposition/1",
+  "summary": {
+    "checkout_status_counts": {
+      "dirty": 1,
+      "unknown_current_namespace": 65
+    },
+    "disposition_counts": {
+      "dirty_or_unproven_preserve": 1,
+      "unavailable_current_namespace_preserve": 65
+    },
+    "topology_counts": {
+      "main_head": 1,
+      "merged_ancestor_of_main": 64,
+      "unmerged_or_diverged": 1
+    }
+  },
+  "worktrees": [
+    {
+      "branch": "main",
+      "checkout_identity": "checkout:40d12d5a1bc7f04d23a0",
+      "checkout_status": "dirty",
+      "detached": false,
+      "disposition": "dirty_or_unproven_preserve",
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 0
+      },
+      "namespace_visibility": "workspace_mounted",
+      "path_exists_in_visible_namespace": true,
+      "registered_path": "/workspace/mncs-compiler",
+      "status_paths": [
+        ".worktrees/",
+        "evidence/campaign-20261006-imported-nominal-ssa.json",
+        "evidence/campaign-20261006-pressure-suite-results.json",
+        "evidence/campaign-20261006-project-results.json"
+      ],
+      "topology_to_main": "main_head",
+      "worktree_admin_id": "main-checkout"
+    },
+    {
+      "branch": "campaign/compiler-evidence-identity-20261009",
+      "checkout_identity": "checkout:892ef7af7b8a82549934",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "ca9516f32e57cbf1f226460fe8013a3471cebd11",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 117
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-evidence-identity-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "compiler-evidence-identity-20261009"
+    },
+    {
+      "branch": "campaign/compiler-identity-correction-20261009",
+      "checkout_identity": "checkout:586ec9b61e5a4df7d8ab",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "0f3a6aae54bc6480b2fe7937a24251092f4af489",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 118
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-identity-correction-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "compiler-identity-correction-20261009"
+    },
+    {
+      "branch": "campaign/probe-telemetry-20261008",
+      "checkout_identity": "checkout:97aff8a258d6efce2270",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "f92deb2cb5b6113234ca0074a1a7068790729550",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 119
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-probe-telemetry-20261008",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "compiler-probe-telemetry-20261008"
+    },
+    {
+      "branch": "campaign/decl-bounded-scan-20261009",
+      "checkout_identity": "checkout:e5d9bd08c75a962b6e90",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "324c0b997edd68472bc4f44a6c08cb02056bc78c",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 86
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/decl-bounded-scan-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "decl-bounded-scan-20261009"
+    },
+    {
+      "branch": "campaign/decl-path-early-exit-20261009",
+      "checkout_identity": "checkout:93497c6801dc68f08432",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "83dfb4a2f57949dc433e0cbf9a4aa94ea2f991c2",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 70
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/decl-path-early-exit-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "decl-path-early-exit-20261009"
+    },
+    {
+      "branch": "campaign/evidence-current-delivery-ledger-20261009",
+      "checkout_identity": "checkout:e01201f07c42424c4c20",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "a39a70e35fc934d6410057fcd53843ae38d3e723",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 109
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/evidence-current-delivery-ledger-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "evidence-current-delivery-ledger-20261009"
+    },
+    {
+      "branch": null,
+      "checkout_identity": "checkout:a09ea4cffa7688849572",
+      "checkout_status": "unknown_current_namespace",
+      "detached": true,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "76ccb18af4e1da9a849f421960ecb9634ca2409d",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 102
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-compiler-run-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "flow-hir-prelude-compiler-run-20261009"
+    },
+    {
+      "branch": "campaign/flow-hir-prelude-evidence-20261009",
+      "checkout_identity": "checkout:935259668936af7ba550",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "4a1479cc53cd9bc3de8aee3f8debcab1f580c124",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 101
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-evidence-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "flow-hir-prelude-evidence-20261009"
+    },
+    {
+      "branch": "campaign/flow-measurement-rss-cap-20261009",
+      "checkout_identity": "checkout:aa9ba63321ea5bf9b97a",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "76ccb18af4e1da9a849f421960ecb9634ca2409d",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 102
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-measurement-rss-cap-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "flow-measurement-rss-cap-20261009"
+    },
+    {
+      "branch": "campaign/flow-profile-resource-evidence-20261009",
+      "checkout_identity": "checkout:d342d651ecc88dca98f1",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "369297178d4bf2f4436e722e6db4d34f1935bba6",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 75
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-profile-resource-evidence-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "flow-profile-resource-evidence-20261009"
+    },
+    {
+      "branch": null,
+      "checkout_identity": "checkout:4d3ec3d2fbf1c38955bd",
+      "checkout_status": "unknown_current_namespace",
+      "detached": true,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "581c8154008b56b968a67e85882a6d5eab0a18b3",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 116
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/import-signature-baseline-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "import-signature-baseline-20261009"
+    },
+    {
+      "branch": "campaign/import-signature-scan-20261009",
+      "checkout_identity": "checkout:a4ef00a1c0057e671628",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "45f84477a2f455cedae645045882f7e5c23bbe9a",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 114
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/import-signature-scan-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "import-signature-scan-20261009"
+    },
+    {
+      "branch": "campaign/lazy-keyword-classification-20261009",
+      "checkout_identity": "checkout:e1a223c93246b060a792",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "97db51927d017123847735baf13409e94d27dc7f",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 111
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lazy-keyword-classification-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "lazy-keyword-classification-20261009"
+    },
+    {
+      "branch": "campaign/lexer-batched-window-20261009",
+      "checkout_identity": "checkout:66b010a9c48fbc86df96",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "5d884cd0d9e17452601324f66abb78b341497310",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 91
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-batched-window-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "lexer-batched-window-20261009"
+    },
+    {
+      "branch": "campaign/lexer-head-byte-pair-window-20261009",
+      "checkout_identity": "checkout:43ac0298a5f4bc8cf15e",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "2ea01d3af28ca9fc2795a8c7669a48773c110c5c",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 76
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-pair-window-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "lexer-head-byte-pair-window-20261009"
+    },
+    {
+      "branch": "campaign/lexer-head-byte-window-20261009",
+      "checkout_identity": "checkout:58f99ba58edb6205223e",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "c756a15247b1eb184c7685b558f61973f376c144",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 77
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-window-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "lexer-head-byte-window-20261009"
+    },
+    {
+      "branch": "campaign/lexer-initial-window-reuse-20261010",
+      "checkout_identity": "checkout:7af8d7075a93bff7948b",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "7b3829ee1586c178b1bdf606066014a8696bd491",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 68
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-initial-window-reuse-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "lexer-initial-window-reuse-20261010"
+    },
+    {
+      "branch": "campaign/lexer-keyword-dispatch-20261009",
+      "checkout_identity": "checkout:6f75a0322dee6d3f068f",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "581c8154008b56b968a67e85882a6d5eab0a18b3",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 116
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-dispatch-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "lexer-keyword-dispatch-20261009"
+    },
+    {
+      "branch": "campaign/lexer-keyword-windows-20261009",
+      "checkout_identity": "checkout:695896cd238aa4ba2f21",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "f5aa9547592694afd11bc28cd8c2da9a17b44ef7",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 81
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-windows-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "lexer-keyword-windows-20261009"
+    },
+    {
+      "branch": "campaign/lexer-proof-20261009",
+      "checkout_identity": "checkout:f36103368d792a110b0f",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "b188398f74398de9a8d6a8ba37b32c525bf637b8",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 93
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-proof-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "lexer-proof-20261009"
+    },
+    {
+      "branch": "campaign/lexer-scan-window-arg-20261009",
+      "checkout_identity": "checkout:8fb145f42c78d2c6241e",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "c88d0675d344c4af212841e667c9af2284b2cf29",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 79
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-scan-window-arg-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "lexer-scan-window-arg-20261009"
+    },
+    {
+      "branch": "campaign/lexer-keyword-byte-reuse-20261010",
+      "checkout_identity": "checkout:213f7208b991fb83e1e9",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "51bb2dd9c0ef9304f2158634c86805480a8e1588",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 45
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-token-frame-carry-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "lexer-token-frame-carry-20261010"
+    },
+    {
+      "branch": "campaign/lexer-trivia-prefix-budget-20261010",
+      "checkout_identity": "checkout:b8664a1ec91a6f28845c",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "ea87c5c5e97d89d219c22f5d25ed728b0547c649",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 63
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-trivia-prefix-budget-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "lexer-trivia-prefix-budget-20261010"
+    },
+    {
+      "branch": "campaign/lexer-window-slide-evidence-20261010",
+      "checkout_identity": "checkout:a378564d18ea816b77f5",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "176c145b4de29caf6a0279b0ebdb194b6ae6e938",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 66
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-window-slide-evidence-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "lexer-window-slide-evidence-20261010"
+    },
+    {
+      "branch": "campaign/nested-match-early-exit-20261009",
+      "checkout_identity": "checkout:ad56d4ef784675bddfd1",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "87127cd6c194a7de9e64238aac10bb3c4de7e061",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 106
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-nested-match-early-exit-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-nested-match-early-exit-20261009"
+    },
+    {
+      "branch": null,
+      "checkout_identity": "checkout:b14ef06585ee598bfaf1",
+      "checkout_status": "unknown_current_namespace",
+      "detached": true,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "422c84460b0af958fab1203ce1c89ba9ed8db89f",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 107
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-runtime-candidate-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-runtime-candidate-20261009"
+    },
+    {
+      "branch": null,
+      "checkout_identity": "checkout:79b96d8dfd8ede684051",
+      "checkout_status": "unknown_current_namespace",
+      "detached": true,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "a110e17d83bcc62bf310768b37fa7186e526ae15",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 96
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-baseline-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "probe-admission-baseline-20261009"
+    },
+    {
+      "branch": "campaign/probe-admission-reuse-20261009",
+      "checkout_identity": "checkout:282d9b038ae8ad56ac4f",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "4d957194d967952fd26411807f3862fa1cacb83c",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 94
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-reuse-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "probe-admission-reuse-20261009"
+    },
+    {
+      "branch": "campaign/probe-outcome-classification-20261009",
+      "checkout_identity": "checkout:20716b4efd73739fccd9",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "9f55339c502dc86d468bf734764baca05dfc7276",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 110
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-outcome-classification-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "probe-outcome-classification-20261009"
+    },
+    {
+      "branch": "campaign/probe-phase-resource-samples-20261009",
+      "checkout_identity": "checkout:a4e530fe13bf58b86c52",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "901fcadcd525afdd4443970a602885eb5ae32c83",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 99
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-phase-resource-samples-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "probe-phase-resource-samples-20261009"
+    },
+    {
+      "branch": "campaign/project-provider-body-retention-20261010",
+      "checkout_identity": "checkout:4f1c077eec1509ddf299",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "85f4886f73eab6699084339ea486d91b5cd95d9c",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 60
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/project-provider-body-retention-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "project-provider-body-retention-20261010"
+    },
+    {
+      "branch": "campaign/project-schema-pages-20261009",
+      "checkout_identity": "checkout:43573953e15eebeaf683",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "d281ad540f6ab87c7c24f2ac52a479d02ce18761",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 112
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/project-schema-pages-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "project-schema-pages-20261009"
+    },
+    {
+      "branch": "campaign/reference-argument-validation-cache-20261010",
+      "checkout_identity": "checkout:21f13fefbef2227a5d30",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "6af2e42a548defe5af25b33711b5ac838583acef",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 47
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/reference-argument-validation-cache-20261010/mncs-compiler",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler1"
+    },
+    {
+      "branch": "campaign/runtime-frame-profile-20261008",
+      "checkout_identity": "checkout:54ab33ed5a44c55f1f7e",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "386e618218afbf2d06e2d0daa03e0836f9e1c997",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 120
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/runtime-frame-profile-20261008/mncs-compiler",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler"
+    },
+    {
+      "branch": "campaign/source-initial-byte-window-20261010",
+      "checkout_identity": "checkout:2b525992fd44bbb97d31",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "4a44f706918d48b37bd273bde27a8d3029f6a9da",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 53
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "source-initial-byte-window-20261010"
+    },
+    {
+      "branch": null,
+      "checkout_identity": "checkout:c14b36a0985e3c8f89b0",
+      "checkout_status": "unknown_current_namespace",
+      "detached": true,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "e05d3ede6a03fb2a02615771954fd2de8e641cb2",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 58
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-baseline-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "source-initial-byte-window-baseline-20261010"
+    },
+    {
+      "branch": "campaign/source-keyword-local-byte-window-20261010",
+      "checkout_identity": "checkout:7f8430877f6f6f7b265f",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "10bf2aae7d0e32767e8f5ad98b0200ee04bbbe89",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 49
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-keyword-local-byte-window-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "source-keyword-local-byte-window-20261010"
+    },
+    {
+      "branch": "campaign/source-local-byte-window-20261010",
+      "checkout_identity": "checkout:e7eae2496bc5936bbdd8",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "e05d3ede6a03fb2a02615771954fd2de8e641cb2",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 58
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "source-local-byte-window-20261010"
+    },
+    {
+      "branch": null,
+      "checkout_identity": "checkout:6a86c768112ebfa2774f",
+      "checkout_status": "unknown_current_namespace",
+      "detached": true,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "85f4886f73eab6699084339ea486d91b5cd95d9c",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 60
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-baseline-control-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "source-local-byte-window-baseline-control-20261010"
+    },
+    {
+      "branch": "campaign/source-page-validation-20261009",
+      "checkout_identity": "checkout:21abcc379e68324ffb82",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "22f771df5b4865623ded5100e09e7a8ad214ed3d",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 82
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-page-validation-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "source-page-validation-20261009"
+    },
+    {
+      "branch": "campaign/streaming-probe-cache-20261009",
+      "checkout_identity": "checkout:72f1fd7136b90ebb799c",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "a110e17d83bcc62bf310768b37fa7186e526ae15",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 96
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/streaming-probe-cache-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "streaming-probe-cache-20261009"
+    },
+    {
+      "branch": "campaign/keyword-window4-20261009",
+      "checkout_identity": "checkout:0942c04576416c14f320",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "6d3bd95b3b2a508dc2982d9538f04679f8fbb31e",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 85
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/keyword-window4-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "keyword-window4-20261009"
+    },
+    {
+      "branch": "campaign/probe-stage0-oracle-skip-20261009",
+      "checkout_identity": "checkout:cd2195a63fdf5f2b11b1",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "5653908ee345ef7b2ed7bcae2a4da71f4ca6a4da",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 75
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/probe-stage0-oracle-skip-20261009",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "probe-stage0-oracle-skip-20261009"
+    },
+    {
+      "branch": "campaign/common-probe-cache-20261010",
+      "checkout_identity": "checkout:fc0d29b14aa59a953940",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "e5bab6bd391379185a1b30a117ed498ce150aa9a",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 24
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-common-probe-cache-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-common-probe-cache-20261010"
+    },
+    {
+      "branch": "campaign/decl-name-token-reuse-20261010",
+      "checkout_identity": "checkout:1616e5760814470e4b21",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "dce6adcf9f0778ec9dd398ffdca5044ce879321f",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 27
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-decl-name-reuse-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-decl-name-reuse-20261010"
+    },
+    {
+      "branch": "campaign/decl-scalar-window-20261010",
+      "checkout_identity": "checkout:5190ddc42e9455959642",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "8d7be4e88afa18c4f6b773d573ab70b0ee240527",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 7
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-decl-scalar-window-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-decl-scalar-window-20261010"
+    },
+    {
+      "branch": "campaign/decl-significant-direct-repeat-20261010",
+      "checkout_identity": "checkout:7cefaddaedf84c5dffea",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "a852da763f78900a68f3e57c3fcf4568424d8436",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 29
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-delivery-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-delivery-20261010"
+    },
+    {
+      "branch": null,
+      "checkout_identity": "checkout:f14d61da1c111b768c43",
+      "checkout_status": "unknown_current_namespace",
+      "detached": true,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 22
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-flow-stage0-baseline-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-flow-stage0-baseline-20261010"
+    },
+    {
+      "branch": "campaign/flow-stage0-pin-profile-20261010",
+      "checkout_identity": "checkout:38423fe6f93ed8e12971",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "cae25860b1cd88b811f94b3ffc76e3aefa37adb4",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 18
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-flow-stage0-pin-profile-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-flow-stage0-pin-profile-20261010"
+    },
+    {
+      "branch": null,
+      "checkout_identity": "checkout:8fcdb21339465bcab21d",
+      "checkout_status": "unknown_current_namespace",
+      "detached": true,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "45eb4f4abee05196db3a60c40eade7cb75ff3c51",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 2
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-flow-wordscan-baseline-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-flow-wordscan-baseline-20261010"
+    },
+    {
+      "branch": "campaign/lexer-keyword-global-local-fast-path-20261010",
+      "checkout_identity": "checkout:a045dde27a6500cd5e0a",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "8f2d8c181dc44384d5c92834481931493b65146d",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 10
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-keyword-global-page-local-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-keyword-global-page-local-20261010"
+    },
+    {
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "checkout_identity": "checkout:1721566ee39d8371b6fc",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 1,
+        "main_only": 14
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+      "status_paths": null,
+      "topology_to_main": "unmerged_or_diverged",
+      "worktree_admin_id": "mncs-compiler-keyword-local-index-20261010"
+    },
+    {
+      "branch": "campaign/lexer-full-frontier-20261010",
+      "checkout_identity": "checkout:d30d24f93e83200b0c72",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "602832610080c838df3d94c9fdbac0fc55753acb",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 5
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-lexer-full-frontier-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-lexer-full-frontier-20261010"
+    },
+    {
+      "branch": "campaign/lexer-self-ingest-repair-20261010",
+      "checkout_identity": "checkout:afeef06671622c92562d",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "78cdd9ece7c192478119d7fc6ed00a60299b95e3",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 6
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-lexer-self-ingest-repair-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-lexer-self-ingest-repair-20261010"
+    },
+    {
+      "branch": "campaign/lexer-window-inline-20261010",
+      "checkout_identity": "checkout:c5353f166eacd600839b",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "15d6a5971f19177dbdf33508ad6a847154ef0e12",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 17
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-lexer-window-inline-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-lexer-window-inline-20261010"
+    },
+    {
+      "branch": null,
+      "checkout_identity": "checkout:e277bcd2d93874747481",
+      "checkout_status": "unknown_current_namespace",
+      "detached": true,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "a1818976da578f60e53aebdd739273e1b4b86b0d",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 48
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-matched-baseline-a181-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-matched-baseline-a181-20261010"
+    },
+    {
+      "branch": null,
+      "checkout_identity": "checkout:046b0d31910037e844f9",
+      "checkout_status": "unknown_current_namespace",
+      "detached": true,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 22
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-runtime-boundary-baseline-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-runtime-boundary-baseline-20261010"
+    },
+    {
+      "branch": null,
+      "checkout_identity": "checkout:5c71f3b64705eab3d099",
+      "checkout_status": "unknown_current_namespace",
+      "detached": true,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 22
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-runtime-boundary-validation-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-runtime-boundary-validation-20261010"
+    },
+    {
+      "branch": "campaign/lexer-word-scan-select-20261010",
+      "checkout_identity": "checkout:78ad2c1d61e09a400a8a",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 0
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-session-admission-telemetry-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-session-admission-telemetry-20261010"
+    },
+    {
+      "branch": null,
+      "checkout_identity": "checkout:b3f9e93cf9e914cdb3c1",
+      "checkout_status": "unknown_current_namespace",
+      "detached": true,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 22
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-stage0-isolation-baseline-3c-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-stage0-isolation-baseline-3c-20261010"
+    },
+    {
+      "branch": "campaign/stage0-language-pin-20261010",
+      "checkout_identity": "checkout:258a287acf5f785b06bc",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "310333c1636a9ec1db918dc14f2df93738c933e0",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 21
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-stage0-language-pin-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-stage0-language-pin-20261010"
+    },
+    {
+      "branch": "campaign/lexer-word-scan-inline-20261010",
+      "checkout_identity": "checkout:33845cb9fa6380944713",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "4ed34b5f2060683045953178cefd31a4da0086d2",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 8
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-word-scan-inline-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-word-scan-inline-20261010"
+    },
+    {
+      "branch": "campaign/lexer-word-scan8-20261010",
+      "checkout_identity": "checkout:e948f59d626693d60a25",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 0
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-compiler-word-scan8-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-compiler-word-scan8-20261010"
+    },
+    {
+      "branch": "campaign/lexer-significant-trivia-inline-20261010",
+      "checkout_identity": "checkout:f15744292e5a73c18499",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "a480a5670c814009801c6d0245ca818d93fa21eb",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 35
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-lexer-significant-trivia-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-lexer-significant-trivia-20261010"
+    },
+    {
+      "branch": "campaign/lexer-token-result-boundary-20261010",
+      "checkout_identity": "checkout:cea0138ee549fea2a53a",
+      "checkout_status": "unknown_current_namespace",
+      "detached": false,
+      "disposition": "unavailable_current_namespace_preserve",
+      "head": "dfc1070e9646cacd4228539e269f934d9f9dc784",
+      "main_only_and_checkout_only_commit_counts": {
+        "checkout_only": 0,
+        "main_only": 39
+      },
+      "namespace_visibility": "outside_workspace_mount_unknown",
+      "path_exists_in_visible_namespace": null,
+      "registered_path": "/tmp/mncs-lexer-token-result-20261010",
+      "status_paths": null,
+      "topology_to_main": "merged_ancestor_of_main",
+      "worktree_admin_id": "mncs-lexer-token-result-20261010"
+    }
+  ]
+}
