@@ -1,0 +1,41 @@
+{
+  "schema_version": "mncs.environment.campaign-proof-fixture/1",
+  "identity": "ev_campaign_proof_intent_fixture_20261011",
+  "recorded_at": "2026-10-11T12:43:12Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "source": {
+    "repository": "mncs-environment",
+    "base_commit": "a822e232c815ee9a169d749fca573520be6089f5",
+    "branch": "campaign/campaign-proof-claim-authority-20261011",
+    "file": "scripts/campaign_proofs.py",
+    "sha256": "88abbf61e1336d08b7a655bac3cd2231918c1666d30ca6bc25408b4220939ae9"
+  },
+  "change": {
+    "summary": "Campaign proof sessions that claim proof-repo now declare proof-repo in their writable session intent.",
+    "authority_effect": "none; production authority remains default-deny and only proof fixtures changed",
+    "affected_proofs": [
+      "two-agent.conflict",
+      "two-agent.authority-deny",
+      "two-agent.handoff",
+      "bypass.no-claim-no-exec",
+      "bypass.claim-executes",
+      "bypass.release-revokes"
+    ]
+  },
+  "validation": {
+    "command": "python3 -u scripts/campaign_proofs.py",
+    "result": "PASS",
+    "passed": 17,
+    "skipped": 0,
+    "failed": 0,
+    "additional_checks": {
+      "py_compile": "PASS",
+      "ruff_check_select_E4_E7_E9_F": "PASS",
+      "git_diff_check": "PASS"
+    }
+  },
+  "limits": [
+    "This validates isolated campaign proof fixtures only; it is not canonical Store or protected-service acceptance evidence.",
+    "No Environment production code or authorization policy changed."
+  ]
+}

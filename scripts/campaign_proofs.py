@@ -45,10 +45,14 @@ def skip(name: str, reason: str) -> None:
     print(f"SKIP {name}: {reason}")
 
 
-def make_session(state_dir: Path, consumer: str):
+def make_session(
+    state_dir: Path, consumer: str, *, repositories: tuple[str, ...] = (),
+):
     store = open_store(state_dir, "store", verify_on_open=False)
     env = sessions.resolve_environment(
-        definition={"name": "proof-env", "intent": {"goal": "campaign proof"}},
+        definition={"name": "proof-env", "intent": {
+            "goal": "campaign proof", "repositories": list(repositories),
+        }},
         workspace_root=ROOT,
         state_dir=state_dir,
         consumer_id=consumer,
@@ -65,8 +69,8 @@ def make_session(state_dir: Path, consumer: str):
 def proof_two_agent() -> None:
     with tempfile.TemporaryDirectory(prefix="proof-two-agent-") as directory:
         state = Path(directory)
-        agent_a = make_session(state, "agent-a")
-        agent_b = make_session(state, "agent-b")
+        agent_a = make_session(state, "agent-a", repositories=("proof-repo",))
+        agent_b = make_session(state, "agent-b", repositories=("proof-repo",))
         record = agent_a.acquire_claim("proof-repo", basis="explicit-claim",
                                        reason="agent a work")
         assert record["session_id"] == agent_a.session_id
@@ -102,7 +106,7 @@ def proof_two_agent() -> None:
 def proof_bypass() -> None:
     with tempfile.TemporaryDirectory(prefix="proof-bypass-") as directory:
         state = Path(directory)
-        session = make_session(state, "agent-a")
+        session = make_session(state, "agent-a", repositories=("proof-repo",))
         canary = state / "planted.txt"
         binding = capabilities.probe_availability(capabilities.bind(
             provider="proof-repo", capability="proof-write",
