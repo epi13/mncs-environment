@@ -53,6 +53,22 @@ HANDOFF_SCHEMA = "mncs.environment.handoff/1"
 
 MAX_EMIT_RETRIES = 16
 
+
+def _request_operation_digest(
+    session_id: str,
+    request_id: str,
+    request_operation: str,
+    snapshot: dict[str, Any],
+) -> str:
+    return digest_hex({
+        "operation": "mncs-environment-request/1",
+        "session_id": session_id,
+        "request_id": request_id,
+        "request_operation": request_operation,
+        "consumer_id": snapshot.get("consumer_id"),
+        "authenticated_principal_id": snapshot.get("authenticated_principal_id"),
+    })
+
 CONTINUATION_MAX_CHECKPOINT_REMAINING = 8
 CONTINUATION_MAX_FOREIGN_CLAIMS = 12
 CONTINUATION_MAX_CLAIM_PATHS = 4
@@ -1422,17 +1438,45 @@ class Session:
     def resume(
         cls, *, state_dir: Path | str, session_id: str, backend: str = "store",
         verify_on_open: bool = True, store: SessionStore | None = None,
+        request_id: str | None = None, request_operation: str = "resume",
     ) -> "Session":
         """Resume active participation: transitions abandoned sessions, logs resume."""
         instance = cls.open(
             state_dir=state_dir, session_id=session_id, backend=backend,
             verify_on_open=verify_on_open, store=store)
+        operation_digest = None
+        if request_id is not None:
+            if (not isinstance(request_id, str) or not request_id
+                    or len(request_id) > 160 or "\x00" in request_id):
+                raise ValueError("resume request identity must be bounded nonempty text")
+            if (not isinstance(request_operation, str) or not request_operation
+                    or len(request_operation) > 256 or "\x00" in request_operation):
+                raise ValueError("resume request operation must be bounded nonempty text")
+            operation_digest = _request_operation_digest(
+                session_id, request_id, request_operation, instance.snapshot
+            )
+            prior = [
+                event for event in instance._log()
+                if event.get("type") == "session.resumed"
+                and event.get("payload", {}).get("request_id") == request_id
+            ]
+            if prior:
+                if any(event.get("payload", {}).get("request_operation_digest")
+                       != operation_digest for event in prior):
+                    raise LifecycleError(
+                        "request identity was already used for a different Environment operation"
+                    )
+                return instance
         if instance.snapshot.get("lifecycle") in ("completed", "failed"):
             raise LifecycleError(f"session {session_id} is terminal and cannot resume")
         if instance.snapshot.get("lifecycle") == "abandoned":
             instance.transition("active", "resumed from abandoned")
-        instance._emit("session.resumed", "environment",
-                       {"consumer_id": instance.snapshot.get("consumer_id")})
+        instance._emit(
+            "session.resumed", "environment",
+            {"consumer_id": instance.snapshot.get("consumer_id")},
+            request_id=request_id,
+            operation_digest=operation_digest,
+        )
         instance._save()
         return instance
 
@@ -1478,7 +1522,40 @@ class Session:
         producer: str,
         payload: dict[str, Any] | None = None,
         causes: list[str] | None = None,
+        *,
+        request_id: str | None = None,
+        operation_digest: str | None = None,
     ) -> dict[str, Any]:
+        event_payload = dict(payload or {})
+        if request_id is not None:
+            if (not isinstance(request_id, str) or not request_id
+                    or len(request_id) > 160 or "\x00" in request_id):
+                raise ValueError("event request identity must be bounded nonempty text")
+            if (not isinstance(operation_digest, str) or not operation_digest
+                    or len(operation_digest) > 160 or "\x00" in operation_digest):
+                raise ValueError("event operation digest is invalid")
+            event_digest = digest_hex({
+                "event_type": event_type,
+                "producer": producer,
+                "payload": event_payload,
+                "causes": causes,
+            })
+            for existing in self._log():
+                prior = existing.get("payload", {})
+                if (existing.get("type") == event_type
+                        and isinstance(prior, dict)
+                        and prior.get("request_id") == request_id):
+                    if prior.get("request_operation_digest") != operation_digest:
+                        raise LifecycleError(
+                            "request identity was already used for a different Environment operation"
+                        )
+                    if prior.get("request_event_digest") == event_digest:
+                        return existing
+            event_payload.update({
+                "request_id": request_id,
+                "request_operation_digest": operation_digest,
+                "request_event_digest": event_digest,
+            })
         last_error: Exception | None = None
         for _ in range(MAX_EMIT_RETRIES):
             if self._next_seq_hint is None:
@@ -1490,7 +1567,7 @@ class Session:
                 sequence=sequence,
                 event_type=event_type,
                 producer=producer,
-                payload=payload,
+                payload=event_payload,
                 causes=causes,
             )
             try:
@@ -2473,7 +2550,13 @@ class Session:
     ) -> dict[str, Any]:
         return self._emit(event_type, producer, payload)
 
-    def observe_workspace(self, workspace_root: str | Path) -> list[dict[str, Any]]:
+    def observe_workspace(
+        self,
+        workspace_root: str | Path,
+        *,
+        request_id: str | None = None,
+        operation_digest: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Adapter poll: selected checkout revision and state changes become events."""
         workspace = workspace_module.discover_workspace(
             workspace_root, repositories=self.snapshot.get("workspace", {}).get("selection"))
@@ -2531,7 +2614,11 @@ class Session:
             current_states=current_states,
         )
         for event in events:
-            self._emit(event["type"], event["producer"], event["payload"])
+            self._emit(
+                event["type"], event["producer"], event["payload"],
+                request_id=request_id,
+                operation_digest=operation_digest,
+            )
         self.snapshot["workspace_heads"] = current
         self.snapshot["workspace_facts"] = current_states
         if self.snapshot.get("selected_checkouts"):
@@ -2588,11 +2675,69 @@ class Session:
         self._save()
         return event
 
-    def revalidate(self) -> dict[str, Any]:
-        """Refresh selected providers, reprobe bindings, and reconcile claims."""
-        workspace_root = self.snapshot.get("workspace", {}).get("root")
-        if workspace_root:
-            self.observe_workspace(workspace_root)
+    def revalidate(
+        self,
+        *,
+        request_id: str | None = None,
+        request_operation: str = "resume/revalidate",
+        workspace_root: str | Path | None = None,
+    ) -> dict[str, Any]:
+        """Refresh selected providers and recover an interrupted revalidation."""
+        operation_digest = None
+        if request_id is not None:
+            if (not isinstance(request_id, str) or not request_id
+                    or len(request_id) > 160 or "\x00" in request_id):
+                raise ValueError("revalidation request identity must be bounded nonempty text")
+            if (not isinstance(request_operation, str) or not request_operation
+                    or len(request_operation) > 256 or "\x00" in request_operation):
+                raise ValueError("revalidation request operation must be bounded nonempty text")
+            operation_digest = _request_operation_digest(
+                self.session_id, request_id, request_operation, self.snapshot
+            )
+
+            receipts = self.snapshot.get("revalidation_receipts", [])
+            for receipt in receipts if isinstance(receipts, list) else []:
+                if not isinstance(receipt, dict) or receipt.get("request_id") != request_id:
+                    continue
+                if receipt.get("operation_digest") != operation_digest:
+                    raise LifecycleError(
+                        "request identity was already used for a different Environment operation"
+                    )
+                report = receipt.get("report", {})
+                report = report if isinstance(report, dict) else {}
+                self._emit(
+                    "session.revalidated", "environment",
+                    {"workspace_root": receipt.get("workspace_root"),
+                     "report": report},
+                    request_id=request_id,
+                    operation_digest=operation_digest,
+                )
+                return dict(report)
+
+            prior = [
+                event for event in self._log()
+                if event.get("type") == "session.revalidated"
+                and event.get("payload", {}).get("request_id") == request_id
+            ]
+            if prior:
+                if any(event.get("payload", {}).get("request_operation_digest")
+                       != operation_digest for event in prior):
+                    raise LifecycleError(
+                        "request identity was already used for a different Environment operation"
+                    )
+                report = prior[-1].get("payload", {}).get("report", {})
+                return dict(report) if isinstance(report, dict) else {}
+
+        selected_workspace = (
+            workspace_root or self.snapshot.get("workspace", {}).get("root")
+        )
+        workspace_root_value = str(selected_workspace) if selected_workspace else None
+        if workspace_root_value:
+            self.observe_workspace(
+                workspace_root_value,
+                request_id=request_id,
+                operation_digest=operation_digest,
+            )
 
         old_bindings = list(self.snapshot.get("bindings", []))
         selected = self.snapshot.get("selected_checkouts", {})
@@ -2659,21 +2804,27 @@ class Session:
                 self._emit("capability.bound", "environment",
                            {"capability": binding.get("capability"),
                             "provider": binding.get("provider"),
-                            "provider_root": binding.get("provider_root")})
+                            "provider_root": binding.get("provider_root")},
+                           request_id=request_id,
+                           operation_digest=operation_digest)
             elif any(previous.get(field) != binding.get(field) for field in binding_fields):
                 self._emit("capability.changed", "environment",
                            {"capability": binding.get("capability"),
                             "provider": binding.get("provider"),
                             "previous_revision": previous.get("contract_revision"),
                             "current_revision": binding.get("contract_revision"),
-                            "provider_root": binding.get("provider_root")})
+                            "provider_root": binding.get("provider_root")},
+                           request_id=request_id,
+                           operation_digest=operation_digest)
         for key, previous in prior_by_key.items():
             if key not in current_by_key:
                 report["unbound"].append(previous.get("capability"))
                 self._emit("capability.unbound", "environment",
                            {"capability": previous.get("capability"),
                             "provider": previous.get("provider"),
-                            "provider_root": previous.get("provider_root")})
+                            "provider_root": previous.get("provider_root")},
+                           request_id=request_id,
+                           operation_digest=operation_digest)
 
         new_bindings = []
         for binding in discovered:
@@ -2708,6 +2859,8 @@ class Session:
                     event_type,
                     "environment",
                     {"capability": binding["capability"], "previous": before_status},
+                    request_id=request_id,
+                    operation_digest=operation_digest,
                 )
         self.snapshot["bindings"] = new_bindings
         selectors = self.snapshot.get("execution_roles", {})
@@ -2719,11 +2872,34 @@ class Session:
         holders = claims_module.holders(self.store.read_claims())
         if holders != self.snapshot.get("claim_holders", {}):
             self._emit("adapter.observed", "environment",
-                       {"note": "claim holders changed", "holders": holders})
+                       {"note": "claim holders changed", "holders": holders},
+                       request_id=request_id,
+                       operation_digest=operation_digest)
         self.snapshot["claim_holders_detailed"] = holders
         self.snapshot["claim_holders"] = holders
         self.snapshot.setdefault("authority", {})["claim_holders"] = dict(holders)
+        if request_id is not None:
+            receipts = self.snapshot.get("revalidation_receipts", [])
+            receipts = list(receipts) if isinstance(receipts, list) else []
+            receipts = [item for item in receipts
+                        if not isinstance(item, dict)
+                        or item.get("request_id") != request_id]
+            receipts.append({
+                "request_id": request_id,
+                "operation_digest": operation_digest,
+                "workspace_root": workspace_root_value,
+                "report": report,
+                "recorded_at": utcnow(),
+            })
+            self.snapshot["revalidation_receipts"] = receipts[-64:]
         self._save()
+        if request_id is not None:
+            self._emit(
+                "session.revalidated", "environment",
+                {"workspace_root": workspace_root_value, "report": report},
+                request_id=request_id,
+                operation_digest=operation_digest,
+            )
         return report
 
     # -- checkpoint / handoff / completion ------------------------------------

@@ -9,6 +9,7 @@ only resume/accept record participation.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -168,6 +169,35 @@ def _open(args: argparse.Namespace) -> sessions_module.Session:
         raise SystemExit(fail(str(error)))
 
 
+def _request_operation(args: argparse.Namespace) -> str:
+    command = getattr(getattr(args, "func", None), "__name__", "cli")
+    values = {
+        key: value for key, value in vars(args).items()
+        if key not in {"func", "state_dir", "persistence"}
+    }
+    normalized = json.loads(json.dumps(values, sort_keys=True, default=str))
+    digest = hashlib.sha256(
+        json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()[:32]
+    return f"{command}:{digest}"
+
+
+def _resume_session(
+    args: argparse.Namespace,
+    *,
+    store=None,
+    request_operation: str | None = None,
+) -> sessions_module.Session:
+    return sessions_module.Session.resume(
+        state_dir=args.state_dir,
+        session_id=args.session,
+        backend=args.persistence,
+        store=store,
+        request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"),
+        request_operation=request_operation or _request_operation(args),
+    )
+
+
 def cmd_inspect(args: argparse.Namespace) -> int:
     with closing(_open(args)) as session:
         out(session.inspect())
@@ -202,8 +232,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
                         diagnostics={"code": "remediation-scope-unknown"})
         with entry_module.entry_lock(args.state_dir, args.persistence):
             try:
-                session = sessions_module.Session.resume(
-                    state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+                session = _resume_session(args)
             except sessions_module.LifecycleError as error:
                 return fail(str(error))
             try:
@@ -225,8 +254,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             return 0
     with entry_module.entry_lock(args.state_dir, args.persistence) as lock:
         try:
-            session = sessions_module.Session.resume(
-                state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+            session = _resume_session(args)
         except sessions_module.LifecycleError as error:
             return fail(str(error))
         try:
@@ -265,8 +293,7 @@ def cmd_projections(args: argparse.Namespace) -> int:
         return cmd_projections_watch(args)
     with entry_module.entry_lock(args.state_dir, args.persistence):
         try:
-            session = sessions_module.Session.resume(
-                state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+            session = _resume_session(args)
         except sessions_module.LifecycleError as error:
             return fail(str(error))
         try:
@@ -311,9 +338,7 @@ def cmd_projections_watch(args: argparse.Namespace) -> int:
         while iterations is None or tick < iterations:
             with entry_module.entry_lock(args.state_dir, args.persistence):
                 try:
-                    session = sessions_module.Session.resume(
-                        state_dir=args.state_dir, session_id=args.session,
-                        backend=args.persistence)
+                    session = _resume_session(args)
                 except sessions_module.LifecycleError as error:
                     return fail(str(error))
                 try:
@@ -343,8 +368,7 @@ def cmd_verification(args: argparse.Namespace) -> int:
         return 0
     with entry_module.entry_lock(args.state_dir, args.persistence):
         try:
-            session = sessions_module.Session.resume(
-                state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+            session = _resume_session(args)
         except sessions_module.LifecycleError as error:
             return fail(str(error))
         try:
@@ -374,8 +398,7 @@ def cmd_diagnostic(args: argparse.Namespace) -> int:
         return 0
     with entry_module.entry_lock(args.state_dir, args.persistence):
         try:
-            session = sessions_module.Session.resume(
-                state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+            session = _resume_session(args)
         except sessions_module.LifecycleError as error:
             return fail(str(error))
         try:
@@ -406,8 +429,7 @@ def cmd_actions(args: argparse.Namespace) -> int:
         return 0
     with entry_module.entry_lock(args.state_dir, args.persistence):
         try:
-            session = sessions_module.Session.resume(
-                state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+            session = _resume_session(args)
         except sessions_module.LifecycleError as error:
             return fail(str(error))
         try:
@@ -436,9 +458,7 @@ def cmd_actions(args: argparse.Namespace) -> int:
 def cmd_family(args: argparse.Namespace) -> int:
     with entry_module.entry_lock(args.state_dir, args.persistence):
         try:
-            session = sessions_module.Session.resume(
-                state_dir=args.state_dir, session_id=args.session,
-                backend=args.persistence)
+            session = _resume_session(args)
         except sessions_module.LifecycleError as error:
             return fail(str(error))
         try:
@@ -500,7 +520,7 @@ def cmd_family(args: argparse.Namespace) -> int:
 
 def cmd_reconcile(args: argparse.Namespace) -> int:
     with entry_module.entry_lock(args.state_dir, args.persistence):
-        session = sessions_module.Session.resume(state_dir=args.state_dir, session_id=args.session, backend=args.persistence)
+        session = _resume_session(args)
         try:
             result = session.reconcile()
             out(result)
@@ -547,20 +567,26 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_resume(args: argparse.Namespace) -> int:
+    request_id = os.environ.get("MNCS_ENV_RPC_REQUEST_ID")
+    request_operation = _request_operation(args)
     try:
-        session = sessions_module.Session.resume(
-            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
-        )
-    except sessions_module.LifecycleError as error:
+        session = _resume_session(args, request_operation=request_operation)
+    except (sessions_module.LifecycleError, ValueError) as error:
         return fail(str(error))
     if args.revalidate:
-        revalidation = session.revalidate()
         workspace_root = (
             args.workspace
             or session.snapshot.get("workspace", {}).get("root")
             or "."
         )
-        session.observe_workspace(workspace_root)
+        try:
+            revalidation = session.revalidate(
+                request_id=request_id,
+                request_operation=request_operation,
+                workspace_root=workspace_root,
+            )
+        except (sessions_module.LifecycleError, ValueError) as error:
+            return fail(str(error), code=3)
     else:
         revalidation = {"reprobed": 0, "changed": []}
     result = session.inspect()
@@ -595,9 +621,7 @@ def cmd_authority(args: argparse.Namespace) -> int:
 
 def cmd_invoke(args: argparse.Namespace) -> int:
     try:
-        session = sessions_module.Session.resume(
-            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
-        )
+        session = _resume_session(args)
     except sessions_module.LifecycleError as error:
         return fail(str(error))
     try:
@@ -626,9 +650,7 @@ def cmd_invoke(args: argparse.Namespace) -> int:
 
 def cmd_test(args: argparse.Namespace) -> int:
     try:
-        session = sessions_module.Session.resume(
-            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
-        )
+        session = _resume_session(args)
     except sessions_module.LifecycleError as error:
         return fail(str(error))
     try:
@@ -665,27 +687,19 @@ def cmd_events(args: argparse.Namespace) -> int:
     session = _open(args)
     if args.subscribe:
         # Subscribing changes cursor state: use a participating handle.
-        participant = sessions_module.Session.resume(
-            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
-        )
+        participant = _resume_session(args)
         out(participant.subscribe(args.subscribe, source_filter=args.source))
         return 0
     if args.poll:
-        participant = sessions_module.Session.resume(
-            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
-        )
+        participant = _resume_session(args)
         out(participant.poll(args.poll))
         return 0
     if args.observe_workspace:
-        participant = sessions_module.Session.resume(
-            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
-        )
+        participant = _resume_session(args)
         out(participant.observe_workspace(args.observe_workspace))
         return 0
     if args.observe_store:
-        participant = sessions_module.Session.resume(
-            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
-        )
+        participant = _resume_session(args)
         out(participant.observe_store())
         return 0
     out(session.inspect()["latest_events"])
@@ -704,9 +718,7 @@ def cmd_updates(args: argparse.Namespace) -> int:
 
 def cmd_ack(args: argparse.Namespace) -> int:
     try:
-        session = sessions_module.Session.resume(
-            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
-        )
+        session = _resume_session(args)
     except sessions_module.LifecycleError as error:
         return fail(str(error))
     out(session.ack(args.index))
@@ -747,9 +759,7 @@ def cmd_reconciler(args: argparse.Namespace) -> int:
 
 def cmd_checkpoint(args: argparse.Namespace) -> int:
     try:
-        session = sessions_module.Session.resume(
-            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
-        )
+        session = _resume_session(args)
     except sessions_module.LifecycleError as error:
         return fail(str(error))
     campaign_evidence = None
@@ -781,9 +791,7 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
 
 def cmd_handoff(args: argparse.Namespace) -> int:
     try:
-        session = sessions_module.Session.resume(
-            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
-        )
+        session = _resume_session(args)
     except sessions_module.LifecycleError as error:
         return fail(str(error))
     out(
@@ -850,9 +858,7 @@ def cmd_complete(args: argparse.Namespace) -> int:
 
 def cmd_fail(args: argparse.Namespace) -> int:
     try:
-        session = sessions_module.Session.resume(
-            state_dir=args.state_dir, session_id=args.session, backend=args.persistence
-        )
+        session = _resume_session(args)
     except sessions_module.LifecycleError as error:
         return fail(str(error))
     try:
@@ -866,10 +872,7 @@ def cmd_claims(args: argparse.Namespace) -> int:
     store = open_store(args.state_dir, args.persistence, session_id=args.session)
     try:
         if args.release:
-            session = sessions_module.Session.resume(
-                state_dir=args.state_dir, session_id=args.session, backend=args.persistence,
-                store=store,
-            )
+            session = _resume_session(args, store=store)
             try:
                 out({"released": session.release_claim(
                     args.release, reason=args.reason, claim_id=args.claim_id,
@@ -881,10 +884,7 @@ def cmd_claims(args: argparse.Namespace) -> int:
                 })
             return 0
         if args.transfer_to:
-            session = sessions_module.Session.resume(
-                state_dir=args.state_dir, session_id=args.session, backend=args.persistence,
-                store=store,
-            )
+            session = _resume_session(args, store=store)
             if not args.claim_id:
                 return fail("transfer needs --claim-id")
             try:
@@ -899,10 +899,7 @@ def cmd_claims(args: argparse.Namespace) -> int:
                 })
             return 0
         if args.acquire:
-            session = sessions_module.Session.resume(
-                state_dir=args.state_dir, session_id=args.session, backend=args.persistence,
-                store=store,
-            )
+            session = _resume_session(args, store=store)
             scope = None
             branch = args.branch
             if args.paths or args.worktree:

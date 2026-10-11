@@ -2009,6 +2009,121 @@ class ToolchainTests(unittest.TestCase):
 
 
 class SessionTests(unittest.TestCase):
+    def test_resume_request_retry_deduplicates_published_participation_event(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            request_id = "req_resume_publication_retry"
+            args = {
+                "state_dir": state,
+                "session_id": session.session_id,
+                "backend": "store",
+                "store": session.store,
+                "request_id": request_id,
+                "request_operation": "cmd_resume:exact-operation",
+            }
+
+            with mock.patch.object(
+                sessions.Session, "_save",
+                side_effect=RuntimeError("caller interrupted after resume event"),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "after resume event"):
+                    sessions.Session.resume(**args)
+
+            resumed_events = [
+                event for event in session.store.read_events(session.session_id)
+                if event.get("type") == "session.resumed"
+                and event.get("payload", {}).get("request_id") == request_id
+            ]
+            self.assertEqual(len(resumed_events), 1)
+
+            resumed = sessions.Session.resume(**args)
+            repeated = sessions.Session.resume(**args)
+            self.assertEqual(resumed.session_id, session.session_id)
+            self.assertEqual(repeated.session_id, session.session_id)
+            with self.assertRaisesRegex(
+                sessions.LifecycleError, "different Environment operation"
+            ):
+                sessions.Session.resume(
+                    **{**args, "request_operation": "cmd_checkpoint:other-operation"}
+                )
+            resumed_events = [
+                event for event in session.store.read_events(session.session_id)
+                if event.get("type") == "session.resumed"
+                and event.get("payload", {}).get("request_id") == request_id
+            ]
+            self.assertEqual(len(resumed_events), 1)
+
+    def test_revalidation_retry_recovers_events_and_returns_durable_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            workspace_root = state / "workspace"
+            workspace_root.mkdir()
+            session = make_session(state)
+            session.snapshot["workspace"] = {"root": str(workspace_root)}
+            session.snapshot["selected_checkouts"] = {}
+            session.snapshot["bindings"] = [{
+                "provider": "old-provider",
+                "capability": "old-capability",
+                "availability": {"status": "available"},
+            }]
+            session.snapshot["execution_roles"] = {}
+            session.snapshot["toolchain"] = None
+            session._save()
+            request_id = "req_revalidate_publication_retry"
+            operation = "cmd_resume:revalidate-workspace"
+            with mock.patch.object(sessions.Session, "observe_workspace", return_value=[]), \
+                 mock.patch.object(sessions.capabilities_module,
+                                   "discover_capabilities", return_value=[]):
+                with mock.patch.object(
+                    session, "_save",
+                    side_effect=RuntimeError("caller interrupted before receipt snapshot"),
+                ):
+                    with self.assertRaisesRegex(RuntimeError, "before receipt snapshot"):
+                        session.revalidate(
+                            request_id=request_id,
+                            request_operation=operation,
+                            workspace_root=workspace_root,
+                        )
+
+                unbound = [
+                    event for event in session.store.read_events(session.session_id)
+                    if event.get("type") == "capability.unbound"
+                    and event.get("payload", {}).get("request_id") == request_id
+                ]
+                self.assertEqual(len(unbound), 1)
+                restarted = sessions.Session.open(
+                    state_dir=state, session_id=session.session_id,
+                    backend="store", store=session.store,
+                )
+                report = restarted.revalidate(
+                    request_id=request_id,
+                    request_operation=operation,
+                    workspace_root=workspace_root,
+                )
+                sequence = restarted.snapshot["snapshot_sequence"]
+                repeated = restarted.revalidate(
+                    request_id=request_id,
+                    request_operation=operation,
+                    workspace_root=workspace_root,
+                )
+
+            self.assertEqual(report["unbound"], ["old-capability"])
+            self.assertEqual(repeated, report)
+            self.assertEqual(restarted.snapshot["snapshot_sequence"], sequence)
+            events_for_request = [
+                event for event in session.store.read_events(session.session_id)
+                if event.get("payload", {}).get("request_id") == request_id
+            ]
+            self.assertEqual(
+                sum(event.get("type") == "capability.unbound"
+                    for event in events_for_request), 1
+            )
+            self.assertEqual(
+                sum(event.get("type") == "session.revalidated"
+                    for event in events_for_request), 1
+            )
+
     def test_session_bound_invocation_uses_the_active_session_identity(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))

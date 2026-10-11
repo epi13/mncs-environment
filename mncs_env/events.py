@@ -23,6 +23,7 @@ SCHEMA = "mncs.environment.event/1"
 TYPES = (
     "session.created",
     "session.resumed",
+    "session.revalidated",
     "session.checkpointed",
     "campaign.reconciled",
     "session.handed_off",
