@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.language-service-live-probe/1",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "observed_at": "2026-10-11T22:39:41+00:00",
+  "execution": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "provider": "mncs-language-service/tools/mnls_provider.py",
+    "operation": "status",
+    "selected_environment_definition": ".mncs/environment.json",
+    "selected_repository_count": 14,
+    "selected_repository_roots_match_resident": true,
+    "provider_status_refreshes_disk_state": true,
+    "source_or_configuration_mutation": false,
+    "reconcile_or_restart_requested": false
+  },
+  "service": {
+    "schema_version": "mncs.language-service.resident-status/1",
+    "state": "stale-toolchain",
+    "ready": false,
+    "detail": "resident toolchain binding differs from the measured toolchain",
+    "workspace_root": "/workspace",
+    "socket": "/workspace/.mncs/mnls-language-service.sock",
+    "instance_id": "mnls-2973749-1791502945101124136",
+    "version": "0.1.0",
+    "pid": 2973749,
+    "lease_owned_by_provider": true,
+    "lease_pid_alive": null,
+    "lease_pid_identity_state": "outside-current-pid-namespace",
+    "selected_host_build_fingerprint": "sha256:8149316c56247f6c75ad3dd0ad051a551fee2f2dacf65628696a43c0bad634ed",
+    "resident_build_fingerprint": "sha256:8149316c56247f6c75ad3dd0ad051a551fee2f2dacf65628696a43c0bad634ed",
+    "selected_toolchain": {
+      "pinned": "mncs-language:7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "digest": "sha256:d9e20e2cd608017c698d73d9bfb0d927643f9eb9e454ba416ec9752cfca24bae",
+      "language_root": "/workspace/mncs-language",
+      "library_path": "/workspace/mncs-language/library"
+    },
+    "resident_observation": {
+      "generation": 142,
+      "stream_identity": "mnls-stream-2973749-1791502945101120724",
+      "event_cursor": 16,
+      "documents": 543,
+      "analysis_pending": 532,
+      "diagnostics_error": 4,
+      "diagnostics_warning": 0,
+      "obligations_fail": 0,
+      "obligations_unknown": 5312
+    },
+    "resident_toolchain_digest_exposed_by_status": false
+  },
+  "source_checkout_observation": {
+    "repository": "mncs-language-service",
+    "branch": "main",
+    "head": "40257bbf9b63f802ad55821c7e62eb305afb04fc",
+    "clean": true,
+    "note": "The provider status response identifies the selected and resident executable build fingerprint; this checkout identity is recorded separately and does not assert a source-to-binary build attestation."
+  },
+  "environment_health": {
+    "observation": "live",
+    "readiness": "degraded",
+    "available_capabilities": 3,
+    "unavailable_capabilities": 0,
+    "unknown_capabilities": [
+      {
+        "capability": "mncs-environment:ambient-projection-coherence",
+        "code": "provider-invocation-undeclared",
+        "reason": "mncs-environment must publish an invocation descriptor for mncs-environment:ambient-projection-coherence; source fingerprints are not commands"
+      }
+    ],
+    "session_definition_services": [],
+    "session_definition": "tests/fixtures/control-rpc-entry.json"
+  },
+  "recovery": {
+    "action_taken": "none",
+    "reason": "The provider reports an owned lease but cannot verify its PID in this namespace. Preserve the service and lease; route any lifecycle recovery through the owning service contract after the stale toolchain cause is established."
+  },
+  "limitations": [
+    "The resident toolchain digest was not exposed in the bounded status response, so the differing digest is unknown.",
+    "The direct probe reports stale-toolchain; it does not establish that semantic data is current or ready.",
+    "Environment health for this session has no declared resident Language Service entry, so the direct service status is recorded separately."
+  ]
+}
