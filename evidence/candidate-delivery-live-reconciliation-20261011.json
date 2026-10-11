@@ -1,0 +1,199 @@
+{
+  "schema_version": "mncs.environment.candidate-delivery-live-reconciliation/1",
+  "identity": "ev_candidate_delivery_live_reconciliation_20261011",
+  "observed_at": "2026-10-11T22:20:50.708720Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "source": {
+    "owner": "MNCS Environment",
+    "repository_observations": "host agent shell; read-only Git commands",
+    "claim_observations": "authenticated Environment claims RPC through MNCS Control project Bwrap",
+    "sandbox_backend_for_claim_queries": "bwrap",
+    "mutation_performed": false
+  },
+  "authorized_deliveries": [
+    {
+      "repository": "mncs-environment",
+      "candidate_commit": "d98729e01e9be8c867198a9228bcd8516c77e06a",
+      "current_origin_main": "8c49842c65b5d8785aa922a7f65bb2ba3f67f126",
+      "candidate_is_ancestor": true,
+      "status": "merged-and-pushed"
+    },
+    {
+      "repository": "mncs-control-mcp",
+      "candidate_commit": "b6e2e09f8f6d6dafaee9ff1856d9bd845aeb7030",
+      "current_origin_main": "a336e446d4ea704ad917f243933e9e653bf0f448",
+      "candidate_is_ancestor": true,
+      "status": "merged-and-pushed"
+    }
+  ],
+  "candidates": [
+    {
+      "repository": "mncs-compiler",
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "worktree": {
+        "path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+        "checkout_identity": "checkout:5c90f6fe8e41236c05c702ac",
+        "physically_available": true,
+        "status": "clean"
+      },
+      "current_origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "graph_relation": {
+        "ancestor": false,
+        "ahead": 1,
+        "behind": 14
+      },
+      "patch_relation": {
+        "status": "patch-equivalent-on-origin-main",
+        "unique_patch_commit_count": 0,
+      "graph_ahead_commit_changed_paths": [
+          "evidence/SELF-HOST-MATRIX.json"
+        ],
+        "git_cherry": "- 2b6f38113a4716ce3918f6a3318e70353caeaa88 Record lexer keyword optimization delivery"
+      },
+      "owning_claim": {
+        "claim_id": "claim:mncs-compiler",
+        "version": 63,
+        "session_id": "ses_d2537acde8b8a875",
+        "owner_lifecycle": "active",
+        "freshness": "stale",
+        "recovery_verdict": "not-recoverable",
+        "effective_expires_at": "2026-10-16T18:13:43+00:00",
+        "observed_at": "2026-10-11T22:20:43.968061Z"
+      },
+      "verification": {
+        "current_main_unchanged": true,
+        "tests": "not rerun; the candidate's only unique patch is evidence and the repository is protected by an active exclusive claim"
+      },
+      "disposition": "source delivery is already present on main by patch identity; retain the unmerged branch and checkout until owner release or authorized recovery"
+    },
+    {
+      "repository": "mncs-language",
+      "branch": "campaign/process-environment-value-bound-20261010",
+      "commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "worktree": {
+        "path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+        "physically_available": true,
+        "status": "untracked evidence/campaign-20261010-forge-core-quiet-output.json"
+      },
+      "current_origin_main": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "graph_relation": {
+        "ancestor": false,
+        "ahead": 1,
+        "behind": 2
+      },
+      "patch_relation": {
+        "status": "patch-equivalent-on-origin-main",
+        "unique_patch_commit_count": 0,
+        "commit_message": "Add bounded process environment values and quiet compile output",
+        "git_cherry": "- fc49c0cc6afe388ff8d18341595422cc52225005 Add bounded process environment values and quiet compile output",
+        "changed_paths": [
+          "crates/mncs-cli/src/main.rs",
+          "crates/mncs-cli/tests/fixtures/quiet-compile.mncs",
+          "crates/mncs-cli/tests/profile_registry.rs",
+          "crates/mncs-cli/tests/quiet_compile.rs",
+          "crates/mncs-compiler/src/frontend.rs",
+          "crates/mncs-compiler/tests/source_profile_019_sequence_bound.rs",
+          "crates/mncs-model/src/body.rs",
+          "crates/mncs-model/src/capability_gap.rs",
+          "crates/mncs-syntax/src/profile.rs",
+          "crates/mncs-syntax/src/source.rs",
+          "docs/language-capabilities.json",
+          "docs/language-capability-deltas.json",
+          "docs/source-profile-0.18.md",
+          "docs/source-profile-0.19.md",
+          "examples/capability-gaps/process-environment-value-1447.json",
+          "library/std/application.mncs",
+          "library/std/process.mncs",
+          "library/stdlib-bundle.json",
+          "rfcs/0049-machine-native-source-profile-0-19-bounded-sequence-capacity.md",
+          "rfcs/README.md",
+          "scripts/generate_language_capabilities.py",
+          "scripts/test_generate_language_capabilities.py",
+          "spec/README.md",
+          "spec/source-profile-registry.json"
+        ]
+      },
+      "verification": {
+        "status": "focused tests passed against exact current origin/main source; not rerun",
+        "source_commit": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+        "evidence_path": "evidence/compiler-worktree-physical-refresh-20261011.json",
+        "sandbox_backend": "bwrap",
+        "network": false,
+        "tests": [
+          {
+            "command": "cargo test --offline -p mncs-compiler --test source_profile_019_sequence_bound",
+            "passed": 1
+          },
+          {
+            "command": "cargo test --offline -p mncs-cli --test quiet_compile",
+            "passed": 3
+          },
+          {
+            "command": "cargo test --offline -p mncs-cli --test profile_registry",
+            "passed": 4
+          }
+        ]
+      },
+      "disposition": "implementation is already present by patch identity; retain dirty checkout and its untracked Forge evidence"
+    },
+    {
+      "repository": "mncs-forge",
+      "branch": "campaign/forge-quiet-compile-output-20261010",
+      "commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "worktree": {
+        "path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+        "physically_available": true,
+        "status": "clean"
+      },
+      "current_origin_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "graph_relation": {
+        "ancestor": false,
+        "ahead": 1,
+        "behind": 0
+      },
+      "patch_relation": {
+        "status": "unique-unmerged-patch",
+        "unique_patch_commit_count": 1,
+        "git_cherry": "+ 608334b703de708ef15c11147b0ee5c624f87ed6 Skip discarded Forge compile outputs",
+        "changed_paths": [
+          "src/mncs_forge/mncs_native.py",
+          "tests/test_mncs_native.py"
+        ]
+      },
+      "owning_claim": {
+        "claim_id": "claim:mncs-forge",
+        "version": 28,
+        "session_id": "ses_95c3aa35b8544042",
+        "owner_lifecycle": "active",
+        "freshness": "stale",
+        "recovery_verdict": "not-recoverable",
+        "effective_expires_at": "2026-10-16T02:18:31+00:00",
+        "observed_at": "2026-10-11T22:20:50.708720Z"
+      },
+      "verification": {
+        "status": "not_run",
+        "reason": "the active exclusive Forge claim remains held and no owner handoff or confirmed termination is available"
+      },
+      "disposition": "retain clean unmerged candidate; do not test, merge, push, transfer, or retire under the current claim"
+    }
+  ],
+  "related_foreign_claims": [
+    {
+      "claim_id": "claim:mncs-reference-studies",
+      "session_id": "ses_95c3aa35b8544042",
+      "owner_lifecycle": "active",
+      "recovery_verdict": "not-recoverable",
+      "effective_expires_at": "2026-10-16T02:18:43+00:00",
+      "observed_at": "2026-10-11T22:20:37.227255Z"
+    }
+  ],
+  "overall_disposition": {
+    "verified_deliveries": 2,
+    "patch_equivalent_candidates": 2,
+    "unique_unmerged_candidates": 1,
+    "candidates_merged_or_deleted_by_this_report": 0,
+    "source_worktree_mutations": 0,
+    "next_authorized_action": "obtain an owner handoff or confirmed lifecycle fact for Compiler/Forge before testing or retiring protected candidates"
+  }
+}
