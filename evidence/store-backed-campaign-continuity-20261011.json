@@ -1,0 +1,171 @@
+{
+  "schema_version": "mncs.environment.store-backed-campaign-continuity/1",
+  "recorded_at": "2026-10-11T01:40:38Z",
+  "implementation": {
+    "repository": "mncs-environment",
+    "main_head": "b1f682e30e8a2041bc25f3261b0ec60c7c34a199",
+    "commits": [
+      {
+        "identity": "c16a4f034feed2c7670d89ef39153c4a474f8439",
+        "summary": "Persist observation caches in Store and resume campaign identity safely"
+      },
+      {
+        "identity": "b1f682e30e8a2041bc25f3261b0ec60c7c34a199",
+        "summary": "Refresh campaign checkout references on workspace observation"
+      }
+    ],
+    "delivery": {
+      "previous_main": "1f7716c073191d671d89828185427dd766a3f65b",
+      "merge_mode": "FAST_FORWARD",
+      "push_status": "PUSHED",
+      "remote_main_at_implementation_push": "b1f682e30e8a2041bc25f3261b0ec60c7c34a199"
+    },
+    "changes": [
+      "Store-backed repository and library observation catalogues use immutable Environment-owned evidence references.",
+      "Store-backed incremental coherence results use immutable Store evidence references instead of state_dir session sidecars.",
+      "Authenticated campaign entry rejects duplicate, foreign-owned, or mismatched live campaign contexts with compact continuation diagnostics; a unique same-intent campaign is discovered across definition changes.",
+      "Every workspace observation refreshes the campaign repository refs from the observed workspace, selected checkouts, and live claims, so a continuation capsule carries current branch, head, cleanliness, and checkout identities."
+    ]
+  },
+  "store_transport": {
+    "owner": "MNCS Control authenticated Environment RPC and StoreBackend",
+    "canonical_root": "/home/epi13/.local/share/mncs-environment/store",
+    "agent_direct_path_access": {
+      "visible_in_bwrap": false,
+      "writable_in_bwrap": false,
+      "checks": ["test ! -e canonical_store", "test ! -w canonical_store"]
+    },
+    "service_boundary": {
+      "unit": "mncs-control-tunnel.service",
+      "active": true,
+      "ProtectSystem": "strict",
+      "ProtectHome": "read-only",
+      "NoNewPrivileges": true,
+      "ReadWritePaths_includes_only_this_store_root_for_store_access": true
+    },
+    "environment_persistence_status": "owner-write-path-available",
+    "protected_checkpoint": {
+      "session": "ses_7226fbcfe65820f7",
+      "identity": "chk_4d94094bd8ba15be",
+      "sequence": 21,
+      "request_id": "req_61995bcd6d2e2316fdd3ab0e28d636fd39de7ad2"
+    },
+    "canonical_store_verification": {
+      "passed": true,
+      "mode": "read-only EmbeddedStore.verify()",
+      "generation": 43594,
+      "objects": 43594,
+      "relations": 0,
+      "provenance_records": 0,
+      "recovery": "RECOVERED_OLD"
+    },
+    "acceptance_history": "evidence/campaign-continuity-delivery-20261010.json"
+  },
+  "campaign_continuity": {
+    "campaign_identity": "cmp_mncs_continuity_20261010",
+    "authenticated_principal": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "session": "ses_7226fbcfe65820f7",
+    "consumer": "codex-process-1",
+    "lifecycle": "active",
+    "latest_checkpoint": {
+      "identity": "chk_4d94094bd8ba15be",
+      "sequence": 21
+    },
+    "owned_claims": ["claim:mncs-control-mcp", "claim:mncs-environment"],
+    "writable_repositories": ["mncs-environment"],
+    "protected_resume_proof": {
+      "operation": "resume --revalidate through Control RPC inside bwrap",
+      "session_reused": true,
+      "campaign_reused": true,
+      "claim_ids_unchanged": true,
+      "current_environment_checkout": {
+        "branch": "main",
+        "head": "b1f682e30e8a2041bc25f3261b0ec60c7c34a199",
+        "clean": true,
+        "observation": "current"
+      }
+    },
+    "preserved_partial_entry": {
+      "session": "ses_b4b2d283542220b0",
+      "state": "partial session created by an earlier wrong-definition entry attempt; no checkpoint or claim",
+      "disposition": "preserved; no automatic adoption or cleanup"
+    },
+    "prior_restart_and_transfer_evidence": "evidence/campaign-continuity-delivery-20261010.json"
+  },
+  "validation": {
+    "full_environment_pytest": {
+      "passed": 596,
+      "skipped": 46,
+      "failed": 0,
+      "duration_seconds": 490.42
+    },
+    "environment_vertical_proof": "PASS: real capability invocation, protected write denial, checkpoint, new-process resume, authenticated handoff, and completion",
+    "vertical_proof_session": "ses_caaa3513e932ff67",
+    "store_evidence_and_capsule_tests_in_bwrap": {
+      "passed": 4,
+      "failed": 0,
+      "canonical_store_absent_and_not_writable": true
+    },
+    "campaign_discovery_and_store_evidence_tests": {
+      "passed": 10,
+      "failed": 0,
+      "canonical_store_absent_and_not_writable": true
+    },
+    "ruff": "observations.py, coherence.py, and test_store_evidence_transport.py passed; sessions.py and test_environment.py still report pre-existing repository diagnostics outside the changed lines",
+    "python_compile": "passed",
+    "git_diff_check": "passed"
+  },
+  "git_and_candidate_state": {
+    "compiler_worktree_inventory": {
+      "source": "evidence/compiler-worktree-dispositions-20261010.json",
+      "registered": 66,
+      "detached": 12,
+      "dirty": 8,
+      "retireable_in_dry_run": 0,
+      "cleanup_performed": false
+    },
+    "candidates": [
+      {
+        "repository": "mncs-compiler",
+        "branch": "campaign/keyword-local-index-delivery-20261010",
+        "commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+        "owner_session": "ses_d2537acde8b8a875",
+        "disposition": "retained under active exclusive claim; no test, merge, push, or retirement"
+      },
+      {
+        "repository": "mncs-language",
+        "branch": "campaign/process-environment-value-bound-20261010",
+        "commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+        "disposition": "retained with untracked evidence; no write authority in this Environment session"
+      },
+      {
+        "repository": "mncs-forge",
+        "branch": "campaign/forge-quiet-compile-output-20261010",
+        "commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+        "owner_session": "ses_95c3aa35b8544042",
+        "disposition": "retained under active exclusive claim; no test, merge, push, or retirement"
+      }
+    ],
+    "disposition_sources": [
+      "evidence/candidate-reconciliation-20261010.json",
+      "evidence/compiler-worktree-dispositions-20261010.json"
+    ]
+  },
+  "compiler_and_resource_frontier": {
+    "compiler_source_changed": false,
+    "self_host_matrix": "mncs-compiler/evidence/SELF-HOST-MATRIX.json",
+    "complete_flow_compilation": "unproven",
+    "stage1": "unproven",
+    "stage2": "unproven",
+    "unresolved_pressures": ["CP-0011", "CP-0023", "CP-0024", "CP-0025"],
+    "resource_feedback_vertical_slice": "NOT_PROVEN",
+    "forge_provider_health": "capability_unavailable",
+    "authority_constraint": "Compiler and Forge exclusive claims remain owned by other sessions; no takeover or candidate cleanup was attempted."
+  },
+  "next_work": [
+    "Obtain authenticated owner handoff or a legitimate claim recovery proof before changing protected Compiler or Forge work.",
+    "Inspect and deliver the Language candidate through an authorized Language session after preserving its untracked evidence.",
+    "Complete the Compiler to Forge to System Monitor to Store to Automation scheduling slice under owning repository authority.",
+    "Continue the measured Stage-0 compiler frontier; do not claim Stage-1 or Stage-2 without succession evidence."
+  ]
+}
