@@ -1,0 +1,76 @@
+{
+  "schema_version": "mncs.environment.invocation-artifact-store-proof/1",
+  "identity": "ev_environment_invocation_artifacts_20261011",
+  "recorded_at": "2026-10-11T18:39:23Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "change": {
+    "repository": "mncs-environment",
+    "base_commit": "d98729e01e9be8c867198a9228bcd8516c77e06a",
+    "commit": "e7cb9883111e71b3b8548fe662567f802b0d8286",
+    "owner_reason": "Environment owns capability admission, session invocation, and the bounded provider artifact cache. Store remains the immutable persistence owner.",
+    "paths": [
+      {
+        "path": "mncs_env/invocation_artifacts.py",
+        "sha256": "6b1c3aa9eb50827647d00e5abaccdea7f97b9f1db6e79e442e7518128655474a",
+        "purpose": "Give Store-backed providers private scratch, restore and publish exact session/capability/binding bundles through strict immutable Store records, and reject symlinked, special, or over-budget trees."
+      },
+      {
+        "path": "mncs_env/sessions.py",
+        "sha256": "2cc573aeccbc0e02955dfe77984ad20b636dac445ebf125419f185fcf5c2389a",
+        "purpose": "Perform availability and effect authority admission before scratch creation or provider execution; record immutable artifact references and completion only after publication succeeds."
+      },
+      {
+        "path": "tests/test_environment.py",
+        "sha256": "855981e62475cb2c809758e9597f6dfe24d42928379091cca66aac9c9c980f5c",
+        "purpose": "Verify denial, Store publication/readback, fresh-process cache restoration, scratch cleanup, and symlink rejection."
+      },
+      {
+        "path": "docs/INTEGRATIONS.md",
+        "sha256": "36e115e02d3c27390d8cda2b11a3e2c8c6cb96403200c92888340e3b99d0955a",
+        "purpose": "Document Store-backed invocation cache ownership, transport, and bounds."
+      }
+    ]
+  },
+  "validation": {
+    "focused_command": "python3 -m pytest -q tests/test_environment.py -k 'session_invoke or deny_never_executes'",
+    "focused_result": "5 passed, 161 deselected",
+    "full_command": "python3 -m pytest tests/ -q",
+    "full_result": "642 passed, 46 skipped, 2 failed in 548.03s",
+    "baseline_comparison": {
+      "result": "same two failures as the pre-change run",
+      "failures": [
+        "tests/test_doctor.py::EpochTests::test_epoch_miss_on_manifest_change",
+        "tests/test_environment.py::SessionTests::test_provision_checkouts_extends_authority_and_binds_exact_provider_checkout"
+      ]
+    },
+    "vertical_proof": "python3 scripts/vertical_proof.py: PASS; entered a session, invoked a real provider, checkpointed, resumed in a fresh process, accepted a handoff, and completed against its proof Store.",
+    "static_checks": [
+      "ruff check mncs_env/invocation_artifacts.py passed",
+      "py_compile mncs_env/invocation_artifacts.py mncs_env/sessions.py passed",
+      "git diff --check passed"
+    ]
+  },
+  "protected_execution": {
+    "sandbox_backend": "bwrap",
+    "scope": "workspace",
+    "project": "mncs-environment",
+    "canonical_store_root": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_visible_to_caller": false,
+    "canonical_store_writable_by_caller": false,
+    "read_only_capability_inventory": "passed through authenticated Control Environment RPC",
+    "generic_invoke_request": {
+      "capability": "mncs-environment:workspace-readiness",
+      "result": "not dispatched",
+      "diagnostic": "operation-unavailable",
+      "cause_code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+      "publication_completed": false
+    },
+    "note": "Control deliberately reports generic capability invocation as UNKNOWN because `invoke` is outside its exposed operation contract. This probe is not a provider invocation or a canonical artifact-publication proof."
+  },
+  "result": "PASS_WITH_PROTECTED_INVOKE_LIMITATION",
+  "limits": [
+    "Store-backed artifact behavior and fresh-process restoration pass in Environment tests, but this change has not yet been exercised through a live protected invocation because Control does not expose that operation.",
+    "The live protected probe confirms the caller cannot see or write the canonical Store root; earlier Store continuity evidence remains the separate canonical checkpoint and claim publication proof."
+  ]
+}
