@@ -365,6 +365,9 @@ def _validate_campaign_identity(store, *, campaign_id: str,
     def continuation(session_id: str) -> dict:
         snapshot = snapshots[session_id]
         campaign = snapshot.get("campaign") or {}
+        observations = sessions.continuation_observations(
+            store, snapshot, session_id
+        )
         repositories = []
         repository_refs = campaign.get("repository_refs", [])
         if not isinstance(repository_refs, list):
@@ -376,7 +379,7 @@ def _validate_campaign_identity(store, *, campaign_id: str,
                     "branch", "head", "clean", "observation",
                 )})
         checkpoint_ids = snapshot.get("checkpoints", [])
-        claim_ids = campaign.get("claim_ids", [])
+        claim_ids = observations["claim_ids"]
         pressures = campaign.get("unresolved_pressures", [])
         if not isinstance(checkpoint_ids, list):
             checkpoint_ids = []
@@ -387,7 +390,7 @@ def _validate_campaign_identity(store, *, campaign_id: str,
         delivery = campaign.get("delivery", {"status": "pending"})
         if not isinstance(delivery, dict):
             delivery = {"status": "unknown"}
-        return {
+        result = {
             "session_id": session_id,
             "lifecycle": snapshot.get("lifecycle"),
             "consumer_id": snapshot.get("consumer_id"),
@@ -399,6 +402,15 @@ def _validate_campaign_identity(store, *, campaign_id: str,
             "delivery": delivery,
             "unresolved_pressures": pressures[:8],
         }
+        if observations["latest_checkpoint"] is not None:
+            result["latest_checkpoint"] = observations["latest_checkpoint"]
+        if observations["foreign_claims_count"]:
+            result.update({
+                "foreign_claims": observations["foreign_claims"],
+                "foreign_claims_count": observations["foreign_claims_count"],
+                "foreign_claims_truncated": observations["foreign_claims_truncated"],
+            })
+        return result
 
     handoff_session = pending_handoff[0] if pending_handoff is not None else None
     foreign = [

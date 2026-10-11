@@ -52,6 +52,10 @@ HANDOFF_SCHEMA = "mncs.environment.handoff/1"
 
 MAX_EMIT_RETRIES = 16
 
+CONTINUATION_MAX_CHECKPOINT_REMAINING = 8
+CONTINUATION_MAX_FOREIGN_CLAIMS = 12
+CONTINUATION_MAX_CLAIM_PATHS = 4
+
 # Allowed lifecycle transitions. Every transition records a reason; an
 # illegal transition raises LifecycleError. Completion paths below match
 # this table exactly (audited); complete()/fail() enforce the same sets.
@@ -110,6 +114,156 @@ def _repo_facts(workspace_view: dict[str, Any]) -> dict[str, dict[str, Any]]:
             "foreign_signals": [] if clean else ["dirty-tree"],
         }
     return facts
+
+
+def _bounded_capsule_text(value: Any, limit: int) -> str | None:
+    if not isinstance(value, str):
+        return None
+    if len(value) <= limit:
+        return value
+    return value[:limit - 1] + "…"
+
+
+def continuation_observations(
+    store: SessionStore, snapshot: dict[str, Any], session_id: str,
+) -> dict[str, Any]:
+    """Project current claim and checkpoint facts into a bounded capsule.
+
+    Store remains authoritative. This read-only projection deliberately omits
+    host-local checkout paths and does not interpret a durable session
+    lifecycle as proof that its process is still running.
+    """
+    campaign = snapshot.get("campaign") or {}
+    all_claims = claims_module.active_claims(store.read_claims())
+    own_claim_ids = sorted(
+        str(record.get("claim_id"))
+        for record in all_claims.values()
+        if record.get("session_id") == session_id and record.get("claim_id")
+    )
+
+    relevant_repositories: list[str] = []
+
+    def add_repository(value: Any) -> None:
+        if isinstance(value, str) and value and value not in relevant_repositories:
+            relevant_repositories.append(value)
+
+    work_intent = campaign.get("work_intent") or {}
+    intent_repositories = work_intent.get("repositories", [])
+    if isinstance(intent_repositories, list):
+        for repository in intent_repositories:
+            add_repository(repository)
+    for item in campaign.get("repository_refs", []):
+        if isinstance(item, dict):
+            add_repository(item.get("repository"))
+    for repository in (snapshot.get("selected_checkouts") or {}):
+        add_repository(repository)
+    for item in (snapshot.get("workspace") or {}).get("repositories", []):
+        if isinstance(item, dict):
+            add_repository(item.get("manifest_repository") or item.get("name"))
+
+    foreign: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+    repository_order = {name: index for index, name in enumerate(relevant_repositories)}
+    for claim_id, record in all_claims.items():
+        owner_session = str(record.get("session_id", ""))
+        repository = str(record.get("repository", ""))
+        if owner_session == session_id or not repository:
+            continue
+        raw_scope = record.get("scope")
+        scope = raw_scope if isinstance(raw_scope, dict) else {}
+        kind = str(scope.get("kind", "repository"))
+        projected_scope: dict[str, Any] = {
+            "kind": kind,
+            "exclusive": bool(scope.get("exclusive", kind == "repository")),
+        }
+        branch = _bounded_capsule_text(scope.get("branch"), 160)
+        if branch is not None:
+            projected_scope["branch"] = branch
+        if kind == "paths":
+            paths = scope.get("paths")
+            if not isinstance(paths, list):
+                paths = []
+            paths = [path for path in paths if isinstance(path, str) and path and not path.startswith("/")]
+            projected_scope.update({
+                "paths": [path[:160] for path in paths[:CONTINUATION_MAX_CLAIM_PATHS]],
+                "path_count": len(paths),
+                "paths_truncated": len(paths) > CONTINUATION_MAX_CLAIM_PATHS,
+            })
+        elif kind == "worktree":
+            # The Store claim identity is the durable reference. Its checkout
+            # path is a namespace-local observation and must not leak here.
+            projected_scope["checkout_bound"] = bool(scope.get("checkout"))
+        workspace_related = repository in repository_order
+        version = record.get("version", 0)
+        try:
+            version = int(version)
+        except (TypeError, ValueError):
+            version = 0
+        lease = claims_module.lease_diagnostic(record)
+        projection = {
+            "claim_id": str(record.get("claim_id", claim_id)),
+            "version": version,
+            "repository": repository,
+            "workspace_related": workspace_related,
+            "owner_session_id": _bounded_capsule_text(owner_session, 160),
+            "owner_consumer_id": _bounded_capsule_text(record.get("consumer_id"), 160),
+            "basis": _bounded_capsule_text(record.get("basis"), 80),
+            "status": "held",
+            "effective_expires_at": _bounded_capsule_text(
+                lease.get("effective_expires_at"), 64
+            ),
+            "scope": projected_scope,
+        }
+        sort_key = (
+            0 if projected_scope["exclusive"] else 1,
+            0 if workspace_related else 1,
+            repository_order.get(repository, len(repository_order)),
+            repository, str(claim_id),
+        )
+        foreign.append((sort_key, projection))
+    foreign.sort(key=lambda item: item[0])
+
+    checkpoints = [
+        record for record in store.list_checkpoints(session_id)
+        if isinstance(record, dict) and isinstance(record.get("identity"), str)
+    ]
+    latest_checkpoint = None
+    if checkpoints:
+        def checkpoint_order(record: dict[str, Any]) -> tuple[int, str, str]:
+            try:
+                sequence = int(record.get("sequence", 0))
+            except (TypeError, ValueError):
+                sequence = 0
+            return sequence, str(record.get("created_at", "")), str(record["identity"])
+
+        latest = max(checkpoints, key=checkpoint_order)
+        raw_remaining = latest.get("remaining")
+        remaining = [value for value in raw_remaining if isinstance(value, str)] \
+            if isinstance(raw_remaining, list) else []
+        remaining_limit = CONTINUATION_MAX_CHECKPOINT_REMAINING
+        progress = latest.get("progress", "")
+        bounded_progress = _bounded_capsule_text(progress, 320) or ""
+        bounded_remaining = [value[:200] for value in remaining[:remaining_limit]]
+        latest_checkpoint = {
+            "identity": latest["identity"],
+            "sequence": checkpoint_order(latest)[0],
+            "created_at": _bounded_capsule_text(latest.get("created_at"), 64),
+            "progress": bounded_progress,
+            "progress_truncated": isinstance(progress, str) and len(progress) > 320,
+            "remaining": bounded_remaining,
+            "remaining_count": len(remaining),
+            "remaining_truncated": (
+                len(remaining) > remaining_limit
+                or any(len(value) > 200 for value in remaining[:remaining_limit])
+            ),
+        }
+
+    return {
+        "claim_ids": own_claim_ids[-16:],
+        "foreign_claims": [item[1] for item in foreign[:CONTINUATION_MAX_FOREIGN_CLAIMS]],
+        "foreign_claims_count": len(foreign),
+        "foreign_claims_truncated": len(foreign) > CONTINUATION_MAX_FOREIGN_CLAIMS,
+        "latest_checkpoint": latest_checkpoint,
+    }
 
 
 def _workspace_change_facts(
@@ -2599,10 +2753,8 @@ class Session:
         max_capabilities = 20
         session_id = self.session_id
         campaign = self.snapshot.get("campaign") or {}
-        live_claim_ids = sorted(
-            str(record.get("claim_id"))
-            for record in claims_module.active_claims(self.store.read_claims()).values()
-            if record.get("session_id") == session_id
+        observations = continuation_observations(
+            self.store, self.snapshot, session_id
         )
         authorized_consumers = list(campaign.get("authorized_consumers", []))
         previous_consumers = [
@@ -2612,7 +2764,7 @@ class Session:
         continuation = {
             "identity": campaign.get("identity"),
             "session_ids": list(campaign.get("session_ids", []))[-8:],
-            "claim_ids": live_claim_ids[-16:],
+            "claim_ids": observations["claim_ids"],
             "repositories": [
                 {key: item.get(key) for key in
                  ("repository", "observed_path", "checkout_identity",
@@ -2631,6 +2783,14 @@ class Session:
                 campaign.get("unresolved_pressures", [])
             )[:12],
         }
+        if observations["foreign_claims_count"]:
+            continuation.update({
+                "foreign_claims": observations["foreign_claims"],
+                "foreign_claims_count": observations["foreign_claims_count"],
+                "foreign_claims_truncated": observations["foreign_claims_truncated"],
+            })
+        if observations["latest_checkpoint"] is not None:
+            continuation["latest_checkpoint"] = observations["latest_checkpoint"]
         if previous_consumers:
             continuation["previous_consumers"] = previous_consumers[-7:]
             continuation["previous_consumers_truncated"] = len(previous_consumers) > 7

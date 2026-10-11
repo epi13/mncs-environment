@@ -335,8 +335,12 @@ class ClaimTests(unittest.TestCase):
             self.assertEqual(moved["session_id"], "b")
             self.assertEqual(moved["expires_at"],
                              expected_expiry.isoformat(timespec="seconds"))
+            self.assertEqual(
+                claims.lease_diagnostic(moved)["effective_expires_at"],
+                expected_expiry.isoformat(timespec="seconds"),
+            )
             self.assertLessEqual(
-                claims._lease_diagnostic(moved)["effective_duration_hours"],
+                claims.lease_diagnostic(moved)["effective_duration_hours"],
                 claims.MAX_TTL_HOURS,
             )
 
@@ -606,6 +610,74 @@ class CampaignContinuityTests(unittest.TestCase):
                 self.assertTrue(reference["clean"])
                 self.assertTrue(reference["git_common_directory_identity"].startswith("git-common:"))
                 self.assertTrue(reference["checkout_identity"].startswith("checkout:"))
+            finally:
+                session.close()
+
+    def test_continuation_capsule_projects_latest_checkpoint_and_foreign_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            session = make_session(base / "state")
+            try:
+                session.checkpoint(progress="older checkpoint", remaining=["old task"])
+                latest = session.checkpoint(
+                    progress="p" * 1000,
+                    remaining=["r" * 300, *[f"pending-{index}" for index in range(10)]],
+                )
+
+                private_checkout = base / "foreign-owner-private-checkout"
+                private_checkout.mkdir()
+                foreign = claims.acquire(
+                    session.store,
+                    repository="mncs-compiler",
+                    session_id="ses_foreign_campaign_owner",
+                    consumer_id="compiler-campaign-owner",
+                    basis=claims.BASIS_EXPLICIT,
+                    reason="continuation capsule projection test",
+                    scope={
+                        "kind": "worktree",
+                        "checkout": str(private_checkout),
+                        "branch": "campaign/protected-worktree",
+                        "exclusive": True,
+                    },
+                    checkout_facts={
+                        "head": "test-head", "branch": "campaign/protected-worktree",
+                        "dirty": False, "foreign_signals": [],
+                    },
+                )
+
+                # A fresh handle proves the capsule comes from durable Store
+                # records rather than only the writer's in-memory state.
+                reopened = sessions.Session.open(
+                    state_dir=base / "state", session_id=session.session_id, **FAST
+                )
+                capsule = reopened.context()["continuation"]
+                checkpoint = capsule["latest_checkpoint"]
+                self.assertEqual(checkpoint["identity"], latest["identity"])
+                self.assertEqual(checkpoint["sequence"], 2)
+                self.assertEqual(len(checkpoint["progress"]), 320)
+                self.assertTrue(checkpoint["progress_truncated"])
+                self.assertEqual(checkpoint["remaining_count"], 11)
+                self.assertTrue(checkpoint["remaining_truncated"])
+                self.assertEqual(len(checkpoint["remaining"]), 8)
+                self.assertEqual(len(checkpoint["remaining"][0]), 200)
+
+                self.assertEqual(capsule["foreign_claims_count"], 1)
+                self.assertFalse(capsule["foreign_claims_truncated"])
+                projected = capsule["foreign_claims"][0]
+                self.assertEqual(projected["claim_id"], foreign["claim_id"])
+                self.assertEqual(projected["version"], foreign["version"])
+                self.assertEqual(projected["owner_session_id"], "ses_foreign_campaign_owner")
+                self.assertEqual(projected["owner_consumer_id"], "compiler-campaign-owner")
+                self.assertFalse(projected["workspace_related"])
+                self.assertEqual(
+                    projected["effective_expires_at"],
+                    claims.lease_diagnostic(foreign)["effective_expires_at"],
+                )
+                self.assertEqual(projected["scope"], {
+                    "kind": "worktree", "exclusive": True,
+                    "branch": "campaign/protected-worktree", "checkout_bound": True,
+                })
+                self.assertNotIn(str(private_checkout), json.dumps(capsule))
             finally:
                 session.close()
 
@@ -2978,6 +3050,28 @@ class EntryFrictionTests(unittest.TestCase):
                     "--definition", str(definition_path), "--workspace", str(workspace_root),
                     "--consumer", "first-process", "--campaign-id", campaign_id,
                 )
+                durable = sessions.Session.open(
+                    state_dir=state, session_id=first["session_id"], backend="file"
+                )
+                durable.checkpoint(
+                    progress="retained progress before definition change",
+                    remaining=["resume the recorded campaign"],
+                )
+                campaign = dict(durable.snapshot["campaign"])
+                campaign["work_intent"] = dict(campaign.get("work_intent") or {})
+                campaign["work_intent"]["repositories"] = ["mncs-test-repo"]
+                campaign["repository_refs"] = [{"repository": "mncs-test-repo"}]
+                durable.snapshot["campaign"] = campaign
+                durable._save()
+                protected = claims.acquire(
+                    durable.store,
+                    repository="mncs-test-repo",
+                    session_id="ses_other_campaign_owner",
+                    consumer_id="other-campaign-consumer",
+                    basis=claims.BASIS_EXPLICIT,
+                    reason="campaign entry capsule proof",
+                )
+                durable.close()
                 changed = dict(original, name="campaign-definition-after-restart")
                 definition_path.write_text(json.dumps(changed), encoding="utf-8")
                 second_code, second, second_error = self._run_cli(
@@ -3000,6 +3094,15 @@ class EntryFrictionTests(unittest.TestCase):
                              "campaign-context-mismatch")
             self.assertEqual(diagnostic["diagnostics"]["session_id"],
                              first["session_id"])
+            capsule = diagnostic["diagnostics"]["continuation"]
+            self.assertEqual(
+                capsule["latest_checkpoint"]["progress"],
+                "retained progress before definition change",
+            )
+            self.assertEqual(capsule["foreign_claims_count"], 1)
+            self.assertEqual(
+                capsule["foreign_claims"][0]["claim_id"], protected["claim_id"]
+            )
             self.assertIn(first["session_id"], diagnostic["diagnostics"]["next"])
             self.assertEqual(foreign_code, 2)
             self.assertEqual(foreign, {})

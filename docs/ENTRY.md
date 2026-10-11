@@ -126,6 +126,20 @@ delivery state, and unresolved pressures. It is reconstructed from
 Environment and Git records; a consumer label by itself does not authorize
 continuation.
 
+When present, `latest_checkpoint` gives its durable identity, sequence,
+timestamp, bounded progress text, and a bounded pending-work list plus its full
+item count. `foreign_claims` lists held claims in the selected Store, including
+the exact claim identity and version, owner session and consumer, effective
+lease expiry, and a bounded scope summary. A held status describes the Store
+lease; `effective_expires_at` applies the current lease bound. Process liveness
+is established through the claim recovery protocol. Workspace-related claims
+are ordered first, followed by other claims in the selected Store, so a
+protected checkout outside the current namespace remains visible.
+`workspace_related` marks that projection. Worktree checkout paths are omitted
+from the capsule, while the claim identity remains the durable reference to
+that exact scope. Claim summaries include counts and truncation flags when
+claims are present, so the consumer can request full inspection when needed.
+
 `actions.*.argv` is directly executable and preserves the current interpreter,
 CLI path, state root, backend, and session. It works from another directory and
 with paths containing spaces. `next_commands` contains the canonical next

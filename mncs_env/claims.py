@@ -365,6 +365,11 @@ def _lease_diagnostic(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def lease_diagnostic(record: dict[str, Any]) -> dict[str, Any]:
+    """Return the recorded and enforceable expiry for a claim lease."""
+    return _lease_diagnostic(migrate_record(dict(record)))
+
+
 def classify(record: dict[str, Any], owner: dict[str, Any] | None, *,
              now: datetime | None = None) -> dict[str, Any]:
     """Explain one claim record as live/stale/recoverable/not-recoverable.
