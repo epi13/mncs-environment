@@ -1,0 +1,75 @@
+{
+  "schema_version": "mncs.environment.protected-campaign-entry-restart/1",
+  "identity": "ev_environment_protected_campaign_entry_restart_20261011",
+  "recorded_at": "2026-10-11T22:01:35Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "observer_session_id": "ses_7226fbcfe65820f7",
+  "observer_consumer_id": "local-agent",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_revision_before_evidence": "9f2546d0333c3ee89b9deac5d6916e3c72651d61",
+    "control_repository": "mncs-control-mcp",
+    "control_revision": "a336e446d4ea704ad917f243933e9e653bf0f448",
+    "approved_environment_candidate": "d98729e01e9be8c867198a9228bcd8516c77e06a",
+    "candidate_delivery": "already an ancestor of environment main and origin/main"
+  },
+  "execution": {
+    "transport": "authenticated MNCS Control Environment RPC",
+    "tool": "mncs_control_terminal_exec",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "canonical_store_filesystem_access": "not granted to the protected caller"
+  },
+  "continuation_lookup": {
+    "command": "python3 -B -m mncs_env.cli continuation --campaign-id cmp_mncs_continuity_20261010",
+    "exit_code": 0,
+    "status": "ready",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "selection_basis": "authenticated-project-environment-definition",
+    "contexts_count": 2,
+    "unselected_sessions_count": 1,
+    "underlying_context_conflict_status": "context-conflict",
+    "unselected_context_mutated": false
+  },
+  "fresh_process_entry": {
+    "command": "python3 -B -m mncs_env.cli enter --campaign-id cmp_mncs_continuity_20261010",
+    "exit_code": 0,
+    "session_id_after_entry": "ses_7226fbcfe65820f7",
+    "consumer_id_after_entry": "local-agent",
+    "lifecycle_after_entry": "active",
+    "follow_up": "a separate protected inspect request read the same session identity and active lifecycle",
+    "campaign_claim_ids": [
+      "claim:mncs-control-mcp",
+      "claim:mncs-environment"
+    ],
+    "ownership_transitions": 0
+  },
+  "canonical_store_verification": {
+    "command": "python3 -B -m mncs_env.cli store --session ses_7226fbcfe65820f7 --verify",
+    "exit_code": 0,
+    "sandbox_backend": "bwrap",
+    "network": false,
+    "generation": 45159,
+    "objects": 45161,
+    "ok": true,
+    "commit_feed": "4d430100000000000000b0670000b0690000000000000000b8b268c6344b5dddbaa37b36ac2808f9a6a29ccc65b160b5ffe011bba874089c",
+    "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+    "recovery": "RECOVERED_OLD",
+    "duration_seconds": 114.582
+  },
+  "readback": {
+    "fresh_context_session_id": "ses_7226fbcfe65820f7",
+    "campaign_identity": "cmp_mncs_continuity_20261010",
+    "campaign_evidence_count": 91,
+    "campaign_state_checkpoint_id": "chk_3b660ba4dc38fab2",
+    "delivery_status": "partial"
+  },
+  "result": "PASS",
+  "limits": [
+    "The project-scoped selector chose the authenticated Environment definition and left one other durable context unselected; the older context-conflict fact remains visible.",
+    "The existing canonical Store path-grant acceptance artifact separately proves checkpoint and claim publication while the path is unavailable inside project bwrap.",
+    "This proof does not authorize or change the three foreign exclusive claims or deliver the compiler, Forge, or Language candidates."
+  ]
+}
