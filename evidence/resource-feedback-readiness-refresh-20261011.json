@@ -1,0 +1,31 @@
+{
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "observations": {
+    "control_fabric": {
+      "available": true,
+      "available_workers": 0,
+      "controller_runtime": "RUNNING",
+      "fleet_count": 3,
+      "present_workers": 0,
+      "service_contract": "mncs-fabric.controller-service.v0.1",
+      "status": "available",
+      "version": "0.2.0a31"
+    },
+    "forge_mcp": {
+      "compiler_experiments_count": 0,
+      "execution_receipts_count": 0,
+      "project_inspect_error": "maximum recursion depth exceeded",
+      "providers_status": "UNKNOWN",
+      "state_inspect_error": "maximum recursion depth exceeded"
+    }
+  },
+  "operation_disposition": {
+    "compiler_job_submitted": false,
+    "monitor_measurement_retained": false,
+    "scheduling_decision_evaluated": false
+  },
+  "readiness": "UNKNOWN",
+  "recorded_at": "2026-10-11T15:11:00Z",
+  "schema_version": "mncs.environment.resource-feedback-readiness/1",
+  "summary": "The connected Fabric controller is compatible and running but has no present or available workers. Forge MCP inspection returns a recursion error, with no execution receipts or compiler experiments. No job was dispatched and no resource-feedback claim is made."
+}
