@@ -1,0 +1,149 @@
+{
+  "schema_version": "mncs.environment.claim-transfer-store-crash-proof/1",
+  "recorded_at": "2026-10-11T02:36:00Z",
+  "implementation": {
+    "repository": "mncs-environment",
+    "branch": "campaign/store-claim-transfer-crash-proof-20261011",
+    "base": "2caafc2c9d5b63e9940b8baab238509727a1ef8d",
+    "source_commit": "05e4a6f57601c016a23cb948deb18f8814c26dde",
+    "summary": "Make claim transfer retries stable across Store crashes",
+    "owner": "Environment owns claim admission, transfer identity, and lease provenance; Store retains atomic immutable batch and generation semantics.",
+    "change": "Transfer retries with one stable request identity reproduce the original claim batch. Lease acquisition time and deadline remain stable through transfer, making immutable retry payloads byte-stable; expired or unbounded transfers fail closed."
+  },
+  "transfer_recovery_proof": {
+    "store": "real EmbeddedStore in isolated temporary test-owned directories",
+    "canonical_store_opened_by_tests": false,
+    "process_interruption_points": [
+      {
+        "point": "before claim batch",
+        "recovery": "source owner remains active, retry publishes one complete transfer"
+      },
+      {
+        "point": "before generation publication",
+        "recovery": "reopen recovers the prior generation, source owner remains active, retry publishes one complete transfer"
+      },
+      {
+        "point": "after generation publication before head publication",
+        "recovery": "reopen resolves the published generation, retry reconciles to one recipient owner"
+      },
+      {
+        "point": "after head publication",
+        "recovery": "recipient remains active and identical request retry is idempotent"
+      }
+    ],
+    "invariants_checked": [
+      "never two active owners for one exclusive claim",
+      "transfer consists of exactly one release and one recipient record",
+      "stable request identity and exact transferred-from/by provenance survive retry",
+      "two concurrent Store clients attempting different recipients produce one winner and one conflict"
+    ],
+    "focused_test_result": {
+      "command": "python3 -m pytest tests/test_store_claim_transfer.py -q",
+      "execution": "protected bwrap Control terminal",
+      "passed": 5,
+      "failed": 0,
+      "duration_seconds": 25.06
+    }
+  },
+  "validation": {
+    "environment_suite": {
+      "command": "python3 -m pytest tests -q",
+      "passed": 601,
+      "skipped": 46,
+      "failed": 0,
+      "duration_seconds": 523.82,
+      "store_scope": "temporary test-owned stores"
+    },
+    "environment_vertical_proof": "PASS: real capability invocation, protected write denial, checkpoint, new-process resume, authenticated handoff, and completion",
+    "ruff_new_test": "PASS",
+    "git_diff_check": "PASS",
+    "canonical_claim_transfer_mutation": "none"
+  },
+  "canonical_store_transport": {
+    "owner_path": "MNCS Control authenticated Environment RPC to Environment StoreBackend",
+    "canonical_root": "/home/epi13/.local/share/mncs-environment/store",
+    "agent_path_probe": {
+      "sandbox": "bwrap",
+      "exists": false,
+      "readable": false,
+      "writable": false
+    },
+    "control_unit": {
+      "name": "mncs-control-tunnel.service",
+      "active": true,
+      "ProtectSystem": "strict",
+      "ProtectHome": "read-only",
+      "NoNewPrivileges": true,
+      "ReadWritePaths_includes_exact_store_root": true,
+      "grant_authorized_by_user": true
+    },
+    "session": {
+      "campaign": "cmp_mncs_continuity_20261010",
+      "environment_session": "ses_7226fbcfe65820f7",
+      "consumer": "codex-process-1",
+      "fresh_protected_resume": "session resumed with --revalidate after Control service restart; same campaign/session and claims preserved",
+      "checkpoint_readback": {
+        "identity": "chk_df314681f6f36f3e",
+        "sequence": 24,
+        "request_id": "req_0dff1868d6754718c1717e5cc86c461ec0032d39",
+        "new_protected_process_inspect": "PASS; exact session.checkpointed event recovered"
+      },
+      "writable_repository_authority": ["mncs-environment"],
+      "protected_claims_preserved": [
+        {
+          "repository": "mncs-compiler",
+          "session": "ses_d2537acde8b8a875",
+          "claim": "claim:mncs-compiler"
+        },
+        {
+          "repository": "mncs-forge",
+          "session": "ses_95c3aa35b8544042",
+          "claim": "claim:mncs-forge"
+        },
+        {
+          "repository": "mncs-reference-studies",
+          "session": "ses_95c3aa35b8544042",
+          "claim": "claim:mncs-reference-studies"
+        }
+      ]
+    },
+    "canonical_store_read_only_scrub": {
+      "result": "PASS",
+      "method": "EmbeddedStore.verify() in read-only mode",
+      "generation": 43638,
+      "objects": 43638,
+      "relations": 0,
+      "provenance_records": 0,
+      "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+      "note": "Verification occurred after checkpoint 24. The verifier's RECOVERED_OLD read-only-open status did not perform a recovery mutation."
+    }
+  },
+  "campaign_state": {
+    "readiness": "degraded with no blocking requirements; ambient projection coherence remains unavailable because Environment has not published an invocation descriptor",
+    "current_claims": [
+      "claim:mncs-environment",
+      "claim:mncs-control-mcp"
+    ],
+    "candidate_delivery": "No Compiler, Forge, or Language candidate was modified or retired in this session.",
+    "compiler_worktrees": {
+      "registered": 66,
+      "detached": 12,
+      "dirty": 8,
+      "dry_run_retireable": 0,
+      "cleanup_performed": false
+    },
+    "compiler_succession": {
+      "complete_flow_compilation": "unproven",
+      "stage1": "unproven",
+      "stage2": "unproven",
+      "unresolved_pressures": ["CP-0011", "CP-0023", "CP-0024", "CP-0025"]
+    },
+    "resource_feedback_vertical_slice": "NOT_PROVEN",
+    "next_work": [
+      "verify this feature branch after the evidence commit, then fast-forward Environment main and push",
+      "verify final delivery and checkpoint it through protected Environment RPC",
+      "continue candidate reconciliation only with owning-repository authority",
+      "integrate a small measured Compiler-to-Forge-to-System Monitor-to-Store-to-Automation resource-feedback slice"
+    ]
+  }
+}
