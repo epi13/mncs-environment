@@ -1,0 +1,166 @@
+{
+  "schema_version": "mncs.environment.candidate-ownership-revalidation/1",
+  "recorded_at": "2026-10-11T02:45:13Z",
+  "campaign": {
+    "identity": "cmp_mncs_continuity_20261010",
+    "session": "ses_7226fbcfe65820f7",
+    "latest_checkpoint": {
+      "identity": "chk_a97716915a06afa3",
+      "sequence": 25,
+      "request_id": "req_checkpoint_transfer_delivery_5c0ee69"
+    },
+    "effective_writable_repositories": ["mncs-environment"]
+  },
+  "canonical_store": {
+    "root": "/home/epi13/.local/share/mncs-environment/store",
+    "verification": {
+      "result": "PASS",
+      "method": "EmbeddedStore.verify() with read_only=true",
+      "generation": 43645,
+      "objects": 43645,
+      "relations": 0,
+      "provenance_records": 0,
+      "recovery": "RECOVERED_OLD",
+      "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf"
+    },
+    "execution_boundary": {
+      "unit": "mncs-control-tunnel.service",
+      "unit_file": "/home/epi13/.config/systemd/user/mncs-control-tunnel.service",
+      "active": true,
+      "read_write_paths_includes_canonical_store_root": true,
+      "ProtectSystem": "strict",
+      "ProtectHome": "read-only",
+      "NoNewPrivileges": true,
+      "canonical_path_visible_in_bwrap": false,
+      "canonical_path_writable_in_bwrap": false
+    }
+  },
+  "candidates": [
+    {
+      "repository": "mncs-compiler",
+      "main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "merge_base": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+      "main_ahead": 14,
+      "candidate_ahead": 1,
+      "worktree": {
+        "path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+        "available": true,
+        "status": "clean"
+      },
+      "candidate_change_summary": "The branch commit changes SELF-HOST-MATRIX.json; main and candidate have diverged.",
+      "claim": {
+        "id": "claim:mncs-compiler",
+        "owner_session": "ses_d2537acde8b8a875",
+        "owner_lifecycle": "active",
+        "activity": "stale",
+        "verdict": "not-recoverable",
+        "effective_expires_at": "2026-10-16T18:13:43+00:00"
+      },
+      "disposition": "protected; no test, merge, push, transfer, or retirement"
+    },
+    {
+      "repository": "mncs-language",
+      "main": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "origin_main": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "branch": "campaign/process-environment-value-bound-20261010",
+      "head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "merge_base": "e8f8a5f8659c71b33cd32c964d4982bec1a9668e",
+      "main_ahead": 2,
+      "candidate_ahead": 1,
+      "worktree": {
+        "path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+        "available": true,
+        "head_after_tests": "fc49c0cc6afe388ff8d18341595422cc52225005",
+        "tracked_changes": false,
+        "untracked_evidence": {
+          "path": "evidence/campaign-20261010-forge-core-quiet-output.json",
+          "sha256": "7b1d1a609703ffae19f0834252d68da638d279463e7d24a9e12123c4891efc42"
+        }
+      },
+      "read_only_focused_tests": [
+        {
+          "command": "cargo test --locked -p mncs-cli --test quiet_compile",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "command": "cargo test --locked -p mncs-compiler --test source_profile_019_sequence_bound",
+          "passed": 1,
+          "failed": 0
+        },
+        {
+          "command": "cargo test --locked -p mncs-model",
+          "passed": 224,
+          "failed": 0
+        },
+        {
+          "command": "cargo test --locked -p mncs-syntax",
+          "passed": 29,
+          "failed": 0
+        }
+      ],
+      "test_total": {
+        "passed": 257,
+        "failed": 0
+      },
+      "claim": {
+        "id": "claim:mncs-language",
+        "verdict": "released",
+        "owner_session_record": "ses_7226fbcfe65820f7"
+      },
+      "disposition": "implementation tests pass; retain untracked evidence and branch because this session has no Language write grant; do not merge, push, or retire"
+    },
+    {
+      "repository": "mncs-forge",
+      "main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "origin_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "branch": "campaign/forge-quiet-compile-output-20261010",
+      "head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "merge_base": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "main_ahead": 0,
+      "candidate_ahead": 1,
+      "worktree": {
+        "path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+        "available": true,
+        "status": "clean"
+      },
+      "claim": {
+        "id": "claim:mncs-forge",
+        "owner_session": "ses_95c3aa35b8544042",
+        "owner_lifecycle": "active",
+        "activity": "stale",
+        "verdict": "not-recoverable",
+        "effective_expires_at": "2026-10-16T02:18:31+00:00"
+      },
+      "disposition": "protected; no test, merge, push, transfer, or retirement"
+    }
+  ],
+  "worktree_inventory": {
+    "latest_full_machine_report": "evidence/compiler-worktree-dispositions-20261010.json",
+    "registered": 66,
+    "detached": 12,
+    "dirty": 8,
+    "dry_run_retireable": 0,
+    "cleanup_performed": false,
+    "scope_note": "Full inventory dispositions remain from the prior read-only dry run; this revalidation only queried the three named candidate worktrees and did not mark other paths missing or abandoned."
+  },
+  "compiler_frontier": {
+    "repository_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "self_host_matrix": "mncs-compiler/evidence/SELF-HOST-MATRIX.json",
+    "self_host_matrix_sha256": "1e82d83d8c8bdc9195f37dae6397e2daddc61fbcff928e584250e0a927447e72",
+    "evidence_updated_at": "2026-10-10T15:53:22Z",
+    "latest_frontier": "At 1M reference steps, parsing remains in decl::parse_unit_mode; the recorded hotspots are lexer.next_token_global, scan_chunk_window, and significant_global.",
+    "complete_flow_compilation": "unproven",
+    "stage1": "unproven",
+    "stage2": "unproven",
+    "unresolved_pressures": ["CP-0011", "CP-0023", "CP-0024", "CP-0025"]
+  },
+  "unresolved_authority": [
+    "Compiler and Forge claims remain exclusive, unexpired, and not-recoverable even though their activity is stale; a legitimate owner handoff, confirmed dead lifecycle, or effective lease expiry is required.",
+    "Language has no active holder, but the current Environment session grants writes only to mncs-environment; its candidate needs an owning Language write grant before delivery.",
+    "The resource-feedback path still lacks a retained compiler execution receipt feeding a subsequent Automation admission or scheduling decision."
+  ]
+}
