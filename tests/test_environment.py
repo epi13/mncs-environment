@@ -2786,12 +2786,13 @@ class SessionTests(unittest.TestCase):
             session._save()
             commit = "a" * 40
             evidence = [{
-                "identity": "ev_environment_delivery",
+                "identity": "ev_environment_delivery" if index == 0
+                else f"ev_environment_delivery_{index}",
                 "repository": "mncs-environment",
                 "commit": commit,
-                "path": "evidence/campaign-delivery.json",
-                "sha256": "b" * 64,
-            }]
+                "path": f"evidence/campaign-delivery-{index}.json",
+                "sha256": f"{index + 1:064x}",
+            } for index in range(12)]
             delivery = {
                 "status": "delivered",
                 "repositories": [{
@@ -2822,6 +2823,8 @@ class SessionTests(unittest.TestCase):
             )
             capsule = reopened.context()["continuation"]
             self.assertEqual(capsule["evidence"], evidence)
+            self.assertEqual(capsule["evidence_count"], len(evidence))
+            self.assertFalse(capsule["evidence_truncated"])
             self.assertEqual(capsule["delivery"]["status"], "delivered")
             self.assertEqual(capsule["campaign_state_checkpoint_id"], checkpoint["identity"])
             self.assertEqual(

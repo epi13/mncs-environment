@@ -523,9 +523,9 @@ def continuation_observations(
                     state["recorded_by"].get("principal_id"), 160
                 ),
             },
-            "evidence": evidence[-8:],
+            "evidence": evidence[-CAMPAIGN_EVIDENCE_MAX:],
             "evidence_count": len(evidence),
-            "evidence_truncated": len(evidence) > 8,
+            "evidence_truncated": len(evidence) > CAMPAIGN_EVIDENCE_MAX,
             "delivery": {
                 **{key: value for key, value in delivery.items()
                    if key != "repositories"},
