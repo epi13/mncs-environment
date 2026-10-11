@@ -1,0 +1,111 @@
+{
+  "schema_version": "mncs.environment.session-completion-recovery/1",
+  "identity": "ev_session_completion_recovery_20261011",
+  "recorded_at": "2026-10-11T13:43:25Z",
+  "owner": "mncs-environment",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "source": {
+    "repository": "mncs-environment",
+    "main_revision": "0ed3e07bdc1b1f08d740af99ce5bb3209bcc8002",
+    "files": [
+      "mncs_env/sessions.py",
+      "mncs_env/cli.py",
+      "tests/test_session_completion.py"
+    ],
+    "control_revision": "ae2b40be5bbc573847c42f231ae17a53cbfbcee8"
+  },
+  "implementation": {
+    "owner_boundary": "Environment owns lifecycle transition, completion provenance, and claim release; Control only authenticates and admits the project-scoped CLI request.",
+    "request_protocol": [
+      "Persist completion intent before terminal lifecycle transition.",
+      "Use stable request and per-session/per-repository claim-release identities.",
+      "Reconcile after interruption without duplicating claim-release or completion events.",
+      "Fence retry to the original authenticated principal and validate the stored request digest.",
+      "Project bounded completion-recovery instructions in Environment continuation context."
+    ],
+    "store_invariants": [
+      "Environment publishes immutable Store snapshots and events through the configured Store backend.",
+      "Claim release retains Store generation CAS and immutable claim history.",
+      "No direct Store path, second database, or file persistence fallback was added."
+    ]
+  },
+  "validation": {
+    "completion_unit_tests": {
+      "command": "python3 -m pytest tests/test_session_completion.py -q",
+      "result": "11 passed",
+      "covers": [
+        "same-request replay after process restart",
+        "interruption before intent, during transition, and after claim release",
+        "partial multi-repository release reconciliation",
+        "transient Store fault retry",
+        "principal fencing",
+        "stored request integrity",
+        "cross-session request-ID isolation"
+      ]
+    },
+    "full_environment_suite": {
+      "command": "python3 -m pytest tests/ -q",
+      "passed": 629,
+      "skipped": 46,
+      "failed": 0,
+      "duration_seconds": 531.72
+    },
+    "environment_vertical_proof": {
+      "command": "python3 scripts/vertical_proof.py",
+      "result": "PASS",
+      "proof_session": "ses_f41de5b12370ea97",
+      "summary": "fresh-process resume, authenticated handoff, checkpoint, and completion"
+    },
+    "scoped_static_checks": {
+      "compileall": "passed",
+      "ruff_select": "E4,E7,E9,F passed on changed Python files",
+      "git_diff_check": "passed",
+      "full_ruff": "existing repository style diagnostics remain outside changed completion logic"
+    }
+  },
+  "protected_canonical_store_proof": {
+    "service": "mncs-control-tunnel.service",
+    "runtime_revision": "ae2b40be5bbc573847c42f231ae17a53cbfbcee8",
+    "sandbox": {
+      "backend": "bwrap",
+      "scope": "project",
+      "project": "mncs-environment",
+      "network": false,
+      "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+      "path_visible": false,
+      "direct_write_access": false
+    },
+    "session": {
+      "identity": "ses_f0e6e64390bb5843",
+      "initial_lifecycle": "active",
+      "final_lifecycle": "completed",
+      "authenticated_principal": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+      "completion_request_id": "req_945ff2f523ccf83dc5399694bace907454c545a0",
+      "outcome": "rpc completion proof",
+      "claims_released": [],
+      "claims_release_error": null
+    },
+    "publication": {
+      "operation": "mncs-env complete through authenticated Control Environment RPC",
+      "control_job_id": "term-17b3ed6b87d550eca2b11266",
+      "exit_code": 0,
+      "fresh_process_retry": {
+        "operation": "mncs-env complete --retry-pending",
+        "control_job_id": "term-b8e18c61279545e03f39d26e",
+        "exit_code": 0,
+        "same_request_id_returned": true
+      },
+      "fresh_process_readback": {
+        "operation": "mncs-env inspect",
+        "lifecycle": "completed",
+        "same_request_id": true,
+        "same_outcome": true
+      }
+    },
+    "prior_store_acceptance": "mncs-control-mcp/evidence/canonical-store-rpc-path-acceptance-20261010.json"
+  },
+  "limitations": [
+    "The proof session held no claims; actual canonical claim acquire/release and unauthorized publication are covered by the prior Control Store acceptance evidence.",
+    "Process-boundary interruption during completion is covered with injected publication faults in the Environment unit suite. This run verifies canonical publication, post-restart RPC runtime, retry, and new-process readback."
+  ]
+}
