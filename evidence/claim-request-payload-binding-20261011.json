@@ -1,0 +1,67 @@
+{
+  "schema_version": "mncs.environment.claim-request-payload-binding/1",
+  "identity": "ev_claim_request_payload_binding_20261011",
+  "recorded_at": "2026-10-11T14:06:59Z",
+  "owner": "mncs-environment",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "source": {
+    "repository": "mncs-environment",
+    "main_revision": "59b3258790a1273dfae452ec89acb87b65169069",
+    "files": [
+      "mncs_env/claims.py",
+      "mncs_env/events.py",
+      "mncs_env/sessions.py",
+      "tests/test_store_claim_transfer.py"
+    ]
+  },
+  "implementation": {
+    "owner_boundary": "Environment owns claim operation identities, lifecycle events, and retry reconciliation; Store continues to own immutable claim persistence and generation compare-and-swap.",
+    "request_protocol": [
+      "Bind claim acquire, release, and transfer request IDs to canonical payload digests.",
+      "Return the original result for an exact retry and reject a reused request ID with changed effect or provenance payload.",
+      "Publish one atomic release/recipient pair for transfer and validate both records before reporting a retry as committed.",
+      "Record request-bound no-op releases so a later claim cannot be released by replaying a request that already completed as a no-op.",
+      "Deduplicate the Environment release event when Store claim publication succeeded but the caller snapshot save was interrupted."
+    ],
+    "store_invariants": [
+      "Claim mutations continue through Store claim batches with expected-generation CAS.",
+      "Immutable claim history and exact transfer provenance are preserved.",
+      "No direct canonical Store filesystem access, alternate persistence database, or persistence fallback was added."
+    ]
+  },
+  "validation": {
+    "full_environment_suite": {
+      "command": "python -m pytest -q",
+      "passed": 633,
+      "skipped": 46,
+      "failed": 0,
+      "duration_seconds": 538.51
+    },
+    "environment_vertical_proof": {
+      "command": "python scripts/vertical_proof.py",
+      "result": "PASS",
+      "proof_session": "ses_ea164af6a66d6540",
+      "summary": "provider bindings, protected write denial, checkpoint, fresh-process resume, handoff, and completion"
+    },
+    "scoped_static_checks": {
+      "compileall": "passed on changed Python modules",
+      "ruff_select": "E4,E7,E9,F passed on changed Python modules and tests",
+      "git_diff_check": "passed"
+    },
+    "new_regression_coverage": [
+      "Acquire/release/transfer request IDs reject changed payloads and accept exact retries.",
+      "Interrupted session snapshot save after Store claim release reconciles without duplicating the release event.",
+      "A completed no-op release request cannot affect a claim acquired later."
+    ]
+  },
+  "delivery": {
+    "code_commit": "59b3258790a1273dfae452ec89acb87b65169069",
+    "main_fast_forwarded": true,
+    "pushed": true,
+    "origin_main_revision_at_code_delivery": "59b3258790a1273dfae452ec89acb87b65169069"
+  },
+  "limitations": [
+    "This change hardens Environment claim request replay and release reconciliation; it is not evidence that every legacy request record has an original payload digest.",
+    "Canonical Store publication and the protected execution transport are evidenced separately in the existing Control acceptance record."
+  ]
+}
