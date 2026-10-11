@@ -1,0 +1,63 @@
+{
+  "schema_version": "mncs.environment.canonical-campaign-cas-proof/1",
+  "identity": "ev_canonical_campaign_cas_retry_20261011",
+  "recorded_at": "2026-10-11T07:18:30Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "main",
+    "commit": "f7119c2f7bff62f1064e59858a163534ce10f7ae",
+    "remote_ref": "origin/main",
+    "test_command": "python3 -m pytest -q tests/test_environment.py",
+    "test_result": "152 passed in 254.23s",
+    "targeted_checks": [
+      "ruff check --select F401,F821,F822,F823 mncs_env/sessions.py mncs_env/cli.py mncs_env/rpc_client.py: passed",
+      "python3 -m py_compile mncs_env/sessions.py mncs_env/cli.py mncs_env/rpc_client.py: passed",
+      "git diff --check: passed"
+    ]
+  },
+  "protected_execution": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "transport": "authenticated Environment persistence RPC through MNCS Control",
+    "canonical_store_root_directly_visible_to_caller": false,
+    "store_policy_evidence": "ev_canonical_store_path_grant_20261011"
+  },
+  "stable_checkpoint_retry": {
+    "request_id": "req_mncs_canonical_claim_roundtrip_checkpoint_20261011g",
+    "checkpoint_id": "chk_22fe487235a7b9cf",
+    "sequence": 50,
+    "replay_returned_same_checkpoint": true,
+    "duplicate_authoritative_checkpoint_created": false,
+    "fresh_process_readback": {
+      "exit_code": 0,
+      "checkpoint_id": "chk_22fe487235a7b9cf",
+      "evidence_count": 15,
+      "evidence_truncated": false
+    }
+  },
+  "stale_campaign_cas": {
+    "request_id": "req_mncs_canonical_stale_campaign_cas_20261011j",
+    "supplied_base_checkpoint": "chk_92de481d574a59de",
+    "current_checkpoint": "chk_22fe487235a7b9cf",
+    "exit_code": 3,
+    "diagnostic_code": "publication-conflict",
+    "cause_code": "publication-conflict",
+    "publication_completed": false,
+    "conflict_kind": "campaign-state-base-checkpoint",
+    "readback_after_rejection": {
+      "checkpoint_id": "chk_22fe487235a7b9cf",
+      "evidence_count": 15,
+      "evidence_truncated": false,
+      "authoritative_state_changed": false
+    }
+  },
+  "result": "PASS",
+  "limits": [
+    "This proves canonical stable-request checkpoint replay and structured stale-base CAS rejection through protected Environment RPC.",
+    "It does not prove service-process termination during canonical publication or canonical recovery after a caller interruption; those crash cases remain covered only by isolated EmbeddedStore tests.",
+    "The campaign has two Environment contexts with the same campaign identity. This receipt applies only to the exact resumed session and does not adopt or mutate the other session."
+  ]
+}
