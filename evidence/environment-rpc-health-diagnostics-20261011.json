@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.rpc-health-diagnostics-proof/1",
+  "identity": "ev_environment_rpc_health_diagnostics_20261011",
+  "recorded_at": "2026-10-11T07:40:32Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "repositories": [
+      {
+        "repository": "mncs-control-mcp",
+        "branch": "main",
+        "commit": "3a7866ad3f23a57d4a815c689bb25d569797054b",
+        "remote_ref": "origin/main",
+        "change": "health is exposed through authenticated session-principal authorization; unsupported Environment commands report operation unavailable and unknown"
+      },
+      {
+        "repository": "mncs-environment",
+        "branch": "main",
+        "commit": "a5a9efd045c5977e1b67f584b15630c3707cf152",
+        "remote_ref": "origin/main",
+        "change": "RPC operation-unavailable response maps to a structured unknown diagnostic"
+      }
+    ],
+    "validation": {
+      "control_test_command": "PYTHONPATH=src python3 -m pytest tests/ -q",
+      "control_test_result": "passed; one skipped",
+      "environment_test_command": "python3 -m pytest tests/ -q",
+      "environment_test_result": "153 passed in 255.38s",
+      "focused_checks": [
+        "Control Environment RPC health and unknown-operation tests passed",
+        "ruff check on changed Control source and tests passed",
+        "ruff check mncs_env/rpc_client.py passed",
+        "python3 -m py_compile mncs_env/rpc_client.py tests/test_environment.py passed",
+        "git diff --check passed"
+      ]
+    }
+  },
+  "protected_execution": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "persistence_transport": "control-rpc",
+    "grant_configured": true,
+    "rpc_socket_is_socket": true,
+    "canonical_store_root": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_root_visible_to_caller": false,
+    "direct_store_write_attempted": false,
+    "authorization": "authenticated project grant plus canonical session-principal check"
+  },
+  "live_health": {
+    "command": "python3 -m mncs_env.cli health ses_7226fbcfe65820f7 --consumer codex-process-1 --live",
+    "exit_code": 0,
+    "session_id": "ses_7226fbcfe65820f7",
+    "readiness_status": "degraded",
+    "blocking": [],
+    "unavailable_capability": {
+      "capability": "mncs-environment:ambient-projection-coherence",
+      "code": "provider-invocation-undeclared",
+      "status": "unavailable",
+      "reason": "Environment has not declared an invocation descriptor; source fingerprints are not commands"
+    }
+  },
+  "unsupported_operation": {
+    "command": "python3 -m mncs_env.cli doctor ses_7226fbcfe65820f7",
+    "exit_code": 3,
+    "diagnostic_code": "operation-unavailable",
+    "cause_code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+    "operation": "doctor",
+    "status": "unknown",
+    "publication_completed": false,
+    "side_effect": "rejected at the Control operation boundary before Environment command dispatch"
+  },
+  "continuation": {
+    "selected_campaign_id": "cmp_mncs_continuity_20261010",
+    "selected_definition_id": "env_f31ee034e8e1fdcb",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "selected_consumer": "codex-process-1",
+    "campaign_lookup": "exact campaign returned authenticated continuation capsule",
+    "other_session_id": "ses_b4b2d283542220b0",
+    "other_session_disposition": "preserved; not selected, adopted, checkpointed, or modified",
+    "remaining_context_conflict": "two Environment definitions remain associated with the same campaign; the lookup reports both and requires exact selection"
+  },
+  "service_boundary": {
+    "store_root_policy_changed": false,
+    "service_restarted": false,
+    "runtime_contract_proof": "live protected health RPC succeeded and unsupported doctor RPC returned the new structured unknown diagnostic",
+    "system_status_probe": "MCP system_status request timed out; service state was verified through the live project RPC path"
+  },
+  "result": "PASS_WITH_READINESS_LIMITATION",
+  "limits": [
+    "Health and unsupported-operation dispatch prove the Control runtime path, but do not prove canonical Store service termination and restart during publication.",
+    "The selected campaign remains in context-conflict because a second Environment definition is retained; this evidence uses the exact previously authorized definition and session.",
+    "Ambient projection coherence remains unavailable until Environment publishes a valid invocation descriptor."
+  ]
+}
