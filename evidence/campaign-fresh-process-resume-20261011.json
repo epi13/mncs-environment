@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.campaign-fresh-process-resume/1",
+  "identity": "ev_campaign_fresh_process_resume_20261011",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source_checkout": {
+    "repository": "mncs-environment",
+    "branch": "main",
+    "revision_before_evidence": "bd1bb86f19cb2dc3629d12055d3024696415ee74"
+  },
+  "execution": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "persistence_transport": "authenticated mncs-control-environment-rpc",
+    "direct_canonical_store_filesystem_write_access": false
+  },
+  "resume": {
+    "command": [
+      "python3",
+      "scripts/mncs-env",
+      "resume",
+      "ses_7226fbcfe65820f7",
+      "--consumer",
+      "local-agent",
+      "--revalidate"
+    ],
+    "started_at": "2026-10-11T23:53:09.223108Z",
+    "completed_at": "2026-10-11T23:53:23.306895Z",
+    "exit_code": 0,
+    "session_id": "ses_7226fbcfe65820f7",
+    "revalidation": {
+      "reprobed": 4,
+      "changed": [],
+      "bound": [],
+      "unbound": []
+    }
+  },
+  "separate_process_readback": {
+    "transport": "authenticated project-scoped Environment continuation",
+    "started_at": "2026-10-11T23:53:34.725288Z",
+    "completed_at": "2026-10-11T23:53:43.054925Z",
+    "exit_code": 0,
+    "status": "ready",
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "selected_session": {
+      "lifecycle": "active",
+      "consumer_id": "local-agent",
+      "snapshot_version": 951,
+      "latest_checkpoint_id": "chk_bb22a2df7972b717",
+      "latest_checkpoint_sequence": 155,
+      "claim_id": "claim:mncs-environment",
+      "claim_identity": "clm_545ce73595e24c40",
+      "claim_version": 33,
+      "claim_owner_session_id": "ses_7226fbcfe65820f7",
+      "claim_status": "held",
+      "claim_expires_at": "2026-10-12T19:38:47+00:00"
+    },
+    "other_same_campaign_context": {
+      "session_id": "ses_b4b2d283542220b0",
+      "lifecycle": "active",
+      "selected": false,
+      "claim_ids": [],
+      "disposition": "left visible and unchanged"
+    }
+  },
+  "unsupported_status_operation": {
+    "operation": "status",
+    "result": "operation-unavailable",
+    "publication_completed": false,
+    "interpretation": "Control does not expose this Environment operation; the supported project continuation read was used for readback."
+  },
+  "result": {
+    "same_authorized_session_resumed": true,
+    "same_exclusive_claim_owner_read_back": true,
+    "new_competing_claim_created": false,
+    "other_campaign_context_adopted": false
+  }
+}
