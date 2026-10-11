@@ -1,0 +1,51 @@
+{
+  "schema_version": "mncs.environment.session-revalidation-proof/1",
+  "identity": "ev_environment_default_root_revalidation_20261011",
+  "recorded_at": "2026-10-11T19:03:39Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "change": {
+    "repository": "mncs-environment",
+    "base_commit": "0be5ad2ea1246d05c967047f9e2fa881251e9f63",
+    "commit": "234065d24608608c9472ad78cfe43a1d69f42baf",
+    "owner_reason": "Environment owns session workspace resolution and capability discovery during revalidation.",
+    "path": "mncs_env/sessions.py",
+    "sha256": "2871355efeabb82baff39516b6a49beea8ef936da2c6dbaea150c24ab12d83f5",
+    "behavior": "When no explicit workspace_root is passed, revalidation now uses the session's persisted workspace root for capability discovery as well as workspace observation."
+  },
+  "validation": {
+    "focused_command": "python3 -m pytest -q tests/test_doctor.py::EpochTests::test_epoch_miss_on_manifest_change tests/test_environment.py::SessionTests::test_provision_checkouts_extends_authority_and_binds_exact_provider_checkout",
+    "focused_result": "2 passed in 3.08s",
+    "full_command": "python3 -m pytest tests/ -q",
+    "full_result": "644 passed, 46 skipped in 532.83s",
+    "test_files": [
+      {
+        "path": "tests/test_doctor.py",
+        "sha256": "f708e5876f89198d1f70ffa697f83d15136e45222cd6f5a095067db58b03ca6b"
+      },
+      {
+        "path": "tests/test_environment.py",
+        "sha256": "855981e62475cb2c809758e9597f6dfe24d42928379091cca66aac9c9c980f5c"
+      }
+    ],
+    "vertical_proof": "python3 scripts/vertical_proof.py: PASS; real provider invocation, authorization denial, checkpoint, fresh-process resume, handoff, and completion all succeeded in the isolated proof Store.",
+    "static_checks": [
+      "python3 -m py_compile mncs_env/sessions.py: PASS",
+      "git diff --check: PASS"
+    ],
+    "lint": {
+      "command": "ruff check --output-format json mncs_env/sessions.py",
+      "result": "18 diagnostics in existing unrelated statements; no diagnostic on the changed line 2737",
+      "diagnostic_codes": ["BLE001", "PIE810", "S112", "SIM102", "TRY004", "UP037"]
+    }
+  },
+  "regressions_resolved": [
+    "Manifest contract revision changes now rediscover and re-probe changed provider bindings.",
+    "Checkout provisioning now binds capabilities from the newly selected checkout during its default revalidation."
+  ],
+  "result": "PASS",
+  "limits": [
+    "The vertical proof uses its own isolated proof Store; it is not canonical Store artifact invocation evidence.",
+    "The Control RPC generic invoke operation remains UNKNOWN under the existing safe operation contract."
+  ]
+}
