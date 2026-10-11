@@ -1,0 +1,97 @@
+{
+  "schema_version": "mncs.environment.durable-campaign-state-evidence/1",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "implementation": {
+    "repository": "mncs-environment",
+    "branch": "main",
+    "commit": "49055c66a5464aa658b80b49955d5db70667226a",
+    "remote_ref": "origin/main",
+    "remote_head_at_proof": "49055c66a5464aa658b80b49955d5db70667226a"
+  },
+  "behavior": {
+    "checkpoint_schema": "mncs.environment.checkpoint/1",
+    "campaign_state_schema": "mncs.environment.campaign-state/1",
+    "evidence_reference_fields": [
+      "identity",
+      "repository",
+      "commit",
+      "path",
+      "sha256"
+    ],
+    "campaign_delivery_schema": "mncs.environment.campaign-delivery/1",
+    "optimistic_base": "campaign_state_checkpoint_id",
+    "initial_base": "none",
+    "retry_identity": "Environment RPC request identity plus immutable checkpoint operation digest",
+    "crash_recovery": "reconciles the immutable checkpoint into the session campaign projection"
+  },
+  "verification": {
+    "focused_regressions": {
+      "command": "python3 -m pytest tests/test_environment.py -q -k 'campaign_evidence_and_delivery_are_checkpointed_and_reconstructed or campaign_checkpoint_retry_is_stable_and_stale_base_is_rejected or campaign_metadata_recovery_after_snapshot_write_interruption or campaign_evidence_rejects_unverifiable_or_path_escaping_references or checkpoint_request_retry_reads_back_one_immutable_checkpoint or continuation_capsule_projects_latest_checkpoint_and_foreign_claim'",
+      "passed": 6
+    },
+    "environment_module": {
+      "command": "python3 -m pytest tests/test_environment.py -q",
+      "passed": 142,
+      "failed": 0
+    },
+    "full_suite": {
+      "command": "python3 -m pytest tests/ -q",
+      "passed": 606,
+      "skipped": 46,
+      "failed": 0,
+      "duration_seconds": 535.19
+    },
+    "vertical_proof": {
+      "result": "PASS",
+      "session_id": "ses_6e433aaec6eca037",
+      "checkpoint_id": "chk_6c26bd3881825be2",
+      "fresh_process_resume": true,
+      "handoff_and_completion": true
+    },
+    "campaign_proofs": {
+      "result": "PASS",
+      "passed": 17,
+      "skipped": 0,
+      "failed": 0
+    },
+    "syntax_and_diff": {
+      "result": "PASS",
+      "checks": [
+        "python3 -m py_compile mncs_env/sessions.py mncs_env/cli.py mncs_env/entry.py",
+        "git diff --check"
+      ]
+    }
+  },
+  "canonical_store_proof": {
+    "execution_boundary": "Control terminal using bwrap project scope",
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "path_visible_inside_agent": false,
+    "path_readable_inside_agent": false,
+    "path_writable_inside_agent": false,
+    "environment_persistence": "store",
+    "publication_transport": "authenticated Environment RPC over the local Control socket",
+    "checkpoint_id": "chk_1a182f59d7e693a8",
+    "checkpoint_sequence": 29,
+    "request_id": "req_c59afb22ceaa7e5e214470b847a9b9517da3c64e",
+    "campaign_state_digest": "bea6b216c34d955a",
+    "recorded_by": {
+      "consumer_id": "codex-process-1",
+      "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+    },
+    "fresh_protected_process_readback": {
+      "result": "PASS",
+      "checkpoint_id": "chk_1a182f59d7e693a8",
+      "canonical_store_path_remained_invisible": true,
+      "capsule_persistence": "store",
+      "capsule_evidence": [],
+      "capsule_delivery_status": "pending"
+    }
+  },
+  "readiness": {
+    "campaign_evidence_and_delivery_checkpoint_projection": "implemented and verified",
+    "canonical_path_checkpoint_publication_and_fresh_process_readback": "PASS",
+    "full_environment_claim_lifecycle_acceptance": "previously proven; not repeated by this evidence record",
+    "compiler_and_forge_delivery": "outside this Environment-owned change"
+  }
+}
