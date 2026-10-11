@@ -234,6 +234,46 @@ class ClaimTests(unittest.TestCase):
                                     consumer_id="b", basis=claims.BASIS_EXPLICIT, reason="now")
             self.assertEqual(second["version"], 3)
 
+    def test_claim_id_inspection_returns_only_latest_matching_record(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            store = open_store(state, "file")
+            first = claims.acquire(
+                store, repository="r", session_id="owner-a", consumer_id="owner-a",
+                basis=claims.BASIS_EXPLICIT, reason="initial owner",
+            )
+            claims.release(
+                store, session_id="owner-a", claim_id=first["claim_id"],
+                request_id="claim-history-release",
+            )
+            latest = claims.acquire(
+                store, repository="r", session_id="owner-b", consumer_id="owner-b",
+                basis=claims.BASIS_EXPLICIT, reason="current owner",
+            )
+            claims.acquire(
+                store, repository="other", session_id="other", consumer_id="other",
+                basis=claims.BASIS_EXPLICIT, reason="unrelated claim",
+            )
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = cli.main([
+                    "--persistence", "file", "--state-dir", str(state),
+                    "claims", "ses_reader", "--claim-id", first["claim_id"],
+                ])
+
+            self.assertEqual(code, 0, stderr.getvalue())
+            self.assertEqual(stderr.getvalue(), "")
+            result = json.loads(stdout.getvalue())
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0]["claim_id"], first["claim_id"])
+            self.assertEqual(result[0]["version"], latest["version"])
+            self.assertEqual(result[0]["identity"], latest["identity"])
+            self.assertEqual(result[0]["session_id"], "owner-b")
+            self.assertEqual(result[0]["status"], "held")
+            self.assertTrue(result[0]["live"])
+
     def test_environment_claim_requests_require_effective_writable_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

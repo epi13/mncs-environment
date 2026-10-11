@@ -939,6 +939,12 @@ def cmd_claims(args: argparse.Namespace) -> int:
                 return fail(f"unknown claim {args.explain}")
             out(claims_module.explain(latest, store))
             return 0
+        if args.claim_id:
+            matching = [record for record in records
+                        if str(record.get("claim_id", "")) == args.claim_id]
+            if not matching:
+                return fail(f"unknown claim {args.claim_id}")
+            records = [max(matching, key=lambda record: int(record.get("version", 0)))]
         live = claims_module.active_claims(records)
         live_keys = {(str(item.get("claim_id", "")),
                       int(item.get("version", 0)))
@@ -1350,7 +1356,10 @@ def build_parser() -> argparse.ArgumentParser:
     claims.add_argument("session")
     claims.add_argument("--acquire", default=None)
     claims.add_argument("--release", default=None)
-    claims.add_argument("--claim-id", default=None)
+    claims.add_argument(
+        "--claim-id", default=None,
+        help="target one claim for release/transfer, or inspect its latest record",
+    )
     claims.add_argument("--transfer-to", default=None,
                         help="session id receiving an explicit claim transfer")
     claims.add_argument("--transfer-consumer", default="",
