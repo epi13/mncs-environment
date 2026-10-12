@@ -120,8 +120,17 @@
   },
   "delivery": {
     "branch_commit": "e14e31017bba6ddfa5903c89d6a2e9c835e293ba",
-    "main_merge": "pending",
-    "push": "pending"
+    "main_merge": {
+      "method": "fast-forward",
+      "previous_main": "a6d054029fdbf1f0f61a08392ca7773e07796b79",
+      "main_at_feature_delivery": "6e911594d9c9039549e238a19a5c93b49e59f2e5"
+    },
+    "push": {
+      "remote": "origin",
+      "branch": "main",
+      "status": "confirmed",
+      "pushed_feature_delivery_commit": "6e911594d9c9039549e238a19a5c93b49e59f2e5"
+    }
   },
   "limitations": [
     "The restart test intentionally uses a test-owned FileSessionStore and is not evidence of canonical Store retirement publication.",
