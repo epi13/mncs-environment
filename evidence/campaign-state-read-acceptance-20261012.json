@@ -1,0 +1,98 @@
+{
+  "schema_version": "mncs.environment.campaign-state-read-acceptance/1",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "campaign_state_checkpoint_id": "chk_cabb81865832a773",
+  "campaign_state_recorded_by": {
+    "consumer_id": "local-agent",
+    "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+  },
+  "evidence_count": 114,
+  "delivery_status_before_update": "partial",
+  "observed_at": "2026-10-12T03:51:15Z",
+  "read_capability": {
+    "identity": "mncs-environment:campaign-state-inspection",
+    "contract_version": "2",
+    "effects": [
+      "read"
+    ],
+    "declared_output_limit_bytes": 131072
+  },
+  "protected_execution": {
+    "project": "mncs-environment",
+    "scope": "project",
+    "sandbox_backend": "bwrap",
+    "network": false,
+    "persistence_transport": "control-rpc",
+    "canonical_store_path_directly_writable": false,
+    "direct_write_probe_evidence_identity": "ev_canonical_store_integrity_after_task_selector_20261012",
+    "request_id": "req_campaign_state_full_20261012_0550",
+    "provider_returncode": 0,
+    "provider_stdout_bytes": 35015,
+    "provider_output_truncated": false
+  },
+  "repositories": {
+    "mncs-environment": {
+      "main_head_before_evidence_commit": "f806be8a3d6a7ca9bea54d90d22bf39d8a733ce2",
+      "candidate_state": "campaign-state read contract and bounded capture implementation pushed"
+    },
+    "mncs-control-mcp": {
+      "main_head": "079eec283fcb9ae1be7f6f4682ecd7deb69b43b7",
+      "candidate_state": "exact authenticated campaign-state inspection capability allowed"
+    },
+    "mncs-compiler": {
+      "main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "candidate_branch": "campaign/keyword-local-index-delivery-20261010",
+      "candidate_head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "candidate_state": "evidence-only commit; implementation parent 29e3ec3dd3f8b128c6e02d6275ee8ead165abd09 is an ancestor of main",
+      "ownership": {
+        "claim_id": "claim:mncs-compiler",
+        "version": 63,
+        "session_id": "ses_d2537acde8b8a875"
+      },
+      "action": "retained; no merge or retirement under current Environment scope"
+    },
+    "mncs-forge": {
+      "main_head": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "candidate_branch": "campaign/forge-quiet-compile-output-20261010",
+      "candidate_head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "candidate_state": "one clean implementation and test commit ahead of main",
+      "ownership": {
+        "claim_id": "claim:mncs-forge",
+        "version": 28,
+        "session_id": "ses_95c3aa35b8544042"
+      },
+      "action": "retained; no merge or retirement under current Environment scope"
+    },
+    "mncs-language": {
+      "remote_main_head": "12b29d6482599465698b78c87a21c63d3adeceb6",
+      "local_main_head": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "candidate_branch": "campaign/process-environment-value-bound-20261010",
+      "candidate_head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "candidate_state": "candidate diverged from remote main; worktree contains untracked evidence",
+      "action": "retained; Language is outside current Environment writable scope"
+    }
+  },
+  "compiler_worktree_inventory": {
+    "evidence_identity": "ev_compiler_worktree_inventory_protected_20261012",
+    "registered_worktree_count": 66,
+    "classification": "dry-run retained; cleanup not performed",
+    "claim_owner": "ses_d2537acde8b8a875"
+  },
+  "verification": {
+    "environment_command": "PYTHONPATH=. python -m pytest -q tests/test_environment.py -k 'campaign_evidence_and_delivery_are_checkpointed_and_reconstructed or projection_capability_invocations_are_declared_and_session_bound or session_invoke_uses_capability_declared_output_limit'",
+    "environment_result": "3 passed",
+    "control_command": "python -m pytest -q tests/test_environment_rpc.py -k project_rpc_exposes_session_authorized_read_operations_and_reports_unknown_operations",
+    "control_result": "1 passed",
+    "static_checks": [
+      "python -m compileall -q mncs_env",
+      "git diff --check"
+    ],
+    "static_check_result": "passed"
+  },
+  "mutation": {
+    "store_read_only_operation": true,
+    "campaign_checkpoint_updated": false,
+    "claim_transfer_or_recovery_performed": false,
+    "compiler_or_forge_worktree_retired": false
+  }
+}
