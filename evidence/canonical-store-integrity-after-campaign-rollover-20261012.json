@@ -1,0 +1,63 @@
+{
+  "schema_version": "mncs.environment.canonical-store-integrity-after-campaign-rollover/1",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "observed_at": "2026-10-12T09:59:49Z",
+  "continuity_reference": {
+    "checkpoint_id": "chk_5cfca11ecb242cae",
+    "checkpoint_sequence": 186,
+    "campaign_state_digest": "6612e3415622302f",
+    "evidence_count": 130,
+    "evidence_identity": "ev_canonical_campaign_evidence_history_rollover_20261012",
+    "evidence_commit": "836ee564777b0b6b7c206d98f2f13102e73fbcbf"
+  },
+  "execution": {
+    "command": "python3 scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "persistence_transport": "authenticated-control-environment-rpc",
+    "direct_store_filesystem_write_grant": false,
+    "terminal_job_id": "term-cfcefbbf1dcd53b885d562fc",
+    "exit_code": 0,
+    "timed_out": false,
+    "duration_seconds": 110.19
+  },
+  "fresh_process_readback": {
+    "command": "python3 scripts/mncs-env campaign-state ses_7226fbcfe65820f7 --evidence-offset 129 --evidence-limit 1",
+    "terminal_job_id": "term-e82098aee333846e3a8d71e2",
+    "exit_code": 0,
+    "checkpoint_id": "chk_5cfca11ecb242cae",
+    "evidence_count": 130,
+    "evidence_offset": 129,
+    "latest_evidence_identity": "ev_canonical_campaign_evidence_history_rollover_20261012"
+  },
+  "verification": {
+    "ok": true,
+    "generation": 46569,
+    "objects": 46571,
+    "recovery": "RECOVERED_OLD",
+    "chunk_size": 65536,
+    "fanout": 31,
+    "relations": 0,
+    "provenance_records": 0,
+    "commit_feed": "4d430100000000000000b5e90000b5eb00000000000000001dd353d36f032571fda1b1c2a3944b9f99df9abcc23bdd8e12f6eddd342cc21c"
+  },
+  "verification_artifact": {
+    "sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+    "backend": "mncs-research-bytecode",
+    "toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs"
+  },
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_revision": "836ee564777b0b6b7c206d98f2f13102e73fbcbf",
+    "control_repository": "mncs-control-mcp",
+    "control_revision": "c9dd68ebd400f8f6bd3c2e8feda2daf568541c50"
+  },
+  "result": "PASS; canonical Store integrity and fresh-process campaign evidence page readback succeeded from protected project Bwrap through authenticated Control RPC without direct Store filesystem write access.",
+  "limitations": [
+    "RECOVERED_OLD was reported while the current generation verified successfully (ok=true).",
+    "This point-in-time Git evidence record was added after verification and did not mutate canonical Store."
+  ]
+}
