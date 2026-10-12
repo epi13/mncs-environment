@@ -1,0 +1,48 @@
+{
+  "schema_version": "mncs.environment.canonical-store-postwrite-integrity/1",
+  "identity": "ev_environment_canonical_store_postwrite_integrity_20261012",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "recorded_at": "2026-10-12T23:02:30.110526Z",
+  "owner": "mncs-environment",
+  "source_identity": {
+    "repository": "mncs-environment",
+    "revision": "44fb34c882e9cfa0651deaebd0fb21aa51eb200f"
+  },
+  "execution": {
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "fresh_process": true,
+    "command": "python3 -m mncs_env.cli store --session ses_7226fbcfe65820f7 --verify",
+    "protected_process_has_direct_store_path": false,
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store"
+  },
+  "verification": {
+    "status": "pass",
+    "ok": true,
+    "generation": 47257,
+    "objects_verified": 47259,
+    "relations": 0,
+    "provenance_records": 0,
+    "commit_feed": "4d430100000000000000b8990000b89b000000000000000062b9f3ae8f8fd4254bea734ada0b02a545e348f8198f5168d4dbead4785b0ef2",
+    "store_artifact_backend": "mncs-research-bytecode",
+    "store_artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+    "verification_toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs",
+    "recovery_value": "RECOVERED_OLD",
+    "recovery_semantics": "Read-only-open sentinel; no recovery mutation or repair is claimed."
+  },
+  "postwrite_state": {
+    "campaign_state_checkpoint": "chk_43c829392974543a",
+    "campaign_evidence_count": 164,
+    "session_checkpoint": "chk_34d9cfddebd6ff8d",
+    "session_checkpoint_sequence": 242,
+    "claim_scope": "evidence/.mncs-canonical-store-claim-transport-probe-20261012",
+    "claim_latest_version": 2,
+    "claim_latest_status": "released",
+    "claim_is_live": false
+  },
+  "readiness": {
+    "status": "partial",
+    "reason": "The canonical Store generation containing the protected-process checkpoint and claim round trip now passes a full read-only object scrub; unauthorized publication, stale CAS, and interrupted publication tests remain unproven."
+  }
+}
