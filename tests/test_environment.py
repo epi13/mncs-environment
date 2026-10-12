@@ -3743,7 +3743,7 @@ class SessionTests(unittest.TestCase):
                 "commit": commit,
                 "path": f"evidence/campaign-delivery-{index}.json",
                 "sha256": f"{index + 1:064x}",
-            } for index in range(12)]
+            } for index in range(40)]
             delivery = {
                 "status": "delivered",
                 "repositories": [{
@@ -3773,9 +3773,10 @@ class SessionTests(unittest.TestCase):
                 state_dir=state_dir, session_id=session.session_id, **FAST
             )
             capsule = reopened.context()["continuation"]
-            self.assertEqual(capsule["evidence"], evidence)
+            evidence_limit = sessions.CONTINUATION_MAX_CAMPAIGN_EVIDENCE
+            self.assertEqual(capsule["evidence"], evidence[-evidence_limit:])
             self.assertEqual(capsule["evidence_count"], len(evidence))
-            self.assertFalse(capsule["evidence_truncated"])
+            self.assertTrue(capsule["evidence_truncated"])
             self.assertEqual(capsule["delivery"]["status"], "delivered")
             self.assertEqual(capsule["campaign_state_checkpoint_id"], checkpoint["identity"])
             self.assertEqual(

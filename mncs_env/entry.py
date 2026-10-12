@@ -417,6 +417,12 @@ def _validate_campaign_identity(store, *, campaign_id: str,
                 "checkpoint_id"
             )
             result["evidence"] = persisted_campaign_state.get("evidence", [])
+            result["evidence_count"] = persisted_campaign_state.get(
+                "evidence_count", len(result["evidence"])
+            )
+            result["evidence_truncated"] = persisted_campaign_state.get(
+                "evidence_truncated", False
+            )
         if observations["foreign_claims_count"]:
             result.update({
                 "foreign_claims": observations["foreign_claims"],

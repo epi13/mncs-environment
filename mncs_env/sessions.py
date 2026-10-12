@@ -77,6 +77,7 @@ CONTINUATION_MAX_CHECKPOINT_REMAINING = 8
 CONTINUATION_MAX_FOREIGN_CLAIMS = 12
 CONTINUATION_MAX_CLAIM_PATHS = 4
 CAMPAIGN_EVIDENCE_MAX = 128
+CONTINUATION_MAX_CAMPAIGN_EVIDENCE = 32
 CAMPAIGN_DELIVERY_REPOSITORIES_MAX = 16
 CAMPAIGN_STATE_INPUT_MAX_BYTES = 32 * 1024
 CAMPAIGN_STATE_READ_MAX_BYTES = 56 * 1024
@@ -574,9 +575,14 @@ def continuation_observations(
                     state["recorded_by"].get("principal_id"), 160
                 ),
             },
-            "evidence": evidence[-CAMPAIGN_EVIDENCE_MAX:],
+            # The entry capsule is a context projection, not the campaign's
+            # evidence ledger. Keep only its newest references here; the
+            # owner-authorized campaign_state() read returns the full ledger.
+            "evidence": evidence[-CONTINUATION_MAX_CAMPAIGN_EVIDENCE:],
             "evidence_count": len(evidence),
-            "evidence_truncated": len(evidence) > CAMPAIGN_EVIDENCE_MAX,
+            "evidence_truncated": (
+                len(evidence) > CONTINUATION_MAX_CAMPAIGN_EVIDENCE
+            ),
             "delivery": {
                 **{key: value for key, value in delivery.items()
                    if key != "repositories"},
