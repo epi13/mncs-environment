@@ -1,0 +1,67 @@
+{
+  "schema_version": "mncs.environment.language-candidate-patch-equivalent-revalidation/1",
+  "identity": "ev_language_candidate_patch_equivalent_revalidation_20261012",
+  "recorded_at": "2026-10-12T05:56:07Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "candidate": {
+    "repository": "mncs-language",
+    "branch": "campaign/process-environment-value-bound-20261010",
+    "revision": "fc49c0cc6afe388ff8d18341595422cc52225005",
+    "patch_id": "d59075fdf3391a828010e8e1b8dde48edb869e0e",
+    "worktree": "/tmp/mncs-language-process-environment-value-bound-20261010",
+    "claim": {
+      "claim_id": "claim:mncs-language",
+      "verdict": "released",
+      "owner_session_id": "ses_7226fbcfe65820f7"
+    }
+  },
+  "delivery": {
+    "status": "already-delivered-equivalently",
+    "equivalent_commit": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+    "equivalent_patch_id": "d59075fdf3391a828010e8e1b8dde48edb869e0e",
+    "equivalent_commit_is_ancestor_of_origin_main": true,
+    "origin_main": "12b29d6482599465698b78c87a21c63d3adeceb6",
+    "candidate_commit_is_ancestor_of_origin_main": false,
+    "candidate_merge_required": false,
+    "candidate_push_required": false
+  },
+  "verification": {
+    "sandbox_backend": "bwrap",
+    "project": "mncs-language",
+    "network": false,
+    "tested_source_revision": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+    "tests": [
+      {
+        "command": "cargo test -p mncs-cli --test quiet_compile",
+        "job_id": "term-a5aacf2eaf4b672d495daebc",
+        "result": "PASS",
+        "passed": 3,
+        "failed": 0
+      },
+      {
+        "command": "cargo test -p mncs-compiler --test source_profile_019_sequence_bound",
+        "job_id": "term-e33f543f18890516ad44bee1",
+        "result": "PASS",
+        "passed": 1,
+        "failed": 0
+      }
+    ]
+  },
+  "worktree_disposition": {
+    "status": "retained",
+    "head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+    "dirty": true,
+    "untracked_paths": [
+      "evidence/campaign-20261010-forge-core-quiet-output.json"
+    ],
+    "untracked_evidence_inspected": false,
+    "retirement_authorized": false,
+    "reason": "The candidate source patch is already delivered through main, but the registered candidate checkout contains untracked evidence whose ownership and relationship have not been proven. It was left unchanged."
+  },
+  "result": "PASS: the candidate implementation is present in pushed main with an identical patch identity, both focused protected tests pass, and the candidate checkout remains intact.",
+  "limits": [
+    "This is focused candidate verification, not a full Language workspace suite or compiler succession proof.",
+    "The untracked evidence file was not interpreted or moved; no candidate branch or worktree was deleted."
+  ]
+}
