@@ -1,0 +1,74 @@
+{
+  "schema_version": "mncs.environment.campaign-evidence-history-preflight/1",
+  "recorded_at": "2026-10-12",
+  "implementation": {
+    "mncs-environment": {
+      "branch": "main",
+      "commit": "8ad3d4ee57d23ca77f5259158eef6d071fd83fc9",
+      "source_sha256": {
+        "mncs_env/sessions.py": "636bc7994b666c6ad5f067394ce7f8cbd8b3549756633fc6f929f57cd0a9fb62",
+        "mncs_env/cli.py": "9e3733e94218b55b9a4c99e566659c524910c1f210eb18c0b576d56d4e86b282",
+        "tests/test_environment.py": "972573bd954a18f765882c14b724b61fe1ad37a8516e8c8866ea9c248c81ca7a"
+      }
+    },
+    "mncs-control-mcp": {
+      "branch": "main",
+      "commit": "c9dd68ebd400f8f6bd3c2e8feda2daf568541c50",
+      "source_sha256": {
+        "src/mncs_control_mcp/environment_rpc.py": "a816bb0a8e4e29bb09ad7e9d3b68f2736f49da6e5a1529099149b4f0a13d6e20",
+        "tests/test_environment_rpc.py": "b56382c756dfc4f47dd5f3536428738e798ba22cba18d41543d11b59b10f0ed8"
+      }
+    }
+  },
+  "verification": {
+    "environment_full_suite": {
+      "command": "python3 -m pytest tests/ -q",
+      "passed": 674,
+      "skipped": 46,
+      "duration_seconds": 621.2
+    },
+    "environment_vertical_proof": "pass",
+    "environment_campaign_proofs": {
+      "passed": 17,
+      "skipped": 0,
+      "failed": 0
+    },
+    "control_full_suite": "pass",
+    "control_environment_rpc_suite": "pass",
+    "syntax_and_diff_checks": "pass"
+  },
+  "protected_readback": {
+    "execution": "MNCS Control terminal in project-scoped Bwrap sandbox",
+    "terminal_job_id": "term-0256910ebb2ccdb278370ce9",
+    "campaign_identity": "cmp_mncs_continuity_20261010",
+    "session_id": "ses_7226fbcfe65820f7",
+    "checkpoint_id": "chk_d80c1b95f4682d5b",
+    "evidence_count": 128,
+    "evidence_offset": 0,
+    "evidence_limit": 2,
+    "page_result": "read from canonical Store through authenticated Control RPC",
+    "direct_store_write_access": false
+  },
+  "projection_state": {
+    "evidence_identity": "mncs-store:ses_7226fbcfe65820f7:projections:60c41770f3cd104de7bceec73b2a7e079f71b729ea936b4c76b96a80a450cb19",
+    "persisted": true,
+    "pending": [
+      "mncs-environment:overview",
+      "mncs-environment:project-view"
+    ],
+    "note": "The protected ambient pass recorded drift but did not apply the explicit overview projection."
+  },
+  "canonical_rollover_write_proof": "pending",
+  "protected_candidate_ownership": {
+    "mncs-compiler": {
+      "owner_session": "ses_d2537acde8b8a875",
+      "handoff_received": false,
+      "candidate_operation": "untouched"
+    },
+    "mncs-forge": {
+      "owner_session": "ses_95c3aa35b8544042",
+      "handoff_received": false,
+      "candidate_operation": "untouched"
+    }
+  }
+}
