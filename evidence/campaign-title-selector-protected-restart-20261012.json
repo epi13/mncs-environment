@@ -1,0 +1,99 @@
+{
+  "ambient_projection_observation": {
+    "applied": false,
+    "pending": 11,
+    "reconciled": 0
+  },
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "execution": {
+    "campaign_lookup_without_selector": {
+      "campaigns_count": 3,
+      "continuations_count": 4,
+      "exit_code": 0,
+      "matching_campaign_status": "context-conflict",
+      "status": "ambiguous-campaigns",
+      "terminal_job_id": "term-810616e551c320180205c02e"
+    },
+    "direct_store_filesystem_write_access": false,
+    "fresh_process_resume": {
+      "argv": [
+        "./scripts/mncs-env",
+        "enter",
+        "--task-identity",
+        "MNCS — Permanent Store Access, Campaign Continuity, and Compiler Development"
+      ],
+      "campaign_id_supplied": false,
+      "entry_reused": true,
+      "exit_code": 0,
+      "new_session_created": false,
+      "readiness": "degraded",
+      "request_id": "req_campaign_title_selector_fresh_resume_20261012",
+      "selected_campaign_id": "cmp_mncs_continuity_20261010",
+      "selected_session_id": "ses_7226fbcfe65820f7",
+      "session_id_supplied": false,
+      "task_selector_status": "resumed",
+      "terminal_job_id": "term-5c02fcbfe78f920a75ddc1c5"
+    },
+    "initial_binding": {
+      "argv": [
+        "./scripts/mncs-env",
+        "enter",
+        "--task-identity",
+        "MNCS — Permanent Store Access, Campaign Continuity, and Compiler Development",
+        "--campaign-id",
+        "cmp_mncs_continuity_20261010"
+      ],
+      "entry_reused": true,
+      "exit_code": 0,
+      "new_session_created": false,
+      "readiness": "degraded",
+      "request_id": "req_campaign_title_selector_bind_20261012",
+      "selected_campaign_id": "cmp_mncs_continuity_20261010",
+      "selected_session_id": "ses_7226fbcfe65820f7",
+      "task_selector_status": "bound",
+      "terminal_job_id": "term-e8801ca21f6b0253a9ac2452"
+    },
+    "network": false,
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "transport": "authenticated Control Environment RPC"
+  },
+  "identity": "ev_campaign_title_selector_protected_restart_20261012",
+  "limitations": [
+    "The unqualified project continuation lookup remains ambiguous across three campaigns; the request title selector addresses this exact task on later entry without changing other campaign records.",
+    "The separate same-campaign Environment context remains lifecycle-active and blocked; it was not adopted or modified.",
+    "This proves campaign/session selection and readback through Environment. It does not release another owner's claims or prove liveness of that owner's process."
+  ],
+  "other_context": {
+    "lifecycle": "active",
+    "ownership_changed": false,
+    "readiness": "blocked",
+    "session_id": "ses_b4b2d283542220b0"
+  },
+  "recorded_at": "2026-10-12T10:17:09Z",
+  "result": "PASS: after one explicit binding that matched the user request title to the persisted campaign charter, a fresh protected process resumed the exact existing authorized session using only that title; no session id, campaign id, claim list, or branch list was supplied on reentry.",
+  "schema_version": "mncs.environment.campaign-title-selector-protected-restart/1",
+  "selector": {
+    "matching_persisted_charter": {
+      "commit": "8fc6052c794c223a686d87fab7b794fbf934a120",
+      "identity": "ev_mncs_campaign_charter_continuity_20261011",
+      "path": "evidence/campaign-charter-continuity-20261011.json",
+      "sha256": "1b67657c87cdc3c49c93149ec839eb7f67e5b049c3ec5f2c410cfbd072641a26"
+    },
+    "scope": {
+      "authenticated_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+      "environment_definition_id": "env_f31ee034e8e1fdcb",
+      "workspace_root": "/home/epi13/Documents/Projects"
+    },
+    "selector_identity": "tsel_7ccf2b8b07a98500c8b60be8b9e1d6d34e00644befe4e2e62c6e9ca7862c2f94",
+    "store_evidence_id": "ev_campaign_task_7ccf2b8b07a98500c8b60be8b9e1d6d34e00644befe4e2e62c6e9ca7862c2f94",
+    "task_identity": "MNCS — Permanent Store Access, Campaign Continuity, and Compiler Development"
+  },
+  "source": {
+    "control_repository": "mncs-control-mcp",
+    "control_revision": "c9dd68ebd400f8f6bd3c2e8feda2daf568541c50",
+    "environment_repository": "mncs-environment",
+    "environment_revision_before_evidence": "28b813f93831d828ea5f7b9f0de9ae4f6bf5fbcb"
+  }
+}
