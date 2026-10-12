@@ -1,0 +1,78 @@
+{
+  "schema_version": "mncs-environment.claim-transfer-crash-evidence/1",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "recorded_at": "2026-10-12T19:51:32.754Z",
+  "owner": "mncs-environment",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source_revision": "60ef3c7df12a13a3d7759b660286c91ac45a67cc",
+  "source_files": [
+    {
+      "path": "mncs_env/claims.py",
+      "sha256": "ea0bbdb5dd2bf08ef1ead7c448b99dd5a57a77a1d734a0a30c377fb523e1bdd3"
+    },
+    {
+      "path": "tests/test_store_claim_transfer.py",
+      "sha256": "b79f4fb1ce3262d05b95087e90fd4edd6502ad5cfd170cf958fe3a4cee3ac432"
+    },
+    {
+      "path": "tests/test_claim_recovery.py",
+      "sha256": "5a2322ad6977accbd7473ee8ed8ef72ed31b7cc4528358561f42a8b432deca12"
+    }
+  ],
+  "transfer_protocol": {
+    "mutation": "sender release and recipient acquisition are published as one Store claim batch guarded by the expected claim generation",
+    "fencing": "the source release is version n+1 and recipient hold is n+2; a competing transfer that loses the generation CAS cannot publish a second owner",
+    "retry": "stable transfer request identity and payload digest allow a caller to reconcile an interrupted publication by reading the exact release/recipient pair",
+    "lease": "transfer preserves the existing bounded lease origin and does not restart its TTL"
+  },
+  "crash_matrix": [
+    {
+      "point": "before_generation_publication",
+      "reopened_state": "source is the sole effective owner"
+    },
+    {
+      "point": "after_generation_publication",
+      "reopened_state": "the test accepts either source or recipient as the sole effective owner; retry reconciles to recipient"
+    },
+    {
+      "point": "after_head_publication",
+      "reopened_state": "recipient is the sole effective owner"
+    }
+  ],
+  "concurrency": {
+    "test": "test_concurrent_store_transfers_admit_one_recipient",
+    "result": "only one competing recipient is admitted"
+  },
+  "validation": {
+    "command": "python3 -m pytest -q tests/test_store_claim_transfer.py tests/test_claim_recovery.py",
+    "status": "pass",
+    "passed": 37,
+    "elapsed_seconds": 33.53,
+    "execution": "protected mncs-environment project bwrap",
+    "store_kind": "isolated test-owned EmbeddedStore fixtures; this result is not canonical Store publication proof"
+  },
+  "live_claim_liveness_observation": {
+    "inspection_date": "2026-10-12",
+    "authority": "read-only Environment claims explain through canonical Store transport",
+    "owner_lifecycle": "active",
+    "owner_lifecycle_is_process_proof": false,
+    "compiler": {
+      "claim_id": "claim:mncs-compiler",
+      "version": 63,
+      "owner_session": "ses_d2537acde8b8a875",
+      "freshness": "stale",
+      "verdict": "not-recoverable",
+      "effective_expires_at": "2026-10-16T18:13:43Z"
+    },
+    "forge": {
+      "claim_id": "claim:mncs-forge",
+      "version": 28,
+      "owner_session": "ses_95c3aa35b8544042",
+      "freshness": "stale",
+      "verdict": "not-recoverable",
+      "effective_expires_at": "2026-10-16T02:18:31Z"
+    },
+    "action": "no recovery, transfer, test, merge, or checkout mutation was attempted"
+  },
+  "readiness": "Atomic claim transfer and interruption recovery pass the focused isolated-store suite. Canonical Store transfer is not asserted here. Compiler and Forge remain protected until their authenticated owner handoffs are received."
+}
