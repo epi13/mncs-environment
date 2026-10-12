@@ -25,6 +25,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from . import authority as authority_module
+from . import campaign_selector
 from . import capabilities as capabilities_module
 from . import claims as claims_module
 from . import composition
@@ -1352,6 +1353,66 @@ class Session:
         close = getattr(self.store, "close", None)
         if callable(close):
             close()
+
+    def bind_task_identity(
+        self,
+        task_identity: str,
+        *,
+        campaign_id: str,
+        authenticated_principal_id: str,
+        request_id: str,
+    ) -> dict[str, Any]:
+        """Bind an authenticated stable task key to this exact live session.
+
+        The binding is a navigation index only. It does not resume the session,
+        transfer claims, or authorize any operation on its own; normal session,
+        claim, lifecycle, and rights admission still applies after lookup.
+        """
+        snapshot = self.snapshot
+        campaign = snapshot.get("campaign")
+        campaign = campaign if isinstance(campaign, dict) else {}
+        if (not isinstance(authenticated_principal_id, str)
+                or not authenticated_principal_id
+                or snapshot.get("authenticated_principal_id")
+                != authenticated_principal_id
+                or campaign.get("principal_id") != authenticated_principal_id):
+            raise AuthorityDenied(
+                "task selector binding requires the session's authenticated principal"
+            )
+        if campaign.get("identity") != campaign_id:
+            raise AuthorityDenied(
+                "task selector campaign does not match this exact Environment session"
+            )
+        if snapshot.get("lifecycle") not in {
+            "active", "blocked", "waiting", "checkpointed", "abandoned",
+        }:
+            raise LifecycleError(
+                "task selector can bind only a continuable Environment session"
+            )
+        provenance = snapshot.get("provenance")
+        provenance = provenance if isinstance(provenance, dict) else {}
+        workspace = snapshot.get("workspace")
+        workspace = workspace if isinstance(workspace, dict) else {}
+        definition_id = provenance.get("definition_id")
+        workspace_root = workspace.get("root")
+        selector = campaign_selector.selector_identity(
+            task_identity,
+            authenticated_principal_id=authenticated_principal_id,
+            definition_id=definition_id,
+            workspace_root=workspace_root,
+        )
+        return campaign_selector.bind(
+            self.store,
+            selector=selector,
+            authenticated_principal_id=authenticated_principal_id,
+            definition_id=definition_id,
+            workspace_root=workspace_root,
+            campaign_id=campaign_id,
+            session_id=self.session_id,
+            request_id=request_id,
+            admitted_by="mncs-environment.project-continuation",
+        )
+
 
     @property
     def state_dir(self) -> Path:

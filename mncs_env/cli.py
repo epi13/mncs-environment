@@ -160,6 +160,17 @@ def cmd_campaign_continuation(_args: argparse.Namespace) -> int:
     )
 
 
+def cmd_campaign_task_bind(_args: argparse.Namespace) -> int:
+    return fail(
+        "campaign task binding requires the authenticated Control Environment transport",
+        diagnostics={
+            "code": "persistence-service-unavailable",
+            "transport": "mncs-control-environment-rpc",
+            "next": "run campaign-bind through the MNCS Control project-scoped protected execution path",
+        },
+    )
+
+
 def cmd_campaign_state(args: argparse.Namespace) -> int:
     """Return one bounded page from the exact persisted campaign ledger."""
     try:
@@ -1863,7 +1874,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--campaign-id", default=None,
         help="select one durable campaign when the project has multiple continuations",
     )
+    continuation.add_argument(
+        "--task-identity", default=None,
+        help="resolve a previously bound identity scoped to this authenticated Environment definition and workspace",
+    )
     continuation.set_defaults(func=cmd_campaign_continuation)
+
+    task_bind = sub.add_parser(
+        "campaign-bind",
+        help="bind a stable task identity to one explicitly selected project session",
+    )
+    task_bind.add_argument("--campaign-id", required=True)
+    task_bind.add_argument("--session-id", required=True)
+    task_bind.add_argument("--task-identity", required=True)
+    task_bind.set_defaults(func=cmd_campaign_task_bind)
 
     def session_parser(name: str, help_text: str):
         parser_ = sub.add_parser(name, parents=[common], help=help_text)

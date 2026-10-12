@@ -16,6 +16,10 @@ from .identity import digest_hex
 
 SCHEMA = "mncs.environment.campaign-task-binding/1"
 MAX_TASK_IDENTITY_LENGTH = 256
+ADMITTED_BY = frozenset({
+    "mncs-environment.entry",
+    "mncs-environment.project-continuation",
+})
 
 
 class TaskSelectorError(ValueError):
@@ -129,7 +133,7 @@ def _read(store: Any, selector: str) -> dict[str, Any] | None:
     if (
         not isinstance(record.get("bound_at"), str)
         or not isinstance(provenance, dict)
-        or provenance.get("admitted_by") != "mncs-environment.entry"
+        or provenance.get("admitted_by") not in ADMITTED_BY
         or provenance.get("requested_by_authenticated_principal_id")
         != record["authenticated_principal_id"]
         or provenance.get("environment_session_id") != record["session_id"]
@@ -155,6 +159,7 @@ def bind(
     campaign_id: str,
     session_id: str,
     request_id: str,
+    admitted_by: str = "mncs-environment.entry",
 ) -> dict[str, Any]:
     """Publish one immutable selector-to-campaign binding with safe retry."""
     if (not isinstance(request_id, str) or not request_id.startswith("req_")
@@ -162,6 +167,8 @@ def bind(
         raise TaskSelectorError("task selector request identity is invalid")
     if (not campaign_id.startswith("cmp_") or not session_id.startswith("ses_")):
         raise TaskSelectorError("task selector target identity is invalid")
+    if not isinstance(admitted_by, str) or admitted_by not in ADMITTED_BY:
+        raise TaskSelectorError("task selector admission owner is invalid")
     operation_digest = digest_hex({
         "selector_identity": selector,
         "authenticated_principal_id": authenticated_principal_id,
@@ -204,7 +211,7 @@ def bind(
         "bound_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "provenance": {
             "requested_by_authenticated_principal_id": authenticated_principal_id,
-            "admitted_by": "mncs-environment.entry",
+            "admitted_by": admitted_by,
             "environment_session_id": session_id,
             "request_id": request_id,
         },
