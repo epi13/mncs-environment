@@ -1,0 +1,97 @@
+{
+  "schema_version": "mncs.environment.canonical-task-selector-continuation-acceptance/1",
+  "identity": "ev_environment_canonical_task_selector_continuation_20261012",
+  "recorded_at_utc": "2026-10-12T17:16:47Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_commit": "98d1623dff562f4b503b52570d0e4e6030a5a6b4",
+    "control_repository": "mncs-control-mcp",
+    "control_commit": "4d9ae974bcb407945c74f414dd3379382e294676",
+    "store_repository": "mncs-store",
+    "store_commit": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "execution": {
+    "transport": "authenticated MNCS Control Environment RPC",
+    "backend": "bwrap",
+    "project": "mncs-environment",
+    "scope": "project",
+    "network": false,
+    "request_id": "req_campaign_task_selector_evidence_read_20261013",
+    "credential_values_or_paths_recorded": false,
+    "caller_canonical_store_path": {
+      "path": "/home/epi13/.local/share/mncs-environment/store",
+      "visible": false,
+      "directory": false,
+      "writable": false
+    }
+  },
+  "lookup": {
+    "operation": "Control project continuation lookup by task identity only",
+    "campaign_id_supplied": false,
+    "session_id_supplied": false,
+    "task_identity": "MNCS — Permanent Store Access, Campaign Continuity, and Compiler Development",
+    "result": "ready",
+    "resolved_campaign_id": "cmp_mncs_continuity_20261010",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "selection_basis": "authenticated-project-environment-definition",
+    "task_selector": {
+      "status": "resolved",
+      "campaign_id": "cmp_mncs_continuity_20261010",
+      "session_id": "ses_7226fbcfe65820f7",
+      "definition_id": "env_f31ee034e8e1fdcb",
+      "workspace_root": "/home/epi13/Documents/Projects"
+    },
+    "context_conflict_status": "context-conflict",
+    "contexts_count": 2,
+    "unselected_contexts": [
+      {
+        "definition_id": "env_1ea3af15c7464177",
+        "workspace_root": "/home/epi13/Documents/Projects",
+        "session_id": "ses_b4b2d283542220b0",
+        "lifecycle": "active",
+        "claim_ids": [],
+        "checkpoint_ids": [],
+        "evidence_count": 0,
+        "process_liveness": "unknown; lifecycle classification alone does not establish that a process is running or terminated"
+      }
+    ],
+    "ownership_effect": "Read-only lookup; it neither created a session nor transferred, recovered, acquired, or released a claim."
+  },
+  "selected_continuation": {
+    "lifecycle": "active",
+    "consumer_id": "local-agent",
+    "checkpoint_ids": [
+      "chk_41b05d0e610a962b",
+      "chk_a0e7163343203ae4"
+    ],
+    "evidence_count": 148,
+    "claim": {
+      "claim_id": "claim:mncs-environment",
+      "version": 33,
+      "status": "held",
+      "scope": {
+        "kind": "repository",
+        "repository": "mncs-environment",
+        "exclusive": true
+      },
+      "expires_at": "2026-10-12T19:38:47+00:00"
+    },
+    "project_repository_observation": {
+      "repository": "mncs-environment",
+      "branch": "main",
+      "head": "98d1623dff562f4b503b52570d0e4e6030a5a6b4",
+      "clean": true,
+      "scan_status": "complete"
+    }
+  },
+  "worktree_observation": {
+    "registered_branch": "campaign/authority-resource-frontier-20261012",
+    "registered_path": "/tmp/mncs-environment-authority-resource-frontier-20261012",
+    "current_project_namespace_path_visible": false,
+    "physical_state": "unknown; retained without modification",
+    "basis": "Git worktree registration and Environment continuation observation only"
+  },
+  "readiness": "A fresh protected Control RPC caller resolved the existing durable task selector without a campaign or session ID and selected the exact Environment session bound to the authenticated project definition. The other same-campaign Environment context remains visible and unchanged."
+}
