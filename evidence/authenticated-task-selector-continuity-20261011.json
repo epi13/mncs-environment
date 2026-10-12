@@ -1,0 +1,108 @@
+{
+  "schema_version": "mncs.environment.authenticated-task-selector-continuity/1",
+  "identity": "ev_env_authenticated_task_selector_continuity_20261011",
+  "observed_at": "2026-10-11T16:38:33-08:00",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "observer_session_id": "ses_7226fbcfe65820f7",
+  "active_environment_claim": "claim:mncs-environment",
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "campaign/authenticated-task-selector-20261012",
+    "commit": "1ff37b9e1268b7ad1290323c962e1dfb717a9963",
+    "base_revision": "090e03f59fd53646abf979802b8a98ffcd5a3ea7",
+    "files_sha256": {
+      "mncs_env/campaign_selector.py": "d2e304fdb2e79576b206b7545adb528ae211e3ed375993eded032eaaaca464e9",
+      "mncs_env/entry.py": "04de723b31f13faad2d3fc2d303cd89e62e2de7c3f430b04782218a13c5e7c02",
+      "mncs_env/cli.py": "a66ac6296a6aa429cc47b6d0a82d4de597906d622841d4c4ccdab824c697f5e3",
+      "tests/test_campaign_selector.py": "513f70e5b6160dbc70e3aa076867bc6a56294527721a9a2ce4cea424ae3fa474",
+      "tests/test_entry.py": "f79469e598c0d3f6a987fd1add69f25fa85b61fb7014f0b52cb3d61be1efc975",
+      "docs/ENTRY.md": "2ed428e466bf9a714b4b448e3bd6b596e32d9554bbb30deac3872c0b259749ca"
+    }
+  },
+  "implementation": {
+    "owner": "mncs-environment",
+    "selector_scope": [
+      "authenticated_environment_principal",
+      "exact_environment_definition",
+      "resolved_workspace_root",
+      "stable_external_task_identity"
+    ],
+    "persistence": "one immutable Store evidence binding with readback on ambiguous publication",
+    "authority_effect": "lookup only; principal, rights, lifecycle, and claims are checked by normal Environment entry",
+    "external_task_identity_persisted": false,
+    "first_binding_with_prior_campaigns": "requires explicit campaign selection; implicit adoption is rejected"
+  },
+  "tests": {
+    "command": "PYTHONPATH=. pytest -q tests/test_campaign_selector.py tests/test_entry.py",
+    "result": "PASS",
+    "passed": 52,
+    "duration_seconds": 71,
+    "coverage": [
+      "immutable publication response-loss readback",
+      "one-winner concurrent binding",
+      "principal, definition, and workspace scoping",
+      "no rebind to another campaign",
+      "first-use adoption refusal",
+      "fresh-process resume with multiple project campaigns",
+      "session-created-before-binding interruption recovery",
+      "wrong-campaign conflict",
+      "external task identity absent from the stored binding"
+    ],
+    "static_checks": [
+      "ruff check mncs_env/campaign_selector.py tests/test_campaign_selector.py: PASS",
+      "ruff check --select I tests/test_entry.py: PASS",
+      "python3 -m compileall for changed source and tests: PASS",
+      "git diff --check: PASS"
+    ],
+    "store_mode": "temporary test-owned canonical Store roots; not the Environment canonical Store"
+  },
+  "protected_canonical_rpc_acceptance": {
+    "execution": {
+      "tool": "mncs_control_terminal_exec",
+      "project": "mncs-environment",
+      "sandbox_backend": "bwrap",
+      "scope": "project",
+      "network": false,
+      "transport": "authenticated MNCS Control Environment persistence RPC",
+      "direct_canonical_store_write_access": false
+    },
+    "initial_binding": {
+      "command_shape": "mncs_env.cli enter --campaign-id <selected campaign> --task-identity <stable task identity>",
+      "exit_code": 0,
+      "task_selector_status": "bound",
+      "session_id": "ses_7226fbcfe65820f7",
+      "campaign_id": "cmp_mncs_continuity_20261010"
+    },
+    "fresh_process_resume": {
+      "command_shape": "mncs_env.cli enter --task-identity <same stable task identity>",
+      "consumer_id": "codex-process-5",
+      "campaign_id_supplied": false,
+      "session_id_supplied": false,
+      "exit_code": 0,
+      "task_selector_status": "resumed",
+      "entry_reused": true,
+      "session_id": "ses_7226fbcfe65820f7",
+      "campaign_id": "cmp_mncs_continuity_20261010",
+      "claim_ids": [
+        "claim:mncs-environment"
+      ],
+      "checkpoint_id": "chk_79d3abce2679008f",
+      "control_project_capsule": {
+        "status": "ready",
+        "selection_basis": "authenticated-project-environment-definition"
+      }
+    },
+    "canonical_binding_readback_basis": "The fresh process supplied no campaign or session identifier and returned resumed for the same campaign. The bound selector is read by Environment entry through Control RPC. An unbound selector in this project, which already has matching campaigns, is rejected by the tested campaign-task-selector-unbound path.",
+    "result": "PASS"
+  },
+  "excluded_probe": {
+    "operation": "A direct Python StoreBackend read was attempted inside Bwrap outside the CLI RPC dispatch.",
+    "result": "not used as canonical evidence",
+    "reason": "It bypassed MNCS_ENV_PERSISTENCE_TRANSPORT=control-rpc and returned a generation-0 view; the configured authenticated RPC path is the canonical publication/read path.",
+    "mutation_requested": false
+  },
+  "limitations": [
+    "The authenticated caller must supply the same stable task identity on restart; automatic delivery of an upstream task identity remains Control or caller integration work.",
+    "The first binding still requires one explicit campaign choice when multiple prior campaigns match."
+  ]
+}
