@@ -1,0 +1,63 @@
+{
+  "schema_version": "mncs.environment.canonical-store-integrity-after-title-selector/1",
+  "identity": "ev_canonical_store_integrity_after_title_selector_20261012",
+  "observed_at": "2026-10-12T10:21:44Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "continuity": {
+    "checkpoint_id": "chk_3f7e54b70c0f867c",
+    "checkpoint_sequence": 188,
+    "campaign_state_digest": "a4fac66f55484733",
+    "evidence_history_digest": "d25c8319acaf9984",
+    "evidence_count": 132,
+    "latest_evidence_identity": "ev_campaign_title_selector_protected_restart_20261012",
+    "title_selector_store_evidence_id": "ev_campaign_task_7ccf2b8b07a98500c8b60be8b9e1d6d34e00644befe4e2e62c6e9ca7862c2f94"
+  },
+  "execution": {
+    "transport": "authenticated Control Environment RPC",
+    "tool": "mncs_control_terminal_start",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "direct_canonical_store_write_access": false,
+    "terminal_job_id": "term-eb7c7fbd9d9730d8e58b51fb",
+    "exit_code": 0,
+    "duration_seconds": 105.52,
+    "readback_command": "./scripts/mncs-env campaign-state ses_7226fbcfe65820f7 --evidence-offset 131 --evidence-limit 1",
+    "readback": {
+      "checkpoint_id": "chk_3f7e54b70c0f867c",
+      "evidence_count": 132,
+      "evidence_offset": 131,
+      "evidence_identity": "ev_campaign_title_selector_protected_restart_20261012"
+    },
+    "verification_command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify"
+  },
+  "verification": {
+    "ok": true,
+    "generation": 46636,
+    "objects": 46638,
+    "recovery": "RECOVERED_OLD",
+    "chunk_size": 65536,
+    "fanout": 31,
+    "relations": 0,
+    "provenance_records": 0,
+    "commit_feed": "4d430100000000000000b62c0000b62e0000000000000000816ad84cbe0212ed64b5698d4de621378c51a6d0386f15cf88f7ad4eac2acf80"
+  },
+  "verification_artifact": {
+    "sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+    "backend": "mncs-research-bytecode",
+    "toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs"
+  },
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_revision_before_report": "9945b24466035e2dafd2016e537fd8c4fe61b4bc",
+    "control_repository": "mncs-control-mcp",
+    "control_revision": "c9dd68ebd400f8f6bd3c2e8feda2daf568541c50"
+  },
+  "result": "PASS: canonical Store verification and title-selector campaign page readback succeeded after the durable campaign checkpoint from the normal protected project process, without direct Store filesystem write access.",
+  "limitations": [
+    "RECOVERED_OLD accompanied a valid current generation (ok=true); this result is preserved as reported.",
+    "This Git-only verification report was added after Store verification and did not mutate canonical Store."
+  ]
+}
