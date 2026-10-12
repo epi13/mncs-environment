@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.canonical-store-transport-acceptance/1",
+  "identity": "ev_environment_canonical_store_bwrap_acceptance_20261012",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "recorded_at": "2026-10-12T22:55:12Z",
+  "owner": "mncs-environment",
+  "source_identity": {
+    "repository": "mncs-environment",
+    "revision": "82821ea01da6cde976a45e1f1f1bc11a61c0fb51"
+  },
+  "execution": {
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_path_mounted": false,
+    "direct_filesystem_write_access": false,
+    "probe": "os.path.isdir returned false; os.statvfs returned FileNotFoundError inside the protected project process"
+  },
+  "continuation": {
+    "schema_version": "mncs.control.campaign-continuation/2",
+    "status": "ready",
+    "selection_basis": "authenticated-project-environment-definition",
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "campaign_state_checkpoint_before_probe": "chk_acefbb10e3b18304",
+    "campaign_evidence_count_before_probe": 163,
+    "fresh_process_readback": true
+  },
+  "checkpoint_publication": {
+    "transport": "mncs-control-environment-rpc",
+    "identity": "chk_34d9cfddebd6ff8d",
+    "sequence": 242,
+    "request_id": "req_7886f9c31a4296a79f098cfcf3de15d578e2a95d",
+    "event_identity": "evt_6d705c881812bb20",
+    "event_sequence": 1360,
+    "operation_digest": "faa702b76ce55610",
+    "readback_process": "fresh MNCS Control project-scoped terminal process",
+    "readback_command": "python3 -m mncs_env.cli inspect ses_7226fbcfe65820f7",
+    "readback_result": "new checkpoint identity is present in session checkpoint history and its session.checkpointed event"
+  },
+  "claim_round_trip": {
+    "transport": "mncs-control-environment-rpc",
+    "repository": "mncs-environment",
+    "scope": {
+      "kind": "paths",
+      "paths": [
+        "evidence/.mncs-canonical-store-claim-transport-probe-20261012"
+      ],
+      "exclusive": false
+    },
+    "session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "local-agent",
+    "acquired": {
+      "identity": "clm_b13e16df32ec1162",
+      "claim_id": "claim:mncs-environment:paths:6369dd38ce90",
+      "version": 1,
+      "status": "held",
+      "request_id": "req_1978bce967ee0d18dd9b89f5174f9ad54e3e8651"
+    },
+    "released": {
+      "identity": "clm_484e646fc339286a",
+      "claim_id": "claim:mncs-environment:paths:6369dd38ce90",
+      "version": 2,
+      "status": "released",
+      "live": false,
+      "request_id": "req_f2c97626affa3dd1888461177b6793f03c407a8c"
+    },
+    "fresh_page_readback": true
+  },
+  "outcome": {
+    "checkpoint_publish_and_fresh_readback": "pass",
+    "authorized_claim_acquire_release_and_fresh_readback": "pass",
+    "canonical_store_path_write_access_from_agent": "absent",
+    "canonical_store_object_wide_scrub_after_this_publication": "not_run",
+    "unauthorized_publication_rejection": "not_proven_by_this_probe",
+    "stale_cas_rejection_against_live_canonical_transport": "not_proven_by_this_probe",
+    "canonical_service_or_caller_interruption_recovery": "not_proven_by_this_probe"
+  },
+  "prior_integrity_baseline": {
+    "source_evidence": "ev_environment_canonical_store_readonly_verify_20261012",
+    "generation": 47224,
+    "objects_verified": 47226,
+    "note": "The object-wide scrub preceded the checkpoint and claim mutations recorded here; this probe instead verifies their canonical readback through fresh protected processes."
+  },
+  "readiness": {
+    "status": "partial",
+    "reason": "The protected-process checkpoint and claim round trip are proven through the authenticated Environment transport; denial, stale-CAS, and interrupted-publication acceptance still require dedicated service tests."
+  }
+}
