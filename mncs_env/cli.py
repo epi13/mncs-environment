@@ -43,6 +43,7 @@ from .store_backend import StoreIntegrityFailure, StoreUnavailable
 
 DEFAULT_STATE_DIR = Path.home() / ".local" / "share" / "mncs-environment"
 MAX_ARTIFACT_READ_BYTES = 1024 * 1024
+MAX_CLAIM_PAGE_OUTPUT_BYTES = 48 * 1024
 
 
 def out(value: object) -> None:
@@ -1072,6 +1073,25 @@ def cmd_fail(args: argparse.Namespace) -> int:
 
 
 def cmd_claims(args: argparse.Namespace) -> int:
+    if args.repository is None and (args.offset is not None or args.limit is not None):
+        return fail("claim pagination requires --repository")
+    if args.repository is not None:
+        if (not isinstance(args.repository, str) or not args.repository.strip()
+                or len(args.repository) > 120):
+            return fail("claim repository filter must be bounded nonempty text")
+        if (
+            args.acquire or args.release or args.transfer_to or args.claim_id or args.explain
+            or args.transfer_consumer or args.paths or args.worktree or args.branch
+            or args.adopt or args.reason or args.basis != claims_module.BASIS_EXPLICIT
+            or args.ttl != 24
+        ):
+            return fail(
+                "--repository is a read-only latest-claim query and cannot be combined with claim operations"
+            )
+        offset = 0 if args.offset is None else args.offset
+        limit = 100 if args.limit is None else args.limit
+        if offset < 0 or limit < 1 or limit > 128:
+            return fail("claim page requires offset >= 0 and limit between 1 and 128")
     store = open_store(args.state_dir, args.persistence, session_id=args.session)
     try:
         if args.release:
@@ -1142,6 +1162,83 @@ def cmd_claims(args: argparse.Namespace) -> int:
                 })
             return 0
         records = store.read_claims()
+        if args.repository is not None:
+            repository = args.repository.strip()
+            matching = [
+                record for record in records
+                if str(record.get("repository", "")) == repository
+            ]
+            latest_by_id: dict[str, dict[str, Any]] = {}
+            for record in matching:
+                claim_id = str(record.get("claim_id", ""))
+                if not claim_id:
+                    continue
+                try:
+                    version = int(record.get("version", 0))
+                except (TypeError, ValueError):
+                    version = 0
+                previous = latest_by_id.get(claim_id)
+                try:
+                    previous_version = int(previous.get("version", 0)) if previous else -1
+                except (TypeError, ValueError):
+                    previous_version = 0
+                if previous is None or (version, str(record.get("identity", ""))) > (
+                    previous_version, str(previous.get("identity", ""))
+                ):
+                    latest_by_id[claim_id] = record
+            latest_records = sorted(
+                latest_by_id.values(), key=lambda record: str(record.get("claim_id", ""))
+            )
+            live = claims_module.active_claims(matching)
+            live_keys = {
+                (str(item.get("claim_id", "")), int(item.get("version", 0)))
+                for item in live.values()
+            }
+            annotated = []
+            for record in latest_records:
+                copy = dict(record)
+                try:
+                    version = int(record.get("version", 0))
+                except (TypeError, ValueError):
+                    version = 0
+                copy["live"] = (str(record.get("claim_id", "")), version) in live_keys
+                annotated.append(copy)
+            offset = 0 if args.offset is None else args.offset
+            limit = 100 if args.limit is None else args.limit
+            page = annotated[offset:offset + limit]
+            while True:
+                response = {
+                    "schema_version": "mncs.environment.claim-page/1",
+                    "repository": repository,
+                    "offset": offset,
+                    "limit": limit,
+                    "total": len(annotated),
+                    "next_offset": (
+                        offset + len(page)
+                        if offset + len(page) < len(annotated) else None
+                    ),
+                    "claims": page,
+                }
+                encoded = json.dumps(
+                    response, ensure_ascii=False, indent=2, sort_keys=True,
+                ).encode("utf-8")
+                if len(encoded) <= MAX_CLAIM_PAGE_OUTPUT_BYTES:
+                    break
+                if len(page) <= 1:
+                    return fail(
+                        "one claim record exceeds the bounded query response size",
+                        code=3,
+                        diagnostics={
+                            "code": "claim-record-too-large",
+                            "publication_completed": False,
+                            "claim_id": page[0]["claim_id"] if page else None,
+                            "next_offset": offset + 1 if page else offset,
+                            "next": "inspect the claim through a transport that can return its exact full scope",
+                        },
+                    )
+                page = page[:-1]
+            out(response)
+            return 0
         if args.explain:
             latest = None
             for record in records:
@@ -2150,6 +2247,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--claim-id", default=None,
         help="target one claim for release/transfer, or inspect its latest record",
     )
+    claims.add_argument(
+        "--repository", default=None,
+        help="read a bounded page of latest claim records for one repository",
+    )
+    claims.add_argument("--offset", type=int, default=None,
+                        help="claim page offset (requires --repository)")
+    claims.add_argument("--limit", type=int, default=None,
+                        help="claim page size from 1 to 128 (requires --repository)")
     claims.add_argument("--transfer-to", default=None,
                         help="session id receiving an explicit claim transfer")
     claims.add_argument("--transfer-consumer", default="",

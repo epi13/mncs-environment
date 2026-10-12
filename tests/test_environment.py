@@ -336,6 +336,100 @@ class ClaimTests(unittest.TestCase):
             self.assertEqual(result[0]["status"], "held")
             self.assertTrue(result[0]["live"])
 
+    def test_repository_claim_query_returns_bounded_latest_records(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            store = open_store(state, "file")
+            first = claims.acquire(
+                store, repository="r", session_id="owner-a", consumer_id="owner-a",
+                basis=claims.BASIS_EXPLICIT, reason="first path",
+                scope={"kind": "paths", "paths": ["src/first.py"]},
+            )
+            second = claims.acquire(
+                store, repository="r", session_id="owner-b", consumer_id="owner-b",
+                basis=claims.BASIS_EXPLICIT, reason="second path",
+                scope={"kind": "paths", "paths": ["src/second.py"]},
+            )
+            claims.acquire(
+                store, repository="other", session_id="other", consumer_id="other",
+                basis=claims.BASIS_EXPLICIT, reason="unrelated claim",
+            )
+
+            def query(*options: str) -> dict[str, object]:
+                stdout = io.StringIO()
+                stderr = io.StringIO()
+                with redirect_stdout(stdout), redirect_stderr(stderr):
+                    code = cli.main([
+                        "--persistence", "file", "--state-dir", str(state),
+                        "claims", "ses_reader", "--repository", "r", *options,
+                    ])
+                self.assertEqual(code, 0, stderr.getvalue())
+                self.assertEqual(stderr.getvalue(), "")
+                return json.loads(stdout.getvalue())
+
+            first_page = query("--limit", "1")
+            second_page = query("--offset", "1", "--limit", "1")
+            self.assertEqual(first_page["schema_version"], "mncs.environment.claim-page/1")
+            self.assertEqual(first_page["repository"], "r")
+            self.assertEqual(first_page["total"], 2)
+            self.assertEqual(first_page["next_offset"], 1)
+            self.assertEqual(second_page["next_offset"], None)
+            records = first_page["claims"] + second_page["claims"]
+            self.assertEqual(
+                {record["claim_id"] for record in records},
+                {first["claim_id"], second["claim_id"]},
+            )
+            self.assertTrue(all(record["live"] for record in records))
+            self.assertEqual({record["repository"] for record in records}, {"r"})
+
+    def test_repository_claim_query_rejects_mutations_and_unbounded_pages(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            store = open_store(state, "file")
+            held = claims.acquire(
+                store, repository="r", session_id="owner", consumer_id="owner",
+                basis=claims.BASIS_EXPLICIT, reason="protected claim",
+            )
+            before = store.read_claims()
+            for args in (
+                ["--acquire", "r"],
+                ["--release", "r"],
+                ["--offset", "-1"],
+                ["--limit", "129"],
+            ):
+                stdout = io.StringIO()
+                stderr = io.StringIO()
+                with redirect_stdout(stdout), redirect_stderr(stderr):
+                    code = cli.main([
+                        "--persistence", "file", "--state-dir", str(state),
+                        "claims", "ses_reader", "--repository", "r", *args,
+                    ])
+                self.assertNotEqual(code, 0)
+                self.assertEqual(store.read_claims(), before)
+            self.assertEqual(held["status"], "held")
+
+    def test_repository_claim_query_rejects_a_record_larger_than_its_reply_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            store = open_store(state, "file")
+            claims.acquire(
+                store, repository="r", session_id="owner", consumer_id="owner",
+                basis=claims.BASIS_EXPLICIT, reason="oversized scope",
+                scope={"kind": "paths", "paths": ["src/" + ("x" * 60_000)]},
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = cli.main([
+                    "--persistence", "file", "--state-dir", str(state),
+                    "claims", "ses_reader", "--repository", "r",
+                ])
+            self.assertEqual(code, 3)
+            error = json.loads(stderr.getvalue())
+            self.assertEqual(error["diagnostics"]["code"], "claim-record-too-large")
+            self.assertLess(len(stderr.getvalue().encode("utf-8")), 1024)
+            self.assertEqual(stdout.getvalue(), "")
+
     def test_environment_claim_requests_require_effective_writable_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
