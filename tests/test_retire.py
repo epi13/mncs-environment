@@ -73,6 +73,22 @@ class RetireTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return target
 
+    def _protected_alias(self, target: Path) -> Path:
+        """Model a checkout whose Git admin pointers were written in bwrap."""
+        gitfile = (target / ".git").read_text(encoding="utf-8").strip()
+        self.assertTrue(gitfile.startswith("gitdir: "), gitfile)
+        admin = Path(gitfile.removeprefix("gitdir: ")).resolve()
+        sandbox_root = Path("/workspace") / self.repo.name
+        sandbox_target = sandbox_root / target.relative_to(self.repo)
+        sandbox_admin = sandbox_root / ".git" / "worktrees" / admin.name
+        (admin / "gitdir").write_text(
+            str(sandbox_target / ".git") + "\n", encoding="utf-8",
+        )
+        (target / ".git").write_text(
+            f"gitdir: {sandbox_admin}\n", encoding="utf-8",
+        )
+        return sandbox_root
+
     def test_checked_out_branch_refuses_even_when_merged(self):
         self._worktree("feat", "feature/x")
         _git(self.repo, "push", "-q", "origin", "feature/x:main")
@@ -227,24 +243,96 @@ class RetireTests(unittest.TestCase):
 
     def test_protected_git_registration_maps_to_host_checkout(self):
         target = self._worktree("mapped", "feature/mapped")
-        rows = retire_module.worktrees(self.repo)
-        for row in rows:
-            if Path(str(row["path"])) == target:
-                row["path"] = "/workspace/demo/.worktrees/mapped"
-        with mock.patch.object(retire_module, "worktrees", return_value=rows):
-            verdict = retire_module.worktree_assessment(
-                self.repo, target, sandbox_root=Path("/workspace/demo"),
-                execution_root=self.repo,
-            )
-            report = retire_module.inventory_repository(
-                self.repo, workspace_root=self.base,
-                execution_root=self.repo, sandbox_root=Path("/workspace/demo"),
-            )
+        sandbox_root = self._protected_alias(target)
+        verdict = retire_module.worktree_assessment(
+            self.repo, target, sandbox_root=sandbox_root,
+            execution_root=self.repo,
+        )
+        report = retire_module.inventory_repository(
+            self.repo, workspace_root=self.base,
+            execution_root=self.repo, sandbox_root=sandbox_root,
+        )
         self.assertTrue(verdict["retireable"], verdict)
         mapped = next(row for row in report["worktrees"] if row["path"] == str(target))
         self.assertEqual(mapped["registered_path"], "/workspace/demo/.worktrees/mapped")
         self.assertEqual(mapped["classification"], "merged-and-safely-retireable")
         self.assertEqual(mapped["checkout_identity_basis"], "git-administrative-identity")
+
+    def test_protected_git_worktree_retires_inside_exact_project_alias(self):
+        target = self._worktree("mapped-retire", "feature/mapped-retire")
+        sandbox_root = self._protected_alias(target)
+
+        result = retire_module.retire_worktree(
+            self.repo, target, sandbox_root=sandbox_root,
+            execution_root=self.repo,
+        )
+
+        self.assertTrue(result["retired"], result)
+        self.assertEqual(result["status"], "retired")
+        self.assertFalse(target.exists())
+        self.assertIn("feature/mapped-retire", retire_module.local_branches(self.repo))
+        self.assertEqual(
+            [row for row in retire_module.worktrees(self.repo)
+             if row.get("path") == "/workspace/demo/.worktrees/mapped-retire"],
+            [],
+        )
+
+    def test_protected_git_status_preserves_dirty_and_ignored_files(self):
+        _git(self.repo, "config", "core.excludesFile", "")
+        (self.repo / ".gitignore").write_text("ignored-output/\n", encoding="utf-8")
+        _git(self.repo, "add", ".gitignore")
+        _git(self.repo, "commit", "-qm", "ignore test output")
+        _git(self.repo, "push", "-q", "origin", "main")
+        _git(self.repo, "fetch", "-q", "origin")
+        target = self._worktree("mapped-dirty", "feature/mapped-dirty")
+        sandbox_root = self._protected_alias(target)
+        (target / "dirty.txt").write_text("uncommitted\n", encoding="utf-8")
+        dirty = retire_module.worktree_assessment(
+            self.repo, target, sandbox_root=sandbox_root,
+            execution_root=self.repo,
+        )
+        self.assertFalse(dirty["retireable"])
+        self.assertIn("uncommitted, untracked, or ignored", dirty["reason"])
+
+        (target / "dirty.txt").unlink()
+        ignored = target / "ignored-output" / "keep.txt"
+        ignored.parent.mkdir()
+        ignored.write_text("retained\n", encoding="utf-8")
+        protected = retire_module.worktree_assessment(
+            self.repo, target, sandbox_root=sandbox_root,
+            execution_root=self.repo,
+        )
+        self.assertFalse(protected["retireable"])
+        self.assertIn("uncommitted, untracked, or ignored", protected["reason"])
+        self.assertTrue(ignored.exists())
+
+    def test_protected_git_status_is_unknown_when_bubblewrap_is_unavailable(self):
+        target = self._worktree("mapped-unavailable", "feature/mapped-unavailable")
+        sandbox_root = self._protected_alias(target)
+        with mock.patch.object(retire_module.shutil, "which", return_value=None):
+            verdict = retire_module.worktree_assessment(
+                self.repo, target, sandbox_root=sandbox_root,
+                execution_root=self.repo,
+            )
+        self.assertFalse(verdict["retireable"])
+        self.assertEqual(verdict["status"], "unknown")
+        self.assertIn("bubblewrap is unavailable", verdict["reason"])
+
+    def test_restricted_git_namespace_cannot_access_home_store(self):
+        git_launcher = retire_module.shutil.which("env", path="/usr/bin:/bin")
+        self.assertIsNotNone(git_launcher)
+        with mock.patch.object(
+            retire_module.workspace_module, "git_binary", return_value=git_launcher,
+        ):
+            result = retire_module._execution_git(
+                self.repo,
+                Path("/workspace/demo"),
+                self.repo,
+                "python3", "-c",
+                "import os; assert not os.path.exists('/home'); "
+                "assert not os.path.exists('/home/epi13/.local/share/mncs-environment/store')",
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_unavailable_mapped_checkout_is_preserved_for_reconciliation(self):
         rows = retire_module.worktrees(self.repo)

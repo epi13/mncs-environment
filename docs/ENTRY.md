@@ -346,9 +346,14 @@ separate retirement invocation.
 When the authenticated Control bridge runs retirement from its owner namespace,
 it supplies the exact protected-project-to-host-project path mapping. Environment
 uses that mapping to match Git's registered path while retaining the original
-registration in inventory. The mapping does not prove the checkout is available
-to the owner process: if Git cannot verify its status through that namespace,
-retirement remains unknown and preserves the worktree metadata.
+registration in inventory. For linked worktrees whose `.git` pointers name the
+protected `/workspace` alias, Environment runs status and Git-native removal in
+a nested bubblewrap with that one project mounted writable, system tools and
+configuration read-only, and network, home, Store, and unrelated projects
+unavailable. Status includes ignored files so retirement preserves local
+outputs as well as tracked and untracked changes. If the restricted namespace
+cannot be established or Git cannot verify the checkout, retirement remains
+unknown and preserves the worktree metadata.
 
 Provider diagnostics, selected identity, observed identity, and recovery remain
 structured in service observations. Reconciliation preserves the provider JSON

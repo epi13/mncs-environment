@@ -36,6 +36,7 @@ verification.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -57,6 +58,129 @@ def _git(repo: Path, *args: str, timeout: int = 60) -> subprocess.CompletedProce
         [workspace_module.git_binary(), "-C", str(repo), *args],
         capture_output=True, text=True, timeout=timeout, check=False,
     )
+
+
+def _execution_git(
+    repo: Path,
+    sandbox_root: Path | None,
+    execution_root: Path | None,
+    *args: str,
+    timeout: int = 60,
+) -> subprocess.CompletedProcess[str]:
+    """Run Git in the authenticated project alias, with only that repo writable.
+
+    Protected checkouts can store absolute ``/workspace`` paths in linked
+    worktree metadata. The Environment owner process sees their backing files
+    under a host path instead, so running Git directly there cannot resolve the
+    checkout's ``.git`` pointer. Recreate the exact project alias in a nested,
+    networkless bubblewrap and mount only the authorized project writable.
+    """
+    invocation = [workspace_module.git_binary(), *args]
+    if sandbox_root is None or execution_root is None:
+        return _git(repo, *args, timeout=timeout)
+
+    try:
+        host_root = Path(execution_root).resolve(strict=True)
+        repository = Path(repo).resolve(strict=True)
+        sandbox = Path(os.path.abspath(str(sandbox_root)))
+        git_binary = Path(workspace_module.git_binary()).resolve(strict=True)
+    except OSError as error:
+        return subprocess.CompletedProcess(
+            invocation, 126, "", f"restricted Git root is unavailable: {error}",
+        )
+    if repository != host_root:
+        return subprocess.CompletedProcess(
+            invocation, 126, "",
+            "restricted Git execution requires the exact authorized project root",
+        )
+    if (sandbox.parent != Path("/workspace") or sandbox.name in {"", ".", ".."}
+            or not sandbox.is_absolute()):
+        return subprocess.CompletedProcess(
+            invocation, 126, "", "restricted Git sandbox root is not one project alias",
+        )
+    try:
+        git_binary.relative_to(Path("/usr"))
+    except ValueError:
+        return subprocess.CompletedProcess(
+            invocation, 126, "",
+            "restricted Git executable is outside the read-only system tool root",
+        )
+    bubblewrap = shutil.which("bwrap", path="/usr/bin:/bin")
+    if bubblewrap is None:
+        return subprocess.CompletedProcess(
+            invocation, 126, "", "bubblewrap is unavailable for restricted Git execution",
+        )
+    bubblewrap_path = Path(bubblewrap).resolve(strict=True)
+    try:
+        bubblewrap_path.relative_to(Path("/usr"))
+    except ValueError:
+        return subprocess.CompletedProcess(
+            invocation, 126, "",
+            "restricted Git launcher is outside the read-only system tool root",
+        )
+
+    command = [
+        str(bubblewrap_path),
+        "--die-with-parent",
+        "--new-session",
+        "--unshare-net",
+        "--unshare-pid",
+        "--cap-drop", "ALL",
+    ]
+    for root in ("/usr", "/etc", "/lib", "/lib64"):
+        if Path(root).exists():
+            command.extend(("--ro-bind", root, root))
+    command.extend((
+        "--proc", "/proc",
+        "--dev", "/dev",
+        "--tmpfs", "/tmp",
+        "--dir", "/workspace",
+        "--bind", str(host_root), str(sandbox),
+        "--chdir", str(sandbox),
+        "--setenv", "PATH", "/usr/bin:/bin",
+        "--setenv", "HOME", "/tmp",
+        "--setenv", "LANG", "C.UTF-8",
+        "--setenv", "GIT_CONFIG_NOSYSTEM", "1",
+        "--setenv", "GIT_CONFIG_GLOBAL", "/dev/null",
+        "--setenv", "GIT_OPTIONAL_LOCKS", "0",
+        "--setenv", "GIT_TERMINAL_PROMPT", "0",
+        str(git_binary),
+        *args,
+    ))
+    try:
+        return subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+            env={"PATH": "/usr/bin:/bin", "HOME": "/tmp", "LANG": "C.UTF-8"},
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return subprocess.CompletedProcess(
+            invocation, 126, "", f"restricted Git execution failed: {error}",
+        )
+
+
+def _map_host_checkout(
+    path: str | Path,
+    sandbox_root: Path | None,
+    execution_root: Path | None,
+) -> Path | None:
+    """Map one owner-visible project path back to its protected alias."""
+    if sandbox_root is None or execution_root is None:
+        return None
+    source = Path(os.path.abspath(str(execution_root)))
+    destination = Path(os.path.abspath(str(sandbox_root)))
+    candidate = Path(os.path.abspath(str(path)))
+    try:
+        relative = candidate.relative_to(source)
+    except ValueError:
+        return None
+    mapped = destination / relative
+    if not _within_root_without_symlinks(candidate, source):
+        return None
+    return mapped
 
 
 def _ensure_repo(repo: Path) -> None:
@@ -183,7 +307,14 @@ def worktree_clean(repo: Path, path: Path) -> bool:
     return _worktree_status(repo, path)["clean"] is True
 
 
-def _worktree_status(repo: Path, path: Path) -> dict[str, Any]:
+def _worktree_status(
+    repo: Path,
+    path: Path,
+    *,
+    registered_path: str | None = None,
+    sandbox_root: Path | None = None,
+    execution_root: Path | None = None,
+) -> dict[str, Any]:
     """Distinguish clean, dirty, and unobservable checkout states."""
     if not Path(path).is_dir():
         return {
@@ -191,11 +322,28 @@ def _worktree_status(repo: Path, path: Path) -> dict[str, Any]:
             "clean": None,
             "reason": "checkout path is unavailable in the Environment execution namespace",
         }
-    completed = _git(repo, "-C", str(path), "status", "--porcelain=v1",
-                     "--untracked-files=all")
+    if registered_path is not None and sandbox_root is not None and execution_root is not None:
+        mapped = _map_execution_checkout(
+            registered_path, sandbox_root, execution_root,
+        )
+        if mapped is None or not _same_path(mapped, path):
+            return {
+                "available": True,
+                "clean": None,
+                "reason": "registered checkout does not map to the authorized project path",
+            }
+        completed = _execution_git(
+            repo, sandbox_root, execution_root,
+            "-C", str(sandbox_root), "-C", str(registered_path),
+            "status", "--porcelain=v1", "--untracked-files=all",
+            "--ignored=matching",
+        )
+    else:
+        completed = _git(repo, "-C", str(path), "status", "--porcelain=v1",
+                         "--untracked-files=all", "--ignored=matching")
     if completed.returncode != 0:
         diagnostic = completed.stderr.strip() or completed.stdout.strip()
-        reason = "Git could not verify checkout status in the Environment execution namespace"
+        reason = "Git could not verify checkout status in the restricted project namespace"
         if diagnostic:
             reason += f": {diagnostic[:400]}"
         return {"available": True, "clean": None, "reason": reason}
@@ -203,7 +351,7 @@ def _worktree_status(repo: Path, path: Path) -> dict[str, Any]:
         return {
             "available": True,
             "clean": False,
-            "reason": "worktree has uncommitted or untracked files",
+            "reason": "worktree has uncommitted, untracked, or ignored files",
         }
     return {"available": True, "clean": True, "reason": "checkout is clean"}
 
@@ -318,7 +466,15 @@ def worktree_assessment(repo: Path, path: str | Path, *,
     if row is None:
         return {"retireable": False, "status": "unknown",
                 "reason": "not a registered worktree"}
-    status = _worktree_status(repo, Path(target))
+    status = _worktree_status(
+        repo, Path(target),
+        registered_path=(
+            str(row["registered_path"])
+            if isinstance(row.get("registered_path"), str) else None
+        ),
+        sandbox_root=sandbox_root,
+        execution_root=execution_root,
+    )
     if not status["available"]:
         reason = (
             "registered checkout is unavailable in the Environment service "
@@ -360,7 +516,10 @@ def _assess_registered_worktree(
         return {"retireable": False,
                 "reason": "directory is gone; use prune, not retire"}
     if not clean:
-        return {"retireable": False, "reason": "worktree has uncommitted work"}
+        return {
+            "retireable": False,
+            "reason": "worktree has uncommitted, untracked, or ignored files",
+        }
     if not canonical_resolves(repo, canonical):
         return {"retireable": False,
                 "reason": f"canonical ref {canonical} does not resolve; refusing to judge"}
@@ -441,7 +600,21 @@ def retire_worktree(repo: Path, path: str | Path, *,
         return {"target": str(path), "kind": "worktree", "retired": False,
                 "status": "would-retire",
                 "reason": "dry run: would remove", "dry_run": True}
-    completed = _git(Path(repo), "worktree", "remove", str(path))
+    mapped_target = _map_host_checkout(path, sandbox_root, execution_root)
+    if sandbox_root is not None and execution_root is not None:
+        if mapped_target is None:
+            return {
+                "target": str(path), "kind": "worktree", "retired": False,
+                "status": "unknown",
+                "reason": "checkout does not map to the authorized project namespace",
+                "dry_run": False,
+            }
+        completed = _execution_git(
+            Path(repo), sandbox_root, execution_root,
+            "-C", str(sandbox_root), "worktree", "remove", str(mapped_target),
+        )
+    else:
+        completed = _git(Path(repo), "worktree", "remove", str(path))
     if completed.returncode != 0:
         return {"target": str(path), "kind": "worktree", "retired": False,
                 "status": "mutation-failed",
@@ -704,7 +877,18 @@ def inventory_repository(
             in_scope = _within_root_without_symlinks(raw_path, execution_root_resolved)
         ownership_protected = bool(own_claims or other_claims)
         exists = (in_scope and checkout_path.is_dir()) if not ownership_protected else None
-        checkout_status = _worktree_status(repo, checkout_path) if exists else None
+        checkout_status = (
+            _worktree_status(
+                repo, checkout_path,
+                registered_path=(
+                    str(row["registered_path"])
+                    if isinstance(row.get("registered_path"), str) else None
+                ),
+                sandbox_root=sandbox_root,
+                execution_root=execution_root,
+            )
+            if exists else None
+        )
         clean = checkout_status["clean"] if checkout_status is not None else None
         if not in_scope:
             access_disposition = "outside-current-execution-scope"
@@ -752,7 +936,7 @@ def inventory_repository(
             reason = "Git worktree metadata has no verifiable head or attached branch ref"
         elif clean is False:
             classification = "uncommitted-work-retained"
-            reason = "checkout has uncommitted or untracked files"
+            reason = "checkout has uncommitted, untracked, or ignored files"
         elif row.get("detached") and evidence_relevant:
             classification = "detached-but-evidence-relevant"
             reason = "detached HEAD's tip commit changes tracked evidence paths"
