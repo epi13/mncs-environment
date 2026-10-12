@@ -27,12 +27,12 @@ def _reference(index: int, *, path: str | None = None) -> dict[str, str]:
 
 def test_campaign_evidence_allows_growth_past_previous_transport_limit() -> None:
     references = [
-        _reference(index, path=f"e/{index:03d}.json")
+        _reference(index, path=f"evidence/{'x' * 120}_{index:03d}.json")
         for index in range(128)
     ]
     encoded = json.dumps(references, sort_keys=True, separators=(",", ":")).encode()
 
-    assert len(encoded) > 8192
+    assert len(encoded) > 32 * 1024
     assert len(encoded) <= CAMPAIGN_STATE_INPUT_MAX_BYTES
     assert len(normalize_campaign_evidence(references)) == 128
     with pytest.raises(ValueError, match="at most 128 references"):
@@ -41,8 +41,8 @@ def test_campaign_evidence_allows_growth_past_previous_transport_limit() -> None
 
 def test_campaign_evidence_remains_bounded_by_normalized_utf8_size() -> None:
     references = [
-        _reference(index, path=f"evidence/{'x' * 470}_{index:02d}.json")
-        for index in range(64)
+        _reference(index, path=f"evidence/{'x' * 470}_{index:03d}.json")
+        for index in range(128)
     ]
 
     with pytest.raises(ValueError, match="bounded publication size"):
