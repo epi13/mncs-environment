@@ -1,0 +1,188 @@
+{
+  "candidates": [
+    {
+      "active_claim_observation": {
+        "claim_id": "claim:mncs-compiler",
+        "effective_expires_at": "2026-10-16T18:13:43+00:00",
+        "owner_consumer_id": "luna-compiler-self-consumption-admission-20261009",
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "status": "held",
+        "version": 63
+      },
+      "candidate_branch": "campaign/keyword-local-index-delivery-20261010",
+      "candidate_commit_paths": [
+        "evidence/SELF-HOST-MATRIX.json"
+      ],
+      "candidate_head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "candidate_subject": "Record lexer keyword optimization delivery",
+      "disposition": "patch-equivalent-to-origin-main; branch retained because compiler repository is exclusively claimed",
+      "origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "patch_relations_against_origin_main": [
+        {
+          "commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+          "relation": "-",
+          "subject": "Record lexer keyword optimization delivery"
+        }
+      ],
+      "physical_worktree": {
+        "branch": "campaign/keyword-local-index-delivery-20261010",
+        "head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+        "path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+        "path_exists": true,
+        "status_counts": {
+          "conflict": 0,
+          "renamed_or_typechanged": 0,
+          "tracked_modified": 0,
+          "untracked": 0
+        }
+      },
+      "relationship": {
+        "candidate_commit_is_ancestor_of_origin_main": false,
+        "candidate_only_commits": 1,
+        "local_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+        "origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+        "origin_main_only_commits": 14,
+        "origin_main_only_commits_from_local_main": 0
+      },
+      "repository": "mncs-compiler"
+    },
+    {
+      "active_claim_observation": {
+        "interpretation": "ownership not established by a claim; candidate remains retained due untracked evidence and repository is outside writable scope",
+        "status": "no_language_claim_in_authenticated_campaign_foreign_claim_projection"
+      },
+      "candidate_branch": "campaign/process-environment-value-bound-20261010",
+      "candidate_commit_paths": [
+        "crates/mncs-cli/src/main.rs",
+        "crates/mncs-cli/tests/fixtures/quiet-compile.mncs",
+        "crates/mncs-cli/tests/profile_registry.rs",
+        "crates/mncs-cli/tests/quiet_compile.rs",
+        "crates/mncs-compiler/src/frontend.rs",
+        "crates/mncs-compiler/tests/source_profile_019_sequence_bound.rs",
+        "crates/mncs-model/src/body.rs",
+        "crates/mncs-model/src/capability_gap.rs",
+        "crates/mncs-syntax/src/profile.rs",
+        "crates/mncs-syntax/src/source.rs",
+        "docs/language-capabilities.json",
+        "docs/language-capability-deltas.json",
+        "docs/source-profile-0.18.md",
+        "docs/source-profile-0.19.md",
+        "examples/capability-gaps/process-environment-value-1447.json",
+        "library/std/application.mncs",
+        "library/std/process.mncs",
+        "library/stdlib-bundle.json",
+        "rfcs/0049-machine-native-source-profile-0-19-bounded-sequence-capacity.md",
+        "rfcs/README.md",
+        "scripts/generate_language_capabilities.py",
+        "scripts/test_generate_language_capabilities.py",
+        "spec/README.md",
+        "spec/source-profile-registry.json"
+      ],
+      "candidate_head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "candidate_subject": "Add bounded process environment values and quiet compile output",
+      "disposition": "patch-equivalent-to-origin-main; retained worktree has untracked evidence; writable scope does not include Language",
+      "origin_main": "12b29d6482599465698b78c87a21c63d3adeceb6",
+      "patch_relations_against_origin_main": [
+        {
+          "commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+          "relation": "-",
+          "subject": "Add bounded process environment values and quiet compile output"
+        }
+      ],
+      "physical_worktree": {
+        "branch": "campaign/process-environment-value-bound-20261010",
+        "head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+        "path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+        "path_exists": true,
+        "status_counts": {
+          "conflict": 0,
+          "renamed_or_typechanged": 0,
+          "tracked_modified": 0,
+          "untracked": 1
+        }
+      },
+      "relationship": {
+        "candidate_commit_is_ancestor_of_origin_main": false,
+        "candidate_only_commits": 1,
+        "local_main": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+        "origin_main": "12b29d6482599465698b78c87a21c63d3adeceb6",
+        "origin_main_only_commits": 3,
+        "origin_main_only_commits_from_local_main": 1
+      },
+      "repository": "mncs-language"
+    },
+    {
+      "active_claim_observation": {
+        "claim_id": "claim:mncs-forge",
+        "effective_expires_at": "2026-10-16T02:18:31+00:00",
+        "owner_consumer_id": "luna-compiler-self-consumption",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "status": "held",
+        "version": 28
+      },
+      "candidate_branch": "campaign/forge-quiet-compile-output-20261010",
+      "candidate_commit_paths": [
+        "src/mncs_forge/mncs_native.py",
+        "tests/test_mncs_native.py"
+      ],
+      "candidate_head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "candidate_subject": "Skip discarded Forge compile outputs",
+      "disposition": "one unique implementation/test commit ahead; retained under existing exclusive Forge claim",
+      "origin_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "patch_relations_against_origin_main": [
+        {
+          "commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+          "relation": "+",
+          "subject": "Skip discarded Forge compile outputs"
+        }
+      ],
+      "physical_worktree": {
+        "branch": "campaign/forge-quiet-compile-output-20261010",
+        "head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+        "path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+        "path_exists": true,
+        "status_counts": {
+          "conflict": 0,
+          "renamed_or_typechanged": 0,
+          "tracked_modified": 0,
+          "untracked": 0
+        }
+      },
+      "relationship": {
+        "candidate_commit_is_ancestor_of_origin_main": false,
+        "candidate_only_commits": 1,
+        "local_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+        "origin_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+        "origin_main_only_commits": 0,
+        "origin_main_only_commits_from_local_main": 0
+      },
+      "repository": "mncs-forge"
+    }
+  ],
+  "compiler_inventory_evidence": {
+    "disposition": "All registrations are protected by another consumer in the restricted project execution scope; 63 registrations are outside this namespace and 3 were not probed due protection. No retirement was attempted.",
+    "path": "evidence/compiler-worktree-retirement-dry-run-20261012.json",
+    "sha256": "7256f5fd592eed46b5c83b2b977009ac80a06d509147ebf985224845f9ee1681",
+    "worktree_count": 66
+  },
+  "identity": "ev_campaign_candidate_worktree_refresh_20261012",
+  "method": {
+    "candidate_tests_run": 0,
+    "commit_relationship": "git rev-list --left-right --count against origin/main; git merge-base --is-ancestor",
+    "mutations": 0,
+    "network_ref_refresh": "git fetch origin succeeded for all three repositories before inspection",
+    "patch_equivalence": "git cherry -v origin/main candidate",
+    "worktree_state": "git worktree list --porcelain; git status --porcelain=v2 --untracked-files=all"
+  },
+  "observed_at": "2026-10-12T02:08:33+00:00",
+  "observed_by": {
+    "campaign_identity": "cmp_mncs_continuity_20261010",
+    "consumer_id": "codex-process-5",
+    "environment_session_id": "ses_7226fbcfe65820f7"
+  },
+  "schema_version": "mncs.environment.campaign-candidate-disposition-refresh/1",
+  "writable_repositories": [
+    "mncs-control-mcp",
+    "mncs-environment"
+  ]
+}
