@@ -1,0 +1,137 @@
+{
+  "schema_version": "mncs.environment.compact-continuation-acceptance/1",
+  "identity": "ev_compact_continuation_context_20261012",
+  "recorded_at": "2026-10-12T04:14:42Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "source_heads": {
+    "mncs-environment": "45fd1f3569adb78514236586782c3d3a5afe26a4",
+    "mncs-control-mcp": "9b16ef08bcdf5ebb4fb877c5c49a964ce45b574c"
+  },
+  "source_files": [
+    {
+      "repository": "mncs-environment",
+      "path": "mncs_env/sessions.py",
+      "sha256": "bf43444407061969376bbd60537fc1d6c17826f13057ec3da6585246ed742e08"
+    },
+    {
+      "repository": "mncs-environment",
+      "path": "mncs_env/entry.py",
+      "sha256": "18994dfca86b2e2885a9bd49e2859de6a495ea8c70069dc9d5565d3b0bc7cf8e"
+    },
+    {
+      "repository": "mncs-environment",
+      "path": "tests/test_environment.py",
+      "sha256": "0339db4da9c7bc8ca7964f0c702105b1ba8130116ba660431af1c9190d0c0074"
+    },
+    {
+      "repository": "mncs-control-mcp",
+      "path": "src/mncs_control_mcp/environment_sessions.py",
+      "sha256": "b5d0bac97fef3e0a56d54757928721b15b4a852c5b8837ecc9265b9ca67d9b08"
+    },
+    {
+      "repository": "mncs-control-mcp",
+      "path": "tests/test_environment_sessions.py",
+      "sha256": "5e4d9750bf95a92f8f9dcf0595ccd99d1f349c9e13ddec2325fcf9e72bdc401a"
+    }
+  ],
+  "behavior": {
+    "entry_capsule_evidence_limit": 32,
+    "full_campaign_state_read_remains_available": true,
+    "evidence_count_remains_total": true,
+    "truncation_is_explicit": true,
+    "verified_charter_search_uses_owner_read_full_ledger": true,
+    "charter_and_old_history_are_not_emitted_as_evidence_rows": true
+  },
+  "validation": {
+    "environment_test": {
+      "command": "PYTHONPATH=. python -m pytest -q tests/test_environment.py -k campaign_evidence_and_delivery_are_checkpointed_and_reconstructed",
+      "result": "1 passed, 169 deselected"
+    },
+    "control_test": {
+      "command": "PYTHONPATH=src python -m pytest -q tests/test_environment_sessions.py",
+      "result": "21 passed"
+    },
+    "static_checks": [
+      "Environment python -m compileall -q mncs_env",
+      "Control python -m compileall -q src",
+      "git diff --check in both repositories"
+    ]
+  },
+  "protected_entry": {
+    "tool": "MNCS Control terminal_start",
+    "terminal_job_id": "term-bf84c43c081e441d2bfccd84",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "exit_code": 0,
+    "session_id": "ses_7226fbcfe65820f7",
+    "entry_reused_existing_session": true,
+    "lifecycle": "active",
+    "campaign_evidence_count": 116,
+    "campaign_evidence_emitted": 32,
+    "campaign_evidence_truncated": true,
+    "checkpoint_id": "chk_36e99b966a27c554",
+    "checkpoint_sequence": 167,
+    "remaining_count": 6,
+    "control_continuation_status": "ready",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "control_evidence_count": 116,
+    "control_evidence_emitted": 32,
+    "control_evidence_truncated": true,
+    "verified_charter_status": "verified",
+    "other_campaign_contexts_unselected": 1
+  },
+  "protected_store_boundary": {
+    "path": "/home/epi13/.local/share/mncs-environment/store",
+    "direct_probe_job_id": "term-051ed5e58dfbcb22c570c670",
+    "direct_probe_exit_code": 0,
+    "exists": false,
+    "readable": false,
+    "writable": false,
+    "persistence_transport": "authenticated Environment RPC through Control"
+  },
+  "full_ledger_capability_readback": {
+    "request_id": "req_compact_full_ledger_readback_20261012_0820",
+    "terminal_job_id": "term-03ff56297ff06d18c9300f59",
+    "capability": "mncs-environment:campaign-state-inspection",
+    "status": "ok",
+    "provider_returncode": 0,
+    "truncated": false,
+    "checkpoint_id": "chk_36e99b966a27c554",
+    "evidence_count": 116,
+    "delivery_status": "partial",
+    "environment_head_in_pre-refresh_state": "7b589567208d799dd7f6c706d42695f69b71b668"
+  },
+  "owner_service_policy": {
+    "unit": "user/mncs-control-tunnel.service",
+    "active_state": "active",
+    "sub_state": "running",
+    "ProtectSystem": "strict",
+    "ProtectHome": "read-only",
+    "NoNewPrivileges": true,
+    "canonical_store_in_ReadWritePaths": true
+  },
+  "ownership_and_readiness": {
+    "campaign_claims_mutated": [],
+    "compiler_claim": {
+      "claim_id": "claim:mncs-compiler",
+      "owner_session_id": "ses_d2537acde8b8a875",
+      "version": 63,
+      "disposition": "retained under existing exclusive owner"
+    },
+    "forge_claim": {
+      "claim_id": "claim:mncs-forge",
+      "owner_session_id": "ses_95c3aa35b8544042",
+      "version": 28,
+      "disposition": "retained under existing exclusive owner"
+    },
+    "compiler_worktree_count": 66,
+    "worktree_retirement_performed": false,
+    "campaign_delivery": "partial",
+    "compiler_stage_1": "unproven",
+    "compiler_stage_2": "unproven",
+    "resource_feedback_vertical_slice": "pending"
+  }
+}
