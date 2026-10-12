@@ -1,0 +1,101 @@
+{
+  "schema_version": "mncs.environment.candidate-mainline-revalidation/1",
+  "identity": "ev_candidate_mainline_static_revalidation_20261012",
+  "recorded_at": "2026-10-12T20:21:44Z",
+  "method": {
+    "authority": "read-only Git metadata and live remote refs",
+    "sandbox_backend": "project-scoped bwrap",
+    "tests_run": false,
+    "candidate_worktrees_checked_out": false,
+    "remote_refs_fetched_or_updated": false
+  },
+  "candidates": [
+    {
+      "repository": "mncs-compiler",
+      "local_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "live_remote_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "candidate_branch": "campaign/keyword-local-index-delivery-20261010",
+      "candidate_commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "candidate_remote_branch_present": false,
+      "origin_main_left_right_count": [14, 1],
+      "candidate_commit_is_ancestor_of_main": false,
+      "git_cherry_patch_equivalent_on_main": true,
+      "registered_worktree": {
+        "path_name": "mncs-compiler-keyword-local-index-20261010",
+        "physical_path_visible_in_current_namespace": false,
+        "candidate_dirty_state": "unknown"
+      },
+      "main_checkout_untracked_paths": [
+        ".worktrees/",
+        "evidence/campaign-20261006-imported-nominal-ssa.json",
+        "evidence/campaign-20261006-pressure-suite-results.json",
+        "evidence/campaign-20261006-project-results.json"
+      ],
+      "disposition": "implementation is patch-equivalent to pushed main; retain candidate and protected checkout until owner handoff and dirty-state verification"
+    },
+    {
+      "repository": "mncs-forge",
+      "local_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "origin_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "live_remote_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "candidate_branch": "campaign/forge-quiet-compile-output-20261010",
+      "candidate_commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "candidate_remote_branch_present": false,
+      "origin_main_left_right_count": [0, 1],
+      "candidate_commit_is_ancestor_of_main": false,
+      "git_cherry_patch_equivalent_on_main": false,
+      "registered_worktree": {
+        "path_name": "mncs-forge-quiet-compile-output-20261010",
+        "physical_path_visible_in_current_namespace": false,
+        "candidate_dirty_state": "unknown"
+      },
+      "disposition": "useful unmerged candidate, but protected by its active exclusive owner; no test, merge, push, or retirement"
+    },
+    {
+      "repository": "mncs-language",
+      "local_main": "12b29d6482599465698b78c87a21c63d3adeceb6",
+      "origin_main": "12b29d6482599465698b78c87a21c63d3adeceb6",
+      "live_remote_main": "12b29d6482599465698b78c87a21c63d3adeceb6",
+      "candidate_branch": "campaign/process-environment-value-bound-20261010",
+      "candidate_commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "candidate_remote_branch_present": false,
+      "origin_main_left_right_count": [3, 1],
+      "candidate_commit_is_ancestor_of_main": false,
+      "git_cherry_patch_equivalent_on_main": true,
+      "registered_worktree": {
+        "path_name": "mncs-language-process-environment-value-bound-20261010",
+        "physical_path_visible_in_current_namespace": false,
+        "candidate_dirty_state": "unknown"
+      },
+      "disposition": "implementation is patch-equivalent to pushed main; preserve candidate checkout until its physical state is verified"
+    }
+  ],
+  "claim_authority": {
+    "compiler": {
+      "claim_id": "claim:mncs-compiler",
+      "owner_session": "ses_d2537acde8b8a875",
+      "last_activity": "2026-10-09T20:23:20Z",
+      "owner_lifecycle": "active",
+      "verdict": "not-recoverable",
+      "effective_expires_at": "2026-10-16T18:13:43Z",
+      "handoff_received": false
+    },
+    "forge": {
+      "claim_id": "claim:mncs-forge",
+      "owner_session": "ses_95c3aa35b8544042",
+      "last_activity": "2026-10-09T03:05:19Z",
+      "owner_lifecycle": "active",
+      "verdict": "not-recoverable",
+      "effective_expires_at": "2026-10-16T02:18:31Z",
+      "handoff_received": false
+    }
+  },
+  "actions": {
+    "compiler_or_forge_files_modified": false,
+    "candidate_tests_run": false,
+    "candidate_merge_or_push": false,
+    "candidate_worktree_retirement": false,
+    "foreign_or_uncertain_work_preserved": true
+  }
+}
