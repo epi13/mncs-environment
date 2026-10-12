@@ -1,0 +1,131 @@
+{
+  "schema_version": "mncs.environment.protected-campaign-ownership-snapshot/1",
+  "identity": "ev_protected_campaign_ownership_snapshot_20261012",
+  "observed_at": "2026-10-12T10:07:10Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_revision": "391c563938f23070f3449a4b4e72e82870f7f7f7",
+    "control_repository": "mncs-control-mcp",
+    "control_revision": "c9dd68ebd400f8f6bd3c2e8feda2daf568541c50",
+    "campaign_checkpoint_id": "chk_5cfca11ecb242cae",
+    "campaign_checkpoint_sequence": 186
+  },
+  "execution": {
+    "transport": "authenticated Control Environment RPC",
+    "tool": "mncs_control_terminal_start",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "terminal_job_id": "term-e79350838e880e3f1828b453",
+    "exit_code": 0,
+    "operations": [
+      "mncs-env context ses_7226fbcfe65820f7",
+      "mncs-env claims ses_7226fbcfe65820f7 --claim-id claim:mncs-environment",
+      "mncs-env context ses_b4b2d283542220b0",
+      "mncs-env claims ses_b4b2d283542220b0 --claim-id claim:mncs-environment"
+    ],
+    "mutations": 0
+  },
+  "selected_continuation": {
+    "session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "local-agent",
+    "lifecycle": "active",
+    "environment_id": "renv_ef518b3ade5d6337",
+    "readiness": "degraded",
+    "latest_checkpoint": "chk_5cfca11ecb242cae",
+    "campaign_session_ids": [
+      "ses_7226fbcfe65820f7"
+    ],
+    "owned_campaign_claim_ids": [
+      "claim:mncs-automation",
+      "claim:mncs-control-mcp",
+      "claim:mncs-environment",
+      "claim:mncs-system-monitor"
+    ],
+    "environment_claim": {
+      "claim_identity": "clm_545ce73595e24c40",
+      "claim_id": "claim:mncs-environment",
+      "version": 33,
+      "status": "held",
+      "scope": {
+        "kind": "repository",
+        "repository": "mncs-environment",
+        "exclusive": true
+      },
+      "expires_at": "2026-10-12T19:38:47+00:00",
+      "transferred_from_session": "ses_f0e6e64390bb5843",
+      "transfer_request_id": "req_claim_transfer_restore_owner_20261011"
+    },
+    "foreign_claims": [
+      {
+        "claim_id": "claim:mncs-compiler",
+        "version": 63,
+        "status": "held",
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "owner_consumer_id": "luna-compiler-self-consumption-admission-20261009",
+        "scope": {
+          "kind": "repository",
+          "repository": "mncs-compiler",
+          "exclusive": true
+        },
+        "effective_expires_at": "2026-10-16T18:13:43+00:00"
+      },
+      {
+        "claim_id": "claim:mncs-forge",
+        "version": 28,
+        "status": "held",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "owner_consumer_id": "luna-compiler-self-consumption",
+        "scope": {
+          "kind": "repository",
+          "repository": "mncs-forge",
+          "exclusive": true
+        },
+        "effective_expires_at": "2026-10-16T02:18:31+00:00"
+      },
+      {
+        "claim_id": "claim:mncs-reference-studies",
+        "version": 7,
+        "status": "held",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "owner_consumer_id": "luna-compiler-self-consumption",
+        "scope": {
+          "kind": "repository",
+          "repository": "mncs-reference-studies",
+          "exclusive": true
+        },
+        "effective_expires_at": "2026-10-16T02:18:43+00:00"
+      }
+    ],
+    "claim_liveness": "not independently established by this read; held status and expiry are preserved as Store claim facts"
+  },
+  "other_campaign_context": {
+    "session_id": "ses_b4b2d283542220b0",
+    "consumer_id": "local-agent",
+    "lifecycle": "active",
+    "environment_id": "renv_f5553ab9385f6b78",
+    "readiness": "blocked",
+    "latest_checkpoint": null,
+    "owned_campaign_claim_ids": [],
+    "action": "left unchanged; campaign task selection continues to bind the exact authorized project session without adopting this separate context"
+  },
+  "preservation": {
+    "compiler_or_forge_checks_or_mutations": false,
+    "foreign_work_adopted": false,
+    "foreign_dirty_projection": {
+      "repositories": [
+        "mncs-compiler",
+        "mncs-reference-studies"
+      ],
+      "interpretation": "these dirty flags come from the other session's retained workspace projection, not a new current Git inventory; both remain protected"
+    },
+    "required_continuation": "Obtain explicit Environment handoffs for the exclusive Compiler and Forge claims before testing, merging, or modifying their repositories; the Forge owner also holds mncs-reference-studies."
+  },
+  "result": "PASS: protected read-only Environment context and claim queries distinguish the selected campaign session from a second active but blocked context; no claims changed and no process liveness was inferred.",
+  "limitations": [
+    "The second Environment session remains lifecycle-active in Store but its process liveness was not established.",
+    "Held foreign claim records identify protected ownership and expiration; they are not authorization to transfer or recover those scopes."
+  ]
+}
