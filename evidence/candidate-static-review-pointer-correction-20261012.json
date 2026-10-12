@@ -1,0 +1,28 @@
+{
+  "schema_version": "mncs.environment.campaign-evidence-pointer-correction/1",
+  "identity": "ev_candidate_static_review_pointer_correction_20261012",
+  "observed_at": "2026-10-12T11:11:33Z",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "correction": {
+    "evidence_identity": "ev_candidate_static_review_20261012",
+    "path": "evidence/candidate-static-review-20261012.json",
+    "sha256": "97c3b905653daf245befe1176f55ac8185381420936f33fed135e1107566eb22",
+    "incorrect_commit_pointer": "72da8f5a3a329f255420a5f5a6b73f8e9e32c8c8",
+    "verified_commit": "72da8f52877136f44f8dbdc7a0331704a09e8467",
+    "verification": "git rev-parse HEAD and origin/main both returned the verified commit; the evidence file SHA-256 still matches"
+  },
+  "affected_campaign_records": [
+    {
+      "checkpoint": "chk_9979d6b45a2e3e99",
+      "sequence": 191,
+      "field": "campaign_state.evidence_delta[0].commit"
+    },
+    {
+      "checkpoint": "chk_cdd17520a1d6e674",
+      "sequence": 192,
+      "field": "campaign_state.delivery.repositories[mncs-environment].head"
+    }
+  ],
+  "disposition": "The earlier checkpoints remain immutable and visible. This correction supersedes their incorrect commit pointer; the report content and Git push are intact."
+}
