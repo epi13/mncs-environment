@@ -1,0 +1,73 @@
+{
+  "schema_version": "mncs.environment.canonical-store-denial-cas-acceptance/1",
+  "identity": "ev_environment_canonical_store_denial_cas_20261012",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "recorded_at": "2026-10-12T23:10:14Z",
+  "owner": "mncs-environment",
+  "source_identity": {
+    "repository": "mncs-environment",
+    "revision": "76adc91ac132d070ac7d2f56c61a6b5bbc536856"
+  },
+  "execution": {
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "transport": "mncs-control-environment-rpc",
+    "canonical_store_path_mounted_in_agent": false,
+    "store_integrity_baseline_generation": 47257,
+    "store_integrity_baseline_objects_verified": 47259
+  },
+  "authorization_denial": {
+    "attempted_operation": "acquire a scoped workspace claim",
+    "repository": "mncs-compiler",
+    "scope": {
+      "kind": "paths",
+      "paths": [
+        "evidence/.mncs-unauthorized-claim-probe-20261012"
+      ]
+    },
+    "effective_writable_repositories": [
+      "mncs-automation",
+      "mncs-control-mcp",
+      "mncs-environment",
+      "mncs-system-monitor"
+    ],
+    "result": "rejected",
+    "exit_code": 3,
+    "cause_code": "authority-denied",
+    "publication_completed": false,
+    "message": "claim denied: mncs-compiler is outside this Environment session's writable authority",
+    "post_attempt_claim_readback": {
+      "identity": "clm_5871ad9917e5210d",
+      "claim_id": "claim:mncs-compiler",
+      "version": 63,
+      "session_id": "ses_d2537acde8b8a875",
+      "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+      "status": "held",
+      "live": true,
+      "scope_kind": "repository",
+      "exclusive": true
+    }
+  },
+  "stale_campaign_cas": {
+    "attempted_operation": "checkpoint campaign delivery update",
+    "supplied_base_checkpoint": "chk_43c829392974543a",
+    "current_checkpoint_before_attempt": "chk_7cd1100563e12e2a",
+    "result": "rejected",
+    "exit_code": 3,
+    "cause_code": "publication-conflict",
+    "conflict_kind": "campaign-state-base-checkpoint",
+    "publication_completed": false,
+    "post_attempt_readback": {
+      "checkpoint_id": "chk_7cd1100563e12e2a",
+      "evidence_count": 165,
+      "latest_evidence_identity": "ev_environment_canonical_store_postwrite_integrity_20261012"
+    }
+  },
+  "readiness": {
+    "unauthorized_claim_publication_rejection": "pass",
+    "stale_campaign_state_cas_rejection": "pass",
+    "canonical_service_or_caller_interruption_recovery": "not_proven_by_this_probe",
+    "reason": "Both negative requests were rejected through the authorized Environment transport with publication_completed=false; the foreign exclusive Compiler claim and current campaign checkpoint read back unchanged."
+  }
+}
