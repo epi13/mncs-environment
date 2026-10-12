@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.canonical-campaign-state-checkpoint-readback/1",
+  "identity": "ev_canonical_campaign_state_checkpoint_readback_20261012",
+  "recorded_at": "2026-10-12T04:28:05Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "source_heads": {
+    "mncs-environment": "c3dfa0f5f22238812821bf3386f1da26af90a2af",
+    "mncs-control-mcp": "02c39765504794e250fc65e957f199e07be681d4"
+  },
+  "canonical_checkpoint": {
+    "identity": "chk_85a8ca9c9af94ae0",
+    "sequence": 168,
+    "request_id": "req_campaign_checkpoint_after_capacity_20261012_0930",
+    "evidence_count": 118,
+    "delivery_status": "partial",
+    "prior_116_references_preserved": true,
+    "environment_head": "c3dfa0f5f22238812821bf3386f1da26af90a2af",
+    "control_head": "02c39765504794e250fc65e957f199e07be681d4"
+  },
+  "full_ledger_readback": {
+    "capability": "mncs-environment:campaign-state-inspection",
+    "tool": "MNCS Control terminal_start",
+    "terminal_job_id": "term-2d51cbb2ed5a6783dd8fac07",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "exit_code": 0,
+    "status": "ok",
+    "returncode": 0,
+    "truncated": false,
+    "checkpoint_id": "chk_85a8ca9c9af94ae0",
+    "evidence_count": 118,
+    "evidence_tail": [
+      "ev_compact_continuation_context_20261012",
+      "ev_campaign_state_input_capacity_20261012"
+    ],
+    "delivery_status": "partial",
+    "environment_head": "c3dfa0f5f22238812821bf3386f1da26af90a2af",
+    "control_head": "02c39765504794e250fc65e957f199e07be681d4"
+  },
+  "fresh_process_entry": {
+    "tool": "MNCS Control terminal_start",
+    "terminal_job_id": "term-aff9ce450b4dec81a5e8b431",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "exit_code": 0,
+    "session_id": "ses_7226fbcfe65820f7",
+    "entry_reused_existing_session": true,
+    "lifecycle": "active",
+    "campaign_state_checkpoint_id": "chk_85a8ca9c9af94ae0",
+    "checkpoint_id": "chk_85a8ca9c9af94ae0",
+    "checkpoint_sequence": 168,
+    "remaining_count": 6,
+    "campaign_evidence_count": 118,
+    "campaign_evidence_emitted": 32,
+    "campaign_evidence_truncated": true,
+    "control_status": "ready",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "charter_status": "verified",
+    "canonical_store_visible": false
+  },
+  "store_boundary": {
+    "canonical_path": "/home/epi13/.local/share/mncs-environment/store",
+    "visible_in_project_bwrap": false,
+    "direct_agent_write": false,
+    "publication_transport": "authenticated Environment RPC through Control to the configured canonical Store provider"
+  },
+  "ownership_and_readiness": {
+    "compiler_claim_mutated": false,
+    "forge_claim_mutated": false,
+    "other_campaign_session_selected": false,
+    "campaign_delivery": "partial",
+    "compiler_stage_1": "unproven",
+    "compiler_stage_2": "unproven",
+    "resource_feedback_vertical_slice": "pending"
+  }
+}
