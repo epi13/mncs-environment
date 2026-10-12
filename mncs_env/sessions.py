@@ -79,6 +79,7 @@ CONTINUATION_MAX_CLAIM_PATHS = 4
 CAMPAIGN_EVIDENCE_MAX = 128
 CAMPAIGN_DELIVERY_REPOSITORIES_MAX = 16
 CAMPAIGN_STATE_INPUT_MAX_BYTES = 32 * 1024
+CAMPAIGN_STATE_READ_MAX_BYTES = 56 * 1024
 
 _CAMPAIGN_REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
 _CAMPAIGN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$")
@@ -3558,7 +3559,9 @@ class Session:
             "evidence_count": len(state["evidence"]),
             "delivery": state["delivery"],
         }
-        if len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")) > CAMPAIGN_STATE_INPUT_MAX_BYTES:
+        if len(json.dumps(
+            result, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")) > CAMPAIGN_STATE_READ_MAX_BYTES:
             raise LifecycleError(
                 "persisted campaign state exceeds the bounded read response"
             )

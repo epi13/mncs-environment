@@ -160,7 +160,11 @@ def cmd_campaign_state(args: argparse.Namespace) -> int:
     try:
         with closing(_open(args)) as session:
             try:
-                out(session.campaign_state())
+                state = session.campaign_state()
+                sys.stdout.write(json.dumps(
+                    state, ensure_ascii=False, sort_keys=True,
+                    separators=(",", ":"),
+                ) + "\n")
             except sessions_module.LifecycleError as error:
                 return fail(
                     str(error),
