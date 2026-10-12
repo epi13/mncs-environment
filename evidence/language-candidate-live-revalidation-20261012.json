@@ -1,0 +1,67 @@
+{
+  "schema_version": "mncs.environment.language-candidate-live-revalidation/1",
+  "identity": "ev_language_candidate_live_revalidation_20261012",
+  "recorded_at": "2026-10-12T22:22:45Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "inspection": {
+    "authority": "read-only Environment claim query and protected Control Git RPC",
+    "sandbox": "project-scoped bwrap",
+    "environment_session_id": "ses_7226fbcfe65820f7",
+    "repository_claims": {
+      "repository": "mncs-language",
+      "latest_records": 10,
+      "live_exclusive_claims": 0
+    },
+    "fetch": {
+      "remote": "origin",
+      "completed": true,
+      "network": true
+    },
+    "local_main": "12b29d6482599465698b78c87a21c63d3adeceb6",
+    "origin_main": "12b29d6482599465698b78c87a21c63d3adeceb6",
+    "candidate_branch": "campaign/process-environment-value-bound-20261010",
+    "candidate_commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+    "candidate_is_ancestor_of_origin_main": false,
+    "origin_candidate_branch_present": false,
+    "tree_difference": [
+      "docs/mncs-badge.json"
+    ],
+    "implementation_tree_diff_excluding_badge": false,
+    "candidate_worktree": {
+      "registered_path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+      "visible_in_current_protected_namespace": false,
+      "git_worktree_status": "prunable gitdir file points to non-existent location",
+      "disposition": "retain branch and registration; do not retire until physical checkout ownership and state can be confirmed"
+    }
+  },
+  "verification": {
+    "tested_revision": "12b29d6482599465698b78c87a21c63d3adeceb6",
+    "equivalence_basis": "candidate and main differ only in generated docs/mncs-badge.json; implementation tree diff is empty",
+    "commands": [
+      {
+        "command": "cargo test -p mncs-cli --test quiet_compile",
+        "result": "3 passed",
+        "exit_code": 0
+      },
+      {
+        "command": "cargo test -p mncs-compiler --test source_profile_019_sequence_bound",
+        "result": "1 passed",
+        "exit_code": 0
+      }
+    ],
+    "sandbox": "project-scoped bwrap",
+    "candidate_checkout_tests": "not run; checkout unavailable in the current namespace",
+    "repository_status": "mncs-language main clean and synchronized with origin/main"
+  },
+  "delivery": {
+    "status": "implementation already present on pushed main",
+    "reason": "No merge is needed. The candidate commit itself is not an ancestor, but its implementation is already present in main. Preserve the stale candidate branch and inaccessible worktree registration."
+  },
+  "actions": {
+    "language_files_modified": false,
+    "candidate_files_modified": false,
+    "candidate_branch_deleted": false,
+    "candidate_worktree_retired": false,
+    "compiler_or_forge_touched": false
+  }
+}
