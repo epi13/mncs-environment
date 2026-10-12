@@ -1,0 +1,45 @@
+{
+  "schema_version": "mncs.environment.claim-transfer-tests/1",
+  "identity": "ev_environment_claim_transfer_restart_tests_20261012",
+  "recorded_at_utc": "2026-10-12T16:03:12Z",
+  "source": {
+    "repository": "mncs-environment",
+    "commit": "b24e21794e8c2cc1d7f4d03dc3b1a6f3653d8001",
+    "test_file": "tests/test_store_claim_transfer.py",
+    "test_file_sha256": "b79f4fb1ce3262d05b95087e90fd4edd6502ad5cfd170cf958fe3a4cee3ac432"
+  },
+  "execution": {
+    "command": "python3 -m pytest -q tests/test_store_claim_transfer.py",
+    "backend": "bwrap",
+    "project_scope": "mncs-environment",
+    "network": false,
+    "result": "passed",
+    "exit_code": 0,
+    "passed": 9,
+    "failed": 0,
+    "duration_seconds": 35.34,
+    "store_boundary": "Tests used temporary test-owned Stores and did not open the canonical Environment Store."
+  },
+  "coverage": [
+    {
+      "test": "test_transfer_process_crash_recovers_atomic_owner",
+      "cases": [
+        "before_batch",
+        "before_generation_publication",
+        "after_generation_publication",
+        "after_head_publication"
+      ]
+    },
+    "test_concurrent_store_transfers_admit_one_recipient",
+    "test_claim_request_identity_rejects_changed_acquire_release_and_transfer_payloads",
+    "test_session_claim_release_retry_after_snapshot_failure_emits_once",
+    "test_noop_release_request_is_durable_and_cannot_release_later_claim",
+    "test_session_transfer_retry_after_snapshot_failure_emits_one_transition"
+  ],
+  "limits": [
+    "These tests establish isolated Store crash recovery and competing-transfer behavior; they are not a canonical Store interruption test.",
+    "Canonical claim acquisition, readback, release, authority denial, and structural verification are recorded separately in evidence/canonical-claim-rpc-acceptance-20261012.json.",
+    "A direct stale expected-generation rejection against canonical RPC remains unproven."
+  ],
+  "readiness": "Protected isolated transfer restart and concurrency tests passed; canonical crash injection and stale-generation rejection remain open."
+}
