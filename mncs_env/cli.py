@@ -1202,6 +1202,30 @@ def cmd_retire(args: argparse.Namespace) -> int:
             repo = _resolve_retire_repo(session, args.repository)
         except ValueError as error:
             return fail(str(error))
+        sandbox_root_value = getattr(args, "sandbox_root", None)
+        execution_root_value = getattr(args, "execution_root", None)
+        if (sandbox_root_value is None) != (execution_root_value is None):
+            return fail(
+                "protected checkout path mapping is incomplete",
+                diagnostics={
+                    "code": "checkout-path-mapping-invalid",
+                    "next": "retry through the authenticated project Control transport",
+                },
+            )
+        sandbox_root = (Path(sandbox_root_value) if sandbox_root_value is not None
+                        else None)
+        execution_root = (Path(execution_root_value).resolve(strict=False)
+                          if execution_root_value is not None else None)
+        if execution_root is not None and execution_root != repo:
+            return fail(
+                "protected checkout path mapping does not match the resolved repository",
+                diagnostics={
+                    "code": "checkout-path-mapping-invalid",
+                    "repository": str(repo),
+                    "execution_root": str(execution_root),
+                    "next": "retry through the authenticated project Control transport",
+                },
+            )
         store = open_store(args.state_dir, args.persistence, session_id=args.session)
         try:
             claim_records = store.read_claims()
@@ -1215,7 +1239,7 @@ def cmd_retire(args: argparse.Namespace) -> int:
             report = retire_module.inventory_repository(
                 repo, canonical=args.canonical, claim_records=claim_records,
                 requesting_session=args.session, workspace_root=workspace_root,
-                execution_root=args.execution_root,
+                execution_root=execution_root, sandbox_root=sandbox_root,
             )
             campaign = session.snapshot.get("campaign", {})
             if isinstance(campaign, dict):
@@ -1233,7 +1257,9 @@ def cmd_retire(args: argparse.Namespace) -> int:
                 for branch in (args.branch or [])
             )
             if args.worktree:
-                registered = retire_module.worktrees(repo)
+                registered = retire_module._execution_worktrees(
+                    repo, sandbox_root=sandbox_root, execution_root=execution_root,
+                )
                 for raw_path in args.worktree:
                     path = Path(raw_path)
                     if not path.is_absolute():
@@ -1303,12 +1329,14 @@ def cmd_retire(args: argparse.Namespace) -> int:
             results.append(retire_module.retire_branch(
                 repo, branch, canonical=args.canonical,
                 claim_records=claim_records,
-                requesting_session=args.session, dry_run=args.dry_run))
+                requesting_session=args.session, dry_run=args.dry_run,
+                sandbox_root=sandbox_root, execution_root=execution_root))
         for path in args.worktree or []:
             results.append(retire_module.retire_worktree(
                 repo, path, canonical=args.canonical,
                 claim_records=claim_records,
-                requesting_session=args.session, dry_run=args.dry_run))
+                requesting_session=args.session, dry_run=args.dry_run,
+                sandbox_root=sandbox_root, execution_root=execution_root))
         out({"session_id": args.session, "repository": str(repo),
              "canonical": args.canonical, "dry_run": args.dry_run,
              "results": results})
@@ -1722,6 +1750,7 @@ def build_parser() -> argparse.ArgumentParser:
     retire.add_argument("--inventory", action="store_true",
                         help="emit all branch/worktree dispositions; requires --dry-run")
     retire.add_argument("--execution-root", type=Path, help=argparse.SUPPRESS)
+    retire.add_argument("--sandbox-root", type=Path, help=argparse.SUPPRESS)
     retire.add_argument("--dry-run", action="store_true",
                         help="assess only; change nothing")
     retire.set_defaults(func=cmd_retire)

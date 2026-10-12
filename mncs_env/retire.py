@@ -55,7 +55,7 @@ class RetireError(Exception):
 def _git(repo: Path, *args: str, timeout: int = 60) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [workspace_module.git_binary(), "-C", str(repo), *args],
-        capture_output=True, text=True, timeout=timeout,
+        capture_output=True, text=True, timeout=timeout, check=False,
     )
 
 
@@ -111,6 +111,51 @@ def worktrees(repo: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def _map_execution_checkout(
+    path: str | Path,
+    sandbox_root: Path | None,
+    execution_root: Path | None,
+) -> Path | None:
+    if sandbox_root is None or execution_root is None:
+        return None
+    source = Path(os.path.abspath(str(sandbox_root)))
+    destination = Path(os.path.abspath(str(execution_root)))
+    candidate = Path(os.path.abspath(str(path)))
+    try:
+        relative = candidate.relative_to(source)
+    except ValueError:
+        return None
+    mapped = destination / relative
+    if not _within_root_without_symlinks(mapped, destination):
+        return None
+    return mapped
+
+
+def _execution_worktrees(
+    repo: Path,
+    *,
+    sandbox_root: Path | None = None,
+    execution_root: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Map protected project registrations to owner-service project aliases.
+
+    Git stores the absolute path used by ``worktree add`` in its administrative
+    metadata. A protected project commonly records ``/workspace/<project>``
+    while the owner service addresses the checkout under its configured host
+    root. Map only registrations beneath the exact project sandbox root; leave
+    every other registration as an observation.
+    """
+    rows = worktrees(repo)
+    for row in rows:
+        registered = str(row.get("path", ""))
+        mapped = _map_execution_checkout(registered, sandbox_root, execution_root)
+        if mapped is None:
+            continue
+        row["registered_path"] = registered
+        row["path"] = str(mapped)
+    return rows
+
+
 def main_worktree(repo: Path) -> Path | None:
     """Resolve the main checkout path (the holder of the common dir)."""
     completed = _git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
@@ -135,11 +180,32 @@ def cherry_unique_count(repo: Path, canonical: str, branch: str) -> int | None:
 
 
 def worktree_clean(repo: Path, path: Path) -> bool:
+    return _worktree_status(repo, path)["clean"] is True
+
+
+def _worktree_status(repo: Path, path: Path) -> dict[str, Any]:
+    """Distinguish clean, dirty, and unobservable checkout states."""
+    if not Path(path).is_dir():
+        return {
+            "available": False,
+            "clean": None,
+            "reason": "checkout path is unavailable in the Environment execution namespace",
+        }
     completed = _git(repo, "-C", str(path), "status", "--porcelain=v1",
                      "--untracked-files=all")
     if completed.returncode != 0:
-        return False
-    return not completed.stdout.strip()
+        diagnostic = completed.stderr.strip() or completed.stdout.strip()
+        reason = "Git could not verify checkout status in the Environment execution namespace"
+        if diagnostic:
+            reason += f": {diagnostic[:400]}"
+        return {"available": True, "clean": None, "reason": reason}
+    if completed.stdout.strip():
+        return {
+            "available": True,
+            "clean": False,
+            "reason": "worktree has uncommitted or untracked files",
+        }
+    return {"available": True, "clean": True, "reason": "checkout is clean"}
 
 
 def canonical_resolves(repo: Path, canonical: str) -> bool:
@@ -192,14 +258,24 @@ def _branch_topology(repo: Path, branch: str, branches: dict[str, str],
     return {"retireable": True, "reason": "merged into " + canonical}
 
 
-def _checkout_paths(repo: Path, branch: str) -> list[str]:
-    return [str(row.get("path")) for row in worktrees(repo)
+def _checkout_paths(
+    repo: Path,
+    branch: str,
+    *,
+    sandbox_root: Path | None = None,
+    execution_root: Path | None = None,
+) -> list[str]:
+    return [str(row.get("path")) for row in _execution_worktrees(
+        repo, sandbox_root=sandbox_root, execution_root=execution_root,
+    )
             if row.get("branch") == branch]
 
 
 def branch_assessment(repo: Path, branch: str, *, canonical: str = DEFAULT_CANONICAL_REF,
                       claim_records: list[dict[str, Any]] | None = None,
-                      requesting_session: str | None = None) -> dict[str, Any]:
+                      requesting_session: str | None = None,
+                      sandbox_root: Path | None = None,
+                      execution_root: Path | None = None) -> dict[str, Any]:
     """Judge one branch; never mutates. Returns ``{"retireable": bool, "reason": str}``."""
     repo = Path(repo)
     _ensure_repo(repo)
@@ -208,7 +284,9 @@ def branch_assessment(repo: Path, branch: str, *, canonical: str = DEFAULT_CANON
     branches = local_branches(repo)
     if branch not in branches:
         return {"retireable": False, "reason": "no such local branch"}
-    checked_out = _checkout_paths(repo, branch)
+    checked_out = _checkout_paths(
+        repo, branch, sandbox_root=sandbox_root, execution_root=execution_root,
+    )
     if checked_out:
         return {"retireable": False,
                 "reason": f"checked out at {checked_out[0]}"}
@@ -226,23 +304,46 @@ def branch_assessment(repo: Path, branch: str, *, canonical: str = DEFAULT_CANON
 def worktree_assessment(repo: Path, path: str | Path, *,
                         canonical: str = DEFAULT_CANONICAL_REF,
                         claim_records: list[dict[str, Any]] | None = None,
-                        requesting_session: str | None = None) -> dict[str, Any]:
+                        requesting_session: str | None = None,
+                        sandbox_root: Path | None = None,
+                        execution_root: Path | None = None) -> dict[str, Any]:
     """Judge one worktree; never mutates."""
     repo = Path(repo)
     _ensure_repo(repo)
     target = str(Path(path))
-    rows = worktrees(repo)
+    rows = _execution_worktrees(
+        repo, sandbox_root=sandbox_root, execution_root=execution_root,
+    )
     row = next((item for item in rows if item.get("path") == target), None)
     if row is None:
-        return {"retireable": False, "reason": "not a registered worktree"}
+        return {"retireable": False, "status": "unknown",
+                "reason": "not a registered worktree"}
+    status = _worktree_status(repo, Path(target))
+    if not status["available"]:
+        reason = (
+            "registered checkout is unavailable in the Environment service "
+            "namespace; retaining metadata"
+            if row.get("registered_path") is not None
+            else "directory is gone; use prune, not retire"
+        )
+        return {
+            "retireable": False,
+            "status": "unknown",
+            "reason": reason,
+        }
+    if status["clean"] is None:
+        return {"retireable": False, "status": "unknown",
+                "reason": status["reason"]}
     main = main_worktree(repo)
     branches = local_branches(repo)
-    return _assess_registered_worktree(
+    verdict = _assess_registered_worktree(
         repo, target, row, rows, branches, main, canonical,
         claim_records or [], requesting_session,
-        path_available=Path(target).is_dir(),
-        clean=worktree_clean(repo, Path(target)) if Path(target).is_dir() else False,
+        path_available=True,
+        clean=status["clean"],
     )
+    verdict["status"] = "assessed"
+    return verdict
 
 
 def _assess_registered_worktree(
@@ -296,11 +397,15 @@ def _assess_registered_worktree(
 def retire_branch(repo: Path, branch: str, *, canonical: str = DEFAULT_CANONICAL_REF,
                   claim_records: list[dict[str, Any]] | None = None,
                   requesting_session: str | None = None,
-                  dry_run: bool = False) -> dict[str, Any]:
+                  dry_run: bool = False,
+                  sandbox_root: Path | None = None,
+                  execution_root: Path | None = None) -> dict[str, Any]:
     """Delete one merged local branch after strict assessment."""
     verdict = branch_assessment(repo, branch, canonical=canonical,
                                 claim_records=claim_records,
-                                requesting_session=requesting_session)
+                                requesting_session=requesting_session,
+                                sandbox_root=sandbox_root,
+                                execution_root=execution_root)
     if not verdict["retireable"]:
         return {"target": branch, "kind": "branch", "retired": False,
                 "reason": verdict["reason"], "dry_run": dry_run}
@@ -319,23 +424,30 @@ def retire_worktree(repo: Path, path: str | Path, *,
                     canonical: str = DEFAULT_CANONICAL_REF,
                     claim_records: list[dict[str, Any]] | None = None,
                     requesting_session: str | None = None,
-                    dry_run: bool = False) -> dict[str, Any]:
+                    dry_run: bool = False,
+                    sandbox_root: Path | None = None,
+                    execution_root: Path | None = None) -> dict[str, Any]:
     """Remove one spent worktree (its branch, if any, is kept)."""
     verdict = worktree_assessment(repo, path, canonical=canonical,
                                   claim_records=claim_records,
-                                  requesting_session=requesting_session)
+                                  requesting_session=requesting_session,
+                                  sandbox_root=sandbox_root,
+                                  execution_root=execution_root)
     if not verdict["retireable"]:
         return {"target": str(path), "kind": "worktree", "retired": False,
+                "status": verdict.get("status", "assessed"),
                 "reason": verdict["reason"], "dry_run": dry_run}
     if dry_run:
         return {"target": str(path), "kind": "worktree", "retired": False,
+                "status": "would-retire",
                 "reason": "dry run: would remove", "dry_run": True}
     completed = _git(Path(repo), "worktree", "remove", str(path))
     if completed.returncode != 0:
         return {"target": str(path), "kind": "worktree", "retired": False,
+                "status": "mutation-failed",
                 "reason": f"git refused: {completed.stderr.strip()}", "dry_run": False}
     return {"target": str(path), "kind": "worktree", "retired": True,
-            "reason": verdict["reason"], "dry_run": False}
+            "status": "retired", "reason": verdict["reason"], "dry_run": False}
 
 
 def prune_worktrees(repo: Path, *, dry_run: bool = False) -> dict[str, Any]:
@@ -435,7 +547,9 @@ def _repository_identity(repo: Path, workspace_root: Path | None) -> dict[str, A
 
 
 def _worktree_identities(repo: Path, common_identity: str,
-                         rows: list[dict[str, Any]], main: Path | None
+                         rows: list[dict[str, Any]], main: Path | None,
+                         *, sandbox_root: Path | None = None,
+                         execution_root: Path | None = None,
                          ) -> dict[str, tuple[str, str]]:
     """Map observed checkout paths to Git-admin identities, not path identities."""
     common = _git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
@@ -450,6 +564,11 @@ def _worktree_identities(repo: Path, common_identity: str,
                 except (OSError, UnicodeDecodeError):
                     continue
                 checkout = Path(os.path.abspath(str(checkout_gitdir.parent)))
+                mapped = _map_execution_checkout(
+                    checkout, sandbox_root, execution_root,
+                )
+                if mapped is not None:
+                    checkout = mapped
                 identity = "git-worktree:" + digest_hex({
                     "git_common_directory_identity": common_identity,
                     "administrative_identity": admin.name,
@@ -484,6 +603,7 @@ def inventory_repository(
     requesting_session: str | None = None,
     workspace_root: Path | None = None,
     execution_root: Path | None = None,
+    sandbox_root: Path | None = None,
 ) -> dict[str, Any]:
     """Return a read-only branch/worktree disposition.
 
@@ -495,7 +615,9 @@ def inventory_repository(
     records = claim_records or []
     repository_claims = _repo_claims(records, repo.name, None)
     branches = local_branches(repo)
-    rows = worktrees(repo)
+    rows = _execution_worktrees(
+        repo, sandbox_root=sandbox_root, execution_root=execution_root,
+    )
     common_identity = _repository_identity(repo, workspace_root)
     canonical_ok = canonical_resolves(repo, canonical)
     canonical_head = None
@@ -506,6 +628,7 @@ def inventory_repository(
     main = main_worktree(repo)
     checkout_identities = _worktree_identities(
         repo, common_identity["identity"], rows, main,
+        sandbox_root=sandbox_root, execution_root=execution_root,
     )
     execution_root_resolved = (
         Path(os.path.abspath(str(execution_root))) if execution_root is not None else None
@@ -581,7 +704,8 @@ def inventory_repository(
             in_scope = _within_root_without_symlinks(raw_path, execution_root_resolved)
         ownership_protected = bool(own_claims or other_claims)
         exists = (in_scope and checkout_path.is_dir()) if not ownership_protected else None
-        clean: bool | None = worktree_clean(repo, checkout_path) if exists else None
+        checkout_status = _worktree_status(repo, checkout_path) if exists else None
+        clean = checkout_status["clean"] if checkout_status is not None else None
         if not in_scope:
             access_disposition = "outside-current-execution-scope"
         elif ownership_protected:
@@ -614,6 +738,11 @@ def inventory_repository(
         elif not exists:
             classification = "unavailable-in-current-execution-namespace"
             reason = "registered path is not available here; absence is not treated as permission to prune"
+        elif clean is None:
+            classification = "unavailable-in-current-execution-namespace"
+            reason = (checkout_status or {}).get(
+                "reason", "Git could not verify checkout state in this execution namespace",
+            )
         elif main is not None and _same_path(raw_path, main):
             classification = "canonical-checkout"
             reason = "main checkout is never retired"
@@ -668,6 +797,9 @@ def inventory_repository(
             "evidence_relevant": evidence_relevant if row.get("detached") else None,
             "claim_records": own_claims + other_claims,
             "reason": reason,
+            "checkout_status_reason": (
+                checkout_status.get("reason") if checkout_status is not None else None
+            ),
         }
 
     checkout_map: dict[str, list[str]] = {}
@@ -769,6 +901,7 @@ def inventory_repository(
         identity, identity_basis = identity_pair or (None, "unknown")
         worktree_rows.append({
             "path": path,
+            "registered_path": row.get("registered_path", path),
             "checkout_identity": identity,
             "checkout_identity_basis": identity_basis,
             "branch": row.get("branch"),
@@ -779,6 +912,7 @@ def inventory_repository(
             "git_prunable_reason": row.get("prunable_reason"),
             "classification": facts["classification"],
             "reason": facts["reason"],
+            "checkout_status_reason": facts["checkout_status_reason"],
             "clean": facts["clean"],
             "path_available": facts["path_available"],
             "within_execution_scope": facts["within_execution_scope"],

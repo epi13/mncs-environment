@@ -20,7 +20,7 @@ from mncs_env import retire as retire_module
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", "-C", str(repo), *args],
-                          capture_output=True, text=True, timeout=60)
+                          capture_output=True, text=True, timeout=60, check=False)
 
 
 def _future() -> str:
@@ -220,9 +220,59 @@ class RetireTests(unittest.TestCase):
         _git(self.repo, "fetch", "-q", "origin")
         result = retire_module.retire_worktree(self.repo, target)
         self.assertTrue(result["retired"], result)
+        self.assertEqual(result["status"], "retired")
         self.assertFalse(target.exists())
         # The branch itself is kept; only the checkout is removed.
         self.assertIn("feature/x", retire_module.local_branches(self.repo))
+
+    def test_protected_git_registration_maps_to_host_checkout(self):
+        target = self._worktree("mapped", "feature/mapped")
+        rows = retire_module.worktrees(self.repo)
+        for row in rows:
+            if Path(str(row["path"])) == target:
+                row["path"] = "/workspace/demo/.worktrees/mapped"
+        with mock.patch.object(retire_module, "worktrees", return_value=rows):
+            verdict = retire_module.worktree_assessment(
+                self.repo, target, sandbox_root=Path("/workspace/demo"),
+                execution_root=self.repo,
+            )
+            report = retire_module.inventory_repository(
+                self.repo, workspace_root=self.base,
+                execution_root=self.repo, sandbox_root=Path("/workspace/demo"),
+            )
+        self.assertTrue(verdict["retireable"], verdict)
+        mapped = next(row for row in report["worktrees"] if row["path"] == str(target))
+        self.assertEqual(mapped["registered_path"], "/workspace/demo/.worktrees/mapped")
+        self.assertEqual(mapped["classification"], "merged-and-safely-retireable")
+        self.assertEqual(mapped["checkout_identity_basis"], "git-administrative-identity")
+
+    def test_unavailable_mapped_checkout_is_preserved_for_reconciliation(self):
+        rows = retire_module.worktrees(self.repo)
+        head = _git(self.repo, "rev-parse", "main").stdout.strip()
+        rows.append({
+            "path": "/workspace/demo/.worktrees/unavailable",
+            "branch": None,
+            "head": head,
+            "detached": True,
+            "locked": False,
+            "prunable_reason": None,
+        })
+        target = self.repo / ".worktrees" / "unavailable"
+        with mock.patch.object(retire_module, "worktrees", return_value=rows):
+            result = retire_module.retire_worktree(
+                self.repo, target, sandbox_root=Path("/workspace/demo"),
+                execution_root=self.repo,
+            )
+            report = retire_module.inventory_repository(
+                self.repo, workspace_root=self.base,
+                execution_root=self.repo, sandbox_root=Path("/workspace/demo"),
+            )
+        self.assertFalse(result["retired"])
+        self.assertEqual(result["status"], "unknown")
+        self.assertIn("unavailable in the Environment service namespace", result["reason"])
+        checkout = next(row for row in report["worktrees"] if row["path"] == str(target))
+        self.assertEqual(checkout["classification"], "unavailable-in-current-execution-namespace")
+        self.assertFalse(checkout["path_available"])
 
     def test_dirty_worktree_refuses(self):
         target = self._worktree("feat", "feature/x")
@@ -339,7 +389,8 @@ class RetireTests(unittest.TestCase):
     def test_inventory_does_not_probe_checkouts_already_protected_by_repo_claim(self):
         records = [_claim("ses_foreign", self.name)]
         with mock.patch.object(
-            retire_module, "worktree_clean", side_effect=AssertionError("checkout probed")
+            retire_module, "_worktree_status",
+            side_effect=AssertionError("checkout probed"),
         ):
             report = retire_module.inventory_repository(
                 self.repo, claim_records=records, requesting_session="ses_current",

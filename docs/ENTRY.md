@@ -343,6 +343,13 @@ reports missing or out-of-scope checkout paths without pruning them. Inventory
 is read-only; deletion still requires individually selected targets and a
 separate retirement invocation.
 
+When the authenticated Control bridge runs retirement from its owner namespace,
+it supplies the exact protected-project-to-host-project path mapping. Environment
+uses that mapping to match Git's registered path while retaining the original
+registration in inventory. The mapping does not prove the checkout is available
+to the owner process: if Git cannot verify its status through that namespace,
+retirement remains unknown and preserves the worktree metadata.
+
 Provider diagnostics, selected identity, observed identity, and recovery remain
 structured in service observations. Reconciliation preserves the provider JSON
 response; transport success is separate from subsequent verified readiness.
