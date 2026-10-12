@@ -1,0 +1,149 @@
+{
+  "schema_version": "mncs.environment.campaign-checkpoint-repair-acceptance/1",
+  "identity": "ev_campaign_state_checkpoint_repair_20261012",
+  "recorded_at": "2026-10-12T03:59:21Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "source_heads": {
+    "mncs-environment": "732a72f665a4791bd7575a657c7276bcc62fed7b",
+    "mncs-control-mcp": "079eec283fcb9ae1be7f6f4682ecd7deb69b43b7"
+  },
+  "protected_execution": {
+    "tool": "MNCS Control terminal_start",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "store_path_probe": {
+      "path": "/home/epi13/.local/share/mncs-environment/store",
+      "command": "python -c probe using Path.exists and os.access for read and write",
+      "result": {
+        "exists": false,
+        "readable": false,
+        "writable": false
+      },
+      "exit_code": 0,
+      "terminal_job_id": "term-39bb0f87c25abe8c91f61c73"
+    }
+  },
+  "checkpoint_publication": {
+    "transport": "authenticated Environment RPC supplied by Control",
+    "store_filesystem_access_granted_to_agent": false,
+    "initial_checkpoint": {
+      "request_id": "req_campaign_delivery_checkpoint_20261012_0600",
+      "checkpoint_id": "chk_07c103f2be4ebba5",
+      "sequence": 165,
+      "status": "published_then_superseded",
+      "readback_discovered": "Repeated argparse --remaining options retained only the final item."
+    },
+    "repair_checkpoint": {
+      "request_id": "req_campaign_delivery_checkpoint_repair_20261012_0620",
+      "terminal_job_id": "term-aa8626023c4c716d8ce4718d",
+      "exit_code": 0,
+      "base_checkpoint": "chk_07c103f2be4ebba5",
+      "checkpoint_id": "chk_a2d9795e1f986b72",
+      "sequence": 166,
+      "remaining_count": 6,
+      "remaining_truncated": false,
+      "evidence_count": 115,
+      "delivery_status": "partial"
+    }
+  },
+  "fresh_process_readback": {
+    "request_id": "req_campaign_delivery_checkpoint_repair_readback_20261012_0630",
+    "terminal_job_id": "term-6b6602cb5d979e3ba8355ae6",
+    "capability": "mncs-environment:campaign-state-inspection",
+    "capability_version": 2,
+    "exit_code": 0,
+    "provider_returncode": 0,
+    "truncated": false,
+    "campaign_state_checkpoint_id": "chk_a2d9795e1f986b72",
+    "evidence_count": 115,
+    "delivery_status": "partial",
+    "pushed_heads": {
+      "mncs-compiler": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "mncs-control-mcp": "079eec283fcb9ae1be7f6f4682ecd7deb69b43b7",
+      "mncs-environment": "732a72f665a4791bd7575a657c7276bcc62fed7b",
+      "mncs-forge": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "mncs-language": "12b29d6482599465698b78c87a21c63d3adeceb6"
+    }
+  },
+  "authenticated_project_reentry": {
+    "command": "python -m mncs_env.cli enter --definition tests/fixtures/control-rpc-entry.json --consumer local-agent --consumer-kind agent --campaign-id cmp_mncs_continuity_20261010",
+    "terminal_job_id": "term-544764ef57db248e537d321c",
+    "exit_code": 0,
+    "session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "local-agent",
+    "lifecycle": "active",
+    "entry_reused_existing_session": true,
+    "selection_basis": "authenticated-project-environment-definition",
+    "checkpoint_id": "chk_a2d9795e1f986b72",
+    "checkpoint_sequence": 166,
+    "remaining_count": 6,
+    "selected_session_claims": [
+      "claim:mncs-control-mcp",
+      "claim:mncs-environment"
+    ],
+    "other_campaign_context": {
+      "session_id": "ses_b4b2d283542220b0",
+      "selected": false,
+      "mutated": false,
+      "visible_in_continuation": true
+    }
+  },
+  "operation_probe": {
+    "operation": "brief",
+    "status": "unknown",
+    "diagnostic_code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+    "publication_completed": false,
+    "interpretation": "Control does not expose this Environment operation; its unsupported status remains UNKNOWN."
+  },
+  "ownership_and_worktree_disposition": {
+    "campaign_claims_mutated": [],
+    "compiler_claim": {
+      "claim_id": "claim:mncs-compiler",
+      "owner_session_id": "ses_d2537acde8b8a875",
+      "version": 63,
+      "disposition": "retained under existing exclusive owner"
+    },
+    "forge_claim": {
+      "claim_id": "claim:mncs-forge",
+      "owner_session_id": "ses_95c3aa35b8544042",
+      "version": 28,
+      "disposition": "retained under existing exclusive owner"
+    },
+    "candidate_worktrees_changed_or_retired": [],
+    "compiler_registered_worktree_count": 66,
+    "compiler_inventory": {
+      "path": "evidence/compiler-worktree-retirement-dry-run-20261012.json",
+      "sha256": "7256f5fd592eed46b5c83b2b977009ac80a06d509147ebf985224845f9ee1681",
+      "dry_run": true
+    },
+    "candidate_dispositions": {
+      "path": "evidence/candidate-disposition-live-refresh-20261012.json",
+      "sha256": "9b3969b4ecbcb1b202ef8f3aaf7470f041f0c2eacb1632c6a4c9b93d04831e41"
+    }
+  },
+  "verification": {
+    "environment_focused_tests": "3 passed for campaign state reconstruction, session binding, and capability output limit",
+    "control_focused_test": "1 passed for exact session-authorized read operation and unknown operation reporting",
+    "static_checks": ["compileall", "git diff --check"],
+    "campaign_state_read_acceptance": {
+      "path": "evidence/campaign-state-read-acceptance-20261012.json",
+      "sha256": "81795a1681c978913980331090933843fb5f0e68c280235a67990d039f164366"
+    }
+  },
+  "readiness": {
+    "campaign_continuation": "pass for authenticated project reentry and fresh-process checkpoint readback",
+    "campaign_delivery": "partial",
+    "compiler_stage_1": "unproven",
+    "compiler_stage_2": "unproven",
+    "resource_feedback_vertical_slice": "pending",
+    "compiler_and_forge_candidate_delivery": "protected by active owner claims"
+  },
+  "next_work": [
+    "Preserve existing compiler and Forge ownership until authenticated handoff or valid claim recovery.",
+    "Complete a representative compiler execution through Forge admission, System Monitor receipt, Store evidence, and Automation reconsideration.",
+    "Keep unavailable or undeclared Control operations UNKNOWN."
+  ]
+}
