@@ -115,8 +115,8 @@ exact Environment definition, and workspace, then stores one immutable
 task-to-campaign binding through the selected Store. The external task identity
 itself is not persisted. The selector only finds a campaign; normal principal,
 rights, lifecycle, and claim checks still apply. The typed Control `env_enter`
-MCP operation does not expose `task_identity` yet; it remains available through
-the authenticated Control-backed Environment CLI while that adapter is wired.
+MCP operation exposes optional `task_identity` and forwards it through the
+authenticated Environment persistence transport. It selects a campaign but grants no rights or ownership.
 
 On first use, an existing campaign is never adopted from the selector alone.
 Inspect the project continuation capsule and pass the intended `campaign_id`

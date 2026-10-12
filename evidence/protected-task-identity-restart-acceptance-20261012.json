@@ -1,0 +1,62 @@
+{
+  "authority": {
+    "other_same_campaign_context": "left unchanged",
+    "ownership_effect": "lookup only; normal principal, rights, lifecycle, and claim checks remain in force",
+    "selection_basis": "authenticated task selector, scoped by principal, Environment definition, and workspace"
+  },
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "execution": {
+    "direct_canonical_store_write_access": false,
+    "direct_write_probe": "test ! -w /home/epi13/.local/share/mncs-environment/store",
+    "network": false,
+    "persistence_transport": "control-rpc",
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "tool": "mncs_control_terminal_exec"
+  },
+  "fresh_process_resume": {
+    "campaign_id_supplied": false,
+    "entry_reused": true,
+    "exit_code": 0,
+    "selected_campaign_id": "cmp_mncs_continuity_20261010",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "separate_process": true,
+    "session_id_supplied": false,
+    "store_path_directly_writable": false,
+    "task_selector_status": "resumed"
+  },
+  "identity": "ev_protected_task_identity_restart_20261012",
+  "initial_binding": {
+    "campaign_id_supplied": true,
+    "entry_reused": true,
+    "exit_code": 0,
+    "external_task_identity_value_persisted": false,
+    "selected_campaign_id": "cmp_mncs_continuity_20261010",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "session_id_supplied": false,
+    "task_selector_status": "bound"
+  },
+  "integrity_scan": {
+    "command_limit_seconds": 90,
+    "exit_code": -15,
+    "interpretation": "The bounded command was terminated before verification returned; this does not indicate corruption or successful full verification.",
+    "operation": "mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "outcome": "inconclusive-timeout"
+  },
+  "readiness": {
+    "blocking_count": 0,
+    "status": "degraded",
+    "unknown_count": 1
+  },
+  "recorded_at": "2026-10-12T02:32:14Z",
+  "result": "PASS for protected canonical-RPC task-selector binding and fresh-process resumption; full Store integrity scan remains unverified in this observation.",
+  "schema_version": "mncs.environment.protected-task-selector-restart-acceptance/1",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "control_repository": "mncs-control-mcp",
+    "control_revision": "802756f97190332a76190115d4b6bd39edb2769f",
+    "environment_repository": "mncs-environment",
+    "environment_revision": "49807b82b123d968c8d6d3ab6a37fb46236e13c3"
+  }
+}
