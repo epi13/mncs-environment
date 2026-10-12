@@ -26,6 +26,9 @@ TYPES = (
     "session.revalidated",
     "session.checkpointed",
     "campaign.reconciled",
+    "environment.retirement.requested",
+    "environment.retirement.target-completed",
+    "environment.retirement.completed",
     "session.handed_off",
     "session.completed",
     "session.failed",
@@ -132,9 +135,7 @@ def matches(subscription: dict[str, Any], event: dict[str, Any]) -> bool:
     wanted = subscription.get("event_types", [])
     if "*" in wanted or event.get("type") in wanted:
         source_filter = subscription.get("source_filter")
-        if source_filter and event.get("producer") != source_filter:
-            return False
-        return True
+        return not source_filter or event.get("producer") == source_filter
     return False
 
 

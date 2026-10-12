@@ -3322,9 +3322,58 @@ class Session:
         raise LifecycleError(f"unknown subscription {subscription_id}")
 
     def record_observation(
-        self, event_type: str, producer: str, payload: dict[str, Any] | None = None
+        self,
+        event_type: str,
+        producer: str,
+        payload: dict[str, Any] | None = None,
+        *,
+        request_id: str | None = None,
+        operation_digest: str | None = None,
     ) -> dict[str, Any]:
-        return self._emit(event_type, producer, payload)
+        """Persist one observation, optionally bound to a retry identity."""
+        return self._emit(
+            event_type, producer, payload,
+            request_id=request_id,
+            operation_digest=operation_digest,
+        )
+
+    def request_event(
+        self,
+        event_type: str,
+        request_id: str,
+        operation_digest: str,
+    ) -> dict[str, Any] | None:
+        """Read a durable request event and reject request identity reuse."""
+        if (not isinstance(event_type, str) or not event_type
+                or not isinstance(request_id, str) or not request_id
+                or len(request_id) > 160 or "\x00" in request_id
+                or not isinstance(operation_digest, str) or not operation_digest
+                or len(operation_digest) > 160 or "\x00" in operation_digest):
+            raise ValueError("request event lookup identity is invalid")
+        matches: list[dict[str, Any]] = []
+        for event in self._log():
+            payload = event.get("payload", {})
+            if (event.get("type") == event_type
+                    and isinstance(payload, dict)
+                    and payload.get("request_id") == request_id):
+                if payload.get("request_operation_digest") != operation_digest:
+                    raise LifecycleError(
+                        "request identity was already used for a different Environment operation"
+                    )
+                matches.append(event)
+        if not matches:
+            return None
+        event_digests = [
+            event.get("payload", {}).get("request_event_digest")
+            for event in matches
+        ]
+        if (len(event_digests) != 1
+                or not all(isinstance(value, str) and value for value in event_digests)
+                or len(set(event_digests)) != 1):
+            raise LifecycleError(
+                "request identity has malformed or conflicting durable Environment events"
+            )
+        return matches[0]
 
     def observe_workspace(
         self,

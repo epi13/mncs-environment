@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import argparse
 import io
+import json
+import os
 import subprocess
 import tempfile
 import unittest
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -16,6 +18,12 @@ from unittest import mock
 from mncs_env import claims as claims_module
 from mncs_env import cli as cli_module
 from mncs_env import retire as retire_module
+from mncs_env import sessions as sessions_module
+from mncs_env.session_store import open_store
+
+
+class SimulatedProcessExit(BaseException):
+    """Stop between Git mutation and durable receipt publication."""
 
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -73,6 +81,12 @@ class RetireTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return target
 
+    def _make_worktree_retireable(self, branch: str) -> None:
+        pushed = _git(self.repo, "push", "-q", "origin", f"{branch}:main")
+        self.assertEqual(pushed.returncode, 0, pushed.stderr)
+        fetched = _git(self.repo, "fetch", "-q", "origin")
+        self.assertEqual(fetched.returncode, 0, fetched.stderr)
+
     def _protected_alias(self, target: Path) -> Path:
         """Model a checkout whose Git admin pointers were written in bwrap."""
         gitfile = (target / ".git").read_text(encoding="utf-8").strip()
@@ -88,6 +102,163 @@ class RetireTests(unittest.TestCase):
             f"gitdir: {sandbox_admin}\n", encoding="utf-8",
         )
         return sandbox_root
+
+    def _retirement_cli_args(self, target: Path, request_id: str) -> argparse.Namespace:
+        session_id = "ses_retirement_restart_test"
+        state_dir = self.base / "environment-state"
+        store = open_store(state_dir, "file")
+        store.save_snapshot(session_id, {
+            "schema_version": "mncs.environment.session/5",
+            "session_id": session_id,
+            "consumer_id": "consumer-retirement-test",
+            "authenticated_principal_id": "principal-retirement-test",
+            "lifecycle": "active",
+            "snapshot_sequence": 1,
+            "workspace": {"root": str(self.base)},
+            "campaign": {"identity": "cmp_retirement_restart_test"},
+        })
+        return argparse.Namespace(
+            session=session_id, repository=self.name, canonical="origin/main",
+            execution_root=None, sandbox_root=None, inventory=False,
+            dry_run=False, prune=False, branch=[], worktree=[str(target)],
+            state_dir=state_dir, persistence="file", request_id=request_id,
+            func=cli_module.cmd_retire,
+        )
+
+    def _invoke_retirement(self, args: argparse.Namespace,
+                           request_id: str) -> tuple[int, str, str]:
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with mock.patch.object(
+            sessions_module.Session, "check",
+            return_value={"verdict": "allow", "reason": "fixture claim"},
+        ), mock.patch.dict(os.environ, {"MNCS_ENV_RPC_REQUEST_ID": request_id}), \
+                redirect_stdout(stdout), redirect_stderr(stderr):
+            result = cli_module.cmd_retire(args)
+        return result, stdout.getvalue(), stderr.getvalue()
+
+    def test_retirement_replays_after_git_remove_before_receipt(self):
+        target = self._worktree("restart-complete", "feature/restart-complete")
+        self._make_worktree_retireable("feature/restart-complete")
+        args = self._retirement_cli_args(target, "req_retire_after_remove")
+        actual = retire_module.retire_worktree
+
+        def interrupt_after_remove(*call_args, **kwargs):
+            result = actual(*call_args, **kwargs)
+            if result.get("retired") is not True:
+                raise AssertionError(result)
+            raise SimulatedProcessExit("caller exited after Git completed")
+
+        with mock.patch.object(
+            retire_module, "retire_worktree", side_effect=interrupt_after_remove,
+        ), self.assertRaises(SimulatedProcessExit):
+            self._invoke_retirement(args, "req_retire_after_remove")
+
+        result, stdout, stderr = self._invoke_retirement(
+            args, "req_retire_after_remove",
+        )
+        self.assertEqual(result, 0, stderr + stdout)
+        response = json.loads(stdout)
+        self.assertEqual(response["completion_status"], "completed")
+        self.assertTrue(response["results"][0]["reconciled"])
+        self.assertFalse(target.exists())
+        restarted = sessions_module.Session.open(
+            state_dir=args.state_dir, session_id=args.session, backend="file",
+        )
+        log = restarted._log()
+        self.assertEqual(sum(event.get("type") ==
+                             "environment.retirement.requested" for event in log), 1)
+        self.assertEqual(sum(event.get("type") ==
+                             "environment.retirement.target-completed" for event in log), 1)
+        self.assertEqual(sum(event.get("type") ==
+                             "environment.retirement.completed" for event in log), 1)
+        with mock.patch.object(
+            retire_module, "retire_worktree",
+            side_effect=AssertionError("completed request must replay its receipt"),
+        ):
+            replay_result, replay_stdout, replay_stderr = self._invoke_retirement(
+                args, "req_retire_after_remove",
+            )
+        self.assertEqual(replay_result, 0, replay_stderr)
+        self.assertEqual(json.loads(replay_stdout), {
+            "replayed_request": True, **response,
+        })
+
+    def test_retirement_retries_when_process_exits_before_git_mutation(self):
+        target = self._worktree("restart-before", "feature/restart-before")
+        self._make_worktree_retireable("feature/restart-before")
+        args = self._retirement_cli_args(target, "req_retire_before_mutation")
+        with mock.patch.object(
+            retire_module, "retire_worktree",
+            side_effect=SimulatedProcessExit("stopped before Git mutation"),
+        ), self.assertRaises(SimulatedProcessExit):
+            self._invoke_retirement(args, "req_retire_before_mutation")
+        self.assertTrue(target.is_dir())
+
+        result, stdout, stderr = self._invoke_retirement(
+            args, "req_retire_before_mutation",
+        )
+        self.assertEqual(result, 0, stderr + stdout)
+        self.assertFalse(target.exists())
+
+    def test_retirement_retry_preserves_split_checkout_registration(self):
+        target = self._worktree("restart-split", "feature/restart-split")
+        self._make_worktree_retireable("feature/restart-split")
+        args = self._retirement_cli_args(target, "req_retire_split_state")
+
+        def interrupt_between_registration_and_checkout(*_args, **_kwargs):
+            gitfile = (target / ".git").read_text(encoding="utf-8").strip()
+            admin = Path(gitfile.removeprefix("gitdir: "))
+            if not admin.is_absolute():
+                admin = (target / admin).resolve()
+            import shutil
+            shutil.rmtree(admin)
+            raise SimulatedProcessExit("registration disappeared before checkout")
+
+        with mock.patch.object(
+            retire_module, "retire_worktree",
+            side_effect=interrupt_between_registration_and_checkout,
+        ), self.assertRaises(SimulatedProcessExit):
+            self._invoke_retirement(args, "req_retire_split_state")
+
+        result, stdout, stderr = self._invoke_retirement(args, "req_retire_split_state")
+        self.assertEqual(result, 3, stderr)
+        response = json.loads(stdout)
+        self.assertEqual(response["completion_status"], "pending")
+        self.assertEqual(response["results"][0]["status"], "unknown")
+        self.assertTrue(target.is_dir())
+
+    def test_retirement_retry_does_not_remove_a_reused_checkout_path(self):
+        target = self._worktree("restart-reused", "feature/restart-reused")
+        self._make_worktree_retireable("feature/restart-reused")
+        args = self._retirement_cli_args(target, "req_retire_reused_path")
+
+        def replace_checkout(*_args, **_kwargs):
+            import shutil
+            gitfile = (target / ".git").read_text(encoding="utf-8").strip()
+            admin = Path(gitfile.removeprefix("gitdir: "))
+            if not admin.is_absolute():
+                admin = (target / admin).resolve()
+            shutil.rmtree(target)
+            shutil.rmtree(admin)
+            created = _git(self.repo, "worktree", "add", str(target),
+                           "feature/restart-reused")
+            if created.returncode != 0:
+                raise AssertionError(created.stderr)
+            raise SimulatedProcessExit("new checkout reused the old path")
+
+        with mock.patch.object(
+            retire_module, "retire_worktree", side_effect=replace_checkout,
+        ), self.assertRaises(SimulatedProcessExit):
+            self._invoke_retirement(args, "req_retire_reused_path")
+
+        result, stdout, stderr = self._invoke_retirement(
+            args, "req_retire_reused_path",
+        )
+        self.assertEqual(result, 3, stderr)
+        response = json.loads(stdout)
+        self.assertEqual(response["results"][0]["status"], "unknown")
+        self.assertTrue(target.is_dir())
+        self.assertIn("feature/restart-reused", retire_module.local_branches(self.repo))
 
     def test_checked_out_branch_refuses_even_when_merged(self):
         self._worktree("feat", "feature/x")
@@ -123,14 +294,41 @@ class RetireTests(unittest.TestCase):
         self.assertTrue(result["retired"], result)
         self.assertNotIn("feature/x", retire_module.local_branches(self.repo))
 
+    def test_branch_retirement_uses_compare_and_delete(self):
+        target = self._worktree("cas", "feature/cas")
+        _git(self.repo, "worktree", "remove", str(target))
+        head = retire_module.local_branches(self.repo)["feature/cas"]
+        tree = _git(self.repo, "rev-parse", "main^{tree}").stdout.strip()
+        new_head = _git(self.repo, "commit-tree", tree, "-m", "concurrent branch update").stdout.strip()
+        actual_git = retire_module._git
+
+        def race_after_assessment(repo, *args, **kwargs):
+            if args[:2] == ("update-ref", "-d"):
+                raced = _git(self.repo, "update-ref", "refs/heads/feature/cas", new_head)
+                self.assertEqual(raced.returncode, 0, raced.stderr)
+            return actual_git(repo, *args, **kwargs)
+
+        with mock.patch.object(retire_module, "_git", side_effect=race_after_assessment):
+            result = retire_module.retire_branch(
+                self.repo, "feature/cas", expected_head=head,
+            )
+        self.assertFalse(result["retired"])
+        self.assertIn("git refused", result["reason"])
+        self.assertEqual(retire_module.local_branches(self.repo)["feature/cas"], new_head)
+
     def test_cli_requires_retirement_authority_before_branch_mutation(self):
         class Session:
             def __init__(self):
                 self.calls = []
+                self.snapshot = {"consumer_id": "test-consumer", "campaign": {}}
+                self.session_id = "ses_mine"
 
             def check(self, **kwargs):
                 self.calls.append(kwargs)
                 return {"verdict": "escalate", "reason": "claim required"}
+
+            def request_event(self, *_args):
+                return None
 
             def close(self):
                 pass
@@ -144,7 +342,7 @@ class RetireTests(unittest.TestCase):
             session="ses_mine", repository=self.name, canonical="origin/main",
             execution_root=None, inventory=False, dry_run=False, prune=False,
             branch=["feature/x"], worktree=[], state_dir=self.base,
-            persistence="store",
+            persistence="store", sandbox_root=None, request_id=None,
         )
         error = io.StringIO()
         with mock.patch.object(cli_module, "_open", return_value=session), \
@@ -169,10 +367,30 @@ class RetireTests(unittest.TestCase):
         class Session:
             def __init__(self):
                 self.calls = []
+                self.events = []
+                self.snapshot = {"consumer_id": "test-consumer", "campaign": {}}
+                self.session_id = "ses_mine"
 
             def check(self, **kwargs):
                 self.calls.append(kwargs)
                 return {"verdict": "allow", "reason": "claim covers target"}
+
+            def request_event(self, event_type, request_id, operation_digest):
+                return next((event for event in self.events
+                             if event["type"] == event_type
+                             and event["payload"].get("request_id") == request_id
+                             and event["payload"].get("request_operation_digest")
+                             == operation_digest), None)
+
+            def record_observation(self, event_type, producer, payload, *,
+                                   request_id=None, operation_digest=None):
+                event = {"type": event_type, "producer": producer, "payload": {
+                    **payload, "request_id": request_id,
+                    "request_operation_digest": operation_digest,
+                    "request_event_digest": f"digest-{len(self.events)}",
+                }}
+                self.events.append(event)
+                return event
 
             def close(self):
                 pass
@@ -186,24 +404,23 @@ class RetireTests(unittest.TestCase):
             session="ses_mine", repository=self.name, canonical="origin/main",
             execution_root=None, inventory=False, dry_run=False, prune=False,
             branch=[], worktree=[str(target)], state_dir=self.base,
-            persistence="store",
+            persistence="store", sandbox_root=None, request_id=None,
         )
         with mock.patch.object(cli_module, "_open", return_value=session), \
                 mock.patch.object(cli_module, "_resolve_retire_repo", return_value=self.repo), \
                 mock.patch.object(cli_module, "open_store", return_value=Store()), \
                 mock.patch.object(cli_module, "close_store"), \
                 mock.patch.object(retire_module, "retire_worktree", return_value={
-                    "target": str(target), "kind": "worktree", "retired": False,
-                    "reason": "dry run", "dry_run": False,
+                    "target": str(target), "kind": "worktree", "retired": True,
+                    "status": "retired", "reason": "removed", "dry_run": False,
                 }) as retire_worktree:
             result = cli_module.cmd_retire(args)
 
         self.assertEqual(result, 0)
         self.assertEqual(session.calls, [{
             "action": "retire", "target": self.name,
-            "scope": {"kind": "worktree", "checkout": str(target.resolve()),
-                      "branch": "feature/owned"},
-        }])
+            "scope": {"kind": "worktree", "checkout": str(target.resolve())},
+        }] * 2)
         retire_worktree.assert_called_once()
 
     def test_canonical_branch_never_retires(self):
@@ -261,10 +478,15 @@ class RetireTests(unittest.TestCase):
     def test_protected_git_worktree_retires_inside_exact_project_alias(self):
         target = self._worktree("mapped-retire", "feature/mapped-retire")
         sandbox_root = self._protected_alias(target)
+        identity = retire_module.retirement_target_state(
+            self.repo, "worktree", str(target), sandbox_root=sandbox_root,
+            execution_root=self.repo,
+        )
+        self.assertEqual(identity["status"], "available", identity)
 
         result = retire_module.retire_worktree(
             self.repo, target, sandbox_root=sandbox_root,
-            execution_root=self.repo,
+            execution_root=self.repo, expected_identity=identity["identity"],
         )
 
         self.assertTrue(result["retired"], result)

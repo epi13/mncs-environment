@@ -12,6 +12,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import sys
 from contextlib import closing
 from pathlib import Path
@@ -1195,6 +1196,118 @@ def _resolve_retire_repo(session: sessions_module.Session, repository: str) -> P
     return resolved
 
 
+def _retirement_request_id(args: argparse.Namespace, operation: str) -> str:
+    controlled = os.environ.get("MNCS_ENV_RPC_REQUEST_ID")
+    supplied = getattr(args, "request_id", None)
+    if (controlled and supplied and controlled != supplied):
+        raise ValueError("--request-id cannot replace the authenticated Control request identity")
+    request_id = controlled or supplied
+    if request_id is not None:
+        if not isinstance(request_id, str) or not re.fullmatch(
+            r"req_[A-Za-z0-9_-]{1,76}", request_id,
+        ):
+            raise ValueError("retirement request id must use the bounded req_ identity format")
+        return request_id
+    return "req_retire_" + sessions_module.digest_hex({
+        "session_id": args.session,
+        "operation": operation,
+    }, length=48)
+
+
+def _retirement_specs(args: argparse.Namespace, repo: Path) -> list[dict[str, Any]]:
+    specs: list[dict[str, Any]] = []
+    if args.prune:
+        specs.append({"kind": "prune", "target": str(repo),
+                      "scope": {"kind": "repository"}})
+    specs.extend({"kind": "branch", "target": branch,
+                  "scope": {"kind": "repository"}}
+                 for branch in args.branch or [])
+    for raw_path in args.worktree or []:
+        path = Path(raw_path)
+        if not path.is_absolute():
+            path = Path.cwd() / path
+        checkout = str(path.resolve(strict=False))
+        scope: dict[str, Any] = {"kind": "worktree", "checkout": checkout}
+        specs.append({"kind": "worktree", "target": checkout, "scope": scope})
+    for index, spec in enumerate(specs):
+        spec["index"] = index
+    return specs
+
+
+def _retirement_target_request_id(parent: str, spec: dict[str, Any]) -> str:
+    return "req_retire_" + sessions_module.digest_hex({
+        "parent_request_id": parent,
+        "target": {key: spec[key] for key in ("index", "kind", "target")},
+    }, length=48)
+
+
+def _retirement_target_operation_digest(parent_digest: str,
+                                        spec: dict[str, Any]) -> str:
+    return sessions_module.digest_hex({
+        "operation": "mncs-environment-retirement-target/1",
+        "parent_operation_digest": parent_digest,
+        "target": {key: spec[key] for key in ("index", "kind", "target")},
+    })
+
+
+def _retirement_store_claims(args: argparse.Namespace) -> list[dict[str, Any]]:
+    store = open_store(args.state_dir, args.persistence, session_id=args.session)
+    try:
+        return store.read_claims()
+    finally:
+        close_store(store)
+
+
+def _retirement_admission(session: sessions_module.Session, repo: Path,
+                          spec: dict[str, Any]) -> dict[str, Any]:
+    verdict = session.check(
+        action="retire", target=repo.name, scope=spec["scope"],
+    )
+    return {
+        "target_index": spec["index"],
+        "verdict": verdict.get("verdict", "unknown"),
+        "reason": verdict.get("reason"),
+        "scope": spec["scope"],
+        "session_id": session.session_id,
+        "consumer_id": session.snapshot.get("consumer_id"),
+        "authenticated_principal_id": session.snapshot.get("authenticated_principal_id"),
+        "campaign_id": (session.snapshot.get("campaign", {}).get("identity")
+                        if isinstance(session.snapshot.get("campaign"), dict) else None),
+    }
+
+
+def _retirement_adapter(
+    repo: Path,
+    spec: dict[str, Any],
+    expected: dict[str, Any],
+    *,
+    canonical: str,
+    claim_records: list[dict[str, Any]],
+    requesting_session: str,
+    sandbox_root: Path | None,
+    execution_root: Path | None,
+) -> dict[str, Any]:
+    kind, target = spec["kind"], spec["target"]
+    if kind == "prune":
+        return retire_module.prune_worktrees(
+            repo, sandbox_root=sandbox_root, execution_root=execution_root,
+            expected_candidates=expected.get("candidates", []),
+        )
+    if kind == "branch":
+        return retire_module.retire_branch(
+            repo, target, canonical=canonical, claim_records=claim_records,
+            requesting_session=requesting_session,
+            sandbox_root=sandbox_root, execution_root=execution_root,
+            expected_head=expected.get("head"),
+        )
+    return retire_module.retire_worktree(
+        repo, target, canonical=canonical, claim_records=claim_records,
+        requesting_session=requesting_session,
+        sandbox_root=sandbox_root, execution_root=execution_root,
+        expected_identity=expected.get("identity"),
+    )
+
+
 def cmd_retire(args: argparse.Namespace) -> int:
     """Retire merged branches / spent worktrees after strict assessment."""
     with closing(_open(args)) as session:
@@ -1226,11 +1339,14 @@ def cmd_retire(args: argparse.Namespace) -> int:
                     "next": "retry through the authenticated project Control transport",
                 },
             )
-        store = open_store(args.state_dir, args.persistence, session_id=args.session)
         try:
-            claim_records = store.read_claims()
-        finally:
-            close_store(store)
+            claim_records = _retirement_store_claims(args)
+        except Exception as error:  # noqa: BLE001 - provider failures need structured diagnostics
+            return fail(
+                f"retirement claims are unavailable: {error}", code=3,
+                diagnostics={"code": "persistence-service-unavailable",
+                            "mutation_performed": False},
+            )
         if args.inventory:
             if (not args.dry_run or args.prune or args.branch or args.worktree):
                 return fail("--inventory requires --dry-run and cannot be combined with mutation targets")
@@ -1248,98 +1364,406 @@ def cmd_retire(args: argparse.Namespace) -> int:
             out(report)
             return 0
 
-        mutation_scopes: list[tuple[str, dict[str, Any] | None]] = []
-        if not args.dry_run:
-            if args.prune:
-                mutation_scopes.append(("worktree metadata", {"kind": "repository"}))
-            mutation_scopes.extend(
-                (f"branch {branch}", {"kind": "repository"})
-                for branch in (args.branch or [])
+        specs = _retirement_specs(args, repo)
+        if not specs:
+            out({"session_id": args.session, "repository": str(repo),
+                 "canonical": args.canonical, "dry_run": args.dry_run,
+                 "completion_status": "completed", "results": []})
+            return 0
+        if args.dry_run:
+            results = []
+            for spec in specs:
+                if spec["kind"] == "prune":
+                    results.append(retire_module.prune_worktrees(
+                        repo, dry_run=True, sandbox_root=sandbox_root,
+                        execution_root=execution_root,
+                    ))
+                elif spec["kind"] == "branch":
+                    results.append(retire_module.retire_branch(
+                        repo, spec["target"], canonical=args.canonical,
+                        claim_records=claim_records, requesting_session=args.session,
+                        dry_run=True, sandbox_root=sandbox_root,
+                        execution_root=execution_root,
+                    ))
+                else:
+                    results.append(retire_module.retire_worktree(
+                        repo, spec["target"], canonical=args.canonical,
+                        claim_records=claim_records, requesting_session=args.session,
+                        dry_run=True, sandbox_root=sandbox_root,
+                        execution_root=execution_root,
+                    ))
+            out({"session_id": args.session, "repository": str(repo),
+                 "canonical": args.canonical, "dry_run": True,
+                 "completion_status": "assessed", "results": results})
+            return 0
+
+        try:
+            operation = _request_operation(args)
+            request_id = _retirement_request_id(args, operation)
+            session_operation_digest = sessions_module._request_operation_digest(
+                session.session_id, request_id, operation, session.snapshot,
             )
-            if args.worktree:
-                registered = retire_module._execution_worktrees(
-                    repo, sandbox_root=sandbox_root, execution_root=execution_root,
-                )
-                for raw_path in args.worktree:
-                    path = Path(raw_path)
-                    if not path.is_absolute():
-                        path = Path.cwd() / path
-                    checkout = str(path.resolve(strict=False))
-                    row = next((item for item in registered
-                                if str(Path(str(item.get("path", ""))).resolve(
-                                    strict=False)) == checkout), None)
-                    scope: dict[str, Any] = {
-                        "kind": "worktree",
-                        "checkout": checkout,
-                    }
-                    if isinstance(row, dict) and isinstance(row.get("branch"), str):
-                        scope["branch"] = row["branch"]
-                    mutation_scopes.append((f"worktree {checkout}", scope))
+            campaign = session.snapshot.get("campaign", {})
+            campaign_id = campaign.get("identity") if isinstance(campaign, dict) else None
+            operation_digest = sessions_module.digest_hex({
+                "session_operation_digest": session_operation_digest,
+                "campaign_id": campaign_id,
+            })
+        except (ValueError, sessions_module.LifecycleError) as error:
+            return fail(str(error), diagnostics={"code": "request-identity-invalid"})
 
-        for label, scope in mutation_scopes:
+        try:
+            completed_event = session.request_event(
+                "environment.retirement.completed", request_id, operation_digest,
+            )
+            if completed_event is not None:
+                completed_payload = completed_event.get("payload", {})
+                response = completed_payload.get("response")
+                if (completed_payload.get("schema_version")
+                        != "mncs.environment.retirement-receipt/1"
+                        or not isinstance(response, dict)
+                        or response.get("session_id") != session.session_id
+                        or response.get("request_id") != request_id
+                        or response.get("completion_status") != "completed"):
+                    return fail("durable retirement receipt is malformed", code=3,
+                                diagnostics={"code": "store-corruption",
+                                             "request_id": request_id})
+                out({"replayed_request": True, **response})
+                return int(response.get("exit_code", 0))
+            intent_event = session.request_event(
+                "environment.retirement.requested", request_id, operation_digest,
+            )
+        except Exception as error:  # noqa: BLE001 - Store history is an external boundary
+            return fail(
+                f"retirement request history is unavailable: {error}", code=3,
+                diagnostics={"code": "persistence-service-unavailable",
+                            "request_id": request_id, "mutation_performed": False},
+            )
+
+        admissions: dict[int, dict[str, Any]] = {}
+        if intent_event is None:
+            for spec in specs:
+                try:
+                    admission = _retirement_admission(session, repo, spec)
+                except Exception as error:  # noqa: BLE001 - authority provider failures are structured
+                    return fail(
+                        f"retirement authority could not be revalidated: {error}",
+                        code=3,
+                        diagnostics={"code": "authority-revalidation-unavailable",
+                                    "action": "retire", "scope": spec["scope"],
+                                    "request_id": request_id,
+                                    "mutation_performed": False},
+                    )
+                admissions[spec["index"]] = admission
+                if admission["verdict"] != "allow":
+                    status = str(admission["verdict"])
+                    return fail(
+                        f"retirement of {spec['kind']} {spec['target']} is not authorized: {admission.get('reason') or status}",
+                        code=3,
+                        diagnostics={"code": ("authority-denied" if status == "deny"
+                                             else "authority-escalation-required"),
+                                    "action": "retire", "target": repo.name,
+                                    "scope": spec["scope"], "verdict": status,
+                                    "reason": admission.get("reason"),
+                                    "request_id": request_id,
+                                    "mutation_performed": False},
+                    )
             try:
-                verdict = session.check(
-                    action="retire", target=repo.name, scope=scope,
+                claim_records = _retirement_store_claims(args)
+                states = []
+                for spec in specs:
+                    state = retire_module.retirement_target_state(
+                        repo, spec["kind"], spec["target"],
+                        sandbox_root=sandbox_root, execution_root=execution_root,
+                    )
+                    if state.get("status") == "unknown":
+                        return fail(
+                            f"cannot establish exact retirement target state: {state.get('reason')}",
+                            code=3,
+                            diagnostics={"code": "retirement-target-unknown",
+                                        "request_id": request_id,
+                                        "target": spec["target"],
+                                        "mutation_performed": False},
+                        )
+                    if (spec["kind"] == "worktree"
+                            and (state.get("registered") is not True
+                                 or state.get("identity") is None)):
+                        return fail(
+                            "worktree registration and checkout identity are unavailable",
+                            code=3,
+                            diagnostics={"code": "retirement-target-unknown",
+                                        "request_id": request_id,
+                                        "target": spec["target"],
+                                        "mutation_performed": False},
+                        )
+                    if spec["kind"] == "branch" and state.get("head") is None:
+                        return fail(
+                            "branch ref is unavailable before retirement intent",
+                            code=3,
+                            diagnostics={"code": "retirement-target-unknown",
+                                        "request_id": request_id,
+                                        "target": spec["target"],
+                                        "mutation_performed": False},
+                        )
+                    states.append(state)
+                intent_payload = {
+                    "schema_version": "mncs.environment.retirement-intent/1",
+                    "session_id": session.session_id,
+                    "consumer_id": session.snapshot.get("consumer_id"),
+                    "authenticated_principal_id": session.snapshot.get("authenticated_principal_id"),
+                    "campaign_id": (session.snapshot.get("campaign", {}).get("identity")
+                                    if isinstance(session.snapshot.get("campaign"), dict) else None),
+                    "repository": str(repo), "repository_name": repo.name,
+                    "canonical": args.canonical,
+                    "target_specs": specs,
+                    "target_states": states,
+                    "admissions": [admissions[index] for index in sorted(admissions)],
+                }
+                session.record_observation(
+                    "environment.retirement.requested", "mncs-env.retirement",
+                    intent_payload, request_id=request_id,
+                    operation_digest=operation_digest,
                 )
-            except sessions_module.LifecycleError as error:
+            except Exception as error:  # noqa: BLE001 - Store publication failures are ambiguous
                 return fail(
-                    f"retirement authority could not be revalidated: {error}",
-                    code=3,
-                    diagnostics={
-                        "code": "authority-revalidation-unavailable",
-                        "action": "retire",
-                        "target": repo.name,
-                        "scope": scope,
-                        "mutation_performed": False,
-                        "next": "restore Environment claim and checkout observations before retrying",
-                    },
+                    f"retirement intent could not be published: {error}", code=3,
+                    diagnostics={"code": "persistence-service-unavailable",
+                                "request_id": request_id,
+                                "mutation_performed": False},
                 )
-            if verdict.get("verdict") != "allow":
-                status = str(verdict.get("verdict", "unknown"))
+        else:
+            intent_payload = intent_event.get("payload", {})
+            stored_specs = intent_payload.get("target_specs")
+            campaign = session.snapshot.get("campaign", {})
+            current_campaign_id = campaign.get("identity") if isinstance(campaign, dict) else None
+            if (intent_payload.get("schema_version")
+                    != "mncs.environment.retirement-intent/1"
+                    or intent_payload.get("session_id") != session.session_id
+                    or intent_payload.get("consumer_id") != session.snapshot.get("consumer_id")
+                    or intent_payload.get("authenticated_principal_id")
+                    != session.snapshot.get("authenticated_principal_id")
+                    or intent_payload.get("campaign_id") != current_campaign_id
+                    or stored_specs != specs
+                    or intent_payload.get("repository") != str(repo)
+                    or intent_payload.get("canonical") != args.canonical):
                 return fail(
-                    f"retirement of {label} is not authorized: {verdict.get('reason', status)}",
+                    "retirement request identity is bound to different targets",
                     code=3,
-                    diagnostics={
-                        "code": ("authority-denied" if status == "deny"
-                                 else "authority-escalation-required"),
-                        "action": "retire",
-                        "target": repo.name,
-                        "scope": scope,
-                        "verdict": status,
-                        "reason": verdict.get("reason"),
-                        "mutation_performed": False,
-                        "next": "continue the selected Environment session and hold a claim covering this exact scope",
-                    },
+                    diagnostics={"code": "request-identity-conflict",
+                                "request_id": request_id,
+                                "mutation_performed": False},
                 )
+            target_states = intent_payload.get("target_states")
+            recorded_admissions = intent_payload.get("admissions")
+            if (not isinstance(target_states, list) or len(target_states) != len(specs)
+                    or not isinstance(recorded_admissions, list)
+                    or len(recorded_admissions) != len(specs)):
+                return fail("durable retirement intent is malformed", code=3,
+                            diagnostics={"code": "store-corruption",
+                                         "request_id": request_id})
+            for admission in recorded_admissions:
+                if isinstance(admission, dict):
+                    index = admission.get("target_index")
+                    if (not isinstance(index, int) or index < 0 or index >= len(specs)
+                            or admission.get("verdict") != "allow"
+                            or admission.get("session_id") != session.session_id
+                            or admission.get("consumer_id") != session.snapshot.get("consumer_id")
+                            or admission.get("authenticated_principal_id")
+                            != session.snapshot.get("authenticated_principal_id")
+                            or admission.get("campaign_id")
+                            != current_campaign_id
+                            or admission.get("scope") != specs[index].get("scope")
+                            or index in admissions):
+                        return fail("durable retirement admission is malformed", code=3,
+                                    diagnostics={"code": "store-corruption",
+                                                 "request_id": request_id})
+                    admissions[index] = admission
+                else:
+                    return fail("durable retirement admission is malformed", code=3,
+                                diagnostics={"code": "store-corruption",
+                                             "request_id": request_id})
+            if set(admissions) != set(range(len(specs))):
+                return fail("durable retirement admission is incomplete", code=3,
+                            diagnostics={"code": "store-corruption",
+                                         "request_id": request_id})
 
-        if mutation_scopes:
-            # Authority checks refresh the session's claim projection. Read
-            # Store once more after those checks so the retirement adapter
-            # receives the latest claim records at its Git preflight.
-            store = open_store(args.state_dir, args.persistence, session_id=args.session)
+        states_by_index = {
+            spec["index"]: state
+            for spec, state in zip(specs, intent_payload.get("target_states", []), strict=False)
+            if isinstance(state, dict)
+        }
+        results: list[dict[str, Any]] = []
+        incomplete = False
+        for spec in specs:
+            target_request_id = _retirement_target_request_id(request_id, spec)
+            target_digest = _retirement_target_operation_digest(operation_digest, spec)
+            expected = states_by_index.get(spec["index"])
+            if expected is None:
+                return fail("durable retirement intent omits a target identity", code=3,
+                            diagnostics={"code": "store-corruption",
+                                         "request_id": request_id,
+                                         "target": spec["target"]})
             try:
-                claim_records = store.read_claims()
-            finally:
-                close_store(store)
+                prior = session.request_event(
+                    "environment.retirement.target-completed",
+                    target_request_id, target_digest,
+                )
+            except Exception as error:  # noqa: BLE001 - Store history is an external boundary
+                return fail(
+                    f"retirement target history is unavailable: {error}", code=3,
+                    diagnostics={"code": "persistence-service-unavailable",
+                                "request_id": request_id,
+                                "target": spec["target"],
+                                "mutation_performed": bool(results)},
+                )
+            if prior is not None:
+                payload = prior.get("payload", {})
+                result = payload.get("result")
+                if (payload.get("parent_request_id") != request_id
+                        or payload.get("schema_version")
+                        != "mncs.environment.retirement-target-receipt/1"
+                        or payload.get("session_id") != session.session_id
+                        or payload.get("consumer_id") != session.snapshot.get("consumer_id")
+                        or payload.get("authenticated_principal_id")
+                        != session.snapshot.get("authenticated_principal_id")
+                        or payload.get("campaign_id") != intent_payload.get("campaign_id")
+                        or payload.get("target_spec") != spec
+                        or payload.get("expected_target_state") != expected
+                        or not isinstance(payload.get("admission"), dict)
+                        or payload["admission"].get("verdict") != "allow"
+                        or not isinstance(result, dict)
+                        or result.get("retired") is not True):
+                    return fail("durable retirement target receipt is malformed", code=3,
+                                diagnostics={"code": "store-corruption",
+                                             "request_id": request_id,
+                                             "target": spec["target"]})
+                results.append(result)
+                continue
 
-        results: list[dict] = []
-        if args.prune:
-            results.append(retire_module.prune_worktrees(repo, dry_run=args.dry_run))
-        for branch in args.branch or []:
-            results.append(retire_module.retire_branch(
-                repo, branch, canonical=args.canonical,
-                claim_records=claim_records,
-                requesting_session=args.session, dry_run=args.dry_run,
-                sandbox_root=sandbox_root, execution_root=execution_root))
-        for path in args.worktree or []:
-            results.append(retire_module.retire_worktree(
-                repo, path, canonical=args.canonical,
-                claim_records=claim_records,
-                requesting_session=args.session, dry_run=args.dry_run,
-                sandbox_root=sandbox_root, execution_root=execution_root))
-        out({"session_id": args.session, "repository": str(repo),
-             "canonical": args.canonical, "dry_run": args.dry_run,
-             "results": results})
+            transition = retire_module.reconcile_retirement_target(
+                repo, spec["kind"], spec["target"], expected,
+                sandbox_root=sandbox_root, execution_root=execution_root,
+            )
+            if transition["state"] == "completed":
+                result = {"target": spec["target"], "kind": spec["kind"],
+                          "retired": True, "status": "reconciled",
+                          "reason": transition["reason"], "reconciled": True}
+                admission = admissions.get(spec["index"], {})
+            elif transition["state"] == "retry":
+                try:
+                    admission = _retirement_admission(session, repo, spec)
+                except Exception as error:  # noqa: BLE001 - authority provider failures are structured
+                    return fail(
+                        f"retirement authority could not be revalidated: {error}",
+                        code=3,
+                        diagnostics={"code": "authority-revalidation-unavailable",
+                                    "request_id": request_id,
+                                    "target": spec["target"],
+                                    "mutation_performed": bool(results)},
+                    )
+                if admission["verdict"] != "allow":
+                    result = {"target": spec["target"], "kind": spec["kind"],
+                              "retired": False, "status": "authority-denied",
+                              "reason": admission.get("reason") or admission["verdict"]}
+                    incomplete = True
+                    results.append(result)
+                    continue
+                try:
+                    claim_records = _retirement_store_claims(args)
+                    repeated = retire_module.reconcile_retirement_target(
+                        repo, spec["kind"], spec["target"], expected,
+                        sandbox_root=sandbox_root, execution_root=execution_root,
+                    )
+                    if repeated["state"] != "retry":
+                        result = {"target": spec["target"], "kind": spec["kind"],
+                                  "retired": False, "status": "unknown",
+                                  "reason": repeated.get("reason", "target changed before mutation")}
+                        incomplete = True
+                        results.append(result)
+                        continue
+                    result = _retirement_adapter(
+                        repo, spec, expected, canonical=args.canonical,
+                        claim_records=claim_records,
+                        requesting_session=session.session_id,
+                        sandbox_root=sandbox_root, execution_root=execution_root,
+                    )
+                except Exception as error:  # noqa: BLE001 - Git and Store can fail after intent
+                    return fail(
+                        f"retirement mutation outcome is ambiguous: {error}", code=3,
+                        diagnostics={"code": "ambiguous-publication-outcome",
+                                    "request_id": request_id,
+                                    "target": spec["target"],
+                                    "mutation_performed": bool(results)},
+                    )
+                if result.get("retired") is not True:
+                    incomplete = True
+                    results.append(result)
+                    continue
+            else:
+                result = {"target": spec["target"], "kind": spec["kind"],
+                          "retired": False, "status": "unknown",
+                          "reason": transition.get("reason", "target state is ambiguous")}
+                incomplete = True
+                results.append(result)
+                continue
+
+            receipt_payload = {
+                "schema_version": "mncs.environment.retirement-target-receipt/1",
+                "parent_request_id": request_id,
+                "session_id": session.session_id,
+                "consumer_id": session.snapshot.get("consumer_id"),
+                "authenticated_principal_id": session.snapshot.get("authenticated_principal_id"),
+                "campaign_id": intent_payload.get("campaign_id"),
+                "target_spec": spec,
+                "expected_target_state": expected,
+                "admission": admission,
+                "result": result,
+            }
+            try:
+                session.record_observation(
+                    "environment.retirement.target-completed", "mncs-env.retirement",
+                    receipt_payload, request_id=target_request_id,
+                    operation_digest=target_digest,
+                )
+            except Exception as error:  # noqa: BLE001 - receipt publication follows Git mutation
+                return fail(
+                    f"retirement may have completed but its receipt is unavailable: {error}",
+                    code=3,
+                    diagnostics={"code": "ambiguous-publication-outcome",
+                                "request_id": request_id,
+                                "target": spec["target"],
+                                "mutation_performed": True},
+                )
+            results.append(result)
+
+        response = {
+            "session_id": session.session_id, "repository": str(repo),
+            "canonical": args.canonical, "dry_run": False,
+            "request_id": request_id,
+            "completion_status": "pending" if incomplete else "completed",
+            "mutation_performed": any(item.get("retired") is True for item in results),
+            "results": results,
+            "exit_code": 3 if incomplete else 0,
+        }
+        if incomplete:
+            out(response)
+            return 3
+        try:
+            session.record_observation(
+                "environment.retirement.completed", "mncs-env.retirement",
+                {"schema_version": "mncs.environment.retirement-receipt/1",
+                 "response": response}, request_id=request_id,
+                operation_digest=operation_digest,
+            )
+        except Exception as error:  # noqa: BLE001 - final Store receipt can be ambiguous
+            return fail(
+                f"retirement completed but its final receipt is unavailable: {error}",
+                code=3,
+                diagnostics={"code": "ambiguous-publication-outcome",
+                            "request_id": request_id,
+                            "mutation_performed": response["mutation_performed"]},
+            )
+        out(response)
         return 0
 
 
@@ -1375,17 +1799,17 @@ def cmd_resident(args):
         raise ValueError('resident interval must be positive and max-ticks nonnegative')
     count = 0
     while True:
-        with entry_module.entry_lock(args.state_dir, args.persistence):
-            with closing(_open(args)) as session:
-                source = session.snapshot.get('configuration', {}).get('source')
-                definition, _ = entry_module.select_definition(Path(source) if source and source != 'orientation-default' else None,
-                    session.snapshot['workspace']['root'])
-                expected = session.snapshot.get('provenance', {}).get('definition_id')
-                if expected and entry_module.identity.environment_id(definition) != expected:
-                    raise ValueError('resident definition changed; re-enter to select and bind the new environment')
-                _, trace = entry_module.ambient_tick(session, definition)
-                if not args.watch or trace.get('scheduled') or trace.get('events'):
-                    out({'session_id': session.session_id, 'trace': trace})
+        with entry_module.entry_lock(args.state_dir, args.persistence), \
+                closing(_open(args)) as session:
+            source = session.snapshot.get('configuration', {}).get('source')
+            definition, _ = entry_module.select_definition(Path(source) if source and source != 'orientation-default' else None,
+                session.snapshot['workspace']['root'])
+            expected = session.snapshot.get('provenance', {}).get('definition_id')
+            if expected and entry_module.identity.environment_id(definition) != expected:
+                raise ValueError('resident definition changed; re-enter to select and bind the new environment')
+            _, trace = entry_module.ambient_tick(session, definition)
+            if not args.watch or trace.get('scheduled') or trace.get('events'):
+                out({'session_id': session.session_id, 'trace': trace})
         count += 1
         if not args.watch or (args.max_ticks and count >= args.max_ticks):
             return 0
@@ -1751,6 +2175,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="emit all branch/worktree dispositions; requires --dry-run")
     retire.add_argument("--execution-root", type=Path, help=argparse.SUPPRESS)
     retire.add_argument("--sandbox-root", type=Path, help=argparse.SUPPRESS)
+    retire.add_argument("--request-id",
+                        help="stable request identity for explicit retry/reconciliation")
     retire.add_argument("--dry-run", action="store_true",
                         help="assess only; change nothing")
     retire.set_defaults(func=cmd_retire)

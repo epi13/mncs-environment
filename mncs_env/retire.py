@@ -280,6 +280,73 @@ def _execution_worktrees(
     return rows
 
 
+def _worktree_admin_identity(
+    repo: Path,
+    row: dict[str, Any],
+    *,
+    sandbox_root: Path | None = None,
+    execution_root: Path | None = None,
+) -> str | None:
+    """Return a generation-sensitive identity for one linked checkout.
+
+    Git's administrative directory name identifies a worktree while it is
+    registered. Device/inode facts fence a later checkout that reuses the same
+    path and branch after the original registration was removed.
+    """
+    checkout = Path(str(row.get("path", "")))
+    marker = checkout / ".git"
+    try:
+        marker_stat = marker.stat()
+        marker_text = marker.read_text(encoding="utf-8").strip()
+        common = _git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
+        if common.returncode != 0:
+            return None
+        common_path = Path(os.path.abspath(common.stdout.strip()))
+        if not marker_text.startswith("gitdir:"):
+            return None
+        admin_name = Path(marker_text.partition(":")[2].strip()).name
+        admin = common_path / "worktrees" / admin_name
+        admin_stat = admin.stat()
+        if not admin.is_dir():
+            return None
+        admin_parent = admin.resolve(strict=True).parent
+        if admin_parent != (common_path / "worktrees").resolve(strict=True):
+            return None
+        backlink_path = admin / "gitdir"
+        backlink = Path(backlink_path.read_text(encoding="utf-8").strip())
+        if not backlink.is_absolute():
+            backlink = (admin / backlink).resolve(strict=False)
+        backlink_checkout = backlink.parent
+        backlink_stat = backlink_path.stat()
+        commondir_stat = (admin / "commondir").stat()
+        registered = str(row.get("registered_path") or row.get("path", ""))
+        if row.get("registered_path") is not None:
+            backlink_checkout = _map_execution_checkout(
+                backlink_checkout, sandbox_root, execution_root,
+            )
+        if (backlink_checkout is None
+                or not _same_path(backlink_checkout, row.get("path", ""))):
+            return None
+    except (OSError, UnicodeDecodeError, ValueError):
+        return None
+    return digest_hex({
+        "repository_common_directory": str(common_path),
+        "administrative_directory": admin_name,
+        "admin_device": admin_stat.st_dev,
+        "admin_inode": admin_stat.st_ino,
+        "backlink_device": backlink_stat.st_dev,
+        "backlink_inode": backlink_stat.st_ino,
+        "commondir_device": commondir_stat.st_dev,
+        "commondir_inode": commondir_stat.st_ino,
+        "checkout_gitfile_device": marker_stat.st_dev,
+        "checkout_gitfile_inode": marker_stat.st_ino,
+        "registered_path": registered,
+        "branch": row.get("branch"),
+        "head": row.get("head"),
+        "detached": row.get("detached") is True,
+    })
+
+
 def main_worktree(repo: Path) -> Path | None:
     """Resolve the main checkout path (the holder of the common dir)."""
     completed = _git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
@@ -558,7 +625,8 @@ def retire_branch(repo: Path, branch: str, *, canonical: str = DEFAULT_CANONICAL
                   requesting_session: str | None = None,
                   dry_run: bool = False,
                   sandbox_root: Path | None = None,
-                  execution_root: Path | None = None) -> dict[str, Any]:
+                  execution_root: Path | None = None,
+                  expected_head: str | None = None) -> dict[str, Any]:
     """Delete one merged local branch after strict assessment."""
     verdict = branch_assessment(repo, branch, canonical=canonical,
                                 claim_records=claim_records,
@@ -571,9 +639,25 @@ def retire_branch(repo: Path, branch: str, *, canonical: str = DEFAULT_CANONICAL
     if dry_run:
         return {"target": branch, "kind": "branch", "retired": False,
                 "reason": "dry run: would delete", "dry_run": True}
-    completed = _git(Path(repo), "branch", "-d", branch)
+    current_head = local_branches(Path(repo)).get(branch)
+    if expected_head is not None and current_head != expected_head:
+        return {"target": branch, "kind": "branch", "retired": False,
+                "status": "unknown",
+                "reason": "branch tip changed after retirement intent",
+                "dry_run": False}
+    if current_head is None:
+        return {"target": branch, "kind": "branch", "retired": False,
+                "status": "unknown", "reason": "branch ref disappeared before mutation",
+                "dry_run": False}
+    # Delete the ref with an expected old object id. This retains Git's
+    # conditional-ref semantics if another writer changes the branch after
+    # assessment.
+    completed = _git(
+        Path(repo), "update-ref", "-d", f"refs/heads/{branch}", current_head,
+    )
     if completed.returncode != 0:
         return {"target": branch, "kind": "branch", "retired": False,
+                "status": "mutation-failed",
                 "reason": f"git refused: {completed.stderr.strip()}", "dry_run": False}
     return {"target": branch, "kind": "branch", "retired": True,
             "reason": verdict["reason"], "dry_run": False}
@@ -585,7 +669,8 @@ def retire_worktree(repo: Path, path: str | Path, *,
                     requesting_session: str | None = None,
                     dry_run: bool = False,
                     sandbox_root: Path | None = None,
-                    execution_root: Path | None = None) -> dict[str, Any]:
+                    execution_root: Path | None = None,
+                    expected_identity: str | None = None) -> dict[str, Any]:
     """Remove one spent worktree (its branch, if any, is kept)."""
     verdict = worktree_assessment(repo, path, canonical=canonical,
                                   claim_records=claim_records,
@@ -600,6 +685,18 @@ def retire_worktree(repo: Path, path: str | Path, *,
         return {"target": str(path), "kind": "worktree", "retired": False,
                 "status": "would-retire",
                 "reason": "dry run: would remove", "dry_run": True}
+    if expected_identity is not None:
+        current = retirement_target_state(
+            repo, "worktree", str(path),
+            sandbox_root=sandbox_root, execution_root=execution_root,
+        )
+        if current.get("identity") != expected_identity:
+            return {
+                "target": str(path), "kind": "worktree", "retired": False,
+                "status": "unknown",
+                "reason": "registered checkout identity changed before mutation",
+                "dry_run": False,
+            }
     mapped_target = _map_host_checkout(path, sandbox_root, execution_root)
     if sandbox_root is not None and execution_root is not None:
         if mapped_target is None:
@@ -623,7 +720,14 @@ def retire_worktree(repo: Path, path: str | Path, *,
             "status": "retired", "reason": verdict["reason"], "dry_run": False}
 
 
-def prune_worktrees(repo: Path, *, dry_run: bool = False) -> dict[str, Any]:
+def prune_worktrees(
+    repo: Path,
+    *,
+    dry_run: bool = False,
+    sandbox_root: Path | None = None,
+    execution_root: Path | None = None,
+    expected_candidates: list[str] | None = None,
+) -> dict[str, Any]:
     """Drop administrative records whose directories are already gone.
 
     ``git worktree prune`` only removes metadata for missing
@@ -631,17 +735,178 @@ def prune_worktrees(repo: Path, *, dry_run: bool = False) -> dict[str, Any]:
     """
     repo = Path(repo)
     _ensure_repo(repo)
+    def git_prune(*flags: str) -> subprocess.CompletedProcess[str]:
+        if sandbox_root is not None and execution_root is not None:
+            return _execution_git(
+                repo, sandbox_root, execution_root,
+                "-C", str(sandbox_root), "worktree", "prune", *flags,
+            )
+        return _git(repo, "worktree", "prune", *flags)
+
     if dry_run:
-        completed = _git(repo, "worktree", "prune", "--dry-run", "-v")
+        completed = git_prune("--dry-run", "-v")
+        if completed.returncode != 0:
+            return {"target": str(repo), "kind": "prune", "retired": False,
+                    "status": "unknown",
+                    "reason": f"git could not assess prune candidates: {completed.stderr.strip()}",
+                    "dry_run": True}
         return {"target": str(repo), "kind": "prune", "retired": False,
                 "reason": "dry run", "dry_run": True,
                 "output": completed.stdout.strip()}
-    completed = _git(repo, "worktree", "prune", "-v")
+    if expected_candidates is not None:
+        observed = prune_worktrees(
+            repo, dry_run=True,
+            sandbox_root=sandbox_root, execution_root=execution_root,
+        )
+        if observed.get("status") == "unknown":
+            return {**observed, "dry_run": False}
+        lines = [line.strip() for line in str(observed.get("output", "")).splitlines()
+                 if line.strip()]
+        if any(line not in expected_candidates for line in lines):
+            return {"target": str(repo), "kind": "prune", "retired": False,
+                    "status": "unknown",
+                    "reason": "new prune candidates appeared after retirement intent",
+                    "dry_run": False}
+    completed = git_prune("-v")
     if completed.returncode != 0:
         return {"target": str(repo), "kind": "prune", "retired": False,
                 "reason": f"git refused: {completed.stderr.strip()}", "dry_run": False}
     return {"target": str(repo), "kind": "prune", "retired": True,
             "reason": "pruned", "dry_run": False, "output": completed.stdout.strip()}
+
+
+def retirement_target_state(
+    repo: Path,
+    kind: str,
+    target: str,
+    *,
+    sandbox_root: Path | None = None,
+    execution_root: Path | None = None,
+) -> dict[str, Any]:
+    """Capture the exact Git state needed to reconcile one retirement retry."""
+    repo = Path(repo)
+    common = _git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    if common.returncode != 0:
+        return {"status": "unknown", "reason": "Git common directory is unavailable"}
+    common_path = Path(os.path.abspath(common.stdout.strip()))
+    repository_identity = digest_hex({
+        "common_directory": str(common_path),
+        "repository_name": repo.name,
+    })
+    if kind == "worktree":
+        target_path = Path(os.path.abspath(target))
+        rows = _execution_worktrees(
+            repo, sandbox_root=sandbox_root, execution_root=execution_root,
+        )
+        row = next((item for item in rows
+                    if _same_path(item.get("path", ""), target_path)), None)
+        exists = target_path.is_dir()
+        if row is None:
+            return {
+                "status": "available" if not exists else "ambiguous",
+                "repository_identity": repository_identity,
+                "path_exists": exists,
+                "registered": False,
+                "identity": None,
+            }
+        identity = _worktree_admin_identity(
+            repo, row, sandbox_root=sandbox_root, execution_root=execution_root,
+        ) if exists else None
+        return {
+            "status": "available" if exists and identity else "unknown",
+            "repository_identity": repository_identity,
+            "path_exists": exists,
+            "registered": True,
+            "identity": identity,
+            "branch": row.get("branch"),
+            "head": row.get("head"),
+            "detached": row.get("detached") is True,
+            "registered_path": row.get("registered_path") or row.get("path"),
+        }
+    if kind == "branch":
+        head = local_branches(repo).get(target)
+        rows = _execution_worktrees(
+            repo, sandbox_root=sandbox_root, execution_root=execution_root,
+        )
+        checkouts = sorted(
+            str(row.get("path")) for row in rows if row.get("branch") == target
+        )
+        return {
+            "status": "available" if head is not None else "missing",
+            "repository_identity": repository_identity,
+            "branch": target,
+            "head": head,
+            "checked_out_paths": checkouts,
+        }
+    if kind == "prune":
+        result = prune_worktrees(
+            repo, dry_run=True,
+            sandbox_root=sandbox_root, execution_root=execution_root,
+        )
+        if result.get("status") == "unknown":
+            return {"status": "unknown", "reason": result.get("reason")}
+        output = result.get("output")
+        if not isinstance(output, str):
+            return {"status": "unknown", "reason": "Git prune candidates are unavailable"}
+        candidates = sorted(line.strip() for line in output.splitlines() if line.strip())
+        return {
+            "status": "available",
+            "repository_identity": repository_identity,
+            "candidates": candidates,
+        }
+    return {"status": "unknown", "reason": f"unsupported retirement target kind: {kind}"}
+
+
+def reconcile_retirement_target(
+    repo: Path,
+    kind: str,
+    target: str,
+    expected: dict[str, Any],
+    *,
+    sandbox_root: Path | None = None,
+    execution_root: Path | None = None,
+) -> dict[str, Any]:
+    """Decide whether a pending request is complete, retryable, or ambiguous."""
+    current = retirement_target_state(
+        repo, kind, target,
+        sandbox_root=sandbox_root, execution_root=execution_root,
+    )
+    if current.get("status") == "unknown":
+        return {"state": "unknown", "reason": current.get("reason", "target state is unavailable")}
+    if current.get("repository_identity") != expected.get("repository_identity"):
+        return {"state": "unknown", "reason": "Git common-directory identity changed"}
+    if kind == "worktree":
+        if (current.get("registered") is False
+                and current.get("path_exists") is False):
+            return {"state": "completed", "reason": "checkout and Git registration are absent"}
+        if (current.get("registered") is not True
+                or current.get("path_exists") is not True):
+            return {"state": "unknown", "reason": "checkout and registration disagree; preserving both states"}
+        if (not expected.get("identity")
+                or current.get("identity") != expected.get("identity")):
+            return {"state": "unknown", "reason": "registered checkout identity changed"}
+        return {"state": "retry", "reason": "the original registered checkout remains"}
+    if kind == "branch":
+        if current.get("head") is None:
+            if current.get("checked_out_paths"):
+                return {"state": "unknown", "reason": "branch ref is absent while a checkout still names it"}
+            return {"state": "completed", "reason": "branch ref is absent"}
+        if current.get("head") != expected.get("head"):
+            return {"state": "unknown", "reason": "branch tip changed after retirement intent"}
+        if current.get("checked_out_paths"):
+            return {"state": "unknown", "reason": "branch became checked out after retirement intent"}
+        return {"state": "retry", "reason": "the original branch ref remains"}
+    if kind == "prune":
+        previous = expected.get("candidates")
+        remaining = current.get("candidates")
+        if not isinstance(previous, list) or not isinstance(remaining, list):
+            return {"state": "unknown", "reason": "prune candidate identity is invalid"}
+        if not remaining:
+            return {"state": "completed", "reason": "all recorded stale registrations are absent"}
+        if any(item not in previous for item in remaining):
+            return {"state": "unknown", "reason": "new prune candidates appeared after retirement intent"}
+        return {"state": "retry", "reason": "recorded stale registrations remain"}
+    return {"state": "unknown", "reason": f"unsupported retirement target kind: {kind}"}
 
 
 def _same_path(left: str | Path, right: str | Path) -> bool:

@@ -106,6 +106,36 @@ class InjectedInterruption(BaseException):
 
 
 class CompletionReleasesClaimsTests(unittest.TestCase):
+    def test_request_event_replays_and_rejects_request_identity_reuse(self):
+        store = StubStore(_snapshot(), [])
+        first = _session(store)
+        recorded = first.record_observation(
+            "environment.retirement.requested", "mncs-env.retirement",
+            {"target": "worktree"}, request_id="req_retirement_replay",
+            operation_digest="operation-a",
+        )
+        restarted = sessions_module.Session.open(
+            state_dir=".", session_id="ses_test", store=store,
+        )
+        self.assertEqual(
+            restarted.request_event(
+                "environment.retirement.requested", "req_retirement_replay",
+                "operation-a",
+            ),
+            recorded,
+        )
+        self.assertIsNone(restarted.request_event(
+            "environment.retirement.completed", "req_retirement_replay",
+            "operation-a",
+        ))
+        with self.assertRaisesRegex(
+            sessions_module.LifecycleError, "different Environment operation",
+        ):
+            restarted.request_event(
+                "environment.retirement.requested", "req_retirement_replay",
+                "operation-b",
+            )
+
     def test_complete_releases_own_live_claims(self):
         store = StubStore(_snapshot(), [
             _record("ses_test", "mncs-demo"),
