@@ -1,0 +1,128 @@
+{
+  "schema_version": "mncs.environment.protected-projection-capability-rpc-acceptance/1",
+  "identity": "ev_protected_projection_capability_rpc_20261012",
+  "recorded_at": "2026-10-12T03:30:08Z",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_revision": "d1f3842764dbbf9f1f37e8f42bb6c9e91ccc3f4f",
+    "control_repository": "mncs-control-mcp",
+    "control_revision": "6f9e78bc7aa3b1204daf8024e3ee6a7b5cfaaf92",
+    "files": [
+      "mncs_env/sessions.py",
+      "tests/test_environment.py",
+      ".mncs/project.json",
+      "src/mncs_control_mcp/environment_rpc.py",
+      "tests/test_environment_rpc.py"
+    ]
+  },
+  "capabilities": {
+    "write": {
+      "identity": "mncs-environment:ambient-projection-coherence",
+      "contract_revision": "2",
+      "effects": ["read", "write"],
+      "provider_invocation": ["projections", "{session_id}"],
+      "rpc_arguments": ["invoke", "<authorized-session>", "mncs-environment:ambient-projection-coherence"]
+    },
+    "readback": {
+      "identity": "mncs-environment:projection-evidence-inspection",
+      "contract_revision": "1",
+      "effects": ["read"],
+      "provider_invocation": ["projections", "--evidence", "{session_id}"],
+      "rpc_arguments": ["invoke", "<authorized-session>", "mncs-environment:projection-evidence-inspection"]
+    },
+    "authorization": "Control admits only these exact declared capabilities for the Environment project grant; Environment checks session binding, invoke rights, effect rights, and current repository claims before provider execution. Other capability identities remain UNKNOWN."
+  },
+  "protected_execution": {
+    "tool": "mncs_control_terminal_exec",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "persistence_transport": "authenticated Control Environment RPC",
+    "canonical_store_direct_write_probe": "test ! -w /home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_direct_write_access": false
+  },
+  "publication": {
+    "outer_request_id": "req_projection_provenance_20261012_0330",
+    "provider_request_id": "req_d5d8c4eaefc13622352426aeefe4099b7b665e5fd2e55bfc",
+    "exit_code": 0,
+    "invoke_status": "ok",
+    "provider_returncode": 0,
+    "summary": {
+      "blockers": 0,
+      "current": 0,
+      "degraded": 0,
+      "epoch_reused": false,
+      "invalid": 0,
+      "pending": 3,
+      "persisted": true,
+      "reconciled": 0
+    },
+    "pending_projection_ids": [
+      "mncs-environment:overview",
+      "mncs-environment:project-view",
+      "mncs-environment:roadmap"
+    ],
+    "evidence_reference": "mncs-store:ses_7226fbcfe65820f7:projections:1c6a9053eca6310d0aeee119d6a245b34a39674916fd6a9ca1f89df5f60fa0bc",
+    "invocation_snapshot_readback": {
+      "status": "ok",
+      "parent_request_id": "req_projection_provenance_20261012_0330",
+      "provider_request_id": "req_d5d8c4eaefc13622352426aeefe4099b7b665e5fd2e55bfc"
+    }
+  },
+  "immutable_evidence_readback": {
+    "capability": "mncs-environment:projection-evidence-inspection",
+    "request_id": "req_projection_evidence_readback_20261012_0350",
+    "terminal_job_id": "term-27caffbf28a60d8e5fa4f3ff",
+    "exit_code": 0,
+    "evidence_reference": "mncs-store:ses_7226fbcfe65820f7:projections:1c6a9053eca6310d0aeee119d6a245b34a39674916fd6a9ca1f89df5f60fa0bc",
+    "readback_schema": "mncs.environment.projections/1",
+    "finished_at": "2026-10-12T03:25:05+00:00",
+    "readback_summary": {
+      "blockers": 0,
+      "current": 0,
+      "degraded": 0,
+      "epoch_reused": false,
+      "invalid": 0,
+      "pending": 3,
+      "reconciled": 0
+    },
+    "history_contains_same_reference": true
+  },
+  "validation": {
+    "environment_suite": {
+      "commit": "cf9d52c",
+      "command": "PYTHONPATH=. python -m pytest -q tests/test_environment.py",
+      "result": "PASS; 169 passed in 266.56s"
+    },
+    "environment_invocation_regression": {
+      "commit": "d1f3842",
+      "command": "PYTHONPATH=. python -m pytest -q tests/test_environment.py::SessionTests::test_session_invoke_scopes_parent_rpc_identity_to_provider_child",
+      "result": "PASS; 1 passed"
+    },
+    "control_rpc_suite": {
+      "commit": "6f9e78b",
+      "command": "python -m pytest -q tests/test_environment_rpc.py",
+      "result": "PASS; 31 tests"
+    },
+    "static_checks": [
+      "compileall passed for changed Python files",
+      "git diff --check passed"
+    ]
+  },
+  "recovery_observation": {
+    "earlier_outcome": "A provider request identity collision and then a stale snapshot CAS conflict were reported as failures; the session retained failed invocation records, while the subsequent evidence history exposed the child pass that had committed before the outer snapshot conflict.",
+    "reconciliation": "A later call with a new stable request identity reused the committed evidence. After provider request identities were separated and the outer invocation adopted the latest child snapshot, a fresh pass completed and its exact evidence reference was read back.",
+    "no_direct_store_grant": true
+  },
+  "readiness": {
+    "authorized_write_path": "PASS",
+    "canonical_store_evidence_readback": "PASS",
+    "session_invocation_provenance": "PASS",
+    "projection_reconciliation": "PARTIAL; three declared projections were deferred because their inputs were unreadable; no projection was marked reconciled",
+    "compiler_succession": "NOT_ADVANCED_BY_THIS_CHECKPOINT",
+    "resource_feedback": "NOT_ADVANCED_BY_THIS_CHECKPOINT"
+  }
+}
