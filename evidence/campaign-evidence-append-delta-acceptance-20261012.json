@@ -1,0 +1,77 @@
+{
+  "schema_version": "mncs.environment.campaign-evidence-append-delta/1",
+  "identity": "ev_campaign_evidence_delta_20261012",
+  "recorded_at": "2026-10-12T20:07:17Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "implementation": {
+    "repository": "mncs-environment",
+    "branch": "campaign/campaign-evidence-delta-20261012",
+    "base_commit": "5e45b53c7ff06ca76062d773dbfe1b0d8a8e8baa",
+    "implementation_commit": "70509229f343971a98a1247fa51c1299324e3a24",
+    "source_files": [
+      {
+        "path": "mncs_env/cli.py",
+        "sha256": "d1213c796bcb6e5583548848d9124e4b00cf976a9e874d3830da9ad4f4c8de74"
+      },
+      {
+        "path": "mncs_env/sessions.py",
+        "sha256": "dfde2b093eb89865defbd31ee005a6ab1fa7f8f44e4f451bc8c9824d33b5f564"
+      },
+      {
+        "path": "tests/test_environment.py",
+        "sha256": "44ce17fc88c8b24d7a1abdc0b71bb05c2fa634f2ee3ca9c013bef31ca25389a1"
+      }
+    ]
+  },
+  "behavior": {
+    "cli_option": "--campaign-evidence-delta-json",
+    "authority_owner": "mncs-environment",
+    "persistence": "existing configured Environment Store provider",
+    "caller_submits_only_new_references": true,
+    "owner_validates_and_appends_to_authenticated_history": true,
+    "requires_current_campaign_base_checkpoint": true,
+    "rejects_delta_before_campaign_history_initialization": true,
+    "retains_only_newest_prior_suffix_that_fits": true,
+    "older_references_remain_in_immutable_checkpoints": true,
+    "request_identity_and_payload_digest_support_retry": true,
+    "stale_base_rejected": true,
+    "legacy_full_window_operation_digest_preserved": true,
+    "control_rpc_contract_change_required": false
+  },
+  "verification": {
+    "sandbox": "project-scoped bwrap",
+    "focused_environment_tests": {
+      "command": "python3 -m pytest -q tests/test_environment.py -k 'campaign_evidence_append_delta or campaign_evidence_rollover or checkpoint_cli_accepts_campaign_evidence_append_delta'",
+      "result": "4 passed, 180 deselected",
+      "exit_code": 0
+    },
+    "metadata_bounds_tests": {
+      "command": "python3 -m pytest -q tests/test_campaign_metadata_bounds.py",
+      "result": "2 passed",
+      "exit_code": 0
+    },
+    "compileall": {
+      "command": "python3 -m compileall -q mncs_env",
+      "result": "passed",
+      "exit_code": 0
+    },
+    "git_diff_check": {
+      "command": "git diff --check",
+      "result": "passed",
+      "exit_code": 0
+    }
+  },
+  "readiness": {
+    "implementation_tests": "passed",
+    "canonical_rpc_delta_publication": "pending deployment and fresh-process readback",
+    "isolated_test_store_used_for_unit_tests": true,
+    "canonical_store_was_not_claimed_from_isolated_tests": true
+  },
+  "ownership": {
+    "environment_claim": "held by selected authorized campaign session",
+    "compiler_claim": "ses_d2537acde8b8a875 remains protected; handoff pending",
+    "forge_claim": "ses_95c3aa35b8544042 remains protected; handoff pending",
+    "compiler_or_forge_repositories_modified": false
+  }
+}
