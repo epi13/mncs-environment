@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.campaign.protected-worktree-retirement/1",
+  "identity": "ev_protected_worktree_retirement_20261012",
+  "observed_at_utc": "2026-10-12T14:02:30Z",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_commit": "1e8d2012305fe845bc312e614a38a3870dcd4fb7",
+    "control_repository": "mncs-control-mcp",
+    "control_commit": "bd1f7d0b64fbf57225bebfb6e696370878a79725",
+    "path_identity_commit": "6e63caf5d9609ee315329c380e79328d852c7a59"
+  },
+  "restricted_execution": {
+    "backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "sandbox_project_root": "/workspace/mncs-environment",
+    "owner_project_root": "/home/epi13/Documents/Projects/mncs-environment",
+    "canonical_store_path_visible_to_caller": false,
+    "canonical_store_visibility_check": {
+      "command": "test ! -e /home/epi13/.local/share/mncs-environment/store",
+      "exit_status": 0
+    },
+    "nested_git_execution": {
+      "launcher": "bubblewrap",
+      "writable_mount": "the exact authenticated Environment project root",
+      "read_only_mounts": ["/usr", "/etc", "/lib", "/lib64"],
+      "unavailable_mounts": ["/home", "canonical Store", "unrelated projects"],
+      "network": false,
+      "pid_namespace": true,
+      "all_capabilities_dropped": true,
+      "git_optional_locks": false
+    }
+  },
+  "protected_retirement": {
+    "test_checkout": "/workspace/mncs-environment/.worktrees/protected-retire-rpc-proof-20261012",
+    "created_from": "origin/main",
+    "head": "d55bf98f87801956feb31c383fa322fbed3c2f8a",
+    "detached": true,
+    "preflight_status": "clean; no untracked or ignored files",
+    "dry_run": {
+      "command": "python3 -m mncs_env.cli retire ses_7226fbcfe65820f7 --repository mncs-environment --worktree /workspace/mncs-environment/.worktrees/protected-retire-rpc-proof-20261012 --dry-run",
+      "exit_status": 0,
+      "status": "would-retire",
+      "mutation_performed": false
+    },
+    "authorized_retirement": {
+      "command": "python3 -m mncs_env.cli retire ses_7226fbcfe65820f7 --repository mncs-environment --worktree /workspace/mncs-environment/.worktrees/protected-retire-rpc-proof-20261012",
+      "exit_status": 0,
+      "status": "retired",
+      "retired": true,
+      "reason": "clean and unclaimed",
+      "directory_absent_afterward": true,
+      "git_registration_absent_afterward": true
+    }
+  },
+  "verification": {
+    "environment_full_suite": {
+      "command": "python3 -m pytest tests/ -q",
+      "passed": 689,
+      "skipped": 46,
+      "duration_seconds": 638.03
+    },
+    "environment_retirement_suite": {
+      "command": "python3 -m pytest tests/test_retire.py -q",
+      "passed": 28,
+      "duration_seconds": 1.95,
+      "covers": [
+        "sandbox and host path aliasing",
+        "restricted Git-native worktree removal",
+        "tracked, untracked, and ignored work retention",
+        "UNKNOWN when bubblewrap is unavailable",
+        "no /home or canonical Store visibility inside the child namespace"
+      ]
+    },
+    "lint": {
+      "command": "ruff check mncs_env/retire.py tests/test_retire.py",
+      "result": "passed"
+    },
+    "diff_check": "passed"
+  },
+  "result": "PASS_PROTECTED_OWNER_AUTHORIZED_WORKTREE_RETIREMENT",
+  "limitations": [
+    "Compiler and Forge claims remain protected by their current owners; no handoff was present and neither repository was touched.",
+    "Campaign delivery remains partial while the Compiler/Forge work and Forge-to-Automation resource receipt loop await authorized continuation."
+  ]
+}
