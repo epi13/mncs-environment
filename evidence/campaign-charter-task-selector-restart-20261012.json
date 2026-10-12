@@ -1,0 +1,102 @@
+{
+  "schema_version": "mncs.environment.campaign-charter-task-selector-restart/1",
+  "identity": "ev_campaign_charter_task_selector_restart_20261012",
+  "recorded_at": "2026-10-12T05:48:08Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "task_identity_source": {
+    "kind": "campaign-charter-evidence-identity",
+    "identity": "ev_mncs_campaign_charter_continuity_20261011",
+    "raw_value_stored_in_selector_record": false,
+    "selector_binding_scope": [
+      "authenticated Control principal",
+      "Environment definition",
+      "workspace root"
+    ]
+  },
+  "execution": {
+    "transport": "authenticated MNCS Control Environment RPC",
+    "tool": "mncs_control_terminal_start",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "canonical_store": "canonical Store through Environment; protected caller has no direct Store write access"
+  },
+  "supporting_evidence": [
+    {
+      "repository": "mncs-environment",
+      "path": "evidence/canonical-store-path-grant-acceptance-20261011.json",
+      "identity": "ev_canonical_store_path_grant_20261011"
+    },
+    {
+      "repository": "mncs-environment",
+      "path": "evidence/canonical-claim-transfer-restart-replay-20261011.json",
+      "identity": "ev_canonical_claim_transfer_restart_replay_20261011"
+    }
+  ],
+  "ambiguity_before_binding": {
+    "request_id": "req_campaign_resume_acceptance_20261012",
+    "operation": "enter without task, campaign, or session identity",
+    "result": "campaign-continuation-ambiguous",
+    "publication_completed": false,
+    "campaigns_reported": 2,
+    "session_ids_reported": 2,
+    "ownership_changed": false
+  },
+  "initial_binding": {
+    "request_id": "req_campaign_task_bind_20261012",
+    "arguments": [
+      "enter",
+      "--task-identity",
+      "ev_mncs_campaign_charter_continuity_20261011",
+      "--campaign-id",
+      "cmp_mncs_continuity_20261010"
+    ],
+    "exit_code": 0,
+    "entry_reused": true,
+    "task_selector_status": "bound",
+    "selected_campaign_id": "cmp_mncs_continuity_20261010",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "project_selection_basis": "authenticated-project-environment-definition",
+    "readiness": "ready"
+  },
+  "fresh_process_resume": {
+    "request_id": "req_campaign_task_resume_verify_20261012",
+    "arguments": [
+      "enter",
+      "--task-identity",
+      "ev_mncs_campaign_charter_continuity_20261011"
+    ],
+    "exit_code": 0,
+    "campaign_id_supplied": false,
+    "session_id_supplied": false,
+    "entry_reused": true,
+    "task_selector_status": "resumed",
+    "selected_campaign_id": "cmp_mncs_continuity_20261010",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "campaign_state_checkpoint_id": "chk_d79830a4651da875",
+    "project_continuation_status": "ready",
+    "readiness": "ready"
+  },
+  "ownership": {
+    "claim_acquisition_or_release": false,
+    "claim_transfer_or_recovery": false,
+    "same_campaign_context_ses_b4b2d283542220b0": "left visible and unchanged",
+    "separate_campaign_cmp_store_rpc_acceptance_20261010": "left visible and unchanged",
+    "other_authenticated_claim_owners": "not adopted"
+  },
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_revision_before_evidence": "41e4f898b95bb118bef83a2065010644c4ea905a",
+    "control_repository": "mncs-control-mcp",
+    "control_revision": "02c39765504794e250fc65e957f199e07be681d4",
+    "campaign_checkpoint_before_entry": "chk_d79830a4651da875"
+  },
+  "result": "PASS: an authenticated fresh protected process rebound the charter task to the existing canonical campaign session using only the durable task identity; no competing campaign session or claim was created.",
+  "limits": [
+    "The first authorized binding still required explicit selection of the intended campaign because multiple authenticated campaigns matched the default Environment context.",
+    "The agent must carry the stable task identity from the persisted campaign charter into Environment entry; Control does not receive the user prompt as an independent identity signal.",
+    "This acceptance proves campaign/session lookup and canonical Store readback through entry. It does not prove the pending real Compiler-to-Forge resource-feedback loop or Stage-1/Stage-2 succession."
+  ]
+}
