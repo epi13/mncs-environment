@@ -24,6 +24,7 @@ ACTIONS = (
     "publish",
     "merge",
     "delete",
+    "retire",
     "invoke",
     "subscribe",
     "delegate",
@@ -47,7 +48,7 @@ EFFECT_ACTIONS = {
 }
 
 
-MUTATING_ACTIONS = ("write", "mutate", "execute")
+MUTATING_ACTIONS = ("write", "mutate", "execute", "retire")
 
 
 def build_context(
@@ -130,7 +131,9 @@ def evaluate(
     declared writable scope, and no other session holds an overlapping
     scope. Anything else escalates; protected, forbidden, or
     foreign-claimed scope denies. Escalate and deny never authorize
-    execution.
+    execution. The separate ``retire`` action always requires a current
+    claim covering its exact repository or worktree scope; generic
+    ``delete`` retains its escalation policy.
     """
     if action not in ACTIONS:
         return {"verdict": "deny", "reason": f"unknown action {action!r}"}
@@ -141,7 +144,7 @@ def evaluate(
         claims if claims is not None else context.get("claim_holders", {}), repo)
     others = [h for h in holders if h["session_id"] != session_id]
     own = [h for h in holders if h["session_id"] == session_id]
-    mutating = action in ("write", "mutate", "merge", "delete", "execute")
+    mutating = action in ("write", "mutate", "merge", "delete", "execute", "retire")
     # Verification executes provider code inside a checkout, so foreign
     # ownership conflicts deny exactly like mutation; unlike mutation,
     # dirt and branch are the *subject* under verification, not a bar.
@@ -163,6 +166,7 @@ def evaluate(
         "mutate",
         "merge",
         "delete",
+        "retire",
         "execute",
         "publish",
         "verify",
@@ -186,6 +190,20 @@ def evaluate(
                for h in own):
             return {"verdict": "allow",
                     "reason": f"delegate by repository claim on {repo}"}
+    if action == "retire":
+        # Local Git retirement is narrower than general deletion: the
+        # retirement adapter must first prove that the exact branch or
+        # checkout is safe to remove. It still requires a current claim
+        # covering that scope and declared write intent for the repository.
+        if repo not in context.get("writable", []):
+            return {"verdict": "deny",
+                    "reason": f"{repo} is outside this session's writable authority"}
+        owned = any(_covers(h.get("scope") or {}, requested or {}) for h in own)
+        if owned:
+            return {"verdict": "allow",
+                    "reason": f"{target} retirement by scoped claim"}
+        return {"verdict": "escalate",
+                "reason": f"{target} retirement requires a current claim covering the requested scope"}
     if action in MUTATING_ACTIONS:
         facts = (repo_facts or {}).get(repo, {})
         owned = any(

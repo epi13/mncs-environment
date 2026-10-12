@@ -43,6 +43,12 @@ escalation never spawn provider processes. Sensitive invocation effects
 require the corresponding action authority. Rights/provenance evaluation
 composes the owning provider's host gate; unknown rights remain explicit.
 
+Local Git retirement is a separate `retire` action. It requires declared
+writable intent and a current session-owned claim covering the requested
+repository or worktree scope, in addition to the retirement adapter's Git
+safety checks. General `delete` remains escalation-gated and is not implied by
+a retirement claim.
+
 ## 5. Claims preserve scoped concurrent work
 
 `claims.py` records versioned repository/worktree/path scopes, holders,

@@ -2575,7 +2575,7 @@ class Session:
     ) -> dict[str, str]:
         repository = target.split("/")[0] if "/" in target else target
         normalized_scope = self._canonical_scope(repository, scope)
-        if action in ("write", "mutate", "execute", "publish", "merge", "delete"):
+        if action in ("write", "mutate", "execute", "publish", "merge", "delete", "retire"):
             # Current entry observations are not a mutation lease. Re-read
             # claims and the exact selected target at the authority boundary;
             # broad discovery is unnecessary on a quiet observational entry.

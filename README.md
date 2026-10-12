@@ -186,6 +186,7 @@ state, not prose. The hardening campaign added:
 
 - versioned workspace claims replacing advisory leases (`mncs_env/claims.py`);
 - ownership/acquisition authority with tri-state enforcement (`mncs_env/authority.py`);
+- verified local branch/worktree retirement gated by the session's exact live claim; general delete authority remains separate;
 - rights/provenance gate over `mncs-rights-provenance` (`mncs_env/rights.py`);
 - provider-declared `invocation` addressing with toolchain env (`mncs_env/capabilities.py`);
 - generation-based Store-feed observer: own writes re-baseline, external

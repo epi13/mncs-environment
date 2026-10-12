@@ -199,6 +199,65 @@ class AuthorityTests(unittest.TestCase):
                                      target="x", session_id="ses_x")
         self.assertEqual(verdict["verdict"], "deny")
 
+    def test_retire_requires_a_current_claim(self) -> None:
+        unclaimed = authority.evaluate(
+            context_for(), action="retire", target="mncs-atlas",
+            session_id="ses_mine", repo_facts=CLEAN_FACTS,
+        )
+        self.assertEqual(unclaimed["verdict"], "escalate")
+
+        owned = authority.evaluate(
+            context_for(), action="retire", target="mncs-atlas",
+            session_id="ses_mine",
+            claims={"mncs-atlas": "ses_mine"},
+            repo_facts=DIRTY_FACTS,
+        )
+        self.assertEqual(owned["verdict"], "allow")
+
+    def test_retire_claim_must_cover_exact_worktree(self) -> None:
+        target = "/workspace/mncs-atlas/.worktrees/target"
+        other = "/workspace/mncs-atlas/.worktrees/other"
+        scope = {"kind": "worktree", "checkout": target, "branch": "feature/x"}
+        held_elsewhere = {
+            "mncs-atlas": [{
+                "session_id": "ses_mine",
+                "scope": {"kind": "worktree", "checkout": other,
+                          "branch": "feature/x"},
+            }],
+        }
+        denied = authority.evaluate(
+            context_for(), action="retire", target="mncs-atlas",
+            session_id="ses_mine", claims=held_elsewhere, scope=scope,
+        )
+        self.assertEqual(denied["verdict"], "escalate")
+
+        exact = {
+            "mncs-atlas": [{"session_id": "ses_mine", "scope": scope}],
+        }
+        allowed = authority.evaluate(
+            context_for(), action="retire", target="mncs-atlas",
+            session_id="ses_mine", claims=exact, scope=scope,
+        )
+        self.assertEqual(allowed["verdict"], "allow")
+
+    def test_retire_denies_competing_claim_and_preserves_delete_escalation(self) -> None:
+        scope = {"kind": "worktree", "checkout": "/repo/.worktrees/x"}
+        competing = authority.evaluate(
+            context_for(), action="retire", target="mncs-atlas",
+            session_id="ses_mine", scope=scope,
+            claims={"mncs-atlas": [{
+                "session_id": "ses_other", "scope": {**scope, "repository": "mncs-atlas"},
+            }]},
+        )
+        self.assertEqual(competing["verdict"], "deny")
+
+        delete_context = context_for(denied=[], escalation_required=["delete"])
+        delete = authority.evaluate(
+            delete_context, action="delete", target="mncs-atlas",
+            session_id="ses_mine", claims={"mncs-atlas": "ses_mine"},
+        )
+        self.assertEqual(delete["verdict"], "escalate")
+
 
 class ClaimTests(unittest.TestCase):
     def test_claim_lease_is_bounded(self) -> None:

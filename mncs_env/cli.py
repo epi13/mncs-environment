@@ -1,9 +1,8 @@
 """mncs-env: thin inspection/control surface over the session system.
 
-Every command reads or mutates environment-owned session state only. The
-CLI parses arguments and prints JSON; all semantics live in the package.
-Inspection commands open sessions read-only and never append events;
-only resume/accept record participation.
+The CLI parses arguments and prints JSON; session semantics live in the
+package. Git retirement is delegated to the safety-checked retirement adapter
+and requires Environment session authority before mutation.
 """
 
 from __future__ import annotations
@@ -16,6 +15,7 @@ import os
 import sys
 from contextlib import closing
 from pathlib import Path
+from typing import Any
 
 from . import actions as actions_module
 from . import capabilities as capabilities_module
@@ -1223,6 +1223,79 @@ def cmd_retire(args: argparse.Namespace) -> int:
                 report["work_intent"] = campaign.get("work_intent")
             out(report)
             return 0
+
+        mutation_scopes: list[tuple[str, dict[str, Any] | None]] = []
+        if not args.dry_run:
+            if args.prune:
+                mutation_scopes.append(("worktree metadata", {"kind": "repository"}))
+            mutation_scopes.extend(
+                (f"branch {branch}", {"kind": "repository"})
+                for branch in (args.branch or [])
+            )
+            if args.worktree:
+                registered = retire_module.worktrees(repo)
+                for raw_path in args.worktree:
+                    path = Path(raw_path)
+                    if not path.is_absolute():
+                        path = Path.cwd() / path
+                    checkout = str(path.resolve(strict=False))
+                    row = next((item for item in registered
+                                if str(Path(str(item.get("path", ""))).resolve(
+                                    strict=False)) == checkout), None)
+                    scope: dict[str, Any] = {
+                        "kind": "worktree",
+                        "checkout": checkout,
+                    }
+                    if isinstance(row, dict) and isinstance(row.get("branch"), str):
+                        scope["branch"] = row["branch"]
+                    mutation_scopes.append((f"worktree {checkout}", scope))
+
+        for label, scope in mutation_scopes:
+            try:
+                verdict = session.check(
+                    action="retire", target=repo.name, scope=scope,
+                )
+            except sessions_module.LifecycleError as error:
+                return fail(
+                    f"retirement authority could not be revalidated: {error}",
+                    code=3,
+                    diagnostics={
+                        "code": "authority-revalidation-unavailable",
+                        "action": "retire",
+                        "target": repo.name,
+                        "scope": scope,
+                        "mutation_performed": False,
+                        "next": "restore Environment claim and checkout observations before retrying",
+                    },
+                )
+            if verdict.get("verdict") != "allow":
+                status = str(verdict.get("verdict", "unknown"))
+                return fail(
+                    f"retirement of {label} is not authorized: {verdict.get('reason', status)}",
+                    code=3,
+                    diagnostics={
+                        "code": ("authority-denied" if status == "deny"
+                                 else "authority-escalation-required"),
+                        "action": "retire",
+                        "target": repo.name,
+                        "scope": scope,
+                        "verdict": status,
+                        "reason": verdict.get("reason"),
+                        "mutation_performed": False,
+                        "next": "continue the selected Environment session and hold a claim covering this exact scope",
+                    },
+                )
+
+        if mutation_scopes:
+            # Authority checks refresh the session's claim projection. Read
+            # Store once more after those checks so the retirement adapter
+            # receives the latest claim records at its Git preflight.
+            store = open_store(args.state_dir, args.persistence, session_id=args.session)
+            try:
+                claim_records = store.read_claims()
+            finally:
+                close_store(store)
+
         results: list[dict] = []
         if args.prune:
             results.append(retire_module.prune_worktrees(repo, dry_run=args.dry_run))

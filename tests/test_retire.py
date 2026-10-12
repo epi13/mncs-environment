@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import argparse
+import io
 import subprocess
 import tempfile
 import unittest
-from unittest import mock
+from contextlib import redirect_stderr
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 from mncs_env import claims as claims_module
+from mncs_env import cli as cli_module
 from mncs_env import retire as retire_module
 
 
@@ -102,6 +106,89 @@ class RetireTests(unittest.TestCase):
         result = retire_module.retire_branch(self.repo, "feature/x")
         self.assertTrue(result["retired"], result)
         self.assertNotIn("feature/x", retire_module.local_branches(self.repo))
+
+    def test_cli_requires_retirement_authority_before_branch_mutation(self):
+        class Session:
+            def __init__(self):
+                self.calls = []
+
+            def check(self, **kwargs):
+                self.calls.append(kwargs)
+                return {"verdict": "escalate", "reason": "claim required"}
+
+            def close(self):
+                pass
+
+        class Store:
+            def read_claims(self):
+                return []
+
+        session = Session()
+        args = argparse.Namespace(
+            session="ses_mine", repository=self.name, canonical="origin/main",
+            execution_root=None, inventory=False, dry_run=False, prune=False,
+            branch=["feature/x"], worktree=[], state_dir=self.base,
+            persistence="store",
+        )
+        error = io.StringIO()
+        with mock.patch.object(cli_module, "_open", return_value=session), \
+                mock.patch.object(cli_module, "_resolve_retire_repo", return_value=self.repo), \
+                mock.patch.object(cli_module, "open_store", return_value=Store()), \
+                mock.patch.object(cli_module, "close_store"), \
+                mock.patch.object(retire_module, "retire_branch") as retire_branch, \
+                redirect_stderr(error):
+            result = cli_module.cmd_retire(args)
+
+        self.assertEqual(result, 3)
+        self.assertEqual(session.calls, [{
+            "action": "retire", "target": self.name,
+            "scope": {"kind": "repository"},
+        }])
+        retire_branch.assert_not_called()
+        self.assertIn('"mutation_performed": false', error.getvalue())
+
+    def test_cli_authorizes_worktree_by_exact_checkout_scope(self):
+        target = self._worktree("owned", "feature/owned")
+
+        class Session:
+            def __init__(self):
+                self.calls = []
+
+            def check(self, **kwargs):
+                self.calls.append(kwargs)
+                return {"verdict": "allow", "reason": "claim covers target"}
+
+            def close(self):
+                pass
+
+        class Store:
+            def read_claims(self):
+                return []
+
+        session = Session()
+        args = argparse.Namespace(
+            session="ses_mine", repository=self.name, canonical="origin/main",
+            execution_root=None, inventory=False, dry_run=False, prune=False,
+            branch=[], worktree=[str(target)], state_dir=self.base,
+            persistence="store",
+        )
+        with mock.patch.object(cli_module, "_open", return_value=session), \
+                mock.patch.object(cli_module, "_resolve_retire_repo", return_value=self.repo), \
+                mock.patch.object(cli_module, "open_store", return_value=Store()), \
+                mock.patch.object(cli_module, "close_store"), \
+                mock.patch.object(retire_module, "retire_worktree", return_value={
+                    "target": str(target), "kind": "worktree", "retired": False,
+                    "reason": "dry run", "dry_run": False,
+                }) as retire_worktree:
+            result = cli_module.cmd_retire(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(session.calls, [{
+            "action": "retire", "target": self.name,
+            "scope": {"kind": "worktree", "checkout": str(target.resolve()),
+                      "branch": "feature/owned"},
+        }])
+        retire_worktree.assert_called_once()
 
     def test_canonical_branch_never_retires(self):
         verdict = retire_module.branch_assessment(self.repo, "main")
