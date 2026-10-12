@@ -110,11 +110,13 @@ issues a handoff.
 ## Durable task selectors
 
 An authenticated caller may supply a stable `task_identity` to `enter` (CLI:
-`--task-identity`, Control: `env_enter.task_identity`). Environment hashes it
-with the authenticated principal, exact Environment definition, and workspace,
-then stores one immutable task-to-campaign binding through the selected Store.
-The external task identity itself is not persisted. The selector only finds a
-campaign; normal principal, rights, lifecycle, and claim checks still apply.
+`--task-identity`). Environment hashes it with the authenticated principal,
+exact Environment definition, and workspace, then stores one immutable
+task-to-campaign binding through the selected Store. The external task identity
+itself is not persisted. The selector only finds a campaign; normal principal,
+rights, lifecycle, and claim checks still apply. The typed Control `env_enter`
+MCP operation does not expose `task_identity` yet; it remains available through
+the authenticated Control-backed Environment CLI while that adapter is wired.
 
 On first use, an existing campaign is never adopted from the selector alone.
 Inspect the project continuation capsule and pass the intended `campaign_id`
