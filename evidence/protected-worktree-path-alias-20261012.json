@@ -1,0 +1,113 @@
+{
+  "authority": {
+    "environment_claim": {
+      "claim_id": "claim:mncs-environment",
+      "owner_session_id": "ses_7226fbcfe65820f7",
+      "status": "held",
+      "version": 33
+    },
+    "foreign_exclusive_claims": [
+      {
+        "claim_id": "claim:mncs-compiler",
+        "owner_session_id": "ses_d2537acde8b8a875",
+        "repository": "mncs-compiler",
+        "status": "held",
+        "version": 63
+      },
+      {
+        "claim_id": "claim:mncs-forge",
+        "owner_session_id": "ses_95c3aa35b8544042",
+        "repository": "mncs-forge",
+        "status": "held",
+        "version": 28
+      }
+    ],
+    "handoff_observed": false
+  },
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "known_limitations": [
+    "A protected Git worktree registration may name /workspace while the Environment owner service sees the project under /home. The grant-derived path mapping identifies the administrative checkout, but the service cannot follow a .git pointer to /workspace; retirement therefore returns status unknown and preserves the registration.",
+    "A service-side Git mutation channel for worktrees whose checkout data exists only in the protected execution mount remains future work. No Compiler or Forge candidate was tested, changed, merged, or retired without an owner-issued Environment handoff."
+  ],
+  "observed_at_utc": "2026-10-12T13:34:34Z",
+  "protected_probe": {
+    "backend": "bwrap",
+    "canonical_head": "2e70db7e8f8c89e9f909152cd755b3bb142d1050",
+    "checkout_identity": "git-worktree:b974dac50db0f9a2",
+    "checkout_identity_basis": "git-administrative-identity",
+    "control_mapping": {
+      "host_project_root": "/home/epi13/Documents/Projects/mncs-environment",
+      "sandbox_project_root": "/workspace/mncs-environment"
+    },
+    "dry_run": {
+      "mutation_performed": false,
+      "reason": "Git could not verify checkout status in the Environment execution namespace: fatal: not a git repository: (null)",
+      "retired": false,
+      "status": "unknown"
+    },
+    "registered_path": "/workspace/mncs-environment/.worktrees/path-alias-proof-20261012",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "temporary_probe": {
+      "head": "2e70db7e8f8c89e9f909152cd755b3bb142d1050",
+      "path_absent_after_cleanup": true,
+      "registration_absent_after_cleanup": true,
+      "removed_by_creator_after_clean_canonical_check": true
+    }
+  },
+  "schema_version": "mncs.campaign.protected-worktree-path-alias/1",
+  "source_identities": [
+    {
+      "commit": "6e63caf5d9609ee315329c380e79328d852c7a59",
+      "repository": "mncs-environment",
+      "status": "pushed",
+      "branch": "main",
+      "files": [
+        "docs/ENTRY.md",
+        "mncs_env/cli.py",
+        "mncs_env/retire.py",
+        "tests/test_retire.py"
+      ]
+    },
+    {
+      "commit": "bd1f7d0b64fbf57225bebfb6e696370878a79725",
+      "repository": "mncs-control-mcp",
+      "status": "pushed",
+      "branch": "main",
+      "files": [
+        "docs/SECURITY.md",
+        "src/mncs_control_mcp/environment_rpc.py",
+        "tests/test_environment_rpc.py"
+      ]
+    }
+  ],
+  "verification": {
+    "control_full_suite": {
+      "command": ".venv/bin/python -m pytest tests/ -q",
+      "exit_status": 0,
+      "result": "passed",
+      "warnings": "Existing multiprocessing fork deprecation warnings."
+    },
+    "control_lint": {
+      "command": "ruff check src/mncs_control_mcp/environment_rpc.py tests/test_environment_rpc.py",
+      "result": "passed"
+    },
+    "environment_full_suite": {
+      "command": "python3 -m pytest tests/ -q",
+      "duration_seconds": 646.34,
+      "passed": 686,
+      "skipped": 46
+    },
+    "environment_retirement_suite": {
+      "command": "python3 -m pytest tests/test_retire.py -q",
+      "passed": 24
+    },
+    "environment_retirement_lint": {
+      "command": "ruff check mncs_env/retire.py tests/test_retire.py",
+      "result": "passed"
+    },
+    "environment_cli_lint": {
+      "command": "ruff check mncs_env/cli.py",
+      "result": "one pre-existing SIM117 warning at cli.py:1378 in unrelated resident-entry code"
+    }
+  }
+}
