@@ -11,7 +11,7 @@ mncs-environment owns session composition, authority projection, and campaign li
 
 Declared capabilities (declarations do not establish execution health):
 
-- `ambient-projection-coherence/1` — semantic-projection-lifecycle-and-interpretation (experimental)
+- `ambient-projection-coherence/2` — session-bound semantic projection lifecycle and interpretation; read/write effects require Environment authority (experimental)
 - `workspace-discovery/1` — read-only-workspace-discovery (experimental)
 - `workspace-readiness/1` — read-only-workspace-readiness (experimental)
 

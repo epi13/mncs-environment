@@ -15,7 +15,9 @@ identical re-put is idempotent.
 from __future__ import annotations
 
 import json
+import os
 import re
+import secrets
 import shlex
 import sys
 from datetime import datetime, timezone
@@ -1507,6 +1509,19 @@ class Session:
         # only ever reports activity from outside this session.
         self._refresh_feed_baseline()
 
+    def _reload_snapshot(self) -> None:
+        """Adopt a same-session snapshot published by a bound provider."""
+        latest = self.store.load_snapshot(self.session_id)
+        if (not isinstance(latest, dict)
+                or latest.get("session_id") != self.session_id):
+            raise LifecycleError(
+                f"session {self.session_id} became unreadable during capability invocation"
+            )
+        self.snapshot = latest
+        self._next_seq_hint = None
+        self._invalidate_log()
+        self._refresh_feed_baseline()
+
     def _cache_key(self) -> Any:
         generation = getattr(self.store, "generation", None)
         if callable(generation):
@@ -2467,13 +2482,33 @@ class Session:
             invocation_env = dict(env or {})
             invocation_env.update(self._selected_runtime_environment(binding))
             invocation_env["MNCS_ENV_SESSION_ARTIFACT_DIR"] = str(artifact_workspace.path)
+            parent_request_id = os.environ.get("MNCS_ENV_RPC_REQUEST_ID")
+            child_request = {
+                "kind": "provider-invocation",
+                "session_id": self.session_id,
+                "capability": capability,
+                "binding_id": binding.get("binding_id"),
+            }
+            if (isinstance(parent_request_id, str)
+                    and re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", parent_request_id)):
+                child_request["parent_request_id"] = parent_request_id
+            else:
+                child_request["nonce"] = secrets.token_hex(20)
+            invocation_env["MNCS_ENV_RPC_REQUEST_ID"] = (
+                "req_" + digest_hex(child_request, length=48)
+            )
             self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
                        {"capability": capability, "argv": argv, "executor": executor,
                         "effect_target": admitted_effect_target})
+            self._save()
             result = capabilities_module.invoke(
                 binding, argv, cwd=cwd, timeout_seconds=timeout_seconds,
                 output_limit_bytes=output_limit_bytes, env=invocation_env)
             artifact_fields = artifact_workspace.publish()
+        # A declared provider may itself resume this Environment session and
+        # publish domain state. Rebase the invocation result over that newer
+        # snapshot instead of reusing our pre-execution CAS.
+        self._reload_snapshot()
         result.update({
             key: artifact_fields[key]
             for key in ("artifact_store_ref", "artifact_file_count", "artifact_byte_count")

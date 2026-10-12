@@ -1305,13 +1305,46 @@ class WorkspaceTests(unittest.TestCase):
 
 
 class CapabilityTests(unittest.TestCase):
-    def test_projection_evidence_capability_is_session_pinned_read_only(self) -> None:
+    def test_projection_capability_invocations_are_declared_and_session_bound(self) -> None:
         manifest = json.loads((ROOT / ".mncs" / "project.json").read_text())
         coherence = next(
             item for item in manifest["contracts"]["provides"]
             if item.get("contract") == "ambient-projection-coherence"
         )
-        self.assertNotIn("invocation", coherence)
+        self.assertEqual(coherence["version"], "2")
+        self.assertEqual(coherence["effects"], ["read", "write"])
+        self.assertEqual(coherence["invocation"], {
+            "kind": "executable",
+            "path": "scripts/mncs-env",
+            "fixed_argv": ["projections", "{session_id}"],
+        })
+        declared = capabilities.descriptor_invocation(coherence, ROOT, FAMILY)
+        self.assertEqual(declared["address"], str(ROOT / "scripts" / "mncs-env"))
+        self.assertEqual(declared["addressing"], "descriptor")
+        self.assertEqual(
+            authority.required_action_for_effects(coherence["effects"]),
+            "write",
+        )
+        ambient_binding = capabilities.bind(
+            provider="mncs-environment",
+            capability="mncs-environment:ambient-projection-coherence",
+            contract_revision="2",
+            entrypoint=declared["address"],
+            address=declared["address"],
+            effects=coherence["effects"],
+            fixed_argv=declared["fixed_argv"],
+        )
+        observed = capabilities.probe_availability(ambient_binding)
+        self.assertEqual(observed["availability"]["status"], "available")
+        self.assertEqual(observed["availability"]["code"], "executable-present")
+        bound_ambient = capabilities.bind_session_context(
+            ambient_binding, [], session_id="ses_test_bound")
+        self.assertEqual(
+            bound_ambient["fixed_argv"], ["projections", "ses_test_bound"])
+        with self.assertRaises(capabilities.CapabilityError):
+            capabilities.bind_session_context(
+                ambient_binding, ["ses_other"], session_id="ses_test_bound")
+
         contract = next(
             item for item in manifest["contracts"]["provides"]
             if item.get("contract") == "projection-evidence-inspection"
@@ -2642,6 +2675,44 @@ class SessionTests(unittest.TestCase):
                 session.invoke(
                     "echoer", ["hi"],
                     output_limit_bytes=capabilities.MAX_OUTPUT_LIMIT_BYTES + 1)
+
+    def test_session_invoke_scopes_parent_rpc_identity_to_provider_child(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            binding = capabilities.probe_availability(
+                capabilities.bind(provider="p", capability="echoer", contract_revision="1",
+                                  entrypoint="e", address="/bin/echo", effects=["read"]))
+            session.snapshot["bindings"].append(binding)
+            child_request_ids: list[str] = []
+
+            def invoke(_binding, _argv, **kwargs):
+                child_request_ids.append(
+                    kwargs["env"]["MNCS_ENV_RPC_REQUEST_ID"]
+                )
+                child = sessions.Session.open(
+                    state_dir=session.state_dir,
+                    session_id=session.session_id,
+                    store=open_store(session.state_dir, "store", verify_on_open=False),
+                )
+                try:
+                    child.snapshot["projection_test_marker"] = "published"
+                    child._save()
+                finally:
+                    child.close()
+                return {"status": "ok", "returncode": 0, "stdout": "ok", "stderr": ""}
+
+            with mock.patch.dict(
+                os.environ, {"MNCS_ENV_RPC_REQUEST_ID": "req_outer_invoke_test"}
+            ), mock.patch.object(
+                sessions.capabilities_module, "invoke", side_effect=invoke,
+            ):
+                result = session.invoke("echoer", ["hi"])
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(len(child_request_ids), 1)
+            self.assertRegex(child_request_ids[0], r"^req_[0-9a-f]{48}$")
+            self.assertNotEqual(child_request_ids[0], "req_outer_invoke_test")
+            self.assertEqual(session.snapshot["projection_test_marker"], "published")
 
     def test_session_invoke_restores_store_artifacts_after_process_reopen(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -1,7 +1,7 @@
 {
   "schema_version": "mncs-family.repository-manifest/v0alpha1",
   "repository": "mncs-environment",
-  "revision": 6,
+  "revision": 7,
   "manifest_location": "in-repository",
   "authority": {
     "note": "mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration."
@@ -48,8 +48,20 @@
       },
       {
         "contract": "ambient-projection-coherence",
-        "version": "1",
+        "version": "2",
         "kind": "semantic-projection-lifecycle-and-interpretation",
+        "effects": [
+          "read",
+          "write"
+        ],
+        "invocation": {
+          "kind": "executable",
+          "path": "scripts/mncs-env",
+          "fixed_argv": [
+            "projections",
+            "{session_id}"
+          ]
+        },
         "stability": "experimental",
         "output_scope": "explicit projection declarations; canonical subjects; Store provenance; native reconciliation"
       },
