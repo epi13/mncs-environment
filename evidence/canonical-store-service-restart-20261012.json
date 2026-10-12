@@ -1,0 +1,88 @@
+{
+  "schema_version": "mncs.environment.canonical-store-service-restart/1",
+  "identity": "ev_environment_canonical_store_service_restart_20261012",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "recorded_at": "2026-10-12T23:34:36Z",
+  "owner": "mncs-environment",
+  "source_identity": {
+    "repository": "mncs-environment",
+    "revision": "b535c702cdc5c22287b8e104ff558b28994e799d"
+  },
+  "execution": {
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "transport": "mncs-control-environment-rpc",
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_path_mounted_in_agent": false,
+    "agent_direct_store_access": false,
+    "authenticated_continuation": {
+      "campaign_id": "cmp_mncs_continuity_20261010",
+      "session_id": "ses_7226fbcfe65820f7",
+      "status": "ready"
+    },
+    "environment_campaign_state_checkpoint": "chk_0aba4a84ec625c80"
+  },
+  "control_service": {
+    "unit": "mncs-control-tunnel.service",
+    "pre_restart_main_pid": 3420644,
+    "post_restart_main_pid": 3426317,
+    "post_restart_started_at_local": "2026-10-12T15:29:09-08:00",
+    "state_after_restart": "active/running",
+    "restart_policy": "always",
+    "hardening": {
+      "ProtectSystem": "strict",
+      "ProtectHome": "read-only",
+      "NoNewPrivileges": true,
+      "canonical_store_in_ReadWritePaths": true
+    },
+    "principal_id_unchanged": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+  },
+  "lost_receipt_and_recovery": {
+    "request_id": "req_service_restart_checkpoint_20261012",
+    "operation": "Environment session checkpoint",
+    "caller_sent_complete_request_frame": true,
+    "caller_closed_socket_before_receipt": true,
+    "caller_exit_code": 73,
+    "committed_before_service_restart": {
+      "checkpoint_id": "chk_def6b8905ae3d496",
+      "sequence": 247,
+      "progress": "canonical checkpoint caller closed before receipt; retry across Control restart",
+      "observed_by_fresh_protected_process_before_restart": true
+    },
+    "service_restart_between_commit_and_replay": true,
+    "first_post_restart_retry_transport_result": "Control terminal request timed out; outcome treated as ambiguous",
+    "recovered_retry": {
+      "exit_code": 0,
+      "checkpoint_id": "chk_def6b8905ae3d496",
+      "sequence": 247,
+      "request_id": "req_service_restart_checkpoint_20261012",
+      "new_checkpoint_created": false
+    },
+    "fresh_post_retry_readback": {
+      "matching_checkpoint_count": 1,
+      "checkpoint_id": "chk_def6b8905ae3d496"
+    },
+    "exact_store_history_authority_preserved": true
+  },
+  "canonical_store_integrity": {
+    "invocation": "python3 -m mncs_env.cli store --session ses_7226fbcfe65820f7 --verify",
+    "exit_code": 0,
+    "ok": true,
+    "generation": 47302,
+    "objects_verified": 47304,
+    "relations": 0,
+    "provenance_records": 0,
+    "recovery_result": "RECOVERED_OLD",
+    "commit_feed": "4d430100000000000000b8c60000b8c800000000000000005378abda1b23dc1b4d6d52d53225b6785f7ed4fb826cbd994255d07e30d4cb7e",
+    "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf"
+  },
+  "readiness": {
+    "checkpoint_caller_interruption_and_fresh_readback": "pass",
+    "stable_checkpoint_replay_after_Control_service_restart": "pass",
+    "canonical_Store_integrity_after_restart_replay": "pass",
+    "foreign_claims_modified": false,
+    "campaign_delivery": "partial",
+    "reason": "A checkpoint committed before a Control service restart remained readable and was returned with the same identity after restart and stable replay. The service retained strict confinement and the exact canonical Store write path. Compiler/Forge handoffs, Language runtime scope, full compiler scheduling, and compiler succession remain pending."
+  }
+}
