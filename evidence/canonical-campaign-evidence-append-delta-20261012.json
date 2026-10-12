@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.canonical-campaign-evidence-delta-acceptance/1",
+  "identity": "ev_canonical_campaign_evidence_delta_20261012",
+  "recorded_at": "2026-10-12T20:15:42Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "publication": {
+    "transport": "mncs-control-environment-rpc",
+    "execution": "fresh project-scoped bwrap process",
+    "direct_canonical_store_path": {
+      "path": "/home/epi13/.local/share/mncs-environment/store",
+      "exists": false,
+      "writable": false,
+      "probe_exit_code": 0
+    },
+    "control_environment_persistence": {
+      "state": "ready",
+      "authorization": "per-execution-grant-and-peer-credentials",
+      "store_mutation": "owner-write-path-available",
+      "sandbox_backend": "bwrap",
+      "sandbox_required": true
+    },
+    "previous_checkpoint_id": "chk_c0a75dc7228ffa3a",
+    "checkpoint_id": "chk_2d2b20095049d7c3",
+    "checkpoint_sequence": 232,
+    "store_request_id": "req_6eaa9ac7f45654d68296497219a5d6011c5453b0",
+    "evidence_count_before": 152,
+    "evidence_count_after": 154,
+    "evidence_delta": [
+      {
+        "identity": "ev_automation_resource_sample_live_evaluation_20261012",
+        "repository": "mncs-automation",
+        "commit": "dfb5519af7abc1eda14c72b2b0f89d0458cddf51",
+        "path": "evidence/resource-sample-live-evaluation-20261012.json",
+        "sha256": "3fc688ae0f7f871ecc7bfe123b10cb884ae6a0230d16b65ec2a5f785098013aa"
+      },
+      {
+        "identity": "ev_campaign_evidence_delta_20261012",
+        "repository": "mncs-environment",
+        "commit": "7c7dfe9d1b76dc0c740fe5e051cf4e0b2a6e3dd7",
+        "path": "evidence/campaign-evidence-append-delta-acceptance-20261012.json",
+        "sha256": "790cd7a0b81b414367ef44c2c8438a8e0cd649ebacd35f5a2fe64920961ef46b"
+      }
+    ],
+    "previous_state_digest": "42677c89ddc47538",
+    "campaign_state_digest": "a2592a6522d980f6",
+    "evidence_history_digest": "dfabc064fff8c7c6",
+    "recorded_by": {
+      "consumer_id": "local-agent",
+      "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+    }
+  },
+  "fresh_process_readback": {
+    "status": "passed",
+    "transport": "mncs-control-environment-rpc",
+    "sandbox_backend": "bwrap",
+    "exit_code": 0,
+    "session_id": "ses_7226fbcfe65820f7",
+    "campaign_identity": "cmp_mncs_continuity_20261010",
+    "checkpoint_id": "chk_2d2b20095049d7c3",
+    "evidence_count": 154,
+    "page_offset": 152,
+    "references": [
+      "ev_automation_resource_sample_live_evaluation_20261012",
+      "ev_campaign_evidence_delta_20261012"
+    ],
+    "environment_main_head": "7c7dfe9d1b76dc0c740fe5e051cf4e0b2a6e3dd7",
+    "automation_main_head": "dfb5519af7abc1eda14c72b2b0f89d0458cddf51",
+    "recorded_by": {
+      "consumer_id": "local-agent",
+      "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+    }
+  },
+  "validation": {
+    "environment_append_delta_tests": "4 passed",
+    "campaign_metadata_bounds_tests": "2 passed",
+    "isolated_unit_store_only": true,
+    "canonical_mutation_and_readback": "passed through Control owner RPC",
+    "agent_direct_store_filesystem_write": false,
+    "unauthorized_canonical_filesystem_access_granted": false
+  },
+  "readiness": {
+    "canonical_append_delta": "passed",
+    "fresh_process_readback": "passed",
+    "session_continuity": "passed",
+    "campaign_delivery": "partial",
+    "compiler_and_forge_handoffs": "pending",
+    "compiler_resource_scheduling_decision": "unproven"
+  }
+}
