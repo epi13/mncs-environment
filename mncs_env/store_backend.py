@@ -295,6 +295,35 @@ class StoreBackend:
                 raise _SequenceTaken(session_id, sequence) from error
             raise
 
+    def put_event_at_generation(
+        self, session_id: str, sequence: int, event: dict[str, Any], *,
+        expected_generation: int,
+    ):
+        """Publish a sequenced event in a one-object Store generation CAS."""
+        self._ensure_writable()
+        from mncs_store import BoundObjectInput  # noqa: E402
+        from mncs_store.errors import StoreResultCode  # noqa: E402
+
+        identity = _event_identity(session_id, sequence)
+        payload = json.dumps(event, ensure_ascii=False, sort_keys=True).encode()
+        descriptor = json.dumps(
+            {"schema": SCHEMA_EVENT.decode(), "identity": identity.decode()},
+            sort_keys=True,
+        ).encode()
+        result = self._store.put_bound_objects(
+            [BoundObjectInput(SCHEMA_EVENT, identity, descriptor, payload)],
+            expected_generation=expected_generation,
+        )
+        if result.code == StoreResultCode.STALE_GENERATION:
+            raise _StaleGeneration(expected_generation, int(result.observed_generation))
+        if result.code == StoreResultCode.IDENTITY_CONFLICT:
+            raise _SequenceTaken(session_id, sequence)
+        if not result.committed:
+            from mncs_store.errors import StoreError
+
+            raise StoreError(result.code, "fenced Environment event publication failed")
+        return result
+
     def read_events(self, session_id: str) -> list[dict[str, Any]]:
         prefix = f"{session_id}:evt:".encode()
         found: list[tuple[int, dict[str, Any]]] = []
@@ -635,3 +664,15 @@ class _SequenceTaken(Exception):
         super().__init__(f"event sequence {sequence} already taken in {session_id}")
         self.session_id = session_id
         self.sequence = sequence
+
+
+class _StaleGeneration(Exception):
+    """Raised when a Store generation CAS observed newer durable state."""
+
+    def __init__(self, expected_generation: int, observed_generation: int):
+        self.expected_generation = expected_generation
+        self.observed_generation = observed_generation
+        super().__init__(
+            f"Store generation advanced from {expected_generation} "
+            f"to {observed_generation}"
+        )

@@ -532,7 +532,10 @@ def mutation_session(tmp_path, root, claims):
     from mncs_env.sessions import Session
     session = Session.__new__(Session)
     session.session_id = 'ses_mutation_fixture'
-    session.store = SimpleNamespace(read_claims=lambda: claims)
+    session.store = SimpleNamespace(
+        read_claims=lambda: claims,
+        read_events=lambda _session_id: [],
+    )
     session.snapshot = {'workspace': {'root': str(tmp_path)},
         'selected_checkouts': {'app': {'path': str(root)}},
         'claim_holders': {}, 'repo_facts': {'app': {'clean': True, 'main_branch': True}},

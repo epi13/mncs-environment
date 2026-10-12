@@ -25,6 +25,18 @@ class SequenceTaken(Exception):
     """Another writer committed a different record at this sequence/revision."""
 
 
+class EventGenerationConflict(Exception):
+    """The canonical Store advanced before a fenced event publication."""
+
+    def __init__(self, expected_generation: int, observed_generation: int):
+        self.expected_generation = expected_generation
+        self.observed_generation = observed_generation
+        super().__init__(
+            f"event publication expected Store generation {expected_generation}, "
+            f"observed {observed_generation}"
+        )
+
+
 class SnapshotConflict(Exception):
     """A concurrent participant published this immutable snapshot revision."""
 
@@ -291,6 +303,13 @@ class SessionStore:
 
     def put_event(self, session_id: str, sequence: int, event: dict[str, Any]) -> None:
         """Persist one sequenced event; raise SequenceTaken on foreign conflict."""
+        raise NotImplementedError
+
+    def put_event_at_generation(
+        self, session_id: str, sequence: int, event: dict[str, Any], *,
+        expected_generation: int,
+    ) -> None:
+        """Publish one event only if canonical Store generation is unchanged."""
         raise NotImplementedError
 
     def existing_sequences(self, session_id: str) -> list[int]:
@@ -638,6 +657,24 @@ class StoreSessionStore(SessionStore):
             self.backend.put_event(session_id, sequence, event)
         except _SequenceTaken as error:
             raise SequenceTaken(str(error)) from error
+
+    def put_event_at_generation(
+        self, session_id: str, sequence: int, event: dict[str, Any], *,
+        expected_generation: int,
+    ) -> None:
+        from .store_backend import _SequenceTaken, _StaleGeneration
+
+        try:
+            self.backend.put_event_at_generation(
+                session_id, sequence, event,
+                expected_generation=expected_generation,
+            )
+        except _SequenceTaken as error:
+            raise SequenceTaken(str(error)) from error
+        except _StaleGeneration as error:
+            raise EventGenerationConflict(
+                error.expected_generation, error.observed_generation
+            ) from error
 
     def existing_sequences(self, session_id: str) -> list[int]:
         return sorted(

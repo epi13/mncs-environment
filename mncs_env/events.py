@@ -44,6 +44,7 @@ TYPES = (
     "invocation.completed",
     "authority.denied",
     "authority.escalated",
+    "authority.scope-granted",
     "lease.acquired",
     "lease.released",
     "lease.release_noop",

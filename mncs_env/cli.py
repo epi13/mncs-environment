@@ -620,6 +620,32 @@ def cmd_authority(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_scope_grant(args: argparse.Namespace) -> int:
+    """Admit one Control-authorized repository scope into Environment state."""
+    session = _open(args)
+    try:
+        grant = session.grant_repository_scope(
+            repository=args.repository,
+            campaign_id=args.campaign_id,
+            expected_authority_revision=args.expected_authority_revision,
+            approval_reference=args.approval_reference,
+            authenticated_principal_id=os.environ.get("MNCS_ENV_AUTH_PRINCIPAL_ID"),
+            request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"),
+        )
+        out(grant)
+        return 0
+    except sessions_module.AuthorityScopeConflict as error:
+        return fail(str(error), code=3, diagnostics=error.diagnostics)
+    except sessions_module.AuthorityDenied as error:
+        return fail(str(error), code=3, diagnostics={
+            "code": "authority-denied",
+            "publication_completed": False,
+            "next": "inspect the authenticated Environment scope and Control owner grant",
+        })
+    finally:
+        session.close()
+
+
 def cmd_invoke(args: argparse.Namespace) -> int:
     try:
         session = _resume_session(args)
@@ -1258,6 +1284,16 @@ def build_parser() -> argparse.ArgumentParser:
     authority.add_argument("--action", default=None)
     authority.add_argument("--target", default=None)
     authority.set_defaults(func=cmd_authority)
+
+    scope_grant = session_parser(
+        "scope-grant",
+        "admit one owner-authorized repository scope into the current campaign",
+    )
+    scope_grant.add_argument("--campaign-id", required=True)
+    scope_grant.add_argument("--repository", required=True)
+    scope_grant.add_argument("--expected-authority-revision", required=True)
+    scope_grant.add_argument("--approval-reference", required=True)
+    scope_grant.set_defaults(func=cmd_scope_grant)
 
     invoke = session_parser("invoke", "invoke a bound capability")
     invoke.add_argument(

@@ -40,6 +40,7 @@ from .identity import (
 )
 from .intent import parse as parse_intent
 from .session_store import (
+    EventGenerationConflict,
     SequenceTaken,
     SessionStore,
     open_store,
@@ -119,6 +120,18 @@ class CampaignStateConflict(LifecycleError):
             "current_checkpoint": current_checkpoint,
             "publication_completed": False,
             "next": "read the authenticated continuation capsule and retry with its current campaign state checkpoint",
+        }
+
+
+class AuthorityScopeConflict(LifecycleError):
+    """Raised when a repository authority grant is stale or inadmissible."""
+
+    def __init__(self, code: str, message: str, *, next_step: str):
+        super().__init__(message)
+        self.diagnostics = {
+            "code": code,
+            "publication_completed": False,
+            "next": next_step,
         }
 
 
@@ -1526,6 +1539,7 @@ class Session:
         *,
         request_id: str | None = None,
         operation_digest: str | None = None,
+        expected_generation: int | None = None,
     ) -> dict[str, Any]:
         event_payload = dict(payload or {})
         if request_id is not None:
@@ -1558,11 +1572,16 @@ class Session:
                 "request_event_digest": event_digest,
             })
         last_error: Exception | None = None
-        for _ in range(MAX_EMIT_RETRIES):
-            if self._next_seq_hint is None:
+        attempts = 1 if expected_generation is not None else MAX_EMIT_RETRIES
+        for _ in range(attempts):
+            if expected_generation is not None or self._next_seq_hint is None:
                 sequences = self.store.existing_sequences(self.session_id)
-                self._next_seq_hint = (max(sequences) + 1) if sequences else 1
-            sequence = self._next_seq_hint
+                sequence_hint = (max(sequences) + 1) if sequences else 1
+                if expected_generation is None:
+                    self._next_seq_hint = sequence_hint
+            else:
+                sequence_hint = self._next_seq_hint
+            sequence = sequence_hint
             event = events_module.make(
                 session_id=self.session_id,
                 sequence=sequence,
@@ -1572,13 +1591,26 @@ class Session:
                 causes=causes,
             )
             try:
-                self.store.put_event(self.session_id, sequence, event)
+                if expected_generation is None:
+                    self.store.put_event(self.session_id, sequence, event)
+                else:
+                    self.store.put_event_at_generation(
+                        self.session_id, sequence, event,
+                        expected_generation=expected_generation,
+                    )
                 self._invalidate_log()
                 self._next_seq_hint = sequence + 1
                 return event
+            except EventGenerationConflict:
+                self._next_seq_hint = None
+                raise
             except SequenceTaken as error:
                 last_error = error
                 self._next_seq_hint = None
+                if expected_generation is not None:
+                    raise EventGenerationConflict(
+                        expected_generation, self.store.generation()
+                    ) from error
                 continue
         raise LifecycleError(f"event log unwritable after retries: {last_error}")
 
@@ -1603,6 +1635,286 @@ class Session:
                    {"intent_id": intent["identity"]})
         self._save()
         return intent
+
+    def authority_scope_grants(self) -> list[dict[str, Any]]:
+        """Project Environment-admitted repository grants from immutable events."""
+        grants: dict[str, dict[str, Any]] = {}
+        for event in self._log():
+            if event.get("type") != "authority.scope-granted":
+                continue
+            payload = event.get("payload")
+            grant = payload.get("scope_grant") if isinstance(payload, dict) else None
+            if (not isinstance(grant, dict)
+                    or grant.get("schema_version") != "mncs.environment.authority-scope-grant/1"
+                    or grant.get("session_id") != self.session_id
+                    or grant.get("campaign_id") != (self.snapshot.get("campaign") or {}).get("identity")):
+                continue
+            repository = grant.get("repository")
+            if isinstance(repository, str) and repository:
+                grants[repository] = dict(grant)
+        return [grants[key] for key in sorted(grants)]
+
+    def effective_authority(self) -> dict[str, Any]:
+        """Return the durable authority projection, including admitted grants."""
+        authority = dict(self.snapshot.get("authority") or {})
+        grants = self.authority_scope_grants()
+        protected = set(authority.get("protected_repositories", []))
+        granted = {
+            str(item["repository"])
+            for item in grants
+            if isinstance(item.get("repository"), str)
+        }
+        authority["writable"] = sorted(
+            (set(authority.get("writable", [])) | granted) - protected
+        )
+        authority["scope_grants"] = grants
+        authority["scope_grant_repositories"] = sorted(granted - protected)
+        authority["revision"] = self.authority_revision(authority)
+        return authority
+
+    @staticmethod
+    def authority_revision(authority: dict[str, Any]) -> str:
+        """Hash only authority law, excluding changing claim-holder observations."""
+        grants = authority.get("scope_grants", [])
+        return digest_hex({
+            "subject": authority.get("subject"),
+            "writable": sorted(set(authority.get("writable", []))),
+            "protected_repositories": sorted(set(authority.get("protected_repositories", []))),
+            "denied": sorted(set(authority.get("denied", []))),
+            "grants": authority.get("grants", []),
+            "scope_grants": [
+                {key: item.get(key) for key in (
+                    "identity", "campaign_id", "repository", "scope",
+                    "authorized_by_principal_id", "approval_reference",
+                    "authority_revision_before",
+                )}
+                for item in grants if isinstance(item, dict)
+            ],
+        }, length=64)
+
+    def grant_repository_scope(
+        self,
+        *,
+        repository: str,
+        campaign_id: str,
+        expected_authority_revision: str,
+        approval_reference: str,
+        authenticated_principal_id: str | None,
+        request_id: str | None,
+    ) -> dict[str, Any]:
+        """Record one owner-admitted repository write scope for this campaign.
+
+        The authenticated Control transport allowlists the campaign, repository,
+        and approval reference before calling this Environment-owned operation.
+        Environment independently checks the session owner, campaign, authority
+        revision, workspace boundary, clean Git identity, and competing claims.
+        The immutable event is the source of truth; retries reconcile by request
+        identity, even if the process stopped after Store publication.
+        """
+        if not isinstance(repository, str) or not _CAMPAIGN_REPOSITORY_PATTERN.fullmatch(repository):
+            raise AuthorityScopeConflict(
+                "authority-scope-invalid",
+                "repository scope must name one safe workspace checkout",
+                next_step="select one immediate repository under the campaign workspace",
+            )
+        if not isinstance(campaign_id, str) or not campaign_id or len(campaign_id) > 160:
+            raise AuthorityScopeConflict(
+                "authority-scope-invalid", "campaign identity is invalid",
+                next_step="read the authenticated campaign context and retry",
+            )
+        if (not isinstance(expected_authority_revision, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", expected_authority_revision)):
+            raise AuthorityScopeConflict(
+                "authority-scope-invalid", "expected authority revision is invalid",
+                next_step="read the current Environment authority revision and retry",
+            )
+        if (not isinstance(approval_reference, str) or not approval_reference.strip()
+                or len(approval_reference) > 256 or "\x00" in approval_reference):
+            raise AuthorityScopeConflict(
+                "authority-scope-invalid", "approval reference must be bounded nonempty text",
+                next_step="supply the owner-recorded approval reference for this repository scope",
+            )
+        if (not isinstance(request_id, str)
+                or not re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", request_id)):
+            raise AuthorityScopeConflict(
+                "authority-scope-invalid", "stable scope-grant request identity is required",
+                next_step="retry through the authenticated Control Environment transport",
+            )
+        if not isinstance(authenticated_principal_id, str) or not authenticated_principal_id:
+            raise AuthorityDenied("repository scope grants require a Control-authenticated principal")
+        if authenticated_principal_id != self.snapshot.get("authenticated_principal_id"):
+            raise AuthorityDenied("repository scope grant principal does not own this Environment session")
+        if (self.snapshot.get("campaign") or {}).get("identity") != campaign_id:
+            raise AuthorityDenied("repository scope grant campaign does not match the selected session")
+        if self.snapshot.get("lifecycle") in ("completed", "failed"):
+            raise AuthorityDenied("terminal Environment sessions cannot admit new repository scope")
+        operation_digest = digest_hex({
+            "operation": "environment-authority-scope-grant/1",
+            "session_id": self.session_id,
+            "campaign_id": campaign_id,
+            "repository": repository,
+            "expected_authority_revision": expected_authority_revision,
+            "approval_reference": approval_reference,
+            "authenticated_principal_id": authenticated_principal_id,
+        }, length=64)
+        for event in self._log():
+            payload = event.get("payload")
+            if (event.get("type") != "authority.scope-granted"
+                    or not isinstance(payload, dict)
+                    or payload.get("request_id") != request_id):
+                continue
+            if payload.get("request_operation_digest") != operation_digest:
+                raise AuthorityScopeConflict(
+                    "authority-scope-request-conflict",
+                    "scope-grant request identity is already bound to another operation",
+                    next_step="read the campaign authority events before issuing a new request identity",
+                )
+            prior = payload.get("scope_grant")
+            if isinstance(prior, dict):
+                return dict(prior)
+
+        generation_reader = getattr(self.store, "generation", None)
+        if not callable(generation_reader):
+            raise AuthorityScopeConflict(
+                "authority-scope-cas-unavailable",
+                "selected Environment persistence provider cannot fence scope admission",
+                next_step="use a canonical Store provider with generation compare-and-swap support",
+            )
+        # The authority read and immutable grant publication form one
+        # Store-generation transaction: another publisher advancing the
+        # generation makes the grant CAS fail rather than accepting a stale
+        # authority projection.
+        expected_generation = int(generation_reader())
+        self._invalidate_log()
+        current = self.effective_authority()
+        current_revision = str(current.get("revision", ""))
+        if current_revision != expected_authority_revision:
+            raise AuthorityScopeConflict(
+                "authority-scope-conflict",
+                "Environment authority changed since the scope grant was requested",
+                next_step="read the current authority revision and retry with explicit owner approval",
+            )
+        if repository in current.get("protected_repositories", []):
+            raise AuthorityDenied(f"repository scope is protected for this campaign: {repository}")
+        if repository in current.get("writable", []):
+            raise AuthorityScopeConflict(
+                "authority-scope-already-granted",
+                f"repository already appears in effective writable scope: {repository}",
+                next_step="inspect the existing authority grant and claim before continuing",
+            )
+
+        workspace_root_value = (self.snapshot.get("workspace") or {}).get("root")
+        if not isinstance(workspace_root_value, str) or not workspace_root_value:
+            raise AuthorityDenied("Environment session has no owner-mapped workspace root")
+        workspace_root = Path(workspace_root_value).resolve(strict=True)
+        checkout = workspace_root / repository
+        try:
+            resolved_checkout = checkout.resolve(strict=True)
+            if (checkout.is_symlink() or resolved_checkout.parent != workspace_root
+                    or not resolved_checkout.is_dir()):
+                raise AuthorityDenied("repository scope must be one immediate, non-symlink workspace checkout")
+        except OSError as error:
+            raise AuthorityDenied(f"repository checkout is unavailable: {repository}") from error
+
+        observed = workspace_module.inspect_repo(resolved_checkout, _refresh=True)
+        if observed is None or observed.git_error or not observed.head:
+            raise AuthorityDenied("repository scope requires a fresh Git identity observation")
+        if observed.dirty:
+            raise AuthorityDenied(
+                f"repository scope admission refuses unproven dirty work: {repository}"
+            )
+        rights = self.snapshot.get("rights") or {}
+        right_subjects = rights.get("subjects") if isinstance(rights, dict) else None
+        if isinstance(right_subjects, dict) and right_subjects.get(repository) == "blocked":
+            raise AuthorityDenied(f"repository scope is blocked by Rights/Provenance: {repository}")
+
+        claims = claims_module.active_claims(self.store.read_claims())
+        competing = [
+            item for item in claims.values()
+            if item.get("repository") == repository
+        ]
+        if competing:
+            raise AuthorityScopeConflict(
+                "authority-scope-conflict",
+                f"repository scope has an existing live claim: {repository}",
+                next_step="obtain the recorded owner's handoff or wait for a valid recovery condition",
+            )
+
+        common = workspace_module._git(
+            resolved_checkout, "rev-parse", "--path-format=absolute", "--git-common-dir"
+        )
+        remote = workspace_module._git(resolved_checkout, "config", "--get", "remote.origin.url")
+        common_material: dict[str, Any] = {"repository": repository}
+        common_relative = None
+        if common is not None and common.returncode == 0:
+            common_path = Path(common.stdout.strip()).resolve()
+            try:
+                common_relative = common_path.relative_to(workspace_root).as_posix()
+            except ValueError:
+                common_relative = None
+            if common_relative is not None:
+                common_material["common_directory"] = common_relative
+        if remote is not None and remote.returncode == 0 and remote.stdout.strip():
+            common_material["remote_identity"] = digest_hex(remote.stdout.strip())
+        common_identity = "git-common:" + digest_hex(common_material)
+        observed_path = resolved_checkout.relative_to(workspace_root).as_posix()
+        checkout_identity = "checkout:" + digest_hex({
+            "repository": repository,
+            "path": observed_path,
+            "git_common_directory_identity": common_identity,
+        })
+        scope_grant: dict[str, Any] = {
+            "schema_version": "mncs.environment.authority-scope-grant/1",
+            "identity": "scope_" + digest_hex({
+                "session_id": self.session_id,
+                "campaign_id": campaign_id,
+                "repository": repository,
+                "request_id": request_id,
+            }),
+            "session_id": self.session_id,
+            "campaign_id": campaign_id,
+            "repository": repository,
+            "scope": {"kind": "repository", "repository": repository},
+            "authorized_by_principal_id": authenticated_principal_id,
+            "requested_by_consumer_id": str(self.snapshot.get("consumer_id", "unknown")),
+            "approval_reference": approval_reference,
+            "authority_revision_before": current_revision,
+            "admitted_by": "mncs-environment",
+            "admitted_at": utcnow(),
+            "repository_identity": {
+                "checkout_identity": checkout_identity,
+                "git_common_directory_identity": common_identity,
+                "observed_path": observed_path,
+                "branch": observed.branch,
+                "head": observed.head,
+                "clean": True,
+            },
+        }
+        after = dict(current)
+        after["writable"] = sorted(set(current.get("writable", [])) | {repository})
+        after["scope_grants"] = [*current.get("scope_grants", []), scope_grant]
+        scope_grant["authority_revision_after"] = self.authority_revision(after)
+        try:
+            self._emit(
+                "authority.scope-granted", "environment",
+                {"scope_grant": scope_grant},
+                request_id=request_id,
+                operation_digest=operation_digest,
+                expected_generation=expected_generation,
+            )
+        except EventGenerationConflict as error:
+            raise AuthorityScopeConflict(
+                "authority-scope-conflict",
+                "canonical Store advanced while the repository scope grant was being admitted",
+                next_step="read the current campaign authority and retry with a stable request identity",
+            ) from error
+        except NotImplementedError as error:
+            raise AuthorityScopeConflict(
+                "authority-scope-cas-unavailable",
+                "selected Environment persistence provider cannot fence scope admission",
+                next_step="use a canonical Store provider with generation compare-and-swap support",
+            ) from error
+        return scope_grant
 
     def provision_checkouts(
         self,
@@ -1851,7 +2163,7 @@ class Session:
                 repo_facts = {**self.snapshot.get("repo_facts", {}),
                               **_repo_facts({"repositories": [record]})}
         verdict = authority_module.evaluate(
-            self.snapshot.get("authority", {}),
+            self.effective_authority(),
             action=action,
             target=target,
             session_id=self.session_id,
@@ -2333,7 +2645,7 @@ class Session:
             else False
         )
         if not prior_request:
-            authority = self.snapshot.get("authority") or {}
+            authority = self.effective_authority()
             writable = authority.get("writable", [])
             protected = authority.get("protected_repositories", [])
             if repository in protected:
@@ -3744,7 +4056,7 @@ class Session:
         This method is read-only and does not advance cursors or append events.
         """
         intent = self.snapshot.get("intent") or {}
-        authority = self.snapshot.get("authority") or {}
+        authority = self.effective_authority()
         protected = sorted(set(authority.get("protected_repositories", [])))
         writable = sorted(
             set(authority.get("writable", [])) - set(protected)
@@ -3900,6 +4212,8 @@ class Session:
                 "invocable": list(authority.get("invocable", [])),
                 "protected_repositories": protected,
                 "escalation_required": list(authority.get("escalation_required", [])),
+                "scope_grants": list(authority.get("scope_grants", [])),
+                "revision": authority.get("revision"),
             },
             "capabilities": {
                 "available": available[:max_capabilities],
@@ -4066,7 +4380,7 @@ class Session:
             "requirements": self.snapshot.get("requirements", {}),
             "readiness": readiness_module.summarize(self.snapshot),
             "intent": self.snapshot.get("intent"),
-            "authority": self.snapshot.get("authority"),
+            "authority": self.effective_authority(),
             "rights": self.snapshot.get("rights", {}),
             "workspace": self.snapshot.get("workspace", {}),
             "selected_checkouts": self.snapshot.get("selected_checkouts", {}),
