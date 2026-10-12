@@ -1,0 +1,46 @@
+{
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "continuity_reference": {
+    "commit": "2907faa14fc888f5e92dd06f01db8dd0177d0553",
+    "identity": "ev_protected_task_identity_restart_20261012",
+    "path": "evidence/protected-task-identity-restart-acceptance-20261012.json",
+    "sha256": "05afb182a6eec73c15ebd171e4af09c590df4ccb336ce8351398bf66a3bf9518"
+  },
+  "execution": {
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "direct_canonical_store_write_access": false,
+    "duration_seconds": 110.188,
+    "exit_code": 0,
+    "job_id": "term-f334acbe87a4aaac72c7038e",
+    "network": false,
+    "persistence_transport": "control-rpc",
+    "request_id": "req_task_identity_store_verify_20261012",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "timed_out": false,
+    "tool": "mncs_control_terminal_start"
+  },
+  "identity": "ev_canonical_store_integrity_after_task_selector_20261012",
+  "recorded_at": "2026-10-12T02:41:35Z",
+  "result": "PASS; canonical Store integrity verified after protected task-selector resumption, with no direct Store filesystem write access.",
+  "schema_version": "mncs.environment.canonical-store-integrity-after-task-selector/1",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "control_repository": "mncs-control-mcp",
+    "control_revision": "802756f97190332a76190115d4b6bd39edb2769f",
+    "environment_repository": "mncs-environment",
+    "environment_revision": "2907faa14fc888f5e92dd06f01db8dd0177d0553"
+  },
+  "verification": {
+    "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+    "chunk_size": 65536,
+    "commit_feed": "4d430100000000000000b17f0000b1810000000000000000c179db72c799911b2a4e73c8d4743df5769620c24817abdcf24e7c7f767a3296",
+    "fanout": 31,
+    "generation": 45439,
+    "objects": 45441,
+    "ok": true,
+    "provenance_records": 0,
+    "recovery": "RECOVERED_OLD",
+    "relations": 0
+  }
+}
