@@ -953,6 +953,12 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
         if len(raw.encode("utf-8")) > sessions_module.CAMPAIGN_STATE_INPUT_MAX_BYTES:
             raise ValueError("campaign evidence JSON exceeds the bounded publication size")
         campaign_evidence = json.loads(raw)
+    campaign_evidence_delta = None
+    if args.campaign_evidence_delta_json is not None:
+        raw = args.campaign_evidence_delta_json
+        if len(raw.encode("utf-8")) > sessions_module.CAMPAIGN_STATE_INPUT_MAX_BYTES:
+            raise ValueError("campaign evidence append delta exceeds the bounded publication size")
+        campaign_evidence_delta = json.loads(raw)
     campaign_delivery = None
     if args.campaign_delivery_json is not None:
         raw = args.campaign_delivery_json
@@ -965,6 +971,7 @@ def cmd_checkpoint(args: argparse.Namespace) -> int:
             remaining=args.remaining,
             request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"),
             campaign_evidence=campaign_evidence,
+            campaign_evidence_delta=campaign_evidence_delta,
             campaign_delivery=campaign_delivery,
             campaign_base_checkpoint=args.campaign_base_checkpoint,
         )
@@ -2068,6 +2075,13 @@ def build_parser() -> argparse.ArgumentParser:
         help=("bounded JSON evidence window in append order; when new references "
               "overflow the window, only the oldest prefix may roll off because "
               "earlier immutable checkpoints retain the history"),
+    )
+    checkpoint.add_argument(
+        "--campaign-evidence-delta-json", default=None,
+        help=("bounded JSON array of new immutable evidence references; the "
+              "Environment owner appends it to history after validating the "
+              "current --campaign-base-checkpoint. Initialize campaign state "
+              "with --campaign-evidence-json first"),
     )
     checkpoint.add_argument(
         "--campaign-delivery-json", default=None,

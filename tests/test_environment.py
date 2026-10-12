@@ -3381,6 +3381,20 @@ class SessionTests(unittest.TestCase):
         self.assertIsNone(default.evidence_offset)
         self.assertEqual(default.evidence_limit, sessions.CAMPAIGN_EVIDENCE_MAX)
 
+    def test_checkpoint_cli_accepts_campaign_evidence_append_delta(self) -> None:
+        delta = json.dumps([{
+            "identity": "ev_delta_cli",
+            "repository": "mncs-environment",
+            "commit": "a" * 40,
+            "path": "evidence/delta.json",
+        }])
+        parsed = cli.build_parser().parse_args([
+            "checkpoint", "ses_fixture",
+            "--campaign-base-checkpoint", "chk_current",
+            "--campaign-evidence-delta-json", delta,
+        ])
+        self.assertEqual(parsed.campaign_base_checkpoint, "chk_current")
+        self.assertEqual(parsed.campaign_evidence_delta_json, delta)
     def test_invocation_environment_uses_selected_store_and_language_toolchains(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "workspace"
@@ -4256,6 +4270,120 @@ class SessionTests(unittest.TestCase):
                 reopened.snapshot["campaign"]["evidence"], evidence_window
             )
 
+    def test_campaign_evidence_append_delta_uses_owner_history_and_retries_after_interruption(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state_dir = Path(directory)
+            session = make_session(state_dir)
+            session.snapshot["campaign"]["identity"] = "cmp_evidence_delta_test"
+            session.snapshot["authenticated_principal_id"] = "principal-test"
+            session._save()
+            first_references = [{
+                "identity": f"ev_delta_{index:03d}",
+                "repository": "mncs-environment",
+                "commit": "a" * 40,
+                "path": f"evidence/delta-{index:03d}.json",
+            } for index in range(sessions.CAMPAIGN_EVIDENCE_MAX)]
+            next_reference = {
+                "identity": "ev_delta_128",
+                "repository": "mncs-environment",
+                "commit": "b" * 40,
+                "path": "evidence/delta-128.json",
+            }
+            with self.assertRaisesRegex(ValueError, "initialized campaign state"):
+                session.checkpoint(
+                    progress="reject delta before history initialization",
+                    request_id="req_evidence_delta_before_init",
+                    campaign_base_checkpoint="none",
+                    campaign_evidence_delta=[next_reference],
+                )
+            first = session.checkpoint(
+                progress="initialize bounded evidence history",
+                request_id="req_evidence_delta_first",
+                campaign_base_checkpoint="none",
+                campaign_evidence=first_references,
+            )
+            legacy_operation_digest = sessions.digest_hex({
+                "session_id": session.session_id,
+                "progress": "initialize bounded evidence history",
+                "remaining": [],
+                "campaign_update": {
+                    "base_checkpoint": "none",
+                    "evidence": first_references,
+                    "delivery": None,
+                },
+            })
+            self.assertEqual(first["operation_digest"], legacy_operation_digest)
+            second = session.checkpoint(
+                progress="append using one new reference only",
+                request_id="req_evidence_delta_second",
+                campaign_base_checkpoint=first["identity"],
+                campaign_evidence_delta=[next_reference],
+            )
+            expected_window = [*first_references[1:], next_reference]
+            self.assertEqual(second["campaign_state"]["evidence_delta"], [next_reference])
+            self.assertEqual(second["campaign_state"]["evidence_count"], 129)
+            self.assertEqual(session.snapshot["campaign"]["evidence"], expected_window)
+
+            replay = session.checkpoint(
+                progress="append using one new reference only",
+                request_id="req_evidence_delta_second",
+                campaign_base_checkpoint=first["identity"],
+                campaign_evidence_delta=[next_reference],
+            )
+            self.assertEqual(replay["identity"], second["identity"])
+            self.assertEqual(replay["campaign_state"]["evidence_count"], 129)
+
+            with self.assertRaises(sessions.CampaignStateConflict):
+                session.checkpoint(
+                    progress="reject stale evidence delta",
+                    request_id="req_evidence_delta_stale_base",
+                    campaign_base_checkpoint=first["identity"],
+                    campaign_evidence_delta=[{
+                        "identity": "ev_delta_stale",
+                        "repository": "mncs-environment",
+                        "commit": "d" * 40,
+                        "path": "evidence/delta-stale.json",
+                    }],
+                )
+
+            final_reference = {
+                "identity": "ev_delta_129",
+                "repository": "mncs-environment",
+                "commit": "c" * 40,
+                "path": "evidence/delta-129.json",
+            }
+            with mock.patch.object(
+                session.store, "save_snapshot",
+                side_effect=OSError("interrupted after delta checkpoint publication"),
+            ):
+                with self.assertRaisesRegex(
+                    OSError, "after delta checkpoint publication"
+                ):
+                    session.checkpoint(
+                        progress="reconcile an interrupted append delta",
+                        request_id="req_evidence_delta_interrupted",
+                        campaign_base_checkpoint=second["identity"],
+                        campaign_evidence_delta=[final_reference],
+                    )
+            reopened = sessions.Session.open(
+                state_dir=state_dir, session_id=session.session_id, **FAST
+            )
+            recovery = reopened.reconcile_campaign_continuity()
+            self.assertTrue(recovery["campaign_state_changed"])
+            expected_after_recovery = [
+                *first_references[2:], next_reference, final_reference,
+            ]
+            recovered_state = reopened.campaign_state()
+            self.assertEqual(recovered_state["evidence_count"], 130)
+            self.assertEqual(recovered_state["evidence"], expected_after_recovery)
+            retry = reopened.checkpoint(
+                progress="reconcile an interrupted append delta",
+                request_id="req_evidence_delta_interrupted",
+                campaign_base_checkpoint=second["identity"],
+                campaign_evidence_delta=[final_reference],
+            )
+            self.assertEqual(retry["campaign_state"]["evidence_count"], 130)
+            self.assertEqual(retry["campaign_state"]["evidence_delta"], [final_reference])
     def test_campaign_evidence_rollover_migrates_legacy_cumulative_state(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))

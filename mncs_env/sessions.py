@@ -3735,6 +3735,7 @@ class Session:
     def checkpoint(self, *, progress: str = "", remaining: list[str] | None = None,
                    request_id: str | None = None,
                    campaign_evidence: list[dict[str, Any]] | None = None,
+                   campaign_evidence_delta: list[dict[str, Any]] | None = None,
                    campaign_delivery: dict[str, Any] | None = None,
                    campaign_base_checkpoint: str | None = None) -> dict[str, Any]:
         if request_id is not None and (
@@ -3752,8 +3753,14 @@ class Session:
                            or "\x00" in item for item in remaining)))):
             raise ValueError("checkpoint remaining items must be a bounded text list")
         remaining_values = list(remaining or [])
+        if campaign_evidence is not None and campaign_evidence_delta is not None:
+            raise ValueError(
+                "campaign evidence window and append delta are mutually exclusive"
+            )
         campaign_update_requested = (
-            campaign_evidence is not None or campaign_delivery is not None
+            campaign_evidence is not None
+            or campaign_evidence_delta is not None
+            or campaign_delivery is not None
         )
         if campaign_update_requested and campaign_base_checkpoint is None:
             raise ValueError(
@@ -3770,6 +3777,12 @@ class Session:
             normalize_campaign_evidence(campaign_evidence)
             if campaign_evidence is not None else None
         )
+        normalized_evidence_delta = (
+            normalize_campaign_evidence(campaign_evidence_delta)
+            if campaign_evidence_delta is not None else None
+        )
+        if normalized_evidence_delta is not None and not normalized_evidence_delta:
+            raise ValueError("campaign evidence append delta must contain at least one reference")
         normalized_delivery = (
             normalize_campaign_delivery(campaign_delivery)
             if campaign_delivery is not None else None
@@ -3781,6 +3794,8 @@ class Session:
                 "evidence": normalized_evidence,
                 "delivery": normalized_delivery,
             }
+            if normalized_evidence_delta is not None:
+                campaign_update["evidence_delta"] = normalized_evidence_delta
         state_digest = digest_hex(
             {
                 "intent": self.snapshot.get("intent"),
@@ -3885,6 +3900,11 @@ class Session:
                 raise CampaignStateConflict(
                     str(campaign_base_checkpoint), str(latest_campaign_id)
                 )
+            if normalized_evidence_delta is not None and latest_campaign_record is None:
+                raise ValueError(
+                    "campaign evidence append delta requires an initialized campaign state; "
+                    "initialize it with --campaign-evidence-json first"
+                )
             if latest_campaign_record is not None:
                 campaign_evidence_history_value = campaign_state_history[1]
                 previous_campaign_state_digest = latest_campaign_record.get(
@@ -3901,6 +3921,19 @@ class Session:
                 campaign_evidence_value = campaign_evidence_history_value[
                     -CAMPAIGN_EVIDENCE_MAX:
                 ]
+                if normalized_evidence_delta is not None:
+                    prior_window = campaign_evidence_history_value[
+                        -CAMPAIGN_EVIDENCE_MAX:
+                    ]
+                    keep_count = min(
+                        len(prior_window),
+                        CAMPAIGN_EVIDENCE_MAX - len(normalized_evidence_delta),
+                    )
+                    retained_prior = prior_window[-keep_count:] if keep_count else []
+                    normalized_evidence = [
+                        *retained_prior,
+                        *normalized_evidence_delta,
+                    ]
                 prior_state = latest_campaign_record["campaign_state"]
                 campaign_delivery_value = prior_state["delivery"]
             else:
