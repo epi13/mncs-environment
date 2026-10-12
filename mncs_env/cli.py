@@ -9,6 +9,7 @@ only resume/accept record participation.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -22,7 +23,9 @@ from . import claims as claims_module
 from . import diagnostics as diagnostics_module
 from . import doctor as doctor_module
 from . import entry as entry_module
+from . import evidence_store
 from . import family as family_module
+from . import invocation_artifacts as invocation_artifacts_module
 from . import netcheck as netcheck_module
 from . import pressures as pressures_module
 from . import projections as projections_module
@@ -38,6 +41,7 @@ from .session_store import SnapshotConflict, open_store
 from .store_backend import StoreIntegrityFailure, StoreUnavailable
 
 DEFAULT_STATE_DIR = Path.home() / ".local" / "share" / "mncs-environment"
+MAX_ARTIFACT_READ_BYTES = 1024 * 1024
 
 
 def out(value: object) -> None:
@@ -700,6 +704,132 @@ def cmd_invoke(args: argparse.Namespace) -> int:
         return 0 if result["status"] in ("ok", "pending-escalation") else 4
     finally:
         session.close()
+
+
+def cmd_artifact_read(args: argparse.Namespace) -> int:
+    """Return one authorized file from the latest successful Store artifact."""
+    try:
+        invocation_artifacts_module._safe_relative(args.path)
+    except StoreIntegrityFailure as error:
+        return fail(str(error), code=3, diagnostics={
+            "code": "artifact-path-invalid",
+            "next": "supply one safe path relative to the provider artifact bundle",
+        })
+    try:
+        relative = invocation_artifacts_module._safe_relative(args.path)
+        with closing(_open(args)) as session:
+            bindings = session.snapshot.get("bindings", [])
+            matches = [
+                item for item in bindings
+                if isinstance(item, dict)
+                and item.get("capability") == args.capability
+                and item.get("binding_id") == args.binding_id
+            ] if isinstance(bindings, list) else []
+            if len(matches) != 1:
+                return fail(
+                    "artifact read requires one exact current capability binding",
+                    code=3,
+                    diagnostics={
+                        "code": "artifact-binding-unavailable",
+                        "next": "refresh the Environment capability inventory for the selected session",
+                    },
+                )
+            binding = matches[0]
+            if binding.get("effects") != ["read"]:
+                return fail(
+                    "artifact read requires a capability declared with read effects only",
+                    code=3,
+                    diagnostics={"code": "artifact-effect-denied"},
+                )
+            verdict = session.check(action="invoke", target=args.capability)
+            if verdict.get("verdict") != "allow":
+                return fail(
+                    "Environment did not authorize access to this capability artifact",
+                    code=3,
+                    diagnostics={
+                        "code": "authority-denied",
+                        "reason": verdict.get("reason"),
+                    },
+                )
+
+            artifacts = session.snapshot.get("artifacts", [])
+            latest = next((
+                item for item in reversed(artifacts)
+                if isinstance(item, dict)
+                and item.get("kind") == "invocation-result"
+                and item.get("capability") == args.capability
+                and item.get("binding_id") == args.binding_id
+            ), None) if isinstance(artifacts, list) else None
+            if latest is None:
+                return fail(
+                    "the selected capability has no recorded invocation artifact",
+                    code=4,
+                    diagnostics={"code": "artifact-not-found"},
+                )
+            if latest.get("status") != "ok":
+                return fail(
+                    "the latest capability invocation did not complete successfully",
+                    code=4,
+                    diagnostics={"code": "latest-invocation-unsuccessful"},
+                )
+            reference = latest.get("artifact_store_ref")
+            if not evidence_store.is_store_reference(reference):
+                return fail(
+                    "the latest capability invocation has no canonical Store artifact",
+                    code=4,
+                    diagnostics={"code": "store-artifact-unavailable"},
+                )
+
+            with invocation_artifacts_module.InvocationArtifactWorkspace(
+                session, args.capability, args.binding_id,
+            ) as artifact_workspace:
+                if not artifact_workspace.store_backed:
+                    return fail(
+                        "capability artifact read requires the strict Store provider",
+                        code=4,
+                        diagnostics={"code": "store-provider-operation-unsupported"},
+                    )
+                if artifact_workspace.previous_reference != reference:
+                    raise StoreIntegrityFailure(
+                        "latest invocation artifact does not match the current Store bundle"
+                    )
+                content = artifact_workspace.read_file(
+                    relative.as_posix(), max_bytes=MAX_ARTIFACT_READ_BYTES,
+                )
+            out({
+                "schema_version": "mncs.environment.artifact-read/1",
+                "session_id": session.session_id,
+                "capability": args.capability,
+                "binding_id": args.binding_id,
+                "store_reference": reference,
+                "path": relative.as_posix(),
+                "byte_count": len(content),
+                "sha256": hashlib.sha256(content).hexdigest(),
+                "content_base64": base64.b64encode(content).decode("ascii"),
+            })
+        return 0
+    except StoreUnavailable as error:
+        return fail(str(error), code=4, diagnostics={
+            "code": error.code,
+            "provider": "mncs-store",
+            "next": "restore the authenticated Store provider operation and retry the read",
+        })
+    except StoreIntegrityFailure as error:
+        return fail(str(error), code=4, diagnostics={
+            "code": "store-corruption-or-binding-mismatch",
+            "provider": "mncs-store",
+            "next": "inspect Store integrity and the session artifact reference",
+        })
+    except invocation_artifacts_module.InvocationArtifactError as error:
+        return fail(str(error), code=4, diagnostics={
+            "code": "artifact-read-bound-exceeded",
+            "next": "request a smaller artifact through its owning provider",
+        })
+    except (OSError, ValueError, sessions_module.LifecycleError) as error:
+        return fail(str(error), code=4, diagnostics={
+            "code": "artifact-read-failed",
+            "next": "check the selected session, binding, and relative artifact path",
+        })
 
 
 def cmd_test(args: argparse.Namespace) -> int:
@@ -1494,6 +1624,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     store.add_argument("--verify", action="store_true")
     store.set_defaults(func=cmd_store)
+
+    artifact_read = sub.add_parser(
+        "artifact-read", help="read one bounded file from a capability Store artifact",
+    )
+    artifact_read.add_argument("session")
+    artifact_read.add_argument("capability")
+    artifact_read.add_argument("binding_id")
+    artifact_read.add_argument("path")
+    artifact_read.set_defaults(func=cmd_artifact_read)
 
     retire = sub.add_parser("retire", help="retire merged branches and spent worktrees")
     retire.add_argument("session", help="session id (claim context; own claims do not block)")

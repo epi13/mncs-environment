@@ -37,6 +37,17 @@ report whether the Control-owned transport is ready; direct CLI use outside
 that execution reports a structured persistence error instead of switching
 to file persistence.
 
+The authenticated project continuation capsule may select one Environment
+session for that short-lived grant. Control can then expose a narrow,
+read-only `artifact-read` operation for the System Monitor resource sample.
+Environment checks the session's current binding and invoke authority, selects
+only the latest successful invocation record, verifies its immutable Store
+bundle and exact file digest, and returns at most 1 MiB as base64 with the
+Store reference and SHA-256. A failed latest invocation, an unselected or
+different session, an unsupported Store read operation, or a non-read binding
+does not expose an older artifact. This is a specific artifact consumer
+contract, not a general Store object or path read interface.
+
 On the host, the Control service receives write access only to the configured
 canonical Store root. Its systemd boundary remains `ProtectSystem=strict`,
 `ProtectHome=read-only`, and `NoNewPrivileges=yes`. Environment checkpoints,

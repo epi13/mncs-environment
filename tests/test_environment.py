@@ -2837,6 +2837,184 @@ class SessionTests(unittest.TestCase):
             self.assertFalse((state / "sessions" / session_id).exists())
             reopened.close()
 
+    def test_artifact_read_returns_latest_store_file_after_fresh_reopen(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            session_id = session.session_id
+            capability = "mncs-system-monitor:system-resource-sample"
+            binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-system-monitor", capability=capability,
+                contract_revision="1", entrypoint="sample", address="/bin/echo",
+                effects=["read"],
+            ))
+            session.snapshot["bindings"].append(binding)
+            session._save()
+            expected = b'{"schema":"mncs.system-monitor.resource-sample.v1"}\n'
+
+            def invoke(_binding, _argv, **kwargs):
+                root = Path(kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+                (root / "system-resource-sample.json").write_bytes(expected)
+                return {"status": "ok", "returncode": 0, "stdout": "ok", "stderr": ""}
+
+            with mock.patch.object(sessions.capabilities_module, "invoke", side_effect=invoke):
+                result = session.invoke(capability, [])
+            self.assertEqual(result["status"], "ok")
+            reference = result["artifact_store_ref"]
+            binding_id = binding["binding_id"]
+            session.close()
+
+            reopened = sessions.Session.open(
+                state_dir=state, session_id=session_id, backend="store",
+                verify_on_open=False,
+            )
+            stdout = io.StringIO()
+            args = argparse.Namespace(
+                state_dir=state, persistence="store", session=session_id,
+                capability=capability, binding_id=binding_id,
+                path="system-resource-sample.json",
+            )
+            with mock.patch.object(cli, "_open", return_value=reopened), redirect_stdout(stdout):
+                code = cli.cmd_artifact_read(args)
+            self.assertEqual(code, 0)
+            payload = json.loads(stdout.getvalue())
+            content = base64.b64decode(payload["content_base64"], validate=True)
+            self.assertEqual(payload["schema_version"], "mncs.environment.artifact-read/1")
+            self.assertEqual(payload["session_id"], session_id)
+            self.assertEqual(payload["store_reference"], reference)
+            self.assertEqual(payload["path"], "system-resource-sample.json")
+            self.assertEqual(content, expected)
+            self.assertEqual(payload["byte_count"], len(expected))
+            self.assertEqual(payload["sha256"], hashlib.sha256(expected).hexdigest())
+            self.assertFalse((state / "sessions" / session_id).exists())
+
+    def test_artifact_read_does_not_fall_back_after_latest_failed_invocation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            session_id = session.session_id
+            capability = "mncs-system-monitor:system-resource-sample"
+            binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-system-monitor", capability=capability,
+                contract_revision="1", entrypoint="sample", address="/bin/echo",
+                effects=["read"],
+            ))
+            session.snapshot["bindings"].append(binding)
+            session._save()
+
+            def success(_binding, _argv, **kwargs):
+                root = Path(kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+                (root / "system-resource-sample.json").write_text("old", encoding="utf-8")
+                return {"status": "ok", "returncode": 0, "stdout": "ok", "stderr": ""}
+
+            with mock.patch.object(sessions.capabilities_module, "invoke", side_effect=success):
+                session.invoke(capability, [])
+
+            def failed(_binding, _argv, **_kwargs):
+                return {"status": "failed", "returncode": 1,
+                        "stdout": "", "stderr": "provider failed"}
+
+            with mock.patch.object(sessions.capabilities_module, "invoke", side_effect=failed):
+                failed_result = session.invoke(capability, [])
+            self.assertEqual(failed_result["status"], "failed")
+            session.close()
+
+            reopened = sessions.Session.open(
+                state_dir=state, session_id=session_id, backend="store",
+                verify_on_open=False,
+            )
+            stderr = io.StringIO()
+            args = argparse.Namespace(
+                state_dir=state, persistence="store", session=session_id,
+                capability=capability, binding_id=binding["binding_id"],
+                path="system-resource-sample.json",
+            )
+            with mock.patch.object(cli, "_open", return_value=reopened), redirect_stderr(stderr):
+                code = cli.cmd_artifact_read(args)
+            self.assertEqual(code, 4)
+            self.assertEqual(
+                json.loads(stderr.getvalue())["diagnostics"]["code"],
+                "latest-invocation-unsuccessful",
+            )
+
+    def test_artifact_read_enforces_one_mib_file_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            session_id = session.session_id
+            capability = "mncs-system-monitor:system-resource-sample"
+            binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-system-monitor", capability=capability,
+                contract_revision="1", entrypoint="sample", address="/bin/echo",
+                effects=["read"],
+            ))
+            session.snapshot["bindings"].append(binding)
+            session._save()
+
+            def invoke(_binding, _argv, **kwargs):
+                root = Path(kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+                (root / "system-resource-sample.json").write_bytes(b"x" * (1024 * 1024 + 1))
+                return {"status": "ok", "returncode": 0, "stdout": "ok", "stderr": ""}
+
+            with mock.patch.object(sessions.capabilities_module, "invoke", side_effect=invoke):
+                session.invoke(capability, [])
+            session.close()
+
+            reopened = sessions.Session.open(
+                state_dir=state, session_id=session_id, backend="store",
+                verify_on_open=False,
+            )
+            stderr = io.StringIO()
+            args = argparse.Namespace(
+                state_dir=state, persistence="store", session=session_id,
+                capability=capability, binding_id=binding["binding_id"],
+                path="system-resource-sample.json",
+            )
+            with mock.patch.object(cli, "_open", return_value=reopened), redirect_stderr(stderr):
+                code = cli.cmd_artifact_read(args)
+            self.assertEqual(code, 4)
+            self.assertEqual(
+                json.loads(stderr.getvalue())["diagnostics"]["code"],
+                "artifact-read-bound-exceeded",
+            )
+
+    def test_artifact_read_rejects_path_escape_before_opening_session(self) -> None:
+        stderr = io.StringIO()
+        args = argparse.Namespace(path="../outside.json")
+        with redirect_stderr(stderr), mock.patch.object(cli, "_open") as open_session:
+            code = cli.cmd_artifact_read(args)
+        self.assertEqual(code, 3)
+        self.assertEqual(
+            json.loads(stderr.getvalue())["diagnostics"]["code"],
+            "artifact-path-invalid",
+        )
+        open_session.assert_not_called()
+
+    def test_artifact_read_rejects_unknown_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            capability = "mncs-system-monitor:system-resource-sample"
+            binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-system-monitor", capability=capability,
+                contract_revision="1", entrypoint="sample", address="/bin/echo",
+                effects=["read"],
+            ))
+            session.snapshot["bindings"].append(binding)
+            stderr = io.StringIO()
+            args = argparse.Namespace(
+                state_dir=Path(directory), persistence="store",
+                session=session.session_id, capability=capability,
+                binding_id="cap_" + "0" * 64,
+                path="system-resource-sample.json",
+            )
+            with mock.patch.object(cli, "_open", return_value=session), redirect_stderr(stderr):
+                code = cli.cmd_artifact_read(args)
+            self.assertEqual(code, 3)
+            self.assertEqual(
+                json.loads(stderr.getvalue())["diagnostics"]["code"],
+                "artifact-binding-unavailable",
+            )
+
     def test_session_invoke_rejects_symlinked_artifact_output(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)

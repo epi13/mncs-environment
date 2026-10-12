@@ -226,6 +226,72 @@ class InvocationArtifactWorkspace:
         if record.get("total_bytes") != total:
             raise StoreIntegrityFailure("capability artifact bundle has an invalid total size")
 
+    def read_file(self, relative_path: str, *, max_bytes: int) -> bytes:
+        """Read one restored file through the private workspace's anchored fd.
+
+        The Store bundle has already passed full content and identity
+        verification in ``_restore``. This method adds a smaller caller-facing
+        size bound and never follows a path component supplied by a consumer.
+        """
+        if type(max_bytes) is not int or max_bytes < 1:
+            raise ValueError("artifact read bound must be a positive integer")
+        if not self.store_backed or self.path is None or self._root_fd is None:
+            raise StoreUnavailable(
+                "capability artifact read requires the strict Store provider",
+                code="provider-operation-unsupported",
+            )
+        relative = _safe_relative(relative_path)
+        directory_fd = os.dup(self._root_fd)
+        nofollow_flag = getattr(os, "O_NOFOLLOW", 0)
+        directory_flag = getattr(os, "O_DIRECTORY", 0)
+        try:
+            for part in relative.parts[:-1]:
+                child_fd = os.open(
+                    part, os.O_RDONLY | directory_flag | nofollow_flag,
+                    dir_fd=directory_fd,
+                )
+                os.close(directory_fd)
+                directory_fd = child_fd
+            file_fd = os.open(
+                relative.parts[-1], os.O_RDONLY | nofollow_flag,
+                dir_fd=directory_fd,
+            )
+        except OSError as error:
+            raise StoreIntegrityFailure(
+                "requested capability artifact file is unavailable"
+            ) from error
+        finally:
+            os.close(directory_fd)
+        try:
+            before = os.fstat(file_fd)
+            if not stat.S_ISREG(before.st_mode):
+                raise StoreIntegrityFailure(
+                    "requested capability artifact is not a regular file"
+                )
+            if before.st_size > max_bytes:
+                raise InvocationArtifactError(
+                    "requested capability artifact exceeds the read size bound"
+                )
+            chunks: list[bytes] = []
+            remaining = max_bytes + 1
+            while remaining:
+                chunk = os.read(file_fd, min(remaining, 64 * 1024))
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                remaining -= len(chunk)
+            content = b"".join(chunks)
+            after = os.fstat(file_fd)
+            if (len(content) > max_bytes or len(content) != before.st_size
+                    or (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+                    != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)):
+                raise StoreIntegrityFailure(
+                    "requested capability artifact changed during readback"
+                )
+            return content
+        finally:
+            os.close(file_fd)
+
     def _collect(self) -> tuple[list[dict[str, Any]], int]:
         assert self.path is not None
         assert self._root_fd is not None
