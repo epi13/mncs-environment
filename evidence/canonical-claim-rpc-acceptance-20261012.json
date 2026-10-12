@@ -1,0 +1,96 @@
+{
+  "schema_version": "mncs.environment.canonical-claim-rpc-acceptance/1",
+  "identity": "ev_environment_canonical_claim_rpc_acceptance_20261012",
+  "recorded_at_utc": "2026-10-12T15:57:38Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_commit": "749be1f2ea4fb758f06fefe357aa43b006f007f6",
+    "control_repository": "mncs-control-mcp",
+    "control_commit": "bd1f7d0b64fbf57225bebfb6e696370878a79725",
+    "store_repository": "mncs-store",
+    "store_commit": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "execution": {
+    "transport": "authenticated MNCS Control Environment RPC",
+    "backend": "bwrap",
+    "project": "mncs-environment",
+    "scope": "project",
+    "network": false,
+    "caller_canonical_store_path": {
+      "path": "/home/epi13/.local/share/mncs-environment/store",
+      "visible": false,
+      "directory": false,
+      "writable": false
+    },
+    "continuation": {
+      "campaign_id": "cmp_mncs_continuity_20261010",
+      "selected_session_id": "ses_7226fbcfe65820f7",
+      "status": "ready"
+    }
+  },
+  "claim_lifecycle": {
+    "acquire": {
+      "request_id": "req_4c2ca1d366fc0c8fc2d31cd829b7eaf3535257cb",
+      "request_digest": "a4b64807fdf0ec1d",
+      "claim_id": "claim:mncs-environment:paths:ff37d5401005",
+      "identity": "clm_bacebd5a5efdd9b5",
+      "version": 1,
+      "status": "held",
+      "scope": {
+        "kind": "paths",
+        "paths": ["evidence/.mncs-claim-rpc-probe-20261012"],
+        "exclusive": false
+      },
+      "published_at_utc": "2026-10-12T15:53:26Z",
+      "fresh_process_readback_at_utc": "2026-10-12T15:53:48Z"
+    },
+    "release": {
+      "request_id": "req_476220a0bf8c0cb454a99f4f4a538cd8b24c6475",
+      "request_digest": "a4cb0c38851ce8c9",
+      "identity": "clm_18ff84bb3183b312",
+      "version": 2,
+      "status": "released",
+      "released_by": "ses_7226fbcfe65820f7",
+      "published_at_utc": "2026-10-12T15:54:10Z",
+      "fresh_process_readback_at_utc": "2026-10-12T15:54:30Z"
+    }
+  },
+  "authority_rejection": {
+    "requested_repository": "mncs-compiler",
+    "basis": "explicit-claim",
+    "result": "rejected-before-publication",
+    "exit_code": 3,
+    "diagnostic_code": "authority-denied",
+    "publication_completed": false,
+    "observed_at_utc": "2026-10-12T15:56:54Z",
+    "foreign_claim_after_rejection": {
+      "claim_id": "claim:mncs-compiler",
+      "identity": "clm_5871ad9917e5210d",
+      "version": 63,
+      "session_id": "ses_d2537acde8b8a875",
+      "status": "held",
+      "readback_at_utc": "2026-10-12T15:57:23Z"
+    }
+  },
+  "canonical_store_verification": {
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "verified_at_utc": "2026-10-12T15:56:13Z",
+    "ok": true,
+    "generation": 46789,
+    "objects": 46791,
+    "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+    "recovery_status": "RECOVERED_OLD",
+    "interpretation": "Read-only verification opened the committed head without recovery; this sentinel does not indicate rollback."
+  },
+  "unproven": [
+    "A deliberately stale expected-generation request has not been submitted through canonical RPC; the public Environment claim API owns and retries its CAS loop.",
+    "Caller or service interruption during claim publication has not been fault-injected in this canonical acceptance run."
+  ],
+  "preserved_foreign_work": [
+    "Compiler claim clm_5871ad9917e5210d remains held by ses_d2537acde8b8a875 at version 63; no Compiler checkout was read or changed.",
+    "Forge claim clm_16b820b3293d873b remains held by ses_95c3aa35b8544042; no Forge checkout was read or changed."
+  ],
+  "readiness": "Canonical protected claim acquire, cross-process readback, release, unauthorized scope rejection, and post-operation Store integrity verification passed. CAS rejection and interrupted-claim recovery remain unproven."
+}
