@@ -1,0 +1,104 @@
+{
+  "schema_version": "mncs.environment.foreign-claim-liveness-authority/1",
+  "identity": "ev_foreign_claim_liveness_authority_20261012",
+  "observed_at": "2026-10-12T04:39:31Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "observer_session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "repository": "mncs-environment",
+    "commit": "dd16057cfa361dd7721e318b516e64e5e4fd957a",
+    "path": "mncs_env/claims.py",
+    "sha256": "ea0bbdb5dd2bf08ef1ead7c448b99dd5a57a77a1d734a0a30c377fb523e1bdd3"
+  },
+  "observation": {
+    "tool": "MNCS Control terminal_start",
+    "terminal_job_id": "term-eb0e59ae93cefcdbb12743b9",
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "network": false,
+    "exit_code": 0,
+    "mutation_performed": false,
+    "claim_explanation": "mncs-env claims <observer-session> --explain <claim-id>",
+    "owner_context_read_attempt_job_id": "term-04cada0deec607f8ace3203d",
+    "owner_context_read_attempt_exit_code": 0,
+    "process_existence_proven": false,
+    "owner_lifecycle_observation_is_not_process_liveness_proof": true
+  },
+  "claims": [
+    {
+      "claim_id": "claim:mncs-compiler",
+      "repository": "mncs-compiler",
+      "owner_session_id": "ses_d2537acde8b8a875",
+      "owner_consumer_id": "luna-compiler-self-consumption-admission-20261009",
+      "version": 63,
+      "scope": {
+        "kind": "repository",
+        "exclusive": true
+      },
+      "owner_known": true,
+      "owner_lifecycle": "active",
+      "freshness": "stale",
+      "last_activity_at": "2026-10-09T20:23:20+00:00",
+      "verdict": "not-recoverable",
+      "recorded_expires_at": "2027-08-03T10:31:10+00:00",
+      "effective_expires_at": "2026-10-16T18:13:43+00:00",
+      "effective_maximum_hours": 168,
+      "reason": "owner session is quiet but the exclusive scope needs a dead owner or TTL expiry"
+    },
+    {
+      "claim_id": "claim:mncs-forge",
+      "repository": "mncs-forge",
+      "owner_session_id": "ses_95c3aa35b8544042",
+      "owner_consumer_id": "luna-compiler-self-consumption",
+      "version": 28,
+      "scope": {
+        "kind": "repository",
+        "exclusive": true
+      },
+      "owner_known": true,
+      "owner_lifecycle": "active",
+      "freshness": "stale",
+      "last_activity_at": "2026-10-09T03:05:19+00:00",
+      "verdict": "not-recoverable",
+      "recorded_expires_at": "2027-03-07T23:49:59+00:00",
+      "effective_expires_at": "2026-10-16T02:18:31+00:00",
+      "effective_maximum_hours": 168,
+      "reason": "owner session is quiet but the exclusive scope needs a dead owner or TTL expiry"
+    }
+  ],
+  "continuation_authority": {
+    "compiler_owner_context": {
+      "session_id": "ses_d2537acde8b8a875",
+      "read_status": "denied",
+      "diagnostics_code": "authority-denied",
+      "diagnostic": "session has no matching authenticated continuation principal",
+      "publication_completed": false,
+      "next": "request an explicit handoff from the recorded owner"
+    },
+    "forge_owner_context": {
+      "session_id": "ses_95c3aa35b8544042",
+      "read_status": "denied",
+      "diagnostics_code": "authority-denied",
+      "diagnostic": "session has no matching authenticated continuation principal",
+      "publication_completed": false,
+      "next": "request an explicit handoff from the recorded owner"
+    },
+    "consumer_label_alone_used_for_authorization": false,
+    "recovery_performed": false,
+    "claim_versions_mutated": false,
+    "legitimate_recovery_actions": [
+      "obtain an owner-issued authenticated handoff",
+      "use Environment recovery only after the recorded owner lifecycle becomes terminal or the effective claim lease expires"
+    ]
+  },
+  "readiness": {
+    "campaign_delivery": "partial",
+    "compiler_candidate_integration": "retained under active exclusive owner",
+    "forge_candidate_integration": "retained under active exclusive owner",
+    "language_candidate_ownership": "unknown; dirty evidence remains retained",
+    "compiler_stage_1": "unproven",
+    "compiler_stage_2": "unproven",
+    "resource_feedback_vertical_slice": "pending"
+  }
+}
