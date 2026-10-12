@@ -1358,6 +1358,19 @@ class CapabilityTests(unittest.TestCase):
         for source in contract["fingerprint_sources"]:
             self.assertTrue((ROOT / source).is_file(), source)
 
+        campaign_state = next(
+            item for item in manifest["contracts"]["provides"]
+            if item.get("contract") == "campaign-state-inspection"
+        )
+        self.assertEqual(campaign_state["effects"], ["read"])
+        self.assertEqual(campaign_state["invocation"], {
+            "kind": "executable",
+            "path": "scripts/mncs-env",
+            "fixed_argv": ["campaign-state", "{session_id}"],
+        })
+        for source in campaign_state["fingerprint_sources"]:
+            self.assertTrue((ROOT / source).is_file(), source)
+
         bound = capabilities.bind_session_context(
             {"fixed_argv": ["projections", "--evidence", "{session_id}"]},
             [], session_id="ses_test_bound",
@@ -3736,6 +3749,15 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(
                 capsule["campaign_state_provenance"],
                 {"consumer_id": "tester", "principal_id": "principal-test"},
+            )
+            full_state = reopened.campaign_state()
+            self.assertEqual(full_state["campaign_identity"], "cmp_durable_evidence_test")
+            self.assertEqual(full_state["checkpoint_id"], checkpoint["identity"])
+            self.assertEqual(full_state["evidence_count"], len(evidence))
+            self.assertEqual(full_state["evidence"], evidence)
+            self.assertEqual(
+                full_state["delivery"],
+                sessions.normalize_campaign_delivery(delivery),
             )
 
             # Simulate interruption after the immutable checkpoint was stored

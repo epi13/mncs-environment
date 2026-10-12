@@ -1,7 +1,7 @@
 {
   "schema_version": "mncs-family.repository-manifest/v0alpha1",
   "repository": "mncs-environment",
-  "revision": 7,
+  "revision": 8,
   "manifest_location": "in-repository",
   "authority": {
     "note": "mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration."
@@ -92,6 +92,31 @@
         },
         "stability": "experimental",
         "output_scope": "read-only recorded projection evidence and history for the authorized Environment session"
+      },
+      {
+        "contract": "campaign-state-inspection",
+        "version": "1",
+        "kind": "read-only-campaign-state-inspection",
+        "effects": [
+          "read"
+        ],
+        "fingerprint_sources": [
+          "mncs_env/cli.py",
+          "mncs_env/sessions.py",
+          "mncs_env/session_store.py",
+          "mncs_env/store_backend.py",
+          "scripts/mncs-env"
+        ],
+        "invocation": {
+          "kind": "executable",
+          "path": "scripts/mncs-env",
+          "fixed_argv": [
+            "campaign-state",
+            "{session_id}"
+          ]
+        },
+        "stability": "experimental",
+        "output_scope": "complete immutable campaign evidence and delivery state for the authorized Environment session"
       }
     ],
     "consumes": [

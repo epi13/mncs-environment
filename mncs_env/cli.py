@@ -155,6 +155,26 @@ def cmd_campaign_continuation(_args: argparse.Namespace) -> int:
     )
 
 
+def cmd_campaign_state(args: argparse.Namespace) -> int:
+    """Return the exact persisted campaign ledger for the bound session."""
+    try:
+        with closing(_open(args)) as session:
+            try:
+                out(session.campaign_state())
+            except sessions_module.LifecycleError as error:
+                return fail(
+                    str(error),
+                    diagnostics={
+                        "code": "campaign-state-unavailable",
+                        "next": "read the authenticated continuation capsule and inspect its campaign state status",
+                    },
+                )
+        return 0
+    except (StoreUnavailable, StoreIntegrityFailure) as error:
+        diagnostics = getattr(error, "diagnostics", None)
+        return fail(str(error), diagnostics=diagnostics)
+
+
 def close_store(store) -> None:
     close = getattr(store, "close", None)
     if callable(close):
@@ -1180,6 +1200,12 @@ def build_parser() -> argparse.ArgumentParser:
         parser_ = sub.add_parser(name, parents=[common], help=help_text)
         parser_.add_argument("session")
         return parser_
+
+    campaign_state = session_parser(
+        "campaign-state",
+        "read the full durable campaign evidence and delivery ledger",
+    )
+    campaign_state.set_defaults(func=cmd_campaign_state)
 
     inspect = session_parser("inspect", "inspect session state (read-only)")
     inspect.set_defaults(func=cmd_inspect)

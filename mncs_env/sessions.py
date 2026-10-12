@@ -3527,6 +3527,43 @@ class Session:
         self._save()
         return record
 
+    def campaign_state(self) -> dict[str, Any]:
+        """Read the complete authenticated campaign ledger for this session.
+
+        Entry context deliberately truncates evidence for prompt size. This
+        owner operation exposes the full immutable campaign state through a
+        separately declared read capability so a later checkpoint can retain
+        every existing evidence reference.
+        """
+        campaign = self.snapshot.get("campaign")
+        campaign = campaign if isinstance(campaign, dict) else {}
+        campaign_identity = campaign.get("identity")
+        if (not isinstance(campaign_identity, str)
+                or not _CAMPAIGN_ID_PATTERN.fullmatch(campaign_identity)):
+            raise LifecycleError("session has no durable campaign identity")
+        checkpoint = _latest_campaign_state_checkpoint(
+            self.store.list_checkpoints(self.session_id), campaign_identity
+        )
+        if checkpoint is None:
+            raise LifecycleError("campaign has no persisted state checkpoint")
+        state = checkpoint["campaign_state"]
+        result = {
+            "schema_version": "mncs.environment.campaign-state-read/1",
+            "session_id": self.session_id,
+            "campaign_identity": campaign_identity,
+            "checkpoint_id": checkpoint["identity"],
+            "recorded_at": state.get("recorded_at"),
+            "recorded_by": state["recorded_by"],
+            "evidence": state["evidence"],
+            "evidence_count": len(state["evidence"]),
+            "delivery": state["delivery"],
+        }
+        if len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")) > CAMPAIGN_STATE_INPUT_MAX_BYTES:
+            raise LifecycleError(
+                "persisted campaign state exceeds the bounded read response"
+            )
+        return result
+
     def handoff(
         self,
         *,
