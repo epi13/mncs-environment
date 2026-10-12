@@ -1,0 +1,71 @@
+{
+  "schema_version": "mncs.environment.canonical-store-verification-proof/1",
+  "identity": "ev_environment_canonical_store_post_checkpoint_verification_20261012",
+  "recorded_at_utc": "2026-10-12T15:48:17.888Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_commit": "c2aabcf35bda8b79452ffa5f01b0af2def76f439",
+    "control_repository": "mncs-control-mcp",
+    "control_commit": "bd1f7d0b64fbf57225bebfb6e696370878a79725",
+    "store_repository": "mncs-store",
+    "store_commit": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055",
+    "runtime_acceptance_evidence": "evidence/canonical-retirement-rpc-acceptance-20261012.json"
+  },
+  "restricted_execution": {
+    "transport": "authenticated MNCS Control Environment RPC",
+    "terminal_job_id": "term-9604021fceb7deebb0b9c611",
+    "environment_request_id": "req_campaign_canonical_store_verify_async_20261012",
+    "backend": "bwrap",
+    "project": "mncs-environment",
+    "scope": "project",
+    "network": false,
+    "caller_direct_store_path_visible": false,
+    "caller_direct_store_path_writable": false,
+    "store_path_proof": "evidence/canonical-retirement-rpc-acceptance-20261012.json"
+  },
+  "checkpoint_readback": {
+    "observed_at_utc": "2026-10-12T15:48:17.888Z",
+    "request_id": "req_campaign_after_store_verify_readback_20261012",
+    "checkpoint_id": "chk_581bbc89e0a25fc1",
+    "sequence": 202,
+    "campaign_evidence_count": 142,
+    "latest_evidence_identity": "ev_environment_canonical_retirement_publication_20261012",
+    "delivery_status": "partial",
+    "result": "fresh protected process read the exact checkpoint and hash-bound Environment delivery from canonical Store"
+  },
+  "verification": {
+    "command": "mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "completed_at_utc": "2026-10-12T15:45:33.641347Z",
+    "exit_code": 0,
+    "ok": true,
+    "generation": 46772,
+    "objects": 46774,
+    "relations": 0,
+    "provenance_records": 0,
+    "chunk_size": 65536,
+    "fanout": 31,
+    "commit_feed": "4d430100000000000000b6b40000b6b600000000000000003556f04c4be03c44089b183d68d5d92b05e1ee1199861b6b76c1bf6acea6ed07",
+    "artifact": {
+      "backend": "mncs-research-bytecode",
+      "sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+      "toolchain": "mncs-language/target/release/mncs"
+    },
+    "recovery_field_interpretation": {
+      "reported": "RECOVERED_OLD",
+      "meaning": "the read-only embedded backend sets this value when it opens the committed head without running recovery; it is not evidence of a rollback",
+      "source": {
+        "repository": "mncs-store",
+        "commit": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055",
+        "path": "python/mncs_store/embedded.py"
+      }
+    },
+    "mutation_performed": false
+  },
+  "result": "PASS_CANONICAL_STORE_POST_CHECKPOINT_INTEGRITY_VERIFICATION",
+  "limitations": [
+    "The verification proves the current committed generation and object payload integrity. It does not exercise a Control service restart or an interrupted retirement publication.",
+    "The read-only RECOVERED_OLD field is reported verbatim and interpreted from the Store implementation; no recovery operation was invoked."
+  ]
+}
