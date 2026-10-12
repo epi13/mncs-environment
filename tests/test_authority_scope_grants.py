@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from mncs_env import authority, intent, sessions
+from mncs_env import authority, claims, intent, sessions
 from mncs_env.session_store import open_store
 
 PRINCIPAL = "ctrl_scope_grant_fixture"
@@ -365,3 +365,228 @@ def test_concurrent_grants_with_one_authority_revision_have_one_winner(
     finally:
         left.close()
         right.close()
+
+
+def test_revalidation_composes_only_the_granted_checkout_with_owned_claim(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        grant = _grant(session)
+        claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="continuation composition fixture",
+            request_id="req_fixture_composition_claim",
+        )
+
+        report = session.revalidate()
+
+        composition = report["scope_composition"]
+        assert composition["status"] == "ready"
+        assert composition["composed"] == ["mncs-control-mcp"]
+        selected = session.snapshot["selected_checkouts"]["mncs-control-mcp"]
+        assert selected["source_ref"] == "authenticated-scope-grant"
+        assert selected["checkout_identity"] == grant["repository_identity"][
+            "checkout_identity"
+        ]
+        assert session.snapshot["workspace"]["selection"] == ["mncs-control-mcp"]
+
+        events = [
+            event for event in session._log()
+            if event.get("type") == "workspace.checkout-composed"
+        ]
+        assert len(events) == 1
+        record = events[0]["payload"]["composition"]
+        assert record["scope_grant_identity"] == grant["identity"]
+        assert record["claim_id"] == claim["claim_id"]
+        assert record["claim_version"] == claim["version"]
+    finally:
+        session.close()
+
+
+@pytest.mark.parametrize(
+    ("foreign_claim", "expected_reason"),
+    [(False, "no-live-exclusive-claim"),
+     (True, "claim-not-owned-exclusive-repository-scope")],
+)
+def test_revalidation_does_not_compose_without_current_session_claim(
+    tmp_path: Path, foreign_claim: bool, expected_reason: str,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        _grant(session)
+        if foreign_claim:
+            claims.acquire(
+                session.store,
+                repository="mncs-control-mcp",
+                session_id="ses_foreign_scope_owner",
+                # Matching the user's consumer label still does not transfer
+                # the exact Environment session identity that owns the grant.
+                consumer_id="scope-grant-consumer",
+                basis=claims.BASIS_EXPLICIT,
+                reason="fixture foreign owner",
+                checkout_facts={"dirty": False, "foreign_signals": []},
+                request_id="req_fixture_foreign_scope_claim",
+            )
+
+        report = session.revalidate()
+
+        composition = report["scope_composition"]
+        assert composition["status"] == "unknown"
+        assert composition["skipped"] == [{
+            "repository": "mncs-control-mcp",
+            "reason": expected_reason,
+        }]
+        assert "mncs-control-mcp" not in session.snapshot["selected_checkouts"]
+        assert not [
+            event for event in session._log()
+            if event.get("type") == "workspace.checkout-composed"
+        ]
+    finally:
+        session.close()
+
+
+def test_revalidation_preserves_dirty_work_owned_by_the_live_claim(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        _grant(session)
+        session.acquire_claim(
+            "mncs-control-mcp",
+            reason="claim before making campaign changes",
+            request_id="req_fixture_dirty_composition_claim",
+        )
+        (workspace / "mncs-control-mcp" / "README.md").write_text(
+            "owned campaign change\n", encoding="utf-8"
+        )
+
+        report = session.revalidate()
+
+        assert report["scope_composition"]["status"] == "ready"
+        assert session.snapshot["selected_checkouts"]["mncs-control-mcp"][
+            "clean"
+        ] is False
+    finally:
+        session.close()
+
+
+def test_revalidation_rejects_a_checkout_whose_git_identity_changed(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        _grant(session)
+        session.acquire_claim(
+            "mncs-control-mcp",
+            reason="claim for checkout identity fixture",
+            request_id="req_fixture_identity_composition_claim",
+        )
+        _git(
+            workspace / "mncs-control-mcp",
+            "remote", "add", "origin", "https://example.invalid/replaced.git",
+        )
+
+        report = session.revalidate()
+
+        assert report["scope_composition"]["status"] == "unknown"
+        assert report["scope_composition"]["skipped"] == [{
+            "repository": "mncs-control-mcp",
+            "reason": "checkout-identity-mismatch",
+        }]
+        assert "mncs-control-mcp" not in session.snapshot["selected_checkouts"]
+    finally:
+        session.close()
+
+
+def test_revalidation_drops_composed_checkout_when_claim_is_released(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        _grant(session)
+        claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="claim for composition and release fixture",
+            request_id="req_fixture_release_composition_claim",
+        )
+        session.revalidate()
+        assert "mncs-control-mcp" in session.snapshot["selected_checkouts"]
+
+        session.release_claim(
+            "mncs-control-mcp",
+            claim_id=claim["claim_id"],
+            reason="release composition fixture",
+            request_id="req_fixture_release_composition_claim_release",
+        )
+        report = session.revalidate()
+
+        assert report["scope_composition"]["removed"] == ["mncs-control-mcp"]
+        assert "mncs-control-mcp" not in session.snapshot["selected_checkouts"]
+        assert "mncs-control-mcp" not in session.snapshot["workspace"]["selection"]
+    finally:
+        session.close()
+
+
+def test_revalidation_reconciles_checkout_composition_after_lost_response(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    state_dir = tmp_path / "state"
+    session = _session(state_dir, workspace)
+    _grant(session)
+    session.acquire_claim(
+        "mncs-control-mcp",
+        reason="claim for interrupted composition fixture",
+        request_id="req_fixture_interrupted_composition_claim",
+    )
+    session_id = session.session_id
+    request_id = "req_fixture_interrupted_scope_revalidation"
+    store = session.store
+    original_put = store.put_event
+    interrupted = False
+
+    def commit_then_interrupt(*args, **kwargs):
+        nonlocal interrupted
+        result = original_put(*args, **kwargs)
+        if not interrupted:
+            interrupted = True
+            raise OSError("simulated lost response after Store commit")
+        return result
+
+    monkeypatch.setattr(store, "put_event", commit_then_interrupt)
+    try:
+        with pytest.raises(OSError, match="lost response"):
+            session.revalidate(request_id=request_id)
+    finally:
+        session.close()
+
+    resumed_store = open_store(state_dir, "store", verify_on_open=False)
+    resumed = sessions.Session.open(
+        state_dir=state_dir,
+        session_id=session_id,
+        backend="store",
+        verify_on_open=False,
+        store=resumed_store,
+    )
+    try:
+        report = resumed.revalidate(request_id=request_id)
+        assert report["scope_composition"]["status"] == "ready"
+        assert "mncs-control-mcp" in resumed.snapshot["selected_checkouts"]
+        assert len([
+            event for event in resumed._log()
+            if event.get("type") == "workspace.checkout-composed"
+        ]) == 1
+    finally:
+        resumed.close()

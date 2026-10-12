@@ -657,6 +657,45 @@ def _workspace_change_facts(
     }
 
 
+def _repository_checkout_identity(
+    workspace_root: str | Path,
+    repository: str,
+    checkout: str | Path,
+) -> dict[str, str]:
+    """Derive the stable checkout identity used by repository scope grants."""
+    root = Path(workspace_root).resolve()
+    resolved = Path(checkout).resolve(strict=True)
+    observed_path = resolved.relative_to(root).as_posix()
+    common = workspace_module._git(
+        resolved, "rev-parse", "--path-format=absolute", "--git-common-dir"
+    )
+    remote = workspace_module._git(
+        resolved, "config", "--get", "remote.origin.url"
+    )
+    common_material: dict[str, Any] = {"repository": repository}
+    if common is not None and common.returncode == 0:
+        common_path = Path(common.stdout.strip()).resolve()
+        try:
+            common_relative = common_path.relative_to(root).as_posix()
+        except ValueError:
+            common_relative = None
+        if common_relative is not None:
+            common_material["common_directory"] = common_relative
+    if remote is not None and remote.returncode == 0 and remote.stdout.strip():
+        common_material["remote_identity"] = digest_hex(remote.stdout.strip())
+    common_identity = "git-common:" + digest_hex(common_material)
+    checkout_identity = "checkout:" + digest_hex({
+        "repository": repository,
+        "path": observed_path,
+        "git_common_directory_identity": common_identity,
+    })
+    return {
+        "checkout_identity": checkout_identity,
+        "git_common_directory_identity": common_identity,
+        "observed_path": observed_path,
+    }
+
+
 def _provider_managed_checkouts(
     definition: dict[str, Any],
     workspace_root: str | Path,
@@ -1862,29 +1901,9 @@ class Session:
                 next_step="obtain the recorded owner's handoff or wait for a valid recovery condition",
             )
 
-        common = workspace_module._git(
-            resolved_checkout, "rev-parse", "--path-format=absolute", "--git-common-dir"
+        repository_identity = _repository_checkout_identity(
+            workspace_root, repository, resolved_checkout
         )
-        remote = workspace_module._git(resolved_checkout, "config", "--get", "remote.origin.url")
-        common_material: dict[str, Any] = {"repository": repository}
-        common_relative = None
-        if common is not None and common.returncode == 0:
-            common_path = Path(common.stdout.strip()).resolve()
-            try:
-                common_relative = common_path.relative_to(workspace_root).as_posix()
-            except ValueError:
-                common_relative = None
-            if common_relative is not None:
-                common_material["common_directory"] = common_relative
-        if remote is not None and remote.returncode == 0 and remote.stdout.strip():
-            common_material["remote_identity"] = digest_hex(remote.stdout.strip())
-        common_identity = "git-common:" + digest_hex(common_material)
-        observed_path = resolved_checkout.relative_to(workspace_root).as_posix()
-        checkout_identity = "checkout:" + digest_hex({
-            "repository": repository,
-            "path": observed_path,
-            "git_common_directory_identity": common_identity,
-        })
         scope_grant: dict[str, Any] = {
             "schema_version": "mncs.environment.authority-scope-grant/1",
             "identity": "scope_" + digest_hex({
@@ -1904,9 +1923,7 @@ class Session:
             "admitted_by": "mncs-environment",
             "admitted_at": utcnow(),
             "repository_identity": {
-                "checkout_identity": checkout_identity,
-                "git_common_directory_identity": common_identity,
-                "observed_path": observed_path,
+                **repository_identity,
                 "branch": observed.branch,
                 "head": observed.head,
                 "clean": True,
@@ -1937,6 +1954,236 @@ class Session:
                 next_step="use a canonical Store provider with generation compare-and-swap support",
             ) from error
         return scope_grant
+
+    def _compose_authorized_scope_checkouts(self) -> dict[str, Any]:
+        """Add only explicitly granted repositories with this session's live claim.
+
+        Scope grants and claims are the authority inputs. Workspace selection is
+        a projection of those records: an identical consumer label, a sibling
+        directory, or a historical claim is never enough to add a provider to
+        this session's capability closure.
+        """
+        selected = self.snapshot.get("selected_checkouts", {})
+        if not isinstance(selected, dict):
+            selected = {}
+        grants = self.authority_scope_grants()
+        report: dict[str, Any] = {
+            "status": "unchanged",
+            "composed": [],
+            "retained": [],
+            "removed": [],
+            "skipped": [],
+        }
+        if not grants:
+            return report
+
+        workspace_root_value = (self.snapshot.get("workspace") or {}).get("root")
+        if not isinstance(workspace_root_value, str) or not workspace_root_value:
+            report["status"] = "unknown"
+            report["skipped"] = [
+                {"repository": item.get("repository"),
+                 "reason": "workspace-root-unavailable"}
+                for item in grants
+            ]
+            return report
+
+        try:
+            workspace_root = Path(workspace_root_value).resolve(strict=True)
+        except OSError:
+            report["status"] = "unknown"
+            report["skipped"] = [
+                {"repository": item.get("repository"),
+                 "reason": "workspace-root-unavailable"}
+                for item in grants
+            ]
+            return report
+
+        campaign_id = (self.snapshot.get("campaign") or {}).get("identity")
+        active = claims_module.active_claims(self.store.read_claims())
+        observed_claims = list(active.values())
+        additions: dict[str, dict[str, Any]] = {}
+        eligible_repositories: set[str] = set()
+        for grant in grants:
+            repository = grant.get("repository")
+            if (not isinstance(repository, str)
+                    or not _CAMPAIGN_REPOSITORY_PATTERN.fullmatch(repository)
+                    or grant.get("session_id") != self.session_id
+                    or grant.get("campaign_id") != campaign_id):
+                report["skipped"].append({
+                    "repository": repository,
+                    "reason": "scope-grant-identity-invalid",
+                })
+                continue
+
+            matching_claims = [
+                item for item in observed_claims
+                if item.get("repository") == repository
+            ]
+            if len(matching_claims) != 1:
+                report["skipped"].append({
+                    "repository": repository,
+                    "reason": ("no-live-exclusive-claim"
+                               if not matching_claims
+                               else "multiple-live-claims"),
+                })
+                continue
+            claim = matching_claims[0]
+            claim_scope = claim.get("scope")
+            if (claim.get("session_id") != self.session_id
+                    or not isinstance(claim_scope, dict)
+                    or claim_scope.get("kind") != "repository"
+                    or claim_scope.get("repository") != repository
+                    or claim_scope.get("exclusive") is not True):
+                report["skipped"].append({
+                    "repository": repository,
+                    "reason": "claim-not-owned-exclusive-repository-scope",
+                })
+                continue
+
+            rights = self.snapshot.get("rights") or {}
+            right_subjects = rights.get("subjects") if isinstance(rights, dict) else None
+            if isinstance(right_subjects, dict) and right_subjects.get(repository) == "blocked":
+                report["skipped"].append({
+                    "repository": repository,
+                    "reason": "rights-provenance-blocked",
+                })
+                continue
+
+            expected_identity = grant.get("repository_identity")
+            if not isinstance(expected_identity, dict):
+                report["skipped"].append({
+                    "repository": repository,
+                    "reason": "scope-grant-checkout-identity-missing",
+                })
+                continue
+
+            checkout = workspace_root / repository
+            try:
+                resolved_checkout = checkout.resolve(strict=True)
+                if (checkout.is_symlink() or resolved_checkout.parent != workspace_root
+                        or not resolved_checkout.is_dir()):
+                    raise ValueError("checkout is not one immediate workspace repository")
+                observed = workspace_module.inspect_repo(resolved_checkout, _refresh=True)
+                if observed is None or observed.git_error or not observed.head:
+                    raise ValueError("checkout Git identity is unavailable")
+                current_identity = _repository_checkout_identity(
+                    workspace_root, repository, resolved_checkout
+                )
+            except (OSError, RuntimeError, ValueError):
+                report["skipped"].append({
+                    "repository": repository,
+                    "reason": "checkout-observation-unavailable",
+                })
+                continue
+
+            if any(expected_identity.get(field) != current_identity[field]
+                   for field in current_identity):
+                report["skipped"].append({
+                    "repository": repository,
+                    "reason": "checkout-identity-mismatch",
+                })
+                continue
+
+            prior = selected.get(repository)
+            if isinstance(prior, dict):
+                prior_path = Path(str(prior.get("path", "")))
+                if not prior_path.is_absolute():
+                    prior_path = workspace_root / prior_path
+                try:
+                    same_path = prior_path.resolve() == resolved_checkout
+                except OSError:
+                    same_path = False
+                prior_identity = prior.get("checkout_identity")
+                if (not same_path
+                        or (isinstance(prior_identity, str)
+                            and prior_identity != current_identity["checkout_identity"])):
+                    report["skipped"].append({
+                        "repository": repository,
+                        "reason": "selected-checkout-identity-conflict",
+                    })
+                    continue
+
+            facts = {
+                "repository": repository,
+                "path": str(resolved_checkout),
+                "branch": observed.branch,
+                "head": observed.head,
+                "clean": not bool(observed.dirty),
+                "source_ref": "authenticated-scope-grant",
+                "authoritative_head": observed.head,
+                **current_identity,
+            }
+            composition = {
+                "session_id": self.session_id,
+                "campaign_id": campaign_id,
+                "scope_grant_identity": grant.get("identity"),
+                "claim_id": claim.get("claim_id"),
+                "claim_version": claim.get("version"),
+                "repository": repository,
+                "checkout_identity": current_identity["checkout_identity"],
+                "git_common_directory_identity": current_identity[
+                    "git_common_directory_identity"
+                ],
+                "branch": observed.branch,
+                "head": observed.head,
+                "clean": not bool(observed.dirty),
+            }
+            request_id = "req_scope_checkout_" + digest_hex(composition, length=40)
+            operation_digest = digest_hex({
+                "operation": "environment-scope-checkout-compose/1",
+                **composition,
+            }, length=64)
+            self._emit(
+                "workspace.checkout-composed", "mncs-environment",
+                {"composition": composition},
+                request_id=request_id,
+                operation_digest=operation_digest,
+            )
+            eligible_repositories.add(repository)
+            if not isinstance(prior, dict):
+                additions[repository] = facts
+                report["composed"].append(repository)
+            elif prior.get("source_ref") == "authenticated-scope-grant":
+                additions[repository] = facts
+                report["retained"].append(repository)
+            else:
+                report["retained"].append(repository)
+
+        # A prior projection must stop contributing provider roots as soon as
+        # its exact grant, exclusive claim, or checkout identity is no longer
+        # verifiable. Explicit workspace selections remain untouched.
+        removed = sorted(
+            repository for repository, record in selected.items()
+            if isinstance(record, dict)
+            and record.get("source_ref") == "authenticated-scope-grant"
+            and repository not in eligible_repositories
+        )
+        updated_selected = dict(selected)
+        for repository in removed:
+            updated_selected.pop(repository, None)
+        updated_selected.update(additions)
+
+        if additions or removed:
+            workspace = dict(self.snapshot.get("workspace") or {})
+            selection = workspace.get("selection")
+            if not isinstance(selection, list):
+                selection = list(selected)
+            selected_names = {
+                str(item) for item in selection if isinstance(item, str)
+            }
+            workspace["selection"] = sorted(
+                (selected_names - set(removed)) | set(additions)
+            )
+            workspace["selected_checkouts"] = updated_selected
+            self.snapshot["selected_checkouts"] = updated_selected
+            self.snapshot["workspace"] = workspace
+        report["removed"] = removed
+
+        if report["skipped"]:
+            report["status"] = "unknown"
+        elif report["composed"] or report["retained"] or report["removed"]:
+            report["status"] = "ready"
+        return report
 
     def provision_checkouts(
         self,
@@ -3098,6 +3345,7 @@ class Session:
                 report = prior[-1].get("payload", {}).get("report", {})
                 return dict(report) if isinstance(report, dict) else {}
 
+        scope_composition = self._compose_authorized_scope_checkouts()
         selected_workspace = (
             workspace_root or self.snapshot.get("workspace", {}).get("root")
         )
@@ -3166,7 +3414,8 @@ class Session:
             "provider_root", "event_types", "output_limit_bytes",
         )
         report: dict[str, Any] = {
-            "reprobed": 0, "reused": 0, "changed": [], "bound": [], "unbound": []
+            "reprobed": 0, "reused": 0, "changed": [], "bound": [], "unbound": [],
+            "scope_composition": scope_composition,
         }
         for key, binding in current_by_key.items():
             previous = prior_by_key.get(key)

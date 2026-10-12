@@ -33,6 +33,7 @@ TYPES = (
     "session.unblocked",
     "intent.attached",
     "workspace.changed",
+    "workspace.checkout-composed",
     "workspace.protection_raised",
     "capability.bound",
     "capability.changed",

@@ -1,0 +1,125 @@
+{
+  "schema_version": "mncs.environment.authorized-scope-checkout-composition/1",
+  "identity": "ev_authorized_scope_checkout_composition_20261012",
+  "recorded_at": "2026-10-12T07:06:22Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "campaign/authorized-scope-checkout-composition-20261012",
+    "base_revision": "ab0a6e252afe9787a3e926150d63731f8a74e5cf",
+    "files": {
+      "mncs_env/events.py": "645f64d2e53825a92878ae070d44cb330fa0cac7f1f20d70c7ed73d3ff4ebdb1",
+      "mncs_env/sessions.py": "82702afe112f9ab9992008b60bbf744d87691e8519c28fd8a781cacd56f4ed7b",
+      "tests/test_authority_scope_grants.py": "c44df6ccaee9d7d4aaca1ea4f5435903bfab05dfb7b96b87ecf8a6e78f0bdd7c"
+    }
+  },
+  "implementation": {
+    "owner": "mncs-environment",
+    "behavior": [
+      "Revalidation projects only immutable grants for this session and campaign.",
+      "A checkout is selected only when exactly one live exclusive repository claim belongs to this exact session.",
+      "The immediate non-symlink checkout must match the granted portable Git checkout and common-directory identities.",
+      "Dirty changes made after the same session acquired its claim are retained and recorded in the composition event.",
+      "A previously composed checkout is removed from provider selection when its grant, claim, or Git identity can no longer be verified; explicit workspace selections remain unchanged.",
+      "Composition emits a typed workspace.checkout-composed event with a retry-stable request identity bound to the grant, claim version, checkout identity, branch, head, and cleanliness."
+    ],
+    "event_type_registered": true,
+    "report_field": "revalidation.scope_composition"
+  },
+  "protected_execution": {
+    "control_project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "persistence_transport": "authenticated MNCS Control Environment RPC",
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_direct_write_access": false,
+    "direct_access_evidence": {
+      "repository": "mncs-control-mcp",
+      "path": "../mncs-control-mcp/evidence/protected-projection-capability-rpc-acceptance-20261012.json",
+      "sha256": "c41b101611d70cf95740ff7fe5c6cd3501431095d5df5f9d61a024a9aabe0d41"
+    },
+    "first_resume_revalidate": {
+      "command": "./scripts/mncs-env resume ses_7226fbcfe65820f7 --revalidate",
+      "exit_code": 0,
+      "duration_seconds": 37.332,
+      "prior_selected_repositories": ["mncs-environment"],
+      "readback_selected_repositories": [
+        "mncs-automation",
+        "mncs-control-mcp",
+        "mncs-environment",
+        "mncs-system-monitor"
+      ]
+    },
+    "stable_revalidation_report": {
+      "request_id": "req_scope_compose_proof_20261012",
+      "exit_code": 0,
+      "scope_composition": {
+        "status": "ready",
+        "composed": [],
+        "retained": [
+          "mncs-automation",
+          "mncs-control-mcp",
+          "mncs-system-monitor"
+        ],
+        "removed": [],
+        "skipped": []
+      },
+      "bindings": 23
+    },
+    "fresh_process_readback": {
+      "command": "./scripts/mncs-env inspect ses_7226fbcfe65820f7",
+      "exit_code": 0,
+      "selected_sources": {
+        "mncs-automation": "authenticated-scope-grant",
+        "mncs-control-mcp": "authenticated-scope-grant",
+        "mncs-environment": "explicit-workspace-selection",
+        "mncs-system-monitor": "authenticated-scope-grant"
+      },
+      "bound_capability_count": 23
+    }
+  },
+  "ownership_observation": {
+    "current_session_live_claims": [
+      {"repository": "mncs-environment", "claim_id": "claim:mncs-environment", "version": 33, "expires_at": "2026-10-12T19:38:47+00:00"},
+      {"repository": "mncs-control-mcp", "claim_id": "claim:mncs-control-mcp", "version": 9, "expires_at": "2026-10-13T02:54:51+00:00"},
+      {"repository": "mncs-automation", "claim_id": "claim:mncs-automation", "version": 5, "expires_at": "2026-10-13T05:08:34+00:00"},
+      {"repository": "mncs-system-monitor", "claim_id": "claim:mncs-system-monitor", "version": 1, "expires_at": "2026-10-13T05:08:49+00:00"}
+    ],
+    "protected_foreign_claims": [
+      {"repository": "mncs-compiler", "claim_id": "claim:mncs-compiler", "owner_session_id": "ses_d2537acde8b8a875", "version": 63, "expires_at": "2027-08-03T10:31:10+00:00"},
+      {"repository": "mncs-forge", "claim_id": "claim:mncs-forge", "owner_session_id": "ses_95c3aa35b8544042", "version": 28, "expires_at": "2027-03-07T23:49:59+00:00"}
+    ],
+    "campaign_continuation_status": "context-conflict",
+    "campaign_continuation_sessions": [
+      "ses_7226fbcfe65820f7",
+      "ses_b4b2d283542220b0"
+    ],
+    "foreign_handoff_received": false
+  },
+  "validation": {
+    "focused_scope_tests_after_final_test_change": {
+      "command": "python3 -m pytest tests/test_authority_scope_grants.py -q",
+      "result": "PASS; 16 passed in 45.76s"
+    },
+    "full_environment_suite": {
+      "command": "python3 -m pytest tests/ -q",
+      "result": "PASS; 670 passed, 46 skipped in 641.99s",
+      "note": "The only later test-file edit changed the foreign-claim fixture to reuse the same consumer label; the full scope test file was rerun afterward and passed."
+    },
+    "vertical_proof": {
+      "command": "python3 scripts/vertical_proof.py",
+      "result": "PASS"
+    },
+    "static_checks": {
+      "compileall": "PASS",
+      "git_diff_check": "PASS"
+    }
+  },
+  "readiness": {
+    "authorized_scope_composition": "proved in protected Bwrap execution with canonical Store readback",
+    "campaign_continuity": "partial; duplicate session contexts remain unmerged and no Compiler or Forge handoff has been received",
+    "compiler_forge_candidate_reconciliation": "not attempted; exact foreign exclusive claims remain live",
+    "compiler_succession_and_resource_feedback": "not proved by this milestone"
+  }
+}
