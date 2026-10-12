@@ -1,0 +1,80 @@
+{
+  "canonical_binding": {
+    "authority_effect": "lookup-only",
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "environment_definition_id": "env_f31ee034e8e1fdcb",
+    "project_scope_basis": [
+      "campaign.repository_refs",
+      "snapshot.selected_checkouts",
+      "snapshot.repo_facts",
+      "active_claim.repository"
+    ],
+    "publication_request_id": "req_3d20434c93058392ebe6b2bfc242bd9abc8877fb",
+    "selector_identity": "tsel_920b2f0196bbc4f7d12e1a0926f8e8d944178948580e33ff8d3d48ba95144446",
+    "session_id": "ses_7226fbcfe65820f7",
+    "workspace_root": "/home/epi13/Documents/Projects"
+  },
+  "fresh_process_readback": {
+    "lookup_status": "ready",
+    "resume_lifecycle": "active",
+    "resume_session_id": "ses_7226fbcfe65820f7",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "selection_basis": "authenticated-task-selector",
+    "session_id_was_derived_from_selector_capsule": true,
+    "task_selector_status": "resolved",
+    "unselected_same_campaign_sessions": 1
+  },
+  "identity": "ev_project_task_selector_canonical_acceptance_20261012",
+  "implementation": {
+    "commit": "ca72a41268442d371e75ba043c218a40e9a192ea",
+    "control_commits": [
+      "57b9b7dc0ee682d17fa8d88490f5159bbe99df9c",
+      "5fcf13a4655d4d34ea3558dfd543d746d1b73688"
+    ]
+  },
+  "limitations": [
+    "The full nested-bwrap MCP end-to-end test reached tool-schema assertions but failed at its later terminal_exec shell exit-code assertion; the focused tool-schema and RPC tests passed.",
+    "This proves canonical selector publication and fresh-process session continuation; it does not prove Environment service restart recovery or claim transfer crash recovery."
+  ],
+  "owner": "mncs-environment",
+  "ownership": {
+    "claims_transferred_or_released": false,
+    "compiler_and_forge_claims_modified": false,
+    "duplicate_context_adopted": false,
+    "other_same_campaign_contexts_remain_visible": true
+  },
+  "protected_execution": {
+    "canonical_store_path_directly_writable": false,
+    "canonical_store_path_visible": false,
+    "persistence_transport": "control-rpc",
+    "publication_transport": "authenticated project-scoped Control RPC to Environment owner",
+    "sandbox_backend": "bwrap"
+  },
+  "recorded_at": "2026-10-12T21:49:23+00:00",
+  "schema_version": "mncs.environment.project-task-selector-acceptance/1",
+  "verification": {
+    "canonical_protected_process": "campaign-bind published through Control RPC; a later protected process resolved the selector and resumed the exact active session",
+    "control_tests": [
+      {
+        "command": "python3 -m pytest -q tests/test_environment_sessions.py tests/test_environment_rpc.py -k 'task_binding_uses_authenticated_project_link_and_stable_request or task_binding_survives_a_fresh_environment_service or campaign_task_bind_rpc_selects_one_exact_project_session'",
+        "result": "3 passed"
+      },
+      {
+        "command": "python3 -m pytest -q tests/test_environment_rpc.py -k 'task_selector_selects_saved_project_context_over_current_default or campaign_task_bind_rpc_selects_one_exact_project_session'",
+        "result": "2 passed"
+      },
+      {
+        "command": "python3 -m pytest -q tests/test_mcp_server.py -k environment_campaign_task_bind_tool_schema",
+        "result": "1 passed"
+      },
+      {
+        "command": "python3 -m pytest -q tests/test_operations.py",
+        "result": "17 passed"
+      }
+    ],
+    "environment_tests": {
+      "command": "python3 -m pytest -q tests/test_campaign_selector.py",
+      "result": "7 passed"
+    }
+  }
+}
