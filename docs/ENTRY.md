@@ -107,6 +107,25 @@ recorded Environment, or choose a distinct campaign identity for independent
 work. Another principal's live campaign remains protected unless its owner
 issues a handoff.
 
+## Durable task selectors
+
+An authenticated caller may supply a stable `task_identity` to `enter` (CLI:
+`--task-identity`, Control: `env_enter.task_identity`). Environment hashes it
+with the authenticated principal, exact Environment definition, and workspace,
+then stores one immutable task-to-campaign binding through the selected Store.
+The external task identity itself is not persisted. The selector only finds a
+campaign; normal principal, rights, lifecycle, and claim checks still apply.
+
+On first use, an existing campaign is never adopted from the selector alone.
+Inspect the project continuation capsule and pass the intended `campaign_id`
+with `task_identity` once. If no prior campaign exists, Environment derives a
+deterministic task campaign identity and binds it after session creation. A
+retry after interrupted publication reads the immutable binding back; a
+different campaign mapping conflicts. Later entries can pass only the same
+stable task identity and resume its campaign without a session or campaign ID.
+Independent work needs a different task identity and campaign. A task selector
+cannot be combined with `--new-session`.
+
 Entry and `reconcile` use a nonblocking process lock per state directory and
 backend. A concurrent operation returns `entry-busy`, with a retry action.
 Locks release on process exit. Provider reconciliation must itself be

@@ -126,6 +126,7 @@ def cmd_enter(args: argparse.Namespace) -> int:
                                backend=args.persistence, consumer_id=args.consumer,
                                consumer_kind=args.consumer_kind, new_session=args.new_session,
                                campaign_id=args.campaign_id,
+                               task_identity=args.task_identity,
                                authenticated_principal_id=os.environ.get(
                                    "MNCS_ENV_AUTH_PRINCIPAL_ID"
                                ),
@@ -1131,6 +1132,11 @@ def build_parser() -> argparse.ArgumentParser:
     enter.add_argument("--consumer-kind", default="agent")
     enter.add_argument("--campaign-id", default=None,
                        help="resume a durable campaign identity (authorized Control transport only)")
+    enter.add_argument(
+        "--task-identity", default=None,
+        help=("select a durable campaign using an authenticated, project-scoped task identity; "
+              "first binding requires an explicit campaign when prior work exists"),
+    )
     enter.add_argument("--new-session", action="store_true", help="create independent work instead of reusing matching work")
     enter.set_defaults(func=cmd_enter)
 

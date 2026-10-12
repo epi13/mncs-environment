@@ -9,6 +9,7 @@ from pathlib import Path
 
 from . import (
     actions,
+    campaign_selector,
     composition,
     context_budget,
     diagnostics,
@@ -489,6 +490,7 @@ def _validate_campaign_identity(store, *, campaign_id: str,
 def enter(*, definition: dict, definition_path: Path | None, workspace_root: str,
           state_dir: Path, backend: str, consumer_id: str, consumer_kind: str,
           new_session: bool = False, campaign_id: str | None = None,
+          task_identity: str | None = None,
           authenticated_principal_id: str | None = None,
           continuation_request_id: str | None = None) -> dict:
     # Invalid inputs fail before persistence or provider startup.
@@ -508,8 +510,29 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
     definition_id = identity.environment_id(definition)
     intent = parse_intent(definition.get("intent", {"goal": definition.get("goal", "unspecified")}))
     requested_campaign_id = campaign_id or definition.get("campaign_id")
+    task_selector_identity = None
+    if task_identity is not None:
+        try:
+            task_selector_identity = campaign_selector.selector_identity(
+                task_identity,
+                authenticated_principal_id=authenticated_principal_id,
+                definition_id=definition_id,
+                workspace_root=str(root),
+            )
+        except campaign_selector.TaskSelectorError as error:
+            raise EntryError(str(error), error.code) from error
+        if new_session:
+            raise EntryError(
+                "a task selector cannot be combined with independent-session entry",
+                "campaign-task-selector-invalid",
+                next="select or bind the existing task campaign; use a different task identity for independent work",
+            )
     campaign_id = (
         requested_campaign_id
+        or (
+            "cmp_task_" + task_selector_identity[5:]
+            if task_selector_identity is not None else None
+        )
         or "cmp_" + identity.digest_hex({
             "intent_id": intent["identity"],
             "definition_id": definition_id,
@@ -541,6 +564,63 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
             upgraded = False
             pending_handoff = None
             selected_session_id = None
+            task_binding = None
+            if task_selector_identity is not None:
+                try:
+                    task_binding = campaign_selector.read_binding(
+                        store, task_selector_identity
+                    )
+                except campaign_selector.TaskSelectorError as error:
+                    raise EntryError(
+                        str(error), error.code,
+                        next=("inspect the canonical task-selector record; do not create a replacement mapping"
+                              if error.code == "store-corruption" else
+                              "retry the same task identity and request after Store access is restored"),
+                    ) from error
+                if task_binding is not None:
+                    if (task_binding.get("authenticated_principal_id")
+                            != authenticated_principal_id
+                            or task_binding.get("definition_id") != definition_id
+                            or task_binding.get("workspace_root") != str(root)):
+                        raise EntryError(
+                            "task selector binding does not match this authenticated Environment context",
+                            "campaign-task-selector-conflict",
+                        )
+                    bound_campaign_id = task_binding.get("campaign_id")
+                    if (requested_campaign_id is not None
+                            and requested_campaign_id != bound_campaign_id):
+                        raise EntryError(
+                            "explicit campaign identity conflicts with its durable task selector",
+                            "campaign-task-selector-conflict",
+                            campaign_id=requested_campaign_id,
+                            bound_campaign_id=bound_campaign_id,
+                        )
+                    campaign_id = str(bound_campaign_id)
+                    requested_campaign_id = campaign_id
+                    bound_session = store.load_snapshot(
+                        str(task_binding.get("session_id", ""))
+                    )
+                    bound_campaign = (
+                        bound_session.get("campaign")
+                        if isinstance(bound_session, dict) else None
+                    )
+                    if (
+                        not isinstance(bound_session, dict)
+                        or bound_session.get("authenticated_principal_id")
+                        != authenticated_principal_id
+                        or not isinstance(bound_campaign, dict)
+                        or bound_campaign.get("identity") != campaign_id
+                        or bound_session.get("provenance", {}).get("definition_id")
+                        != definition_id
+                        or bound_session.get("workspace", {}).get("root")
+                        != str(root)
+                    ):
+                        raise EntryError(
+                            "task selector target no longer matches its recorded Environment owner and context",
+                            "campaign-task-selector-target-unavailable",
+                            campaign_id=campaign_id,
+                            session_id=task_binding.get("session_id"),
+                        )
             has_persistence = (Path(state_dir) / ("store" if backend == "store" else "sessions")).exists()
             if not new_session and has_persistence:
                 discovered_campaigns: set[str] = set()
@@ -570,6 +650,27 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                         for session_id in discovered
                     }
                     discovered_sessions = list(discovered)
+                    if (task_selector_identity is not None and task_binding is None
+                            and discovered_campaigns):
+                        if campaign_id not in discovered_campaigns:
+                            raise EntryError(
+                                "task identity is not yet bound and existing project campaigns cannot be adopted implicitly",
+                                "campaign-task-selector-unbound",
+                                campaigns=sorted(discovered_campaigns),
+                                sessions=sorted(discovered_sessions),
+                                next="inspect the authenticated project continuation capsule, select the intended campaign identity once, then enter with --task-identity and --campaign-id",
+                            )
+                        # A new task's campaign identity is derived from its
+                        # scoped selector. If a process stopped after session
+                        # creation but before publishing the immutable link,
+                        # this exact identity is sufficient to finish that
+                        # same binding; other project campaigns stay ignored.
+                        discovered_campaigns = {campaign_id}
+                        discovered_sessions = [
+                            session_id for session_id in discovered_sessions
+                            if (store.load_snapshot(session_id) or {})
+                            .get("campaign", {}).get("identity") == campaign_id
+                        ]
                     if len(discovered_campaigns) > 1:
                         raise EntryError(
                             "multiple durable campaigns match this authenticated consumer and selected environment",
@@ -580,7 +681,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                         )
                     if discovered_campaigns:
                         campaign_id = next(iter(discovered_campaigns))
-                    else:
+                    elif task_selector_identity is None:
                         # Intent identity is stable across definition changes.
                         # Reuse it to find the prior campaign, then let the
                         # campaign-context guard explain whether that exact
@@ -775,6 +876,14 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                     pending_handoff[0] if pending_handoff is not None
                     else matches[0] if len(matches) == 1 else None
                 )
+                if task_binding is not None and selected_session_id is None:
+                    raise EntryError(
+                        "durable task selector campaign has no resumable session or addressed handoff",
+                        "campaign-task-selector-target-unavailable",
+                        campaign_id=campaign_id,
+                        session_id=task_binding.get("session_id"),
+                        next="inspect the recorded session lifecycle; Environment will not create a replacement campaign implicitly",
+                    )
                 _validate_campaign_identity(
                     store, campaign_id=campaign_id,
                     authenticated_principal_id=authenticated_principal_id,
@@ -868,12 +977,61 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                     session.transition("active", "authenticated campaign continuation")
             elif session.snapshot["lifecycle"] in ("checkpointed", "abandoned"):
                 session.transition("active", "re-entered durable work")
+            task_selector_status = None
+            if task_selector_identity is not None:
+                task_selector_status = "resumed" if task_binding is not None else "bound"
+                if task_binding is None:
+                    actual_campaign = (session.snapshot.get("campaign") or {}).get("identity")
+                    if not isinstance(actual_campaign, str):
+                        raise EntryError(
+                            "selected Environment session has no durable campaign identity",
+                            "campaign-identity-invalid",
+                        )
+                    request_id = continuation_request_id
+                    if (not isinstance(request_id, str) or not request_id.startswith("req_")
+                            or len(request_id) > 160 or "\x00" in request_id):
+                        request_id = "req_task_" + identity.digest_hex({
+                            "selector": task_selector_identity,
+                            "campaign_id": actual_campaign,
+                        }, length=48)
+                    try:
+                        task_binding = campaign_selector.bind(
+                            store,
+                            selector=task_selector_identity,
+                            authenticated_principal_id=str(authenticated_principal_id),
+                            definition_id=definition_id,
+                            workspace_root=str(root),
+                            campaign_id=actual_campaign,
+                            session_id=session.session_id,
+                            request_id=request_id,
+                        )
+                    except campaign_selector.TaskSelectorError as error:
+                        raise EntryError(
+                            str(error), error.code,
+                            campaign_id=actual_campaign,
+                            session_id=session.session_id,
+                            publication_completed=(
+                                False if error.code in (
+                                    "campaign-task-selector-conflict",
+                                    "campaign-task-selector-invalid",
+                                    "campaign-task-selector-unauthenticated",
+                                ) else None
+                            ),
+                            next=("retry the same task identity and request to reconcile the immutable binding"
+                                  if error.code == "ambiguous-publication" else
+                                  "select the authorized campaign identity once; subsequent entry will use this durable task selector"),
+                        ) from error
             blocks, _trace = ambient_tick(session, definition, fresh=not reused,
                 upgraded=upgraded, lock_waited=lock_waited)
             remediation = blocks["doctor"]
             result = session.context()
             result["entry"] = {"reused": reused, "revalidation": remediation["revalidation"],
                                "operations": remediation["operations"]}
+            if task_selector_status is not None:
+                result["entry"]["task_selector"] = {
+                    "status": task_selector_status,
+                    "campaign_id": (session.snapshot.get("campaign") or {}).get("identity"),
+                }
             result["doctor"] = {"summary": remediation["summary"], "remaining": remediation["remaining"],
                                 "remaining_truncated": remediation.get("remaining_truncated", False),
                                 "unavailable": remediation.get("unavailable", {"count": 0, "digest": None}),

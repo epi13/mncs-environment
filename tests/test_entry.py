@@ -13,7 +13,16 @@ from unittest import mock
 
 import pytest
 
-from mncs_env import capabilities, cli, entry, readiness, sessions, workspace
+from mncs_env import (
+    campaign_selector,
+    capabilities,
+    cli,
+    entry,
+    identity,
+    readiness,
+    sessions,
+    workspace,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "scripts" / "mncs-env"
@@ -301,6 +310,136 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(code, 0, second)
         self.assertEqual(first["session_id"], second["session_id"])
         self.assertTrue(second["entry"]["reused"])
+
+    def test_authenticated_task_selector_binds_once_and_resumes_exact_campaign(self):
+        self.ready()
+        principal = "control-principal-task-selector"
+        task_identity = "durable-goal-thread-20261012"
+        auth_env = {
+            **os.environ,
+            "MNCS_ENV_AUTH_PRINCIPAL_ID": principal,
+            "MNCS_ENV_RPC_REQUEST_ID": "req_task_selector_first_entry",
+        }
+        code, first = self.run_cli(
+            "enter", "--consumer", "task-selector-process-1",
+            backend="store", env=auth_env,
+        )
+        self.assertEqual(code, 0, first)
+        campaign_id = first["continuation"]["identity"]
+
+        # A task selector never adopts existing work merely because it is the
+        # only campaign in a project. The first binding names its campaign.
+        auth_env["MNCS_ENV_RPC_REQUEST_ID"] = "req_task_selector_unbound"
+        code, unbound = self.run_cli(
+            "enter", "--consumer", "task-selector-process-2",
+            "--task-identity", task_identity,
+            backend="store", env=auth_env,
+        )
+        self.assertNotEqual(code, 0)
+        self.assertEqual(
+            unbound["diagnostics"]["code"], "campaign-task-selector-unbound"
+        )
+        self.assertEqual(unbound["diagnostics"]["campaigns"], [campaign_id])
+
+        auth_env["MNCS_ENV_RPC_REQUEST_ID"] = "req_task_selector_initial_binding"
+        code, bound = self.run_cli(
+            "enter", "--consumer", "task-selector-process-2",
+            "--campaign-id", campaign_id,
+            "--task-identity", task_identity,
+            backend="store", env=auth_env,
+        )
+        self.assertEqual(code, 0, bound)
+        self.assertEqual(bound["session_id"], first["session_id"])
+        self.assertEqual(bound["entry"]["task_selector"]["status"], "bound")
+
+        # A second live campaign in the same exact Environment context must
+        # not make a bound task selector ambiguous.
+        auth_env["MNCS_ENV_RPC_REQUEST_ID"] = "req_task_selector_other_campaign"
+        code, other = self.run_cli(
+            "enter", "--consumer", "task-selector-process-3",
+            "--campaign-id", "cmp_independent_task_selector_fixture",
+            "--new-session", backend="store", env=auth_env,
+        )
+        self.assertEqual(code, 0, other)
+        self.assertNotEqual(other["session_id"], first["session_id"])
+
+        auth_env["MNCS_ENV_RPC_REQUEST_ID"] = "req_task_selector_fresh_process"
+        code, resumed = self.run_cli(
+            "enter", "--consumer", "task-selector-process-4",
+            "--task-identity", task_identity,
+            backend="store", env=auth_env,
+        )
+        self.assertEqual(code, 0, resumed)
+        self.assertEqual(resumed["session_id"], first["session_id"])
+        self.assertTrue(resumed["entry"]["reused"])
+        self.assertEqual(resumed["entry"]["task_selector"]["status"], "resumed")
+        self.assertEqual(resumed["continuation"]["identity"], campaign_id)
+
+        # Store retains only the scoped selector digest; it does not retain
+        # the external task identity itself.
+        selector = campaign_selector.selector_identity(
+            task_identity,
+            authenticated_principal_id=principal,
+            definition_id=identity.environment_id(self.config),
+            workspace_root=str(self.project.resolve()),
+        )
+        store = sessions.open_store(
+            self.state, "store", verify_on_open=False, defer_mutation=False
+        )
+        try:
+            record = campaign_selector.read_binding(store, selector)
+            self.assertEqual(record["campaign_id"], campaign_id)
+            self.assertEqual(record["session_id"], first["session_id"])
+            self.assertNotIn("task_identity", record)
+        finally:
+            store.close()
+
+        auth_env["MNCS_ENV_RPC_REQUEST_ID"] = "req_task_selector_conflicting_campaign"
+        code, conflict = self.run_cli(
+            "enter", "--consumer", "task-selector-process-5",
+            "--campaign-id", "cmp_wrong_campaign_for_selector",
+            "--task-identity", task_identity,
+            backend="store", env=auth_env,
+        )
+        self.assertNotEqual(code, 0)
+        self.assertEqual(
+            conflict["diagnostics"]["code"], "campaign-task-selector-conflict"
+        )
+
+    def test_task_selector_recovers_session_created_before_binding_publication(self):
+        self.ready()
+        principal = "control-principal-task-selector-recovery"
+        task_identity = "durable-task-after-create-interruption"
+        selector = campaign_selector.selector_identity(
+            task_identity,
+            authenticated_principal_id=principal,
+            definition_id=identity.environment_id(self.config),
+            workspace_root=str(self.project.resolve()),
+        )
+        deterministic_campaign = "cmp_task_" + selector[5:]
+        auth_env = {
+            **os.environ,
+            "MNCS_ENV_AUTH_PRINCIPAL_ID": principal,
+            "MNCS_ENV_RPC_REQUEST_ID": "req_task_selector_interrupted_create",
+        }
+        # Simulate a caller stopping after the session object committed but
+        # before the task-binding evidence publication.
+        code, first = self.run_cli(
+            "enter", "--consumer", "selector-recovery-process-1",
+            "--campaign-id", deterministic_campaign,
+            backend="store", env=auth_env,
+        )
+        self.assertEqual(code, 0, first)
+
+        auth_env["MNCS_ENV_RPC_REQUEST_ID"] = "req_task_selector_interrupted_create_retry"
+        code, resumed = self.run_cli(
+            "enter", "--consumer", "selector-recovery-process-2",
+            "--task-identity", task_identity,
+            backend="store", env=auth_env,
+        )
+        self.assertEqual(code, 0, resumed)
+        self.assertEqual(resumed["session_id"], first["session_id"])
+        self.assertEqual(resumed["entry"]["task_selector"]["status"], "bound")
 
     def test_store_entry_discovers_and_accepts_recipient_handoff_in_fresh_process(self):
         self.ready()
