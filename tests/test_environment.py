@@ -2713,6 +2713,25 @@ class SessionTests(unittest.TestCase):
             self.assertRegex(child_request_ids[0], r"^req_[0-9a-f]{48}$")
             self.assertNotEqual(child_request_ids[0], "req_outer_invoke_test")
             self.assertEqual(session.snapshot["projection_test_marker"], "published")
+            invocation_record = session.snapshot["artifacts"][-1]
+            self.assertEqual(
+                invocation_record["parent_request_id"], "req_outer_invoke_test"
+            )
+            self.assertEqual(
+                invocation_record["provider_request_id"], child_request_ids[0]
+            )
+            invoked_event = next(
+                event for event in reversed(session._log())
+                if event.get("type") == "capability.invoked"
+            )
+            self.assertEqual(
+                invoked_event["payload"]["parent_request_id"],
+                "req_outer_invoke_test",
+            )
+            self.assertEqual(
+                invoked_event["payload"]["provider_request_id"],
+                child_request_ids[0],
+            )
 
     def test_session_invoke_restores_store_artifacts_after_process_reopen(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

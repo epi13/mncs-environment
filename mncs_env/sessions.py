@@ -2483,23 +2483,26 @@ class Session:
             invocation_env.update(self._selected_runtime_environment(binding))
             invocation_env["MNCS_ENV_SESSION_ARTIFACT_DIR"] = str(artifact_workspace.path)
             parent_request_id = os.environ.get("MNCS_ENV_RPC_REQUEST_ID")
+            if (not isinstance(parent_request_id, str)
+                    or not re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", parent_request_id)):
+                parent_request_id = None
             child_request = {
                 "kind": "provider-invocation",
                 "session_id": self.session_id,
                 "capability": capability,
                 "binding_id": binding.get("binding_id"),
             }
-            if (isinstance(parent_request_id, str)
-                    and re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", parent_request_id)):
+            if parent_request_id is not None:
                 child_request["parent_request_id"] = parent_request_id
             else:
                 child_request["nonce"] = secrets.token_hex(20)
-            invocation_env["MNCS_ENV_RPC_REQUEST_ID"] = (
-                "req_" + digest_hex(child_request, length=48)
-            )
+            provider_request_id = "req_" + digest_hex(child_request, length=48)
+            invocation_env["MNCS_ENV_RPC_REQUEST_ID"] = provider_request_id
             self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
                        {"capability": capability, "argv": argv, "executor": executor,
-                        "effect_target": admitted_effect_target})
+                        "effect_target": admitted_effect_target,
+                        "parent_request_id": parent_request_id,
+                        "provider_request_id": provider_request_id})
             self._save()
             result = capabilities_module.invoke(
                 binding, argv, cwd=cwd, timeout_seconds=timeout_seconds,
@@ -2518,11 +2521,15 @@ class Session:
              "binding_id": binding.get("binding_id"),
              "status": result["status"], "executor": executor,
              "effect_target": admitted_effect_target,
+             "parent_request_id": parent_request_id,
+             "provider_request_id": provider_request_id,
              **artifact_fields, "at": utcnow()}
         )
         self._emit("invocation.completed", binding.get("provider", "unknown"),
                    {"capability": capability, "status": result["status"],
                     "returncode": result["returncode"],
+                    "parent_request_id": parent_request_id,
+                    "provider_request_id": provider_request_id,
                     "artifact_store_ref": artifact_fields.get("artifact_store_ref")})
         self._save()
         return result
