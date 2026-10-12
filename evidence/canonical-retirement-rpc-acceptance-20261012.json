@@ -1,0 +1,176 @@
+{
+  "schema_version": "mncs.environment.canonical-retirement-store-acceptance/1",
+  "identity": "ev_environment_canonical_retirement_publication_20261012",
+  "recorded_at_utc": "2026-10-12T15:35:13Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_base_commit": "939d6837dd2afd128dbac1b67cadf22e5d8548e3",
+    "retirement_implementation_commit": "e14e31017bba6ddfa5903c89d6a2e9c835e293ba",
+    "control_repository": "mncs-control-mcp",
+    "control_commit": "bd1f7d0b64fbf57225bebfb6e696370878a79725",
+    "implementation_evidence": "evidence/retirement-request-replay-20261012.json"
+  },
+  "ownership": {
+    "read_at_utc": "2026-10-12T15:32:24Z",
+    "environment_claim": {
+      "identity": "clm_545ce73595e24c40",
+      "version": 33,
+      "session_id": "ses_7226fbcfe65820f7",
+      "status": "held",
+      "expires_at": "2026-10-12T19:38:47Z"
+    },
+    "automation_claim": {
+      "identity": "clm_2bc7e8cdbc3c4742",
+      "version": 5,
+      "session_id": "ses_7226fbcfe65820f7",
+      "status": "held",
+      "expires_at": "2026-10-13T05:08:34Z"
+    },
+    "system_monitor_claim": {
+      "identity": "clm_6528f9f4e72e1940",
+      "version": 1,
+      "session_id": "ses_7226fbcfe65820f7",
+      "status": "held",
+      "expires_at": "2026-10-13T05:08:49Z"
+    },
+    "preserved_foreign_claims": [
+      {
+        "repository": "mncs-compiler",
+        "identity": "clm_5871ad9917e5210d",
+        "version": 63,
+        "session_id": "ses_d2537acde8b8a875",
+        "status": "held",
+        "expires_at": "2027-08-03T10:31:10Z"
+      },
+      {
+        "repository": "mncs-forge",
+        "identity": "clm_16b820b3293d873b",
+        "version": 28,
+        "session_id": "ses_95c3aa35b8544042",
+        "status": "held",
+        "expires_at": "2027-03-07T23:49:59Z"
+      }
+    ],
+    "handoffs": "No owner-issued Compiler or Forge handoff was present; neither repository was tested or modified."
+  },
+  "restricted_execution": {
+    "transport": "authenticated MNCS Control Environment RPC",
+    "backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "caller_store_access_check": {
+      "observed_at_utc": "2026-10-12T15:30:31Z",
+      "canonical_store_path_visible": false,
+      "canonical_store_directory_writable": false,
+      "authenticated_rpc_socket_available": true,
+      "grant_file_available": true,
+      "credential_values_or_paths_recorded": false
+    },
+    "service_store_access": "The Control tunnel used its configured authorized Store path grant; no direct Store file access was provided to the protected caller."
+  },
+  "continuation": {
+    "campaign_lookup_without_identity": {
+      "status": "ambiguous-campaigns",
+      "selected_session_id": null,
+      "diagnostic": "Control retained multiple historical project campaign contexts and required an explicit campaign identity."
+    },
+    "authenticated_selection": {
+      "request_id": "req_bind_retirement_probe_continuation_20261012",
+      "campaign_id": "cmp_mncs_continuity_20261010",
+      "selected_session_id": "ses_7226fbcfe65820f7",
+      "selection_basis": "authenticated-project-environment-definition",
+      "status": "ready"
+    },
+    "fresh_cli_resume": {
+      "request_id": "req_campaign_restart_resume_revalidate_20261012",
+      "session_id_unchanged": true,
+      "consumer_id": "local-agent",
+      "lifecycle": "active",
+      "revalidation": {
+        "reprobed": 11,
+        "reused": 13,
+        "unbound": [],
+        "scope_composition_status": "ready"
+      },
+      "compiler_and_forge_tests_run": false
+    }
+  },
+  "retirement": {
+    "test_target": "/workspace/mncs-environment/.worktrees/.mncs-retirement-probe-20261012",
+    "repository": "mncs-environment",
+    "detached_head": "939d6837dd2afd128dbac1b67cadf22e5d8548e3",
+    "target_identity": "8efbb31ef2f01d76",
+    "repository_identity": "67e17678ac1334e6",
+    "dry_run_status": "would-retire",
+    "request_id": "req_retirement_replay_acceptance_b_20261012",
+    "request_operation_digest": "8683f7345edca7d8",
+    "admission": {
+      "verdict": "allow",
+      "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+      "campaign_id": "cmp_mncs_continuity_20261010",
+      "session_id": "ses_7226fbcfe65820f7",
+      "consumer_id": "local-agent",
+      "scope_kind": "worktree",
+      "reason": "mncs-environment retirement by scoped claim"
+    },
+    "result": {
+      "exit_code": 0,
+      "completion_status": "completed",
+      "mutation_performed": true,
+      "retired": true,
+      "reason": "clean and unclaimed"
+    },
+    "canonical_store_events": [
+      {
+        "type": "environment.retirement.requested",
+        "identity": "evt_449bbefd13e73c43",
+        "sequence": 1174
+      },
+      {
+        "type": "environment.retirement.target-completed",
+        "identity": "evt_590278d2dd46460a",
+        "sequence": 1175,
+        "target_request_id": "req_retire_967403125594481735d2ba9176d28cd295cb7c048583a854"
+      },
+      {
+        "type": "environment.retirement.completed",
+        "identity": "evt_ff8b93fb77a36e87",
+        "sequence": 1176
+      }
+    ],
+    "fresh_process_readback": {
+      "operation": "mncs-env inspect",
+      "request_id": "req_retirement_receipt_readback_20261012",
+      "event_count": 5,
+      "all_three_retirement_events_found": true
+    },
+    "postconditions": {
+      "physical_checkout_absent": true,
+      "git_registration_absent": true,
+      "environment_main_head_unchanged": true,
+      "unrelated_prunable_frontier_worktree_preserved": true,
+      "working_tree_clean": true
+    }
+  },
+  "verification": {
+    "protected_dry_run": "pass",
+    "protected_canonical_publication": "pass",
+    "fresh_control_process_store_readback": "pass",
+    "focused_implementation_tests": {
+      "evidence": "evidence/retirement-request-replay-20261012.json",
+      "passed": 45
+    },
+    "store_service_restart_replay": "not exercised",
+    "caller_interruption_replay_against_canonical_store": "not exercised; request and crash transitions have isolated Store coverage"
+  },
+  "result": "PASS_CANONICAL_STORE_RETIREMENT_PUBLICATION_AND_READBACK",
+  "limitations": [
+    "This proves canonical event publication and fresh-process readback through the authenticated Control path; it is not a Store service restart or interrupted-publication acceptance.",
+    "The default project capsule is ambiguous without a campaign identity. Control then selected the exact session for the supplied durable campaign identity; it did not guess a session id.",
+    "Campaign delivery remains partial. The live Forge execution receipt to System Monitor to Store to Automation decision loop is still unproven.",
+    "Compiler and Forge claims remain with their recorded owners pending Environment handoffs."
+  ]
+}
