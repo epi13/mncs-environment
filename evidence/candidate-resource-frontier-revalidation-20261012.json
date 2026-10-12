@@ -1,0 +1,211 @@
+{
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "candidate_dispositions": [
+    {
+      "action": "retain; do not test, merge, or retire without owner-issued Environment handoff",
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "candidate": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "candidate_ahead": 1,
+      "candidate_frontier": "Two matched runs reached the 1,600 MiB sampled RSS stop before ir-prelude completion; HIR/SSA/backend outcome remains UNKNOWN.",
+      "candidate_matrix_sha256": "30bbdb35d6f920769e1e9956db0a6e616fb12f6338dacd0c974481fcf181ce78",
+      "classification": "stale-diverged-evidence-candidate; foreign-exclusive-claim",
+      "commit_scope": "evidence/SELF-HOST-MATRIX.json only",
+      "current_main_frontier": "1M-step reference remains in decl::parse_unit_mode; lexer.next_token_global 37.998s, scan_chunk_window 12.146s, significant_global 6.159s. The page-window guard showed no 100k-step speedup; Cranelift timed out before target execution.",
+      "differing_matrix_fields": [
+        "evidence_updated_at",
+        "identity_ledger",
+        "next_frontier"
+      ],
+      "main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "origin_main_behind": 14,
+      "origin_main_matrix_sha256": "1e82d83d8c8bdc9195f37dae6397e2daddc61fbcff928e584250e0a927447e72",
+      "repository": "mncs-compiler",
+      "stage1_claimed": false,
+      "worktree": {
+        "dirty": false,
+        "path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+        "present_in_host_inventory": true
+      }
+    },
+    {
+      "action": "retain; no tests, merge, source edits, or retirement pending owner-issued Environment handoff",
+      "branch": "campaign/forge-quiet-compile-output-20261010",
+      "candidate": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "candidate_ahead": 1,
+      "classification": "useful-unmerged-candidate; foreign-exclusive-claim",
+      "implementation": "NativeForgeAdapter adds --quiet and --omit-result to its fresh backend compile; one mock test asserts these flags and preserves backend.json bytes.",
+      "main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "main_patch_equivalent": false,
+      "origin_main_behind": 0,
+      "repository": "mncs-forge",
+      "worktree": {
+        "dirty": false,
+        "path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+        "present_in_host_inventory": true
+      }
+    },
+    {
+      "action": "leave the dirty worktree untouched; await explicit writable scope or owner-issued Environment path",
+      "branch": "campaign/process-environment-value-bound-20261010",
+      "candidate": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "candidate_ahead": 1,
+      "classification": "implementation-present-in-main; dirty-candidate-evidence-retained; Environment-write-scope-denied",
+      "current_tree_difference": [
+        "docs/mncs-badge.json"
+      ],
+      "implementation_patch_in_main": true,
+      "main": "12b29d6482599465698b78c87a21c63d3adeceb6",
+      "origin_main_behind": 3,
+      "repository": "mncs-language",
+      "retained_measurement": {
+        "candidate_wall_reduction_percent": 6.79,
+        "compiler_build_had_dirty_inputs": true,
+        "compiler_work_interpretation": "semantic compilation work was not shown faster; duplicated result serialization/output was removed",
+        "forge_execution": "NOT_RUN",
+        "serialized_output_bytes_reduction_percent": 66.79,
+        "stage1_or_stage2_claim": false
+      },
+      "worktree": {
+        "artifact_candidate_branch_and_commit_match_known_candidate": true,
+        "artifact_top_level_campaign_id_present": false,
+        "dirty": true,
+        "path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+        "present_in_host_inventory": true,
+        "untracked_bytes": 7684,
+        "untracked_path": "evidence/campaign-20261010-forge-core-quiet-output.json",
+        "untracked_sha256": "7b1d1a609703ffae19f0834252d68da638d279463e7d24a9e12123c4891efc42"
+      }
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "claim:mncs-compiler",
+      "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+      "environment_liveness": "live",
+      "expires_at": "2027-08-03T10:31:10+00:00",
+      "owner_session": "ses_d2537acde8b8a875",
+      "repository": "mncs-compiler",
+      "status": "held",
+      "version": 63
+    },
+    {
+      "claim_id": "claim:mncs-forge",
+      "consumer_id": "luna-compiler-self-consumption",
+      "environment_liveness": "live",
+      "expires_at": "2027-03-07T23:49:59+00:00",
+      "owner_session": "ses_95c3aa35b8544042",
+      "repository": "mncs-forge",
+      "status": "held",
+      "version": 28
+    },
+    {
+      "acquisition_attempt": {
+        "publication_completed": false,
+        "reason": "mncs-language is outside this Environment session's writable authority",
+        "request_id": "req_language_measurement_claim_20261012",
+        "result": "authority-denied",
+        "user_scope_request": "pending-at-observation"
+      },
+      "claim_id": "claim:mncs-language",
+      "environment_liveness": "not-live",
+      "last_owner_session": "ses_7226fbcfe65820f7",
+      "latest_version": 42,
+      "repository": "mncs-language",
+      "status": "released"
+    },
+    {
+      "claim_id": "claim:mncs-automation",
+      "environment_liveness": "live",
+      "expires_at": "2026-10-13T05:08:34+00:00",
+      "owner_session": "ses_7226fbcfe65820f7",
+      "repository": "mncs-automation",
+      "status": "held",
+      "version": 5
+    },
+    {
+      "claim_id": "claim:mncs-system-monitor",
+      "environment_liveness": "live",
+      "expires_at": "2026-10-13T05:08:49+00:00",
+      "owner_session": "ses_7226fbcfe65820f7",
+      "repository": "mncs-system-monitor",
+      "status": "held",
+      "version": 1
+    }
+  ],
+  "compiler_frontier": {
+    "compiler_candidate_head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+    "full_worktree_inventory": {
+      "cleanup_performed": false,
+      "dirty_checkouts": 8,
+      "heads_merged_into_origin_main": 65,
+      "heads_not_merged_into_origin_main": 1,
+      "observed_at": "2026-10-12T10:32:53+00:00",
+      "path": "evidence/compiler-worktree-disposition-dry-run-refresh-20261012.json",
+      "registered_count": 66,
+      "sha256": "0e185fe2cf7401e70d6f73bf39477414196b1e7525a3207c39fea50fa9936f27"
+    },
+    "latest_reported_flow_frontier": "1M-step decl parse: lexer.next_token_global 37.998s, scan_chunk_window 12.146s, significant_global 6.159s. Stage-1 remains unclaimed.",
+    "matrix_revision": "origin/main",
+    "matrix_sha256": "1e82d83d8c8bdc9195f37dae6397e2daddc61fbcff928e584250e0a927447e72",
+    "observed_at": "2026-10-08T15:06:29.523545+00:00",
+    "stage1_claimed": false
+  },
+  "environment_context": {
+    "authenticated_consumer": "local-agent",
+    "candidate_repositories_modified": [],
+    "candidate_tests_run": false,
+    "last_campaign_evidence_count": 138,
+    "last_campaign_state_checkpoint": "chk_f8be35e1aac8542f",
+    "method": "read-only Git and worktree inspection plus authenticated Control/Environment RPC reads",
+    "new_environment_evidence_write_scope": "mncs-environment only",
+    "session_id": "ses_7226fbcfe65820f7"
+  },
+  "observed_at_utc": "2026-10-12T12:05:50Z",
+  "resource_loop": {
+    "automation": {
+      "behavior": "resource-headroom consumes observed Monitor memory facts and requires one exact Forge execution identity plus subject digest; missing/stale/incomplete facts remain UNKNOWN",
+      "evidence_path": "evidence/resource-sample-condition-20261012.json",
+      "evidence_sha256": "bfe95a61908ba6f667ceecf46d52fe6d8785291fb7eb288b752d2460dcc679ee",
+      "head": "eaf0c10d48f5c8545cd52339577f4dae03bcf0aa",
+      "remote_head": "eaf0c10d48f5c8545cd52339577f4dae03bcf0aa"
+    },
+    "current_readiness": "partial; a canonical Monitor sample exists, but there is no persisted Forge receipt binding to correlate or drive a measured follow-up scheduling decision",
+    "forge_receipt_bindings": {
+      "count": 0,
+      "execution_receipts": [],
+      "observed_at_utc": "2026-10-12T12:05:50Z"
+    },
+    "next_integrated_step": "after owner handoff, run one small compiler task with resource intent, obtain Forge execution receipt, correlate it through System Monitor, persist its sample, and evaluate the subsequent Automation resource-headroom decision",
+    "system_monitor": {
+      "artifact_schema": "mncs.system-monitor.resource-sample.v1",
+      "evidence_path": "evidence/system-resource-sample-20261012.json",
+      "evidence_sha256": "8888d39a0cb958e6315952879ead9e4d06188147a8fb1233f44d08b4ce1916f9",
+      "head": "16789dccb2105849c3f0ebbd3a547bad6c8792d4",
+      "remote_head": "16789dccb2105849c3f0ebbd3a547bad6c8792d4"
+    }
+  },
+  "schema_version": "mncs.environment.candidate-resource-frontier-revalidation/1",
+  "store_transport": {
+    "canonical_store_visible_inside_bwrap": false,
+    "control_proof": {
+      "commit": "a0ee7a109368095d672c81d51ec5832ae613fa70",
+      "identity": "ev_control_environment_artifact_read_boundary_20261012",
+      "path": "evidence/environment-artifact-read-boundary-20261012.json",
+      "sha256": "93b545893b653dbe96a06c9bccaa6ae8c03b2f80e20d5e145a4fe73c2ef5e28b"
+    },
+    "direct_store_write_available_inside_bwrap": false,
+    "environment_proof_commit": "f1c29db0c4589c9b890da51a56fe21ee02645d56",
+    "environment_proof_identity": "ev_protected_store_artifact_read_20261012",
+    "environment_proof_path": "evidence/protected-store-artifact-read-20261012.json",
+    "environment_proof_sha256": "a9ce5dd5f87bcaec347822b00bd2b3a830f12f93fc137e9a8e264600ef0a3069",
+    "protected_artifact": {
+      "binding_id": "cap_9a39cbc2cdf18f11",
+      "bytes": 460,
+      "capability": "mncs-system-monitor:system-resource-sample",
+      "schema": "mncs.system-monitor.resource-sample.v1",
+      "session_id": "ses_7226fbcfe65820f7",
+      "sha256": "6cc3fb5cd4744914195e5312428db78efdf185cce34e8c091fd49249c6e9fcfe",
+      "store_ref": "mncs-store:ses_7226fbcfe65820f7:capability-invocation-artifacts:63f508b36f08907a645eac7f898dd504cae704ef3e559dba62747fb5ee86d9ed"
+    }
+  }
+}
