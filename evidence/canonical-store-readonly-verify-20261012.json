@@ -1,0 +1,69 @@
+{
+  "schema_version": "mncs.environment.canonical-store-readonly-verify/1",
+  "identity": "ev_environment_canonical_store_readonly_verify_20261012",
+  "recorded_at": "2026-10-12T22:31:30Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "execution": {
+    "command": "python3 -m mncs_env.cli store --session ses_7226fbcfe65820f7 --verify",
+    "sandbox": "project-scoped bwrap",
+    "path": "session-selected Environment Store provider",
+    "direct_agent_filesystem_write_to_store": false,
+    "mutations_performed": false
+  },
+  "result": {
+    "ok": true,
+    "generation": 47224,
+    "objects": 47226,
+    "relations": 0,
+    "provenance_records": 0,
+    "commit_feed": "4d430100000000000000b8780000b87a000000000000000098231aa7c1abfe9ec97c47d9d116082379eb55e18fc65ebaa48829e9677d0034",
+    "chunk_size": 65536,
+    "fanout": 31,
+    "reported_recovery": "RECOVERED_OLD",
+    "recovery_interpretation": "read-only open sentinel; this result does not indicate rollback or repair"
+  },
+  "source_identity": {
+    "environment": {
+      "repository": "mncs-environment",
+      "revision": "403b957470854797ad433a78beac3ce5b1559fbc",
+      "files": [
+        {
+          "path": "mncs_env/session_store.py",
+          "sha256": "cb00f95109d886ff132fbafc2bc81bd12914440deb7019b83cb91564833b77fd"
+        },
+        {
+          "path": "mncs_env/store_backend.py",
+          "sha256": "9f1189afecb9d4f73691cb341385a5632e93c03a360a45ca0ab129f290a91876"
+        },
+        {
+          "path": "mncs_env/cli.py",
+          "sha256": "e2c8b2d03475b8f388b256345dbee5ce509cafdf31fb72eb5eee0f08c69224dd"
+        }
+      ]
+    },
+    "store": {
+      "repository": "mncs-store",
+      "revision": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055",
+      "file": {
+        "path": "python/mncs_store/embedded.py",
+        "sha256": "81ebc11d91cbabb38337bf4bb27ac2c2ccf617c08d2f65c368764f10b2177450"
+      }
+    }
+  },
+  "verification_semantics": {
+    "open_store_default": "defer_mutation=true",
+    "existing_store_mode": "EmbeddedStore(read_only=true)",
+    "read_only_recovery": "no recovery, lock creation, directory initialization, or cleanup",
+    "verify": "walks the current generation and verifies every object payload before reporting the commit feed"
+  },
+  "readiness": {
+    "canonical_store_full_payload_integrity": "passed",
+    "object_count_verified": 47226,
+    "generation_verified": 47224,
+    "post_checkpoint_fresh_process_readback": "passed at checkpoint chk_452e6ba6f6e67ed3"
+  },
+  "limitations": [
+    "This verification does not exercise a Store crash failpoint; claim-transfer failpoint tests use a test-owned temporary EmbeddedStore."
+  ]
+}
