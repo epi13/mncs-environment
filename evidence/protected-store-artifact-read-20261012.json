@@ -1,0 +1,101 @@
+{
+  "schema_version": "mncs.environment.protected-store-artifact-read/1",
+  "evidence_id": "ev_protected_store_artifact_read_20261012",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "owner": "mncs-environment",
+  "source_identities": {
+    "mncs-environment": {
+      "branch": "main",
+      "commit": "aaeeee16eb2d24488cfb8b4ef19964e86316b5b9",
+      "remote_ref": "origin/main"
+    },
+    "mncs-control-mcp": {
+      "branch": "main",
+      "commit": "12e11253849570159cf0e0da229c288ec7ec9ede",
+      "remote_ref": "origin/main"
+    }
+  },
+  "behavior": {
+    "operation": "Environment artifact-read over the authenticated Control Environment RPC",
+    "scope": "Environment project grant; exact System Monitor sample capability and file",
+    "continuation": {
+      "status": "ready",
+      "selection_basis": "authenticated-project-environment-definition",
+      "selected_session_id": "ses_7226fbcfe65820f7",
+      "other_same_campaign_context": "ses_b4b2d283542220b0",
+      "other_context_adopted": false
+    },
+    "artifact": {
+      "capability": "mncs-system-monitor:system-resource-sample",
+      "binding_id": "cap_9a39cbc2cdf18f11",
+      "declared_effects": ["read"],
+      "path": "system-resource-sample.json",
+      "schema": "mncs.system-monitor.resource-sample.v1",
+      "byte_count": 460,
+      "sha256": "6cc3fb5cd4744914195e5312428db78efdf185cce34e8c091fd49249c6e9fcfe",
+      "store_reference": "mncs-store:ses_7226fbcfe65820f7:capability-invocation-artifacts:63f508b36f08907a645eac7f898dd504cae704ef3e559dba62747fb5ee86d9ed"
+    },
+    "persistence_boundary": {
+      "sandbox_backend": "bwrap",
+      "canonical_store_visible_inside_sandbox": false,
+      "direct_write_access": false,
+      "direct_write_check": "test ! -w <configured canonical Store path> succeeded; no write was attempted",
+      "transport": "Control host process opened the canonical Store and returned one verified artifact file",
+      "filesystem_path_or_descriptor_exposed": false
+    },
+    "request_ids": [
+      "req_artifact_continuation_20261012",
+      "req_artifact_read_live_20261012"
+    ],
+    "execution_window": {
+      "started_at": "2026-10-12T11:45:34.938601Z",
+      "completed_at": "2026-10-12T11:45:51.155162Z",
+      "exit_code": 0
+    }
+  },
+  "verification": {
+    "environment_full_module": {
+      "command": "/home/epi13/.local/bin/pytest -q tests/test_environment.py",
+      "result": "178 passed in 286.21s; run before the final exact-binding rejection case was added"
+    },
+    "environment_focused_final": {
+      "command": "/home/epi13/.local/bin/pytest -q tests/test_environment.py -k artifact_read",
+      "result": "5 passed, 174 deselected"
+    },
+    "control_rpc": {
+      "command": ".venv/bin/pytest -q tests/test_environment_rpc.py",
+      "result": "32 passed"
+    },
+    "lint_and_diff": {
+      "environment": "ruff F401/F821/E4/E7/E9 checks and git diff --check passed",
+      "control": "ruff checks and git diff --check passed"
+    },
+    "protected_live_read": "PASS; continuation and artifact read ran in one protected bwrap grant; decoded file size and SHA-256 matched the response and the System Monitor schema"
+  },
+  "readiness": {
+    "bounded_store_artifact_read": "implemented, tested, and proven against canonical Store through Control RPC",
+    "direct_agent_store_write_access": "not granted",
+    "campaign_and_session_continuity": "selected session resolved from the authenticated continuation capsule",
+    "overall_campaign": "partial"
+  },
+  "active_claims": [
+    {"claim_id": "claim:mncs-environment", "version": 33, "session_id": "ses_7226fbcfe65820f7", "status": "held"},
+    {"claim_id": "claim:mncs-control-mcp", "version": 9, "session_id": "ses_7226fbcfe65820f7", "status": "held"},
+    {"claim_id": "claim:mncs-automation", "version": 5, "session_id": "ses_7226fbcfe65820f7", "status": "held"},
+    {"claim_id": "claim:mncs-system-monitor", "version": 1, "session_id": "ses_7226fbcfe65820f7", "status": "held"},
+    {"claim_id": "claim:mncs-compiler", "version": 63, "session_id": "ses_d2537acde8b8a875", "status": "held"},
+    {"claim_id": "claim:mncs-forge", "version": 28, "session_id": "ses_95c3aa35b8544042", "status": "held"},
+    {"claim_id": "claim:mncs-reference-studies", "version": 7, "session_id": "ses_95c3aa35b8544042", "status": "held"}
+  ],
+  "protected_work": [
+    {"repository": "mncs-compiler", "candidate": "2b6f381", "disposition": "retained; no tests, edits, merge, or retirement without an owner-issued handoff"},
+    {"repository": "mncs-forge", "candidate": "608334b", "disposition": "retained; no tests, edits, merge, or retirement without an owner-issued handoff"},
+    {"repository": "mncs-language", "candidate": "fc49c0c", "disposition": "previously verified patch-equivalent to main; untracked evidence worktree retained"}
+  ],
+  "next_work": [
+    "Wait for the promised Environment handoffs before touching Compiler or Forge claims and candidates.",
+    "Complete the compiler resource-feedback slice with a real Forge receipt, Monitor correlation, Store evidence, and a subsequent Automation decision.",
+    "Keep the second Environment context ses_b4b2d283542220b0 separate until its authorized owner selects or hands it off."
+  ]
+}
