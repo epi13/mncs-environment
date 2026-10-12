@@ -1,0 +1,107 @@
+{
+  "schema_version": "mncs.environment.canonical-store-caller-interruption/1",
+  "identity": "ev_environment_canonical_store_caller_interruption_20261012",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "recorded_at": "2026-10-12T23:19:47Z",
+  "owner": "mncs-environment",
+  "source_identity": {
+    "repository": "mncs-environment",
+    "revision": "a8c7aeef35fad55d3e8b28141aba003a5abc08ad"
+  },
+  "execution": {
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "transport": "mncs-control-environment-rpc",
+    "control_peer_authentication": "Control-issued per-execution grant and Unix peer credentials",
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_path_mounted_in_agent": false,
+    "agent_direct_store_access": false,
+    "continuation_status": "ready",
+    "selected_campaign_id": "cmp_mncs_continuity_20261010",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "campaign_checkpoint_before_probe": "chk_32e9ca78f9e0732b"
+  },
+  "caller_interruption": {
+    "acquire": {
+      "request_id": "req_caller_drop_acquire_20261012",
+      "operation": "acquire nonexclusive paths claim",
+      "claim_id": "claim:mncs-environment:paths:f967c09ca6c3",
+      "scope": {
+        "kind": "paths",
+        "paths": [
+          "evidence/.mncs-caller-interruption-probe-20261012"
+        ],
+        "exclusive": false
+      },
+      "request_bytes_sent": true,
+      "caller_closed_socket_before_receipt": true,
+      "caller_exit_code": 71,
+      "fresh_process_readback_before_retry": {
+        "identity": "clm_99c165aaf2fafe7d",
+        "version": 1,
+        "status": "held",
+        "session_id": "ses_7226fbcfe65820f7",
+        "operation_request_id": "req_caller_drop_acquire_20261012"
+      },
+      "stable_request_replay": {
+        "exit_code": 0,
+        "returned_same_identity": "clm_99c165aaf2fafe7d",
+        "returned_same_version": 1,
+        "duplicate_version_created": false
+      }
+    },
+    "release": {
+      "request_id": "req_caller_drop_release_20261012",
+      "operation": "release the probe claim",
+      "claim_id": "claim:mncs-environment:paths:f967c09ca6c3",
+      "request_bytes_sent": true,
+      "caller_closed_socket_before_receipt": true,
+      "caller_exit_code": 72,
+      "fresh_process_readback_before_retry": {
+        "identity": "clm_20bf8b8c7e378843",
+        "version": 2,
+        "status": "released",
+        "live": false,
+        "operation_request_id": "req_caller_drop_release_20261012"
+      },
+      "stable_request_replay": {
+        "exit_code": 0,
+        "result": {
+          "released": true
+        }
+      },
+      "fresh_process_readback_after_retry": {
+        "identity": "clm_20bf8b8c7e378843",
+        "version": 2,
+        "status": "released",
+        "live": false,
+        "duplicate_version_created": false
+      }
+    },
+    "sole_owner_after_replay": true,
+    "foreign_claims_modified": false,
+    "notes": "The caller sent a complete framed request and exited without reading a receipt. Fresh protected invocations read back the committed Store claim versions. Replays used the original stable request identities."
+  },
+  "canonical_store_integrity": {
+    "operation": "session-authorized read-only Store verification",
+    "invocation": "python3 -m mncs_env.cli store --session ses_7226fbcfe65820f7 --verify",
+    "exit_code": 0,
+    "ok": true,
+    "generation": 47285,
+    "objects_verified": 47287,
+    "relations": 0,
+    "provenance_records": 0,
+    "recovery_result": "RECOVERED_OLD",
+    "commit_feed": "4d430100000000000000b8b50000b8b70000000000000000a0aeb38e0dfab26951e30bcf97a0ea268d24299f743d356ae3970090e744ce2b",
+    "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf"
+  },
+  "readiness": {
+    "protected_canonical_checkpoint_and_claim_readback": "pass in referenced acceptance evidence",
+    "caller_interruption_and_stable_claim_retry": "pass",
+    "canonical_store_integrity_after_probe": "pass",
+    "service_process_termination_and_restart_after_canonical_commit": "not_proven",
+    "campaign_delivery": "partial",
+    "reason": "A protected caller was interrupted after sending canonical claim acquire and release requests; fresh processes observed each committed result and stable retries did not create duplicate claim versions. This does not prove loss of the Control service process or recovery after its restart."
+  }
+}
