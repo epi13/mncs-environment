@@ -1,0 +1,122 @@
+{
+  "schema_version": "mncs.environment.candidate-static-review/1",
+  "identity": "ev_candidate_static_review_20261012",
+  "observed_at": "2026-10-12T11:04:43Z",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "review_scope": {
+    "method": "read-only Git status, ancestry, tree, patch, and diff inspection",
+    "tests_run": false,
+    "candidate_repositories_modified": false,
+    "producer_identity_from_commit_metadata": "not established; commit author fields are not authenticated campaign ownership"
+  },
+  "handoff_status": {
+    "compiler": "no owner-issued transfer observed; claim remains held by its recorded owner",
+    "forge": "no owner-issued transfer observed; claim remains held by its recorded owner",
+    "forge_reference_studies": "no owner-issued transfer observed; claim remains held by its recorded owner",
+    "claim_liveness_note": "Environment reports live=true for these claim records; this classifier result does not prove that the owner process exists in the current namespace"
+  },
+  "claims": [
+    {
+      "repository": "mncs-compiler",
+      "claim_id": "claim:mncs-compiler",
+      "claim_identity": "clm_5871ad9917e5210d",
+      "version": 63,
+      "status": "held",
+      "environment_liveness_classification": true,
+      "owner_session": "ses_d2537acde8b8a875",
+      "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+      "expires_at": "2027-08-03T10:31:10+00:00",
+      "observed_at": "2026-10-12T11:03:26Z"
+    },
+    {
+      "repository": "mncs-forge",
+      "claim_id": "claim:mncs-forge",
+      "claim_identity": "clm_16b820b3293d873b",
+      "version": 28,
+      "status": "held",
+      "environment_liveness_classification": true,
+      "owner_session": "ses_95c3aa35b8544042",
+      "consumer_id": "luna-compiler-self-consumption",
+      "expires_at": "2027-03-07T23:49:59+00:00",
+      "observed_at": "2026-10-12T11:03:55Z"
+    },
+    {
+      "repository": "mncs-reference-studies",
+      "claim_id": "claim:mncs-reference-studies",
+      "claim_identity": "clm_7adf92b300de6b72",
+      "version": 7,
+      "status": "held",
+      "environment_liveness_classification": true,
+      "owner_session": "ses_95c3aa35b8544042",
+      "consumer_id": "luna-compiler-self-consumption",
+      "expires_at": "2027-03-07T23:47:38+00:00",
+      "observed_at": "2026-10-12T11:04:04Z"
+    }
+  ],
+  "candidates": [
+    {
+      "repository": "mncs-compiler",
+      "main_revision": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "worktree": "/tmp/mncs-compiler-keyword-local-index-20261010",
+      "head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "tree": "58134304d0c0894cf39492628a42f91438ba1963",
+      "parent": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+      "ahead_of_main": 1,
+      "behind_main": 14,
+      "worktree_clean": true,
+      "diff": {
+        "files": [
+          "evidence/SELF-HOST-MATRIX.json"
+        ],
+        "insertions": 20,
+        "deletions": 2,
+        "classification": "delivery evidence only",
+        "implementation_commit": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+        "implementation_commit_is_ancestor_of_main": true
+      },
+      "disposition": "retain pending owner handoff; source implementation is already in main, while this candidate adds a delivery record that requires ancestry-aware integration"
+    },
+    {
+      "repository": "mncs-forge",
+      "main_revision": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "branch": "campaign/forge-quiet-compile-output-20261010",
+      "worktree": "/tmp/mncs-forge-quiet-compile-output-20261010",
+      "head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "tree": "7d4fa071a0628e945b949b041f4de90f24b150de",
+      "parent": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "ahead_of_main": 1,
+      "behind_main": 0,
+      "worktree_clean": true,
+      "diff": {
+        "files": [
+          "src/mncs_forge/mncs_native.py",
+          "tests/test_mncs_native.py"
+        ],
+        "insertions": 34,
+        "deletions": 0,
+        "summary": "adds --quiet and --omit-result to the backend compile command and a focused file-only output test"
+      },
+      "disposition": "retain pending owner handoff and focused test; do not merge or retire"
+    },
+    {
+      "repository": "mncs-language",
+      "main_revision": "12b29d6482599465698b78c87a21c63d3adeceb6",
+      "branch": "campaign/process-environment-value-bound-20261010",
+      "worktree": "/tmp/mncs-language-process-environment-value-bound-20261010",
+      "head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "tree": "e239179d9a6a433007ac9211bc467098883be254",
+      "parent": "e8f8a5f8659c71b33cd32c964d4982bec1a9668e",
+      "worktree_clean": false,
+      "untracked_paths": [
+        "evidence/campaign-20261010-forge-core-quiet-output.json"
+      ],
+      "patch_id": "d59075fdf3391a828010e8e1b8dde48edb869e0e",
+      "patch_equivalent_main_commit": "7cfd996",
+      "patch_equivalence_verified": true,
+      "disposition": "implementation patch is present on main; preserve the untracked evidence and retain the candidate checkout until ownership and evidence disposition are confirmed"
+    }
+  ],
+  "readiness": "static candidate review complete; Compiler and Forge tests, merges, and retirement remain unauthorized pending owner-issued handoffs"
+}
