@@ -1,0 +1,78 @@
+{
+  "schema_version": "mncs.environment.campaign-evidence-capacity-acceptance/1",
+  "identity": "ev_campaign_state_input_capacity_20261012",
+  "recorded_at": "2026-10-12T04:23:10Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "environment_session_id": "ses_7226fbcfe65820f7",
+  "source_heads": {
+    "mncs-environment": "fd521b054b0f13a1650ad04a5f624a712a278740",
+    "mncs-control-mcp": "02c39765504794e250fc65e957f199e07be681d4"
+  },
+  "source_files": [
+    {
+      "repository": "mncs-environment",
+      "path": "mncs_env/sessions.py",
+      "sha256": "65899f3afe4fa809b29e28747e2aad5c97d4f3875229b46a38ea2f6653ab2200"
+    },
+    {
+      "repository": "mncs-environment",
+      "path": "tests/test_campaign_metadata_bounds.py",
+      "sha256": "2082e5c5b8ee3a585169ac5b5c467acb755c589b314eaf27b54d05397b782e60"
+    },
+    {
+      "repository": "mncs-control-mcp",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "b27699c8e9a5a53d6005ed9622db044012e937fda32b559e5c4d30aff0ba8f25"
+    },
+    {
+      "repository": "mncs-control-mcp",
+      "path": "tests/test_environment_rpc.py",
+      "sha256": "2b2cb6033ad1df86ebddaf6cc74fc877a39cb6879e3b24b40a0e9791849f52bb"
+    }
+  ],
+  "behavior": {
+    "environment_campaign_state_input_max_bytes": 49152,
+    "control_environment_rpc_argument_max_bytes": 49152,
+    "control_environment_rpc_request_max_bytes": 262144,
+    "larger_than_32_kib_campaign_ledger_is_accepted": true,
+    "payloads_over_48_kib_are_rejected": true,
+    "all_prior_immutable_evidence_references_must_be_retained": true,
+    "prior_campaign_evidence_was_not_removed": true
+  },
+  "validation": {
+    "environment_test": {
+      "command": "PYTHONPATH=. python -m pytest -q tests/test_campaign_metadata_bounds.py",
+      "result": "2 passed",
+      "terminal_job_id": "term-17bb83b3036878a250915891",
+      "sandbox_backend": "bwrap",
+      "scope": "project",
+      "network": false,
+      "exit_code": 0
+    },
+    "control_test": {
+      "command": "PYTHONPATH=src python -m pytest -q tests/test_environment_rpc.py",
+      "result": "31 tests completed successfully",
+      "terminal_job_id": "term-eb87e750e9969c43cbbda05e",
+      "sandbox_backend": "bwrap",
+      "scope": "project",
+      "network": false,
+      "exit_code": 0
+    },
+    "static_checks": [
+      "Environment python -m compileall -q mncs_env",
+      "Control python -m compileall -q src",
+      "git diff --check in both repositories"
+    ]
+  },
+  "ownership_and_readiness": {
+    "environment_owner": "mncs-environment",
+    "rpc_transport_owner": "mncs-control-mcp",
+    "canonical_store_authority": "Environment RPC and configured Store provider",
+    "campaign_checkpoint_after_artifact_publication": "pending",
+    "canonical_store_path_proof": "see ev_compact_continuation_context_20261012",
+    "campaign_delivery": "partial",
+    "compiler_stage_1": "unproven",
+    "compiler_stage_2": "unproven",
+    "resource_feedback_vertical_slice": "pending"
+  }
+}
