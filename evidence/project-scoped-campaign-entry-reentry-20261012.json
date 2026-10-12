@@ -1,0 +1,92 @@
+{
+  "schema_version": "mncs.environment.project-scoped-campaign-entry-restart-proof/1",
+  "identity": "ev_project_scoped_campaign_entry_restart_20261012",
+  "recorded_at": "2026-10-12T08:10:42.157140Z",
+  "owner": "mncs-environment",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "purpose": "Record a fresh protected project entry resuming the authenticated durable campaign session through Control's owner-mapped workspace path.",
+  "sources": [
+    {
+      "repository": "mncs-environment",
+      "revision": "9d68a463a59e9bb4cd1131f47855673f8d8ed868",
+      "files": [
+        {
+          "path": "mncs_env/entry.py",
+          "sha256": "18994dfca86b2e2885a9bd49e2859de6a495ea8c70069dc9d5565d3b0bc7cf8e"
+        },
+        {
+          "path": ".mncs/project-environment.json",
+          "sha256": "9bfa2806ca68f8a440a73922d1289e63da6c9ce03c53223d92eb9dbba92d3839"
+        }
+      ]
+    },
+    {
+      "repository": "mncs-control-mcp",
+      "revision": "02c39765504794e250fc65e957f199e07be681d4",
+      "files": [
+        {
+          "path": "src/mncs_control_mcp/environment_rpc.py",
+          "sha256": "b27699c8e9a5a53d6005ed9622db044012e937fda32b559e5c4d30aff0ba8f25"
+        }
+      ]
+    }
+  ],
+  "execution": {
+    "transport": "authenticated MNCS Control Environment RPC",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "initial_attempt": {
+      "command": "./scripts/mncs-env enter --definition .mncs/project-environment.json --workspace .. --campaign-id cmp_mncs_continuity_20261010",
+      "result": "rejected",
+      "diagnostic_code": "publication-rejected",
+      "cause": "client path resolves outside its granted root",
+      "publication_completed": false
+    },
+    "owner_mapped_retry": {
+      "command": "./scripts/mncs-env enter --definition .mncs/project-environment.json --campaign-id cmp_mncs_continuity_20261010",
+      "started_at": "2026-10-12T08:10:09.842446Z",
+      "completed_at": "2026-10-12T08:10:42.157140Z",
+      "exit_code": 0,
+      "workspace_root_source": "Control configured workspace root injected after validating the admitted project definition"
+    }
+  },
+  "result": {
+    "persistence": "store",
+    "session_id": "ses_7226fbcfe65820f7",
+    "environment_id": "renv_ef518b3ade5d6337",
+    "workspace_root": "/home/epi13/Documents/Projects",
+    "work_intent": {
+      "identity": "int_8475157f281c835f",
+      "goal": "exercise canonical Environment persistence through the Control socket"
+    },
+    "lifecycle": "active",
+    "reused_preexisting_session": true,
+    "new_session_created": false,
+    "readiness": {
+      "status": "degraded",
+      "available_count": 12,
+      "unavailable_count": 3,
+      "unknown_count": 9
+    },
+    "projection": {
+      "persisted": true,
+      "store_ref": "mncs-store:ses_7226fbcfe65820f7:projections:6155db36208eebca395d81f2c20ad0f35e42048e8481677e64aaab515d3b49fd",
+      "pending_count": 11,
+      "reconciled_count": 0
+    }
+  },
+  "continuity": {
+    "previously_discovered_campaign_contexts": 2,
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "selection_basis": "authenticated campaign identity plus the admitted project Environment definition and Control-mapped workspace",
+    "other_contexts_adopted_or_modified": false,
+    "compiler_and_forge_claims_changed": false
+  },
+  "limitations": [
+    "The project-level capsule still reports another active Environment context for this campaign; the fresh entry selected the exact existing project session and left the other context untouched.",
+    "Environment readiness remains degraded with three unavailable and nine unknown capabilities.",
+    "This proves protected Environment reentry and Store-backed projection persistence; it does not prove System Monitor resource-sample invocation, a real Forge receipt feedback loop, or compiler succession."
+  ]
+}
