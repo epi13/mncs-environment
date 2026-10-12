@@ -1334,7 +1334,7 @@ def build_parser() -> argparse.ArgumentParser:
     invoke.add_argument("--cwd", default=None)
     invoke.add_argument("--timeout", type=int, default=120)
     invoke.add_argument("--output-limit-bytes", type=int,
-                        default=capabilities_module.DEFAULT_OUTPUT_LIMIT_BYTES,
+                        default=None,
                         help=f"bounded stdout/stderr capture limit (max {capabilities_module.MAX_OUTPUT_LIMIT_BYTES})")
     invoke.add_argument("argv", nargs="*")
     invoke.set_defaults(func=cmd_invoke)

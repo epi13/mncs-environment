@@ -1363,6 +1363,8 @@ class CapabilityTests(unittest.TestCase):
             if item.get("contract") == "campaign-state-inspection"
         )
         self.assertEqual(campaign_state["effects"], ["read"])
+        self.assertEqual(campaign_state["version"], "2")
+        self.assertEqual(campaign_state["output_limit_bytes"], 131072)
         self.assertEqual(campaign_state["invocation"], {
             "kind": "executable",
             "path": "scripts/mncs-env",
@@ -2688,6 +2690,28 @@ class SessionTests(unittest.TestCase):
                 session.invoke(
                     "echoer", ["hi"],
                     output_limit_bytes=capabilities.MAX_OUTPUT_LIMIT_BYTES + 1)
+
+    def test_session_invoke_uses_capability_declared_output_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            binding = capabilities.probe_availability(
+                capabilities.bind(
+                    provider="p", capability="campaign-state-inspector",
+                    contract_revision="2", entrypoint="e", address="/bin/echo",
+                    effects=["read"], output_limit_bytes=131072,
+                )
+            )
+            session.snapshot["bindings"].append(binding)
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke",
+                return_value={"status": "ok", "returncode": 0,
+                              "stdout": "ok", "stderr": ""},
+            ) as provider:
+                result = session.invoke("campaign-state-inspector", ["ready"])
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(
+                provider.call_args.kwargs["output_limit_bytes"], 131072
+            )
 
     def test_session_invoke_scopes_parent_rpc_identity_to_provider_child(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

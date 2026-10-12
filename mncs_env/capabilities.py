@@ -135,9 +135,10 @@ def bind(
     fixed_env: dict[str, str] | None = None,
     timeout_seconds: int | None = None,
     working_directory: str | None = None,
+    output_limit_bytes: int | None = None,
 ) -> dict[str, Any]:
     """Construct a binding record (availability is observed separately)."""
-    return {
+    record = {
         "schema_version": SCHEMA,
         "binding_id": _binding_id(provider, capability, contract_revision),
         "provider": provider,
@@ -157,6 +158,11 @@ def bind(
         "availability": {"status": "unknown", "reason": "not yet probed", "observed_at": None},
         "provenance": provenance or {},
     }
+    if output_limit_bytes is not None:
+        record["output_limit_bytes"] = validate_output_limit_bytes(
+            output_limit_bytes
+        )
+    return record
 
 
 _PROTECTED_TOOLCHAIN_ENV = {
@@ -672,6 +678,12 @@ def _from_semantic_contracts(
                 or any(effect not in {"read", "verify", "write", "execute", "publish"}
                        for effect in effects)):
             continue
+        output_limit_bytes = entry.get("output_limit_bytes")
+        if (output_limit_bytes is not None
+                and (type(output_limit_bytes) is not int
+                     or output_limit_bytes < 1
+                     or output_limit_bytes > MAX_OUTPUT_LIMIT_BYTES)):
+            continue
         record = bind(
             provider=repository_id,
             capability=contract,
@@ -684,6 +696,7 @@ def _from_semantic_contracts(
             fixed_env=declared["fixed_env"],
             effects=[str(effect) for effect in effects],
             event_types=["unknown"],
+            output_limit_bytes=output_limit_bytes,
             provenance={"source": f"{repo.name}/family-semantic-contracts-v1.json",
                         "status": entry.get("status"), "addressing": addressing,
                         "adapter_library_paths": declared["adapter_library_paths"]},

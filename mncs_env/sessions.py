@@ -2402,7 +2402,7 @@ class Session:
         *,
         cwd: str | Path | None = None,
         timeout_seconds: int | None = None,
-        output_limit_bytes: int = capabilities_module.DEFAULT_OUTPUT_LIMIT_BYTES,
+        output_limit_bytes: int | None = None,
         env: dict[str, str] | None = None,
         effect_target: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -2417,10 +2417,16 @@ class Session:
         this session's exact observed checkout. Invocation records carry both
         executor and effect target.
         """
+        binding = self._binding(capability)
+        if output_limit_bytes is None:
+            declared_limit = binding.get("output_limit_bytes")
+            output_limit_bytes = (
+                declared_limit if declared_limit is not None
+                else capabilities_module.DEFAULT_OUTPUT_LIMIT_BYTES
+            )
         output_limit_bytes = capabilities_module.validate_output_limit_bytes(
             output_limit_bytes
         )
-        binding = self._binding(capability)
         binding = capabilities_module.bind_session_context(
             binding, argv, session_id=self.session_id,
         )
@@ -3151,7 +3157,7 @@ class Session:
         binding_fields = (
                 "contract_revision", "entrypoint", "address", "effects", "toolchain_address",
                 "toolchain_env", "fixed_argv", "fixed_env", "timeout_seconds", "working_directory", "provenance",
-            "provider_root", "event_types",
+            "provider_root", "event_types", "output_limit_bytes",
         )
         report: dict[str, Any] = {
             "reprobed": 0, "reused": 0, "changed": [], "bound": [], "unbound": []
