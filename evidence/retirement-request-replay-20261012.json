@@ -1,0 +1,132 @@
+{
+  "schema_version": "mncs.campaign.environment-retirement-replay/1",
+  "identity": "ev_retirement_request_replay_20261012",
+  "recorded_at_utc": "2026-10-12T15:19:28Z",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "ownership_snapshot": {
+    "read_at_utc": "2026-10-12T15:18:40Z",
+    "environment_claim": {
+      "version": 33,
+      "status": "held",
+      "expires_at": "2026-10-12T19:38:47Z"
+    },
+    "automation_claim": {
+      "version": 5,
+      "status": "held",
+      "expires_at": "2026-10-13T05:08:34Z"
+    },
+    "system_monitor_claim": {
+      "version": 1,
+      "status": "held",
+      "expires_at": "2026-10-13T05:08:49Z"
+    },
+    "foreign_claims_preserved": [
+      {
+        "repository": "mncs-compiler",
+        "session_id": "ses_d2537acde8b8a875",
+        "version": 63,
+        "status": "held",
+        "expires_at": "2027-08-03T10:31:10Z"
+      },
+      {
+        "repository": "mncs-forge",
+        "session_id": "ses_95c3aa35b8544042",
+        "version": 28,
+        "status": "held",
+        "expires_at": "2027-03-07T23:49:59Z"
+      }
+    ],
+    "handoff_status": "no Environment handoff record was supplied or adopted during this checkpoint"
+  },
+  "source": {
+    "repository": "mncs-environment",
+    "baseline_main": "a6d054029fdbf1f0f61a08392ca7773e07796b79",
+    "implementation_commit": "e14e31017bba6ddfa5903c89d6a2e9c835e293ba",
+    "candidate_branch": "campaign/retirement-replay-20261012",
+    "files_sha256": {
+      "mncs_env/cli.py": "592686ed9319db564a25ee3482dff181561d7f82fdc27f4cf41b65cd8da76df5",
+      "mncs_env/events.py": "414f62bda82279b28880e27754047d581327385331a92fc7d6f342d07f0f7205",
+      "mncs_env/retire.py": "a7c7b7de72e327228e1d0616c15f82d1b30c648c3225f54b91407897c32eaaf2",
+      "mncs_env/sessions.py": "afff4d02d5e4954d696d3d47022bb35fb63f11636a2f1ade249c8340d5f86375",
+      "tests/test_retire.py": "b02e89ebeee0d46458a83e2dcdfaf57125114d18b7c4cb5275e654c46f857043",
+      "tests/test_session_completion.py": "af3375e0cdc3dd5bbf020a645557af03acb90d80dd5e43129e6345c2bff11ecc"
+    }
+  },
+  "implementation": {
+    "owner": "mncs-environment",
+    "typed_events": [
+      "environment.retirement.requested",
+      "environment.retirement.target-completed",
+      "environment.retirement.completed"
+    ],
+    "durable_identity": "The authenticated Control request identity is bound to the Environment session, consumer, principal, campaign, full command, and target index.",
+    "intent_and_receipts": "One durable intent precedes Git mutation. Each completed target has its own durable receipt; the final receipt is written after all targets complete. A replay returns the saved result and marks replayed_request.",
+    "reconciliation": [
+      "A worktree is complete only when both its recorded Git registration and physical checkout are absent.",
+      "A surviving registration with a missing checkout, an unregistered surviving directory, or a changed administrative identity remains UNKNOWN and is preserved.",
+      "An interrupted branch deletion is reconciled against its original object id; Git ref deletion uses update-ref compare-and-delete.",
+      "Prune retries are restricted to the recorded Git prune candidates and protected calls run inside the exact project alias."
+    ],
+    "authority_and_provenance": "The session rechecks retirement authority and Store claims before each retrying mutation. Intent and completion events record the Environment session, consumer, authenticated principal, campaign, admitted scope, exact target identity, and result.",
+    "store_boundary": "Environment events use the existing Store-backed session event log. The change adds no Store filesystem access or alternate persistence database."
+  },
+  "verification": {
+    "focused_suite": {
+      "command": "python -m pytest -q tests/test_retire.py tests/test_session_completion.py",
+      "passed": 45,
+      "duration_seconds": 2.21,
+      "covers": [
+        "process exit before Git mutation and safe retry",
+        "process exit after worktree removal and before receipt publication",
+        "split checkout/registration preservation",
+        "same-path replacement checkout fencing",
+        "request event replay and request identity reuse rejection",
+        "branch compare-and-delete under a concurrent ref change",
+        "protected nested bubblewrap identity verification and worktree removal"
+      ]
+    },
+    "full_suite": {
+      "command": "python -m pytest -q",
+      "passed": 696,
+      "skipped": 46,
+      "duration_seconds": 638.96,
+      "source_note": "The full run preceded only a syntax-preserving flattening of cmd_resident's nested context managers; the focused suite, compileall, and Ruff were rerun on the final implementation tree."
+    },
+    "static_checks": {
+      "command": "ruff check mncs_env/cli.py mncs_env/retire.py mncs_env/events.py tests/test_retire.py tests/test_session_completion.py; python -m compileall -q mncs_env tests; git diff --check",
+      "result": "passed"
+    },
+    "protected_git_namespace": {
+      "test": "test_protected_git_worktree_retires_inside_exact_project_alias",
+      "backend": "nested bubblewrap",
+      "writable_mount": "exact test-owned Git project only",
+      "network": false,
+      "canonical_store_visible": false,
+      "result": "passed"
+    },
+    "isolated_event_restart": {
+      "backend": "FileSessionStore debug projection in a test-owned temporary directory",
+      "fresh_session_readback": true,
+      "result": "passed",
+      "canonical_store_proof": false
+    }
+  },
+  "readiness": {
+    "status": "implemented_and_component_verified",
+    "canonical_retirement_receipt_acceptance": "not yet exercised through the live authenticated Control transport against canonical Store",
+    "prior_canonical_store_transport_evidence": "evidence/canonical-store-path-grant-acceptance-20261011.json",
+    "campaign_delivery": "partial"
+  },
+  "delivery": {
+    "branch_commit": "e14e31017bba6ddfa5903c89d6a2e9c835e293ba",
+    "main_merge": "pending",
+    "push": "pending"
+  },
+  "limitations": [
+    "The restart test intentionally uses a test-owned FileSessionStore and is not evidence of canonical Store retirement publication.",
+    "The protected Git namespace test proves the scoped Git removal path but does not invoke the live Control RPC or canonical Store for this new retirement protocol.",
+    "Compiler and Forge remain held by their recorded foreign owners; no handoff was present, so those repositories were not tested or modified.",
+    "Compiler succession and the real Forge-to-System-Monitor-to-Store-to-Automation resource-feedback loop remain unproven."
+  ]
+}
