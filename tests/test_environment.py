@@ -3131,6 +3131,19 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(parsed.command, "continuation")
         self.assertEqual(parsed.campaign_id, "cmp_fixture")
 
+    def test_campaign_state_cli_accepts_bounded_evidence_pages(self) -> None:
+        parsed = cli.build_parser().parse_args([
+            "campaign-state", "ses_fixture",
+            "--evidence-offset", "64", "--evidence-limit", "32",
+        ])
+        self.assertEqual(parsed.evidence_offset, 64)
+        self.assertEqual(parsed.evidence_limit, 32)
+        default = cli.build_parser().parse_args([
+            "campaign-state", "ses_fixture",
+        ])
+        self.assertIsNone(default.evidence_offset)
+        self.assertEqual(default.evidence_limit, sessions.CAMPAIGN_EVIDENCE_MAX)
+
     def test_invocation_environment_uses_selected_store_and_language_toolchains(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "workspace"
@@ -3868,6 +3881,269 @@ class SessionTests(unittest.TestCase):
                     campaign_evidence=[],
                 )
             self.assertEqual(len(session.store.list_checkpoints(session.session_id)), 1)
+
+    def test_campaign_evidence_rollover_is_chained_paged_and_recovers_after_interruption(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state_dir = Path(directory)
+            session = make_session(state_dir)
+            session.snapshot["campaign"]["identity"] = "cmp_evidence_rollover_test"
+            session.snapshot["authenticated_principal_id"] = "principal-test"
+            session._save()
+            first_references = [{
+                "identity": f"ev_rollover_{index:03d}",
+                "repository": "mncs-environment",
+                "commit": "a" * 40,
+                "path": f"evidence/rollover-{index:03d}.json",
+            } for index in range(sessions.CAMPAIGN_EVIDENCE_MAX)]
+            first = session.checkpoint(
+                progress="publish first bounded evidence segment",
+                request_id="req_evidence_rollover_first",
+                campaign_base_checkpoint="none",
+                campaign_evidence=first_references,
+            )
+            self.assertEqual(
+                first["campaign_state"]["schema_version"],
+                "mncs.environment.campaign-state/2",
+            )
+            self.assertEqual(
+                first["campaign_state"]["evidence_delta"], first_references
+            )
+            self.assertNotIn("evidence", first["campaign_state"])
+
+            next_reference = {
+                "identity": "ev_rollover_128",
+                "repository": "mncs-environment",
+                "commit": "b" * 40,
+                "path": "evidence/rollover-128.json",
+            }
+            evidence_window = [*first_references[1:], next_reference]
+            delivery = {
+                "status": "partial",
+                "repositories": [{
+                    "repository": "mncs-environment",
+                    "branch": "main",
+                    "head": "b" * 40,
+                    "status": "pushed",
+                    "remote_ref": "origin/main",
+                    "remote_head": "b" * 40,
+                    # This evidence is now outside the recent window but
+                    # remains present in the immutable checkpoint chain.
+                    "evidence_identity": first_references[0]["identity"],
+                }],
+            }
+            second = session.checkpoint(
+                progress="append beyond the bounded evidence window",
+                request_id="req_evidence_rollover_second",
+                campaign_base_checkpoint=first["identity"],
+                campaign_evidence=evidence_window,
+                campaign_delivery=delivery,
+            )
+            state = second["campaign_state"]
+            self.assertEqual(state["evidence_delta"], [next_reference])
+            self.assertEqual(state["evidence_count"], 129)
+            self.assertEqual(
+                state["previous_state_digest"], first["campaign_state_digest"]
+            )
+            self.assertEqual(
+                state["evidence_history_digest"],
+                sessions.digest_hex({
+                    "previous": first["campaign_state"]["evidence_history_digest"],
+                    "delta": [next_reference],
+                }),
+            )
+            self.assertEqual(
+                session.snapshot["campaign"]["evidence"], evidence_window
+            )
+            self.assertEqual(session.snapshot["campaign"]["evidence_count"], 129)
+
+            latest_page = session.campaign_state()
+            self.assertEqual(latest_page["evidence"], evidence_window)
+            self.assertEqual(latest_page["evidence_count"], 129)
+            self.assertEqual(latest_page["evidence_offset"], 1)
+            self.assertTrue(latest_page["evidence_truncated"])
+            first_page = session.campaign_state(
+                evidence_offset=0, evidence_limit=64
+            )
+            second_page = session.campaign_state(
+                evidence_offset=64, evidence_limit=64
+            )
+            final_page = session.campaign_state(
+                evidence_offset=128, evidence_limit=64
+            )
+            self.assertEqual(
+                first_page["evidence"] + second_page["evidence"] + final_page["evidence"],
+                [*first_references, next_reference],
+            )
+            self.assertEqual(
+                first_page["next_evidence_offset"], 64
+            )
+            self.assertEqual(
+                second_page["next_evidence_offset"], 128
+            )
+            self.assertIsNone(final_page["next_evidence_offset"])
+
+            with self.assertRaises(sessions.CampaignStateConflict):
+                session.checkpoint(
+                    progress="stale evidence writer",
+                    request_id="req_evidence_rollover_stale",
+                    campaign_base_checkpoint=first["identity"],
+                    campaign_delivery=delivery,
+                )
+
+            with mock.patch.object(
+                session.store, "save_snapshot",
+                side_effect=OSError("interrupted after evidence checkpoint publication"),
+            ):
+                with self.assertRaisesRegex(
+                    OSError, "interrupted after evidence checkpoint publication"
+                ):
+                    session.checkpoint(
+                        progress="recover the evidence segment after interruption",
+                        request_id="req_evidence_rollover_recovery",
+                        campaign_base_checkpoint=second["identity"],
+                        campaign_delivery=delivery,
+                    )
+            reopened = sessions.Session.open(
+                state_dir=state_dir, session_id=session.session_id, **FAST
+            )
+            recovery = reopened.reconcile_campaign_continuity()
+            self.assertTrue(recovery["campaign_state_changed"])
+            recovered_state = reopened.campaign_state()
+            self.assertEqual(recovered_state["evidence_count"], 129)
+            self.assertEqual(recovered_state["evidence"], evidence_window)
+            self.assertEqual(
+                recovered_state["delivery"],
+                sessions.normalize_campaign_delivery(delivery),
+            )
+            self.assertEqual(
+                reopened.snapshot["campaign"]["evidence"], evidence_window
+            )
+
+    def test_campaign_evidence_rollover_migrates_legacy_cumulative_state(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            session.snapshot["campaign"]["identity"] = "cmp_legacy_evidence_rollover_test"
+            session.snapshot["authenticated_principal_id"] = "principal-test"
+            session._save()
+            legacy_evidence = [{
+                "identity": f"ev_legacy_{index:03d}",
+                "repository": "mncs-environment",
+                "commit": "c" * 40,
+                "path": f"evidence/legacy-{index:03d}.json",
+            } for index in range(sessions.CAMPAIGN_EVIDENCE_MAX)]
+            legacy_state = {
+                "schema_version": "mncs.environment.campaign-state/1",
+                "campaign_identity": "cmp_legacy_evidence_rollover_test",
+                "evidence": legacy_evidence,
+                "delivery": sessions.normalize_campaign_delivery({
+                    "status": "pending", "repositories": [],
+                }),
+                "recorded_at": "2026-10-10T00:00:00+00:00",
+                "recorded_by": {
+                    "consumer_id": "tester", "principal_id": "principal-test",
+                },
+            }
+            legacy_record = {
+                "schema_version": sessions.CHECKPOINT_SCHEMA,
+                "identity": "chk_legacy_evidence_state",
+                "session_id": session.session_id,
+                "sequence": 1,
+                "progress": "legacy cumulative campaign evidence",
+                "remaining": [],
+                "created_at": "2026-10-10T00:00:00+00:00",
+                "created_by": "tester",
+                "created_by_principal_id": "principal-test",
+                "campaign_identity": "cmp_legacy_evidence_rollover_test",
+                "campaign_state": legacy_state,
+                "campaign_state_digest": sessions.digest_hex(legacy_state),
+            }
+            session.store.save_checkpoint(session.session_id, legacy_record)
+
+            new_reference = {
+                "identity": "ev_legacy_128",
+                "repository": "mncs-environment",
+                "commit": "d" * 40,
+                "path": "evidence/legacy-128.json",
+            }
+            migrated = session.checkpoint(
+                progress="roll forward legacy campaign evidence",
+                request_id="req_legacy_evidence_rollover",
+                campaign_base_checkpoint="chk_legacy_evidence_state",
+                campaign_evidence=[*legacy_evidence[1:], new_reference],
+            )
+            state = migrated["campaign_state"]
+            self.assertEqual(
+                state["schema_version"], "mncs.environment.campaign-state/2"
+            )
+            self.assertEqual(state["evidence_delta"], [new_reference])
+            self.assertEqual(
+                state["previous_state_digest"],
+                legacy_record["campaign_state_digest"],
+            )
+            self.assertEqual(
+                state["evidence_history_digest"],
+                sessions.digest_hex({
+                    "previous": sessions.digest_hex(legacy_evidence),
+                    "delta": [new_reference],
+                }),
+            )
+            recovered = session.campaign_state()
+            self.assertEqual(recovered["evidence_count"], 129)
+            self.assertEqual(
+                recovered["evidence"], [*legacy_evidence[1:], new_reference]
+            )
+
+    def test_legacy_campaign_evidence_history_rejects_reordering(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            campaign_identity = "cmp_legacy_evidence_order_test"
+            session.snapshot["campaign"]["identity"] = campaign_identity
+            session._save()
+            evidence = [{
+                "identity": f"ev_legacy_order_{index}",
+                "repository": "mncs-environment",
+                "commit": "e" * 40,
+                "path": f"evidence/legacy-order-{index}.json",
+            } for index in range(2)]
+
+            def checkpoint(identity: str, sequence: int,
+                           references: list[dict[str, str]]) -> dict[str, object]:
+                state = {
+                    "schema_version": "mncs.environment.campaign-state/1",
+                    "campaign_identity": campaign_identity,
+                    "evidence": references,
+                    "delivery": sessions.normalize_campaign_delivery({
+                        "status": "pending", "repositories": [],
+                    }),
+                    "recorded_at": "2026-10-10T00:00:00+00:00",
+                    "recorded_by": {"consumer_id": "tester", "principal_id": None},
+                }
+                return {
+                    "schema_version": sessions.CHECKPOINT_SCHEMA,
+                    "identity": identity,
+                    "session_id": session.session_id,
+                    "sequence": sequence,
+                    "progress": "legacy campaign evidence",
+                    "remaining": [],
+                    "created_at": "2026-10-10T00:00:00+00:00",
+                    "created_by": "tester",
+                    "created_by_principal_id": None,
+                    "campaign_identity": campaign_identity,
+                    "campaign_state": state,
+                    "campaign_state_digest": sessions.digest_hex(state),
+                }
+
+            session.store.save_checkpoint(
+                session.session_id, checkpoint("chk_legacy_order_1", 1, evidence)
+            )
+            session.store.save_checkpoint(
+                session.session_id,
+                checkpoint("chk_legacy_order_2", 2, list(reversed(evidence))),
+            )
+            with self.assertRaisesRegex(
+                sessions.LifecycleError, "reordered or removed"
+            ):
+                session.campaign_state()
 
     def test_campaign_metadata_recovery_after_snapshot_write_interruption(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

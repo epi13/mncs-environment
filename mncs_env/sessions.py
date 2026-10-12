@@ -258,6 +258,56 @@ def normalize_campaign_evidence(value: Any) -> list[dict[str, str]]:
     return normalized
 
 
+def _append_campaign_evidence(
+    previous_history: list[dict[str, str]],
+    incoming_window: list[dict[str, str]],
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Accept an append-only evidence window, evicting only its oldest prefix.
+
+    Older references remain recoverable from their immutable campaign-state
+    checkpoints. When a new reference arrives, the request must retain the
+    newest prior suffix that fits alongside the additions.
+    """
+    prior_window = previous_history[-CAMPAIGN_EVIDENCE_MAX:]
+    prior_by_identity = {
+        item["identity"]: item for item in previous_history
+    }
+    retained: list[dict[str, str]] = []
+    added: list[dict[str, str]] = []
+    saw_addition = False
+    for item in incoming_window:
+        existing = prior_by_identity.get(item["identity"])
+        if existing is None:
+            saw_addition = True
+            added.append(item)
+            continue
+        if item != existing:
+            raise LifecycleError(
+                "campaign evidence changed an existing immutable reference"
+            )
+        if saw_addition:
+            raise LifecycleError(
+                "new campaign evidence must follow the retained prior suffix"
+            )
+        retained.append(item)
+    if not added:
+        if incoming_window != prior_window:
+            raise LifecycleError(
+                "campaign evidence updates must retain the current evidence window"
+            )
+    else:
+        keep_count = min(
+            len(prior_window), CAMPAIGN_EVIDENCE_MAX - len(added)
+        )
+        expected_prior = prior_window[-keep_count:] if keep_count else []
+        if retained != expected_prior or incoming_window != [*expected_prior, *added]:
+            raise LifecycleError(
+                "campaign evidence may evict only its oldest prefix when appending; "
+                "prior immutable checkpoints retain the evicted references"
+            )
+    return added, [*previous_history, *added]
+
+
 def normalize_campaign_delivery(value: Any) -> dict[str, Any]:
     """Validate a compact delivery report; it is a recorded claim, not proof."""
     if not isinstance(value, dict):
@@ -363,25 +413,51 @@ def normalize_campaign_delivery(value: Any) -> dict[str, Any]:
     return normalized
 
 
-def _latest_campaign_state_checkpoint(
+def _validated_campaign_state_history(
     checkpoints: list[dict[str, Any]], campaign_identity: str | None,
-) -> dict[str, Any] | None:
+) -> tuple[dict[str, Any], list[dict[str, str]]] | None:
+    """Validate the immutable checkpoint chain and reconstruct its evidence.
+
+    Campaign-state/1 checkpoints carry a cumulative bounded list. Version 2
+    checkpoints carry only the new evidence segment and a digest link to the
+    preceding campaign state. Evicted references remain available from their
+    earlier immutable checkpoints.
+    """
     candidates = [record for record in checkpoints
                   if isinstance(record, dict) and isinstance(record.get("campaign_state"), dict)]
     if not candidates:
         return None
+    candidates.sort(key=lambda record: (
+        int(record.get("sequence", 0)), str(record.get("created_at", "")),
+        str(record.get("identity", "")),
+    ))
+
+    # A same-sequence identical publication is a retry-equivalent duplicate;
+    # divergent state at one sequence is ambiguous and cannot be extended.
+    logical: list[dict[str, Any]] = []
     for record in candidates:
         state = record["campaign_state"]
-        if (state.get("schema_version") != "mncs.environment.campaign-state/1"
+        schema = state.get("schema_version")
+        if (schema not in (
+                "mncs.environment.campaign-state/1",
+                "mncs.environment.campaign-state/2",
+            )
                 or state.get("campaign_identity") != campaign_identity
                 or record.get("campaign_state_digest") != digest_hex(state)):
             raise LifecycleError("campaign state checkpoint failed identity or digest validation")
         try:
-            evidence = normalize_campaign_evidence(state.get("evidence"))
             delivery = normalize_campaign_delivery(state.get("delivery"))
+            if schema == "mncs.environment.campaign-state/1":
+                evidence = normalize_campaign_evidence(state.get("evidence"))
+                if evidence != state.get("evidence"):
+                    raise ValueError("campaign evidence is not canonically normalized")
+            else:
+                evidence_delta = normalize_campaign_evidence(state.get("evidence_delta"))
+                if evidence_delta != state.get("evidence_delta"):
+                    raise ValueError("campaign evidence delta is not canonically normalized")
         except ValueError as error:
             raise LifecycleError(f"campaign state checkpoint is invalid: {error}") from error
-        if evidence != state.get("evidence") or delivery != state.get("delivery"):
+        if delivery != state.get("delivery"):
             raise LifecycleError("campaign state checkpoint is not canonically normalized")
         provenance = state.get("recorded_by")
         if (not isinstance(provenance, dict)
@@ -389,29 +465,106 @@ def _latest_campaign_state_checkpoint(
                 or (provenance.get("principal_id") is not None
                     and not isinstance(provenance.get("principal_id"), str))):
             raise LifecycleError("campaign state checkpoint lacks Environment provenance")
-    candidates.sort(key=lambda record: (
-        int(record.get("sequence", 0)), str(record.get("created_at", "")),
-        str(record.get("identity", "")),
-    ))
-    latest_sequence = int(candidates[-1].get("sequence", 0))
-    same_sequence = [record for record in candidates
-                     if int(record.get("sequence", 0)) == latest_sequence]
-    digests = {record.get("campaign_state_digest") for record in same_sequence}
-    if len(digests) > 1:
-        raise LifecycleError(
-            "conflicting campaign state checkpoints share one sequence; reconcile before updating"
-        )
-    return candidates[-1]
+        if logical and int(logical[-1].get("sequence", 0)) == int(record.get("sequence", 0)):
+            previous = logical[-1]
+            if (record.get("campaign_state_digest")
+                    != previous.get("campaign_state_digest")
+                    or state != previous.get("campaign_state")):
+                raise LifecycleError(
+                    "conflicting campaign state checkpoints share one sequence; reconcile before updating"
+                )
+            logical[-1] = record
+        else:
+            logical.append(record)
+
+    latest_record: dict[str, Any] | None = None
+    history: list[dict[str, str]] = []
+    prior_digest: str | None = None
+    prior_schema: str | None = None
+    prior_evidence_digest = digest_hex([])
+    prior_evidence_count = 0
+    seen: dict[str, dict[str, str]] = {}
+    for record in logical:
+        state = record["campaign_state"]
+        schema = state["schema_version"]
+        if schema == "mncs.environment.campaign-state/1":
+            if prior_schema == "mncs.environment.campaign-state/2":
+                raise LifecycleError("campaign state schema cannot move back to version 1")
+            try:
+                cumulative = normalize_campaign_evidence(state["evidence"])
+            except ValueError as error:
+                raise LifecycleError(f"campaign state checkpoint is invalid: {error}") from error
+            if any(seen.get(item["identity"]) != item for item in cumulative
+                   if item["identity"] in seen):
+                raise LifecycleError("campaign evidence history changed an immutable reference")
+            if cumulative[:len(history)] != history:
+                raise LifecycleError(
+                    "campaign evidence history reordered or removed a prior reference"
+                )
+            history = cumulative
+            seen = {item["identity"]: item for item in history}
+            prior_evidence_count = len(history)
+            prior_evidence_digest = digest_hex(history)
+        else:
+            if state.get("previous_state_digest") != prior_digest:
+                raise LifecycleError("campaign evidence checkpoint chain has an invalid predecessor")
+            delta = normalize_campaign_evidence(state["evidence_delta"])
+            if any(item["identity"] in seen for item in delta):
+                raise LifecycleError("campaign evidence history repeats an earlier identity")
+            history.extend(delta)
+            seen.update({item["identity"]: item for item in delta})
+            evidence_count = state.get("evidence_count")
+            if (not isinstance(evidence_count, int)
+                    or isinstance(evidence_count, bool)
+                    or evidence_count != prior_evidence_count + len(delta)):
+                raise LifecycleError("campaign evidence count does not match its checkpoint chain")
+            expected_evidence_digest = digest_hex({
+                "previous": prior_evidence_digest,
+                "delta": delta,
+            })
+            if state.get("evidence_history_digest") != expected_evidence_digest:
+                raise LifecycleError("campaign evidence history digest failed verification")
+            prior_evidence_count = evidence_count
+            prior_evidence_digest = expected_evidence_digest
+        delivery_evidence_ids = {
+            item["identity"] for item in history
+        }
+        if any(item.get("evidence_identity") not in delivery_evidence_ids
+               for item in state["delivery"].get("repositories", [])
+               if item.get("evidence_identity") is not None):
+            raise LifecycleError(
+                "campaign delivery references an evidence identity absent from campaign history"
+            )
+        prior_digest = record.get("campaign_state_digest")
+        prior_schema = schema
+        latest_record = record
+    if latest_record is None:
+        return None
+    return latest_record, history
+
+
+def _latest_campaign_state_checkpoint(
+    checkpoints: list[dict[str, Any]], campaign_identity: str | None,
+) -> dict[str, Any] | None:
+    history = _validated_campaign_state_history(checkpoints, campaign_identity)
+    return history[0] if history else None
 
 
 def _project_campaign_state(
     campaign: dict[str, Any], checkpoint: dict[str, Any] | None,
+    evidence_history: list[dict[str, str]] | None = None,
 ) -> bool:
     if checkpoint is None:
         return False
     state = checkpoint["campaign_state"]
+    if evidence_history is None:
+        if state.get("schema_version") != "mncs.environment.campaign-state/1":
+            raise LifecycleError("campaign evidence history is required to project a version 2 checkpoint")
+        evidence_history = state["evidence"]
     values = {
-        "evidence": state["evidence"],
+        "evidence": evidence_history[-CAMPAIGN_EVIDENCE_MAX:],
+        "evidence_count": len(evidence_history),
+        "evidence_truncated": len(evidence_history) > CAMPAIGN_EVIDENCE_MAX,
         "delivery": state["delivery"],
         "state_checkpoint_id": checkpoint["identity"],
         "state_recorded_at": state.get("recorded_at"),
@@ -555,13 +708,13 @@ def continuation_observations(
             ),
         }
 
-    campaign_state_record = _latest_campaign_state_checkpoint(
+    campaign_state_history = _validated_campaign_state_history(
         checkpoints, campaign.get("identity")
     )
     campaign_state_projection = None
-    if campaign_state_record is not None:
+    if campaign_state_history:
+        campaign_state_record, evidence_history = campaign_state_history
         state = campaign_state_record["campaign_state"]
-        evidence = state["evidence"]
         delivery = state["delivery"]
         delivery_repositories = delivery.get("repositories", [])
         campaign_state_projection = {
@@ -577,11 +730,11 @@ def continuation_observations(
             },
             # The entry capsule is a context projection, not the campaign's
             # evidence ledger. Keep only its newest references here; the
-            # owner-authorized campaign_state() read returns the full ledger.
-            "evidence": evidence[-CONTINUATION_MAX_CAMPAIGN_EVIDENCE:],
-            "evidence_count": len(evidence),
+            # owner-authorized campaign_state() read provides bounded pages.
+            "evidence": evidence_history[-CONTINUATION_MAX_CAMPAIGN_EVIDENCE:],
+            "evidence_count": len(evidence_history),
             "evidence_truncated": (
-                len(evidence) > CONTINUATION_MAX_CAMPAIGN_EVIDENCE
+                len(evidence_history) > CONTINUATION_MAX_CAMPAIGN_EVIDENCE
             ),
             "delivery": {
                 **{key: value for key, value in delivery.items()
@@ -1404,11 +1557,17 @@ class Session:
         prior_repository_refs = campaign.get("repository_refs", [])
         checkpoint_ids = list(dict.fromkeys([*prior_checkpoints, *persisted_ids]))
         missing = sorted(set(prior_checkpoints) - set(persisted_ids))
-        campaign_state_record = _latest_campaign_state_checkpoint(
+        campaign_state_history = _validated_campaign_state_history(
             checkpoints, campaign.get("identity")
         )
+        campaign_state_record = (
+            campaign_state_history[0] if campaign_state_history else None
+        )
+        evidence_history = (
+            campaign_state_history[1] if campaign_state_history else None
+        )
         campaign_state_changed = _project_campaign_state(
-            campaign, campaign_state_record
+            campaign, campaign_state_record, evidence_history
         )
         self.snapshot["checkpoints"] = checkpoint_ids
         campaign["claim_ids"] = claims
@@ -3651,7 +3810,10 @@ class Session:
                 )
         campaign_identity = None
         campaign_evidence_value: list[dict[str, str]] | None = None
+        campaign_evidence_delta_value: list[dict[str, str]] | None = None
+        campaign_evidence_history_value: list[dict[str, str]] | None = None
         campaign_delivery_value: dict[str, Any] | None = None
+        previous_campaign_state_digest: str | None = None
         if record is None and campaign_update_requested:
             campaign = dict(self.snapshot.get("campaign") or {})
             campaign_identity = campaign.get("identity")
@@ -3660,8 +3822,11 @@ class Session:
                 raise LifecycleError(
                     "durable campaign metadata requires an Environment campaign identity"
                 )
-            latest_campaign_record = _latest_campaign_state_checkpoint(
+            campaign_state_history = _validated_campaign_state_history(
                 checkpoint_records, campaign_identity
+            )
+            latest_campaign_record = (
+                campaign_state_history[0] if campaign_state_history else None
             )
             latest_campaign_id = (
                 latest_campaign_record.get("identity")
@@ -3672,12 +3837,26 @@ class Session:
                     str(campaign_base_checkpoint), str(latest_campaign_id)
                 )
             if latest_campaign_record is not None:
+                campaign_evidence_history_value = campaign_state_history[1]
+                previous_campaign_state_digest = latest_campaign_record.get(
+                    "campaign_state_digest"
+                )
+                previous_evidence_history_digest = (
+                    latest_campaign_record["campaign_state"].get(
+                        "evidence_history_digest"
+                    )
+                    if latest_campaign_record["campaign_state"].get("schema_version")
+                    == "mncs.environment.campaign-state/2"
+                    else digest_hex(campaign_evidence_history_value)
+                )
+                campaign_evidence_value = campaign_evidence_history_value[
+                    -CAMPAIGN_EVIDENCE_MAX:
+                ]
                 prior_state = latest_campaign_record["campaign_state"]
-                campaign_evidence_value = prior_state["evidence"]
                 campaign_delivery_value = prior_state["delivery"]
             else:
                 try:
-                    campaign_evidence_value = normalize_campaign_evidence(
+                    projected_evidence = normalize_campaign_evidence(
                         campaign.get("evidence", [])
                     )
                     campaign_delivery_value = normalize_campaign_delivery(
@@ -3687,29 +3866,46 @@ class Session:
                     raise LifecycleError(
                         f"existing campaign projection is invalid: {error}"
                     ) from error
+                # No persisted campaign-state record anchors the projection,
+                # so the first segment contains its retained evidence in full.
+                previous_evidence_history_digest = digest_hex([])
             if normalized_evidence is not None:
-                prior_by_identity = {
-                    item["identity"]: item for item in campaign_evidence_value
-                }
-                new_by_identity = {
-                    item["identity"]: item for item in normalized_evidence
-                }
-                if any(new_by_identity.get(key) != item
-                       for key, item in prior_by_identity.items()):
-                    raise LifecycleError(
-                        "campaign evidence updates must retain every prior immutable reference"
+                if latest_campaign_record is not None:
+                    campaign_evidence_delta_value, campaign_evidence_history_value = (
+                        _append_campaign_evidence(
+                            campaign_evidence_history_value, normalized_evidence
+                        )
                     )
-                campaign_evidence_value = normalized_evidence
+                else:
+                    projected_by_identity = {
+                        item["identity"]: item for item in projected_evidence
+                    }
+                    incoming_by_identity = {
+                        item["identity"]: item for item in normalized_evidence
+                    }
+                    if any(incoming_by_identity.get(key) != item
+                           for key, item in projected_by_identity.items()):
+                        raise LifecycleError(
+                            "initial campaign state must retain every projected immutable reference"
+                        )
+                    campaign_evidence_delta_value = normalized_evidence
+                    campaign_evidence_history_value = list(normalized_evidence)
+            elif latest_campaign_record is None:
+                campaign_evidence_delta_value = projected_evidence
+                campaign_evidence_history_value = list(projected_evidence)
+            else:
+                campaign_evidence_delta_value = []
+            campaign_evidence_value = campaign_evidence_history_value[
+                -CAMPAIGN_EVIDENCE_MAX:
+            ]
             if normalized_delivery is not None:
                 campaign_delivery_value = normalized_delivery
-            evidence_ids = {
-                item["identity"] for item in campaign_evidence_value
-            }
+            evidence_ids = {item["identity"] for item in campaign_evidence_history_value}
             if any(item.get("evidence_identity") not in evidence_ids
                    for item in campaign_delivery_value.get("repositories", [])
                    if item.get("evidence_identity") is not None):
                 raise ValueError(
-                    "campaign delivery references an evidence identity absent from campaign evidence"
+                    "campaign delivery references an evidence identity absent from campaign history"
                 )
         if record is None:
             created_at = utcnow()
@@ -3742,9 +3938,17 @@ class Session:
             }
             if campaign_update_requested:
                 campaign_state = {
-                    "schema_version": "mncs.environment.campaign-state/1",
+                    "schema_version": "mncs.environment.campaign-state/2",
                     "campaign_identity": campaign_identity,
-                    "evidence": campaign_evidence_value,
+                    "previous_state_digest": previous_campaign_state_digest,
+                    "evidence_delta": campaign_evidence_delta_value,
+                    "evidence_count": len(campaign_evidence_history_value),
+                    "evidence_history_digest": digest_hex(
+                        {
+                            "previous": previous_evidence_history_digest,
+                            "delta": campaign_evidence_delta_value,
+                        }
+                    ),
                     "delivery": campaign_delivery_value,
                     "recorded_at": created_at,
                     "recorded_by": {
@@ -3768,7 +3972,15 @@ class Session:
         self.snapshot["checkpoints"] = list(dict.fromkeys(self.snapshot["checkpoints"]))
         if isinstance(record.get("campaign_state"), dict):
             campaign = dict(self.snapshot.get("campaign") or {})
-            _project_campaign_state(campaign, record)
+            current_campaign_history = _validated_campaign_state_history(
+                self.store.list_checkpoints(self.session_id),
+                (self.snapshot.get("campaign") or {}).get("identity"),
+            )
+            if current_campaign_history:
+                latest_campaign_record, evidence_history = current_campaign_history
+                _project_campaign_state(
+                    campaign, latest_campaign_record, evidence_history
+                )
             self.snapshot["campaign"] = campaign
         if self.snapshot.get("lifecycle") == "active":
             self.transition("checkpointed", f"checkpoint {sequence}")
@@ -3789,13 +4001,15 @@ class Session:
         self._save()
         return record
 
-    def campaign_state(self) -> dict[str, Any]:
-        """Read the complete authenticated campaign ledger for this session.
+    def campaign_state(
+        self, *, evidence_offset: int | None = None,
+        evidence_limit: int = CAMPAIGN_EVIDENCE_MAX,
+    ) -> dict[str, Any]:
+        """Read a bounded page from the authenticated campaign evidence history.
 
-        Entry context deliberately truncates evidence for prompt size. This
-        owner operation exposes the full immutable campaign state through a
-        separately declared read capability so a later checkpoint can retain
-        every existing evidence reference.
+        Version 2 checkpoints store append-only evidence segments. The default
+        page contains the newest references that fit one checkpoint update;
+        older pages remain addressable by offset.
         """
         campaign = self.snapshot.get("campaign")
         campaign = campaign if isinstance(campaign, dict) else {}
@@ -3803,30 +4017,61 @@ class Session:
         if (not isinstance(campaign_identity, str)
                 or not _CAMPAIGN_ID_PATTERN.fullmatch(campaign_identity)):
             raise LifecycleError("session has no durable campaign identity")
-        checkpoint = _latest_campaign_state_checkpoint(
+        if (not isinstance(evidence_limit, int) or isinstance(evidence_limit, bool)
+                or evidence_limit < 1 or evidence_limit > CAMPAIGN_EVIDENCE_MAX):
+            raise LifecycleError(
+                f"campaign evidence page limit must be between 1 and {CAMPAIGN_EVIDENCE_MAX}"
+            )
+        if (evidence_offset is not None
+                and (not isinstance(evidence_offset, int)
+                     or isinstance(evidence_offset, bool) or evidence_offset < 0)):
+            raise LifecycleError("campaign evidence page offset must be a nonnegative integer")
+        history = _validated_campaign_state_history(
             self.store.list_checkpoints(self.session_id), campaign_identity
         )
-        if checkpoint is None:
+        if not history:
             raise LifecycleError("campaign has no persisted state checkpoint")
+        checkpoint, all_evidence = history
         state = checkpoint["campaign_state"]
-        result = {
-            "schema_version": "mncs.environment.campaign-state-read/1",
-            "session_id": self.session_id,
-            "campaign_identity": campaign_identity,
-            "checkpoint_id": checkpoint["identity"],
-            "recorded_at": state.get("recorded_at"),
-            "recorded_by": state["recorded_by"],
-            "evidence": state["evidence"],
-            "evidence_count": len(state["evidence"]),
-            "delivery": state["delivery"],
-        }
-        if len(json.dumps(
-            result, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-        ).encode("utf-8")) > CAMPAIGN_STATE_READ_MAX_BYTES:
-            raise LifecycleError(
-                "persisted campaign state exceeds the bounded read response"
+        total = len(all_evidence)
+        limit = evidence_limit
+        while True:
+            offset = (
+                max(0, total - limit)
+                if evidence_offset is None else evidence_offset
             )
-        return result
+            if offset > total:
+                raise LifecycleError("campaign evidence page offset exceeds evidence count")
+            page = all_evidence[offset:offset + limit]
+            end = offset + len(page)
+            result = {
+                "schema_version": "mncs.environment.campaign-state-read/1",
+                "session_id": self.session_id,
+                "campaign_identity": campaign_identity,
+                "checkpoint_id": checkpoint["identity"],
+                "recorded_at": state.get("recorded_at"),
+                "recorded_by": state["recorded_by"],
+                "evidence": page,
+                "evidence_count": total,
+                "evidence_offset": offset,
+                "evidence_limit": limit,
+                "previous_evidence_offset": (
+                    max(0, offset - limit) if offset > 0 else None
+                ),
+                "next_evidence_offset": end if end < total else None,
+                "evidence_truncated": offset > 0 or end < total,
+                "delivery": state["delivery"],
+            }
+            encoded = json.dumps(
+                result, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            ).encode("utf-8")
+            if len(encoded) <= CAMPAIGN_STATE_READ_MAX_BYTES:
+                return result
+            if limit == 1:
+                raise LifecycleError(
+                    "persisted campaign state exceeds the bounded read response"
+                )
+            limit = max(1, limit // 2)
 
     def handoff(
         self,

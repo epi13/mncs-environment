@@ -118,7 +118,7 @@
           ]
         },
         "stability": "experimental",
-        "output_scope": "complete immutable campaign evidence and delivery state for the authorized Environment session"
+        "output_scope": "bounded page from immutable campaign evidence history and delivery state for the authorized Environment session; evidence offsets expose older pages"
       }
     ],
     "consumes": [

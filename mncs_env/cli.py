@@ -156,11 +156,14 @@ def cmd_campaign_continuation(_args: argparse.Namespace) -> int:
 
 
 def cmd_campaign_state(args: argparse.Namespace) -> int:
-    """Return the exact persisted campaign ledger for the bound session."""
+    """Return one bounded page from the exact persisted campaign ledger."""
     try:
         with closing(_open(args)) as session:
             try:
-                state = session.campaign_state()
+                state = session.campaign_state(
+                    evidence_offset=args.evidence_offset,
+                    evidence_limit=args.evidence_limit,
+                )
                 sys.stdout.write(json.dumps(
                     state, ensure_ascii=False, sort_keys=True,
                     separators=(",", ":"),
@@ -1207,7 +1210,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     campaign_state = session_parser(
         "campaign-state",
-        "read the full durable campaign evidence and delivery ledger",
+        "read a bounded page from the durable campaign evidence and delivery ledger",
+    )
+    campaign_state.add_argument("--evidence-offset", type=int, default=None)
+    campaign_state.add_argument(
+        "--evidence-limit", type=int, default=sessions_module.CAMPAIGN_EVIDENCE_MAX,
     )
     campaign_state.set_defaults(func=cmd_campaign_state)
 
@@ -1403,7 +1410,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     checkpoint.add_argument(
         "--campaign-evidence-json", default=None,
-        help="bounded JSON list of cumulative repository/commit/path evidence references",
+        help=("bounded JSON evidence window in append order; when new references "
+              "overflow the window, only the oldest prefix may roll off because "
+              "earlier immutable checkpoints retain the history"),
     )
     checkpoint.add_argument(
         "--campaign-delivery-json", default=None,

@@ -175,8 +175,12 @@ updated before a process interruption.
 Campaign metadata updates use optimistic concurrency. Copy the
 `campaign_state_checkpoint_id` from the current capsule into
 `--campaign-base-checkpoint`, or use `none` before the first campaign metadata
-publication. The evidence JSON is a cumulative list; existing immutable
-identities cannot be removed or rebound. For example:
+publication. The evidence JSON is a bounded window of at most 128 references
+in append order. When new evidence overflows that window, only the oldest
+prefix may roll off; immutable prior campaign-state checkpoints retain each
+evicted reference in the digest-linked history. Existing identities cannot be
+rebound or reordered; references roll off only as new ones are appended. For
+example:
 
 ```sh
 mncs-env checkpoint "$SESSION" --progress "delivery verified" \
@@ -184,6 +188,14 @@ mncs-env checkpoint "$SESSION" --progress "delivery verified" \
   --campaign-evidence-json '[{"identity":"ev_env_delivery","repository":"mncs-environment","commit":"FULL_GIT_COMMIT","path":"evidence/delivery.json"}]' \
   --campaign-delivery-json '{"status":"delivered","repositories":[{"repository":"mncs-environment","branch":"main","head":"FULL_GIT_COMMIT","status":"pushed","remote_ref":"origin/main","remote_head":"FULL_GIT_COMMIT","evidence_identity":"ev_env_delivery"}]}'
 ```
+
+The campaign-state command returns the newest evidence page and its total
+count. The `--evidence-offset` and `--evidence-limit` options read older
+bounded pages; the response includes the page offset, truncation state, and
+next offset. Version 2 campaign checkpoints store only each publication's
+new evidence segment and a digest link to the preceding campaign state, so
+history remains reconstructible without copying the full ledger into every
+checkpoint.
 
 `actions.*.argv` is directly executable and preserves the current interpreter,
 CLI path, state root, backend, and session. It works from another directory and
