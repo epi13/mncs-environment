@@ -1,0 +1,128 @@
+{
+  "schema_version": "mncs.environment.canonical-cas-interruption-acceptance/1",
+  "identity": "ev_environment_canonical_cas_interruption_acceptance_20261012",
+  "recorded_at_utc": "2026-10-12T17:00:42Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_commit": "02736f7a77c92eeb79836c3a554fe46db7eb407b",
+    "control_repository": "mncs-control-mcp",
+    "control_commit": "4d9ae974bcb407945c74f414dd3379382e294676",
+    "store_repository": "mncs-store",
+    "store_commit": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "execution": {
+    "transport": "authenticated MNCS Control Environment RPC",
+    "backend": "bwrap",
+    "project": "mncs-environment",
+    "scope": "project",
+    "network": false,
+    "caller_canonical_store_path": {
+      "path": "/home/epi13/.local/share/mncs-environment/store",
+      "visible": false,
+      "directory": false,
+      "writable": false,
+      "observed_at_utc": "2026-10-12T16:57:29Z"
+    },
+    "credential_handling": "Per-execution Control grant used; credential values and paths are not recorded."
+  },
+  "stale_campaign_base": {
+    "request_id": "req_stale_campaign_base_probe_20261012",
+    "operation": "checkpoint with an empty evidence delta and stale campaign base",
+    "supplied_base_checkpoint": "chk_61222ffe7fd6296d",
+    "current_checkpoint_at_rejection": "chk_41b05d0e610a962b",
+    "result": "rejected",
+    "exit_code": 3,
+    "diagnostic_code": "publication-conflict",
+    "conflict_kind": "campaign-state-base-checkpoint",
+    "publication_completed": false,
+    "fresh_readback_after_rejection": {
+      "request_id": "req_campaign_state_after_stale_base_20261012",
+      "checkpoint_id": "chk_41b05d0e610a962b",
+      "evidence_count": 147,
+      "delivery_status": "partial"
+    }
+  },
+  "caller_interruption": {
+    "request_id": "req_canonical_claim_drop_ack_20261012",
+    "operation": "acquire a non-exclusive Environment evidence-path claim",
+    "path_scope": "evidence/.mncs-canonical-drop-ack-20261012",
+    "claim_id": "claim:mncs-environment:paths:2ef9425964ed",
+    "interruption": {
+      "method": "Official Environment RPC client sent a complete length-prefixed request frame, then the client process exited before its first response read.",
+      "caller_exit_code": 86,
+      "server_process_or_policy_changed": false
+    },
+    "fresh_process_readback": {
+      "request_id": "req_canonical_claim_drop_ack_readback_20261012",
+      "identity": "clm_618405ecb81bf893",
+      "version": 1,
+      "status": "held",
+      "session_id": "ses_7226fbcfe65820f7",
+      "matching_acquire_records": 1
+    },
+    "stable_request_replay": {
+      "request_id": "req_canonical_claim_drop_ack_20261012",
+      "returned_identity": "clm_618405ecb81bf893",
+      "returned_version": 1,
+      "matching_acquire_records_after_replay": 1
+    },
+    "release": {
+      "request_id": "req_canonical_claim_drop_ack_release_20261012",
+      "fresh_readback_request_id": "req_canonical_claim_drop_ack_release_readback_20261012",
+      "latest_identity": "clm_577d6fc87e45c8f4",
+      "latest_version": 2,
+      "latest_status": "released",
+      "released_by": "ses_7226fbcfe65820f7"
+    }
+  },
+  "canonical_store_integrity": {
+    "operation": "mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "request_id": "req_canonical_store_verify_after_cas_interrupt_20261012",
+    "retry_after_protected_command_timeout": true,
+    "result": "ok",
+    "generation": 46890,
+    "objects": 46892,
+    "backend": "canonical Environment Store through the owning Control service"
+  },
+  "canonical_concurrency_reference": {
+    "evidence_identity": "ev_environment_canonical_claim_concurrency_rpc_20261012",
+    "path": "evidence/canonical-claim-concurrency-rpc-acceptance-20261012.json",
+    "sha256": "fc296d70d3324778599a1800722400e3fea97026d942760458251b47797341a7",
+    "result": "Two parallel authorized claim publications both survived, were visible in fresh-process reads, and were released; canonical Store integrity verification passed."
+  },
+  "related_evidence": [
+    {
+      "identity": "ev_environment_canonical_claim_rpc_acceptance_20261012",
+      "path": "evidence/canonical-claim-rpc-acceptance-20261012.json",
+      "sha256": "796e87a7575c9d8e715f56dc210012afa6b5971f07a9df3c5f720cdc854613b0"
+    },
+    {
+      "identity": "ev_environment_claim_transfer_restart_tests_20261012",
+      "path": "evidence/claim-transfer-restart-tests-20261012.json",
+      "sha256": "b0f224629db06a8849aa9f1bfad25920bd1c53bc1d3b73c73f14c2a1de5c7bd4"
+    }
+  ],
+  "ownership": {
+    "campaign_environment_claim": {
+      "claim_id": "claim:mncs-environment",
+      "version": 33,
+      "session_id": "ses_7226fbcfe65820f7",
+      "status": "held"
+    },
+    "probe_claim": {
+      "acquired_by": "ses_7226fbcfe65820f7",
+      "scope": "non-exclusive path in mncs-environment",
+      "final_status": "released",
+      "final_version": 2
+    },
+    "foreign_claims_modified": false
+  },
+  "limits": [
+    "Environment RPC does not accept caller-supplied Store generations or expose arbitrary Store writes. The stale-state rejection tested here is the Environment-owned campaign checkpoint base CAS; Store generation CAS remains internal to the authorized owner.",
+    "Canonical overlapping claim publication is covered by the referenced RPC concurrency acceptance. A direct caller-visible stale Store-generation rejection receipt is intentionally not exposed.",
+    "Caller interruption and retry were proven against canonical Store; the Control service itself was not restarted during this canonical probe."
+  ],
+  "readiness": "Canonical protected Environment claim acquire, dropped-response reconciliation by fresh-process readback and stable retry, release, stale campaign-state rejection, and full Store integrity verification passed without caller filesystem write access."
+}
