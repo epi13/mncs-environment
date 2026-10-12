@@ -1,0 +1,82 @@
+{
+  "schema_version": "mncs.environment.campaign-task-selector-reentry/1",
+  "identity": "ev_campaign_task_selector_current_main_reentry_20261012",
+  "recorded_at": "2026-10-12T08:34:20Z",
+  "result": "PASS: a fresh protected project process resumed the existing canonical campaign session using only the durable task identity; no competing session or claim was created.",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "execution": {
+    "project": "mncs-environment",
+    "scope": "project",
+    "sandbox_backend": "bwrap",
+    "network": false,
+    "transport": "authenticated MNCS Control Environment RPC",
+    "command": [
+      "./scripts/mncs-env",
+      "enter",
+      "--task-identity",
+      "ev_mncs_campaign_charter_continuity_20261011"
+    ],
+    "campaign_id_supplied": false,
+    "session_id_supplied": false
+  },
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "main",
+    "revision": "3147c2911dbb1c559483f28462a76776e10a30ff"
+  },
+  "entry_result": {
+    "exit_code": 0,
+    "task_selector_status": "resumed",
+    "selected_campaign_id": "cmp_mncs_continuity_20261010",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "local-agent",
+    "lifecycle": "active",
+    "entry_reused": true,
+    "environment_id": "renv_ef518b3ade5d6337",
+    "readiness": "degraded",
+    "readiness_summary": {
+      "blockers": 0,
+      "degraded": 12,
+      "reconciled": 1,
+      "repaired": 1
+    }
+  },
+  "readback": {
+    "source": "mncs-env continuation --campaign-id cmp_mncs_continuity_20261010",
+    "session_ids": [
+      "ses_7226fbcfe65820f7",
+      "ses_b4b2d283542220b0"
+    ],
+    "selected_session_checkpoint_ids": [
+      "chk_e72fef341b532533",
+      "chk_4e4247ac2938e37f",
+      "chk_61951356e4d9b2a4",
+      "chk_e5aa6a69da2db679"
+    ],
+    "selected_session_latest_checkpoint": "chk_e5aa6a69da2db679",
+    "selected_session_claim": {
+      "claim_id": "claim:mncs-environment",
+      "status": "held",
+      "version": 33
+    },
+    "context_conflict_status": "context-conflict",
+    "context_conflict_reason": "two Environment definitions still refer to this campaign; the task selector resolves the intended authenticated session without adopting the second context"
+  },
+  "ownership": {
+    "task_binding_scope": [
+      "authenticated Control principal",
+      "Environment definition",
+      "workspace root"
+    ],
+    "consumer_label_alone_used_for_authorization": false,
+    "new_campaign_session_created": false,
+    "new_claim_acquired": false,
+    "claim_owner_version_changed": false,
+    "other_session_adopted": false
+  },
+  "limits": [
+    "The initial task identity binding still requires an explicit campaign selection when multiple campaigns match the authenticated project context.",
+    "The campaign capsule still reports a context conflict because two Environment definitions reference this campaign.",
+    "Compiler and Forge remain protected by owner-held exclusive claims; this entry does not authorize their worktrees."
+  ]
+}
