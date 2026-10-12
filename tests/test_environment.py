@@ -1372,6 +1372,14 @@ class CapabilityTests(unittest.TestCase):
         })
         for source in campaign_state["fingerprint_sources"]:
             self.assertTrue((ROOT / source).is_file(), source)
+        discovered_campaign_state = next(
+            binding for binding in capabilities._from_manifest(
+                ROOT, FAMILY, ""
+            )
+            if binding["capability"] ==
+            "mncs-environment:campaign-state-inspection"
+        )
+        self.assertEqual(discovered_campaign_state["output_limit_bytes"], 131072)
 
         bound = capabilities.bind_session_context(
             {"fixed_argv": ["projections", "--evidence", "{session_id}"]},

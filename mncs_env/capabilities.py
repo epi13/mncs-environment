@@ -757,6 +757,12 @@ def _from_manifest(
                 or any(effect not in {"read", "verify", "write", "execute", "publish"}
                        for effect in effects)):
             continue
+        output_limit_bytes = entry.get("output_limit_bytes")
+        if (output_limit_bytes is not None
+                and (type(output_limit_bytes) is not int
+                     or output_limit_bytes < 1
+                     or output_limit_bytes > MAX_OUTPUT_LIMIT_BYTES)):
+            continue
         record = bind(
             provider=repository_id,
             capability=f"{repository_id}:{contract}",
@@ -769,6 +775,7 @@ def _from_manifest(
             fixed_env=declared["fixed_env"],
             effects=list(effects),
             event_types=["unknown"],
+            output_limit_bytes=output_limit_bytes,
             provenance={"source": f"{repo.name}/.mncs/project.json",
                         "kind": entry.get("kind"), "stability": entry.get("stability"),
                         "addressing": addressing, "manifest_tests": declared_tests,
