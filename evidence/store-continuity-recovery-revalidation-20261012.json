@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.store-continuity-recovery-revalidation/1",
+  "identity": "ev_environment_store_continuity_recovery_revalidation_20261012",
+  "recorded_at": "2026-10-12T23:42:40Z",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "owner": "mncs-environment",
+  "sources": [
+    {
+      "repository": "mncs-environment",
+      "revision": "0d46f95da35252646e959f06e47d81a03ed0f630",
+      "files": [
+        {"path": "mncs_env/claims.py", "sha256": "ea0bbdb5dd2bf08ef1ead7c448b99dd5a57a77a1d734a0a30c377fb523e1bdd3"},
+        {"path": "tests/test_store_claim_transfer.py", "sha256": "b79f4fb1ce3262d05b95087e90fd4edd6502ad5cfd170cf958fe3a4cee3ac432"},
+        {"path": "mncs_env/rpc_client.py", "sha256": "0200a517d7daff5fd0683a5d357f6c0d71ebc0a13df87ddbdddc10aee5dc9a1d"}
+      ]
+    },
+    {
+      "repository": "mncs-control-mcp",
+      "revision": "6d941b6f474116005d9a08f77c799a8df53f9c09",
+      "files": [
+        {"path": "src/mncs_control_mcp/environment_rpc.py", "sha256": "1432234b0ae45bb9d87714a527a553a115b40d6092545d97b1d20fd76df200f7"},
+        {"path": "tests/test_environment_rpc.py", "sha256": "b35e9aa912a25af93fb04393a8b6fffea91cc287b523d56aa77a0097eea11889"},
+        {"path": "src/mncs_control_mcp/environment_sessions.py", "sha256": "ab90e03744a3ff5e33af8e1d9d7986178aa3400b321eae993245ffe8f1f74565"},
+        {"path": "tests/test_environment_sessions.py", "sha256": "86f914d97bde3aa02d187560ef6ee95c04916a0c5d3d33f655eeac75b2129c5d"}
+      ]
+    }
+  ],
+  "protected_verification": {
+    "backend": "bwrap",
+    "network": false,
+    "claim_transfer_crash_matrix": {
+      "command": "python3 -m pytest tests/test_store_claim_transfer.py -q",
+      "exit_code": 0,
+      "passed": 9,
+      "duration_seconds": 33.60,
+      "store": "real EmbeddedStore in temporary test-owned directories",
+      "canonical_store_opened": false,
+      "coverage": [
+        "process termination before, during, and after generation publication",
+        "atomic release-plus-recipient transfer recovery",
+        "stable request replay and exact transfer provenance",
+        "competing continuations admit one recipient"
+      ]
+    },
+    "authenticated_continuation_rpc": {
+      "command": "python3 -m pytest tests/test_environment_sessions.py tests/test_environment_rpc.py -q",
+      "exit_code": 0,
+      "skipped": 1,
+      "duration_seconds": 42.35,
+      "coverage": "project-scoped authenticated campaign lookup, continuation, and Environment RPC"
+    }
+  },
+  "canonical_service_process_termination": {
+    "evidence_repository": "mncs-control-mcp",
+    "evidence_path": "evidence/canonical-store-process-termination-recovery-20261011.json",
+    "evidence_identity": "ev_control_canonical_store_process_termination_recovery_20261011",
+    "evidence_commit": "1510ef5668ed2cd7c0b70fc42d4f39cb6a2bedfe",
+    "evidence_sha256": "b62f3e126d5da189c44453c87991055260301ec6a0efb5e887e8c08ea4f847df",
+    "current_source_lineage": {
+      "control_failure_and_serve_block_matches_evidence_source": true,
+      "environment_rpc_client_has_no_changes_since_evidence_source": true,
+      "current_control_tests_passed": true
+    },
+    "scenario": "The authenticated Control process exited after Environment durably committed a checkpoint and before the caller received a response. systemd restarted Control; a fresh protected process read the same checkpoint and a same-ID retry returned it without a duplicate.",
+    "canonical_store_used": true,
+    "canonical_mid_commit_process_kill_exercised": false
+  },
+  "readiness": {
+    "claim_transfer_crash_recovery": "PASS in protected tests against isolated real EmbeddedStore generations",
+    "canonical_caller_loss_and_post_commit_service_termination": "PASS through authenticated Environment RPC with fresh-process readback and stable retry",
+    "canonical_store_direct_agent_write": false,
+    "compiler_and_forge_claims_modified": false,
+    "delivery": "partial",
+    "remaining": [
+      "Receive authenticated Compiler and Forge handoffs before touching their claims or repositories.",
+      "Resolve the separately requested Language toolchain scope before invoking Automation compiler capabilities.",
+      "Resume compiler progression and resource feedback after required authority is available."
+    ]
+  }
+}
