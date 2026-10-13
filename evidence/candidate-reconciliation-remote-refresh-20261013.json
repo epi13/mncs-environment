@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.candidate-reconciliation-remote-refresh/1",
+  "identity": "ev_env_candidate_reconciliation_remote_refresh_20261013",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T14:32:42Z",
+  "supersedes": {
+    "identity": "ev_env_candidate_reconciliation_readonly_20261013",
+    "reason": "The earlier report used a stale local origin/main tracking ref for Language. Fetch and ls-remote showed the server branch had advanced by one badge-only commit. This report records the fetched server head and updated ancestry counts."
+  },
+  "observation": {
+    "method": "read-only git ls-remote, fetch of origin/main, ancestry, patch-equivalence, registered worktree and porcelain checks",
+    "claim_readback_job_id": "term-c4b90800f7efcc6cd1235af8",
+    "compiler_or_forge_tests_run": false,
+    "compiler_or_forge_repositories_modified": false,
+    "candidate_merges_performed": false,
+    "worktrees_retired": false,
+    "language_source_changes_performed": false
+  },
+  "language_remote_correction": {
+    "repository": "mncs-language",
+    "server_main_before_fetch": "3cfbc094f1a1770fc2409b990f3f7d8912f49bc7",
+    "local_tracking_ref_before_fetch": "7e8f56d3c84b6b1260a99ab403b2a51168d13871",
+    "fetched_main": "3cfbc094f1a1770fc2409b990f3f7d8912f49bc7",
+    "remote_only_commit": {
+      "commit": "3cfbc094f1a1770fc2409b990f3f7d8912f49bc7",
+      "subject": "chore: refresh MNCS language badge",
+      "changed_paths": [
+        "docs/mncs-badge.json"
+      ]
+    },
+    "local_main_fast_forward": {
+      "before": "7e8f56d3c84b6b1260a99ab403b2a51168d13871",
+      "after": "3cfbc094f1a1770fc2409b990f3f7d8912f49bc7",
+      "remote_already_contains_environment_value_delivery": true
+    },
+    "candidate": {
+      "branch": "campaign/process-environment-value-bound-20261010",
+      "commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "main_only_commits": 5,
+      "candidate_only_commits": 1,
+      "git_cherry_marker": "-",
+      "patch_equivalent_to_main": true,
+      "implementation_delivery_evidence": "ev_language_process_environment_candidate_equivalence_tests_20261013",
+      "worktree": {
+        "registered": true,
+        "path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+        "visible_in_host_namespace": true,
+        "porcelain_status": "untracked evidence retained",
+        "untracked_paths": [
+          "evidence/campaign-20261010-forge-core-quiet-output.json"
+        ]
+      },
+      "disposition": "implementation-already-on-pushed-main; badge-only remote commit fetched; preserve candidate and untracked evidence pending owner-reviewed retirement"
+    }
+  },
+  "other_candidates_revalidated": [
+    {
+      "repository": "mncs-compiler",
+      "main_and_origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "candidate_commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "main_only_commits": 14,
+      "candidate_only_commits": 1,
+      "patch_equivalent_to_main": true,
+      "worktree_clean_and_registered": true,
+      "exclusive_claim_version": 63,
+      "claim_owner_session": "ses_d2537acde8b8a875",
+      "disposition": "patch-equivalent; protected by live exclusive claim; retain; no tests, merge, or retirement"
+    },
+    {
+      "repository": "mncs-forge",
+      "main_and_origin_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "branch": "campaign/forge-quiet-compile-output-20261010",
+      "candidate_commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "main_only_commits": 0,
+      "candidate_only_commits": 1,
+      "patch_equivalent_to_main": false,
+      "worktree_clean_and_registered": true,
+      "exclusive_claim_version": 28,
+      "claim_owner_session": "ses_95c3aa35b8544042",
+      "disposition": "unique unmerged commit; protected by live exclusive claim; retain; no tests, merge, or retirement"
+    }
+  ],
+  "readiness": {
+    "status": "partial-read-only-reconciliation",
+    "reason": "The stale Language tracking ref is corrected and local main is synchronized to the server. Compiler and Forge remain under their live exclusive claims without authenticated handoffs; all protected worktrees remain unchanged."
+  }
+}
