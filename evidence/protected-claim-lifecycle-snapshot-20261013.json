@@ -1,0 +1,68 @@
+{
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "identity": "ev_env_protected_foreign_claim_lifecycle_snapshot_20261013",
+  "interpretation": {
+    "handoff_observed": false,
+    "lifecycle_live_semantics": "Environment classified the stored claim version as live at observation time; this is not evidence that the owner's process is currently running.",
+    "next_authorized_action": "resume the appropriate Environment session or accept an authenticated Environment handoff before touching either repository",
+    "takeover_or_release_attempted": false
+  },
+  "observations": [
+    {
+      "claim_id": "claim:mncs-compiler",
+      "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+      "expires_at": "2027-08-03T10:31:10+00:00",
+      "lifecycle_live": true,
+      "other_nonlive_claim_records": 6,
+      "repository": "mncs-compiler",
+      "scope": {
+        "exclusive": true,
+        "kind": "repository",
+        "repository": "mncs-compiler"
+      },
+      "session_id": "ses_d2537acde8b8a875",
+      "version": 63
+    },
+    {
+      "claim_id": "claim:mncs-forge",
+      "consumer_id": "luna-compiler-self-consumption",
+      "expires_at": "2027-03-07T23:49:59+00:00",
+      "lifecycle_live": true,
+      "other_nonlive_claim_records": 4,
+      "repository": "mncs-forge",
+      "scope": {
+        "exclusive": true,
+        "kind": "repository",
+        "repository": "mncs-forge"
+      },
+      "session_id": "ses_95c3aa35b8544042",
+      "version": 28
+    }
+  ],
+  "owner": "mncs-environment",
+  "protected_execution": {
+    "job_id": "term-659b7f15b8b989929f7df21a",
+    "mutated_claims": false,
+    "network": false,
+    "operation": "read-only claim query",
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "transport": "authenticated mncs-control-environment-rpc"
+  },
+  "readiness": {
+    "limitations": [
+      "No Compiler or Forge tests, merges, or repository modifications were performed.",
+      "The snapshot records canonical claim state and does not infer process liveness from the user's visible-agent count."
+    ],
+    "status": "foreign-exclusive-claims-preserved"
+  },
+  "recorded_at": "2026-10-13T15:07:23.259451Z",
+  "schema_version": "mncs.environment.protected-claim-lifecycle-snapshot/1",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "basis": "authenticated canonical claim reads after fresh-process campaign checkpoint readback",
+    "repository": "mncs-environment",
+    "revision": "a7848bee0eb0ef91c71d4128f93ae61f1f587461"
+  }
+}
