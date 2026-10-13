@@ -1,0 +1,39 @@
+{
+  "schema_version": "mncs.environment.retirement-protected-namespace/1",
+  "identity": "ev_env_retirement_nested_namespace_fail_closed_20261013",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T13:37:11Z",
+  "source": {
+    "repository": "mncs-environment",
+    "commit": "725bdb3",
+    "base_main": "af56bd60f02e1814aa1d54016f96add5df04415a",
+    "change_scope": "retirement test expectations only"
+  },
+  "execution": {
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "nested_bubblewrap_error_observed_in_full_suite": {
+      "control_job_id": "term-03b8daefc6a4f1d2bebb522b",
+      "diagnostic": "bwrap: Creating new namespace failed: nesting depth or /proc/sys/user/max_*_namespaces exceeded (ENOSPC)"
+    }
+  },
+  "focused_test": {
+    "control_job_id": "term-eed3fdb962e4a41b384bac84",
+    "command": "env -u MNCS_ENV_PERSISTENCE_TRANSPORT -u MNCS_ENV_RPC_SOCKET -u MNCS_ENV_RPC_GRANT_FILE PYTHONDONTWRITEBYTECODE=1 python3 -m pytest tests/test_retire.py -q",
+    "completed_at": "2026-10-13T13:36:56Z",
+    "duration_seconds": 1.44,
+    "exit_code": 0,
+    "passed": 33,
+    "failed": 0
+  },
+  "verified_contract": {
+    "when_nested_namespace_is_available": "Existing positive assertions still require mapped Git identity, clean-state verification, and safe retirement.",
+    "when_nested_namespace_creation_returns_enospc": "Classification remains unknown; retirement is refused; worktree registration, directory, branch, dirty files, and ignored files remain present.",
+    "security_policy_changed": false,
+    "filesystem_scope_expanded": false,
+    "canonical_store_accessed_directly": false
+  },
+  "readiness": "Protected-environment retirement tests now pass while distinguishing verified retirement from namespace-limited UNKNOWN. This does not claim that a positive retirement ran through the host Environment RPC service."
+}
