@@ -1,0 +1,118 @@
+{
+  "binding": {
+    "availability": {
+      "code": "executable-present",
+      "reason": "invocation substrate present; provider readiness not yet verified",
+      "status": "available",
+      "verification": "substrate"
+    },
+    "binding_id": "cap_75cd183cf08aea1e",
+    "capability": "mncs-system-monitor:system-observability",
+    "checkout": {
+      "branch": "main",
+      "clean": true,
+      "head": "cec9608d084cab704c2af9f52b4eda26c30daa89"
+    },
+    "contract_revision": "0.1.0",
+    "effects": [
+      "read"
+    ],
+    "invocation": {
+      "fixed_argv": [
+        "--json",
+        "--once",
+        "--no-tui"
+      ],
+      "path": "target/debug/mncs-system-monitor"
+    }
+  },
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "control_rpc_attempts": [
+    {
+      "command": "./scripts/mncs-env invoke ses_7226fbcfe65820f7 mncs-system-monitor:system-observability -- --json --once --no-tui",
+      "diagnostic_code": "operation-unavailable",
+      "domain_operation": "mncs-system-monitor:system-observability",
+      "exit_code": 3,
+      "job_id": "term-d17858100dfac942955d5678",
+      "provider_result_received": false,
+      "publication_completed": false
+    },
+    {
+      "command": "./scripts/mncs-env projections ses_7226fbcfe65820f7 --interpret capabilities --repository mncs-system-monitor",
+      "diagnostic_code": "operation-unavailable",
+      "domain_operation": "projections",
+      "exit_code": 3,
+      "job_id": "term-e183949699622563ae0c8bb8",
+      "publication_completed": false
+    }
+  ],
+  "identity": "ev_env_system_observability_control_rpc_gap_20261013",
+  "live_health": {
+    "blocking": [],
+    "required_unavailable": [],
+    "required_unknown": [],
+    "status": "degraded",
+    "system_observability_unknown": false,
+    "unknown_optional_capabilities": [
+      "mncs-automation:automation-definition",
+      "mncs-automation:automation-evaluation",
+      "mncs-automation:automation-occurrence",
+      "mncs-automation:coherence-artifact-reconcile",
+      "mncs-automation:coherence-routing",
+      "mncs-control-mcp:environment.campaign-continuation",
+      "mncs-control-mcp:journal-context",
+      "mncs-control-mcp:workspace.worktree.prepare"
+    ]
+  },
+  "owner": "mncs-environment",
+  "protected_execution": {
+    "environment_revalidation": {
+      "changed": [
+        "mncs-control-mcp:workspace.worktree.prepare",
+        "mncs-system-monitor:system-observability"
+      ],
+      "job_id": "term-ee537baf1e7317c8b1d6dfe2",
+      "network": false,
+      "project": "mncs-environment",
+      "reprobed": 13,
+      "reused": 16,
+      "sandbox_backend": "bwrap",
+      "scope": "project",
+      "session_lifecycle": "active",
+      "transport": "authenticated mncs-control-environment-rpc",
+      "unbound": []
+    },
+    "provider_test": {
+      "command": "cargo test -p mncs-system-monitor --test correlation_smoke",
+      "exit_code": 0,
+      "failed": 0,
+      "job_id": "term-a95970796f14bbcc9634986c",
+      "network": false,
+      "passed": 10,
+      "project": "mncs-system-monitor",
+      "sandbox_backend": "bwrap",
+      "scope": "project"
+    }
+  },
+  "readiness": {
+    "limitations": [
+      "The declared executable was tested directly inside its protected project sandbox, but authenticated Environment invocation is rejected by the Control operation gate before the provider runs.",
+      "Environment projections are also unexposed through the current Control RPC contract, so the generated project view could not be refreshed through its owning Environment capability.",
+      "This evidence does not claim end-to-end Environment capability invocation or a completed projection update.",
+      "No Compiler or Forge repository was read for implementation, tested, merged, or modified in this milestone."
+    ],
+    "status": "provider-bound-control-operation-unavailable"
+  },
+  "recorded_at": "2026-10-13T15:27:40Z",
+  "schema_version": "mncs.environment.provider-binding-invocation-integration/1",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "environment_repository": "mncs-environment",
+    "environment_revision": "3b03e59980aee50a75b6d5157c6c15de7d822a40",
+    "provider_contract": "system-observability/0.1.0",
+    "provider_manifest_sha256": "0761817c93ab0df32d2ad66958f8d19e2eac8b79e10a21293e66e8ef52ffc3b3",
+    "provider_repository": "mncs-system-monitor",
+    "provider_revision": "cec9608d084cab704c2af9f52b4eda26c30daa89",
+    "provider_test_sha256": "b750e74fd09a9eeecf8f179a5f17a6eff6c11047284b943dd79a990135ad3ad0"
+  }
+}
