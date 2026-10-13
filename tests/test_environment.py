@@ -4301,6 +4301,68 @@ class SessionTests(unittest.TestCase):
                       and item.get("payload", {}).get("request_id") == "req_checkpoint-proof"]
             self.assertEqual(len(events), 1)
 
+    def test_campaign_state_indexes_charter_evidence_across_page_boundaries(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            campaign_identity = "cmp_charter_evidence_index_test"
+            session.snapshot["campaign"]["identity"] = campaign_identity
+            session._save()
+            evidence = [{
+                "identity": "ev_environment_campaign_charter_origin_20261013",
+                "repository": "mncs-environment",
+                "commit": "a" * 40,
+                "path": "evidence/campaign-charter-origin.json",
+                "sha256": "1" * 64,
+            }, {
+                "identity": "ev_environment_campaign_charter_task_selector_20261013",
+                "repository": "mncs-environment",
+                "commit": "b" * 40,
+                "path": "evidence/campaign-charter-task-selector.json",
+                "sha256": "2" * 64,
+            }]
+            evidence.extend({
+                "identity": f"ev_charter_index_fill_{index:03d}",
+                "repository": "mncs-environment",
+                "commit": "c" * 40,
+                "path": f"evidence/charter-index-fill-{index:03d}.json",
+            } for index in range(sessions.CAMPAIGN_EVIDENCE_MAX - len(evidence)))
+            first = session.checkpoint(
+                progress="Initialize evidence history with charter pointers",
+                request_id="req_charter_index_first",
+                campaign_base_checkpoint="none",
+                campaign_evidence=evidence,
+            )
+            appended = [{
+                "identity": f"ev_charter_index_append_{index:03d}",
+                "repository": "mncs-control-mcp",
+                "commit": "d" * 40,
+                "path": f"evidence/charter-index-append-{index:03d}.json",
+            } for index in range(4)]
+            session.checkpoint(
+                progress="Move the default evidence page beyond the charter pointers",
+                request_id="req_charter_index_append",
+                campaign_base_checkpoint=first["identity"],
+                campaign_evidence_delta=appended,
+            )
+
+            state = session.campaign_state()
+            self.assertEqual(state["evidence_count"], 132)
+            self.assertEqual(state["evidence_offset"], 4)
+            self.assertNotIn(
+                "ev_environment_campaign_charter_origin_20261013",
+                [item["identity"] for item in state["evidence"]],
+            )
+            index = state["campaign_charter_evidence"]
+            self.assertEqual(index["count"], 2)
+            self.assertFalse(index["truncated"])
+            self.assertEqual(
+                [item["identity"] for item in index["references"]],
+                [
+                    "ev_environment_campaign_charter_origin_20261013",
+                    "ev_environment_campaign_charter_task_selector_20261013",
+                ],
+            )
+
     def test_campaign_evidence_and_delivery_are_checkpointed_and_reconstructed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state_dir = Path(directory)

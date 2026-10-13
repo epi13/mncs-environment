@@ -78,6 +78,7 @@ CONTINUATION_MAX_CHECKPOINT_REMAINING = 8
 CONTINUATION_MAX_FOREIGN_CLAIMS = 12
 CONTINUATION_MAX_CLAIM_PATHS = 4
 CAMPAIGN_EVIDENCE_MAX = 128
+CAMPAIGN_CHARTER_EVIDENCE_MAX = 16
 CONTINUATION_MAX_CAMPAIGN_EVIDENCE = 32
 CAMPAIGN_DELIVERY_REPOSITORIES_MAX = 16
 CAMPAIGN_STATE_INPUT_MAX_BYTES = 48 * 1024
@@ -4271,6 +4272,15 @@ class Session:
             raise LifecycleError("campaign has no persisted state checkpoint")
         checkpoint, all_evidence = history
         state = checkpoint["campaign_state"]
+        charter_references = [
+            item for item in all_evidence
+            if "campaign_charter" in item.get("identity", "")
+        ]
+        charter_reference_index = {
+            "references": charter_references[:CAMPAIGN_CHARTER_EVIDENCE_MAX],
+            "count": len(charter_references),
+            "truncated": len(charter_references) > CAMPAIGN_CHARTER_EVIDENCE_MAX,
+        }
         total = len(all_evidence)
         limit = evidence_limit
         while True:
@@ -4299,6 +4309,10 @@ class Session:
                 "next_evidence_offset": end if end < total else None,
                 "evidence_truncated": offset > 0 or end < total,
                 "delivery": state["delivery"],
+                # This bounded identity index spans the complete validated
+                # evidence history so consumers can locate immutable campaign
+                # charter pointers after the ordinary page window moves on.
+                "campaign_charter_evidence": charter_reference_index,
             }
             encoded = json.dumps(
                 result, ensure_ascii=False, sort_keys=True, separators=(",", ":")
