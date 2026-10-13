@@ -1,0 +1,1424 @@
+{
+  "schema_version": "mncs.environment.compiler-worktree-disposition/1",
+  "identity": "ev_env_compiler_worktree_disposition_20261013",
+  "recorded_at": "2026-10-13 08:52:16 UTC",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "observer": {
+    "session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "local-agent",
+    "environment_repository": "mncs-environment"
+  },
+  "scope": {
+    "method": "read-only project-scoped MNCS Control terminal under bwrap",
+    "source_repositories": [
+      "mncs-compiler",
+      "mncs-language",
+      "mncs-forge"
+    ],
+    "compiler_and_forge_tests_run": false,
+    "compiler_or_forge_repositories_mutated": false,
+    "branch_merges_or_worktree_retirements_performed": false,
+    "classification_rule": "A path unavailable in the protected namespace remains unavailable/unknown. Git registration and commit ancestry are retained as facts. Dirty or unproven states are preserved. Merged state alone does not authorize retirement.",
+    "retire_operation_attempt": {
+      "command": "mncs-env retire ses_7226fbcfe65820f7 --repository mncs-compiler --dry-run --inventory",
+      "result": "rejected_before_classification",
+      "publication_completed": false,
+      "diagnostic_code": "publication-rejected",
+      "message": "retirement repository escapes its authenticated execution root"
+    }
+  },
+  "compiler_repository": {
+    "main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "registered_worktree_count": 66,
+    "accessible_count": 44,
+    "unavailable_count": 22,
+    "accessible_dirty_count": 6,
+    "heads_ancestor_of_main_count": 65,
+    "heads_not_ancestor_of_main_count": 1,
+    "inventory_capture": "Each record contains Git's registered path, HEAD, branch/detached state, protected-namespace availability, worktree admin id when resolved, prunable metadata, exact accessible porcelain status, and ancestry/divergence counts.",
+    "untracked_compiler_main_items": [
+      "?? .worktrees/keyword-window4-20261009/",
+      "?? .worktrees/probe-stage0-oracle-skip-20261009/",
+      "?? evidence/campaign-20261006-imported-nominal-ssa.json",
+      "?? evidence/campaign-20261006-pressure-suite-results.json",
+      "?? evidence/campaign-20261006-project-results.json"
+    ],
+    "repository_exclusive_claim": {
+      "claim_id": "claim:mncs-compiler",
+      "identity": "clm_5871ad9917e5210d",
+      "session_id": "ses_d2537acde8b8a875",
+      "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+      "version": 63,
+      "status": "held",
+      "live": true,
+      "expires_at": "2027-08-03T10:31:10+00:00",
+      "scope": "exclusive repository"
+    },
+    "worktrees": [
+      {
+        "ordinal": 1,
+        "git_worktree_admin_id": "main-worktree",
+        "registered_path": "/workspace/mncs-compiler",
+        "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+        "branch": "main",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": false,
+        "status_entries": [
+          "?? .worktrees/keyword-window4-20261009/",
+          "?? .worktrees/probe-stage0-oracle-skip-20261009/",
+          "?? evidence/campaign-20261006-imported-nominal-ssa.json",
+          "?? evidence/campaign-20261006-pressure-suite-results.json",
+          "?? evidence/campaign-20261006-project-results.json"
+        ],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          0,
+          0
+        ],
+        "disposition": "merged_or_main_checkout_with_dirty_or_untracked_state_preserve"
+      },
+      {
+        "ordinal": 2,
+        "git_worktree_admin_id": "compiler-evidence-identity-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-evidence-identity-20261009",
+        "head": "ca9516f32e57cbf1f226460fe8013a3471cebd11",
+        "branch": "campaign/compiler-evidence-identity-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          117,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 3,
+        "git_worktree_admin_id": "compiler-identity-correction-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-identity-correction-20261009",
+        "head": "0f3a6aae54bc6480b2fe7937a24251092f4af489",
+        "branch": "campaign/compiler-identity-correction-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          118,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 4,
+        "git_worktree_admin_id": "compiler-probe-telemetry-20261008",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-probe-telemetry-20261008",
+        "head": "f92deb2cb5b6113234ca0074a1a7068790729550",
+        "branch": "campaign/probe-telemetry-20261008",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": false,
+        "status_entries": [
+          "?? .bootstrap"
+        ],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          119,
+          0
+        ],
+        "disposition": "merged_or_main_checkout_with_dirty_or_untracked_state_preserve"
+      },
+      {
+        "ordinal": 5,
+        "git_worktree_admin_id": "decl-bounded-scan-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/decl-bounded-scan-20261009",
+        "head": "324c0b997edd68472bc4f44a6c08cb02056bc78c",
+        "branch": "campaign/decl-bounded-scan-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          86,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 6,
+        "git_worktree_admin_id": "decl-path-early-exit-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/decl-path-early-exit-20261009",
+        "head": "83dfb4a2f57949dc433e0cbf9a4aa94ea2f991c2",
+        "branch": "campaign/decl-path-early-exit-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          70,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 7,
+        "git_worktree_admin_id": "evidence-current-delivery-ledger-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/evidence-current-delivery-ledger-20261009",
+        "head": "a39a70e35fc934d6410057fcd53843ae38d3e723",
+        "branch": "campaign/evidence-current-delivery-ledger-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          109,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 8,
+        "git_worktree_admin_id": "flow-hir-prelude-compiler-run-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-compiler-run-20261009",
+        "head": "76ccb18af4e1da9a849f421960ecb9634ca2409d",
+        "branch": null,
+        "detached": true,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": false,
+        "status_entries": [
+          " M mncs-language.lock.json",
+          " M src/compiler/lexer.mncs",
+          " M tools/measure_compiler_probe.py",
+          " M tools/probe_compiler_module_frontier.py",
+          " M tools/stage0-probe/src/main.rs",
+          " M tools/test_measure_compiler_probe.py"
+        ],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          102,
+          0
+        ],
+        "disposition": "merged_or_main_checkout_with_dirty_or_untracked_state_preserve"
+      },
+      {
+        "ordinal": 9,
+        "git_worktree_admin_id": "flow-hir-prelude-evidence-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-evidence-20261009",
+        "head": "4a1479cc53cd9bc3de8aee3f8debcab1f580c124",
+        "branch": "campaign/flow-hir-prelude-evidence-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          101,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 10,
+        "git_worktree_admin_id": "flow-measurement-rss-cap-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-measurement-rss-cap-20261009",
+        "head": "76ccb18af4e1da9a849f421960ecb9634ca2409d",
+        "branch": "campaign/flow-measurement-rss-cap-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          102,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 11,
+        "git_worktree_admin_id": "flow-profile-resource-evidence-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-profile-resource-evidence-20261009",
+        "head": "369297178d4bf2f4436e722e6db4d34f1935bba6",
+        "branch": "campaign/flow-profile-resource-evidence-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          75,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 12,
+        "git_worktree_admin_id": "import-signature-baseline-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/import-signature-baseline-20261009",
+        "head": "581c8154008b56b968a67e85882a6d5eab0a18b3",
+        "branch": null,
+        "detached": true,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": false,
+        "status_entries": [
+          " M src/compiler/decl.mncs",
+          "?? .bootstrap"
+        ],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          116,
+          0
+        ],
+        "disposition": "merged_or_main_checkout_with_dirty_or_untracked_state_preserve"
+      },
+      {
+        "ordinal": 13,
+        "git_worktree_admin_id": "import-signature-scan-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/import-signature-scan-20261009",
+        "head": "45f84477a2f455cedae645045882f7e5c23bbe9a",
+        "branch": "campaign/import-signature-scan-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          114,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 14,
+        "git_worktree_admin_id": "lazy-keyword-classification-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/lazy-keyword-classification-20261009",
+        "head": "97db51927d017123847735baf13409e94d27dc7f",
+        "branch": "campaign/lazy-keyword-classification-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          111,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 15,
+        "git_worktree_admin_id": "lexer-batched-window-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-batched-window-20261009",
+        "head": "5d884cd0d9e17452601324f66abb78b341497310",
+        "branch": "campaign/lexer-batched-window-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          91,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 16,
+        "git_worktree_admin_id": "lexer-head-byte-pair-window-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-pair-window-20261009",
+        "head": "2ea01d3af28ca9fc2795a8c7669a48773c110c5c",
+        "branch": "campaign/lexer-head-byte-pair-window-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          76,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 17,
+        "git_worktree_admin_id": "lexer-head-byte-window-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-window-20261009",
+        "head": "c756a15247b1eb184c7685b558f61973f376c144",
+        "branch": "campaign/lexer-head-byte-window-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          77,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 18,
+        "git_worktree_admin_id": "lexer-initial-window-reuse-20261010",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-initial-window-reuse-20261010",
+        "head": "7b3829ee1586c178b1bdf606066014a8696bd491",
+        "branch": "campaign/lexer-initial-window-reuse-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": false,
+        "status_entries": [
+          " M src/compiler/lexer.mncs"
+        ],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          68,
+          0
+        ],
+        "disposition": "merged_or_main_checkout_with_dirty_or_untracked_state_preserve"
+      },
+      {
+        "ordinal": 19,
+        "git_worktree_admin_id": "lexer-keyword-dispatch-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-dispatch-20261009",
+        "head": "581c8154008b56b968a67e85882a6d5eab0a18b3",
+        "branch": "campaign/lexer-keyword-dispatch-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          116,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 20,
+        "git_worktree_admin_id": "lexer-keyword-windows-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-windows-20261009",
+        "head": "f5aa9547592694afd11bc28cd8c2da9a17b44ef7",
+        "branch": "campaign/lexer-keyword-windows-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          81,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 21,
+        "git_worktree_admin_id": "lexer-proof-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-proof-20261009",
+        "head": "b188398f74398de9a8d6a8ba37b32c525bf637b8",
+        "branch": "campaign/lexer-proof-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": false,
+        "status_entries": [
+          "?? .bootstrap"
+        ],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          93,
+          0
+        ],
+        "disposition": "merged_or_main_checkout_with_dirty_or_untracked_state_preserve"
+      },
+      {
+        "ordinal": 22,
+        "git_worktree_admin_id": "lexer-scan-window-arg-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-scan-window-arg-20261009",
+        "head": "c88d0675d344c4af212841e667c9af2284b2cf29",
+        "branch": "campaign/lexer-scan-window-arg-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          79,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 23,
+        "git_worktree_admin_id": "lexer-token-frame-carry-20261010",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-token-frame-carry-20261010",
+        "head": "51bb2dd9c0ef9304f2158634c86805480a8e1588",
+        "branch": "campaign/lexer-keyword-byte-reuse-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          45,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 24,
+        "git_worktree_admin_id": "lexer-trivia-prefix-budget-20261010",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-trivia-prefix-budget-20261010",
+        "head": "ea87c5c5e97d89d219c22f5d25ed728b0547c649",
+        "branch": "campaign/lexer-trivia-prefix-budget-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          63,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 25,
+        "git_worktree_admin_id": "lexer-window-slide-evidence-20261010",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-window-slide-evidence-20261010",
+        "head": "176c145b4de29caf6a0279b0ebdb194b6ae6e938",
+        "branch": "campaign/lexer-window-slide-evidence-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          66,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 26,
+        "git_worktree_admin_id": "mncs-compiler-nested-match-early-exit-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-nested-match-early-exit-20261009",
+        "head": "87127cd6c194a7de9e64238aac10bb3c4de7e061",
+        "branch": "campaign/nested-match-early-exit-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          106,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 27,
+        "git_worktree_admin_id": "mncs-compiler-runtime-candidate-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-runtime-candidate-20261009",
+        "head": "422c84460b0af958fab1203ce1c89ba9ed8db89f",
+        "branch": null,
+        "detached": true,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          107,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 28,
+        "git_worktree_admin_id": "probe-admission-baseline-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-baseline-20261009",
+        "head": "a110e17d83bcc62bf310768b37fa7186e526ae15",
+        "branch": null,
+        "detached": true,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          96,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 29,
+        "git_worktree_admin_id": "probe-admission-reuse-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-reuse-20261009",
+        "head": "4d957194d967952fd26411807f3862fa1cacb83c",
+        "branch": "campaign/probe-admission-reuse-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          94,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 30,
+        "git_worktree_admin_id": "probe-outcome-classification-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-outcome-classification-20261009",
+        "head": "9f55339c502dc86d468bf734764baca05dfc7276",
+        "branch": "campaign/probe-outcome-classification-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          110,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 31,
+        "git_worktree_admin_id": "probe-phase-resource-samples-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-phase-resource-samples-20261009",
+        "head": "901fcadcd525afdd4443970a602885eb5ae32c83",
+        "branch": "campaign/probe-phase-resource-samples-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          99,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 32,
+        "git_worktree_admin_id": "project-provider-body-retention-20261010",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/project-provider-body-retention-20261010",
+        "head": "85f4886f73eab6699084339ea486d91b5cd95d9c",
+        "branch": "campaign/project-provider-body-retention-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          60,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 33,
+        "git_worktree_admin_id": "project-schema-pages-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/project-schema-pages-20261009",
+        "head": "d281ad540f6ab87c7c24f2ac52a479d02ce18761",
+        "branch": "campaign/project-schema-pages-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          112,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 34,
+        "git_worktree_admin_id": "mncs-compiler1",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/reference-argument-validation-cache-20261010/mncs-compiler",
+        "head": "6af2e42a548defe5af25b33711b5ac838583acef",
+        "branch": "campaign/reference-argument-validation-cache-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          47,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 35,
+        "git_worktree_admin_id": "mncs-compiler",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/runtime-frame-profile-20261008/mncs-compiler",
+        "head": "386e618218afbf2d06e2d0daa03e0836f9e1c997",
+        "branch": "campaign/runtime-frame-profile-20261008",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          120,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 36,
+        "git_worktree_admin_id": "source-initial-byte-window-20261010",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-20261010",
+        "head": "4a44f706918d48b37bd273bde27a8d3029f6a9da",
+        "branch": "campaign/source-initial-byte-window-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          53,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 37,
+        "git_worktree_admin_id": "source-initial-byte-window-baseline-20261010",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-baseline-20261010",
+        "head": "e05d3ede6a03fb2a02615771954fd2de8e641cb2",
+        "branch": null,
+        "detached": true,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          58,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 38,
+        "git_worktree_admin_id": "source-keyword-local-byte-window-20261010",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-keyword-local-byte-window-20261010",
+        "head": "10bf2aae7d0e32767e8f5ad98b0200ee04bbbe89",
+        "branch": "campaign/source-keyword-local-byte-window-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          49,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 39,
+        "git_worktree_admin_id": "source-local-byte-window-20261010",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-20261010",
+        "head": "e05d3ede6a03fb2a02615771954fd2de8e641cb2",
+        "branch": "campaign/source-local-byte-window-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          58,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 40,
+        "git_worktree_admin_id": "source-local-byte-window-baseline-control-20261010",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-baseline-control-20261010",
+        "head": "85f4886f73eab6699084339ea486d91b5cd95d9c",
+        "branch": null,
+        "detached": true,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          60,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 41,
+        "git_worktree_admin_id": "source-page-validation-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-page-validation-20261009",
+        "head": "22f771df5b4865623ded5100e09e7a8ad214ed3d",
+        "branch": "campaign/source-page-validation-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          82,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 42,
+        "git_worktree_admin_id": "streaming-probe-cache-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/.worktrees/streaming-probe-cache-20261009",
+        "head": "a110e17d83bcc62bf310768b37fa7186e526ae15",
+        "branch": "campaign/streaming-probe-cache-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          96,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 43,
+        "git_worktree_admin_id": "keyword-window4-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/keyword-window4-20261009",
+        "head": "6d3bd95b3b2a508dc2982d9538f04679f8fbb31e",
+        "branch": "campaign/keyword-window4-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          85,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 44,
+        "git_worktree_admin_id": "probe-stage0-oracle-skip-20261009",
+        "registered_path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/probe-stage0-oracle-skip-20261009",
+        "head": "5653908ee345ef7b2ed7bcae2a4da71f4ca6a4da",
+        "branch": "campaign/probe-stage0-oracle-skip-20261009",
+        "detached": false,
+        "accessible_in_protected_namespace": true,
+        "registration_prunable_reason": null,
+        "clean": true,
+        "status_entries": [],
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          75,
+          0
+        ],
+        "disposition": "merged_clean_retained_retirement_not_authorized"
+      },
+      {
+        "ordinal": 45,
+        "git_worktree_admin_id": "mncs-compiler-common-probe-cache-20261010",
+        "registered_path": "/tmp/mncs-compiler-common-probe-cache-20261010",
+        "head": "e5bab6bd391379185a1b30a117ed498ce150aa9a",
+        "branch": "campaign/common-probe-cache-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          24,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 46,
+        "git_worktree_admin_id": "mncs-compiler-decl-name-reuse-20261010",
+        "registered_path": "/tmp/mncs-compiler-decl-name-reuse-20261010",
+        "head": "dce6adcf9f0778ec9dd398ffdca5044ce879321f",
+        "branch": "campaign/decl-name-token-reuse-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          27,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 47,
+        "git_worktree_admin_id": "mncs-compiler-decl-scalar-window-20261010",
+        "registered_path": "/tmp/mncs-compiler-decl-scalar-window-20261010",
+        "head": "8d7be4e88afa18c4f6b773d573ab70b0ee240527",
+        "branch": "campaign/decl-scalar-window-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          7,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 48,
+        "git_worktree_admin_id": "mncs-compiler-delivery-20261010",
+        "registered_path": "/tmp/mncs-compiler-delivery-20261010",
+        "head": "a852da763f78900a68f3e57c3fcf4568424d8436",
+        "branch": "campaign/decl-significant-direct-repeat-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          29,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 49,
+        "git_worktree_admin_id": "mncs-compiler-flow-stage0-baseline-20261010",
+        "registered_path": "/tmp/mncs-compiler-flow-stage0-baseline-20261010",
+        "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+        "branch": null,
+        "detached": true,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          22,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 50,
+        "git_worktree_admin_id": "mncs-compiler-flow-stage0-pin-profile-20261010",
+        "registered_path": "/tmp/mncs-compiler-flow-stage0-pin-profile-20261010",
+        "head": "cae25860b1cd88b811f94b3ffc76e3aefa37adb4",
+        "branch": "campaign/flow-stage0-pin-profile-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          18,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 51,
+        "git_worktree_admin_id": "mncs-compiler-flow-wordscan-baseline-20261010",
+        "registered_path": "/tmp/mncs-compiler-flow-wordscan-baseline-20261010",
+        "head": "45eb4f4abee05196db3a60c40eade7cb75ff3c51",
+        "branch": null,
+        "detached": true,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          2,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 52,
+        "git_worktree_admin_id": "mncs-compiler-keyword-global-page-local-20261010",
+        "registered_path": "/tmp/mncs-compiler-keyword-global-page-local-20261010",
+        "head": "8f2d8c181dc44384d5c92834481931493b65146d",
+        "branch": "campaign/lexer-keyword-global-local-fast-path-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          10,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 53,
+        "git_worktree_admin_id": "mncs-compiler-keyword-local-index-20261010",
+        "registered_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+        "head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+        "branch": "campaign/keyword-local-index-delivery-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": false,
+        "main_behind_and_candidate_ahead": [
+          14,
+          1
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 54,
+        "git_worktree_admin_id": "mncs-compiler-lexer-full-frontier-20261010",
+        "registered_path": "/tmp/mncs-compiler-lexer-full-frontier-20261010",
+        "head": "602832610080c838df3d94c9fdbac0fc55753acb",
+        "branch": "campaign/lexer-full-frontier-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          5,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 55,
+        "git_worktree_admin_id": "mncs-compiler-lexer-self-ingest-repair-20261010",
+        "registered_path": "/tmp/mncs-compiler-lexer-self-ingest-repair-20261010",
+        "head": "78cdd9ece7c192478119d7fc6ed00a60299b95e3",
+        "branch": "campaign/lexer-self-ingest-repair-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          6,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 56,
+        "git_worktree_admin_id": "mncs-compiler-lexer-window-inline-20261010",
+        "registered_path": "/tmp/mncs-compiler-lexer-window-inline-20261010",
+        "head": "15d6a5971f19177dbdf33508ad6a847154ef0e12",
+        "branch": "campaign/lexer-window-inline-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          17,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 57,
+        "git_worktree_admin_id": "mncs-compiler-matched-baseline-a181-20261010",
+        "registered_path": "/tmp/mncs-compiler-matched-baseline-a181-20261010",
+        "head": "a1818976da578f60e53aebdd739273e1b4b86b0d",
+        "branch": null,
+        "detached": true,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          48,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 58,
+        "git_worktree_admin_id": "mncs-compiler-runtime-boundary-baseline-20261010",
+        "registered_path": "/tmp/mncs-compiler-runtime-boundary-baseline-20261010",
+        "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+        "branch": null,
+        "detached": true,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          22,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 59,
+        "git_worktree_admin_id": "mncs-compiler-runtime-boundary-validation-20261010",
+        "registered_path": "/tmp/mncs-compiler-runtime-boundary-validation-20261010",
+        "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+        "branch": null,
+        "detached": true,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          22,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 60,
+        "git_worktree_admin_id": "mncs-compiler-session-admission-telemetry-20261010",
+        "registered_path": "/tmp/mncs-compiler-session-admission-telemetry-20261010",
+        "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+        "branch": "campaign/lexer-word-scan-select-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          0,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 61,
+        "git_worktree_admin_id": "mncs-compiler-stage0-isolation-baseline-3c-20261010",
+        "registered_path": "/tmp/mncs-compiler-stage0-isolation-baseline-3c-20261010",
+        "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+        "branch": null,
+        "detached": true,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          22,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 62,
+        "git_worktree_admin_id": "mncs-compiler-stage0-language-pin-20261010",
+        "registered_path": "/tmp/mncs-compiler-stage0-language-pin-20261010",
+        "head": "310333c1636a9ec1db918dc14f2df93738c933e0",
+        "branch": "campaign/stage0-language-pin-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          21,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 63,
+        "git_worktree_admin_id": "mncs-compiler-word-scan-inline-20261010",
+        "registered_path": "/tmp/mncs-compiler-word-scan-inline-20261010",
+        "head": "4ed34b5f2060683045953178cefd31a4da0086d2",
+        "branch": "campaign/lexer-word-scan-inline-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          8,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 64,
+        "git_worktree_admin_id": "mncs-compiler-word-scan8-20261010",
+        "registered_path": "/tmp/mncs-compiler-word-scan8-20261010",
+        "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+        "branch": "campaign/lexer-word-scan8-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          0,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 65,
+        "git_worktree_admin_id": "mncs-lexer-significant-trivia-20261010",
+        "registered_path": "/tmp/mncs-lexer-significant-trivia-20261010",
+        "head": "a480a5670c814009801c6d0245ca818d93fa21eb",
+        "branch": "campaign/lexer-significant-trivia-inline-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          35,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      },
+      {
+        "ordinal": 66,
+        "git_worktree_admin_id": "mncs-lexer-token-result-20261010",
+        "registered_path": "/tmp/mncs-lexer-token-result-20261010",
+        "head": "dfc1070e9646cacd4228539e269f934d9f9dc784",
+        "branch": "campaign/lexer-token-result-boundary-20261010",
+        "detached": false,
+        "accessible_in_protected_namespace": false,
+        "registration_prunable_reason": "gitdir file points to non-existent location",
+        "clean": null,
+        "status_entries": null,
+        "merged_into_compiler_main": true,
+        "main_behind_and_candidate_ahead": [
+          39,
+          0
+        ],
+        "disposition": "unavailable_in_current_namespace_preserve_unknown_owner_and_dirty_state"
+      }
+    ]
+  },
+  "candidates": [
+    {
+      "repository": "mncs-compiler",
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "parent": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+      "current_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "relation": {
+        "behind": 14,
+        "ahead": 1,
+        "is_ancestor": false
+      },
+      "changed_paths": [
+        "evidence/SELF-HOST-MATRIX.json"
+      ],
+      "assessment": "Superseded evidence-only matrix snapshot. Candidate identity-ledger entries are all present on current main; current main adds nine later identities. Compared ledger values match except the top-level updated_at metadata.",
+      "matrix_compare": {
+        "candidate_key_count": 48,
+        "main_key_count": 57,
+        "candidate_only_keys": [],
+        "main_only_keys": [
+          "flow_execution_phase_telemetry_campaign_20261010",
+          "flow_execution_phase_telemetry_delivery_20261010",
+          "flow_window_guard_experiment_campaign_20261010",
+          "flow_word_scan_inline_fast_path_campaign_20261010",
+          "lexer_keyword_global_page_reuse_campaign_20261010",
+          "lexer_keyword_global_page_reuse_delivery_20261010",
+          "lexer_native_self_ingestion_repair_campaign_20261010",
+          "lexer_word_scan_inline_campaign_20261010",
+          "lexer_word_scan_inline_delivery_20261010"
+        ],
+        "matching_key_differences_excluding_updated_at": [],
+        "updated_at_candidate": "2026-10-10T10:49:33Z",
+        "updated_at_main": "2026-10-10T15:53:22Z"
+      },
+      "worktree": {
+        "registered_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+        "available_in_protected_namespace": false,
+        "prunable_reason": "gitdir file points to non-existent location",
+        "dirty_state": "unknown"
+      },
+      "disposition": "retain registration and branch evidence; no merge or tests; protected by the Compiler exclusive claim pending handoff."
+    },
+    {
+      "repository": "mncs-language",
+      "branch": "campaign/process-environment-value-bound-20261010",
+      "commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "parent": "e8f8a5f8659c71b33cd32c964d4982bec1a9668e",
+      "current_main": "7e8f56d3c84b6b1260a99ab403b2a51168d13871",
+      "origin_main": "7e8f56d3c84b6b1260a99ab403b2a51168d13871",
+      "relation": {
+        "behind": 4,
+        "ahead": 1,
+        "is_ancestor": false
+      },
+      "stable_patch_id": "d59075fdf3391a828010e8e1b8dde48edb869e0e",
+      "equivalent_main_commit": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "evidence": {
+        "identity": "ev_language_process_environment_candidate_equivalence_tests_20261013",
+        "repository": "mncs-language",
+        "path": "evidence/candidate-process-environment-value-bound-20261013.json",
+        "commit": "7e8f56d3c84b6b1260a99ab403b2a51168d13871",
+        "sha256": "2535f6bd67e6c783b21dd778d07cb7b5960e967bdb24871ad972903a2ee11b20",
+        "verdict": "PASS",
+        "tested_head": "12b29d6482599465698b78c87a21c63d3adeceb6",
+        "results": [
+          {
+            "command": "cargo test -p mncs-cli --test quiet_compile",
+            "passed": 3,
+            "failed": 0
+          },
+          {
+            "command": "cargo test -p mncs-cli --test profile_registry",
+            "passed": 4,
+            "failed": 0
+          },
+          {
+            "command": "cargo test -p mncs-compiler --test source_profile_019_sequence_bound",
+            "passed": 1,
+            "failed": 0
+          }
+        ]
+      },
+      "worktree": {
+        "registered_path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+        "available_in_protected_namespace": false,
+        "dirty_state": "one untracked Forge evidence file is retained; tracked dirty state observed as none by existing Language evidence"
+      },
+      "retained_untracked_forge_evidence": {
+        "path": "evidence/campaign-20261010-forge-core-quiet-output.json",
+        "sha256": "7b1d1a609703ffae19f0834252d68da638d279463e7d24a9e12123c4891efc42",
+        "disposition": "preserve pending Forge owner handoff"
+      },
+      "disposition": "implementation-equivalent patch already on pushed main; do not merge the redundant commit; retain candidate registration and cross-repository evidence."
+    },
+    {
+      "repository": "mncs-forge",
+      "branch": "campaign/forge-quiet-compile-output-20261010",
+      "commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "parent": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "current_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "origin_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "relation": {
+        "behind": 0,
+        "ahead": 1,
+        "is_ancestor": false
+      },
+      "changed_paths": [
+        "src/mncs_forge/mncs_native.py",
+        "tests/test_mncs_native.py"
+      ],
+      "assessment": "One source commit ahead of current main. Implementation completeness is not established because the candidate has not been tested in this continuation.",
+      "worktree": {
+        "registered_path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+        "available_in_protected_namespace": false,
+        "prunable_reason": "gitdir file points to non-existent location",
+        "dirty_state": "unknown"
+      },
+      "repository_exclusive_claim": {
+        "claim_id": "claim:mncs-forge",
+        "identity": "clm_16b820b3293d873b",
+        "session_id": "ses_95c3aa35b8544042",
+        "consumer_id": "luna-compiler-self-consumption",
+        "version": 28,
+        "status": "held",
+        "live": true,
+        "expires_at": "2027-03-07T23:49:59+00:00",
+        "scope": "exclusive repository"
+      },
+      "disposition": "retain branch and worktree registration; no test or merge until Environment records an authorized transfer."
+    }
+  ],
+  "retirement": {
+    "environment_retire_dry_run": "rejected_before_classification",
+    "independent_read_only_git_classification": "complete",
+    "proposed_retirement_count": 0,
+    "cleanup_performed": false,
+    "reason": "The authenticated Environment execution root did not admit the external Compiler repository. Git was inspected read-only through the authorized Control project terminal. Dirty worktrees, unavailable paths, and all merged-clean worktrees remain retained; the Compiler repository is protected by a live exclusive claim."
+  },
+  "continuation": {
+    "handoff_status": "pending",
+    "compiler_claim_owner": "ses_d2537acde8b8a875",
+    "forge_claim_owner": "ses_95c3aa35b8544042",
+    "current_session": "ses_7226fbcfe65820f7",
+    "user_intent": "User will arrange Environment handoffs; no handoff receipt was observed at capture time."
+  },
+  "limitations": [
+    "Compiler worktree source files in the 22 unavailable paths could not be read; their dirty state and local evidence are unknown.",
+    "The single unmerged Compiler worktree commit is retained, not deleted, even though its evidence snapshot is superseded.",
+    "The Forge source candidate remains untested and not delivered.",
+    "This report does not establish Stage-1 or Stage-2 compiler succession."
+  ]
+}
