@@ -1,0 +1,147 @@
+{
+  "schema_version": "mncs.environment.store-service-protected-boundary/1",
+  "identity": "ev_environment_store_service_protected_boundary_20261013",
+  "recorded_at": "2026-10-13T03:54:34Z",
+  "owner": "mncs-environment",
+  "campaign": {
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "local-agent",
+    "authenticated_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "checkpoint": {
+      "identity": "chk_b8efbf5aba471e02",
+      "sequence": 268,
+      "request_id": "req_63a11973e052a87c5b6f3e82653e9e4807f48997",
+      "created_at": "2026-10-13T03:51:43+00:00",
+      "fresh_process_readback": true,
+      "readback_job_id": "term-4dad24b813654f825aad0269"
+    }
+  },
+  "source_identities": {
+    "mncs_environment_main": "f880f5dafc2b8423abd0d60aa0fe3708b7578220",
+    "mncs_store_selected_revision": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055",
+    "store_verifier_artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+    "control_mcp_main_observed": "5a4b59aa1e7972cd063abf97b0cf115dbe025fa8"
+  },
+  "persistence_boundary": {
+    "agent_transport": "authenticated MNCS Control Environment RPC",
+    "domain_owner": "MNCS Environment validates the session, campaign checkpoint, request identity, and authority before Store mutation",
+    "persistence_owner": "MNCS Control tunnel process writes through the selected canonical Store backend",
+    "agent_store_path_access": "none; no Store path or file descriptor is exposed",
+    "canonical_store_root": "/home/epi13/.local/share/mncs-environment/store",
+    "store_roots_in_service_read_write_paths": [
+      "/home/epi13/.local/share/mncs-environment/store"
+    ]
+  },
+  "store_owner_service": {
+    "scope": "systemd user service",
+    "unit": "mncs-control-tunnel.service",
+    "fragment_path": "/home/epi13/.config/systemd/user/mncs-control-tunnel.service",
+    "fragment_sha256": "b1b56bf1eea0c16c40b48200361c98fc77d0a1dc6c35d18d2bbfc8e29064a285",
+    "fragment_mode": "0644",
+    "captured_at": "2026-10-13T03:54:34Z",
+    "active_state": "active",
+    "sub_state": "running",
+    "active_enter_timestamp": "Mon 2026-10-12 19:30:50 AKDT",
+    "protect_system": "strict",
+    "protect_home": "read-only",
+    "no_new_privileges": true,
+    "read_write_paths": [
+      "/home/epi13/Documents/Projects",
+      "/home/epi13/.config/mncs-control-mcp",
+      "/home/epi13/.config/tunnel-client",
+      "/home/epi13/.local/state/mncs-control-mcp",
+      "/home/epi13/.local/state/tunnel-client",
+      "/home/epi13/.local/share/mncs-control-mcp",
+      "/home/epi13/.local/share/tunnel-client",
+      "/home/epi13/.local/share/mncs-environment/store"
+    ]
+  },
+  "protected_agent_path_probe": {
+    "job_id": "term-a15763b266e3bb8c97a885c6",
+    "started_at": "2026-10-13T03:50:08.923024Z",
+    "completed_at": "2026-10-13T03:50:09.020494Z",
+    "exit_code": 0,
+    "execution_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "path_visible": false,
+    "path_readable": false,
+    "path_writable": false,
+    "parent_visible": false,
+    "parent_writable": false
+  },
+  "protected_publication_and_verification": {
+    "checkpoint": {
+      "command": "./scripts/mncs-env checkpoint ses_7226fbcfe65820f7 --consumer local-agent --campaign-base-checkpoint chk_fa671ade1b314503",
+      "execution_backend": "bwrap",
+      "started_at": "2026-10-13T03:51:33.417685Z",
+      "completed_at": "2026-10-13T03:51:45.074584Z",
+      "exit_code": 0,
+      "identity": "chk_b8efbf5aba471e02",
+      "sequence": 268,
+      "request_id": "req_63a11973e052a87c5b6f3e82653e9e4807f48997",
+      "created_by_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+    },
+    "canonical_store_verification": {
+      "job_id": "term-ad96ea857ded6b2089eab607",
+      "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+      "execution_backend": "bwrap",
+      "started_at": "2026-10-13T03:51:49.719170Z",
+      "completed_at": "2026-10-13T03:53:40.592090Z",
+      "duration_seconds": 110.762,
+      "exit_code": 0,
+      "result": "PASS",
+      "store_backend": "mncs-research-bytecode",
+      "generation": 47578,
+      "objects": 47580,
+      "fanout": 31,
+      "chunk_size": 65536,
+      "commit_feed": "4d430100000000000000b9da0000b9dc0000000000000000b0462368fad416df4643f47ac6300592bbcf80d493303cccebf731d06e805911",
+      "recovery": "RECOVERED_OLD",
+      "read_only": true,
+      "provenance_records": 0,
+      "relations": 0
+    },
+    "fresh_process_readback": {
+      "job_id": "term-4dad24b813654f825aad0269",
+      "backend": "bwrap",
+      "started_at": "2026-10-13T03:53:47.775262Z",
+      "completed_at": "2026-10-13T03:54:02.306284Z",
+      "exit_code": 0,
+      "status": "ready",
+      "selected_session_id": "ses_7226fbcfe65820f7",
+      "campaign_state_checkpoint_id": "chk_fa671ade1b314503",
+      "latest_session_checkpoint_id": "chk_b8efbf5aba471e02",
+      "latest_session_checkpoint_sequence": 268,
+      "latest_session_checkpoint_created_at": "2026-10-13T03:51:43+00:00"
+    }
+  },
+  "verdict": {
+    "status": "PASS",
+    "summary": "After the user-scoped Control tunnel was active with its configured Store-root write path, a protected Environment process could not see or write the canonical Store path. The same restricted process published an authorized checkpoint through Environment RPC, a separate protected process read it back, and the selected Store backend passed full integrity verification at generation 47578.",
+    "direct_store_filesystem_write_granted_to_agent": false,
+    "second_authoritative_store_created": false
+  },
+  "related_evidence": [
+    {
+      "identity": "ev_environment_canonical_store_integrity_after_task_identity_checkpoint_20261013",
+      "path": "evidence/canonical-store-integrity-task-identity-20261013.json",
+      "sha256": "1af717fdc271bf62fab6e3c6ad66ca1d13a41b5a573ad1b0dbcf57ce8989cc67"
+    },
+    {
+      "identity": "store-continuity-acceptance-20261010",
+      "path": "evidence/store-continuity-acceptance-20261010.json"
+    },
+    {
+      "identity": "store-continuity-recovery-revalidation-20261012",
+      "path": "evidence/store-continuity-recovery-revalidation-20261012.json"
+    }
+  ],
+  "limitations": [
+    "The protected canonical verifier is read-only; recovery is reported as RECOVERED_OLD by the Store reader and was not invoked as a mutation.",
+    "A process kill during the canonical Store generation commit has not been demonstrated. Existing caller interruption and service restart coverage is retained in the related recovery evidence.",
+    "Compiler and Forge repositories remain untouched pending the owners' Environment handoffs."
+  ]
+}
