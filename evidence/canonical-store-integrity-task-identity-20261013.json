@@ -1,0 +1,53 @@
+{
+  "schema_version": "mncs.environment.canonical-store-integrity-verification/1",
+  "identity": "ev_environment_canonical_store_integrity_after_task_identity_checkpoint_20261013",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T03:29:26.404408Z",
+  "source_state": {
+    "repository": "mncs-environment",
+    "head_at_execution": "2ca9009a21b95657a91f819557d79806a2e23b25",
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "session_id": "ses_7226fbcfe65820f7",
+    "campaign_state_checkpoint_id": "chk_9b5282c0b3bac60f",
+    "campaign_evidence_count": 181,
+    "session_sequence": 265
+  },
+  "execution": {
+    "backend": "bwrap",
+    "project": "mncs-environment",
+    "scope": "project",
+    "network": false,
+    "control_job_id": "term-98411d188fc97e843b60f98a",
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "started_at": "2026-10-13T03:27:58.495882Z",
+    "completed_at": "2026-10-13T03:29:26.404408Z",
+    "duration_seconds": 87.799,
+    "exit_code": 0,
+    "timed_out": false
+  },
+  "result": {
+    "ok": true,
+    "canonical_store": true,
+    "generation": 47555,
+    "objects": 47557,
+    "fanout": 31,
+    "chunk_size": 65536,
+    "provenance_records": 0,
+    "relations": 0,
+    "recovery": "RECOVERED_OLD",
+    "commit_feed": "4d430100000000000000b9c30000b9c50000000000000000e95deb1901472d64cb9a99785f018cc51752cffce1612f9245909a0e6318ccf8",
+    "artifact": {
+      "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+      "backend": "mncs-research-bytecode",
+      "toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs"
+    }
+  },
+  "verdict": {
+    "status": "PASS",
+    "summary": "The protected Environment Store verification operation completed successfully against the configured canonical Store after campaign checkpoint sequence 265. The exact object count, generation, commit feed, and recovery check are retained above.",
+    "direct_store_path_write_granted": false
+  },
+  "limitations": [
+    "This full integrity pass covers canonical Store state through campaign checkpoint chk_9b5282c0b3bac60f at sequence 265. This verifier report and its campaign pointer are created afterward; they require fresh protected readback and are not claimed to be covered by this pass."
+  ]
+}
