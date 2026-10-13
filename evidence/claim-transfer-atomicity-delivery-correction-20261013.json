@@ -1,0 +1,25 @@
+{
+  "schema_version": "mncs.environment.delivery-correction/1",
+  "identity": "ev_env_claim_transfer_atomicity_delivery_correction_20261013",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T20:50:08Z",
+  "supersedes": {
+    "checkpoint_id": "chk_4500aae55d3bab0d",
+    "sequence": 344,
+    "evidence_identity": "ev_env_claim_transfer_atomicity_verification_20261013",
+    "path": "evidence/claim-transfer-atomicity-verification-20261013.json",
+    "sha256": "92c5a6e8f76331f31430eaadae921a7202ca981d19538f60835a716f133b7bcb"
+  },
+  "correction": {
+    "field": "Git commit containing the Environment evidence file",
+    "previous_value": "d93e4585a1f8c8050bd47e84514f4fb3eb8dcc69",
+    "correct_value": "d93e458c121bf1d7af7e64c577a86dff9f63a5f8",
+    "verification": "git rev-parse main origin/main returned the same full object ID; the pushed file SHA-256 was independently rechecked"
+  },
+  "distinction": {
+    "tested_source_revision": "e1ba0560000a09d2db8fef81eda2ec79f3292077",
+    "evidence_commit": "d93e458c121bf1d7af7e64c577a86dff9f63a5f8",
+    "evidence_sha256": "92c5a6e8f76331f31430eaadae921a7202ca981d19538f60835a716f133b7bcb"
+  },
+  "readiness": "CORRECTED; this record supersedes the earlier campaign ledger commit pointer and delivery head"
+}
