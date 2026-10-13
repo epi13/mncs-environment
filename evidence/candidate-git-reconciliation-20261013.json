@@ -1,0 +1,124 @@
+{
+  "conclusion": "The Compiler candidate is not fast-forwardable and changes only historical matrix evidence relative to its unique commit. The Forge candidate is one commit ahead. Both registered candidate paths are marked prunable by Git inside the protected view; this does not establish host-side deletion or cleanliness. Owner handoffs and physical checkout verification are required before candidate tests, integration, or retirement.",
+  "environment": {
+    "backend": "bwrap",
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "network": false,
+    "scope": "project",
+    "session_id": "ses_7226fbcfe65820f7"
+  },
+  "identity": "ev_environment_candidate_git_reconciliation_20261013",
+  "method": {
+    "candidate_tests_run": false,
+    "checkout_switches": 0,
+    "merges": 0,
+    "operations": [
+      "git rev-parse",
+      "git merge-base",
+      "git rev-list",
+      "git show --stat",
+      "git worktree list --porcelain",
+      "git status --porcelain=v2"
+    ],
+    "read_only": true,
+    "reason": "Existing exclusive Compiler and Forge claims remained live; the candidate worktrees were not testable or safely adoptable from the protected project namespace.",
+    "worktree_retirements": 0
+  },
+  "observed_at": "2026-10-13T05:22:29Z/2026-10-13T05:23:20Z",
+  "repositories": [
+    {
+      "candidate": {
+        "branch": "campaign/keyword-local-index-delivery-20261010",
+        "candidate_only_commits": 1,
+        "classification": "independently_diverged_evidence_only_candidate",
+        "commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+        "fast_forward_to_main": false,
+        "main_only_commits": 14,
+        "merge_base": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+        "unique_commit_changes": [
+          {
+            "deletions": 2,
+            "insertions": 20,
+            "path": "evidence/SELF-HOST-MATRIX.json"
+          }
+        ],
+        "unique_commit_subject": "Record lexer keyword optimization delivery"
+      },
+      "main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "owner_claim": {
+        "claim_id": "claim:mncs-compiler",
+        "claim_identity": "clm_5871ad9917e5210d",
+        "expires_at": "2027-08-03T10:31:10+00:00",
+        "session_id": "ses_d2537acde8b8a875",
+        "status": "held_live",
+        "version": 63
+      },
+      "repository": "mncs-compiler",
+      "root_status": "tracked files clean; untracked .worktrees/ and three evidence files are present and preserved",
+      "worktrees": {
+        "branch_checkouts": 54,
+        "candidate_registration": {
+          "dirty_state": "unknown",
+          "git_status": "prunable: gitdir file points to non-existent location",
+          "physical_checkout_status": "unknown_current_execution_namespace",
+          "registered_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+          "retirement": "not_performed"
+        },
+        "detached_checkouts": 12,
+        "prunable_registrations_in_protected_view": 22,
+        "registered_count": 66
+      }
+    },
+    {
+      "candidate": {
+        "branch": "campaign/forge-quiet-compile-output-20261010",
+        "candidate_only_commits": 1,
+        "classification": "single_commit_descendant_awaiting_owner_validation",
+        "commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+        "fast_forward_to_main": true,
+        "main_only_commits": 0,
+        "merge_base": "cc2516f073d47739d74e68266d97fd090c53da16",
+        "unique_commit_changes": [
+          {
+            "deletions": 0,
+            "insertions": 2,
+            "path": "src/mncs_forge/mncs_native.py"
+          },
+          {
+            "deletions": 0,
+            "insertions": 32,
+            "path": "tests/test_mncs_native.py"
+          }
+        ],
+        "unique_commit_subject": "Skip discarded Forge compile outputs"
+      },
+      "main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "origin_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "owner_claim": {
+        "claim_id": "claim:mncs-forge",
+        "claim_identity": "clm_16b820b3293d873b",
+        "expires_at": "2027-03-07T23:49:59+00:00",
+        "session_id": "ses_95c3aa35b8544042",
+        "status": "held_live",
+        "version": 28
+      },
+      "repository": "mncs-forge",
+      "root_status": "clean",
+      "worktrees": {
+        "branch_checkouts": 5,
+        "candidate_registration": {
+          "dirty_state": "unknown",
+          "git_status": "prunable: gitdir file points to non-existent location",
+          "physical_checkout_status": "unknown_current_execution_namespace",
+          "registered_path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+          "retirement": "not_performed"
+        },
+        "detached_checkouts": 0,
+        "prunable_registrations_in_protected_view": 1,
+        "registered_count": 5
+      }
+    }
+  ],
+  "schema_version": "mncs.environment.candidate-git-reconciliation/1"
+}
