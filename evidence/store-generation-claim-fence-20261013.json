@@ -113,70 +113,12 @@
       "result": "passed"
     }
   },
-  "latest_runtime_retest": {
-    "date": "2026-10-13",
-    "environment_main_head": "5128c1f564743feb1d79e2c40b497c61522d528f",
-    "execution_boundary": {
-      "project": "mncs-environment",
-      "sandbox_backend": "bwrap",
-      "scope": "project",
-      "network": false,
-      "publication_transport": "mncs-control-environment-rpc",
-      "agent_direct_store_write_access": false
-    },
-    "stale_generation_rejection": {
-      "terminal_job_id": "term-a6dd169206da0b624742ac69",
-      "command_exit_code": 3,
-      "generation_before": 48301,
-      "supplied_generation": 48300,
-      "diagnostic_code": "publication-conflict",
-      "transport": "mncs-control-environment-rpc",
-      "publication_completed": false,
-      "domain_details": {
-        "conflict_kind": "store-generation",
-        "conflict_stage": "generation-precondition",
-        "expected_store_generation": 48300,
-        "publication_expected_generation": 48300,
-        "observed_store_generation": 48301
-      }
-    },
-    "fresh_process_readback": {
-      "terminal_job_id": "term-a6dd169206da0b624742ac69",
-      "generation": 48301,
-      "same_as_generation_before": true
-    },
-    "independent_post_rejection_readback": {
-      "terminal_job_id": "term-3b6ab41234527fe5afd4d12f",
-      "exit_code": 0,
-      "generation": 48301
-    },
-    "acceptance_checks": {
-      "conflict_fields_preserved_over_rpc": true,
-      "publication_rejected_before_claim_admission": true,
-      "store_generation_unchanged_after_fresh_process_readback": true
-    }
-  },
-  "canonical_store_integrity_after_checkpoint_311": {
-    "terminal_job_id": "term-d5002e83a3ff6854cd7f2e3c",
-    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
-    "read_only": true,
-    "exit_code": 0,
-    "result": {
-      "ok": true,
-      "generation": 48301,
-      "objects": 48303,
-      "relations": 0,
-      "provenance_records": 0,
-      "fanout": 31,
-      "recovery": "RECOVERED_OLD"
-    }
-  },
   "readiness": {
     "protected_store_generation_read": "pass",
     "guarded_canonical_claim_acquisition": "pass",
     "stale_generation_rejection_and_no_publication": "pass",
     "fresh_process_claim_release_readback": "pass",
     "agent_has_no_direct_store_path_access": "pass",
-    "canonical_store_integrity_after_this_checkpoint": "pass: generation 48301, 48303 objects, read-only verification job term-d5002e83a3ff6854cd7f2e3c"
+    "canonical_store_integrity_after_this_checkpoint": "pending final read-only verification"
   }
 }
