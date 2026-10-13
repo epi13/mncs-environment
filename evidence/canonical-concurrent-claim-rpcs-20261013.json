@@ -1,0 +1,115 @@
+{
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "date": "2026-10-13",
+  "execution_boundary": {
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "direct_path_visibility": "absent in the project bwrap namespace; prior protected probe returned ENOENT and writable access false",
+    "network": false,
+    "project": "mncs-environment",
+    "publication_transport": "authenticated mncs-control-environment-rpc",
+    "sandbox_backend": "bwrap",
+    "scope": "project"
+  },
+  "identity": "ev_env_canonical_concurrent_claim_rpcs_20261013",
+  "limitations": [
+    "The calls demonstrate concurrent canonical claim publication and readback, not a deliberately forced Store-generation CAS collision.",
+    "This run did not inject service or caller interruption during claim publication.",
+    "Two cleanup attempts supplied the claim ID as the repository argument and returned released=false; corrected repository-scoped calls then returned released=true. The final ledger readback shows each claim at version 2 and released."
+  ],
+  "repository": "mncs-environment",
+  "result": "Two disjoint authorized path claims were acquired through Environment RPC from concurrent protected terminal jobs, read back held by a new protected process, released through RPC, and read back released by another protected process.",
+  "schema_version": "mncs.environment.canonical-concurrent-claims/1",
+  "source_commit": "58f6196d0642de264e3fac79bdf391a0839b0fdf",
+  "session": {
+    "consumer_id": "local-agent",
+    "session_id": "ses_7226fbcfe65820f7"
+  },
+  "acquisitions": [
+    {
+      "claim_id": "claim:mncs-environment:paths:9b8347e73d61",
+      "identity": "clm_1d40f79c6a76d32a",
+      "initial_version": 1,
+      "path": "evidence/.mncs-cas-race-20261013-a",
+      "request_id": "req_4548eb7f22924bc57d119a0c87c4d6bc4410a529",
+      "result": "held",
+      "terminal_job_id": "term-f7418a0b44a280a89a69498e"
+    },
+    {
+      "claim_id": "claim:mncs-environment:paths:54b9f545a20b",
+      "identity": "clm_4a0348b9af01f9e0",
+      "initial_version": 1,
+      "path": "evidence/.mncs-cas-race-20261013-b",
+      "request_id": "req_13cf6649ceae5e19c843d4ff6291de735fe26b42",
+      "result": "held",
+      "terminal_job_id": "term-8c00de7c61f20d72b01f3114"
+    }
+  ],
+  "first_fresh_process_readback": {
+    "terminal_job_id": "term-f5bc3ff06306afec5dd708f4",
+    "claims": [
+      {
+        "claim_id": "claim:mncs-environment:paths:54b9f545a20b",
+        "identity": "clm_4a0348b9af01f9e0",
+        "version": 1,
+        "status": "held",
+        "session_id": "ses_7226fbcfe65820f7",
+        "consumer_id": "local-agent",
+        "path": "evidence/.mncs-cas-race-20261013-b"
+      },
+      {
+        "claim_id": "claim:mncs-environment:paths:9b8347e73d61",
+        "identity": "clm_1d40f79c6a76d32a",
+        "version": 1,
+        "status": "held",
+        "session_id": "ses_7226fbcfe65820f7",
+        "consumer_id": "local-agent",
+        "path": "evidence/.mncs-cas-race-20261013-a"
+      }
+    ]
+  },
+  "cleanup": {
+    "no_op_attempts": [
+      {
+        "terminal_job_id": "term-ca73668b46db9b7031a23dfe",
+        "reported_released": false
+      },
+      {
+        "terminal_job_id": "term-b8c499a7d84b749c22185787",
+        "reported_released": false
+      }
+    ],
+    "successful_releases": [
+      {
+        "claim_id": "claim:mncs-environment:paths:9b8347e73d61",
+        "reason": "release-CAS-probe-A",
+        "terminal_job_id": "term-6543fd90b3a3ebe73519c008",
+        "reported_released": true
+      },
+      {
+        "claim_id": "claim:mncs-environment:paths:54b9f545a20b",
+        "reason": "release-CAS-probe-B",
+        "terminal_job_id": "term-dbf61ea73a6e8cb4c7e4a83a",
+        "reported_released": true
+      }
+    ],
+    "second_fresh_process_readback": {
+      "transport": "authenticated Environment claims RPC via mncs-control terminal_exec",
+      "claims": [
+        {
+          "claim_id": "claim:mncs-environment:paths:54b9f545a20b",
+          "identity": "clm_40c189a06237fce6",
+          "version": 2,
+          "status": "released",
+          "reason": "release-CAS-probe-B"
+        },
+        {
+          "claim_id": "claim:mncs-environment:paths:9b8347e73d61",
+          "identity": "clm_87c2f8f193575150",
+          "version": 2,
+          "status": "released",
+          "reason": "release-CAS-probe-A"
+        }
+      ]
+    }
+  }
+}
