@@ -1,0 +1,49 @@
+{
+  "schema_version": "mncs.environment.canonical-store-boundary-revalidation/1",
+  "identity": "ev_env_canonical_store_boundary_revalidation_20261013",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T13:39:01Z",
+  "control_service": {
+    "unit": "mncs-control-tunnel.service",
+    "effective_properties": {
+      "ProtectSystem": "strict",
+      "ProtectHome": "read-only",
+      "NoNewPrivileges": true,
+      "ReadWritePaths_contains_canonical_store": true,
+      "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store"
+    },
+    "source_revision": "687425e35ea076b4d007b1e262a470e75992df9e"
+  },
+  "protected_agent_observation": {
+    "backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "exists": false,
+    "is_directory": false,
+    "writable": false,
+    "write_attempted": false
+  },
+  "authorized_readback": {
+    "transport": "mncs-control-environment-rpc",
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --generation",
+    "completed_at": "2026-10-13T13:39:00Z",
+    "exit_code": 0,
+    "generation": 48310,
+    "network": false
+  },
+  "integrity_scan_reference": {
+    "path": "evidence/canonical-store-post-checkpoint-312-20261013.json",
+    "generation": 48310,
+    "objects": 48312,
+    "verification": "passed in the earlier full canonical Store scan; this record is a bounded generation recheck, not a replacement scan"
+  },
+  "authority_boundary": {
+    "agent_direct_store_filesystem_write": false,
+    "domain_authority_owner": "mncs-environment",
+    "persistence_transport_owner": "mncs-control-mcp",
+    "canonical_store_backend_owner": "mncs-store",
+    "secondary_store_created": false
+  }
+}
