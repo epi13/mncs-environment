@@ -1,0 +1,116 @@
+{
+  "schema_version": "mncs.environment.provider-input-artifact-bridge/1",
+  "identity": "ev_environment_provider_input_artifact_bridge_20261013",
+  "recorded_at": "2026-10-13T07:31:09Z",
+  "owner": "mncs-environment",
+  "campaign": {
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "local-agent",
+    "base_checkpoint_id": "chk_9f83d83f5978ecbd",
+    "base_checkpoint_sequence": 289
+  },
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "main",
+    "commit": "7f7727e3a9bfa55199d43431cf4b58415b6c0de2",
+    "tree": "887002ec3feb9969480eceb90e05e1d7df639102",
+    "files": [
+      "mncs_env/cli.py",
+      "mncs_env/invocation_artifacts.py",
+      "mncs_env/sessions.py",
+      "tests/test_environment.py"
+    ]
+  },
+  "implementation": {
+    "source_binding_requirement": "one exact current read-only capability binding and an Environment invoke authorization verdict",
+    "source_artifact_requirement": "latest invocation must have status ok and an exact verified canonical Store reference",
+    "provider_transport": "bounded selected file copies in a private temporary directory; no Store path or descriptor is included in the input manifest",
+    "limits": {
+      "artifact_count": 8,
+      "bytes_per_artifact": 1048576,
+      "total_bytes": 4194304
+    },
+    "provenance": "source capability and binding, Store reference, relative path, byte count, and SHA-256 are included in provider input metadata, invocation events, and the stable child request identity",
+    "failure_behavior": "unauthorized sources, unsuccessful latest invocations, invalid paths, unavailable Store reads, and Store integrity failures stop before target provider execution"
+  },
+  "protected_execution": {
+    "provider": "MNCS Control terminal_exec",
+    "project": "mncs-environment",
+    "scope": "project",
+    "cwd": "/workspace/mncs-environment",
+    "sandbox_backend": "bwrap",
+    "network": false,
+    "test_command": "python3 -m unittest tests.test_environment.SessionTests.test_session_invoke_passes_authorized_store_artifact_as_private_input tests.test_environment.SessionTests.test_session_invoke_rejects_non_read_store_artifact_inputs tests.test_environment.SessionTests.test_session_invoke_delivers_store_artifact_to_real_protected_child tests.test_environment.SessionTests.test_session_invoke_input_rejects_latest_failed_source_artifact tests.test_environment.SessionTests.test_artifact_read_does_not_fall_back_after_latest_failed_invocation",
+    "started_at": "2026-10-13T07:24:40.683292Z",
+    "completed_at": "2026-10-13T07:24:52.219724Z",
+    "duration_seconds": 11.536,
+    "exit_code": 0,
+    "tests_passed": 5,
+    "tests_failed": 0,
+    "real_child_process": true,
+    "result": "PASS"
+  },
+  "static_validation": {
+    "compileall": "PASS",
+    "git_diff_check": "PASS",
+    "invoke_help_option_parse": "PASS"
+  },
+  "store_boundary": {
+    "input_transport_test_store": "isolated temporary test-owned Store",
+    "canonical_store_acceptance_proven_by_this_record": false,
+    "related_canonical_store_evidence": "evidence/store-service-protected-boundary-20261013.json",
+    "second_authoritative_store_created": false
+  },
+  "delivery": {
+    "implementation_commit": "7f7727e3a9bfa55199d43431cf4b58415b6c0de2",
+    "main_head": "7f7727e3a9bfa55199d43431cf4b58415b6c0de2",
+    "origin_main_head": "7f7727e3a9bfa55199d43431cf4b58415b6c0de2",
+    "status": "pushed"
+  },
+  "ownership_snapshot": {
+    "compiler_claim": {
+      "claim_id": "claim:mncs-compiler",
+      "identity": "clm_5871ad9917e5210d",
+      "owner_session_id": "ses_d2537acde8b8a875",
+      "status": "held",
+      "exclusive": true
+    },
+    "forge_claim": {
+      "claim_id": "claim:mncs-forge",
+      "identity": "clm_16b820b3293d873b",
+      "owner_session_id": "ses_95c3aa35b8544042",
+      "status": "held",
+      "exclusive": true
+    },
+    "automation_claim": {
+      "claim_id": "claim:mncs-automation",
+      "identity": "clm_052e93b760382ca7",
+      "owner_session_id": "ses_7226fbcfe65820f7",
+      "status": "held",
+      "exclusive": true
+    },
+    "system_monitor_claim": {
+      "claim_id": "claim:mncs-system-monitor",
+      "identity": "clm_6cdf93adda018908",
+      "owner_session_id": "ses_7226fbcfe65820f7",
+      "status": "held",
+      "exclusive": true
+    },
+    "campaign_context_selection": "ready; one selected session and a second unselected same-campaign context remain visible as context-conflict"
+  },
+  "readiness": {
+    "environment_input_bridge": "verified",
+    "canonical_store_rpc": "previously verified by related evidence",
+    "automation_scheduler_uses_input_bridge": false,
+    "real_forge_receipt_feedback_loop": false,
+    "compiler_resource_feedback_vertical_slice": "not proven",
+    "campaign_status": "active; partial"
+  },
+  "limitations": [
+    "The real child test uses a small fixture provider and an isolated test-owned Store; it does not execute System Monitor, Automation, or Forge.",
+    "No canonical Store publication or readback claim is made from this artifact bridge test.",
+    "Compiler and Forge work remains untouched while their exclusive claims are held by other sessions.",
+    "A second same-campaign Environment context remains unselected and unresolved; it was not adopted."
+  ]
+}
