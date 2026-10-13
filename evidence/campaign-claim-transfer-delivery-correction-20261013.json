@@ -1,0 +1,31 @@
+{
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "correction": {
+    "artifact_path": "evidence/claim-transfer-atomic-fault-tests-20261013.json",
+    "artifact_sha256": "66e8c43dbbd0fe50748b225ab5cf336d7a893d991d8e14b32abadffced3708e0",
+    "basis": "Protected fresh-process git readback showed local HEAD and origin/main at the same full object ID with clean status. The earlier campaign entry used an incorrect transcribed full SHA.",
+    "checkpoint_id": "chk_50352e3a2821f4fe",
+    "checkpoint_sequence": 326,
+    "correct_commit": "8cfe05eef0acb3bb74c9bbf17a2845c29a4d1a4f",
+    "corrected_delivery_head": "8cfe05eef0acb3bb74c9bbf17a2845c29a4d1a4f",
+    "evidence_identity": "ev_env_claim_transfer_atomic_fault_tests_20261013",
+    "previously_recorded_commit": "8cfe05e3c2ecca220c6c4ecedee12fbd8cf73fd3",
+    "supersedes": "The commit and delivery-head fields for ev_env_claim_transfer_atomic_fault_tests_20261013 in chk_50352e3a2821f4fe; the immutable test artifact and its SHA-256 remain unchanged."
+  },
+  "identity": "ev_env_campaign_claim_transfer_delivery_correction_20261013",
+  "impact": {
+    "artifact_bytes_changed": false,
+    "canonical_store_state_changed": false,
+    "current_delivery_status": "partial",
+    "source_implementation_changed": false,
+    "test_result_changed": false
+  },
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T16:17:08Z",
+  "schema_version": "mncs.environment.campaign-evidence-delivery-correction/1",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "repository": "mncs-environment",
+    "revision": "8cfe05eef0acb3bb74c9bbf17a2845c29a4d1a4f"
+  }
+}
