@@ -32,6 +32,7 @@
   },
   "canonical_store_verification": {
     "operation": "./scripts/mncs-env store --session <selected-session> --verify",
+    "access_mode": "read-only full payload verification; no recovery transaction is invoked",
     "exit_code": 0,
     "ok": true,
     "generation": 48310,
@@ -39,7 +40,8 @@
     "relations": 0,
     "provenance_records": 0,
     "fanout": 31,
-    "recovery": "RECOVERED_OLD"
+    "recovery": "RECOVERED_OLD",
+    "recovery_field_semantics": "The read-only Store open assigns RECOVERED_OLD without invoking recovery. This value does not report that a recovery transaction occurred."
   },
   "authority_boundary_reference": {
     "path": "evidence/canonical-store-boundary-revalidation-20261013.json",
