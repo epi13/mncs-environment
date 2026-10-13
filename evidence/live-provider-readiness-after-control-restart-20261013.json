@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.live-provider-readiness-observation/1",
+  "identity": "ev_env_live_provider_readiness_after_control_restart_20261013",
+  "recorded_at": "2026-10-13T20:16:53Z",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "repository": "mncs-environment",
+  "source_identities": {
+    "environment_main": "5ec4c14224d5813149c7b7a68733bcfe645cddeb",
+    "control_mcp_main": "6ecfc25af7616e6a56ea6da8f1a4241c7e55c5c9",
+    "automation_main": "51b9b860f957dc194f6456851b70cbfda32f13ce",
+    "system_monitor_main": "f8965406e959183b58aa60aec4cee875b5d99fe8"
+  },
+  "observation": {
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "network": false,
+    "transport": "authenticated MNCS Control Environment RPC",
+    "command": "./scripts/mncs-env health ses_7226fbcfe65820f7 --live",
+    "continuation_status": "ready",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "health_status": "degraded",
+    "blocking": [],
+    "required_unavailable": [],
+    "required_unknown": [],
+    "unavailable_capabilities": [],
+    "unknown_capabilities": [
+      "mncs-automation:automation-definition",
+      "mncs-automation:automation-evaluation",
+      "mncs-automation:automation-occurrence",
+      "mncs-automation:coherence-artifact-reconcile",
+      "mncs-automation:coherence-routing",
+      "mncs-control-mcp:environment.campaign-continuation",
+      "mncs-control-mcp:journal-context",
+      "mncs-control-mcp:workspace.worktree.prepare"
+    ],
+    "doctor_summary": null,
+    "execution_composition": {
+      "identity": "ec2f50c8eda21c1a",
+      "selection_status": "current",
+      "compatibility_state": "unproven",
+      "roles": {}
+    }
+  },
+  "capability_bindings": [
+    {
+      "capability": "mncs-system-monitor:system-resource-sample",
+      "binding_id": "cap_9a39cbc2cdf18f11",
+      "status": "available",
+      "code": "executable-present",
+      "verification": "substrate",
+      "provider_readiness": "not yet verified"
+    },
+    {
+      "capability": "mncs-system-monitor:system-observability",
+      "binding_id": "cap_8066edfab5edad2c",
+      "status": "available",
+      "code": "executable-present",
+      "verification": "substrate",
+      "provider_readiness": "not yet verified"
+    },
+    {
+      "capability": "mncs-automation:automation-resource-headroom-evaluation",
+      "binding_id": "cap_5065656331fc735d",
+      "status": "available",
+      "code": "executable-present",
+      "verification": "substrate",
+      "provider_readiness": "not yet verified"
+    },
+    {
+      "capability": "mncs-control-mcp:environment.campaign-continuation",
+      "binding_id": "cap_2e2b79d256722187",
+      "status": "unknown",
+      "code": "provider-invocation-undeclared",
+      "reason": "Control publishes source fingerprints but no Environment invocation descriptor."
+    }
+  ],
+  "interpretation": "Live health preserves eight undeclared optional provider operations as unknown, reports no unavailable or required-unknown operations, and leaves execution compatibility unproven. System Monitor and Automation resource bindings are executable-present at substrate level; this is not provider-readiness proof.",
+  "limitations": [
+    "The health query was read-only and did not invoke System Monitor, Automation, Forge, Doctor, or a Language Service provider.",
+    "Automation has no exact Forge receipt for a compiler execution in this campaign; the real measurement-to-scheduling loop remains unproven.",
+    "Compiler and Forge remain protected by their prior exclusive Environment claims."
+  ]
+}
