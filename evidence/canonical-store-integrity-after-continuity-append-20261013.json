@@ -1,0 +1,61 @@
+{
+  "schema_version": "mncs.environment.canonical-store-integrity-after-continuity-append/1",
+  "identity": "ev_environment_canonical_store_integrity_after_continuity_append_20261013",
+  "recorded_at": "2026-10-13 03:10:41 UTC",
+  "verified_at": "2026-10-13T03:09:45.330534Z",
+  "owner": "mncs-environment",
+  "campaign": {
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "session_id": "ses_7226fbcfe65820f7",
+    "checkpoint_before_verifier": "chk_0af8e652a8d03f72",
+    "evidence_count_before_verifier": 179,
+    "lifecycle": "active",
+    "consumer_id": "local-agent"
+  },
+  "protected_execution": {
+    "backend": "bwrap",
+    "project": "mncs-environment",
+    "scope": "project",
+    "network": false,
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "control_job_id": "term-a02c451afbf962c5383deb83",
+    "started_at": "2026-10-13T03:07:28.285323Z",
+    "completed_at": "2026-10-13T03:09:45.330534Z",
+    "duration_seconds": 137.045,
+    "transport": "Authenticated MNCS Control Environment RPC; canonical Store backend configuration remained Control-owned",
+    "direct_canonical_store_access": "not used by the command",
+    "direct_access_boundary_evidence": "ev_environment_canonical_store_integrity_after_campaign_append_20261013"
+  },
+  "store_verification": {
+    "result": "PASS",
+    "canonical": true,
+    "backend": "mncs-research-bytecode",
+    "generation": 47502,
+    "objects": 47504,
+    "fanout": 31,
+    "chunk_size": 65536,
+    "commit_feed": "4d430100000000000000b98e0000b9900000000000000000a9b983eb1bcc1bee0b3d7af770e6aff87626a25bbb160799507a26f2efc3c517",
+    "recovery": "RECOVERED_OLD",
+    "provenance_records": 0,
+    "relations": 0,
+    "read_only": true,
+    "verifier_artifact": {
+      "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+      "backend": "mncs-research-bytecode",
+      "toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs"
+    }
+  },
+  "source_identity": {
+    "environment_repository": "mncs-environment",
+    "environment_main_at_capture": "e7f5f5fcba0e4d24825e9de5aac85b2a2b32f842",
+    "language_toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs",
+    "language_artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf"
+  },
+  "interpretation": "The canonical Store integrity verifier completed successfully inside the protected project bwrap using the authenticated Environment persistence route. This verification includes the campaign evidence and delivery checkpoint at chk_0af8e652a8d03f72. It reads canonical Store through Environment's owner-controlled transport; it does not grant the agent direct path access.",
+  "readiness": {
+    "canonical_store_integrity": "PASS at the recorded generation",
+    "campaign_checkpoint_readback": "PASS for checkpoint chk_0af8e652a8d03f72 before verification",
+    "compiler_forge_claim_handoffs": "still required before modifying either repository",
+    "compiler_stage1_or_stage2_claimed": false
+  }
+}
