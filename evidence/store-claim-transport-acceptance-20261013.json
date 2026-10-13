@@ -1,0 +1,150 @@
+{
+  "schema_version": "mncs.environment.store-claim-transport-acceptance/1",
+  "identity": "ev_env_store_claim_transport_acceptance_20261013",
+  "recorded_at": "2026-10-13T09:36:06.565024Z",
+  "owner": "mncs-environment",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "consumer_id": "local-agent",
+  "source_identities": {
+    "environment_commit": "21ad7321efe247ad0eee1140b45dc7553f16757e",
+    "store_commit": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055",
+    "control_mcp_commit": "b2f5dfb2f000496b50f776f91810676a7d972e3b"
+  },
+  "protected_execution": {
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "network": false,
+    "persistence_transport": "authenticated MNCS Control Environment RPC",
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_visible_in_agent_namespace": false,
+    "agent_write_access": false,
+    "path_probe_job_id": "term-5b34eaa9a80682803ccb75b0",
+    "path_probe_result": {
+      "path_exists_in_agent_namespace": false,
+      "agent_write_access": false,
+      "stat_errno": 2,
+      "stat_error": "FileNotFoundError"
+    }
+  },
+  "canonical_store_verification": {
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "job_id": "term-cdd81225bfd9aad66d4004e9",
+    "started_at": "2026-10-13T09:34:12.638564Z",
+    "completed_at": "2026-10-13T09:36:06.565024Z",
+    "duration_seconds": 113.92646,
+    "exit_code": 0,
+    "timed_out": false,
+    "read_only": true,
+    "result": {
+      "ok": true,
+      "generation": 48123,
+      "objects": 48125,
+      "relations": 0,
+      "provenance_records": 0,
+      "commit_feed": "4d430100000000000000bbfb0000bbfd0000000000000000a0363a4d947501bfa64dd6dfb36884c87c4800aad6123821596c5170ff894869",
+      "chunk_size": 65536,
+      "fanout": 31,
+      "recovery": "RECOVERED_OLD",
+      "recovery_interpretation": "Expected read-only open sentinel; committed generation was scanned without recovery or mutation.",
+      "compiler_artifact": {
+        "backend": "mncs-research-bytecode",
+        "sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+        "toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs"
+      }
+    }
+  },
+  "canonical_authority_tests": {
+    "out_of_scope_publication": {
+      "job_id": "term-955e1c8e7f6d664ffe1bc9f7",
+      "request_id": "req_unauthorized_store_claim_probe_20261013",
+      "session_id": "ses_7226fbcfe65820f7",
+      "target_repository": "mncs-not-authorized-probe-20261013",
+      "exit_code": 3,
+      "denied": true,
+      "diagnostics": {
+        "code": "publication-rejected",
+        "transport": "mncs-control-environment-rpc",
+        "publication_completed": false,
+        "cause_code": "authority-denied"
+      }
+    },
+    "authorized_acquire_release": {
+      "job_id": "term-c4f8433522d0b04196f61ecb",
+      "repository": "mncs-environment",
+      "scope": {
+        "kind": "paths",
+        "paths": [
+          "evidence/store-transport-claim-acceptance-20261013.json"
+        ],
+        "exclusive": false
+      },
+      "acquire_request_id": "req_store_access_claim_acquire_20261013",
+      "claim_id": "claim:mncs-environment:paths:45646884196d",
+      "acquired_version": 1,
+      "acquired_status": "held",
+      "session_id": "ses_7226fbcfe65820f7",
+      "consumer_id": "local-agent",
+      "release_request_id": "req_store_access_claim_release_20261013",
+      "release_completed": true,
+      "fresh_process_readback": {
+        "request_id": "req_store_access_claim_readback_20261013",
+        "status": "released",
+        "version": 2,
+        "identity": "clm_65fd3267f1cdc088",
+        "live": false,
+        "released_by": "ses_7226fbcfe65820f7"
+      }
+    },
+    "request_retry_idempotency": {
+      "job_id": "term-52efad5d410c8fc8916b6f70",
+      "claim_id": "claim:mncs-environment:paths:c99c60f47e3a",
+      "acquire_request_id": "req_store_retry_acquire_20261013",
+      "acquire_first_version": 1,
+      "acquire_retry_version": 1,
+      "acquire_retry_same_identity": true,
+      "release_request_id": "req_store_retry_release_20261013",
+      "release_retried": true,
+      "fresh_process_readback": {
+        "status": "released",
+        "version": 2,
+        "identity": "clm_320f896efe2ba2f0",
+        "released_by": "ses_7226fbcfe65820f7"
+      },
+      "no_duplicate_claim_versions": true
+    }
+  },
+  "claim_lifecycle_tests": [
+    {
+      "job_id": "term-e060d8a7fb656df0e11c5a16",
+      "path": "tests/test_store_claim_transfer.py",
+      "exit_code": 0,
+      "duration_seconds": 34.40,
+      "result": "9 passed",
+      "store": "test-owned temporary EmbeddedStore",
+      "coverage": [
+        "process exit before claim batch publication",
+        "process exit before generation publication",
+        "process exit after generation publication",
+        "process exit after generation head publication",
+        "retry with the same transfer request identity",
+        "concurrent competing transfers admit one recipient"
+      ]
+    },
+    {
+      "job_id": "term-26392666f892800ac268916d",
+      "path": "tests/test_claim_recovery.py",
+      "exit_code": 0,
+      "duration_seconds": 0.11,
+      "result": "28 passed",
+      "store": "test-owned temporary Store"
+    }
+  ],
+  "limitations": [
+    "The canonical Store checkpoint and path-claim publication/readback succeeded through the mediated transport while the canonical path was absent in the agent namespace.",
+    "Store crash failpoints and competing transfer CAS tests ran on test-owned EmbeddedStore instances; a forced canonical service interruption and manually stale generation request were not injected.",
+    "Campaign continuation still reports a context conflict. Fresh readback selected this session's authenticated task binding.",
+    "Compiler claim version 63 remains held by ses_d2537acde8b8a875; Forge claim version 28 remains held by ses_95c3aa35b8544042. No handoff was present in the readback."
+  ]
+}
