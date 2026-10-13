@@ -1,0 +1,72 @@
+{
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "identity": "ev_campaign_task_identity_live_entry_20261013",
+  "interpretation": {
+    "limitations": [
+      "The operation ran under the existing authenticated Control principal; it does not prove a principal handoff to a different owner.",
+      "Environment readiness remains degraded because six optional capabilities are UNKNOWN; none are blocking requirements.",
+      "The general Environment events operation is not exposed through Control and continues to report UNKNOWN."
+    ],
+    "proved": [
+      "A protected Control project process resolved the durable task selector from Environment evidence and returned the already-existing authorized campaign session without a campaign ID or session ID argument.",
+      "Control selected the project-linked session, verified its charter, and kept the sibling same-campaign session visible without selecting it.",
+      "No new Environment session identity or claim transfer was requested."
+    ]
+  },
+  "recorded_at": "2026-10-13T06:19:36Z",
+  "request": {
+    "campaign_id_argument_supplied": false,
+    "command": "scripts/mncs-env enter --task-identity ev_mncs_campaign_charter_continuity_20261011",
+    "network": false,
+    "project": "mncs-environment",
+    "request_id": "req_campaign_charter_enter_auto_resume_20261013",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "session_id_argument_supplied": false,
+    "surface": "MNCS Control protected terminal execution"
+  },
+  "result": {
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "consumer_id": "local-agent",
+    "control_project_continuation": {
+      "campaign_state_checkpoint_id": "chk_833932af2c5f781a",
+      "selected_session_id": "ses_7226fbcfe65820f7",
+      "selection_basis": "authenticated-project-environment-definition",
+      "status": "ready",
+      "visible_continuations": [
+        {
+          "campaign_charter_status": "verified",
+          "session_id": "ses_7226fbcfe65820f7"
+        },
+        {
+          "campaign_charter_status": null,
+          "session_id": "ses_b4b2d283542220b0"
+        }
+      ]
+    },
+    "environment_readiness": {
+      "available_count": 17,
+      "blocking": [],
+      "required_unavailable": [],
+      "required_unknown": [],
+      "status": "degraded",
+      "unavailable_count": 0,
+      "unknown_count": 6
+    },
+    "exit_code": 0,
+    "session_id": "ses_7226fbcfe65820f7"
+  },
+  "schema_version": "mncs.environment.campaign-task-identity-live-entry/1",
+  "selector_source": {
+    "commit": "fa658d32566d736e5f6cd6e486aba0b65fff196b",
+    "identity": "ev_campaign_charter_task_selector_restart_20261012",
+    "path": "evidence/campaign-charter-task-selector-restart-20261012.json",
+    "repository": "mncs-environment",
+    "sha256": "d571e3eb4097de46f6e3633f67078304b5b499b7e064c943ceaa95663bee0c26",
+    "task_identity": "ev_mncs_campaign_charter_continuity_20261011"
+  },
+  "source_revisions": {
+    "mncs-control-mcp": "0f39a7c39988edebcd44cad0b8b94b8f5377d059",
+    "mncs-environment": "0b5fa24bdd497cd7e5cc3416ea438f50808a69d7"
+  }
+}
