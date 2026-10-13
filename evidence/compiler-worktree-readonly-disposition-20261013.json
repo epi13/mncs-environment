@@ -1,0 +1,1330 @@
+{
+  "campaign": {
+    "campaign_evidence_count": 185,
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "campaign_state_checkpoint_id": "chk_bba944d616974bcb",
+    "session_id": "ses_7226fbcfe65820f7"
+  },
+  "candidate_reconciliation": {
+    "compiler_2b6f381": {
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "candidate_only_commits": 1,
+      "changed_paths_summary": [
+        "evidence/SELF-HOST-MATRIX.json | 22 ++++++++++++++++++++--",
+        "1 file changed, 20 insertions(+), 2 deletions(-)"
+      ],
+      "checkout_branch": "campaign/keyword-local-index-delivery-20261010",
+      "checkout_head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "checkout_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+      "checkout_status": "clean",
+      "commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "main_only_commits": 14,
+      "merge_base": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+      "ownership_disposition": "protected by a live exclusive repository claim",
+      "stable_patch_id": "766cd3d7e0a8f40ce036226d5d0ed31dee1c35b0",
+      "validation_status": "not run in this refresh"
+    },
+    "compiler_candidate_patch_comparison": {
+      "candidate_patch_id": "766cd3d7e0a8f40ce036226d5d0ed31dee1c35b0",
+      "main_commit": "c422b93e89f74aad9e2ba1f01a23351415361c34",
+      "main_patch_id": "493bae7a5b37e243e6121b8f77860da0ed14b86c",
+      "patches_equivalent": false
+    },
+    "forge_608334b": {
+      "branch": "campaign/forge-quiet-compile-output-20261010",
+      "candidate_only_commits": 1,
+      "changed_paths_summary": [
+        "src/mncs_forge/mncs_native.py |  2 ++",
+        "tests/test_mncs_native.py     | 32 ++++++++++++++++++++++++++++++++",
+        "2 files changed, 34 insertions(+)"
+      ],
+      "checkout_branch": "campaign/forge-quiet-compile-output-20261010",
+      "checkout_head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "checkout_path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+      "checkout_status": "clean",
+      "commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "main_only_commits": 0,
+      "merge_base": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "ownership_disposition": "protected by a live exclusive repository claim",
+      "stable_patch_id": null,
+      "validation_status": "not run in this refresh"
+    }
+  },
+  "identity": "ev_environment_compiler_worktree_readonly_disposition_20261013",
+  "main_checkout_untracked_evidence": [
+    {
+      "disposition": "untracked; preserved",
+      "path": "evidence/campaign-20261006-imported-nominal-ssa.json",
+      "sha256": "b3485930b32d03eae10779061a8a2ccd7c4e6fcc545362690ca6b4184347b702"
+    },
+    {
+      "disposition": "untracked; preserved",
+      "path": "evidence/campaign-20261006-pressure-suite-results.json",
+      "sha256": "3a2b9f72afa1c3272b5e0f9efd33fac6c0d6bc36c92e74684eb364cb0d95ca52"
+    },
+    {
+      "disposition": "untracked; preserved",
+      "path": "evidence/campaign-20261006-project-results.json",
+      "sha256": "ffb257db34e88edfa626ac02ab47024ebf48b2134221748fea0ad50979e5aa09"
+    }
+  ],
+  "observation": {
+    "claim_snapshot_source": "protected Environment RPC refresh job term-ebbf2c3c24ba07047ad2b48d, completed 2026-10-13T03:59:13Z",
+    "compiler_exclusive_claim": {
+      "claim_id": "claim:mncs-compiler",
+      "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+      "expires_at": "2027-08-03T10:31:10+00:00",
+      "live": true,
+      "owner_session_id": "ses_d2537acde8b8a875",
+      "scope": {
+        "exclusive": true,
+        "kind": "repository",
+        "repository": "mncs-compiler"
+      },
+      "status": "held",
+      "version": 63
+    },
+    "compiler_main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "compiler_repository": "/home/epi13/Documents/Projects/mncs-compiler",
+    "forge_exclusive_claim": {
+      "claim_id": "claim:mncs-forge",
+      "consumer_id": "luna-compiler-self-consumption",
+      "expires_at": "2027-03-07T23:49:59+00:00",
+      "live": true,
+      "owner_session_id": "ses_95c3aa35b8544042",
+      "scope": {
+        "exclusive": true,
+        "kind": "repository",
+        "repository": "mncs-forge"
+      },
+      "status": "held",
+      "version": 28
+    },
+    "forge_main_head": "cc2516f073d47739d74e68266d97fd090c53da16",
+    "host_status_counts": {
+      "clean": 58,
+      "dirty": 8
+    },
+    "kind": "read-only host inventory",
+    "owner_process_liveness": "unknown; not inferred from session or claim state",
+    "protected_namespace_note": "This report checks host physical paths. It does not infer that a host path absent from an agent namespace is deleted; per-checkout bwrap traversal was not checked.",
+    "registered_paths_missing_on_host": 0,
+    "registered_worktree_count": 66
+  },
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T04:00:20Z",
+  "safety": {
+    "branches_merged": false,
+    "dirty_and_untracked_state_preserved": true,
+    "read_only_commands_only": true,
+    "retirement_eligible_count": 0,
+    "retirement_reason": "The exclusive repository claim is live; physical presence or a clean tree does not establish abandonment, and owner process liveness is unknown.",
+    "tests_run": false,
+    "worktrees_retired": false
+  },
+  "schema_version": "mncs.environment.compiler-worktree-readonly-disposition/1",
+  "worktrees": [
+    {
+      "bare": false,
+      "branch": "main",
+      "changes": [
+        {
+          "path": ".worktrees/keyword-window4-20261009/",
+          "status_code": "??"
+        },
+        {
+          "path": ".worktrees/probe-stage0-oracle-skip-20261009/",
+          "status_code": "??"
+        },
+        {
+          "path": "evidence/campaign-20261006-imported-nominal-ssa.json",
+          "status_code": "??"
+        },
+        {
+          "path": "evidence/campaign-20261006-pressure-suite-results.json",
+          "status_code": "??"
+        },
+        {
+          "path": "evidence/campaign-20261006-project-results.json",
+          "status_code": "??"
+        }
+      ],
+      "detached": false,
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "host_git_status": "dirty",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/mncs-compiler",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "same_as_main",
+        "main_only_commits": 0
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/compiler-evidence-identity-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "ca9516f32e57cbf1f226460fe8013a3471cebd11",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-evidence-identity-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 117
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/compiler-identity-correction-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "0f3a6aae54bc6480b2fe7937a24251092f4af489",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-identity-correction-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 118
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/probe-telemetry-20261008",
+      "changes": [
+        {
+          "path": ".bootstrap",
+          "status_code": "??"
+        }
+      ],
+      "detached": false,
+      "head": "f92deb2cb5b6113234ca0074a1a7068790729550",
+      "host_git_status": "dirty",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-probe-telemetry-20261008",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 119
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/decl-bounded-scan-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "324c0b997edd68472bc4f44a6c08cb02056bc78c",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/decl-bounded-scan-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 86
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/decl-path-early-exit-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "83dfb4a2f57949dc433e0cbf9a4aa94ea2f991c2",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/decl-path-early-exit-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 70
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/evidence-current-delivery-ledger-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "a39a70e35fc934d6410057fcd53843ae38d3e723",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/evidence-current-delivery-ledger-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 109
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": null,
+      "changes": [
+        {
+          "path": "mncs-language.lock.json",
+          "status_code": " M"
+        },
+        {
+          "path": "src/compiler/lexer.mncs",
+          "status_code": " M"
+        },
+        {
+          "path": "tools/measure_compiler_probe.py",
+          "status_code": " M"
+        },
+        {
+          "path": "tools/probe_compiler_module_frontier.py",
+          "status_code": " M"
+        },
+        {
+          "path": "tools/stage0-probe/src/main.rs",
+          "status_code": " M"
+        },
+        {
+          "path": "tools/test_measure_compiler_probe.py",
+          "status_code": " M"
+        }
+      ],
+      "detached": true,
+      "head": "76ccb18af4e1da9a849f421960ecb9634ca2409d",
+      "host_git_status": "dirty",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-compiler-run-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 102
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/flow-hir-prelude-evidence-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "4a1479cc53cd9bc3de8aee3f8debcab1f580c124",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-evidence-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 101
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/flow-measurement-rss-cap-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "76ccb18af4e1da9a849f421960ecb9634ca2409d",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-measurement-rss-cap-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 102
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/flow-profile-resource-evidence-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "369297178d4bf2f4436e722e6db4d34f1935bba6",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-profile-resource-evidence-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 75
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": null,
+      "changes": [
+        {
+          "path": "src/compiler/decl.mncs",
+          "status_code": " M"
+        },
+        {
+          "path": ".bootstrap",
+          "status_code": "??"
+        }
+      ],
+      "detached": true,
+      "head": "581c8154008b56b968a67e85882a6d5eab0a18b3",
+      "host_git_status": "dirty",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/import-signature-baseline-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 116
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/import-signature-scan-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "45f84477a2f455cedae645045882f7e5c23bbe9a",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/import-signature-scan-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 114
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lazy-keyword-classification-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "97db51927d017123847735baf13409e94d27dc7f",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lazy-keyword-classification-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 111
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-batched-window-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "5d884cd0d9e17452601324f66abb78b341497310",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-batched-window-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 91
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-head-byte-pair-window-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "2ea01d3af28ca9fc2795a8c7669a48773c110c5c",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-pair-window-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 76
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-head-byte-window-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "c756a15247b1eb184c7685b558f61973f376c144",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-window-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 77
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-initial-window-reuse-20261010",
+      "changes": [
+        {
+          "path": "src/compiler/lexer.mncs",
+          "status_code": " M"
+        }
+      ],
+      "detached": false,
+      "head": "7b3829ee1586c178b1bdf606066014a8696bd491",
+      "host_git_status": "dirty",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-initial-window-reuse-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 68
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-keyword-dispatch-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "581c8154008b56b968a67e85882a6d5eab0a18b3",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-dispatch-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 116
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-keyword-windows-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "f5aa9547592694afd11bc28cd8c2da9a17b44ef7",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-windows-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 81
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-proof-20261009",
+      "changes": [
+        {
+          "path": ".bootstrap",
+          "status_code": "??"
+        }
+      ],
+      "detached": false,
+      "head": "b188398f74398de9a8d6a8ba37b32c525bf637b8",
+      "host_git_status": "dirty",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-proof-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 93
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-scan-window-arg-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "c88d0675d344c4af212841e667c9af2284b2cf29",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-scan-window-arg-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 79
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-keyword-byte-reuse-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "51bb2dd9c0ef9304f2158634c86805480a8e1588",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-token-frame-carry-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 45
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-trivia-prefix-budget-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "ea87c5c5e97d89d219c22f5d25ed728b0547c649",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-trivia-prefix-budget-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 63
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-window-slide-evidence-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "176c145b4de29caf6a0279b0ebdb194b6ae6e938",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-window-slide-evidence-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 66
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/nested-match-early-exit-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "87127cd6c194a7de9e64238aac10bb3c4de7e061",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-nested-match-early-exit-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 106
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": null,
+      "changes": [],
+      "detached": true,
+      "head": "422c84460b0af958fab1203ce1c89ba9ed8db89f",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-runtime-candidate-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 107
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": null,
+      "changes": [],
+      "detached": true,
+      "head": "a110e17d83bcc62bf310768b37fa7186e526ae15",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-baseline-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 96
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/probe-admission-reuse-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "4d957194d967952fd26411807f3862fa1cacb83c",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-reuse-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 94
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/probe-outcome-classification-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "9f55339c502dc86d468bf734764baca05dfc7276",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-outcome-classification-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 110
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/probe-phase-resource-samples-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "901fcadcd525afdd4443970a602885eb5ae32c83",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-phase-resource-samples-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 99
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/project-provider-body-retention-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "85f4886f73eab6699084339ea486d91b5cd95d9c",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/project-provider-body-retention-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 60
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/project-schema-pages-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "d281ad540f6ab87c7c24f2ac52a479d02ce18761",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/project-schema-pages-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 112
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/reference-argument-validation-cache-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "6af2e42a548defe5af25b33711b5ac838583acef",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/reference-argument-validation-cache-20261010/mncs-compiler",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 47
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/runtime-frame-profile-20261008",
+      "changes": [],
+      "detached": false,
+      "head": "386e618218afbf2d06e2d0daa03e0836f9e1c997",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/runtime-frame-profile-20261008/mncs-compiler",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 120
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/source-initial-byte-window-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "4a44f706918d48b37bd273bde27a8d3029f6a9da",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 53
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": null,
+      "changes": [],
+      "detached": true,
+      "head": "e05d3ede6a03fb2a02615771954fd2de8e641cb2",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-baseline-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 58
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/source-keyword-local-byte-window-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "10bf2aae7d0e32767e8f5ad98b0200ee04bbbe89",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-keyword-local-byte-window-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 49
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/source-local-byte-window-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "e05d3ede6a03fb2a02615771954fd2de8e641cb2",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 58
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": null,
+      "changes": [],
+      "detached": true,
+      "head": "85f4886f73eab6699084339ea486d91b5cd95d9c",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-baseline-control-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 60
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/source-page-validation-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "22f771df5b4865623ded5100e09e7a8ad214ed3d",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-page-validation-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 82
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/streaming-probe-cache-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "a110e17d83bcc62bf310768b37fa7186e526ae15",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/.worktrees/streaming-probe-cache-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 96
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/keyword-window4-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "6d3bd95b3b2a508dc2982d9538f04679f8fbb31e",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/keyword-window4-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 85
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/probe-stage0-oracle-skip-20261009",
+      "changes": [],
+      "detached": false,
+      "head": "5653908ee345ef7b2ed7bcae2a4da71f4ca6a4da",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/probe-stage0-oracle-skip-20261009",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 75
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/common-probe-cache-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "e5bab6bd391379185a1b30a117ed498ce150aa9a",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-common-probe-cache-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 24
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/decl-name-token-reuse-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "dce6adcf9f0778ec9dd398ffdca5044ce879321f",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-decl-name-reuse-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 27
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/decl-scalar-window-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "8d7be4e88afa18c4f6b773d573ab70b0ee240527",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-decl-scalar-window-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 7
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/decl-significant-direct-repeat-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "a852da763f78900a68f3e57c3fcf4568424d8436",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-delivery-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 29
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": null,
+      "changes": [],
+      "detached": true,
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-flow-stage0-baseline-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 22
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/flow-stage0-pin-profile-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "cae25860b1cd88b811f94b3ffc76e3aefa37adb4",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-flow-stage0-pin-profile-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 18
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": null,
+      "changes": [],
+      "detached": true,
+      "head": "45eb4f4abee05196db3a60c40eade7cb75ff3c51",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-flow-wordscan-baseline-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 2
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-keyword-global-local-fast-path-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "8f2d8c181dc44384d5c92834481931493b65146d",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-keyword-global-page-local-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 10
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 1,
+        "classification": "independently_diverged",
+        "main_only_commits": 14
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-full-frontier-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "602832610080c838df3d94c9fdbac0fc55753acb",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-lexer-full-frontier-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 5
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-self-ingest-repair-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "78cdd9ece7c192478119d7fc6ed00a60299b95e3",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-lexer-self-ingest-repair-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 6
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-window-inline-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "15d6a5971f19177dbdf33508ad6a847154ef0e12",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-lexer-window-inline-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 17
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": null,
+      "changes": [],
+      "detached": true,
+      "head": "a1818976da578f60e53aebdd739273e1b4b86b0d",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-matched-baseline-a181-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 48
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": null,
+      "changes": [],
+      "detached": true,
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-runtime-boundary-baseline-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 22
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": null,
+      "changes": [
+        {
+          "path": "mncs-language.lock.json",
+          "status_code": " M"
+        }
+      ],
+      "detached": true,
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "host_git_status": "dirty",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-runtime-boundary-validation-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 22
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-word-scan-select-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-session-admission-telemetry-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "same_as_main",
+        "main_only_commits": 0
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": null,
+      "changes": [
+        {
+          "path": "mncs-language.lock.json",
+          "status_code": " M"
+        }
+      ],
+      "detached": true,
+      "head": "8f19775c3fa499e17f5d7193e2df3fa33613b1a4",
+      "host_git_status": "dirty",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-stage0-isolation-baseline-3c-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 22
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/stage0-language-pin-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "310333c1636a9ec1db918dc14f2df93738c933e0",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-stage0-language-pin-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 21
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-word-scan-inline-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "4ed34b5f2060683045953178cefd31a4da0086d2",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-word-scan-inline-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 8
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-word-scan8-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-compiler-word-scan8-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "same_as_main",
+        "main_only_commits": 0
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-significant-trivia-inline-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "a480a5670c814009801c6d0245ca818d93fa21eb",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-lexer-significant-trivia-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 35
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    },
+    {
+      "bare": false,
+      "branch": "campaign/lexer-token-result-boundary-20261010",
+      "changes": [],
+      "detached": false,
+      "head": "dfc1070e9646cacd4228539e269f934d9f9dc784",
+      "host_git_status": "clean",
+      "ownership_disposition": "protected by another consumer",
+      "physical_directory_present_on_host": true,
+      "registered_path": "/tmp/mncs-lexer-token-result-20261010",
+      "relation_to_compiler_main": {
+        "checkout_only_commits": 0,
+        "classification": "merged_ancestor",
+        "main_only_commits": 39
+      },
+      "retirement_action": "retain; no cleanup authorized or performed"
+    }
+  ]
+}
