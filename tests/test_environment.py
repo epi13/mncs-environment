@@ -47,6 +47,7 @@ from mncs_env import (  # noqa: E402
     events,
     identity,
     intent,
+    invocation_artifacts,
     readiness,
     reconciler,
     rights,
@@ -3255,6 +3256,256 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(payload["byte_count"], len(expected))
             self.assertEqual(payload["sha256"], hashlib.sha256(expected).hexdigest())
             self.assertFalse((state / "sessions" / session_id).exists())
+
+    def test_session_invoke_passes_authorized_store_artifact_as_private_input(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            source_capability = "mncs-system-monitor:system-resource-sample"
+            consumer_capability = "mncs-automation:resource-headroom-evaluation"
+            source_binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-system-monitor", capability=source_capability,
+                contract_revision="1", entrypoint="sample", address="/bin/echo",
+                effects=["read"],
+            ))
+            consumer_binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-automation", capability=consumer_capability,
+                contract_revision="1", entrypoint="evaluate", address="/bin/echo",
+                effects=["read"],
+            ))
+            session.snapshot["bindings"] = [source_binding, consumer_binding]
+            session._save()
+            expected = b'{"schema":"mncs.system-monitor.resource-sample.v1"}\n'
+            staged_directories: list[Path] = []
+            target_request_ids: list[str] = []
+
+            def invoke(binding, _argv, **kwargs):
+                if binding["capability"] == source_capability:
+                    root = Path(kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+                    (root / "system-resource-sample.json").write_bytes(expected)
+                    return {"status": "ok", "returncode": 0,
+                            "stdout": "sampled", "stderr": ""}
+                env = kwargs["env"]
+                source_root = Path(env["MNCS_ENV_INPUT_ARTIFACT_DIR"])
+                staged_directories.append(source_root)
+                target_request_ids.append(env["MNCS_ENV_RPC_REQUEST_ID"])
+                manifest = json.loads(env["MNCS_ENV_INPUT_ARTIFACTS_JSON"])
+                self.assertEqual(
+                    manifest["schema_version"],
+                    "mncs.environment.provider-input-artifacts/1",
+                )
+                self.assertEqual(manifest["session_id"], session.session_id)
+                source = manifest["artifacts"][0]
+                self.assertEqual(source["capability"], source_capability)
+                self.assertEqual(source["path"], "system-resource-sample.json")
+                self.assertEqual(source["sha256"], hashlib.sha256(expected).hexdigest())
+                self.assertEqual(
+                    (source_root / source["local_path"]).read_bytes(), expected
+                )
+                self.assertEqual(
+                    stat.S_IMODE((source_root / source["local_path"]).stat().st_mode),
+                    0o400,
+                )
+                self.assertNotEqual(
+                    source_root, Path(env["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+                )
+                self.assertNotIn(str(session.store.state_dir),
+                                 env["MNCS_ENV_INPUT_ARTIFACTS_JSON"])
+                result_root = Path(env["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+                (result_root / "decision.json").write_text(
+                    '{"status":"unknown"}', encoding="utf-8"
+                )
+                return {"status": "ok", "returncode": 0,
+                        "stdout": "unknown", "stderr": ""}
+
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke", side_effect=invoke,
+            ):
+                sampled = session.invoke(source_capability, [])
+                result = session.invoke(
+                    consumer_capability, ["evaluate"],
+                    input_artifacts=[{
+                        "name": "monitor-sample",
+                        "capability": source_capability,
+                        "binding_id": source_binding["binding_id"],
+                        "path": "system-resource-sample.json",
+                    }],
+                )
+
+            self.assertEqual(result["status"], "ok")
+            self.assertFalse(staged_directories[0].exists())
+            self.assertEqual(len(result["input_artifacts"]), 1)
+            source = result["input_artifacts"][0]
+            self.assertEqual(source["name"], "monitor-sample")
+            self.assertEqual(source["store_reference"], sampled["artifact_store_ref"])
+            self.assertEqual(source["sha256"], hashlib.sha256(expected).hexdigest())
+            result_record = session.snapshot["artifacts"][-1]
+            self.assertEqual(result_record["input_artifacts"], result["input_artifacts"])
+            stored = evidence_store.read(
+                session, "capability-invocation-artifacts", result["artifact_store_ref"],
+            )
+            self.assertEqual([item["path"] for item in stored["files"]], ["decision.json"])
+            invoked_event = next(
+                event for event in reversed(session._log())
+                if event.get("type") == "capability.invoked"
+                and event.get("payload", {}).get("capability") == consumer_capability
+            )
+            self.assertEqual(
+                invoked_event["payload"]["input_artifacts"], result["input_artifacts"]
+            )
+            self.assertEqual(len(target_request_ids), 1)
+
+    def test_session_invoke_rejects_non_read_store_artifact_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            source_capability = "mncs-system-monitor:system-resource-sample"
+            consumer_capability = "mncs-automation:resource-headroom-evaluation"
+            source_binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-system-monitor", capability=source_capability,
+                contract_revision="1", entrypoint="sample", address="/bin/echo",
+                effects=["read", "write"],
+            ))
+            consumer_binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-automation", capability=consumer_capability,
+                contract_revision="1", entrypoint="evaluate", address="/bin/echo",
+                effects=["read"],
+            ))
+            session.snapshot["bindings"] = [source_binding, consumer_binding]
+            session._save()
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke",
+            ) as provider:
+                with self.assertRaises(sessions.AuthorityDenied):
+                    session.invoke(
+                        consumer_capability, [],
+                        input_artifacts=[{
+                            "name": "monitor-sample",
+                            "capability": source_capability,
+                            "binding_id": source_binding["binding_id"],
+                            "path": "system-resource-sample.json",
+                        }],
+                    )
+            provider.assert_not_called()
+
+    def test_session_invoke_delivers_store_artifact_to_real_protected_child(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            session = make_session(root / "state")
+            source_capability = "mncs-system-monitor:system-resource-sample"
+            consumer_capability = "mncs-automation:resource-headroom-evaluation"
+            provider_script = root / "provider.py"
+            provider_script.write_text(
+                "import hashlib, json, os, sys\n"
+                "from pathlib import Path\n"
+                "mode = sys.argv[1]\n"
+                "output = Path(os.environ['MNCS_ENV_SESSION_ARTIFACT_DIR'])\n"
+                "if mode == 'sample':\n"
+                "    (output / 'sample.json').write_bytes(b'sample')\n"
+                "    print('sample published')\n"
+                "else:\n"
+                "    input_root = Path(os.environ['MNCS_ENV_INPUT_ARTIFACT_DIR'])\n"
+                "    manifest = json.loads(os.environ['MNCS_ENV_INPUT_ARTIFACTS_JSON'])\n"
+                "    item = manifest['artifacts'][0]\n"
+                "    content = (input_root / item['local_path']).read_bytes()\n"
+                "    assert hashlib.sha256(content).hexdigest() == item['sha256']\n"
+                "    assert item['store_reference'].startswith('mncs-store:')\n"
+                "    (output / 'decision.json').write_text(json.dumps({'input_sha256': item['sha256']}))\n"
+                "    print('decision evaluated')\n",
+                encoding="utf-8",
+            )
+            source_binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-system-monitor", capability=source_capability,
+                contract_revision="1", entrypoint="sample", address=f"python:{provider_script}",
+                effects=["read"],
+            ))
+            consumer_binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-automation", capability=consumer_capability,
+                contract_revision="1", entrypoint="evaluate", address=f"python:{provider_script}",
+                effects=["read"],
+            ))
+            session.snapshot["bindings"] = [source_binding, consumer_binding]
+            session._save()
+
+            sampled = session.invoke(source_capability, ["sample"])
+            result = session.invoke(
+                consumer_capability, ["evaluate"],
+                input_artifacts=[{
+                    "name": "monitor-sample",
+                    "capability": source_capability,
+                    "binding_id": source_binding["binding_id"],
+                    "path": "sample.json",
+                }],
+            )
+
+            self.assertEqual(sampled["status"], "ok")
+            self.assertEqual(result["status"], "ok")
+            self.assertIn("decision evaluated", result["stdout"])
+            stored = evidence_store.read(
+                session, "capability-invocation-artifacts", result["artifact_store_ref"],
+            )
+            decision = json.loads(base64.b64decode(
+                stored["files"][0]["content_base64"], validate=True,
+            ))
+            self.assertEqual(
+                decision["input_sha256"],
+                hashlib.sha256(b"sample").hexdigest(),
+            )
+            self.assertNotIn(
+                str(session.store.state_dir), json.dumps(result["input_artifacts"])
+            )
+
+    def test_session_invoke_input_rejects_latest_failed_source_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            source_capability = "mncs-system-monitor:system-resource-sample"
+            consumer_capability = "mncs-automation:resource-headroom-evaluation"
+            source_binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-system-monitor", capability=source_capability,
+                contract_revision="1", entrypoint="sample", address="/bin/echo",
+                effects=["read"],
+            ))
+            consumer_binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-automation", capability=consumer_capability,
+                contract_revision="1", entrypoint="evaluate", address="/bin/echo",
+                effects=["read"],
+            ))
+            session.snapshot["bindings"] = [source_binding, consumer_binding]
+            session._save()
+            calls: list[str] = []
+
+            def invoke(binding, _argv, **kwargs):
+                calls.append(binding["capability"])
+                root = Path(kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+                (root / "sample.json").write_text("{}", encoding="utf-8")
+                return {"status": "ok", "returncode": 0,
+                        "stdout": "sampled", "stderr": ""}
+
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke", side_effect=invoke,
+            ):
+                successful = session.invoke(source_capability, [])
+                session.snapshot["artifacts"].append({
+                    "kind": "invocation-result",
+                    "capability": source_capability,
+                    "binding_id": source_binding["binding_id"],
+                    "status": "failed",
+                    "artifact_store_ref": successful["artifact_store_ref"],
+                })
+                session._save()
+                with self.assertRaisesRegex(
+                    invocation_artifacts.InvocationArtifactError,
+                    "latest capability invocation did not complete successfully",
+                ):
+                    session.invoke(
+                        consumer_capability, [],
+                        input_artifacts=[{
+                            "name": "monitor-sample",
+                            "capability": source_capability,
+                            "binding_id": source_binding["binding_id"],
+                            "path": "sample.json",
+                        }],
+                    )
+
+            self.assertEqual(calls, [source_capability])
 
     def test_artifact_read_does_not_fall_back_after_latest_failed_invocation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

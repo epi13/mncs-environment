@@ -2951,6 +2951,78 @@ class Session:
                 return None, None
         return None, None
 
+    def _read_provider_input_artifacts(
+        self, artifacts: list[dict[str, Any]] | None,
+    ) -> list[dict[str, Any]]:
+        if artifacts is None:
+            return []
+        if (not isinstance(artifacts, list)
+                or len(artifacts) > invocation_artifacts_module.MAX_INPUT_ARTIFACTS):
+            raise invocation_artifacts_module.InvocationArtifactError(
+                "provider input artifact list exceeds its bound"
+            )
+        names: set[str] = set()
+        total = 0
+        prepared: list[dict[str, Any]] = []
+        bindings = self.snapshot.get("bindings", [])
+        for item in artifacts:
+            if not isinstance(item, dict) or set(item) != {
+                "name", "capability", "binding_id", "path",
+            }:
+                raise invocation_artifacts_module.InvocationArtifactError(
+                    "provider input artifact request has unsupported fields"
+                )
+            name = item.get("name")
+            source_capability = item.get("capability")
+            source_binding_id = item.get("binding_id")
+            if (not isinstance(name, str)
+                    or not re.fullmatch(r"[A-Za-z][A-Za-z0-9._-]{0,79}", name)
+                    or name in names):
+                raise invocation_artifacts_module.InvocationArtifactError(
+                    "provider input artifact names must be unique bounded identifiers"
+                )
+            if (not isinstance(source_capability, str)
+                    or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,159}",
+                                        source_capability)
+                    or not isinstance(source_binding_id, str)
+                    or not re.fullmatch(r"cap_[A-Za-z0-9_-]{1,120}",
+                                        source_binding_id)):
+                raise invocation_artifacts_module.InvocationArtifactError(
+                    "provider input artifact source identity is invalid"
+                )
+            matches = [
+                binding for binding in bindings
+                if isinstance(binding, dict)
+                and binding.get("capability") == source_capability
+                and binding.get("binding_id") == source_binding_id
+            ] if isinstance(bindings, list) else []
+            if len(matches) != 1:
+                raise LifecycleError(
+                    "provider input artifact requires one exact current source binding"
+                )
+            source_binding = matches[0]
+            if source_binding.get("effects") != ["read"]:
+                raise AuthorityDenied(
+                    "provider input artifact source must be authorized as read-only"
+                )
+            verdict = self.check(action="invoke", target=source_capability)
+            if verdict.get("verdict") != "allow":
+                raise AuthorityDenied(
+                    "Environment did not authorize this source capability artifact"
+                )
+            metadata, content = invocation_artifacts_module.read_latest_invocation_file(
+                self, source_capability, source_binding_id, item.get("path"),
+                max_bytes=invocation_artifacts_module.MAX_INPUT_ARTIFACT_BYTES,
+            )
+            total += len(content)
+            if total > invocation_artifacts_module.MAX_INPUT_TOTAL_BYTES:
+                raise invocation_artifacts_module.InvocationArtifactError(
+                    "provider input artifacts exceed their total size bound"
+                )
+            names.add(name)
+            prepared.append({"name": name, **metadata, "content": content})
+        return prepared
+
     def invoke(
         self,
         capability: str,
@@ -2961,6 +3033,7 @@ class Session:
         output_limit_bytes: int | None = None,
         env: dict[str, str] | None = None,
         effect_target: dict[str, Any] | None = None,
+        input_artifacts: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Invoke a bound capability. Deny and escalate NEVER spawn a process.
 
@@ -3039,37 +3112,49 @@ class Session:
                 raise AuthorityDenied(effect_verdict["reason"])
             if effect_verdict["verdict"] == "escalate":
                 return self._pending(capability, argv, required, effect_verdict["reason"])
+        prepared_inputs = self._read_provider_input_artifacts(input_artifacts)
+        input_provenance = [
+            {key: value for key, value in item.items() if key != "content"}
+            for item in prepared_inputs
+        ]
         with invocation_artifacts_module.InvocationArtifactWorkspace(
             self, capability, binding.get("binding_id")
         ) as artifact_workspace:
-            invocation_env = dict(env or {})
-            invocation_env.update(self._selected_runtime_environment(binding))
-            invocation_env["MNCS_ENV_SESSION_ARTIFACT_DIR"] = str(artifact_workspace.path)
-            parent_request_id = os.environ.get("MNCS_ENV_RPC_REQUEST_ID")
-            if (not isinstance(parent_request_id, str)
-                    or not re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", parent_request_id)):
-                parent_request_id = None
-            child_request = {
-                "kind": "provider-invocation",
-                "session_id": self.session_id,
-                "capability": capability,
-                "binding_id": binding.get("binding_id"),
-            }
-            if parent_request_id is not None:
-                child_request["parent_request_id"] = parent_request_id
-            else:
-                child_request["nonce"] = secrets.token_hex(20)
-            provider_request_id = "req_" + digest_hex(child_request, length=48)
-            invocation_env["MNCS_ENV_RPC_REQUEST_ID"] = provider_request_id
-            self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
-                       {"capability": capability, "argv": argv, "executor": executor,
-                        "effect_target": admitted_effect_target,
-                        "parent_request_id": parent_request_id,
-                        "provider_request_id": provider_request_id})
-            self._save()
-            result = capabilities_module.invoke(
-                binding, argv, cwd=cwd, timeout_seconds=timeout_seconds,
-                output_limit_bytes=output_limit_bytes, env=invocation_env)
+            with invocation_artifacts_module.ProviderInputArtifactWorkspace(
+                self.session_id, prepared_inputs,
+            ) as input_workspace:
+                invocation_env = dict(env or {})
+                invocation_env.update(self._selected_runtime_environment(binding))
+                invocation_env["MNCS_ENV_SESSION_ARTIFACT_DIR"] = str(artifact_workspace.path)
+                invocation_env.update(input_workspace.environment())
+                parent_request_id = os.environ.get("MNCS_ENV_RPC_REQUEST_ID")
+                if (not isinstance(parent_request_id, str)
+                        or not re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", parent_request_id)):
+                    parent_request_id = None
+                child_request = {
+                    "kind": "provider-invocation",
+                    "session_id": self.session_id,
+                    "capability": capability,
+                    "binding_id": binding.get("binding_id"),
+                    "argv": list(argv),
+                    "input_artifacts": input_provenance,
+                }
+                if parent_request_id is not None:
+                    child_request["parent_request_id"] = parent_request_id
+                else:
+                    child_request["nonce"] = secrets.token_hex(20)
+                provider_request_id = "req_" + digest_hex(child_request, length=48)
+                invocation_env["MNCS_ENV_RPC_REQUEST_ID"] = provider_request_id
+                self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
+                           {"capability": capability, "argv": argv, "executor": executor,
+                            "effect_target": admitted_effect_target,
+                            "input_artifacts": input_provenance,
+                            "parent_request_id": parent_request_id,
+                            "provider_request_id": provider_request_id})
+                self._save()
+                result = capabilities_module.invoke(
+                    binding, argv, cwd=cwd, timeout_seconds=timeout_seconds,
+                    output_limit_bytes=output_limit_bytes, env=invocation_env)
             artifact_fields = artifact_workspace.publish()
         # A declared provider may itself resume this Environment session and
         # publish domain state. Rebase the invocation result over that newer
@@ -3079,11 +3164,13 @@ class Session:
             key: artifact_fields[key]
             for key in ("artifact_store_ref", "artifact_file_count", "artifact_byte_count")
         })
+        result["input_artifacts"] = input_provenance
         self.snapshot.setdefault("artifacts", []).append(
             {"kind": "invocation-result", "capability": capability,
              "binding_id": binding.get("binding_id"),
              "status": result["status"], "executor": executor,
              "effect_target": admitted_effect_target,
+             "input_artifacts": input_provenance,
              "parent_request_id": parent_request_id,
              "provider_request_id": provider_request_id,
              **artifact_fields, "at": utcnow()}
@@ -3091,6 +3178,7 @@ class Session:
         self._emit("invocation.completed", binding.get("provider", "unknown"),
                    {"capability": capability, "status": result["status"],
                     "returncode": result["returncode"],
+                    "input_artifacts": input_provenance,
                     "parent_request_id": parent_request_id,
                     "provider_request_id": provider_request_id,
                     "artifact_store_ref": artifact_fields.get("artifact_store_ref")})

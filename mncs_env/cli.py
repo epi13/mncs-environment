@@ -697,18 +697,50 @@ def cmd_invoke(args: argparse.Namespace) -> int:
         return fail(str(error))
     try:
         try:
+            input_artifacts = [
+                {
+                    "name": item[0],
+                    "capability": item[1],
+                    "binding_id": item[2],
+                    "path": item[3],
+                }
+                for item in (getattr(args, "input_artifact", None) or [])
+            ]
             result = session.invoke(
                 args.capability, args.argv, cwd=args.cwd,
                 timeout_seconds=args.timeout,
                 output_limit_bytes=args.output_limit_bytes,
+                input_artifacts=input_artifacts,
                 effect_target=(
                     {"repository": getattr(args, "effect_repository", None)}
                     if getattr(args, "effect_repository", None) else None
                 ),
             )
-        except (sessions_module.AuthorityDenied, sessions_module.LifecycleError,
+        except sessions_module.AuthorityDenied as error:
+            return fail(str(error), code=3, diagnostics={
+                "code": "authority-denied",
+                "publication_completed": False,
+            })
+        except (sessions_module.LifecycleError,
                 capabilities_module.CapabilityError) as error:
             return fail(str(error), code=3)
+        except invocation_artifacts_module.InvocationArtifactError as error:
+            return fail(str(error), code=4, diagnostics={
+                "code": "provider-input-artifact-invalid",
+                "publication_completed": False,
+            })
+        except StoreUnavailable as error:
+            return fail(str(error), code=4, diagnostics={
+                "code": error.code,
+                "provider": "mncs-store",
+                "publication_completed": False,
+            })
+        except StoreIntegrityFailure as error:
+            return fail(str(error), code=4, diagnostics={
+                "code": "store-corruption-or-binding-mismatch",
+                "provider": "mncs-store",
+                "publication_completed": False,
+            })
         out(result)
         if result.get("truncated"):
             print("warning: provider invocation output was truncated by the capture limit",
@@ -2119,6 +2151,12 @@ def build_parser() -> argparse.ArgumentParser:
     invoke.add_argument(
         "--effect-repository", default=None,
         help="selected repository whose checkout is the provider's mutation target",
+    )
+    invoke.add_argument(
+        "--input-artifact", action="append", nargs=4, default=[],
+        metavar=("NAME", "SOURCE_CAPABILITY", "SOURCE_BINDING_ID", "PATH"),
+        help=("pass one bounded file from the latest successful read-only Store artifact "
+              "to the provider; repeat for additional named inputs"),
     )
     invoke.add_argument("capability")
     invoke.add_argument("--cwd", default=None)

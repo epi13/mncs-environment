@@ -13,6 +13,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import stat
 import tempfile
 from pathlib import Path, PurePosixPath
@@ -30,6 +31,10 @@ MAX_TOTAL_BYTES = 64 * 1024 * 1024
 MAX_RECORD_BYTES = 96 * 1024 * 1024
 MAX_PATH_CHARS = 1024
 MAX_TREE_DEPTH = 24
+MAX_INPUT_ARTIFACTS = 8
+MAX_INPUT_ARTIFACT_BYTES = 1024 * 1024
+MAX_INPUT_TOTAL_BYTES = 4 * 1024 * 1024
+INPUT_ARTIFACT_SCHEMA = "mncs.environment.provider-input-artifacts/1"
 
 
 class InvocationArtifactError(ValueError):
@@ -450,3 +455,173 @@ class InvocationArtifactWorkspace:
             "artifact_file_count": len(files),
             "artifact_byte_count": total,
         }
+
+
+def read_latest_invocation_file(
+    session: Any,
+    capability: str,
+    binding_id: str,
+    relative_path: str,
+    *,
+    max_bytes: int = MAX_INPUT_ARTIFACT_BYTES,
+) -> tuple[dict[str, Any], bytes]:
+    """Read one file from the latest successful, Store-backed invocation.
+
+    The immutable reference is taken from the Environment snapshot, then
+    checked against the restored bundle before the file is returned.
+    """
+    try:
+        relative = _safe_relative(relative_path)
+    except StoreIntegrityFailure as error:
+        raise InvocationArtifactError(
+            "provider input artifact path is invalid"
+        ) from error
+    artifacts = session.snapshot.get("artifacts", [])
+    latest = next((
+        item for item in reversed(artifacts)
+        if isinstance(item, dict)
+        and item.get("kind") == "invocation-result"
+        and item.get("capability") == capability
+        and item.get("binding_id") == binding_id
+    ), None) if isinstance(artifacts, list) else None
+    if latest is None:
+        raise InvocationArtifactError(
+            "the selected capability has no recorded invocation artifact"
+        )
+    if latest.get("status") != "ok":
+        raise InvocationArtifactError(
+            "the latest capability invocation did not complete successfully"
+        )
+    reference = latest.get("artifact_store_ref")
+    if not evidence_store.is_store_reference(reference):
+        raise StoreUnavailable(
+            "the latest capability invocation has no canonical Store artifact",
+            code="provider-operation-unsupported",
+        )
+
+    with InvocationArtifactWorkspace(session, capability, binding_id) as workspace:
+        if not workspace.store_backed:
+            raise StoreUnavailable(
+                "capability artifact input requires the strict Store provider",
+                code="provider-operation-unsupported",
+            )
+        if workspace.previous_reference != reference:
+            raise StoreIntegrityFailure(
+                "latest invocation artifact does not match its canonical Store bundle"
+            )
+        content = workspace.read_file(relative.as_posix(), max_bytes=max_bytes)
+    metadata = {
+        "capability": capability,
+        "binding_id": binding_id,
+        "store_reference": reference,
+        "path": relative.as_posix(),
+        "byte_count": len(content),
+        "sha256": hashlib.sha256(content).hexdigest(),
+    }
+    return metadata, content
+
+
+class ProviderInputArtifactWorkspace:
+    """Private, bounded copies of authorized Store artifacts for one provider.
+
+    Providers receive only these selected files and their Store provenance in
+    an environment manifest. They never receive Store paths or descriptors.
+    """
+
+    def __init__(self, session_id: str, artifacts: list[dict[str, Any]]):
+        self.session_id = session_id
+        self.artifacts = artifacts
+        self._temporary: tempfile.TemporaryDirectory[str] | None = None
+        self.path: Path | None = None
+        self.manifest: dict[str, Any] | None = None
+        self.metadata: list[dict[str, Any]] = []
+
+    def __enter__(self) -> Self:
+        if not self.artifacts:
+            return self
+        if len(self.artifacts) > MAX_INPUT_ARTIFACTS:
+            raise InvocationArtifactError("provider input artifact count exceeds its bound")
+        self._temporary = tempfile.TemporaryDirectory(prefix="mncs-env-input-")
+        self.path = Path(self._temporary.name)
+        total = 0
+        names: set[str] = set()
+        files: list[dict[str, Any]] = []
+        try:
+            for index, item in enumerate(self.artifacts):
+                name = item.get("name")
+                content = item.get("content")
+                if (not isinstance(name, str)
+                        or not re.fullmatch(r"[A-Za-z][A-Za-z0-9._-]{0,79}", name)
+                        or name in names):
+                    raise InvocationArtifactError(
+                        "provider input artifact names must be unique bounded identifiers"
+                    )
+                if not isinstance(content, bytes):
+                    raise InvocationArtifactError("provider input artifact content must be bytes")
+                if len(content) > MAX_INPUT_ARTIFACT_BYTES:
+                    raise InvocationArtifactError("provider input artifact exceeds its size bound")
+                total += len(content)
+                if total > MAX_INPUT_TOTAL_BYTES:
+                    raise InvocationArtifactError(
+                        "provider input artifacts exceed their total size bound"
+                    )
+                names.add(name)
+                metadata = {
+                    key: value for key, value in item.items() if key != "content"
+                }
+                if (metadata.get("byte_count") != len(content)
+                        or metadata.get("sha256") != hashlib.sha256(content).hexdigest()
+                        or not evidence_store.is_store_reference(
+                            metadata.get("store_reference")
+                        )):
+                    raise StoreIntegrityFailure(
+                        "provider input metadata does not match its Store artifact bytes"
+                    )
+                local_path = f"{index:04d}.artifact"
+                destination = self.path / local_path
+                flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+                descriptor = os.open(destination, flags, 0o400)
+                try:
+                    view = memoryview(content)
+                    while view:
+                        written = os.write(descriptor, view)
+                        if written <= 0:
+                            raise OSError("short write while staging provider input artifact")
+                        view = view[written:]
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
+                os.chmod(destination, 0o400, follow_symlinks=False)
+                files.append({**metadata, "local_path": local_path})
+                self.metadata.append(metadata)
+            self.manifest = {
+                "schema_version": INPUT_ARTIFACT_SCHEMA,
+                "session_id": self.session_id,
+                "artifacts": files,
+            }
+            return self
+        except Exception:
+            self._temporary.cleanup()
+            self._temporary = None
+            self.path = None
+            raise
+
+    def environment(self) -> dict[str, str]:
+        """Return the provider-only paths and bounded provenance manifest."""
+        if self.path is None or self.manifest is None:
+            return {
+                "MNCS_ENV_INPUT_ARTIFACT_DIR": "",
+                "MNCS_ENV_INPUT_ARTIFACTS_JSON": "",
+            }
+        return {
+            "MNCS_ENV_INPUT_ARTIFACT_DIR": str(self.path),
+            "MNCS_ENV_INPUT_ARTIFACTS_JSON": json.dumps(
+                self.manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            ),
+        }
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        if self._temporary is not None:
+            self._temporary.cleanup()
+            self._temporary = None
+            self.path = None
