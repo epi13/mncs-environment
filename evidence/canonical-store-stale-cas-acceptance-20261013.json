@@ -1,0 +1,43 @@
+{
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "date": "2026-10-13",
+  "execution_boundary": {
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "direct_path_visibility": "absent; a protected namespace probe returned ENOENT and writable access false",
+    "network": false,
+    "project": "mncs-environment",
+    "publication_transport": "mncs-control-environment-rpc",
+    "sandbox_backend": "bwrap",
+    "scope": "project"
+  },
+  "fresh_process_readback": {
+    "campaign_state_checkpoint_id": "chk_ee25201213f56aba",
+    "context_conflict_status": "context-conflict",
+    "delivery_status": "partial",
+    "evidence_count": 202,
+    "latest_checkpoint_sequence": 298,
+    "prior_store_transport_evidence_present": true,
+    "selected_session_id": "ses_7226fbcfe65820f7"
+  },
+  "identity": "ev_env_canonical_store_stale_cas_acceptance_20261013",
+  "limitations": [
+    "No canonical service termination was injected; only the definite stale-base conflict path was exercised.",
+    "The duplicate campaign context remains visible and unselected; no ownership adoption or closure was performed."
+  ],
+  "repository": "mncs-environment",
+  "result": "Canonical Environment RPC rejected stale campaign state before publication and a new process read back the unchanged checkpoint head.",
+  "schema_version": "mncs.environment.store-stale-cas-acceptance/1",
+  "source_commit": "973dc6a116ef39d0c505ec82262bed409093e66c",
+  "stale_cas_attempt": {
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "command_exit_code": 3,
+    "conflict_kind": "campaign-state-base-checkpoint",
+    "current_checkpoint": "chk_ee25201213f56aba",
+    "diagnostic_code": "publication-conflict",
+    "observation": "The RPC diagnostic included the exact supplied and current checkpoint identities.",
+    "operation": "campaign delivery checkpoint update",
+    "publication_completed": false,
+    "session_id": "ses_7226fbcfe65820f7",
+    "supplied_base_checkpoint": "chk_c13f40036af45fe2"
+  }
+}
