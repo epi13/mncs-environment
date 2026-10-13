@@ -1,0 +1,54 @@
+{
+  "schema_version": "mncs.environment.live-provider-readiness-observation/1",
+  "identity": "ev_env_live_provider_readiness_unknowns_20261013",
+  "date": "2026-10-13",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "environment_id": "renv_ef518b3ade5d6337",
+  "repository": "mncs-environment",
+  "source_commit": "680b2d1917c9aae77fe67fe6627d4248497ff87d",
+  "observation": {
+    "observed_at": "2026-10-13T10:00:02+00:00",
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "network": false,
+    "command": "./scripts/mncs-env health ses_7226fbcfe65820f7 --consumer local-agent --live",
+    "status": "degraded",
+    "available_count": 20,
+    "unavailable_count": 0,
+    "unknown_count": 9,
+    "required_unavailable": [],
+    "required_unknown": [],
+    "unavailable_capabilities": [],
+    "last_reconciled_at": "2026-10-13T08:26:42+00:00"
+  },
+  "unknown_capabilities": [
+    "mncs-automation:automation-definition",
+    "mncs-automation:automation-evaluation",
+    "mncs-automation:automation-occurrence",
+    "mncs-automation:coherence-artifact-reconcile",
+    "mncs-automation:coherence-routing",
+    "mncs-control-mcp:environment.campaign-continuation",
+    "mncs-control-mcp:journal-context",
+    "mncs-control-mcp:workspace.worktree.prepare",
+    "mncs-system-monitor:system-observability"
+  ],
+  "unknown_reason": {
+    "code": "provider-invocation-undeclared",
+    "explanation": "The capability source fingerprints exist but no owner-published invocation descriptor exists; source fingerprints are not commands."
+  },
+  "doctor_operation": {
+    "requested": "./scripts/mncs-env doctor ses_7226fbcfe65820f7 --consumer local-agent --evidence",
+    "status": "unknown",
+    "code": "operation-unavailable",
+    "transport": "mncs-control-environment-rpc",
+    "publication_completed": false,
+    "cause_code": "ENVIRONMENT_OPERATION_UNAVAILABLE"
+  },
+  "conclusion": "Live health accurately preserves undeclared provider invocations as unknown and reports degraded readiness. This record does not claim the optional capabilities are unavailable or ready.",
+  "limitations": [
+    "No Automation, Control MCP, or System Monitor invocation contract was modified in this Environment evidence change.",
+    "No provider operation was invoked by substituting source fingerprints or inferred commands."
+  ]
+}
