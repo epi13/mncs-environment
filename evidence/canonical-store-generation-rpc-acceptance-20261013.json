@@ -1,0 +1,97 @@
+{
+  "schema_version": "mncs.environment.canonical-store-generation-rpc-acceptance/1",
+  "identity": "ev_env_canonical_store_generation_rpc_acceptance_20261013",
+  "recorded_at": "2026-10-13T19:48:22Z",
+  "owner": "mncs-environment",
+  "repository": "mncs-environment",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source_identities": {
+    "environment_main_at_execution": "1b8395d56b8df2d1ef672635371f7f4af8de7fa1",
+    "control_mcp_main": "6ecfc25af7616e6a56ea6da8f1a4241c7e55c5c9",
+    "store_main": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "execution_boundary": {
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "network": false,
+    "transport": "authenticated MNCS Control Environment RPC",
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "agent_direct_store_access": false,
+    "direct_path_proof": "ev_env_store_claim_transport_acceptance_20261013"
+  },
+  "stale_generation_probe": {
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "initial_generation": 48850,
+    "authorized_seed_acquisition": {
+      "request_id": "req_store_stale_cas_seed_final_20261013",
+      "claim_id": "claim:mncs-environment:paths:171e6b63f5a2",
+      "version": 5,
+      "scope": {
+        "kind": "paths",
+        "paths": [
+          "evidence/.mncs-stale-store-generation-probe-20261013"
+        ],
+        "exclusive": false
+      },
+      "basis": "explicit-claim",
+      "expected_store_generation": 48850,
+      "post_acquisition_generation": 48853
+    },
+    "stale_request": {
+      "request_id": "req_store_stale_cas_reject_final_20261013",
+      "command_exit_code": 3,
+      "expected_store_generation": 48850,
+      "observed_store_generation": 48853,
+      "diagnostic_code": "publication-conflict",
+      "cause_code": "publication-conflict",
+      "conflict_kind": "store-generation",
+      "conflict_stage": "generation-precondition",
+      "publication_completed": false,
+      "probe_claim_admitted": false
+    },
+    "cleanup_and_fresh_process_readback": {
+      "release_request_id": "req_store_stale_cas_release_final_20261013",
+      "readback_request_id": "req_store_stale_cas_readback_final_20261013",
+      "claim_id": "claim:mncs-environment:paths:171e6b63f5a2",
+      "latest_version": 6,
+      "status": "released",
+      "live": false,
+      "selected_session_id": "ses_7226fbcfe65820f7"
+    }
+  },
+  "canonical_store_verification": {
+    "terminal_job_id": "term-268162d38796d5d3f7ae9c7c",
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "started_at": "2026-10-13T19:46:00.516629Z",
+    "completed_at": "2026-10-13T19:48:22.490456Z",
+    "elapsed_seconds": 141.974,
+    "read_only": true,
+    "exit_code": 0,
+    "result": {
+      "ok": true,
+      "generation": 48858,
+      "objects": 48860,
+      "relations": 0,
+      "provenance_records": 0,
+      "recovery": "RECOVERED_OLD"
+    },
+    "recovery_interpretation": "The read-only embedded Store initialization reports RECOVERED_OLD after scanning the committed head; this verification performed no recovery or mutation."
+  },
+  "claim_continuity": {
+    "repository_claim_id": "claim:mncs-environment",
+    "session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "local-agent",
+    "version": 35,
+    "status": "held",
+    "live": true,
+    "expires_at": "2026-10-14T19:39:46+00:00"
+  },
+  "limitations": [
+    "This acceptance slice proves canonical stale-generation precondition rejection, fresh-process claim release readback, and a subsequent full Store integrity scan. It does not inject a Control service interruption during a canonical publication.",
+    "The duplicate campaign context remains visible and unselected; no ownership adoption or closure was performed.",
+    "Compiler and Forge exclusive claims remain with their prior sessions; neither repository was tested or modified."
+  ],
+  "result": "PASS: a generation-fenced authorized claim reached canonical Store through authenticated RPC from protected bwrap, a stale generation was rejected before publication, the exact temporary claim was released and read back, and a new full integrity scan verified the canonical Store."
+}
