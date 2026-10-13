@@ -1,0 +1,53 @@
+{
+  "schema_version": "mncs.environment.system-resource-sample-store-readback/1",
+  "identity": "ev_env_system_resource_sample_store_readback_20261013",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T17:11:07Z",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "environment_revision": "d210cf1e9e48106d3b9a680dc05cdd01b09ec403",
+  "invocation": {
+    "capability": "mncs-system-monitor:system-resource-sample",
+    "binding_id": "cap_9a39cbc2cdf18f11",
+    "contract_revision": "1",
+    "job_id": "term-231c88829eba859fdfa961c9",
+    "invocation_returncode": 0,
+    "status": "ok",
+    "transport": "mncs-control-environment-rpc",
+    "sandbox_backend": "bwrap",
+    "network": false,
+    "artifact_store_ref": "mncs-store:ses_7226fbcfe65820f7:capability-invocation-artifacts:f9b4e1a9bca480506eff1840f4980f135d979d2d633160a561d4b710b4e890c1",
+    "artifact_path": "system-resource-sample.json",
+    "artifact_byte_count": 459
+  },
+  "readback": {
+    "job_id": "term-e3836b488e940d3664836a40",
+    "sandbox_backend": "bwrap",
+    "network": false,
+    "task_selector_status": "resolved",
+    "selection_basis": "authenticated task identity",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "resumed_session_id": "ses_7226fbcfe65820f7",
+    "operation": "mncs-env artifact-read after continuation and resume",
+    "schema_version": "mncs.environment.artifact-read/1",
+    "sha256": "60a0112c701ee477bf0c63b75e21e8db94932ef32cc206391974582759459bdf",
+    "byte_count": 459,
+    "content_hash_matches": true
+  },
+  "sample": {
+    "schema": "mncs.system-monitor.resource-sample.v1",
+    "observed_at": 1791911343159,
+    "memory_available_status": "observed",
+    "memory_available_bytes": 6626525184,
+    "execution_records_present": false
+  },
+  "limits": {
+    "forge_execution_receipts_available": false,
+    "forge_execution_receipt_count": 0,
+    "automation_scheduling_decision_made": false,
+    "reason": "The real System Monitor artifact contains host resource data but no identity-matched Forge execution record. No Compiler scheduling decision is claimed.",
+    "system_observability_capability": "still denied before provider execution by Control's current allowlist",
+    "compiler_and_forge_claims": "remain held by their original consumers; no tests or repository changes were made there"
+  },
+  "next_step": "After authenticated Environment handoffs or fenced transfers for Compiler and Forge, run one bounded Compiler task through Forge, obtain its real receipt and matching System Monitor execution record, then evaluate and retain the Automation decision using those exact identities."
+}
