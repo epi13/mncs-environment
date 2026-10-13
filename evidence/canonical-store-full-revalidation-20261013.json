@@ -1,0 +1,56 @@
+{
+  "schema_version": "mncs.environment.canonical-store-full-revalidation/1",
+  "identity": "ev_env_canonical_store_full_revalidation_20261013",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T13:43:30Z",
+  "source": {
+    "repository": "mncs-environment",
+    "commit": "51980af7e4713f043af13be32d383d1e708243e6"
+  },
+  "execution": {
+    "control_job_id": "term-8e130aa59597b2b2f8c07236",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "authenticated_transport": "mncs-control-environment-rpc"
+  },
+  "campaign_continuation": {
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "status": "ready",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "selection_basis": "authenticated-project-environment-definition",
+    "checkpoint_sequence": 312,
+    "campaign_state_checkpoint_id": "chk_440a07881c3e12f4",
+    "context_conflict_status": "context-conflict",
+    "environment_claim": {
+      "version": 34,
+      "status": "held",
+      "live": true,
+      "expires_at": "2026-10-13T19:38:39+00:00"
+    }
+  },
+  "canonical_store_verification": {
+    "operation": "./scripts/mncs-env store --session <selected-session> --verify",
+    "exit_code": 0,
+    "ok": true,
+    "generation": 48310,
+    "objects": 48312,
+    "relations": 0,
+    "provenance_records": 0,
+    "fanout": 31,
+    "recovery": "RECOVERED_OLD"
+  },
+  "authority_boundary_reference": {
+    "path": "evidence/canonical-store-boundary-revalidation-20261013.json",
+    "protected_agent_direct_store_access": false,
+    "publication_and_readback_owner": "mncs-control-mcp",
+    "canonical_persistence_owner": "mncs-store"
+  },
+  "disposition": {
+    "store_mutated_by_verification": false,
+    "claim_mutated_by_verification": false,
+    "duplicate_context_adopted": false,
+    "result": "Full integrity verification succeeded through the authorized transport under protected project execution."
+  }
+}
