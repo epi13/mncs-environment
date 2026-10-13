@@ -1,0 +1,79 @@
+{
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "identity": "ev_campaign_charter_control_continuation_live_20261013",
+  "interpretation": {
+    "not_proved": [
+      "This lookup did not resume or transfer the Environment claim to a distinct agent principal.",
+      "This lookup did not resolve the separate compiler or forge owner claims."
+    ],
+    "proved": [
+      "The protected project-scoped Control path read canonical campaign state and returned a ready continuation capsule.",
+      "The authenticated project definition selected the linked Environment session and verified its charter from the exact Git commit, path, and digest.",
+      "A second same-campaign Environment context remained visible as unselected, so the project lookup did not silently adopt or mutate it."
+    ]
+  },
+  "recorded_at": "2026-10-13T06:08:51Z",
+  "request": {
+    "command": "scripts/mncs-env continuation --campaign-id cmp_mncs_continuity_20261010",
+    "network": false,
+    "project_scope": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "surface": "MNCS Control protected terminal execution"
+  },
+  "result": {
+    "campaign_inventory": {
+      "campaign_count": 1,
+      "context_conflict_status": "context-conflict",
+      "contexts_count": 2,
+      "continuations_count": 2,
+      "continuations_truncated": false,
+      "unselected_contexts": [
+        {
+          "checkpoint_ids": [],
+          "claim_ids": [],
+          "definition_id": "env_1ea3af15c7464177",
+          "session_id": "ses_b4b2d283542220b0"
+        }
+      ]
+    },
+    "repository": "mncs-environment",
+    "schema_version": "mncs.control.campaign-continuation/2",
+    "selected_context": {
+      "campaign_charter": {
+        "evidence_identity": "ev_env_campaign_charter_20261011",
+        "identity": "ev_mncs_campaign_charter_continuity_20261011",
+        "source": {
+          "commit": "8fc6052c794c223a686d87fab7b794fbf934a120",
+          "path": "evidence/campaign-charter-continuity-20261011.json",
+          "repository": "mncs-environment",
+          "sha256": "1b67657c87cdc3c49c93149ec839eb7f67e5b049c3ec5f2c410cfbd072641a26"
+        },
+        "status": "verified"
+      },
+      "campaign_state_checkpoint_id": "chk_b59b628929e85cbd",
+      "claim": {
+        "expires_at": "2026-10-13T19:38:39+00:00",
+        "identity": "claim:mncs-environment",
+        "status": "held",
+        "version": 34
+      },
+      "definition_id": "env_f31ee034e8e1fdcb",
+      "evidence_count": 190,
+      "latest_checkpoint_id": "chk_b59b628929e85cbd",
+      "live_checkout": {
+        "branch": "main",
+        "clean": true,
+        "head": "69381c5421a8ac2f67e915e19d43ca8316f46aa6"
+      },
+      "project_reference_status": "linked",
+      "session_id": "ses_7226fbcfe65820f7"
+    },
+    "selection_basis": "authenticated-project-environment-definition",
+    "status": "ready"
+  },
+  "schema_version": "mncs.environment.campaign-continuation-live-proof/1",
+  "source_revisions": {
+    "mncs-control-mcp": "0f39a7c39988edebcd44cad0b8b94b8f5377d059",
+    "mncs-environment": "69381c5421a8ac2f67e915e19d43ca8316f46aa6"
+  }
+}
