@@ -1,0 +1,61 @@
+{
+  "schema_version": "mncs.environment.canonical-store-integrity-revalidation/1",
+  "identity": "ev_env_canonical_store_integrity_after_resource_checkpoints_20261013",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T14:20:39Z",
+  "source": {
+    "repository": "mncs-environment",
+    "revision": "1ad5e92debb71da62c5852cd286ac88c8a6b8566",
+    "basis": "pushed Environment main; campaign checkpoint 315 and related resource evidence were read back before the scan"
+  },
+  "protected_execution": {
+    "job_id": "term-aa0bb624016c5c96fcbdd149",
+    "readback_job_id": "term-93990a2d829b0f5f32cfe564",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "transport": "authenticated mncs-control-environment-rpc",
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_path_visible_to_agent": false,
+    "direct_store_filesystem_access": false,
+    "scan_wrote_to_store": false
+  },
+  "campaign_readback": {
+    "session_id": "ses_7226fbcfe65820f7",
+    "campaign_checkpoint_id": "chk_5a745bcea2f7a585",
+    "checkpoint_sequence": 315,
+    "evidence_count": 218,
+    "latest_evidence_identity": "ev_automation_resource_headroom_protected_tests_20261013",
+    "system_monitor_main": "cb84a852d215387cb8573cd3a6b7ddc3b484e384",
+    "automation_main": "51b9b860f957dc194f6456851b70cbfda32f13ce"
+  },
+  "verification": {
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "started_at": "2026-10-13T14:18:48Z",
+    "completed_at": "2026-10-13T14:20:39Z",
+    "duration_seconds": 111.4,
+    "exit_code": 0,
+    "ok": true,
+    "generation": 48333,
+    "objects_verified": 48335,
+    "relations": 0,
+    "provenance_records": 0,
+    "fanout": 31,
+    "chunk_size": 65536,
+    "commit_feed": "4d430100000000000000bccd0000bccf00000000000000008d515e619195bd936cbfd6e79cad9ae620e31e335274bf0af6c748d01ada52c8",
+    "verifier_artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+    "recovery_field": "RECOVERED_OLD",
+    "recovery_field_semantics": "read-only verifier sentinel; this result does not report a Store recovery event"
+  },
+  "readiness": {
+    "status": "pass-at-generation-48333",
+    "limitations": [
+      "This scan verifies the exact canonical Store generation and object set observed at 2026-10-13T14:20:39Z.",
+      "Later Environment campaign checkpoints append immutable records and advance Store generation; this evidence does not claim to scan those later generations.",
+      "The result proves canonical integrity through the authorized RPC, not unrestricted agent filesystem access."
+    ]
+  }
+}
