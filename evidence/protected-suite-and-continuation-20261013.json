@@ -1,0 +1,91 @@
+{
+  "schema_version": "mncs.environment.protected-test-checkpoint/1",
+  "identity": "ev_env_protected_suite_continuation_20261013",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T13:19:24Z",
+  "source": {
+    "repository": "mncs-environment",
+    "commit": "7497e1d0c99fa6200e2682b061cf04556f9aa9b4",
+    "working_tree_clean_before_run": true
+  },
+  "execution": {
+    "scope": "project",
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "network": false,
+    "canonical_store_direct_write": false
+  },
+  "full_suite": {
+    "command": "env -u MNCS_ENV_PERSISTENCE_TRANSPORT -u MNCS_ENV_RPC_SOCKET -u MNCS_ENV_RPC_GRANT_FILE python3 -m pytest tests/ -q",
+    "control_job_id": "term-03b8daefc6a4f1d2bebb522b",
+    "completed_at": "2026-10-13T13:14:55Z",
+    "duration_seconds": 606.78,
+    "exit_code": 1,
+    "passed": 717,
+    "failed": 6,
+    "skipped": 46,
+    "subtests_passed": 14,
+    "failures": [
+      {
+        "tests": [
+          "tests/test_environment.py::RightsTests::test_clear_gate_enters",
+          "tests/test_environment.py::RightsTests::test_revoked_claim_blocks_enter"
+        ],
+        "cause": "The protected project PYTHONPATH omits mncs-rights-provenance. Environment correctly reports review when the optional provider cannot be imported; the tests expect the provider's clear and revoked verdicts."
+      },
+      {
+        "tests": [
+          "tests/test_retire.py::RetireTests::test_protected_git_registration_maps_to_host_checkout",
+          "tests/test_retire.py::RetireTests::test_protected_git_status_preserves_dirty_and_ignored_files",
+          "tests/test_retire.py::RetireTests::test_protected_git_worktree_retires_inside_exact_project_alias",
+          "tests/test_retire.py::RetireTests::test_restricted_git_namespace_cannot_access_home_store"
+        ],
+        "cause": "Nested bubblewrap cannot create a user namespace in this protected test environment (ENOSPC: nesting depth or max_user_namespaces exceeded). Retirement remained fail-closed with status unknown; no real worktree was retired."
+      }
+    ]
+  },
+  "rights_binding_retest": {
+    "command": "env -u MNCS_ENV_PERSISTENCE_TRANSPORT -u MNCS_ENV_RPC_SOCKET -u MNCS_ENV_RPC_GRANT_FILE PYTHONPATH=/workspace/mncs-rights-provenance/src python3 -m pytest tests/test_environment.py::RightsTests::test_clear_gate_enters tests/test_environment.py::RightsTests::test_revoked_claim_blocks_enter -q",
+    "sandbox_backend": "bwrap",
+    "network": false,
+    "exit_code": 0,
+    "passed": 2,
+    "failed": 0,
+    "duration_seconds": 3.8,
+    "result": "Both tests pass when the configured Rights & Provenance source is bound into the protected runtime."
+  },
+  "continuation_capsule": {
+    "observed_at": "2026-10-13T13:18:54Z",
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "status": "ready",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "selection_basis": "authenticated-project-environment-definition",
+    "selected_claim_ids": [
+      "claim:mncs-environment"
+    ],
+    "checkpoint_sequence": 312,
+    "campaign_state_checkpoint_id": "chk_440a07881c3e12f4",
+    "context_conflict_status": "context-conflict",
+    "unselected_sessions": [
+      {
+        "session_id": "ses_b4b2d283542220b0",
+        "lifecycle": "active",
+        "consumer_id": "local-agent",
+        "claim_ids": [],
+        "checkpoint_sequence": null,
+        "ownership_or_liveness": "unknown",
+        "disposition": "preserved without adoption"
+      }
+    ]
+  },
+  "disposition": {
+    "repository_changes": false,
+    "claim_changes": false,
+    "worktree_changes": false,
+    "next": [
+      "Bind the configured Rights & Provenance package through the Control-owned project and Environment RPC runtime contracts after scope authorization.",
+      "Retain UNKNOWN for retirement operations when nested bubblewrap cannot be created; do not bypass isolation.",
+      "Keep the unselected same-campaign session untouched until authenticated continuation or lifecycle proof is available."
+    ]
+  }
+}
