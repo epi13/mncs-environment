@@ -1,0 +1,74 @@
+{
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "canonical_store_read": {
+    "campaign_state_checkpoint": "chk_9a9ecb9115fcc2c9",
+    "evidence_count": 189,
+    "index_count": 4,
+    "index_truncated": false,
+    "session_id": "ses_7226fbcfe65820f7",
+    "transport": "mncs-env campaign-state through protected project bwrap and the configured Environment Store transport"
+  },
+  "changes": [
+    {
+      "change": "campaign_state returns up to 16 charter-like evidence pointers from its already validated complete append-only history, with exact count and truncation status.",
+      "commit": "cfbddd0dfdcb7b1c4eece47f023d781d4880003b",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment"
+    },
+    {
+      "change": "Control consumes only a complete bounded Environment index, verifies candidate Git blobs by exact commit/path/digest/schema/campaign, ignores invalid selector lookalikes, and leaves multiple valid charters ambiguous.",
+      "commit": "0f39a7c39988edebcd44cad0b8b94b8f5377d059",
+      "path": "src/mncs_control_mcp/environment_sessions.py",
+      "repository": "mncs-control-mcp"
+    }
+  ],
+  "control_git_verification": {
+    "campaign_charter_identity": "ev_mncs_campaign_charter_continuity_20261011",
+    "evidence_identity": "ev_env_campaign_charter_20261011",
+    "method": "Control charter verifier invoked in protected bwrap with the exact canonical Store evidence pointer and the live Environment Git object.",
+    "result": "verified",
+    "source": {
+      "commit": "8fc6052c794c223a686d87fab7b794fbf934a120",
+      "path": "evidence/campaign-charter-continuity-20261011.json",
+      "repository": "mncs-environment",
+      "sha256": "1b67657c87cdc3c49c93149ec839eb7f67e5b049c3ec5f2c410cfbd072641a26"
+    }
+  },
+  "finding": {
+    "campaign_state_checkpoint": "chk_9a9ecb9115fcc2c9",
+    "charter_reference_count": 4,
+    "charter_reference_identities": [
+      "ev_env_campaign_charter_20261011",
+      "ev_control_verified_campaign_charter_capsule_20261011",
+      "ev_control_campaign_charter_window_20261011",
+      "ev_campaign_charter_task_selector_restart_20261012"
+    ],
+    "effect": "The ordinary page omitted the original charter pointer; the bounded full-history pointer index retains it while preserving the recent evidence page.",
+    "evidence_count": 189,
+    "index_truncated": false,
+    "ordinary_recent_page_offset": 61
+  },
+  "identity": "ev_campaign_charter_history_projection_20261013",
+  "limitations": [
+    "The canonical Store supplied the live 189-reference index, and Control verified the exact charter Git object in protected bwrap. The complete Control campaign_continuation API was not invoked against canonical Store in this proof."
+  ],
+  "protected_tests": {
+    "control": {
+      "command": "pytest -q tests/test_environment_sessions.py -k 'campaign_continuation and not real_isolated_store'",
+      "covered": [
+        "valid charter outside the recent page window",
+        "invalid task-selector lookalike",
+        "digest and campaign mismatch",
+        "truncated pointer index",
+        "multiple valid charter ambiguity"
+      ],
+      "result": "13 passed"
+    },
+    "environment": {
+      "command": "pytest -q tests/test_environment.py -k 'campaign_state or campaign_evidence'",
+      "result": "9 passed, 182 deselected, 3 subtests passed"
+    },
+    "supplementary_suite_limit": "The unfiltered campaign_continuation selection included test_campaign_continuation_reads_real_isolated_store, which failed before its assertions because the protected Control test runtime could not import mncs_store. This unrelated isolated-Store fixture failure is not counted as passing evidence."
+  },
+  "recorded_at": "2026-10-13T06:03:30Z"
+}
