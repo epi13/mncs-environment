@@ -1,0 +1,124 @@
+{
+  "schema_version": "mncs.environment.resource-feedback-live-evaluation/1",
+  "identity": "ev_env_resource_feedback_live_evaluation_20261013",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T20:29:19Z",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "protected_execution": {
+    "backend": "bwrap",
+    "project": "mncs-environment",
+    "scope": "project",
+    "network": false,
+    "continuation_status": "ready",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "unselected_same_campaign_session": "ses_b4b2d283542220b0",
+    "unselected_context_modified": false,
+    "canonical_store_access": "authenticated Environment RPC; the agent did not open or write the Store path directly"
+  },
+  "source_revisions": {
+    "mncs-environment": "9e997cc35db7b035d80d93d8b6b7b5a2928a6e52",
+    "mncs-control-mcp": "6ecfc25af7616e6a56ea6da8f1a4241c7e55c5c9",
+    "mncs-control-mcp-artifact-read-implementation": "04d0a888090f29fc8fa8c5b7bae4717b08ead756",
+    "mncs-system-monitor": "f8965406e959183b58aa60aec4cee875b5d99fe8",
+    "mncs-automation": "51b9b860f957dc194f6456851b70cbfda32f13ce"
+  },
+  "monitor_sample": {
+    "command": "./scripts/mncs-env invoke ses_7226fbcfe65820f7 mncs-system-monitor:system-resource-sample",
+    "started_at": "2026-10-13T20:27:32.801778Z",
+    "completed_at": "2026-10-13T20:27:54.997005Z",
+    "status": "ok",
+    "returncode": 0,
+    "capability": "mncs-system-monitor:system-resource-sample",
+    "binding_id": "cap_9a39cbc2cdf18f11",
+    "artifact_path": "system-resource-sample.json",
+    "artifact_byte_count": 460,
+    "artifact_sha256": "bdf4375b63ee4ce9d8a32ba244e097ce36215a53fe061b050d42cd4b1c41856c",
+    "artifact_store_reference": "mncs-store:ses_7226fbcfe65820f7:capability-invocation-artifacts:4ba825856c1521d6580d8ed2cbed9c98dd6511b9ffb0b784f7f8d34adc29d47",
+    "schema": "mncs.system-monitor.resource-sample.v1",
+    "observed_at_ms": 1791923273861,
+    "memory_available_bytes": 7474163712,
+    "execution_records_present": false
+  },
+  "automation_evaluation": {
+    "command": "./scripts/mncs-env invoke ses_7226fbcfe65820f7 mncs-automation:automation-resource-headroom-evaluation",
+    "started_at": "2026-10-13T20:28:06.000056Z",
+    "completed_at": "2026-10-13T20:28:28.091045Z",
+    "status": "ok",
+    "returncode": 0,
+    "capability": "mncs-automation:automation-resource-headroom-evaluation",
+    "binding_id": "cap_5065656331fc735d",
+    "input": {
+      "name": "monitor-sample",
+      "capability": "mncs-system-monitor:system-resource-sample",
+      "binding_id": "cap_9a39cbc2cdf18f11",
+      "path": "system-resource-sample.json",
+      "byte_count": 460,
+      "sha256": "bdf4375b63ee4ce9d8a32ba244e097ce36215a53fe061b050d42cd4b1c41856c",
+      "store_reference": "mncs-store:ses_7226fbcfe65820f7:capability-invocation-artifacts:4ba825856c1521d6580d8ed2cbed9c98dd6511b9ffb0b784f7f8d34adc29d47"
+    },
+    "intent_identity": "compiler-resource-loop-next",
+    "requested_memory_bytes": 1073741824,
+    "measurement_scale_percent": 125,
+    "minimum_host_headroom_bytes": 268435456,
+    "max_age_ms": 60000,
+    "measurement_execution_parameter": "pending-forge-execution",
+    "measurement_subject_identity_parameter": "pending-forge-subject",
+    "measurement_parameters_are_sentinels": true,
+    "decision": "unknown",
+    "condition_value": 2,
+    "reason": "forge-execution-records-unavailable",
+    "artifact_byte_count": 832,
+    "artifact_sha256": "0adb4f7b9f6d7a2c5d3b93d413c6f44c2fffaf3747856204a8a045d6328f9a43",
+    "artifact_store_reference": "mncs-store:ses_7226fbcfe65820f7:capability-invocation-artifacts:28dcaa763405475e0b752a2de7363400d8aa7ce0c656432ca1a41e4451fc74d7",
+    "admission_decision_produced": false,
+    "receipt_or_subject_identity_fabricated": false
+  },
+  "fresh_process_readback": {
+    "backend": "bwrap",
+    "network": false,
+    "continuation_selected_session_before_read": true,
+    "started_at": "2026-10-13T20:28:39.511336Z",
+    "completed_at": "2026-10-13T20:28:58.246875Z",
+    "capability": "mncs-automation:automation-resource-headroom-evaluation",
+    "binding_id": "cap_5065656331fc735d",
+    "path": "resource-headroom-decision.json",
+    "byte_count": 832,
+    "sha256": "0adb4f7b9f6d7a2c5d3b93d413c6f44c2fffaf3747856204a8a045d6328f9a43",
+    "store_reference_matches_invocation": true,
+    "decision": "unknown",
+    "reason": "forge-execution-records-unavailable"
+  },
+  "ownership": {
+    "environment_claim": {
+      "version": 35,
+      "owner_session": "ses_7226fbcfe65820f7"
+    },
+    "automation_claim": {
+      "version": 6,
+      "owner_session": "ses_7226fbcfe65820f7"
+    },
+    "compiler_claim": {
+      "version": 63,
+      "owner_session": "ses_d2537acde8b8a875",
+      "status": "held"
+    },
+    "forge_claim": {
+      "version": 28,
+      "owner_session": "ses_95c3aa35b8544042",
+      "status": "held"
+    },
+    "compiler_or_forge_checkout_touched": false
+  },
+  "milestone": {
+    "status": "partial-fail-closed",
+    "proven": "Environment → System Monitor sample → canonical Store → Automation input verification → canonical decision artifact → fresh protected-process readback",
+    "not_proven": [
+      "Compiler child execution through Forge",
+      "Forge receipt correlated into a System Monitor execution record",
+      "resource-headroom admission based on a real receipt",
+      "subsequent Compiler execution influenced by that admission"
+    ]
+  },
+  "next_step": "Accept authenticated Environment handoffs or fenced transfers for the existing Compiler and Forge claims, then replace the sentinel identities with the exact receipt and subject digest from one bounded real Compiler execution."
+}
