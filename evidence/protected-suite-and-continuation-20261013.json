@@ -78,8 +78,8 @@
       }
     ]
   },
-  "disposition": {
-    "repository_changes": false,
+  "test_effects": {
+    "environment_source_changes": false,
     "claim_changes": false,
     "worktree_changes": false,
     "next": [
