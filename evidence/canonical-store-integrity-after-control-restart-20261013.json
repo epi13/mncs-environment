@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.canonical-store-integrity-after-control-restart/1",
+  "identity": "ev_env_canonical_store_integrity_after_control_restart_20261013",
+  "recorded_at_utc": "2026-10-13T21:33:08.285880Z",
+  "owner": "mncs-environment",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source_revisions": {
+    "mncs-environment": "e00931c248b71e0c0a41acb4d37b995c97cc3a7f",
+    "mncs-control-mcp": "97aeda650b7a444dcf9c2eaea1ecb795889baa3d",
+    "mncs-store": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055",
+    "mncs-language": "3cfbc094f1a1770fc2409b990f3f7d8912f49bc7"
+  },
+  "control_store_boundary": {
+    "service_unit": "mncs-control-tunnel.service",
+    "service_state": "active/running",
+    "invocation_id": "b0206840a3f34e9c9f5d66a621d8519d",
+    "main_pid": 487136,
+    "started_at_local": "2026-10-13T13:17:00-08:00",
+    "protect_system": "strict",
+    "protect_home": "read-only",
+    "no_new_privileges": true,
+    "canonical_store_root": "/home/epi13/.local/share/mncs-environment/store",
+    "canonical_store_root_in_service_read_write_paths": true,
+    "agent_direct_store_path_or_descriptor_grant": false,
+    "filesystem": {
+      "type": "btrfs",
+      "mount_options_include_read_write": true,
+      "directory_owner": "epi13:epi13",
+      "mode": "drwxr-xr-x"
+    },
+    "related_protected_boundary_evidence": {
+      "repository": "mncs-control-mcp",
+      "commit": "1c346a606b7c852dff831e850b1f6b25cd5f736b",
+      "path": "evidence/sandbox-environment-store-shadow-mask-20261013.json",
+      "identity": "ev_control_sandbox_environment_store_shadow_mask_20261013",
+      "sha256": "955ff877566ab261869bccf76d022fd998183cea4d45e70c31590bd80b0a13fd",
+      "result": "PASS: protected Bubblewrap masks the legacy Store path, rejects writes through that mount, and forces authenticated Control RPC"
+    }
+  },
+  "execution": {
+    "backend": "bwrap",
+    "project": "mncs-control-mcp",
+    "scope": "project",
+    "network": false,
+    "terminal_job_id": "term-ac24b59a0857d32d9cf4b099",
+    "started_at_utc": "2026-10-13T21:31:02.407830Z",
+    "completed_at_utc": "2026-10-13T21:33:08.285880Z",
+    "exit_code": 0,
+    "operation": "fresh authenticated task-identity continuation followed by session-authorized Store integrity verification",
+    "task_selector": "persistent active campaign task identity; raw selector omitted",
+    "continuation_status": "ready",
+    "command": "mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "transport": "authenticated Control Environment RPC to the canonical Store owner; no direct Store path or file handle was given to the agent"
+  },
+  "toolchain": {
+    "backend": "mncs-research-bytecode",
+    "path": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs",
+    "binary_sha256": "88676fb9d5e8c828e75774993402a179bc7ec353bca5f647b10857637f28d683",
+    "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf"
+  },
+  "verification": {
+    "ok": true,
+    "generation": 48985,
+    "objects": 48987,
+    "chunk_size": 65536,
+    "fanout": 31,
+    "provenance_records": 0,
+    "relations": 0,
+    "commit_feed": "4d430100000000000000bf590000bf5b0000000000000000361e78af0c9a8a364fbbff9889fea993444fc073a9d5bb50f190614a0156fcb2",
+    "recovery": "RECOVERED_OLD"
+  },
+  "post_restart_checkpoint": {
+    "identity": "chk_dc3cf5a34778ce9f",
+    "sequence": 348,
+    "evidence_count": 259,
+    "control_head": "97aeda650b7a444dcf9c2eaea1ecb795889baa3d",
+    "fresh_protected_readback": true
+  },
+  "limitations": [
+    "This Store verification is read-only; the referenced checkpoint proves the authorized publication path was usable under the same Control service invocation.",
+    "Compiler and Forge sources were not tested or modified; their exclusive claims remain with their recorded owners."
+  ],
+  "readiness": "PASS for canonical Store integrity verification after the Control service restart through the authorized protected Environment transport"
+}
