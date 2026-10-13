@@ -1,0 +1,124 @@
+{
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "date": "2026-10-13",
+  "execution_boundary": {
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "agent_direct_read_access": false,
+    "agent_direct_write_access": false,
+    "path_exists_in_project_bwrap": false,
+    "network": false,
+    "project": "mncs-environment",
+    "publication_transport": "session-authenticated mncs-control-environment-rpc",
+    "sandbox_backend": "bwrap",
+    "scope": "project"
+  },
+  "identity": "ev_env_store_generation_claim_fence_20261013",
+  "limitations": [
+    "The canonical stale-generation proof exercised the deterministic generation-precondition rejection; an actual concurrent canonical Store-CAS collision was not forced in this slice.",
+    "The Store-CAS race branch was exercised by a focused injected-conflict unit test, and unguarded acquisition retry behavior was also verified.",
+    "This evidence does not complete the Compiler or Forge campaign; their exclusive claims remain untouched pending authenticated Environment handoffs."
+  ],
+  "owner": "mncs-environment",
+  "repository": "mncs-environment",
+  "schema_version": "mncs.environment.store-generation-claim-fence/1",
+  "source_identity": {
+    "environment_guard_implementation": "4379004443abc952cf612ca6c263837157aa35ac",
+    "environment_rpc_diagnostic_projection": "2efd8100ea6baf577e1b1087eec4ba329b87294d",
+    "control_generation_query": "687425e35ea076b4d007b1e262a470e75992df9e"
+  },
+  "control_service": {
+    "runtime_revision": "687425e35ea076b4d007b1e262a470e75992df9e",
+    "source_revision": "687425e35ea076b4d007b1e262a470e75992df9e",
+    "restart_required": false,
+    "environment_persistence": "ready",
+    "store_mutation_state": "owner-write-path-available",
+    "unit": "mncs-control-tunnel.service",
+    "hardening": {
+      "ProtectSystem": "strict",
+      "ProtectHome": "read-only",
+      "NoNewPrivileges": true,
+      "canonical_store_in_ReadWritePaths": true
+    }
+  },
+  "generation_query": {
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --generation",
+    "result": "generation-only response returned through the authenticated Control Environment RPC",
+    "canonical_generation": 48245,
+    "direct_path_probe": {
+      "exists": false,
+      "readable": false,
+      "writable": false
+    }
+  },
+  "guarded_acquisition": {
+    "expected_generation": 48245,
+    "claim_id": "claim:mncs-environment:paths:daa1ee1b6ff9",
+    "claim_identity": "clm_bb90721903319a74",
+    "held_version": 1,
+    "scope": [
+      "mncs_env/rpc_client.py",
+      "tests/test_claim_generation_cas.py"
+    ],
+    "request_identity_was_stable_and_generation_bound": true,
+    "released": true,
+    "fresh_process_readback": {
+      "claim_id": "claim:mncs-environment:paths:daa1ee1b6ff9",
+      "released_version": 2,
+      "status": "released",
+      "terminal_job_id": "term-66c4eb91581694085a02479d"
+    },
+    "acquisition_terminal_job_id": "term-becebde1d25158ac9bde2ef6"
+  },
+  "stale_generation_rejection": {
+    "terminal_job_id": "term-35c317190c63870505b98dd5",
+    "session_id": "ses_7226fbcfe65820f7",
+    "generation_before": 48248,
+    "supplied_generation": 48247,
+    "generation_observed": 48248,
+    "generation_after_fresh_process_readback": 48248,
+    "command_exit_code": 3,
+    "diagnostic_code": "publication-conflict",
+    "conflict_kind": "store-generation",
+    "conflict_stage": "generation-precondition",
+    "publication_completed": false,
+    "probe_claim_admitted": false,
+    "diagnostic_fields_preserved_over_rpc": true
+  },
+  "claim_release_cleanup": {
+    "terminal_job_id": "term-66c4eb91581694085a02479d",
+    "released_claims": [
+      {
+        "claim_id": "claim:mncs-environment:paths:daa1ee1b6ff9",
+        "before_version": 1,
+        "after_version": 2,
+        "status": "released"
+      },
+      {
+        "claim_id": "claim:mncs-environment:paths:f754713f3ea4",
+        "before_version": 1,
+        "after_version": 2,
+        "status": "released"
+      }
+    ]
+  },
+  "tests": {
+    "environment_project_bwrap": {
+      "terminal_job_id": "term-dceaabee772eac6cdd989fa6",
+      "command": "python3 -m pytest -q tests/test_claim_generation_cas.py tests/test_claim_recovery.py tests/test_session_completion.py",
+      "result": "50 passed, 3 subtests passed"
+    },
+    "control_project_bwrap": {
+      "terminal_job_id": "term-a72e52f47c025b4588df919a",
+      "command": "python3 -m pytest -q tests/test_environment_rpc.py::test_store_verify_rpc_is_session_bound_and_read_only",
+      "result": "passed"
+    }
+  },
+  "readiness": {
+    "protected_store_generation_read": "pass",
+    "guarded_canonical_claim_acquisition": "pass",
+    "stale_generation_rejection_and_no_publication": "pass",
+    "fresh_process_claim_release_readback": "pass",
+    "agent_has_no_direct_store_path_access": "pass",
+    "canonical_store_integrity_after_this_checkpoint": "pending final read-only verification"
+  }
+}
