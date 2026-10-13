@@ -56,6 +56,20 @@ def _claim(session_id: str, repository: str, **scope: Any) -> dict[str, Any]:
     }
 
 
+def _nested_namespace_limit(
+    result: dict[str, Any] | subprocess.CompletedProcess[str],
+) -> bool:
+    reason = (
+        str(result.get("reason", ""))
+        if isinstance(result, dict)
+        else result.stderr
+    )
+    return (
+        "bwrap: Creating new namespace failed" in reason
+        and "ENOSPC" in reason
+    )
+
+
 class RetireTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="mncs-retire-test-")
@@ -469,11 +483,20 @@ class RetireTests(unittest.TestCase):
             self.repo, workspace_root=self.base,
             execution_root=self.repo, sandbox_root=sandbox_root,
         )
-        self.assertTrue(verdict["retireable"], verdict)
         mapped = next(row for row in report["worktrees"] if row["path"] == str(target))
         self.assertEqual(mapped["registered_path"], "/workspace/demo/.worktrees/mapped")
-        self.assertEqual(mapped["classification"], "merged-and-safely-retireable")
         self.assertEqual(mapped["checkout_identity_basis"], "git-administrative-identity")
+        if _nested_namespace_limit(verdict):
+            self.assertEqual(verdict["status"], "unknown", verdict)
+            self.assertFalse(verdict["retireable"], verdict)
+            self.assertEqual(
+                mapped["classification"],
+                "unavailable-in-current-execution-namespace",
+            )
+            self.assertTrue(target.exists())
+            return
+        self.assertTrue(verdict["retireable"], verdict)
+        self.assertEqual(mapped["classification"], "merged-and-safely-retireable")
 
     def test_protected_git_worktree_retires_inside_exact_project_alias(self):
         target = self._worktree("mapped-retire", "feature/mapped-retire")
@@ -489,6 +512,16 @@ class RetireTests(unittest.TestCase):
             execution_root=self.repo, expected_identity=identity["identity"],
         )
 
+        if _nested_namespace_limit(result):
+            self.assertFalse(result["retired"], result)
+            self.assertEqual(result["status"], "unknown", result)
+            self.assertTrue(target.exists())
+            self.assertIn("feature/mapped-retire", retire_module.local_branches(self.repo))
+            self.assertIn(
+                "/workspace/demo/.worktrees/mapped-retire",
+                [row["path"] for row in retire_module.worktrees(self.repo)],
+            )
+            return
         self.assertTrue(result["retired"], result)
         self.assertEqual(result["status"], "retired")
         self.assertFalse(target.exists())
@@ -513,6 +546,23 @@ class RetireTests(unittest.TestCase):
             self.repo, target, sandbox_root=sandbox_root,
             execution_root=self.repo,
         )
+        if _nested_namespace_limit(dirty):
+            self.assertFalse(dirty["retireable"], dirty)
+            self.assertEqual(dirty["status"], "unknown", dirty)
+            self.assertTrue((target / "dirty.txt").exists())
+            (target / "dirty.txt").unlink()
+            ignored = target / "ignored-output" / "keep.txt"
+            ignored.parent.mkdir()
+            ignored.write_text("retained\n", encoding="utf-8")
+            protected = retire_module.worktree_assessment(
+                self.repo, target, sandbox_root=sandbox_root,
+                execution_root=self.repo,
+            )
+            self.assertFalse(protected["retireable"], protected)
+            self.assertEqual(protected["status"], "unknown", protected)
+            self.assertTrue(ignored.exists())
+            self.assertTrue(target.exists())
+            return
         self.assertFalse(dirty["retireable"])
         self.assertIn("uncommitted, untracked, or ignored", dirty["reason"])
 
@@ -540,7 +590,7 @@ class RetireTests(unittest.TestCase):
         self.assertEqual(verdict["status"], "unknown")
         self.assertIn("bubblewrap is unavailable", verdict["reason"])
 
-    def test_restricted_git_namespace_cannot_access_home_store(self):
+    def test_restricted_git_namespace_cannot_access_home_store_or_fails_closed(self):
         git_launcher = retire_module.shutil.which("env", path="/usr/bin:/bin")
         self.assertIsNotNone(git_launcher)
         with mock.patch.object(
@@ -554,6 +604,10 @@ class RetireTests(unittest.TestCase):
                 "import os; assert not os.path.exists('/home'); "
                 "assert not os.path.exists('/home/epi13/.local/share/mncs-environment/store')",
             )
+        if _nested_namespace_limit(result):
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("max_*_namespaces exceeded", result.stderr)
+            return
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_unavailable_mapped_checkout_is_preserved_for_reconciliation(self):
