@@ -1,0 +1,44 @@
+{
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "date": "2026-10-13",
+  "execution_boundary": {
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "direct_path_access": "unavailable to the agent process in the project bwrap namespace",
+    "network": false,
+    "project": "mncs-environment",
+    "publication_transport": "authenticated mncs-control-environment-rpc",
+    "sandbox_backend": "bwrap",
+    "scope": "project"
+  },
+  "identity": "ev_env_canonical_store_integrity_after_claim_rpc_20261013",
+  "owner": "mncs-environment",
+  "readback": {
+    "campaign_checkpoint_id": "chk_bbe1ad87663e643e",
+    "campaign_evidence_count": 206,
+    "campaign_latest_sequence": 305,
+    "concurrent_claim_evidence_identity": "ev_env_canonical_concurrent_claim_rpcs_20261013",
+    "context_conflict_status": "context-conflict",
+    "delivery_status": "partial",
+    "environment_main_head": "95d976c0a9dae332188ee312bfea76bf40155893",
+    "fresh_protected_process": true,
+    "session_id": "ses_7226fbcfe65820f7"
+  },
+  "repository": "mncs-environment",
+  "result": "PASS: the canonical Store read-only verifier succeeded after the sequence-305 campaign checkpoint, and a fresh protected process read back the same capsule and evidence ledger.",
+  "schema_version": "mncs.environment.canonical-store-integrity-after-claim-rpc/1",
+  "source_commit": "95d976c0a9dae332188ee312bfea76bf40155893",
+  "store_verification": {
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "elapsed_seconds": 125.39,
+    "fanout": 31,
+    "generation": 48223,
+    "objects": 48225,
+    "read_only_recovery_result": null,
+    "status": "ok"
+  },
+  "limitations": [
+    "The verifier is read-only and observed canonical Store generation 48223; it does not inject a generation conflict.",
+    "The duplicate campaign context remains visible and unselected; this verification did not adopt or close it."
+  ],
+  "terminal_job_id": "term-0ba2700ea966f522d12d2a94"
+}
