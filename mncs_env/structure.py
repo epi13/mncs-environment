@@ -31,7 +31,17 @@ def inspect_structure(session, checkout):
                         'schema': digest_hex(schema), 'roles': manifest.get('organization', {})}
         # A changed owning policy must not reuse an old conformance verdict.
         from .projections import _session_binding, input_digest
-        policy = _session_binding(session, DOCTOR_PROJECTION_HEALTH) or {}
+        policy = _session_binding(session, DOCTOR_PROJECTION_HEALTH)
+        if policy is None:
+            return {'state': 'unknown',
+                    'reason': 'structure-verdict-provider-unbound',
+                    'provider_capability': DOCTOR_PROJECTION_HEALTH,
+                    'gaps': []}
+        if policy.get('availability', {}).get('status') != 'available':
+            return {'state': 'unknown',
+                    'reason': 'structure-verdict-provider-unavailable',
+                    'provider_capability': DOCTOR_PROJECTION_HEALTH,
+                    'gaps': []}
         policy_root = Path(policy['provider_root'])
         policy_manifest = json.loads((policy_root / '.mncs/project.json').read_text())
         descriptor = next(row for row in policy_manifest['contracts']['provides']

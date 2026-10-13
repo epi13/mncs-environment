@@ -17,6 +17,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "scripts" / "mncs-env"
@@ -24,6 +25,7 @@ sys.path.insert(0, str(ROOT))
 
 from mncs_env import claims as claims_module  # noqa: E402
 from mncs_env import projections as projections_module  # noqa: E402
+from mncs_env import structure as structure_module  # noqa: E402
 from mncs_env.session_store import open_store  # noqa: E402
 
 REAL_ROOT = ROOT.parent
@@ -820,6 +822,101 @@ class ClassifyOutputTests(unittest.TestCase):
                     b"adopted\n")})
             self.assertEqual(code, projections_module.OUTPUT_DIVERGED)
             self.assertEqual(detail, "output-diverged")
+
+
+class StructureAuthorityDiagnosticTests(unittest.TestCase):
+    def test_unbound_structure_verdict_is_reported_as_authority_gap(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / 'target-repository'
+            owner = root / 'structure-owner'
+            (checkout / '.mncs').mkdir(parents=True)
+            (owner / 'profiles').mkdir(parents=True)
+            (owner / 'schemas').mkdir()
+            profile = {
+                'schema_version': 'mncds.project-structure-profile/1',
+                'profile': 'fixture',
+                'required_paths': [],
+                'artifact_classes': [],
+                'rules': [],
+            }
+            profile_bytes = json.dumps(profile).encode()
+            (owner / 'profiles/profile.json').write_bytes(profile_bytes)
+            (owner / 'schemas/project-structure-profile-1.schema.json').write_text(
+                json.dumps({'type': 'object'}))
+            (checkout / '.mncs/project.json').write_text(json.dumps({
+                'structure_profile': {
+                    'repository': 'structure-owner',
+                    'path': 'profiles/profile.json',
+                    'identity': 'sha256:' + hashlib.sha256(
+                        profile_bytes).hexdigest(),
+                },
+            }))
+            session = SimpleNamespace(snapshot={
+                'workspace': {'root': str(root)},
+                'selected_checkouts': {
+                    'structure-owner': {'path': str(owner)},
+                },
+            })
+
+            structure = structure_module.inspect_structure(session, checkout)
+
+            self.assertEqual(structure['state'], 'unknown')
+            self.assertEqual(
+                structure['reason'], 'structure-verdict-provider-unbound')
+            self.assertEqual(
+                structure['provider_capability'],
+                'mncs-doctor:projection-health')
+            self.assertEqual(
+                projections_module.projection_input_diagnostic(
+                    None, structure),
+                {
+                    'code': 'structure-verdict-provider-unbound',
+                    'structure_state': 'unknown',
+                    'provider_capability': 'mncs-doctor:projection-health',
+                })
+
+    def test_reconcile_evidence_keeps_structure_authority_diagnostic(self):
+        from unittest.mock import patch
+
+        diagnostic = {
+            'code': 'structure-verdict-provider-unbound',
+            'structure_state': 'unknown',
+            'provider_capability': 'mncs-doctor:projection-health',
+        }
+        session = SimpleNamespace(snapshot={}, session_id='fixture-session')
+        declaration = {
+            'id': 'fixture-repository:project-view',
+            'repository': 'fixture-repository',
+            'checkout': '/tmp/fixture-repository',
+            'output': '.mncs/project-view.json',
+        }
+        shared = {'version': 1, 'observed_gen': 0,
+                  'canonical_gen': 0, 'defer_count': 0}
+
+        with patch.object(projections_module, '_machine_outputs',
+                          return_value={}), \
+                patch.object(projections_module, 'repo_facts',
+                             return_value={'head': 'head'}), \
+                patch.object(projections_module, 'claim_facts',
+                             return_value={'claim': 1}), \
+                patch.object(projections_module, '_read_shared_row',
+                             return_value=shared), \
+                patch.object(projections_module, '_retain_shared'):
+            record = projections_module._reconcile_one(
+                session, declaration, None, {}, 'ambient',
+                input_diagnostic=diagnostic)
+
+        self.assertEqual(record['gate_reason'], diagnostic['code'])
+        self.assertEqual(record['input_diagnostic'], diagnostic)
+        self.assertEqual(record['outcome'], 'deferred')
+        self.assertEqual(record['verdict'], projections_module.VERDICT_UNKNOWN)
+
+    def test_missing_subject_with_known_structure_stays_input_error(self):
+        self.assertEqual(
+            projections_module.projection_input_diagnostic(
+                None, {'state': 'pass'}),
+            {'code': 'inputs-unreadable'})
 
 
 if __name__ == "__main__":

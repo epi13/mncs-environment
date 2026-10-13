@@ -477,6 +477,23 @@ def _dirty_digest(state) -> str:
                        "files": files})
 
 
+def projection_input_diagnostic(digest: str | None,
+                                structure: dict[str, Any]) -> dict[str, Any] | None:
+    """Keep structure-authority failures distinct from unreadable inputs."""
+    if digest is not None:
+        return None
+    if structure.get('state') not in ('pass', 'not-declared'):
+        diagnostic = {
+            'code': structure.get('reason') or 'structure-verdict-unknown',
+            'structure_state': structure.get('state', 'unknown'),
+        }
+        capability = structure.get('provider_capability')
+        if isinstance(capability, str) and capability:
+            diagnostic['provider_capability'] = capability
+        return diagnostic
+    return {'code': 'inputs-unreadable'}
+
+
 def _porcelain_path(line: Any) -> str | None:
     """Extract the checkout-relative path from a porcelain line."""
     if not isinstance(line, str) or len(line) < 4:
@@ -1123,6 +1140,12 @@ def ambient_pass(session, *, mode: str = "ambient",
         health = structure[d['repository']]
         if health['state'] not in ('pass', 'not-declared'):
             digests[d['id']] = None
+    input_diagnostics = {
+        d['id']: diagnostic
+        for d in declarations
+        if (diagnostic := projection_input_diagnostic(
+            digests[d['id']], structure[d['repository']])) is not None
+    }
     epoch_inputs = _epoch_inputs(session, declarations, digests)
     epoch_inputs['structure'] = {name: {k: v for k, v in info.items() if k != 'roles'} for name, info in structure.items()}
     epoch = digest_hex(epoch_inputs)
@@ -1140,8 +1163,9 @@ def ambient_pass(session, *, mode: str = "ambient",
                 "evidence": stored.get("evidence_ref")}
     results: list[dict[str, Any]] = []
     for declaration in declarations:
-        results.append(_reconcile_one(session, declaration, digests[
-            declaration["id"]], rows, mode))
+        results.append(_reconcile_one(
+            session, declaration, digests[declaration["id"]], rows, mode,
+            input_diagnostic=input_diagnostics.get(declaration['id'])))
     # The stored epoch describes the post-pass world: shared rows are
     # both an input and an output of the pass, so caching the
     # pre-pass state would never hit after a pass that wrote.
@@ -1211,7 +1235,8 @@ def interpretation(session, repository, route):
 
 def _reconcile_one(session, declaration: dict[str, Any],
                    digest: str | None, rows: dict[str, dict],
-                   mode: str) -> dict[str, Any]:
+                   mode: str,
+                   input_diagnostic: dict[str, Any] | None = None) -> dict[str, Any]:
     projection_id = str(declaration["id"])
     repository = str(declaration["repository"])
     checkout = Path(str(declaration["checkout"]))
@@ -1241,8 +1266,10 @@ def _reconcile_one(session, declaration: dict[str, Any],
     observed = int(shared.get("observed_gen", 0))
     defer_count = int(shared.get("defer_count", 0))
     if digest is None:
+        input_diagnostic = input_diagnostic or {'code': 'inputs-unreadable'}
         record.update({"verdict": VERDICT_UNKNOWN, "gate": GATE_DEFER,
-                       "gate_reason": "inputs-unreadable",
+                       "gate_reason": input_diagnostic['code'],
+                       "input_diagnostic": input_diagnostic,
                        "outcome": "deferred"})
         if declaration.get('schema_version') == semantic_sources.SCHEMA:
             record['health'] = diagnose_projection(session, declaration,
