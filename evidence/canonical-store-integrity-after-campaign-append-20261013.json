@@ -1,0 +1,43 @@
+{
+  "schema_version": "mncs.environment.canonical-store-integrity-after-campaign-append/1",
+  "identity": "ev_environment_canonical_store_integrity_after_campaign_append_20261013",
+  "verified_at": "2026-10-13T02:37:17Z",
+  "owner": "mncs-environment",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "protected_execution": {
+    "backend": "bwrap",
+    "project": "mncs-environment",
+    "entry": "authenticated task-identity continuation",
+    "direct_canonical_store_read": false,
+    "direct_canonical_store_write": false,
+    "persistence_transport": "authenticated MNCS Control Environment RPC to the canonical Environment Store"
+  },
+  "campaign_state": {
+    "checkpoint_id_at_verification": "chk_1e9d86b41de527de",
+    "evidence_count_at_verification": 177,
+    "latest_evidence_identity": "ev_control_campaign_state_cas_base_capsule_20261013",
+    "capsule_cas_base_matches_campaign_state": true
+  },
+  "store_verification": {
+    "result": "PASS",
+    "canonical": true,
+    "backend": "mncs-research-bytecode",
+    "generation": 47435,
+    "objects": 47437,
+    "fanout": 31,
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "read_only": true
+  },
+  "source_identity": {
+    "repository": "mncs-environment",
+    "main_head_at_capture": "612dc00c8f8b073525bf84c8ce4abb6c0c51600e",
+    "control_repository": "mncs-control-mcp",
+    "control_main_head_at_capture": "5a4b59aa1e7972cd063abf97b0cf115dbe025fa8"
+  },
+  "interpretation": "A fresh protected process resolved the durable campaign identity, read the campaign-state ledger after the Control evidence append, verified that the continuation capsule and ledger shared the same CAS base, and performed exact canonical Store integrity verification without direct Store path access.",
+  "remaining": [
+    "Compiler and Forge claims remain held by their earlier owners pending authenticated Environment handoffs.",
+    "Compiler-to-Forge resource-feedback execution and compiler Stage-1 and Stage-2 remain unproven."
+  ]
+}
