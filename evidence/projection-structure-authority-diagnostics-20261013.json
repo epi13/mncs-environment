@@ -1,0 +1,128 @@
+{
+  "authority": {
+    "campaign_claim": {
+      "basis": "explicit-claim",
+      "claim_id": "claim:mncs-environment",
+      "session_id": "ses_7226fbcfe65820f7",
+      "version": 34
+    },
+    "missing_provider": "mncs-doctor:projection-health",
+    "selected_checkouts": [
+      "mncs-automation",
+      "mncs-control-mcp",
+      "mncs-environment",
+      "mncs-system-monitor"
+    ],
+    "unselected_provider_claim": {
+      "claim_id": "claim:mncs-doctor",
+      "expires_at": "2026-10-10T10:08:13+00:00",
+      "live": false,
+      "repository_head": "aacbcbb025cae47ea3e74e0a895e18b838cb1848",
+      "repository_status": "clean main",
+      "session_id": "ses_d2537acde8b8a875",
+      "status": "held",
+      "version": 46
+    }
+  },
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "change": {
+    "behavior": "Projection deferrals now preserve a missing or unavailable structure-verdict provider as the gate reason, with structure state and capability identity in the result. A real unreadable subject remains inputs-unreadable.",
+    "commit": "d83f5c9983793f83b913ec97df943e4fb8b4e803",
+    "owner": "mncs-environment",
+    "tests": [
+      "tests/test_projections.py::StructureAuthorityDiagnosticTests"
+    ]
+  },
+  "control_rpc": {
+    "direct_cli_projections_operation": {
+      "diagnostic_code": "operation-unavailable",
+      "job_id": "term-e183949699622563ae0c8bb8",
+      "publication_completed": false,
+      "status": "unexposed"
+    },
+    "environment_typed_projection_capability": {
+      "binding_id": "cap_bce1ed9579aa6fe9",
+      "capability": "mncs-environment:ambient-projection-coherence",
+      "job_id": "term-f695c30a35d8fcdedf090e3b",
+      "status": "ok"
+    },
+    "projection_evidence_readback": {
+      "binding_id": "cap_2c28e6c78817ce46",
+      "capability": "mncs-environment:projection-evidence-inspection",
+      "job_id": "term-35b6f83237c0639bf86e75d5",
+      "status": "ok"
+    },
+    "system_observability_invocation": {
+      "diagnostic_code": "operation-unavailable",
+      "job_id": "term-d17858100dfac942955d5678",
+      "provider_result_received": false,
+      "publication_completed": false,
+      "status": "rejected-before-provider"
+    }
+  },
+  "identity": "ev_env_projection_structure_authority_diagnostics_20261013",
+  "owner": "mncs-environment",
+  "projection_evidence": {
+    "canonical_store_reference": "mncs-store:ses_7226fbcfe65820f7:projections:c275f809dc253873eb29eb0520153bf8f86158a385eee373172eefacd800d1c2",
+    "finished_at": "2026-10-13T15:54:04+00:00",
+    "invalid": 0,
+    "pending": 11,
+    "reconciled": 0,
+    "results": 11,
+    "unique_gate_reasons": [
+      "structure-verdict-provider-unbound"
+    ]
+  },
+  "readiness": {
+    "limitations": [
+      "The earlier gap record overstated that Environment projections were unexposed. The direct projections CLI operation remains unexposed, while the typed ambient projection and read-only evidence capabilities are exposed and succeeded through the protected Control path.",
+      "The selected session lacks mncs-doctor:projection-health. Its owning repository has an expired, still-held claim associated with ses_d2537acde8b8a875; this campaign did not recover or adopt that scope.",
+      "The typed projection pass is operational and its exact Store evidence was read back, but all 11 projections remain deferred until the authorized structure-verdict provider is bound.",
+      "mncs-system-monitor:system-observability remains bound at substrate level but its Environment invocation is rejected by the Control capability allowlist before the provider runs.",
+      "This does not claim complete projection refresh, Compiler or Forge access, or a resource-feedback execution."
+    ],
+    "status": "typed-projection-operational-provider-authority-pending"
+  },
+  "recorded_at": "2026-10-13T15:56:05Z",
+  "schema_version": "mncs.environment.projection-structure-authority-diagnostics/1",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "branch": "campaign/projection-authority-diagnostics-20261013",
+    "environment_revision": "d83f5c9983793f83b913ec97df943e4fb8b4e803",
+    "protected_execution": {
+      "network": false,
+      "project": "mncs-environment",
+      "sandbox_backend": "bwrap",
+      "scope": "project"
+    },
+    "supersedes": {
+      "commit": "d939d1b0156e053994bd752e35d5923120ee7b35",
+      "identity": "ev_env_system_observability_control_rpc_gap_20261013",
+      "path": "evidence/system-observability-control-rpc-gap-20261013.json",
+      "sha256": "3e9623ccb4f5d7d7aa3a55b9b6816cb92a617ce0d4c594ccd4faae04891a66ac"
+    }
+  },
+  "validation": {
+    "protected_test": {
+      "command": "python3 -m unittest discover -s tests -p test_projections.py -k StructureAuthorityDiagnosticTests -v",
+      "exit_code": 0,
+      "job_id": "term-822db1b72e12a097a618e4f5",
+      "network": false,
+      "passed": 3,
+      "sandbox_backend": "bwrap"
+    },
+    "protected_typed_projection": {
+      "exit_code": 0,
+      "job_id": "term-f695c30a35d8fcdedf090e3b",
+      "network": false,
+      "persisted": true,
+      "sandbox_backend": "bwrap"
+    },
+    "protected_readback": {
+      "exit_code": 0,
+      "job_id": "term-35b6f83237c0639bf86e75d5",
+      "network": false,
+      "sandbox_backend": "bwrap"
+    }
+  }
+}
