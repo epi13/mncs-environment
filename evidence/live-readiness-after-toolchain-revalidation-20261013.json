@@ -1,0 +1,69 @@
+{
+  "schema_version": "mncs.environment.live-readiness-revalidation/1",
+  "identity": "ev_env_live_readiness_after_toolchain_revalidation_20261013",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T15:00:10Z",
+  "source": {
+    "repository": "mncs-environment",
+    "revision": "20ea4be13ce359c87cd48049690d420538429f05"
+  },
+  "protected_execution": {
+    "sandbox_backend": "bwrap",
+    "project": "mncs-environment",
+    "network": false,
+    "transport": "authenticated mncs-control-environment-rpc",
+    "canonical_store_path_visible_to_agent": false
+  },
+  "before": {
+    "job_id": "term-5ee393487fc8e763ef16655c",
+    "observed_at": "2026-10-13T14:58:16Z",
+    "readiness_status": "blocked",
+    "blocking": ["selected-checkout-drift:toolchain:mncs-language"],
+    "selected_language_head": "7e8f56d3c84b6b1260a99ab403b2a51168d13871",
+    "observed_language_head": "3cfbc094f1a1770fc2409b990f3f7d8912f49bc7"
+  },
+  "revalidation": {
+    "job_id": "term-88f87a24882d06b7a1646fc0",
+    "exit_code": 0,
+    "session_lifecycle": "active",
+    "reprobed": 29,
+    "changed": ["mncs-control-mcp:workspace.worktree.prepare"],
+    "unbound": [],
+    "scope_composition_status": "ready"
+  },
+  "after": {
+    "job_id": "term-d3e26c5aeb85cb55bd075dd7",
+    "observed_at": "2026-10-13T15:00:10Z",
+    "exit_code": 0,
+    "readiness_status": "degraded",
+    "blocking": [],
+    "required_unavailable": [],
+    "required_unknown": [],
+    "service_probe_count": 0,
+    "execution_selection_status": "current",
+    "selection_drift": null,
+    "compatibility_state": "unproven",
+    "unknown_capabilities": [
+      "mncs-automation:automation-definition",
+      "mncs-automation:automation-evaluation",
+      "mncs-automation:automation-occurrence",
+      "mncs-automation:coherence-artifact-reconcile",
+      "mncs-automation:coherence-routing",
+      "mncs-control-mcp:environment.campaign-continuation",
+      "mncs-control-mcp:journal-context",
+      "mncs-control-mcp:workspace.worktree.prepare",
+      "mncs-system-monitor:system-observability"
+    ],
+    "unknown_reason": "Provider source fingerprints exist without owner-published invocation descriptors; Environment reports these capabilities as unknown."
+  },
+  "readiness": {
+    "status": "degraded-without-blocking-requirements",
+    "limitations": [
+      "The live health probe confirmed the selected Language checkout is current after revalidation.",
+      "This does not prove the unknown provider operations or execution compatibility contract.",
+      "No Forge compiler execution or resource-scheduling slice was run."
+    ]
+  }
+}
