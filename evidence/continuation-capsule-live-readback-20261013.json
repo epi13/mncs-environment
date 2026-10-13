@@ -1,0 +1,244 @@
+{
+  "schema_version": "mncs.environment.continuation-capsule-live-readback/1",
+  "identity": "ev_env_continuation_capsule_live_readback_20261013",
+  "recorded_at": "2026-10-13T23:12:54Z",
+  "owner": "mncs-environment",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source_revisions": {
+    "mncs-environment": "77d5bae0eb5a5d1182fb323c086c1f112f3381b5",
+    "mncs-control-mcp": "97aeda650b7a444dcf9c2eaea1ecb795889baa3d",
+    "mncs-store": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055",
+    "mncs-automation": "51b9b860f957dc194f6456851b70cbfda32f13ce",
+    "mncs-system-monitor": "f8965406e959183b58aa60aec4cee875b5d99fe8",
+    "mncs-compiler": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "mncs-forge": "cc2516f073d47739d74e68266d97fd090c53da16",
+    "mncs-language": "3cfbc094f1a1770fc2409b990f3f7d8912f49bc7"
+  },
+  "source_files": [
+    {
+      "repository": "mncs-environment",
+      "path": "mncs_env/claims.py",
+      "sha256": "941a5d963efb93c9c474185bb10746ad57d8e7eee2562703779327d65a81235e"
+    },
+    {
+      "repository": "mncs-environment",
+      "path": "mncs_env/sessions.py",
+      "sha256": "4aa0e85799eb81e1c620dafbff7e5a5d7edf9c49f5ffbad8b8f5990a7401a977"
+    },
+    {
+      "repository": "mncs-environment",
+      "path": "tests/test_environment.py",
+      "sha256": "014139d05f28b47059c3174d8821452c49a103b32261bd6f659aafc257738d26"
+    },
+    {
+      "repository": "mncs-compiler",
+      "path": "evidence/SELF-HOST-MATRIX.json",
+      "sha256": "1e82d83d8c8bdc9195f37dae6397e2daddc61fbcff928e584250e0a927447e72"
+    }
+  ],
+  "protected_continuation": {
+    "backend": "bwrap",
+    "project": "mncs-environment",
+    "scope": "project",
+    "network": false,
+    "transport": "authenticated MNCS Control Environment RPC",
+    "continuation_status": "ready",
+    "selected_definition_id": "env_f31ee034e8e1fdcb",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "unselected_same_campaign_session": "ses_b4b2d283542220b0",
+    "unselected_context_mutated": false,
+    "consumer_id": "local-agent",
+    "previous_consumers": [
+      "codex-process-1",
+      "codex-process-2",
+      "codex-process-3",
+      "codex-process-4",
+      "codex-process-5"
+    ],
+    "commands": [
+      "./scripts/mncs-env continuation --campaign-id cmp_mncs_continuity_20261010",
+      "./scripts/mncs-env context ses_7226fbcfe65820f7"
+    ],
+    "context_readback": {
+      "started_at": "2026-10-13T23:10:16.869975Z",
+      "completed_at": "2026-10-13T23:10:25.983012Z",
+      "own_claim_ids": [
+        "claim:mncs-automation",
+        "claim:mncs-control-mcp",
+        "claim:mncs-environment",
+        "claim:mncs-system-monitor"
+      ],
+      "foreign_claims_count": 3,
+      "foreign_claims_truncated": false,
+      "protected_claims": [
+        {
+          "claim_id": "claim:mncs-compiler",
+          "version": 63,
+          "repository": "mncs-compiler",
+          "owner_session_id": "ses_d2537acde8b8a875",
+          "owner_consumer_id": "luna-compiler-self-consumption-admission-20261009",
+          "status": "held",
+          "effective_expires_at": "2026-10-16T18:13:43+00:00",
+          "scope": {
+            "kind": "repository",
+            "exclusive": true
+          }
+        },
+        {
+          "claim_id": "claim:mncs-forge",
+          "version": 28,
+          "repository": "mncs-forge",
+          "owner_session_id": "ses_95c3aa35b8544042",
+          "owner_consumer_id": "luna-compiler-self-consumption",
+          "status": "held",
+          "effective_expires_at": "2026-10-16T02:18:31+00:00",
+          "scope": {
+            "kind": "repository",
+            "exclusive": true
+          }
+        }
+      ]
+    },
+    "selection_readback": {
+      "started_at": "2026-10-13T23:12:29.152626Z",
+      "completed_at": "2026-10-13T23:12:54.216283Z",
+      "status": "ready",
+      "selected_session_id": "ses_7226fbcfe65820f7",
+      "contexts_count": 2,
+      "unselected_session_ids": [
+        "ses_b4b2d283542220b0"
+      ],
+      "compiler_delivery_status": "blocked",
+      "forge_delivery_status": "blocked"
+    }
+  },
+  "claim_recovery_classification": {
+    "observed_at": "2026-10-13T23:08:51Z",
+    "claim_maximum_lease_hours": 168,
+    "claims": [
+      {
+        "claim_id": "claim:mncs-compiler",
+        "version": 63,
+        "freshness": "stale",
+        "last_activity_at": "2026-10-09T20:23:20+00:00",
+        "owner_known": true,
+        "owner_lifecycle": "active",
+        "verdict": "not-recoverable",
+        "reason": "owner session is quiet but the exclusive scope needs a dead owner or TTL expiry",
+        "effective_expires_at": "2026-10-16T18:13:43+00:00"
+      },
+      {
+        "claim_id": "claim:mncs-forge",
+        "version": 28,
+        "freshness": "stale",
+        "last_activity_at": "2026-10-09T03:05:19+00:00",
+        "owner_known": true,
+        "owner_lifecycle": "active",
+        "verdict": "not-recoverable",
+        "reason": "owner session is quiet but the exclusive scope needs a dead owner or TTL expiry",
+        "effective_expires_at": "2026-10-16T02:18:31+00:00"
+      }
+    ],
+    "process_liveness_inferred_from_session_lifecycle": false,
+    "claims_transferred_or_recovered": false
+  },
+  "validation": {
+    "focused_test": {
+      "command": "python3 -m pytest -q tests/test_environment.py::CampaignContinuityTests::test_continuation_capsule_projects_latest_checkpoint_and_foreign_claim",
+      "sandbox_backend": "bwrap",
+      "project": "mncs-environment",
+      "network": false,
+      "started_at": "2026-10-13T23:11:41.459002Z",
+      "completed_at": "2026-10-13T23:11:45.580892Z",
+      "exit_code": 0,
+      "passed": 1,
+      "failed": 0,
+      "duration_seconds": 4.122
+    },
+    "source_checks": {
+      "mncs-environment_main_clean_at_run": true,
+      "mncs-environment_main_revision": "77d5bae0eb5a5d1182fb323c086c1f112f3381b5",
+      "origin_main_revision": "77d5bae0eb5a5d1182fb323c086c1f112f3381b5"
+    }
+  },
+  "compiler_frontier": {
+    "matrix_path": "evidence/SELF-HOST-MATRIX.json",
+    "matrix_observed_at": "2026-10-08T15:06:29.523545+00:00",
+    "identity_ledger_updated_at": "2026-10-10T15:53:22Z",
+    "stage1_claimed": false,
+    "stage2_claimed": false,
+    "latest_reference_profile": {
+      "scope": "1M-step reference execution",
+      "hot_path": [
+        {
+          "function": "lexer.next_token_global",
+          "exclusive_seconds": 37.998,
+          "steps": 461104
+        },
+        {
+          "function": "scan_chunk_window",
+          "exclusive_seconds": 12.146,
+          "steps": 129042
+        },
+        {
+          "function": "significant_global",
+          "exclusive_seconds": 6.159,
+          "steps": 10635
+        }
+      ]
+    },
+    "delivered_bounded_measurement": {
+      "campaign": "lexer-native-self-ingestion-repair-20261010",
+      "exact_stage0_parity": true,
+      "reference_interpreter_steps": 277422,
+      "delivered_main_steps": 260066,
+      "reported_improvement_percent": 6.673,
+      "reported_basis": "percentage as recorded in the compiler identity ledger"
+    },
+    "deferred": [
+      "Do not repeat the reverted page-window guard; its 100k warm sample was slower than baseline.",
+      "Re-run bounded target-only Flow after authorized Compiler handoff.",
+      "Preserve Stage-0 diagnostics and exact source identities; do not promote Stage 1 or Stage 2 without proof.",
+      "Keep CP-0011, CP-0023, CP-0024, and CP-0025 unresolved absent exact evidence."
+    ]
+  },
+  "ownership_and_delivery": {
+    "continuity_claim": {
+      "claim_id": "claim:mncs-environment",
+      "version": 35,
+      "status": "held",
+      "session_id": "ses_7226fbcfe65820f7",
+      "expires_at": "2026-10-14T19:39:46+00:00"
+    },
+    "other_campaign_claims_held_by_current_session": [
+      {
+        "claim_id": "claim:mncs-control-mcp",
+        "version": 14,
+        "expires_at": "2026-10-14T08:03:11+00:00"
+      },
+      {
+        "claim_id": "claim:mncs-automation",
+        "version": 6,
+        "expires_at": "2026-10-14T05:17:38+00:00"
+      },
+      {
+        "claim_id": "claim:mncs-system-monitor",
+        "version": 2,
+        "expires_at": "2026-10-14T05:17:50+00:00"
+      }
+    ],
+    "compiler_and_forge_checkout_touched": false,
+    "resource_feedback_readiness": "partial; current live Automation evaluation correctly returned UNKNOWN without a real Forge receipt",
+    "compiler_stage_1": "unproven",
+    "compiler_stage_2": "unproven"
+  },
+  "remaining": [
+    "Accept authenticated Environment handoffs for Compiler and Forge before testing candidates, merging, or retiring their worktrees.",
+    "After handoff, run one bounded representative Compiler task through Forge, retain the real receipt and matching System Monitor observation, then ground an Automation scheduling decision and subsequent execution in those measurements.",
+    "Resume compiler self-consumption from the current delivered head and identity ledger; advance succession only with exact proof.",
+    "Determine whether an owner-controlled failure can be injected during a canonical Store generation commit; existing caller interruption and post-commit service restart evidence do not prove that exact timing.",
+    "Keep ses_b4b2d283542220b0 unselected and unchanged until its owner authorizes a transition."
+  ],
+  "readiness": "continuation-capsule-projection-verified; compiler-and-resource-work-await-authorized-claim-transition"
+}
