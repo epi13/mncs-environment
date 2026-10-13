@@ -1,0 +1,57 @@
+{
+  "schema_version": "mncs.environment.test-execution/1",
+  "identity": "ev_env_store_entry_test_isolation_20261013",
+  "recorded_at": "2026-10-13 09:09:55 UTC",
+  "owner": "mncs-environment",
+  "source": {
+    "repository": "mncs-environment",
+    "branch": "campaign/isolate-test-store-transport-20261013",
+    "baseline_main": "8cdd2a81807f19b11cf2b1cafa7098528a855cc2",
+    "path": "tests/test_entry.py",
+    "sha256": "3d50a0a5b4e75bd7a2f4510d16e07bb90e36a5e5fc1e5ed7514928c0c30a9634"
+  },
+  "change": {
+    "summary": "Temporary entry-test workspaces now strip inherited MNCS_ENV_PERSISTENCE_TRANSPORT, MNCS_ENV_RPC_SOCKET, and MNCS_ENV_RPC_GRANT_FILE before spawning mncs-env.",
+    "reason": "These tests use TemporaryDirectory workspaces and --state-dir to exercise isolated embedded Stores. Under protected Control, inherited production RPC credentials correctly reject those temp paths as outside the granted project root. The tests now retain the protected bwrap sandbox while using only test-owned temporary Store roots.",
+    "production_rpc_changed": false,
+    "canonical_store_redirected": false
+  },
+  "verification": {
+    "backend": "MNCS Control project-scoped terminal under bwrap",
+    "focused_fresh_process_command": "python3 -m pytest -q tests/test_entry.py::EntryContractTests::test_authenticated_task_selector_binds_once_and_resumes_exact_campaign tests/test_entry.py::EntryContractTests::test_store_entry_discovers_and_accepts_recipient_handoff_in_fresh_process",
+    "focused_fresh_process_result": {
+      "status": "PASS",
+      "passed": 2,
+      "failed": 0,
+      "duration_seconds": 26.99
+    },
+    "crash_retry_command": "python3 -m pytest -q tests/test_store_claim_transfer.py tests/test_campaign_selector.py tests/test_environment.py tests/test_entry.py -k 'transfer or publication_retry or project_continuation or authenticated_task_selector or store_entry_discovers_and_accepts_recipient_handoff or store_entry_lock_uses_only_the_configured_store_root or campaign_checkpoint or campaign_evidence_append or campaign_entry_reconciles or restart_window_ambiguous or first_connect_refusal or same_request_identity'",
+    "crash_retry_result": {
+      "status": "PASS",
+      "passed": 31,
+      "failed": 0,
+      "deselected": 228,
+      "duration_seconds": 72.85
+    },
+    "diff_check": "PASS",
+    "covered_scenarios": [
+      "claim transfer crash/retry and competing transfers",
+      "request identity payload fencing",
+      "campaign publication retry and stale checkpoint CAS",
+      "campaign evidence append recovery after interruption",
+      "fresh-process authenticated task selector resume",
+      "fresh-process Environment handoff acceptance",
+      "ambiguous Control RPC restart diagnostics"
+    ],
+    "isolated_store": true,
+    "canonical_store_acceptance_proven_by_this_test": false
+  },
+  "related_canonical_readback": {
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "session_id": "ses_7226fbcfe65820f7",
+    "campaign_state_checkpoint_id": "chk_31d23a3ddb926308",
+    "evidence_identity": "ev_env_compiler_worktree_disposition_20261013",
+    "note": "Canonical campaign checkpoint and report readback were performed separately through Control RPC in a fresh protected process. These isolated pytest Stores are not used as canonical Store proof."
+  },
+  "limitation": "The Compiler/Forge candidate tests and canonical claim acquire/release, stale-CAS, and owner-transfer acceptance against their foreign exclusive claims remain pending authorized Environment handoffs."
+}

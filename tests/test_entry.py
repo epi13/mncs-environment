@@ -253,9 +253,19 @@ class EntryContractTests(unittest.TestCase):
             subprocess.run(["git", "-C", str(self.project), *argv], check=True, capture_output=True)
 
     def run_cli(self, *argv, cwd=None, backend="file", env=None):
+        # These entry cases own a temporary workspace and state directory.
+        # Keep Store-backed cases on that test-owned Store instead of inheriting
+        # a protected Control grant that is scoped to the real project checkout.
+        process_env = dict(os.environ if env is None else env)
+        for key in (
+            "MNCS_ENV_PERSISTENCE_TRANSPORT",
+            "MNCS_ENV_RPC_SOCKET",
+            "MNCS_ENV_RPC_GRANT_FILE",
+        ):
+            process_env.pop(key, None)
         result = subprocess.run([sys.executable, str(CLI), "--state-dir", str(self.state),
                                  "--persistence", backend, *argv], cwd=cwd or self.project,
-                                capture_output=True, text=True, timeout=30, env=env)
+                                capture_output=True, text=True, timeout=30, env=process_env)
         payload = json.loads(result.stdout or result.stderr)
         return result.returncode, payload
 
