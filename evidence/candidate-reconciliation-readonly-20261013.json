@@ -1,0 +1,123 @@
+{
+  "schema_version": "mncs.environment.candidate-reconciliation-readonly/1",
+  "identity": "ev_env_candidate_reconciliation_readonly_20261013",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T14:27:25Z",
+  "observation": {
+    "method": "read-only Git refs, cherry equivalence, worktree registration, and porcelain status; Environment claim readback through authenticated Control RPC",
+    "execution_namespace": "host workspace",
+    "path_visibility_scope": "Observed paths are visible in this host namespace only; this does not establish that their absolute paths are accessible in project bwrap.",
+    "compiler_or_forge_tests_run": false,
+    "compiler_or_forge_repositories_modified": false,
+    "candidate_merges_performed": false,
+    "worktrees_retired": false,
+    "handoffs_or_claim_transfers_observed": false,
+    "claim_readback_job_id": "term-c4b90800f7efcc6cd1235af8"
+  },
+  "candidates": [
+    {
+      "repository": "mncs-compiler",
+      "main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "candidate_commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "main_vs_candidate_commit_counts": {
+        "main_only": 14,
+        "candidate_only": 1
+      },
+      "candidate_commit_is_ancestor_of_main": false,
+      "git_cherry_marker": "-",
+      "patch_equivalent_to_main": true,
+      "worktree": {
+        "registered": true,
+        "path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+        "visible_in_observation_namespace": true,
+        "porcelain_status": "clean"
+      },
+      "claim": {
+        "claim_id": "claim:mncs-compiler",
+        "identity": "clm_5871ad9917e5210d",
+        "version": 63,
+        "session_id": "ses_d2537acde8b8a875",
+        "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+        "status": "held",
+        "live": true,
+        "expires_at": "2027-08-03T10:31:10+00:00",
+        "basis": "transfer",
+        "transferred_from": "ses_11b5da14d3448fb6",
+        "scope": "exclusive repository"
+      },
+      "disposition": "patch-equivalent-to-main; protected-by-live-exclusive-claim; retain-clean-worktree; no-tests-merge-or-retirement-without-handoff"
+    },
+    {
+      "repository": "mncs-forge",
+      "main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "origin_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "branch": "campaign/forge-quiet-compile-output-20261010",
+      "candidate_commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "main_vs_candidate_commit_counts": {
+        "main_only": 0,
+        "candidate_only": 1
+      },
+      "candidate_commit_is_ancestor_of_main": false,
+      "git_cherry_marker": "+",
+      "patch_equivalent_to_main": false,
+      "worktree": {
+        "registered": true,
+        "path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+        "visible_in_observation_namespace": true,
+        "porcelain_status": "clean"
+      },
+      "claim": {
+        "claim_id": "claim:mncs-forge",
+        "identity": "clm_16b820b3293d873b",
+        "version": 28,
+        "session_id": "ses_95c3aa35b8544042",
+        "consumer_id": "luna-compiler-self-consumption",
+        "status": "held",
+        "live": true,
+        "expires_at": "2027-03-07T23:49:59+00:00",
+        "basis": "transfer",
+        "transferred_from": "ses_b8757ddf133ef14b",
+        "scope": "exclusive repository"
+      },
+      "disposition": "unique-unmerged-commit; protected-by-live-exclusive-claim; retain-clean-worktree; no-tests-merge-or-retirement-without-handoff"
+    },
+    {
+      "repository": "mncs-language",
+      "main": "7e8f56d3c84b6b1260a99ab403b2a51168d13871",
+      "origin_main": "7e8f56d3c84b6b1260a99ab403b2a51168d13871",
+      "branch": "campaign/process-environment-value-bound-20261010",
+      "candidate_commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "main_vs_candidate_commit_counts": {
+        "main_only": 4,
+        "candidate_only": 1
+      },
+      "candidate_commit_is_ancestor_of_main": false,
+      "git_cherry_marker": "-",
+      "patch_equivalent_to_main": true,
+      "delivered_implementation": {
+        "branch": "main",
+        "head": "7e8f56d3c84b6b1260a99ab403b2a51168d13871",
+        "status": "pushed",
+        "evidence_identity": "ev_language_process_environment_candidate_equivalence_tests_20261013"
+      },
+      "worktree": {
+        "registered": true,
+        "path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+        "visible_in_observation_namespace": true,
+        "porcelain_status": "untracked evidence retained",
+        "untracked_paths": [
+          "evidence/campaign-20261010-forge-core-quiet-output.json"
+        ]
+      },
+      "disposition": "implementation-patch-equivalent-on-main; retain-candidate-worktree-and-untracked-evidence-until-safe-owner-reviewed-retirement"
+    }
+  ],
+  "readiness": {
+    "status": "partial-read-only-reconciliation",
+    "reason": "Current candidate ancestry and patch equivalence are revalidated. Compiler and Forge work remains protected by live exclusive claims without handoffs; the Language implementation is delivered, while its untracked evidence is preserved. No candidate was tested, merged, or retired in this recheck."
+  }
+}
