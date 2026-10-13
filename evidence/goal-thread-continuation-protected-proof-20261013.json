@@ -1,0 +1,109 @@
+{
+  "schema_version": "mncs.environment.goal-thread-continuation-proof/1",
+  "identity": "ev_environment_goal_thread_continuation_20261013",
+  "observed_at": "2026-10-13T01:58:08Z",
+  "campaign": {
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "local-agent"
+  },
+  "task_identity": {
+    "source": "persistent active-goal thread identity supplied by the goal runtime",
+    "raw_value_in_evidence": false,
+    "selector_status": "resolved"
+  },
+  "execution": {
+    "boundary": "project-scoped Control bwrap",
+    "flow": [
+      "Environment continuation lookup with task identity only",
+      "Use the selected session returned by the authenticated capsule",
+      "Environment resume with --revalidate",
+      "Write checkpoint through the authorized canonical Store transport",
+      "Fresh protected process resolves task identity and reads the new checkpoint"
+    ],
+    "campaign_or_session_id_supplied_to_lookup": false,
+    "resume_exit_code": 0,
+    "lifecycle_after_resume": "active",
+    "revalidation": {
+      "reprobed": 21,
+      "reused": 3,
+      "changed": [
+        "mncs-control-mcp:workspace.worktree.prepare"
+      ],
+      "bound": [],
+      "unbound": []
+    }
+  },
+  "checkpoint": {
+    "identity": "chk_78b1209d596c5efe",
+    "sequence": 258,
+    "fresh_process_readback": true,
+    "readback_selector_status": "resolved",
+    "readback_session_id": "ses_7226fbcfe65820f7"
+  },
+  "live_health_after_revalidation": {
+    "observation": "live",
+    "status": "degraded",
+    "available_count": 12,
+    "unavailable_count": 3,
+    "unknown_count": 9,
+    "unavailable": [
+      "mncs-automation:automation-adoption",
+      "mncs-automation:automation-reconciliation",
+      "mncs-automation:automation-revisit"
+    ],
+    "unavailable_cause": "mncs-language target/release/mncs is missing from the selected closure",
+    "unknown": [
+      "mncs-automation:automation-definition",
+      "mncs-automation:automation-evaluation",
+      "mncs-automation:automation-occurrence",
+      "mncs-automation:coherence-artifact-reconcile",
+      "mncs-automation:coherence-routing",
+      "mncs-control-mcp:environment.campaign-continuation",
+      "mncs-control-mcp:journal-context",
+      "mncs-control-mcp:workspace.worktree.prepare",
+      "mncs-system-monitor:system-observability"
+    ]
+  },
+  "protected_claims_at_readback": [
+    {
+      "claim_id": "claim:mncs-compiler",
+      "session_id": "ses_d2537acde8b8a875",
+      "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+      "version": 63,
+      "status": "held",
+      "live": true,
+      "expires_at": "2027-08-03T10:31:10+00:00"
+    },
+    {
+      "claim_id": "claim:mncs-forge",
+      "session_id": "ses_95c3aa35b8544042",
+      "consumer_id": "luna-compiler-self-consumption",
+      "version": 28,
+      "status": "held",
+      "live": true,
+      "expires_at": "2027-03-07T23:49:59+00:00"
+    }
+  ],
+  "repository_heads_at_observation": {
+    "mncs-environment": "fb57fffa9077a6d467ec8b4af1ac2a6294013b28",
+    "mncs-control-mcp": "6d941b6f474116005d9a08f77c799a8df53f9c09",
+    "mncs-automation": "a019bc9ba39852c59bc1b0c8115ac65520af58ad",
+    "mncs-compiler": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "mncs-forge": "cc2516f073d47739d74e68266d97fd090c53da16",
+    "mncs-language": "12b29d6482599465698b78c87a21c63d3adeceb6"
+  },
+  "ownership_and_remaining_work": {
+    "compiler_or_forge_source_changed": false,
+    "compiler_or_forge_tests_run": false,
+    "claim_transition": {
+      "compiler_claim_transferred_to_current_session": false,
+      "forge_claim_transferred_to_current_session": false,
+      "handoff_record_state": "not verified in this observation"
+    },
+    "compiler_stage_1_proven": false,
+    "compiler_stage_2_proven": false,
+    "compiler_to_forge_resource_feedback_proven": false
+  },
+  "result": "The active goal identity resolved the existing campaign and Environment session in a fresh protected process, and authorized resume, revalidation, checkpoint publication, and fresh-process readback succeeded. Compiler and Forge ownership remains unchanged."
+}
