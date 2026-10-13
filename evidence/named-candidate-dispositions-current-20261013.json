@@ -1,0 +1,126 @@
+{
+  "schema_version": "mncs.environment.named-candidate-dispositions/1",
+  "identity": "ev_env_named_candidate_dispositions_current_20261013",
+  "recorded_at_utc": "2026-10-13T21:38:49Z",
+  "owner": "mncs-environment",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "observed_session_id": "ses_7226fbcfe65820f7",
+  "observation_method": {
+    "git": "host-side read-only Git metadata and status with GIT_OPTIONAL_LOCKS=0",
+    "claims": "authenticated protected Control RPC read through Environment claims",
+    "tests_run_during_observation": false,
+    "repository_or_worktree_mutations": false
+  },
+  "main_heads": {
+    "mncs-compiler": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "mncs-language": "3cfbc094f1a1770fc2409b990f3f7d8912f49bc7",
+    "mncs-forge": "cc2516f073d47739d74e68266d97fd090c53da16"
+  },
+  "candidates": [
+    {
+      "repository": "mncs-compiler",
+      "branch": "campaign/keyword-local-index-delivery-20261010",
+      "head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "parent": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+      "origin_main_behind": 14,
+      "candidate_ahead": 1,
+      "patch_relation": "patch-equivalent to origin/main (git cherry marks the candidate commit with '-'); candidate tip differs by SELF-HOST-MATRIX evidence",
+      "worktree": {
+        "path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+        "head": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+        "status": "clean"
+      },
+      "evidence": [
+        "evidence/SELF-HOST-MATRIX.json"
+      ],
+      "claim": {
+        "identity": "clm_5871ad9917e5210d",
+        "claim_id": "claim:mncs-compiler",
+        "session_id": "ses_d2537acde8b8a875",
+        "version": 63,
+        "status": "held",
+        "live": true,
+        "expires_at": "2027-08-03T10:31:10+00:00"
+      },
+      "classification": "patch-equivalent implementation; evidence-relevant checkout; protected by another consumer",
+      "disposition": "retain branch and worktree; do not merge the redundant patch or retire the evidence checkout before handoff"
+    },
+    {
+      "repository": "mncs-language",
+      "branch": "campaign/process-environment-value-bound-20261010",
+      "head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "parent": "e8f8a5f8659c71b33cd32c964d4982bec1a9668e",
+      "origin_main_behind": 5,
+      "candidate_ahead": 1,
+      "patch_relation": "patch-equivalent to origin/main (git cherry marks the candidate commit with '-'); equivalent commit 7cfd9969c28c9db42032fee054e5fed0206d7e68 is on main",
+      "current_main_changes_since_tested_head": [
+        "evidence/candidate-process-environment-value-bound-20261013.json",
+        "docs/mncs-badge.json"
+      ],
+      "worktree": {
+        "path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+        "head": "fc49c0cc6afe388ff8d18341595422cc52225005",
+        "status": "dirty",
+        "untracked": [
+          {
+            "path": "evidence/campaign-20261010-forge-core-quiet-output.json",
+            "sha256": "7b1d1a609703ffae19f0834252d68da638d279463e7d24a9e12123c4891efc42",
+            "disposition": "preserve; Forge-related evidence remains uncommitted pending owner handoff"
+          }
+        ]
+      },
+      "existing_verification": {
+        "repository": "mncs-language",
+        "commit": "7e8f56d3c84b6b1260a99ab403b2a51168d13871",
+        "path": "evidence/candidate-process-environment-value-bound-20261013.json",
+        "identity": "ev_language_process_environment_value_bound_candidate_equivalence_tests_20261013",
+        "sha256": "2535f6bd67e6c783b21dd778d07cb7b5960e967bdb24871ad972903a2ee11b20",
+        "tested_head": "12b29d6482599465698b78c87a21c63d3adeceb6",
+        "result": "8 focused tests passed; current main changes since that tested head are evidence and badge metadata only"
+      },
+      "claim": {
+        "identity": "clm_51e4cf94b9f5f521",
+        "claim_id": "claim:mncs-language",
+        "session_id": "ses_7226fbcfe65820f7",
+        "version": 42,
+        "status": "released",
+        "live": false,
+        "reason": "validated bounded-environment candidate is on Language main; its separate dirty Forge-evidence worktree remains retained"
+      },
+      "classification": "implementation patch delivered on main; candidate worktree retained with untracked evidence",
+      "disposition": "no merge needed; preserve the worktree and Forge-related untracked evidence"
+    },
+    {
+      "repository": "mncs-forge",
+      "branch": "campaign/forge-quiet-compile-output-20261010",
+      "head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "parent": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "origin_main_behind": 0,
+      "candidate_ahead": 1,
+      "patch_relation": "unique implementation commit (git cherry marks the candidate with '+')",
+      "diffstat": "src/mncs_forge/mncs_native.py: 2 insertions; tests/test_mncs_native.py: 32 insertions",
+      "worktree": {
+        "path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+        "head": "608334b703de708ef15c11147b0ee5c624f87ed6",
+        "status": "clean"
+      },
+      "claim": {
+        "identity": "clm_16b820b3293d873b",
+        "claim_id": "claim:mncs-forge",
+        "session_id": "ses_95c3aa35b8544042",
+        "version": 28,
+        "status": "held",
+        "live": true,
+        "expires_at": "2027-03-07T23:49:59+00:00"
+      },
+      "classification": "unmerged useful implementation; protected by another consumer",
+      "disposition": "preserve; await authenticated handoff before tests, merge, or retirement"
+    }
+  ],
+  "limitations": [
+    "Compiler and Forge remain with their recorded live exclusive owners; this report does not infer that their owner processes are absent.",
+    "The Language candidate worktree contains an untracked Forge artifact and must not be retired until its ownership and evidence destination are resolved.",
+    "No new implementation tests were run here; previous Language test evidence is linked, and the Compiler/Forge claims remain protected."
+  ],
+  "readiness": "PASS for current read-only classification of the three named candidates; Compiler and Forge delivery still requires authenticated owner handoffs"
+}

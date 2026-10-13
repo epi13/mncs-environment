@@ -1,0 +1,85 @@
+{
+  "authorization": {
+    "agent_store_path_or_descriptor_exposed": false,
+    "artifact_file": "system-observability-summary.json",
+    "binding_identity_required": true,
+    "capability": "mncs-system-monitor:system-observability",
+    "code_change_required_during_this_validation": false,
+    "implementation_already_on_control_main": "04d0a888090f29fc8fa8c5b7bae4717b08ead756",
+    "request": "exact capability and artifact filename pair",
+    "scope": "one declared artifact pair through the authenticated Environment project grant",
+    "selected_session_enforced": true,
+    "user_authorized": true
+  },
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "candidate_disposition_report": {
+    "compiler_and_forge_mutated": false,
+    "identity": "ev_env_named_candidate_dispositions_current_20261013",
+    "path": "evidence/named-candidate-dispositions-current-20261013.json",
+    "sha256": "f6190f5c66dc6ed4f157d1f50ae07d13d75500300e471ed68dc32f2d2937a576",
+    "summary": "Compiler and Forge candidates remain protected pending authenticated handoff; Language patch is already equivalent on main and its dirty evidence worktree is retained."
+  },
+  "identity": "ev_env_system_observability_summary_live_readback_20261013",
+  "owner": "mncs-environment",
+  "protected_readback": {
+    "artifact_file": "system-observability-summary.json",
+    "backend": "bwrap",
+    "binding_id": "cap_8066edfab5edad2c",
+    "byte_count": 1334,
+    "capability": "mncs-system-monitor:system-observability",
+    "content_hash_matches": true,
+    "json_parsed": true,
+    "network": false,
+    "process": "fresh project-scoped terminal invocation",
+    "schema": "mncs.system-monitor.observability-summary.v1",
+    "scope": "mncs-environment project",
+    "sha256": "fd34fe9cb013e82e71d92478280eaad97d30bc2bf679510db01279d678338659",
+    "store_reference": "mncs-store:ses_7226fbcfe65820f7:capability-invocation-artifacts:1e11338296b2051d700a3af0698d33a16bcd0bc12226242c8781bbc588be81b4",
+    "task_selector": {
+      "basis": "persistent goal runtime thread identity",
+      "raw_identity_recorded": false,
+      "selected_session_id": "ses_7226fbcfe65820f7",
+      "status": "resolved"
+    },
+    "transport": "authenticated MNCS Control Environment RPC"
+  },
+  "readiness": "PASS for exact summary artifact authorization, focused RPC validation, and fresh protected readback; compiler resource scheduling remains unproven",
+  "recorded_at_utc": "2026-10-13T21:43:33+00:00",
+  "schema_version": "mncs.environment.system-observability-summary-readback/1",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "mncs_control_mcp": {
+      "binding_introduced_in": "04d0a888090f29fc8fa8c5b7bae4717b08ead756",
+      "files": [
+        {
+          "path": "src/mncs_control_mcp/environment_rpc.py",
+          "sha256": "164e44b15831435d0e25e77440949d619e08ef9f0a9d655957fdc42f12144261"
+        },
+        {
+          "path": "tests/test_environment_rpc.py",
+          "sha256": "e6e10edeb0fa7f8cfc354ad3588cb151638a0b3644b218573d4799c75e1193d6"
+        }
+      ],
+      "validated_main": "97aeda650b7a444dcf9c2eaea1ecb795889baa3d"
+    },
+    "mncs_environment_before_evidence_commit": "df691dd7d20ad3e022a526fb154027d61ee8e325"
+  },
+  "validation": {
+    "focused_rpc_test": {
+      "command": "pytest -q tests/test_environment_rpc.py::test_artifact_read_is_bound_to_environment_selected_project_session",
+      "result": "PASS; 1 test"
+    },
+    "negative_cases": [
+      "wrong selected session is rejected before provider invocation",
+      "extra artifact-read argument is rejected before provider invocation"
+    ],
+    "rpc_test_file": {
+      "command": "pytest -q tests/test_environment_rpc.py",
+      "result": "PASS; 40 tests"
+    },
+    "static_checks": {
+      "command": "ruff check src/mncs_control_mcp/environment_rpc.py tests/test_environment_rpc.py",
+      "result": "PASS"
+    }
+  }
+}
