@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.canonical-store-service-restart-acceptance/1",
+  "identity": "ev_env_canonical_store_service_restart_acceptance_20261013",
+  "recorded_at": "2026-10-13T20:06:30Z",
+  "owner": "mncs-environment",
+  "repository": "mncs-environment",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source_identities": {
+    "environment_main_at_execution": "15977388338291fa13b53c7a311073a77f70ef81",
+    "control_mcp_main": "6ecfc25af7616e6a56ea6da8f1a4241c7e55c5c9",
+    "store_main": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "execution_boundary": {
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "network": false,
+    "transport": "authenticated MNCS Control Environment RPC",
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "agent_direct_store_access": false,
+    "direct_path_proof": "ev_env_store_claim_transport_acceptance_20261013"
+  },
+  "control_service_restart": {
+    "unit": "mncs-control-tunnel.service",
+    "service_owner": "user systemd",
+    "restart_command": "systemctl --user restart mncs-control-tunnel.service",
+    "restart_exit_code": 0,
+    "before": {
+      "active_state": "active",
+      "sub_state": "running",
+      "main_pid": 384145
+    },
+    "after": {
+      "active_state": "active",
+      "sub_state": "running",
+      "main_pid": 392425,
+      "exec_main_start_timestamp_local": "2026-10-13T12:04:58-08:00",
+      "result": "success",
+      "exec_main_status": 0
+    }
+  },
+  "canonical_claim_reconciliation": {
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "initial_acquisition": {
+      "terminal_job_id": "term-871b3126f9ac90bcbb292dff",
+      "pre_acquisition_store_generation": 48881,
+      "request_id": "req_canonical_service_restart_probe_20261013",
+      "claim_id": "claim:mncs-environment:paths:2dd49b370632",
+      "claim_identity": "clm_6acf40c8de880189",
+      "version": 1,
+      "status": "held",
+      "scope": {
+        "kind": "paths",
+        "paths": [
+          "evidence/.mncs-control-service-restart-probe-20261013"
+        ],
+        "exclusive": false
+      }
+    },
+    "post_restart_fresh_process": {
+      "terminal_job_id": "term-32b2eb62f711b05e72f2b70b",
+      "continuation_status": "ready",
+      "selected_session_id": "ses_7226fbcfe65820f7",
+      "store_generation_before_replay": 48886,
+      "replayed_request_id": "req_canonical_service_restart_probe_20261013",
+      "claim_id": "claim:mncs-environment:paths:2dd49b370632",
+      "claim_identity": "clm_6acf40c8de880189",
+      "returned_version": 1,
+      "same_identity": true,
+      "duplicate_version_created": false
+    },
+    "release_and_readback": {
+      "release_request_id": "req_canonical_service_restart_release_20261013",
+      "readback_request_id": "req_canonical_service_restart_readback_20261013",
+      "claim_id": "claim:mncs-environment:paths:2dd49b370632",
+      "version": 2,
+      "status": "released",
+      "live": false,
+      "final_store_generation": 48893
+    }
+  },
+  "related_canonical_caller_interruption_evidence": "ev_environment_canonical_store_caller_interruption_20261012",
+  "limitations": [
+    "This service restart occurred after the canonical claim commit and before an authenticated stable-request replay from a new protected process. A Control process termination during the Store commit itself was not injected.",
+    "Compiler and Forge exclusive claims remain owned by their prior sessions; neither repository was tested or modified."
+  ],
+  "result": "PASS: the canonical claim survived a real Control user-service restart. A fresh protected process resumed the same campaign session, replayed the stable operation identity to the original claim version, released it, and read back the released version without duplicate authoritative state."
+}
