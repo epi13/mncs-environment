@@ -1,0 +1,177 @@
+{
+  "schema_version": "mncs.environment.candidate-readonly-reconciliation/1",
+  "identity": "ev_environment_candidate_readonly_reconciliation_20261013",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "recorded_at": "2026-10-13T01:15:03Z",
+  "owner": "mncs-environment",
+  "environment_source": {
+    "repository": "mncs-environment",
+    "base_revision": "776c33de7b9c877a03f498e861a004b21f8d13b3",
+    "branch": "evidence/candidate-readonly-reconciliation-20261013",
+    "working_tree_clean_before_report": true
+  },
+  "inspection": {
+    "mode": "read-only Git and Environment claim inspection",
+    "git_operations": [
+      "rev-parse",
+      "ls-remote",
+      "merge-base",
+      "rev-list",
+      "branch --contains",
+      "worktree list",
+      "status",
+      "show",
+      "diff-tree",
+      "diff"
+    ],
+    "candidate_worktree_path_visibility": {
+      "observed_namespace": "local host workspace",
+      "protected_bwrap_namespace_visibility": "unknown",
+      "rule": "Host-visible registered worktrees are not classified as available inside protected execution."
+    },
+    "compiler_or_forge_repository_mutations": false,
+    "candidate_tests_run": false,
+    "candidate_merges_or_retirements": false
+  },
+  "ownership": {
+    "environment_claim": {
+      "claim_id": "claim:mncs-environment",
+      "owner_session_id": "ses_7226fbcfe65820f7",
+      "owner_lifecycle": "active",
+      "verdict": "live",
+      "effective_expires_at": "2026-10-13T19:38:39Z"
+    },
+    "compiler_claim": {
+      "claim_id": "claim:mncs-compiler",
+      "owner_session_id": "ses_d2537acde8b8a875",
+      "freshness": "stale",
+      "owner_lifecycle": "active",
+      "verdict": "not-recoverable",
+      "reason": "Owner is quiet; exclusive scope requires a dead owner or TTL expiry."
+    },
+    "forge_claim": {
+      "claim_id": "claim:mncs-forge",
+      "owner_session_id": "ses_95c3aa35b8544042",
+      "freshness": "stale",
+      "owner_lifecycle": "active",
+      "verdict": "not-recoverable",
+      "reason": "Owner is quiet; exclusive scope requires a dead owner or TTL expiry."
+    },
+    "language_claim": {
+      "claim_id": "claim:mncs-language",
+      "owner_session_id": "ses_7226fbcfe65820f7",
+      "verdict_before_reacquire_attempt": "released",
+      "reacquire_request_id": "req_language_candidate_reverify_claim_20261013",
+      "reacquire_result": "rejected",
+      "publication_completed": false,
+      "cause_code": "authority-denied",
+      "diagnostic": "mncs-language is outside this Environment session's writable authority"
+    }
+  },
+  "candidates": [
+    {
+      "repository": "mncs-compiler",
+      "candidate_branch": "campaign/keyword-local-index-delivery-20261010",
+      "candidate_commit": "2b6f38113a4716ce3918f6a3318e70353caeaa88",
+      "candidate_parent": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+      "local_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "relationship": {
+        "candidate_commits_not_in_main": 1,
+        "main_commits_not_in_candidate": 14,
+        "merge_base": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+        "candidate_is_ancestor_of_main": false
+      },
+      "candidate_commit_changes": [
+        "evidence/SELF-HOST-MATRIX.json"
+      ],
+      "candidate_evidence_matches_current_main": {
+        "matrix_campaign_entry": "lexer_keyword_local_index_campaign_20261010",
+        "matrix_delivery_entry": "lexer_keyword_local_index_delivery_20261010",
+        "both_entries_equal_candidate_values": true
+      },
+      "registered_worktree": {
+        "path": "/tmp/mncs-compiler-keyword-local-index-20261010",
+        "visible_in_observed_host_namespace": true,
+        "protected_namespace_visibility": "unknown",
+        "branch_checkout_status": "clean"
+      },
+      "main_checkout_untracked_paths": [
+        ".worktrees/keyword-window4-20261009/",
+        ".worktrees/probe-stage0-oracle-skip-20261009/",
+        "evidence/campaign-20261006-imported-nominal-ssa.json",
+        "evidence/campaign-20261006-pressure-suite-results.json",
+        "evidence/campaign-20261006-project-results.json"
+      ],
+      "disposition": "candidate evidence is already represented identically in current main; retain branch and all untracked work pending Compiler owner handoff",
+      "tests_run": false,
+      "merge_or_retirement": false
+    },
+    {
+      "repository": "mncs-language",
+      "candidate_branch": "campaign/process-environment-value-bound-20261010",
+      "candidate_commit": "fc49c0cc6afe388ff8d18341595422cc52225005",
+      "candidate_parent": "e8f8a5f8659c71b33cd32c964d4982bec1a9668e",
+      "equivalent_main_delivery_commit": "7cfd9969c28c9db42032fee054e5fed0206d7e68",
+      "local_main": "12b29d6482599465698b78c87a21c63d3adeceb6",
+      "origin_main": "12b29d6482599465698b78c87a21c63d3adeceb6",
+      "relationship": {
+        "candidate_commits_not_in_main": 1,
+        "main_commits_not_in_candidate": 3,
+        "merge_base": "e8f8a5f8659c71b33cd32c964d4982bec1a9668e",
+        "candidate_is_ancestor_of_main": false,
+        "candidate_vs_current_main_changed_paths": [
+          "docs/mncs-badge.json"
+        ],
+        "implementation_content_delivered_on_main": true
+      },
+      "registered_worktree": {
+        "path": "/tmp/mncs-language-process-environment-value-bound-20261010",
+        "visible_in_observed_host_namespace": true,
+        "protected_namespace_visibility": "unknown",
+        "branch_checkout_status": "dirty-untracked-evidence",
+        "untracked_path": "evidence/campaign-20261010-forge-core-quiet-output.json",
+        "untracked_sha256": "7b1d1a609703ffae19f0834252d68da638d279463e7d24a9e12123c4891efc42",
+        "untracked_evidence_owner": "unknown; preserve"
+      },
+      "disposition": "implementation already delivered on main by equivalent commit; preserve detached branch and untracked measurement evidence; focused tests require an Environment session with mncs-language writable authority",
+      "tests_run": false,
+      "merge_or_retirement": false
+    },
+    {
+      "repository": "mncs-forge",
+      "candidate_branch": "campaign/forge-quiet-compile-output-20261010",
+      "candidate_commit": "608334b703de708ef15c11147b0ee5c624f87ed6",
+      "candidate_parent": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "local_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "origin_main": "cc2516f073d47739d74e68266d97fd090c53da16",
+      "relationship": {
+        "candidate_commits_not_in_main": 1,
+        "main_commits_not_in_candidate": 0,
+        "merge_base": "cc2516f073d47739d74e68266d97fd090c53da16",
+        "candidate_is_ancestor_of_main": false
+      },
+      "candidate_commit_changes": [
+        "src/mncs_forge/mncs_native.py",
+        "tests/test_mncs_native.py"
+      ],
+      "registered_worktree": {
+        "path": "/tmp/mncs-forge-quiet-compile-output-20261010",
+        "visible_in_observed_host_namespace": true,
+        "protected_namespace_visibility": "unknown",
+        "branch_checkout_status": "clean"
+      },
+      "disposition": "unmerged one-commit child of main; preserve and await Forge owner handoff before testing, merging, or retiring",
+      "tests_run": false,
+      "merge_or_retirement": false
+    }
+  ],
+  "readiness": {
+    "candidate_reconciliation": "read-only current branch relationships captured",
+    "compiler_and_forge_delivery": "pending authenticated owner handoffs",
+    "language_delivery": "equivalent implementation commit exists on main; test revalidation pending writable Environment scope",
+    "protected_work": "untracked and namespace-uncertain states retained",
+    "stage1_or_stage2_claimed": false
+  }
+}
