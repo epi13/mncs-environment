@@ -11,6 +11,7 @@
   },
   "branch_count": 54,
   "campaign_identity": "cmp_mncs_continuity_20261010",
+  "identity": "ev_environment_campaign_live_repository_dispositions_20261013",
   "candidate_reconciliation": {
     "compiler": {
       "branch": "campaign/keyword-local-index-delivery-20261010",
