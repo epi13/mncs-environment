@@ -5472,7 +5472,12 @@ class EntryFrictionTests(unittest.TestCase):
     def _run_cli(*args: str) -> tuple[int, dict, str]:
         stdout = io.StringIO()
         stderr = io.StringIO()
-        with redirect_stdout(stdout), redirect_stderr(stderr):
+        # These fixtures explicitly select isolated file persistence. The
+        # protected Control host sets this process-wide switch for production
+        # CLI calls; keep it from redirecting temporary test Stores to the
+        # canonical RPC transport.
+        with mock.patch.dict(os.environ, {"MNCS_ENV_PERSISTENCE_TRANSPORT": ""}), \
+                redirect_stdout(stdout), redirect_stderr(stderr):
             code = cli.main(list(args))
         payload = json.loads(stdout.getvalue()) if stdout.getvalue().strip() else {}
         return code, payload, stderr.getvalue()

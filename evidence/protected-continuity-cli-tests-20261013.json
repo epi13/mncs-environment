@@ -1,0 +1,52 @@
+{
+  "schema_version": "mncs.environment.protected-continuity-cli-tests/1",
+  "identity": "ev_env_protected_continuity_cli_tests_20261013",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T14:45:44Z",
+  "source": {
+    "repository": "mncs-environment",
+    "base_revision": "0ad9981daa624881e3a19c58be8cd323999fc48e",
+    "tested_path_sha256": {
+      "tests/test_environment.py": "f9ab32dee9a5b353eb36bb459e0c2ea8aa920b42a3ae76a769095452cb23e270"
+    },
+    "change": "isolate temporary file-backed CLI tests from the Control-managed production RPC environment variable"
+  },
+  "protected_execution": {
+    "job_id": "term-c28a847a546c418c6bbdd1c0",
+    "initial_fixture_failure_job_id": "term-e28a71074f63b42c016efec7",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false,
+    "canonical_store_accessed": false,
+    "temporary_file_store_only": true
+  },
+  "verification": {
+    "command": "python3 -m pytest -q tests/test_environment.py -k 'transfer or liveness or authenticated_entry_discovers_unique_campaign or authenticated_entry_refuses_ambiguous_campaign_discovery or handoff'",
+    "exit_code": 0,
+    "passed": 14,
+    "failed": 0,
+    "deselected": 181,
+    "duration_seconds": 28.83,
+    "coverage": [
+      "atomic claim transfer and stable retry after caller interruption",
+      "competing continuation transfer fencing",
+      "authenticated campaign discovery and ambiguity refusal",
+      "session handoff creation, acceptance, and crash recovery"
+    ]
+  },
+  "diagnosis": {
+    "initial_failures": 2,
+    "cause": "The protected host sets MNCS_ENV_PERSISTENCE_TRANSPORT=control-rpc. Temporary file-backed CLI tests inherited it and were routed to RPC despite --persistence file.",
+    "resolution": "The test helper now clears that process-local dispatch switch only while executing explicit file-backed fixtures. Control configuration, bwrap policy, and canonical Store access are unchanged."
+  },
+  "readiness": {
+    "status": "pass-for-protected-temporary-store-continuity-tests",
+    "limitations": [
+      "This run validates Environment continuity logic using temporary test-owned file Stores; it does not add canonical Store publication evidence.",
+      "Compiler and Forge claims remain held by prior owners; their repositories were not tested or modified in this run."
+    ]
+  }
+}
