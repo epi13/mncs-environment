@@ -1,0 +1,88 @@
+{
+  "schema_version": "mncs.environment.canonical-store-protected-reverify/1",
+  "identity": "ev_environment_canonical_store_protected_reverify_20261013",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "recorded_at": "2026-10-13T01:04:00Z",
+  "owner": "mncs-environment",
+  "environment_source": {
+    "repository": "mncs-environment",
+    "revision_at_capture": "1fd12963076092c0947489de5841dbd308b88b92",
+    "branch": "main",
+    "clean_at_capture": true
+  },
+  "protected_execution": {
+    "project": "mncs-environment",
+    "backend": "bwrap",
+    "authenticated_continuation": {
+      "campaign_id": "cmp_mncs_continuity_20261010",
+      "status": "ready",
+      "selected_session_id": "ses_7226fbcfe65820f7"
+    },
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "direct_path_access": {
+      "visible": false,
+      "readable": false,
+      "writable": false
+    }
+  },
+  "store_owner_service": {
+    "scope": "systemd user service",
+    "unit": "mncs-control-tunnel.service",
+    "fragment_path": "/home/epi13/.config/systemd/user/mncs-control-tunnel.service",
+    "fragment_sha256": "b1b56bf1eea0c16c40b48200361c98fc77d0a1dc6c35d18d2bbfc8e29064a285",
+    "fragment_mode": "0644",
+    "active_state": "active",
+    "sub_state": "running",
+    "protect_system": "strict",
+    "protect_home": "read-only",
+    "no_new_privileges": true,
+    "read_write_paths": [
+      "/home/epi13/Documents/Projects",
+      "/home/epi13/.config/mncs-control-mcp",
+      "/home/epi13/.config/tunnel-client",
+      "/home/epi13/.local/state/mncs-control-mcp",
+      "/home/epi13/.local/state/tunnel-client",
+      "/home/epi13/.local/share/mncs-control-mcp",
+      "/home/epi13/.local/share/tunnel-client",
+      "/home/epi13/.local/share/mncs-environment/store"
+    ],
+    "authorized_store_write_path": "/home/epi13/.local/share/mncs-environment/store"
+  },
+  "verification": {
+    "request_id": "req_store_reverify_post_checkpoint_20261013",
+    "control_terminal_job_id": "term-b9558df89e71d17d27ebfb2f",
+    "command": "mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "fresh_process_sequence": [
+      "authenticated campaign continuation",
+      "session-authorized Store verification"
+    ],
+    "result": {
+      "ok": true,
+      "generation": 47351,
+      "objects": 47353,
+      "fanout": 31,
+      "chunk_size": 65536,
+      "relations": 0,
+      "provenance_records": 0,
+      "commit_feed": "4d430100000000000000b8f70000b8f900000000000000009750da6a3b80cf0eaf2ef41ae58080c05adf73238d29062122677fa25fcf2d17",
+      "read_only_recovery_result": "RECOVERED_OLD",
+      "verification_artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+      "backend": "mncs-research-bytecode",
+      "toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs"
+    },
+    "recovery_interpretation": "The Store embedded reader sets RECOVERED_OLD for its read-only initialization path after reading the committed head. This verification did not invoke recovery or mutate Store."
+  },
+  "store_source": {
+    "repository": "mncs-store",
+    "revision": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055",
+    "path": "python/mncs_store/embedded.py",
+    "sha256": "81ebc11d91cbabb38337bf4bb27ac2c2ccf617c08d2f65c368764f10b2177450"
+  },
+  "campaign_state_at_capture": {
+    "latest_campaign_checkpoint_id": "chk_515a40d8ac4c3df5",
+    "evidence_count": 172,
+    "delivery_status": "partial"
+  },
+  "readiness": "The authorized Store transport is active with the approved narrow path grant and retained systemd hardening. A protected Environment process cannot see or write the canonical Store path, while the authenticated Store verification succeeds against generation 47351 and 47353 objects. Compiler and Forge ownership handoffs and the real compiler resource-feedback loop remain unresolved."
+}
