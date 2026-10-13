@@ -1,0 +1,75 @@
+{
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "identity": "ev_campaign_session_resume_revalidation_live_20261013",
+  "operation": {
+    "command": "scripts/mncs-env resume ses_7226fbcfe65820f7 --revalidate",
+    "network": false,
+    "process": "new protected terminal subprocess using the authenticated Control/Environment transport",
+    "project_scope": "mncs-environment",
+    "request_id": "req_campaign_live_resume_revalidate_20261013",
+    "sandbox_backend": "bwrap",
+    "surface": "MNCS Control protected terminal execution"
+  },
+  "readback": {
+    "consumer_id": "local-agent",
+    "lifecycle": "active",
+    "matching_event": {
+      "request_id": "req_campaign_live_resume_revalidate_20261013",
+      "request_operation_digest": "3c0a0663bbaf8af4",
+      "type": "session.revalidated"
+    },
+    "operation": "mncs-env inspect",
+    "read_at": "2026-10-13T06:16:25Z",
+    "session_id": "ses_7226fbcfe65820f7",
+    "transport": "authenticated Control project execution"
+  },
+  "recorded_at": "2026-10-13T06:16:39Z",
+  "resume_result": {
+    "consumer_id": "local-agent",
+    "exit_code": 0,
+    "lifecycle": "active",
+    "new_session_created": false,
+    "revalidation": {
+      "bound": [],
+      "changed": [],
+      "reprobed": 9,
+      "reused": 14,
+      "scope_composition": {
+        "composed": [],
+        "removed": [],
+        "retained": [
+          "mncs-automation",
+          "mncs-system-monitor"
+        ],
+        "skipped": [
+          {
+            "reason": "no-live-exclusive-claim",
+            "repository": "mncs-control-mcp"
+          }
+        ],
+        "status": "unknown"
+      },
+      "unbound": []
+    },
+    "session_id": "ses_7226fbcfe65820f7"
+  },
+  "schema_version": "mncs.environment.session-resume-live-proof/1",
+  "scope_and_authority": {
+    "claim_transfer_performed": false,
+    "new_consumer_identity_created": false,
+    "same_campaign_session_reused": true,
+    "separate_compiler_and_forge_claims_modified": false
+  },
+  "source_revisions": {
+    "mncs-control-mcp": "0f39a7c39988edebcd44cad0b8b94b8f5377d059",
+    "mncs-environment": "ffbdf7ab9196fc0f313bf6c106da3058583277d8"
+  },
+  "unsupported_readback": {
+    "diagnostic": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+    "note": "Control does not expose the Environment events operation. The exact session.resumed event was not independently read back; the supported inspect path did verify the matching session.revalidated event.",
+    "operation": "mncs-env events",
+    "publication_completed": false,
+    "status": "unknown",
+    "transport": "mncs-control-environment-rpc"
+  }
+}
