@@ -1,0 +1,33 @@
+{
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "corrected_pointer": {
+    "commit": "ac4a14c044003198d0e955a8d10facc143886472",
+    "identity": "ev_campaign_charter_control_continuation_live_corrected_20261013",
+    "path": "evidence/campaign-charter-control-continuation-live-20261013.json",
+    "repository": "mncs-environment",
+    "sha256": "4564397e2fe68e020fe36aebb5a9fb4581aa58526ce720b89c2905cf5cb5529f"
+  },
+  "correction_of": {
+    "evidence_identity": "ev_campaign_charter_control_continuation_live_20261013",
+    "incorrect_commit_recorded_in_store": "ac4a14c2f5a1d5c7e755a6ebc5f8a2d6e885cf2d",
+    "path": "evidence/campaign-charter-control-continuation-live-20261013.json",
+    "repository": "mncs-environment",
+    "sha256": "4564397e2fe68e020fe36aebb5a9fb4581aa58526ce720b89c2905cf5cb5529f"
+  },
+  "disposition": {
+    "corrected_pointer_must_be_appended_separately": true,
+    "original_pointer_is_authoritative": false,
+    "original_store_pointer_removed": false,
+    "underlying_protected_continuation_observation_changed": false
+  },
+  "identity": "ev_campaign_charter_control_continuation_pointer_correction_20261013",
+  "recorded_at": "2026-10-13T06:11:00Z",
+  "schema_version": "mncs.environment.evidence-pointer-correction/1",
+  "verified_source": {
+    "commit": "ac4a14c044003198d0e955a8d10facc143886472",
+    "path": "evidence/campaign-charter-control-continuation-live-20261013.json",
+    "repository": "mncs-environment",
+    "sha256": "4564397e2fe68e020fe36aebb5a9fb4581aa58526ce720b89c2905cf5cb5529f",
+    "verification": "git rev-parse HEAD and origin/main matched this full commit; sha256sum matched the artifact digest"
+  }
+}
