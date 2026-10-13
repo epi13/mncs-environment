@@ -1,0 +1,77 @@
+{
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "continuation": {
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "evidence_count_before_resume": 231,
+    "latest_campaign_checkpoint_id": "chk_b15eeac7eff1245d",
+    "latest_campaign_sequence": 328,
+    "operation": "mncs-env continuation --task-identity <persistent-goal-threadId>",
+    "selected_definition_id": "env_f31ee034e8e1fdcb",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "selection_basis": "authenticated-task-selector",
+    "status": "ready",
+    "task_binding_created_during_test": false,
+    "task_selector_status": "resolved",
+    "unselected_sessions_count": 1
+  },
+  "identity": "ev_env_goal_thread_task_selector_resume_20261013",
+  "interpretation": {
+    "claim_changes": [],
+    "limitations": [
+      "This proves a fresh protected process and Control restart-safe selector path; it does not simulate a new independent user thread or a host crash during selector publication.",
+      "Unselected campaign contexts remain unchanged; task identity does not authorize their adoption."
+    ],
+    "proof": "A newly started protected driver obtained its task identity from the persistent goal API, resolved the existing task selector through Control, parsed the selected Environment session from the capsule, and resumed that same session. No campaign/session identifier was manually supplied to the driver, no new session was created, and the other same-campaign context remained unselected."
+  },
+  "owner": "mncs-environment",
+  "platform_identity": {
+    "field": "threadId",
+    "raw_identity_recorded": false,
+    "sha256": "219d272820d04bb127ef6ddf30734806fab48a05a3d9f392edd4d58e9bc5bdc8",
+    "source": "persistent active-goal API"
+  },
+  "protected_execution": {
+    "canonical_store_path_visible_to_agent": false,
+    "completed_at": "2026-10-13T16:45:36.432908Z",
+    "exit_code": 0,
+    "job_id": "term-50a2a0a82d059aae2b88165e",
+    "network": false,
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "started_at": "2026-10-13T16:44:57.371574Z",
+    "transport": "authenticated mncs-control-environment-rpc"
+  },
+  "recorded_at": "2026-10-13T16:46:03Z",
+  "resume": {
+    "lifecycle": "active",
+    "operation": "resume the selected session returned by the continuation capsule with --revalidate",
+    "resumed_session_id": "ses_7226fbcfe65820f7",
+    "revalidation": {
+      "bound": [],
+      "changed": [
+        "mncs-control-mcp:workspace.worktree.prepare"
+      ],
+      "reprobed": 10,
+      "reused": 19,
+      "scope_composition": {
+        "composed": [],
+        "removed": [],
+        "retained": [
+          "mncs-automation",
+          "mncs-control-mcp",
+          "mncs-system-monitor"
+        ],
+        "skipped": [],
+        "status": "ready"
+      },
+      "unbound": []
+    },
+    "selected_session_id_was_hardcoded": false
+  },
+  "schema_version": "mncs.environment.goal-thread-continuation-restart-proof/1",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "repository": "mncs-environment",
+    "revision": "29ea71d0ee62440e60eae0c718ec2f0343430086"
+  }
+}
