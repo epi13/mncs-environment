@@ -1,0 +1,79 @@
+{
+  "schema_version": "mncs.environment.canonical-store-post-checkpoint-verification/1",
+  "identity": "ev_env_canonical_store_post_checkpoint_312_20261013",
+  "date": "2026-10-13",
+  "owner": "mncs-environment",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source_identities": {
+    "environment_main": "36e68b86288ddbd8fe672daf3f4e5b97cb6a01f4",
+    "control_mcp_main": "687425e35ea076b4d007b1e262a470e75992df9e",
+    "store_main": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "execution_boundary": {
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "network": false,
+    "publication_transport": "authenticated mncs-control-environment-rpc",
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "agent_direct_store_write_access": false
+  },
+  "campaign_checkpoint": {
+    "checkpoint_id": "chk_440a07881c3e12f4",
+    "sequence": 312,
+    "fresh_process_readback_job_id": "term-819e1c9590aa2c1cf4e951a3",
+    "readback_exit_code": 0,
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "campaign_evidence_count": 210,
+    "environment_main_head": "36e68b86288ddbd8fe672daf3f4e5b97cb6a01f4"
+  },
+  "canonical_store_verification": {
+    "job_id": "term-819e1c9590aa2c1cf4e951a3",
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "read_only": true,
+    "exit_code": 0,
+    "result": {
+      "ok": true,
+      "generation": 48310,
+      "objects": 48312,
+      "relations": 0,
+      "provenance_records": 0,
+      "fanout": 31,
+      "recovery": "RECOVERED_OLD"
+    }
+  },
+  "continuation_contexts": {
+    "observation_job_id": "term-2f1fde1f6457548ed25802a1",
+    "status": "ready",
+    "context_conflict_status": "context-conflict",
+    "selection_basis": "authenticated-project-environment-definition",
+    "selected_session": {
+      "session_id": "ses_7226fbcfe65820f7",
+      "lifecycle": "active",
+      "definition_id": "env_f31ee034e8e1fdcb",
+      "workspace_root": "/home/epi13/Documents/Projects",
+      "claim_ids": ["claim:mncs-environment"],
+      "campaign_state_checkpoint_id": "chk_440a07881c3e12f4"
+    },
+    "unselected_same_campaign_session": {
+      "session_id": "ses_b4b2d283542220b0",
+      "lifecycle": "active",
+      "consumer_label": "local-agent",
+      "definition_id": "env_1ea3af15c7464177",
+      "workspace_root": "/home/epi13/Documents/Projects",
+      "project_reference_status": "linked",
+      "claim_ids": [],
+      "campaign_state_checkpoint_id": null,
+      "delivery_status": "pending",
+      "process_liveness": "unknown"
+    },
+    "ownership_action": "The exact project session was selected; the other context remains visible and unchanged. No adoption, transfer, or closure was attempted."
+  },
+  "limitations": [
+    "The unselected session is lifecycle-active but its process liveness and authenticated owner relationship were not established; no ownership transition is justified by this capsule alone.",
+    "Compiler and Forge claims remain with their recorded owners pending authenticated Environment handoffs.",
+    "This verification does not prove a Control service kill during an in-flight Store publication."
+  ],
+  "result": "PASS: a fresh protected process read back campaign checkpoint 312, and the canonical Store at the post-checkpoint generation passed full read-only integrity verification."
+}
