@@ -1,0 +1,62 @@
+{
+  "schema_version": "mncs.environment.control-rpc-no-grant-fail-closed/1",
+  "identity": "ev_env_control_rpc_no_grant_fail_closed_20261013",
+  "recorded_at": "2026-10-13T19:31:45Z",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "owner": "mncs-environment",
+  "source": {
+    "repository": "mncs-environment",
+    "revision": "cdd66ad230e3be4733699c906064f47bcf5d433d",
+    "files": [
+      {
+        "path": "tests/test_environment.py",
+        "sha256": "014139d05f28b47059c3174d8821452c49a103b32261bd6f659aafc257738d26"
+      },
+      {
+        "path": "mncs_env/rpc_client.py",
+        "sha256": "a113f4d6f5a719309ec2fbef7263547b35ce28f5f7a7cf68fc190a75397708e4"
+      }
+    ]
+  },
+  "behavior": {
+    "selected_transport": "control-rpc",
+    "grant": "absent",
+    "diagnostic": "persistence-service-unavailable",
+    "publication_completed": false,
+    "direct_store_fallback_called": false,
+    "rpc_exchange_called": false
+  },
+  "validation": {
+    "protected_test": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q tests/test_environment.py::StoreTransportDiagnosticsTests::test_control_rpc_without_grant_fails_closed_without_local_store",
+      "result": "PASS; 1 test",
+      "backend": "bwrap",
+      "project": "mncs-environment"
+    },
+    "claim_transfer_fault_tests": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q tests/test_store_claim_transfer.py",
+      "result": "PASS; 9 tests in 33.19s",
+      "backend": "bwrap",
+      "store_scope": "isolated temporary EmbeddedStore; canonical Environment Store was not opened"
+    },
+    "lint_regression_comparison": {
+      "command": "ruff check --stdin-filename tests/test_environment.py --output-format json -",
+      "result": "PASS; no findings introduced by this change; 21 pre-existing findings remain in the baseline test module"
+    },
+    "diff_check": "PASS"
+  },
+  "interpretation": {
+    "owner_boundary": "Environment selects the configured Control RPC transport and returns structured unavailable diagnostics; Control provides the authenticated publication path. This regression test ensures missing grant data cannot silently select local Store persistence.",
+    "claim_transfer": "Existing Store batch CAS transfer protocol covers interruption before, during, and after generation publication, retry reconciliation, one active owner, and competing recipient requests; the protected crash suite passed again."
+  },
+  "limitations": [
+    "The new no-grant case proves fail-closed behavior without a canonical mutation. It does not replace the separate protected canonical Store publication proof.",
+    "Compiler and Forge claims remain owned by ses_d2537acde8b8a875 and ses_95c3aa35b8544042; those repositories were not tested or modified."
+  ],
+  "delivery": {
+    "branch": "campaign/environment-rpc-no-grant-fail-closed-20261013",
+    "implementation_revision": "cdd66ad230e3be4733699c906064f47bcf5d433d",
+    "evidence_commit_merge_pending": true
+  }
+}
