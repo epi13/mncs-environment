@@ -1,0 +1,48 @@
+{
+  "schema_version": "mncs.environment.canonical-store-integrity-verification/1",
+  "identity": "ev_env_canonical_store_integrity_verify_20261013",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T20:56:06Z",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source_revisions": {
+    "mncs-environment": "d139d1a452d52f06dc9bbce6bd1901505bb4641f",
+    "mncs-control-mcp": "6ecfc25af7616e6a56ea6da8f1a4241c7e55c5c9",
+    "mncs-store": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055",
+    "mncs-language": "3cfbc094f1a1770fc2409b990f3f7d8912f49bc7"
+  },
+  "toolchain": {
+    "backend": "mncs-research-bytecode",
+    "path": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs",
+    "binary_sha256": "88676fb9d5e8c828e75774993402a179bc7ec353bca5f647b10857637f28d683",
+    "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf"
+  },
+  "execution": {
+    "backend": "bwrap",
+    "project": "mncs-environment",
+    "scope": "project",
+    "network": false,
+    "terminal_job_id": "term-05f91c70625e046967bc8eed",
+    "started_at": "2026-10-13T20:53:40.298276Z",
+    "completed_at": "2026-10-13T20:56:06.649802Z",
+    "command": "mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "continuation_selection": "A ready campaign continuation selected ses_7226fbcfe65820f7 earlier in the same protected terminal job.",
+    "transport": "authenticated Control Environment RPC to canonical Store; no direct Store path or file handle was given to the agent"
+  },
+  "verification": {
+    "ok": true,
+    "generation": 48962,
+    "objects": 48964,
+    "chunk_size": 65536,
+    "fanout": 31,
+    "provenance_records": 0,
+    "relations": 0,
+    "commit_feed": "4d430100000000000000bf420000bf4400000000000000002583eb87b0fdf18816efb24dbad5faf3cc60f2ca5bdcdb6d724d26bee0299e09",
+    "recovery": "RECOVERED_OLD"
+  },
+  "limitations": [
+    "This is a full protected read-only verification of canonical Store integrity; it does not re-exercise Store publication or crash recovery.",
+    "Compiler and Forge repositories were not opened or modified during this verification."
+  ],
+  "readiness": "PASS for canonical Store verification through the authorized protected Environment transport"
+}
