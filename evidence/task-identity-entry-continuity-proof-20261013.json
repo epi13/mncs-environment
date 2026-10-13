@@ -1,0 +1,103 @@
+{
+  "schema_version": "mncs.environment.task-identity-entry-continuity-proof/1",
+  "identity": "ev_environment_task_identity_entry_continuity_20261013",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13 03:21:43 UTC",
+  "campaign": {
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "local-agent",
+    "lifecycle": "active",
+    "campaign_state_checkpoint_id": "chk_0e35257587b43be4",
+    "evidence_count_before_this_report": 180
+  },
+  "source_identity": {
+    "repository": "mncs-environment",
+    "main_head_at_entry": "95aeb331b529023fae37d8464115e2736637f3b9",
+    "origin_main_head_at_entry": "95aeb331b529023fae37d8464115e2736637f3b9"
+  },
+  "protected_entry": {
+    "backend": "bwrap",
+    "project": "mncs-environment",
+    "control_job_id": "term-401b1a3368306cec0312e0a3",
+    "started_at": "2026-10-13T03:18:21.212759Z",
+    "completed_at": "2026-10-13T03:18:55.964069Z",
+    "exit_code": 0,
+    "timed_out": false,
+    "operation": "mncs-env enter --task-identity <authenticated stable task selector> --consumer local-agent --consumer-kind agent",
+    "campaign_id_supplied": false,
+    "session_id_supplied": false,
+    "new_session_requested": false,
+    "consumer_label_supplied": "local-agent",
+    "persistence": "store",
+    "returned_session_id": "ses_7226fbcfe65820f7",
+    "returned_consumer_id": "local-agent",
+    "returned_lifecycle": "active",
+    "readiness": {
+      "status": "degraded",
+      "available_count": 10,
+      "unavailable_count": 3,
+      "unknown_count": 6,
+      "blocking": [],
+      "required_unavailable": [],
+      "required_unknown": []
+    }
+  },
+  "fresh_protected_readback": {
+    "backend": "bwrap",
+    "observed_at": "2026-10-13T03:21:04.705825Z",
+    "operation": "mncs-env continuation --task-identity <same authenticated stable task selector>",
+    "selector_status": "resolved",
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "session_lifecycle": "active",
+    "session_consumer_id": "local-agent",
+    "capsule_checkpoint_id": "chk_0e35257587b43be4",
+    "ledger_checkpoint_id": "chk_0e35257587b43be4",
+    "evidence_count": 180,
+    "latest_evidence_identity": "ev_environment_canonical_store_integrity_after_continuity_append_20261013",
+    "capsule_and_ledger_match": true
+  },
+  "claims_discovered_by_same_authenticated_session": {
+    "environment": {
+      "claim_id": "claim:mncs-environment",
+      "version": 34,
+      "status": "held",
+      "owner_session_id": "ses_7226fbcfe65820f7",
+      "expires_at": "2026-10-13T19:38:39+00:00"
+    },
+    "compiler": {
+      "claim_id": "claim:mncs-compiler",
+      "identity": "clm_5871ad9917e5210d",
+      "version": 63,
+      "live": true,
+      "status": "held",
+      "exclusive": true,
+      "owner_session_id": "ses_d2537acde8b8a875",
+      "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+      "expires_at": "2027-08-03T10:31:10+00:00"
+    },
+    "forge": {
+      "claim_id": "claim:mncs-forge",
+      "identity": "clm_16b820b3293d873b",
+      "version": 28,
+      "live": true,
+      "status": "held",
+      "exclusive": true,
+      "owner_session_id": "ses_95c3aa35b8544042",
+      "consumer_id": "luna-compiler-self-consumption",
+      "expires_at": "2027-03-07T23:49:59+00:00"
+    }
+  },
+  "verdict": {
+    "status": "PASS",
+    "summary": "The authenticated task selector resolved the existing campaign, then Environment entry without a campaign ID or session ID returned the same active session and consumer. A fresh protected continuation read matched the capsule checkpoint to the durable campaign ledger and exposed current claims. No new session or competing campaign identity was created.",
+    "authentication_boundary": "The stable selector is bound through Control-authenticated principal, Environment definition, and workspace. The consumer label alone is not the authorization basis.",
+    "raw_task_selector_persisted": false,
+    "claim_transfer_or_recovery_performed": false
+  },
+  "limitations": [
+    "Environment readiness remains degraded, with three unavailable and six unknown optional operations in this entry snapshot.",
+    "Compiler and Forge remain exclusively claimed by their existing owners; no compiler or Forge source or worktree was changed."
+  ]
+}
