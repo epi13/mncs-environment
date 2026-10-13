@@ -1,0 +1,44 @@
+{
+  "schema_version": "mncs.environment.claim-transfer-atomicity-verification/1",
+  "identity": "ev_env_claim_transfer_atomicity_verification_20261013",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T20:42:21Z",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "environment_session": "ses_7226fbcfe65820f7",
+  "source": {
+    "repository": "mncs-environment",
+    "revision": "e1ba0560000a09d2db8fef81eda2ec79f3292077",
+    "implementation": "mncs_env/claims.py::transfer",
+    "test": "tests/test_store_claim_transfer.py"
+  },
+  "execution": {
+    "backend": "bwrap",
+    "project": "mncs-environment",
+    "scope": "project",
+    "network": false,
+    "command": "python3 -m pytest tests/test_store_claim_transfer.py -q",
+    "started_at": "2026-10-13T20:41:45.882892Z",
+    "completed_at": "2026-10-13T20:42:21.181455Z",
+    "exit_code": 0,
+    "tests_passed": 9,
+    "tests_failed": 0,
+    "duration_seconds": 34.86
+  },
+  "coverage": {
+    "store": "temporary test-owned EmbeddedStore; canonical Store was not opened or mutated",
+    "process_interruption_points": [
+      "before transfer batch",
+      "before generation publication",
+      "after generation publication",
+      "after generation-head publication"
+    ],
+    "recovery": "reopen Store and retry with the same request identity; exactly one active recipient owns the claim",
+    "concurrency": "competing transfers admit one recipient and reject the other",
+    "provenance": "source and recipient versions share one atomic generation and retain the stable transfer request identity"
+  },
+  "limitations": [
+    "This proves the Environment transfer implementation against an isolated EmbeddedStore, not a new canonical Store publication operation.",
+    "This grants no authority to inspect, test, transfer, merge, or retire the separately held Compiler and Forge claims."
+  ],
+  "readiness": "PASS for atomic claim transfer and interruption recovery under the protected Environment test runner"
+}
