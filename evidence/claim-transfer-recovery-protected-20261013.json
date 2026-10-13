@@ -1,0 +1,44 @@
+{
+  "schema_version": "mncs.environment.claim-transfer-store-cas-proof/1",
+  "identity": "ev_env_store_claim_transfer_recovery_protected_20261013",
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T13:50:27Z",
+  "source": {
+    "repository": "mncs-environment",
+    "commit": "7f26f480ead319019e49f767c18847c246989597"
+  },
+  "execution": {
+    "control_job_id": "term-3168a42a8ec3255642fbc0d8",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "project": "mncs-environment",
+    "network": false
+  },
+  "test_run": {
+    "command": "env -u MNCS_ENV_PERSISTENCE_TRANSPORT -u MNCS_ENV_RPC_SOCKET -u MNCS_ENV_RPC_GRANT_FILE PYTHONDONTWRITEBYTECODE=1 python3 -m pytest tests/test_store_claim_transfer.py tests/test_claim_recovery.py -q",
+    "completed_at": "2026-10-13T13:49:58Z",
+    "duration_seconds": 35.19,
+    "exit_code": 0,
+    "passed": 37,
+    "failed": 0,
+    "persistence_backend": "mncs-store in temporary test-owned directories"
+  },
+  "covered_cases": [
+    "tests/test_store_claim_transfer.py::test_transfer_process_crash_recovers_atomic_owner",
+    "tests/test_store_claim_transfer.py::test_concurrent_store_transfers_admit_one_recipient",
+    "tests/test_store_claim_transfer.py::test_session_transfer_retry_after_snapshot_failure_emits_one_transition",
+    "tests/test_claim_recovery.py::AcquireRecoveryTests::test_interrupted_recovery_before_commit_keeps_victim_and_retries",
+    "tests/test_claim_recovery.py::AcquireRecoveryTests::test_interrupted_recovery_after_commit_reads_back_same_claim",
+    "tests/test_claim_recovery.py::AcquireRecoveryTests::test_concurrent_recovery_has_exactly_one_winner",
+    "tests/test_claim_recovery.py::AcquireRecoveryTests::test_recovery_survives_store_restart"
+  ],
+  "verified_properties": {
+    "source_release_and_recipient_acquire_share_one_store_generation": true,
+    "interrupted_publication_reconciles_without_duplicate_live_owner": true,
+    "concurrent_competing_recipients_have_one_winner": true,
+    "recovery_retries_are_idempotent": true,
+    "canonical_store_used": false,
+    "canonical_claims_mutated": false
+  },
+  "readiness": "Store-backed claim transfer and recovery semantics pass under protected execution against isolated real Store instances. Canonical Store transport is separately verified in evidence/canonical-store-full-revalidation-20261013.json."
+}
