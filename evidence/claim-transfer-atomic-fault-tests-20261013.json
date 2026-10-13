@@ -1,0 +1,53 @@
+{
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "execution": {
+    "command": "python3 -m pytest -q tests/test_store_claim_transfer.py",
+    "completed_at": "2026-10-13T16:12:06.421482Z",
+    "exit_code": 0,
+    "job_id": "term-ff5864402bcba39c75b4cc27",
+    "network": false,
+    "project": "mncs-environment",
+    "result": "9 passed in 33.23s",
+    "sandbox_backend": "bwrap",
+    "started_at": "2026-10-13T16:11:32.773116Z"
+  },
+  "identity": "ev_env_claim_transfer_atomic_fault_tests_20261013",
+  "interpretation": {
+    "disposition": "Existing Environment transfer implementation and focused fault tests satisfy tested atomic publication and retry cases; no source change was necessary.",
+    "limits": [
+      "This is an isolated transfer-protocol proof and is not a canonical Store service crash test.",
+      "This does not authorize recovery or transfer of claims owned by ses_d2537acde8b8a875 or ses_95c3aa35b8544042."
+    ]
+  },
+  "owner": "mncs-environment",
+  "recorded_at": "2026-10-13T16:13:41Z",
+  "schema_version": "mncs.environment.claim-transfer-fault-injection/1",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "implementation_path": "mncs_env/claims.py",
+    "implementation_sha256": "941a5d963efb93c9c474185bb10746ad57d8e7eee2562703779327d65a81235e",
+    "repository": "mncs-environment",
+    "revision": "8e93d68ae0de8b261e3f54c0dd051b6dc8c4285b",
+    "test_path": "tests/test_store_claim_transfer.py",
+    "test_sha256": "b79f4fb1ce3262d05b95087e90fd4edd6502ad5cfd170cf958fe3a4cee3ac432"
+  },
+  "store_scope": {
+    "backend": "real EmbeddedStore implementation",
+    "canonical_environment_store_opened": false,
+    "canonical_store_publication_proven": false,
+    "storage": "temporary test-owned directories"
+  },
+  "verified": {
+    "competing_continuations": "Concurrent competing transfer requests admit one recipient and return one conflict.",
+    "interrupted_retry": "A retry with the same stable request identity reconciles to exactly one active owner and exactly two transfer records.",
+    "payload_binding": "Reusing a transfer request identity with a changed recipient payload is rejected.",
+    "process_interruption_points": [
+      "before_batch",
+      "before_generation_publication",
+      "after_generation_publication",
+      "after_head_publication"
+    ],
+    "session_snapshot_retry": "A transfer retry after session snapshot failure emits one transition.",
+    "transfer_publication": "One Store claim batch publishes release and recipient records under expected-generation CAS, preserving atomic generation semantics."
+  }
+}
