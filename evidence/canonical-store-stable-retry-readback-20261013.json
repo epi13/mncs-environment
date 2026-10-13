@@ -1,0 +1,83 @@
+{
+  "schema_version": "mncs.environment.canonical-store-stable-retry-readback/1",
+  "identity": "ev_env_canonical_store_stable_retry_readback_20261013",
+  "recorded_at_utc": "2026-10-13T22:10:10Z",
+  "owner": "mncs-environment",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source_revisions": {
+    "mncs-environment": "37b9f38045e3fca7b60c25080dbae9647c83ed84",
+    "mncs-control-mcp": "97aeda650b7a444dcf9c2eaea1ecb795889baa3d",
+    "mncs-store": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "control_source": {
+    "path": "src/mncs_control_mcp/environment_rpc.py",
+    "sha256": "164e44b15831435d0e25e77440949d619e08ef9f0a9d655957fdc42f12144261",
+    "owner_armed_termination_hook_commit": "1510ef5668ed2cd7c0b70fc42d4f39cb6a2bedfe",
+    "hook_commit_is_ancestor_of_validated_main": true,
+    "blame_confirms_hook_and_response_boundary_are_from_hook_commit": true
+  },
+  "persistence_boundary": {
+    "transport": "authenticated MNCS Control Environment RPC",
+    "protected_backend": "bwrap",
+    "scope": "mncs-environment project",
+    "network": false,
+    "agent_direct_canonical_store_path_or_descriptor": false,
+    "canonical_store_root": "/home/epi13/.local/share/mncs-environment/store",
+    "store_write_authority": "mncs-control-tunnel.service under its exact authorized ReadWritePaths entry",
+    "service_unit": "mncs-control-tunnel.service",
+    "final_service_state": "active/running",
+    "final_invocation_id": "ecb225bb7f83494c9bcd864cb123fd54",
+    "test_environment_marker_unset_after_cleanup": true
+  },
+  "publication_retry": {
+    "request_id": "req_env_store_process_kill_20261013_2152",
+    "operation": "Environment checkpoint",
+    "retry_used_same_request_id_and_payload": true,
+    "first_raw_rpc_sender_outcome": "ambiguous; the Control tool returned an error without structured job metadata and the sender did not read a response",
+    "current_attempt_process_termination_confirmed": false,
+    "termination_journal_record_for_this_request_found": false,
+    "tracked_terminal_job_for_this_request_found": false,
+    "reconciliation": {
+      "method": "same-ID mncs-env checkpoint retry through authenticated Environment RPC",
+      "exit_code": 0,
+      "returned_checkpoint_id": "chk_96a119e739059e93",
+      "returned_sequence": 352,
+      "all_four_remaining_items_matched_the_retried_payload": true
+    }
+  },
+  "fresh_protected_readback": {
+    "terminal_job_id": "term-501c63955216a9c30d00ebec",
+    "process": "new project-scoped Bwrap process",
+    "completed_at_utc": "2026-10-13T22:06:22Z",
+    "exit_code": 0,
+    "task_selector": "persistent campaign task identity resolved to the existing Environment session",
+    "session_id": "ses_7226fbcfe65820f7",
+    "latest_checkpoint_id": "chk_96a119e739059e93",
+    "latest_checkpoint_sequence": 352,
+    "checkpoint_identity_occurrences_in_snapshot": 1,
+    "matching_checkpoint_event_occurrences": 1,
+    "canonical_store_verify": {
+      "ok": true,
+      "generation": 49013,
+      "objects": 49015,
+      "fanout": 31,
+      "chunk_size": 65536,
+      "recovery": "RECOVERED_OLD"
+    }
+  },
+  "prior_independent_process_termination_proof": {
+    "repository": "mncs-control-mcp",
+    "path": "evidence/canonical-store-process-termination-recovery-20261011.json",
+    "identity": "ev_control_canonical_store_process_termination_recovery_20261011",
+    "sha256": "b62f3e126d5da189c44453c87991055260301ec6a0efb5e887e8c08ea4f847df",
+    "result": "PASS for owner-armed Control process termination after a committed checkpoint, automatic restart, fresh protected readback, and same-ID retry on 2026-10-11"
+  },
+  "limitations": [
+    "This 2026-10-13 attempt does not prove that the owner-armed termination hook fired; no matching journal record or tracked job was found.",
+    "The successful same-ID retry, single checkpoint occurrence, and Store integrity verification do prove reconciliation of the canonical publication state after an ambiguous first sender outcome.",
+    "The earlier Control-owned 2026-10-11 evidence remains the proven service-process termination case; neither result interrupts Store during its atomic generation write.",
+    "The unsupported Environment events read remains UNKNOWN and was not added to a Control allowlist."
+  ],
+  "readiness": "PASS for canonical Store stable-ID retry, fresh protected readback, and integrity verification; current service-termination injection remains unconfirmed"
+}
