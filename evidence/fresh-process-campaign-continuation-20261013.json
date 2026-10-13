@@ -1,0 +1,75 @@
+{
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "continuation": {
+    "campaign_checkpoint_id": "chk_cfb77c97624a0083",
+    "campaign_selector": "cmp_mncs_continuity_20261010",
+    "evidence_count": 227,
+    "selected_definition_id": "env_f31ee034e8e1fdcb",
+    "selected_session_id": "ses_7226fbcfe65820f7",
+    "selected_workspace_root": "/home/epi13/Documents/Projects",
+    "selection_basis": "authenticated-project-environment-definition",
+    "status": "ready",
+    "unselected_contexts": [
+      {
+        "adopted_or_mutated": false,
+        "definition_id": "env_1ea3af15c7464177",
+        "session_id": "ses_b4b2d283542220b0"
+      }
+    ],
+    "unselected_sessions_count": 1
+  },
+  "identity": "ev_env_fresh_process_campaign_continuation_20261013",
+  "interpretation": {
+    "claim_transfer_or_recovery_attempted": false,
+    "limits": [
+      "This tested continuation with the stable campaign ID supplied as intent; continuation without a selector remains ambiguous when multiple campaigns exist.",
+      "The unselected context was left untouched; this run did not prove that it belongs to this campaign's current owner."
+    ],
+    "ownership_changes": [],
+    "proof": "A fresh protected process obtained the authorized session from the campaign continuation capsule, resumed that same session, and completed revalidation without creating a competing session or selecting the other same-campaign context."
+  },
+  "owner": "mncs-environment",
+  "protected_execution": {
+    "canonical_store_path_visible_to_agent": false,
+    "job_id": "term-c34f93fc0c4cbce8b1559eb4",
+    "network": false,
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "transport": "authenticated mncs-control-environment-rpc"
+  },
+  "recorded_at": "2026-10-13T16:03:25Z",
+  "resume": {
+    "driver": "fresh protected Python process; selected_session_id was parsed from continuation output and then passed to resume",
+    "lifecycle": "active",
+    "resume_status": "ok",
+    "resumed_session_id": "ses_7226fbcfe65820f7",
+    "revalidation": {
+      "bound": [],
+      "changed": [
+        "mncs-control-mcp:workspace.worktree.prepare"
+      ],
+      "reprobed": 10,
+      "reused": 19,
+      "scope_composition": {
+        "composed": [],
+        "removed": [],
+        "retained": [
+          "mncs-automation",
+          "mncs-control-mcp",
+          "mncs-system-monitor"
+        ],
+        "skipped": [],
+        "status": "ready"
+      },
+      "unbound": []
+    }
+  },
+  "schema_version": "mncs.environment.campaign-continuation-restart-proof/1",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source": {
+    "basis": "clean pushed main before evidence branch",
+    "repository": "mncs-environment",
+    "revision": "77e42fd11f28fa79089ae98c1f4b7482cd9a0a8a"
+  }
+}
