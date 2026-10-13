@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 from types import SimpleNamespace
 import pytest
 from mncs_env import composition, doctor
@@ -113,6 +114,62 @@ def test_selected_role_without_checkout_provenance_is_unproven(tmp_path):
         'provider':'mncs-compiler', 'path':None,
         'reasons':['provider-checkout-unselected'], 'selected':None, 'observed':None,
     }]
+
+
+def _git_checkout(path, repository):
+    path.mkdir()
+    metadata=path/'.mncs'; metadata.mkdir()
+    (metadata/'project.json').write_text(
+        '{"repository":"'+repository+'","contracts":{}}', encoding='utf-8')
+    (path/'source.txt').write_text(repository, encoding='utf-8')
+    subprocess.run(['git','init','-q','-b','main',str(path)],check=True)
+    subprocess.run(['git','-C',str(path),'add','.'],check=True)
+    subprocess.run(['git','-C',str(path),'-c','user.name=Environment Test',
+                    '-c','user.email=environment-test@example.invalid',
+                    'commit','-qm','fixture'],check=True)
+    facts=composition.workspace_module.inspect_repo(path,_refresh=True)
+    identity=composition.workspace_module.repository_checkout_identity(
+        path.parent,repository,path)
+    return facts,identity
+
+
+def test_role_runtime_toolchain_checkout_identity_is_revalidated(tmp_path):
+    producer=tmp_path/'producer'
+    language=tmp_path/'mncs-language'
+    producer_facts,_=_git_checkout(producer,'producer')
+    language_facts,language_identity=_git_checkout(language,'mncs-language')
+    selected={'producer':{'path':str(producer),'head':producer_facts.head,
+                          'branch':producer_facts.branch,'clean':True}}
+    runtime={
+        'repository':'mncs-language','observed_path':'mncs-language',
+        'head':language_facts.head,'branch':language_facts.branch,'clean':True,
+        **language_identity,
+    }
+    selected_binding={
+        'capability':'producer:compile','binding_id':'producer-binding',
+        'provider':'producer','provenance':{
+            'checkout':{'path':str(producer),'head':producer_facts.head,
+                        'branch':producer_facts.branch,'clean':True},
+            'toolchain_checkouts':[runtime],
+        },
+    }
+    selectors={'compiler':{'capability':'producer:compile'}}
+    assert composition.selected_checkout_drift(
+        selectors,[selected_binding],selected,tmp_path)==[]
+    # Runtime dependency freshness is session-wide even when no execution role
+    # was selected for its provider.
+    assert composition.selected_checkout_drift(
+        {},[selected_binding],selected,tmp_path)==[]
+
+    (language/'source.txt').write_text('next revision',encoding='utf-8')
+    subprocess.run(['git','-C',str(language),'add','.'],check=True)
+    subprocess.run(['git','-C',str(language),'-c','user.name=Environment Test',
+                    '-c','user.email=environment-test@example.invalid',
+                    'commit','-qm','advance runtime dependency'],check=True)
+    drift=composition.selected_checkout_drift(
+        {},[selected_binding],selected,tmp_path)
+    runtime_drift=next(item for item in drift if item['provider']=='toolchain:mncs-language')
+    assert 'revision-changed' in runtime_drift['reasons']
 
 
 def test_selected_binary_replacement_invalidates_epoch_without_git(tmp_path):

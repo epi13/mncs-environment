@@ -1458,6 +1458,221 @@ class WorkspaceTests(unittest.TestCase):
 
 
 class CapabilityTests(unittest.TestCase):
+    @staticmethod
+    def _git_checkout(root: Path, repository: str, manifest: dict) -> Path:
+        root.mkdir(parents=True)
+        (root / ".mncs").mkdir()
+        (root / ".mncs" / "project.json").write_text(
+            json.dumps({"repository": repository, **manifest}), encoding="utf-8"
+        )
+        (root / "README.md").write_text(f"{repository}\n", encoding="utf-8")
+        subprocess.run(["git", "init", "-q", "-b", "main", str(root)], check=True)
+        subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+        subprocess.run([
+            "git", "-C", str(root), "-c", "user.name=Environment Test",
+            "-c", "user.email=environment-test@example.invalid", "commit", "-qm",
+            "fixture",
+        ], check=True)
+        return root
+
+    def test_declared_toolchain_references_are_limited_to_contract_invocations(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mncs-automation"
+            (root / ".mncs").mkdir(parents=True)
+            (root / ".mncs" / "project.json").write_text(json.dumps({
+                "repository": "mncs-automation",
+                "fingerprint_sources": [{
+                    "repository": "mncs-fingerprint-only", "path": "."
+                }],
+                "contracts": {
+                    "provides": [{
+                        "contract": "automation:run",
+                        "invocation": {"toolchain": {
+                            "repository": "mncs-language", "path": "target/release/mncs"
+                        }},
+                    }, {
+                        "contract": "automation:bad",
+                        "invocation": {"toolchain": {
+                            "repository": "mncs-escape", "path": "../../outside"
+                        }},
+                    }],
+                    "tests": [{
+                        "test": "automation:tests",
+                        "command": {"toolchains": {"MNCS": {
+                            "repository": "mncs-language", "path": "target/release/mncs"
+                        }}},
+                    }],
+                },
+            }), encoding="utf-8")
+            (root / "family-semantic-contracts-v1.json").write_text(json.dumps({
+                "repository_id": "mncs-automation",
+                "fingerprint_sources": [{
+                    "repository": "mncs-semantic-fingerprint-only", "path": "."
+                }],
+                "provides": [{
+                    "contract_identity": "automation.semantic-run/1",
+                    "invocation": {"toolchains": {"MNCS": {
+                        "repository": "mncs-language", "path": "target/release/mncs"
+                    }}},
+                }],
+            }), encoding="utf-8")
+            references = capabilities.declared_repository_toolchain_references(
+                {"mncs-automation": root}
+            )
+            self.assertEqual(set(references), {"mncs-language"})
+            self.assertEqual(len(references["mncs-language"]), 3)
+            self.assertEqual(
+                {item["operation"] for item in references["mncs-language"]},
+                {"provide:automation:run", "semantic:automation.semantic-run/1:toolchain:MNCS",
+                 "test:automation:tests:toolchain:MNCS"},
+            )
+
+    def test_declared_external_toolchain_is_readonly_and_does_not_add_provider_or_effect_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace_root = Path(directory)
+            language = self._git_checkout(
+                workspace_root / "mncs-language", "mncs-language", {"contracts": {}}
+            )
+            binary = language / "target" / "release" / "mncs"
+            binary.parent.mkdir(parents=True)
+            binary.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            binary.chmod(0o755)
+            # Include the toolchain artifact in the observed checkout revision.
+            subprocess.run(["git", "-C", str(language), "add", "."], check=True)
+            subprocess.run([
+                "git", "-C", str(language), "-c", "user.name=Environment Test",
+                "-c", "user.email=environment-test@example.invalid", "commit", "-qm",
+                "language artifact",
+            ], check=True)
+            provider = self._git_checkout(
+                workspace_root / "mncs-automation", "mncs-automation", {
+                    "contracts": {"provides": [{
+                        "contract": "automation:run",
+                        "version": "1",
+                        "effects": ["read"],
+                        "invocation": {
+                            "kind": "executable",
+                            "path": "run.sh",
+                            "toolchain": {
+                                "repository": "mncs-language",
+                                "path": "target/release/mncs",
+                            },
+                        },
+                    }]}
+                },
+            )
+            (provider / "run.sh").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            (provider / "run.sh").chmod(0o755)
+            subprocess.run(["git", "-C", str(provider), "add", "."], check=True)
+            subprocess.run([
+                "git", "-C", str(provider), "-c", "user.name=Environment Test",
+                "-c", "user.email=environment-test@example.invalid", "commit", "-qm",
+                "provider entrypoint",
+            ], check=True)
+
+            roots, facts, diagnostics = sessions._resolve_declared_runtime_toolchain_checkouts(
+                workspace_root,
+                {"mncs-automation": provider},
+                {"mncs-automation": {"path": str(provider)}},
+            )
+            self.assertEqual(diagnostics, {})
+            self.assertEqual(set(roots), {"mncs-language"})
+            self.assertTrue(facts["mncs-language"]["read_only"])
+            self.assertEqual(facts["mncs-language"]["head"],
+                             workspace.inspect_repo(language, _refresh=True).head)
+
+            bindings = capabilities.discover_capabilities(
+                workspace_root,
+                repository_roots={"mncs-automation": provider},
+                runtime_toolchain_roots=roots,
+                runtime_toolchain_facts=facts,
+            )
+            self.assertEqual({item["provider"] for item in bindings}, {"mncs-automation"})
+            binding = next(item for item in bindings
+                           if item["capability"].endswith(":automation:run"))
+            self.assertEqual(binding["toolchain_address"], str(binary))
+            self.assertEqual(
+                binding["provenance"]["toolchain_checkouts"][0]["checkout_identity"],
+                facts["mncs-language"]["checkout_identity"],
+            )
+            self.assertTrue(binding["provenance"]["toolchain_checkouts"][0]["read_only"])
+
+            session = object.__new__(sessions.Session)
+            session.snapshot = {
+                "workspace": {
+                    "root": str(workspace_root),
+                    "repositories": [{
+                        "name": "mncs-language", "manifest_repository": "mncs-language",
+                        "path": str(language), "branch": "main",
+                    }],
+                    "runtime_toolchain_checkouts": list(facts.values()),
+                },
+                "selected_checkouts": {"mncs-automation": {"path": str(provider)}},
+            }
+            self.assertEqual(session._effect_checkout("mncs-language", workspace_root),
+                             (None, None))
+
+            resolved_environment = sessions.resolve_environment(
+                definition={
+                    "name": "automation-runtime-dependency-test",
+                    "workspace_scope": {
+                        "kind": "workspace", "repositories": ["mncs-automation"]
+                    },
+                    "intent": {
+                        "goal": "bind a declared runtime toolchain read-only",
+                        "repositories": ["mncs-automation"],
+                    },
+                },
+                workspace_root=workspace_root,
+                state_dir=workspace_root / "environment-state",
+                consumer_id="capability-test",
+                backend="file",
+                verify_on_open=False,
+            )
+            self.assertEqual(
+                set(resolved_environment["selected_checkouts"]), {"mncs-automation"}
+            )
+            integrated = next(
+                item for item in resolved_environment["bindings"]
+                if item["capability"].endswith(":automation:run")
+            )
+            self.assertEqual(integrated["toolchain_address"], str(binary))
+            self.assertEqual(
+                resolved_environment["workspace"]["runtime_toolchain_checkouts"][0][
+                    "repository"
+                ],
+                "mncs-language",
+            )
+
+    def test_unclaimed_dirty_external_toolchain_is_not_resolved(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace_root = Path(directory)
+            language = self._git_checkout(
+                workspace_root / "mncs-language", "mncs-language", {"contracts": {}}
+            )
+            provider = self._git_checkout(
+                workspace_root / "mncs-automation", "mncs-automation", {
+                    "contracts": {"provides": [{
+                        "contract": "automation:run",
+                        "invocation": {"toolchain": {
+                            "repository": "mncs-language", "path": "."
+                        }},
+                    }]}
+                },
+            )
+            (language / "uncommitted.txt").write_text("dirty", encoding="utf-8")
+            roots, facts, diagnostics = sessions._resolve_declared_runtime_toolchain_checkouts(
+                workspace_root,
+                {"mncs-automation": provider},
+                {"mncs-automation": {"path": str(provider)}},
+            )
+            self.assertEqual(roots, {})
+            self.assertEqual(facts, {})
+            self.assertEqual(
+                diagnostics["mncs-language"]["code"],
+                "runtime-toolchain-checkout-dirty",
+            )
+
     def test_projection_capability_invocations_are_declared_and_session_bound(self) -> None:
         manifest = json.loads((ROOT / ".mncs" / "project.json").read_text())
         coherence = next(

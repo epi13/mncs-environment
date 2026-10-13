@@ -203,6 +203,109 @@ def _selected_repository_toolchain(
     return str(candidate) if candidate.exists() else None
 
 
+def declared_repository_toolchain_references(
+    repository_roots: dict[str, Path | str],
+) -> dict[str, list[dict[str, str]]]:
+    """Read exact repository dependencies from selected provider declarations.
+
+    These dependencies are execution inputs, not provider checkouts or write
+    scopes. Only toolchains in an authenticated selected provider's declared
+    ``contracts.provides`` or ``contracts.tests`` entries are considered.
+    Fingerprint sources and ambient workspace contents never select a root.
+    """
+    references: dict[str, list[dict[str, str]]] = {}
+
+    def add(selection: Any, *, provider: str, operation: str) -> None:
+        if not isinstance(selection, dict):
+            return
+        repository = selection.get("repository")
+        relative_raw = selection.get("path", ".")
+        if (not isinstance(repository, str)
+                or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", repository)
+                or repository in {".", ".."}
+                or not isinstance(relative_raw, str) or not relative_raw):
+            return
+        relative = Path(relative_raw)
+        if relative.is_absolute() or ".." in relative.parts:
+            return
+        row = {"provider": provider, "operation": operation,
+               "path": relative.as_posix()}
+        bucket = references.setdefault(repository, [])
+        if row not in bucket:
+            bucket.append(row)
+
+    def add_invocation(invocation: Any, *, provider: str, operation: str) -> None:
+        if not isinstance(invocation, dict):
+            return
+        add(invocation.get("toolchain"), provider=provider, operation=operation)
+        toolchains = invocation.get("toolchains", {})
+        if isinstance(toolchains, dict):
+            for variable, selection in sorted(toolchains.items()):
+                add(selection, provider=provider,
+                    operation=f"{operation}:toolchain:{variable}")
+
+    for provider, raw_root in sorted(repository_roots.items()):
+        root = Path(raw_root)
+        if root.is_symlink() or not root.is_dir():
+            continue
+        manifest_path = root / ".mncs" / "project.json"
+        try:
+            raw = manifest_path.read_bytes()
+            if len(raw) > 4 * 1024 * 1024:
+                continue
+            manifest = json.loads(raw)
+        except (OSError, ValueError):
+            continue
+        if (not isinstance(manifest, dict)
+                or manifest.get("repository") != provider):
+            continue
+        contracts = manifest.get("contracts", {})
+        if not isinstance(contracts, dict):
+            continue
+        provides = contracts.get("provides", [])
+        if isinstance(provides, list):
+            for entry in provides:
+                if isinstance(entry, dict):
+                    contract = entry.get("contract")
+                    if isinstance(contract, str) and contract:
+                        add_invocation(entry.get("invocation"), provider=provider,
+                                       operation=f"provide:{contract}")
+        tests = contracts.get("tests", [])
+        if isinstance(tests, list):
+            for entry in tests:
+                if not isinstance(entry, dict):
+                    continue
+                identity = entry.get("test")
+                command = entry.get("command")
+                if isinstance(identity, str) and identity and isinstance(command, dict):
+                    add_invocation(command, provider=provider,
+                                   operation=f"test:{identity}")
+        semantic_path = root / "family-semantic-contracts-v1.json"
+        try:
+            semantic_raw = semantic_path.read_bytes()
+            semantic = (
+                json.loads(semantic_raw)
+                if len(semantic_raw) <= 4 * 1024 * 1024 else None
+            )
+        except (OSError, ValueError):
+            semantic = None
+        if (isinstance(semantic, dict)
+                and semantic.get("repository_id", root.name) == provider):
+            semantic_provides = semantic.get("provides", [])
+            if isinstance(semantic_provides, list):
+                for entry in semantic_provides:
+                    if not isinstance(entry, dict):
+                        continue
+                    contract = entry.get("contract_identity")
+                    if isinstance(contract, str) and contract:
+                        add_invocation(
+                            entry.get("invocation"), provider=provider,
+                            operation=f"semantic:{contract}",
+                        )
+    return {repository: sorted(rows, key=lambda row: (row["provider"], row["operation"], row["path"]))
+            for repository, rows in sorted(references.items())}
+
+
 def descriptor_invocation(
     entry: dict[str, Any],
     repo: Path,
@@ -281,7 +384,7 @@ def descriptor_invocation(
             toolchain_address = str(candidate)
     if ((isinstance(toolchain, dict) or isinstance(toolchain, str) and toolchain)
             and toolchain_address is None):
-        return unusable("toolchain unresolvable in selected closure: %r"
+        return unusable("toolchain unresolvable in authorized checkout closure: %r"
                         % (toolchain,))
     fixed_env: dict[str, str] = {}
     declared_toolchains = spec.get("toolchains", {})
@@ -293,7 +396,7 @@ def descriptor_invocation(
             return unusable("invalid or protected invocation toolchain environment name")
         selected = _selected_repository_toolchain(selection, workspace, repository_roots)
         if selected is None:
-            return unusable("composition toolchain unresolvable in selected closure: %r" % (selection,))
+            return unusable("composition toolchain unresolvable in authorized checkout closure: %r" % (selection,))
         fixed_env[variable] = selected
     adapter_library_paths: list[str] = []
     raw_roots = spec.get("adapter_library_paths", [])
@@ -424,18 +527,36 @@ def discover_capabilities(
     *,
     repository_roots: dict[str, Path | str] | None = None,
     checkout_facts: dict[str, dict[str, Any]] | None = None,
+    runtime_toolchain_roots: dict[str, Path | str] | None = None,
+    runtime_toolchain_facts: dict[str, dict[str, Any]] | None = None,
     language_binary: Path | str | None = None,
 ) -> list[dict[str, Any]]:
     """Build bindings from repository declarations.
 
-    When ``repository_roots`` is supplied, it is the complete binding set:
-    no workspace-root checkout or PATH toolchain fallback is considered.
-    This lets a session bind declarations to its exact provider-selected
-    worktrees while retaining broad discovery for non-campaign callers.
+    When ``repository_roots`` is supplied, it is the complete provider set:
+    no workspace-root provider or PATH fallback is considered. Separately,
+    ``runtime_toolchain_roots`` may bind repository roots explicitly declared
+    as toolchains by those providers. They can resolve invocation inputs but
+    never add provider capabilities or write targets.
     """
     root = Path(workspace_root).resolve()
     if language_binary is not None:
         language_bin = str(Path(language_binary).resolve()) if Path(language_binary).is_file() else ""
+    elif repository_roots is not None:
+        language_root = (
+            repository_roots.get("mncs-language")
+            or (runtime_toolchain_roots or {}).get("mncs-language")
+        )
+        if language_root is None:
+            language_bin = ""
+        else:
+            candidates = (
+                Path(language_root) / "target" / "release" / "mncs",
+                Path(language_root) / "target" / "debug" / "mncs",
+            )
+            language_bin = next(
+                (str(path.resolve()) for path in candidates if path.is_file()), ""
+            )
     else:
         language_root = root if root.name == "mncs-language" else root / "mncs-language"
         release_bin = language_root / "target" / "release" / "mncs"
@@ -468,10 +589,31 @@ def discover_capabilities(
             if not path.is_dir():
                 raise CapabilityError(f"selected checkout for {repository} is unavailable")
             repos.append(path)
+    invocation_roots: dict[str, Path | str] | None = None
+    if repository_roots is not None:
+        invocation_roots = dict(runtime_toolchain_roots or {})
+        invocation_roots.update(repository_roots)
+        for repository, raw_path in (runtime_toolchain_roots or {}).items():
+            candidate = Path(raw_path)
+            if candidate.is_symlink():
+                raise CapabilityError(
+                    f"runtime toolchain checkout for {repository} is a symbolic link"
+                )
+            resolved = candidate.resolve()
+            try:
+                resolved.relative_to(root)
+            except ValueError as error:
+                raise CapabilityError(
+                    f"runtime toolchain checkout for {repository} escapes workspace root"
+                ) from error
+            if not resolved.is_dir():
+                raise CapabilityError(
+                    f"runtime toolchain checkout for {repository} is unavailable"
+                )
     for repo in repos:
         discovered = [
-            *_from_semantic_contracts(repo, root, language_bin, repository_roots),
-            *_from_manifest(repo, root, language_bin, repository_roots),
+            *_from_semantic_contracts(repo, root, language_bin, invocation_roots),
+            *_from_manifest(repo, root, language_bin, invocation_roots),
             *_from_verification_inventory(repo),
         ]
         repository = next(
@@ -486,6 +628,45 @@ def discover_capabilities(
                     key: facts.get(key)
                     for key in ("path", "branch", "head", "clean", "source_ref", "authoritative_head")
                 }
+        runtime_facts = runtime_toolchain_facts or {}
+        for binding in discovered:
+            addresses = [binding.get("toolchain_address")]
+            provider_address = binding.get("address")
+            if isinstance(provider_address, str) and provider_address.startswith("python:"):
+                provider_address = provider_address[len("python:"):]
+            addresses.append(provider_address)
+            fixed_env = binding.get("fixed_env")
+            if isinstance(fixed_env, dict):
+                addresses.extend(fixed_env.values())
+            selected_dependencies = []
+            for dependency, dependency_facts in sorted(runtime_facts.items()):
+                dependency_root = dependency_facts.get("path")
+                if not isinstance(dependency_root, str):
+                    continue
+                resolved_root = Path(dependency_root).resolve()
+                refers_to_dependency = False
+                for address in addresses:
+                    if not isinstance(address, str):
+                        continue
+                    try:
+                        Path(address).resolve().relative_to(resolved_root)
+                    except (OSError, ValueError):
+                        continue
+                    refers_to_dependency = True
+                    break
+                if not refers_to_dependency:
+                    continue
+                selected_dependencies.append({
+                    key: dependency_facts.get(key)
+                    for key in ("repository", "observed_path", "branch", "head",
+                                "clean", "checkout_identity",
+                                "git_common_directory_identity", "source_ref",
+                                "read_only", "declared_by")
+                })
+            if selected_dependencies:
+                binding.setdefault("provenance", {})[
+                    "toolchain_checkouts"
+                ] = selected_dependencies
         bindings.extend(discovered)
     bindings.sort(key=lambda item: (item["provider"], item["capability"]))
     return bindings

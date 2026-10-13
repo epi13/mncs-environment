@@ -817,37 +817,83 @@ def _repository_checkout_identity(
     checkout: str | Path,
 ) -> dict[str, str]:
     """Derive the stable checkout identity used by repository scope grants."""
+    return workspace_module.repository_checkout_identity(
+        workspace_root, repository, checkout
+    )
+
+
+def _resolve_declared_runtime_toolchain_checkouts(
+    workspace_root: str | Path,
+    provider_roots: dict[str, Path],
+    provider_facts: dict[str, dict[str, Any]],
+) -> tuple[dict[str, Path], dict[str, dict[str, Any]], dict[str, dict[str, str]]]:
+    """Resolve exact manifest-declared toolchains without granting write scope.
+
+    External dependencies are limited to their direct workspace checkout,
+    which must have a matching repository identity and a clean Git tree.
+    Already-selected checkouts keep their existing claim semantics. Runtime
+    dependency facts are recorded in capability provenance, never in
+    ``selected_checkouts`` where they could be mistaken for an effect target.
+    """
     root = Path(workspace_root).resolve()
-    resolved = Path(checkout).resolve(strict=True)
-    observed_path = resolved.relative_to(root).as_posix()
-    common = workspace_module._git(
-        resolved, "rev-parse", "--path-format=absolute", "--git-common-dir"
+    references = capabilities_module.declared_repository_toolchain_references(
+        provider_roots
     )
-    remote = workspace_module._git(
-        resolved, "config", "--get", "remote.origin.url"
-    )
-    common_material: dict[str, Any] = {"repository": repository}
-    if common is not None and common.returncode == 0:
-        common_path = Path(common.stdout.strip()).resolve()
+    roots: dict[str, Path] = {}
+    facts: dict[str, dict[str, Any]] = {}
+    diagnostics: dict[str, dict[str, str]] = {}
+    for repository, declared_by in sorted(references.items()):
+        selected_root = provider_roots.get(repository)
+        read_only = selected_root is None
+        candidate = Path(selected_root) if selected_root is not None else root / repository
         try:
-            common_relative = common_path.relative_to(root).as_posix()
-        except ValueError:
-            common_relative = None
-        if common_relative is not None:
-            common_material["common_directory"] = common_relative
-    if remote is not None and remote.returncode == 0 and remote.stdout.strip():
-        common_material["remote_identity"] = digest_hex(remote.stdout.strip())
-    common_identity = "git-common:" + digest_hex(common_material)
-    checkout_identity = "checkout:" + digest_hex({
-        "repository": repository,
-        "path": observed_path,
-        "git_common_directory_identity": common_identity,
-    })
-    return {
-        "checkout_identity": checkout_identity,
-        "git_common_directory_identity": common_identity,
-        "observed_path": observed_path,
-    }
+            if candidate.is_symlink():
+                raise ValueError("toolchain checkout is a symbolic link")
+            resolved = candidate.resolve(strict=True)
+            resolved.relative_to(root)
+            if not resolved.is_dir():
+                raise ValueError("toolchain checkout is not a directory")
+        except (OSError, ValueError) as error:
+            diagnostics[repository] = {
+                "code": "runtime-toolchain-checkout-unavailable",
+                "reason": str(error)[:240],
+            }
+            continue
+
+        observed = workspace_module.inspect_repo(resolved, _refresh=True)
+        if (observed is None or observed.git_error or not observed.head
+                or observed.manifest_repository != repository):
+            diagnostics[repository] = {
+                "code": "runtime-toolchain-identity-unavailable",
+                "reason": "checkout Git head or manifest repository identity is unavailable",
+            }
+            continue
+        if read_only and observed.dirty:
+            diagnostics[repository] = {
+                "code": "runtime-toolchain-checkout-dirty",
+                "reason": "unclaimed runtime toolchain checkout is not clean",
+            }
+            continue
+
+        identity = _repository_checkout_identity(root, repository, resolved)
+        source_ref = (
+            "selected-checkout" if not read_only
+            else "provider-declared-read-only-toolchain"
+        )
+        roots[repository] = resolved
+        facts[repository] = {
+            "repository": repository,
+            "path": str(resolved),
+            "branch": observed.branch,
+            "head": observed.head,
+            "clean": not bool(observed.dirty),
+            "source_ref": source_ref,
+            "authoritative_head": observed.head,
+            "read_only": read_only,
+            "declared_by": declared_by,
+            **identity,
+        }
+    return roots, facts, diagnostics
 
 
 def _provider_managed_checkouts(
@@ -1108,6 +1154,9 @@ def resolve_environment(
             selected_facts[name] = {"repository": name, "path": str(path), "head": record.get("head"),
                                     "branch": record.get("branch"), "clean": not record.get("dirty"),
                                     "source_ref": "explicit-workspace-selection", "authoritative_head": record.get("head")}
+    runtime_toolchain_roots: dict[str, Path] = {}
+    runtime_toolchain_facts: dict[str, dict[str, Any]] = {}
+    runtime_toolchain_diagnostics: dict[str, dict[str, str]] = {}
     toolchain = None
     if selected_roots:
         # Reconcile the workspace view after provider provisioning so the
@@ -1128,8 +1177,17 @@ def resolve_environment(
                 },
             )
         workspace_view["selected_checkouts"] = selected_facts
+        (runtime_toolchain_roots, runtime_toolchain_facts,
+         runtime_toolchain_diagnostics) = _resolve_declared_runtime_toolchain_checkouts(
+            resolved_root, selected_roots, selected_facts
+        )
+        workspace_view["runtime_toolchain_checkouts"] = [
+            runtime_toolchain_facts[name]
+            for name in sorted(runtime_toolchain_facts)
+        ]
+        workspace_view["runtime_toolchain_diagnostics"] = runtime_toolchain_diagnostics
         language_root = selected_roots.get("mncs-language")
-        language_binary = None
+        language_binary: Path | str | None = None
         if language_root is not None:
             candidates = (
                 language_root / "target" / "release" / "mncs",
@@ -1148,6 +1206,8 @@ def resolve_environment(
             resolved_root,
             repository_roots=selected_roots,
             checkout_facts=selected_facts,
+            runtime_toolchain_roots=runtime_toolchain_roots,
+            runtime_toolchain_facts=runtime_toolchain_facts,
             language_binary=language_binary,
         )
     else:
@@ -1256,6 +1316,18 @@ def resolve_environment(
                 else ((item["name"], item) for item in workspace_view.get("repositories", []))
             )
         },
+        "runtime_toolchain_checkouts": [
+            {
+                key: facts.get(key)
+                for key in (
+                    "repository", "observed_path", "branch", "head", "clean",
+                    "checkout_identity", "git_common_directory_identity",
+                    "source_ref", "read_only", "declared_by",
+                )
+            }
+            for _, facts in sorted(runtime_toolchain_facts.items())
+        ],
+        "runtime_toolchain_diagnostics": runtime_toolchain_diagnostics,
         "binding_ids": sorted(binding["binding_id"] for binding in bindings),
         "intent": intent["identity"],
         "claim_holders": claim_holders,
@@ -2857,6 +2929,16 @@ class Session:
                 return expected.resolve(), selected.get("branch")
             except OSError:
                 return None, None
+        read_only_dependencies = (
+            self.snapshot.get("workspace", {}).get("runtime_toolchain_checkouts", [])
+        )
+        if any(
+            isinstance(item, dict)
+            and item.get("repository") == repository
+            and item.get("read_only") is True
+            for item in read_only_dependencies
+        ):
+            return None, None
         for repo in self.snapshot.get("workspace", {}).get("repositories", []):
             if not isinstance(repo, dict):
                 continue
@@ -3645,7 +3727,18 @@ class Session:
                     continue
                 roots[str(repository)] = path
                 facts[str(repository)] = dict(record, path=str(path))
-            language_binary: Path | str = "/nonexistent/mncs-language/mncs"
+            (runtime_toolchain_roots, runtime_toolchain_facts,
+             runtime_toolchain_diagnostics) = _resolve_declared_runtime_toolchain_checkouts(
+                workspace_root, roots, facts
+            )
+            workspace_snapshot = dict(self.snapshot.get("workspace", {}))
+            workspace_snapshot["runtime_toolchain_checkouts"] = [
+                runtime_toolchain_facts[name]
+                for name in sorted(runtime_toolchain_facts)
+            ]
+            workspace_snapshot["runtime_toolchain_diagnostics"] = runtime_toolchain_diagnostics
+            self.snapshot["workspace"] = workspace_snapshot
+            language_binary: Path | str | None = None
             if "mncs-language" in roots:
                 candidates = (
                     roots["mncs-language"] / "target" / "release" / "mncs",
@@ -3658,6 +3751,8 @@ class Session:
                 workspace_root,
                 repository_roots=roots,
                 checkout_facts=facts,
+                runtime_toolchain_roots=runtime_toolchain_roots,
+                runtime_toolchain_facts=runtime_toolchain_facts,
                 language_binary=language_binary,
             )
         elif workspace_root:

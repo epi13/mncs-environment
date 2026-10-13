@@ -35,6 +35,16 @@ PROOF_CONSUMER_A = "proof-agent-a"
 PROOF_CONSUMER_B = "proof-agent-b"
 
 
+def isolated_store_environment() -> dict[str, str]:
+    """Keep this TemporaryDirectory-owned proof Store out of canonical RPC."""
+    environment = os.environ.copy()
+    # Control RPC fixes its persistence root to canonical Environment state.
+    # This proof deliberately owns a different, temporary Store for its
+    # fresh-process assertions; it does not read or write canonical sessions.
+    environment["MNCS_ENV_PERSISTENCE_TRANSPORT"] = "isolated-test-store"
+    return environment
+
+
 def cli(state_dir: Path, *args: str) -> dict:
     completed = subprocess.run(
         [sys.executable, "-m", "mncs_env.cli", "--state-dir", str(state_dir), *args],
@@ -42,6 +52,7 @@ def cli(state_dir: Path, *args: str) -> dict:
         capture_output=True,
         text=True,
         check=False,
+        env=isolated_store_environment(),
     )
     if completed.returncode != 0:
         raise AssertionError(f"cli {' '.join(args)} failed: {completed.stderr[-2000:]}")
@@ -102,6 +113,7 @@ def main() -> int:
             [sys.executable, "-m", "mncs_env.cli", "--state-dir", str(state),
              "authority", session_id, "--action", "write", "--target", "mncs-language"],
             cwd=str(REPO), capture_output=True, text=True, check=False,
+            env=isolated_store_environment(),
         )
         evaluation = json.loads(denied.stdout)["evaluation"]
         assert evaluation["verdict"] == "deny", evaluation

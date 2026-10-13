@@ -247,6 +247,112 @@ def selected_checkout_drift(selectors, bindings, selected_checkouts,
                               "clean": observed_clean}
                              if facts is not None else None),
             })
+
+    # Runtime checkouts are identity-bound inputs to a selected provider's
+    # declared invocation. They remain outside selected_checkouts and never
+    # become effect targets, but changing one must stale the role binding.
+    runtime_dependencies: dict[tuple[str, str, str], dict] = {}
+    for binding in bindings:
+        if not isinstance(binding, dict):
+            continue
+        provenance = binding.get("provenance") or {}
+        dependencies = provenance.get("toolchain_checkouts", [])
+        if not isinstance(dependencies, list):
+            continue
+        for dependency in dependencies:
+            if not isinstance(dependency, dict):
+                continue
+            repository = dependency.get("repository")
+            observed_path = dependency.get("observed_path")
+            if not isinstance(repository, str) or not isinstance(observed_path, str):
+                continue
+            checkout_identity = dependency.get("checkout_identity")
+            runtime_dependencies[(repository, observed_path,
+                                  str(checkout_identity or ""))] = dependency
+
+    for (repository, observed_path, _), dependency in sorted(runtime_dependencies.items()):
+        relative = Path(observed_path)
+        reasons = []
+        if relative.is_absolute() or ".." in relative.parts:
+            drift.append({
+                "provider": f"toolchain:{repository}", "path": None,
+                "reasons": ["runtime-toolchain-path-invalid"],
+                "selected": {"head": dependency.get("head"),
+                             "checkout_identity": dependency.get("checkout_identity")},
+                "observed": None,
+            })
+            continue
+        raw_path = root / relative
+        try:
+            if raw_path.is_symlink():
+                raise OSError("runtime toolchain checkout became a symbolic link")
+            path = raw_path.resolve(strict=True)
+            path.relative_to(root.resolve())
+        except (OSError, ValueError):
+            drift.append({
+                "provider": f"toolchain:{repository}", "path": str(raw_path),
+                "reasons": ["checkout-unreadable"],
+                "selected": {"head": dependency.get("head"),
+                             "checkout_identity": dependency.get("checkout_identity")},
+                "observed": None,
+            })
+            continue
+        repo_state = workspace_module.inspect_repo(path, _refresh=True)
+        identity = None
+        observed = None
+        if repo_state is None or repo_state.git_error:
+            reasons.append("checkout-unreadable")
+        else:
+            if repo_state.manifest_repository != repository:
+                reasons.append("runtime-toolchain-identity-changed")
+            expected_head = dependency.get("head")
+            expected_branch = dependency.get("branch")
+            expected_clean = dependency.get("clean")
+            if not isinstance(expected_head, str) or not expected_head:
+                reasons.append("selected-revision-unrecorded")
+            elif repo_state.head != expected_head:
+                reasons.append("revision-changed")
+            if repo_state.branch != expected_branch:
+                reasons.append("branch-changed")
+            observed_clean = not bool(repo_state.dirty)
+            if type(expected_clean) is bool and observed_clean != expected_clean:
+                reasons.append("working-tree-cleanliness-changed")
+            observed = {
+                "head": repo_state.head,
+                "branch": repo_state.branch,
+                "clean": observed_clean,
+            }
+            try:
+                identity = workspace_module.repository_checkout_identity(
+                    root, repository, path
+                )
+            except (OSError, ValueError):
+                identity = None
+            if identity is None:
+                reasons.append("runtime-toolchain-identity-unavailable")
+            else:
+                if (dependency.get("checkout_identity")
+                        != identity.get("checkout_identity")):
+                    reasons.append("checkout-identity-changed")
+                if (dependency.get("git_common_directory_identity")
+                        != identity.get("git_common_directory_identity")):
+                    reasons.append("git-common-directory-identity-changed")
+        if reasons:
+            drift.append({
+                "provider": f"toolchain:{repository}",
+                "path": str(path),
+                "reasons": reasons,
+                "selected": {
+                    "head": dependency.get("head"),
+                    "branch": dependency.get("branch"),
+                    "clean": dependency.get("clean"),
+                    "checkout_identity": dependency.get("checkout_identity"),
+                },
+                "observed": ({
+                    **observed,
+                    "checkout_identity": identity.get("checkout_identity") if identity else None,
+                } if observed is not None else None),
+            })
     return drift
 
 

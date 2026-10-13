@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .identity import digest_hex
+
 GIT_TIMEOUT_SECONDS = 3
 MAX_PORCELAIN_LINES = 200
 MAX_REPOS = 500
@@ -230,6 +232,48 @@ def inspect_repo(path: Path, *, deadline: float | None = None,
     if git_error is None:
         _inspect_cache[key] = state
     return state
+
+
+def repository_checkout_identity(
+    workspace_root: str | Path,
+    repository: str,
+    checkout: str | Path,
+) -> dict[str, str]:
+    """Return stable identity facts for one checkout within a workspace.
+
+    The relative checkout and Git common-directory identities distinguish
+    linked worktrees while the remote digest helps retain identity when the
+    workspace is observed through a different mount namespace.
+    """
+    root = Path(workspace_root).resolve()
+    resolved = Path(checkout).resolve(strict=True)
+    observed_path = resolved.relative_to(root).as_posix()
+    common = _git(
+        resolved, "rev-parse", "--path-format=absolute", "--git-common-dir"
+    )
+    remote = _git(resolved, "config", "--get", "remote.origin.url")
+    common_material: dict[str, Any] = {"repository": repository}
+    if common is not None and common.returncode == 0:
+        common_path = Path(common.stdout.strip()).resolve()
+        try:
+            common_relative = common_path.relative_to(root).as_posix()
+        except ValueError:
+            common_relative = None
+        if common_relative is not None:
+            common_material["common_directory"] = common_relative
+    if remote is not None and remote.returncode == 0 and remote.stdout.strip():
+        common_material["remote_identity"] = digest_hex(remote.stdout.strip())
+    common_identity = "git-common:" + digest_hex(common_material)
+    checkout_identity = "checkout:" + digest_hex({
+        "repository": repository,
+        "path": observed_path,
+        "git_common_directory_identity": common_identity,
+    })
+    return {
+        "checkout_identity": checkout_identity,
+        "git_common_directory_identity": common_identity,
+        "observed_path": observed_path,
+    }
 
 
 MANAGED_WORKTREES_DIR = ".worktrees"

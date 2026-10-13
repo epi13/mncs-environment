@@ -1,0 +1,179 @@
+{
+  "schema_version": "mncs.environment.declared-readonly-runtime-toolchain/1",
+  "identity": "ev_environment_declared_readonly_runtime_toolchain_20261013",
+  "recorded_at": "2026-10-13T05:08:00Z",
+  "campaign_identity": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "owner": "mncs-environment",
+  "source": {
+    "branch": "campaign/declared-readonly-toolchain-20261013",
+    "base_revision": "ee3d677cc3d68faed3458b199ef642ecdd80b1b8",
+    "files": [
+      {
+        "path": "mncs_env/capabilities.py",
+        "sha256": "30da792c5a06bf6b5826d295f8d83909ca4580d06c209084506f2c1c5b072a8e"
+      },
+      {
+        "path": "mncs_env/sessions.py",
+        "sha256": "49982ef19c2591fd059dd50a8d73abcb42a30c8e4413ed76b9ab1e98d4fbf473"
+      },
+      {
+        "path": "mncs_env/composition.py",
+        "sha256": "fae08749c87fd5ff9345eb48695d53dd45c34f7b5b72d77084fd6f6a4623bb23"
+      },
+      {
+        "path": "mncs_env/workspace.py",
+        "sha256": "1e05c39f01af011ecfa4bd383b513f0fd81310e3706e8598d10e8e90751e35ff"
+      },
+      {
+        "path": "scripts/vertical_proof.py",
+        "sha256": "432d3db1e25654058a918c7a1f6ba712691319c8d777a3ebbf65600c7508fd9a"
+      },
+      {
+        "path": "tests/test_environment.py",
+        "sha256": "ed83322b12c1e676a43e1d0ff1c55a1600129a117bfa230e2164292afc4e5035"
+      },
+      {
+        "path": "tests/test_composition.py",
+        "sha256": "9ba3325b8a5a8e455581358737982dec85325307d313d848290a7fab02b74984"
+      },
+      {
+        "path": "docs/ARCHITECTURE.md",
+        "sha256": "3422d681edce1845de83a30cbb65f1b7af2f54e0f38b737a26cccc424bb182c2"
+      }
+    ]
+  },
+  "behavior": {
+    "resolution_basis": "Exact repository toolchains declared in selected providers' .mncs/project.json contracts and family-semantic-contracts-v1.json invocations are resolved as runtime dependencies.",
+    "unselected_checkout_rule": "An external dependency is limited to its direct workspace checkout, must match the manifest repository identity, and must be clean.",
+    "runtime_dependency": {
+      "repository": "mncs-language",
+      "observed_path": "mncs-language",
+      "branch": "main",
+      "head": "7e8f56d3c84b6b1260a99ab403b2a51168d13871",
+      "checkout_identity": "checkout:5963b0a68e915817",
+      "git_common_directory_identity": "git-common:2df63788adee8239",
+      "read_only": true,
+      "declared_by": [
+        "mncs-automation:automation-adoption",
+        "mncs-automation:automation-reconciliation",
+        "mncs-automation:automation-revisit"
+      ]
+    },
+    "write_scope": {
+      "mncs-language_added_to_selected_checkouts": false,
+      "write_claim_added": false,
+      "read_only_runtime_dependency_rejected_as_effect_target": true,
+      "capability_provenance_contains_dependency_identity": true,
+      "health_rechecks_head_branch_cleanliness_and_checkout_identity": true
+    }
+  },
+  "canonical_session_revalidation": {
+    "transport": "authenticated mncs-control-environment-rpc",
+    "sandbox_backend": "bwrap",
+    "project_scope": "mncs-environment",
+    "network": false,
+    "canonical_store_direct_write_access": false,
+    "command": "./scripts/mncs-env resume ses_7226fbcfe65820f7 --revalidate",
+    "result": "PASS; exit 0; revalidation and a separate fresh-process capability readback used the canonical session",
+    "revalidation": {
+      "reused": 23,
+      "reprobed": 0,
+      "changed": [],
+      "selected_checkouts": [
+        "mncs-automation",
+        "mncs-environment",
+        "mncs-system-monitor"
+      ],
+      "mncs-language_selected_for_write": false
+    },
+    "capabilities_now_addressed": [
+      {
+        "identity": "mncs-automation:automation-adoption",
+        "address": "python:/home/epi13/Documents/Projects/mncs-automation/tools/reconcile.py",
+        "toolchain_address": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs",
+        "availability": "available"
+      },
+      {
+        "identity": "mncs-automation:automation-reconciliation",
+        "address": "python:/home/epi13/Documents/Projects/mncs-automation/tools/reconcile.py",
+        "toolchain_address": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs",
+        "availability": "available"
+      },
+      {
+        "identity": "mncs-automation:automation-revisit",
+        "address": "python:/home/epi13/Documents/Projects/mncs-automation/tools/reconcile.py",
+        "toolchain_address": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs",
+        "availability": "available"
+      }
+    ],
+    "live_health_readback": {
+      "readiness": "degraded",
+      "selected_checkout_drift": [],
+      "runtime_toolchain_drift": []
+    }
+  },
+  "protected_validation": {
+    "runner": "mncs_control_terminal_exec",
+    "sandbox_backend": "bwrap",
+    "project_scope": "mncs-environment",
+    "network": false,
+    "focused_tests": {
+      "command": "python3 -m pytest -q tests/test_environment.py::CapabilityTests::test_declared_toolchain_references_are_limited_to_contract_invocations tests/test_environment.py::CapabilityTests::test_declared_external_toolchain_is_readonly_and_does_not_add_provider_or_effect_scope tests/test_environment.py::CapabilityTests::test_unclaimed_dirty_external_toolchain_is_not_resolved tests/test_environment.py::CapabilityTests::test_manifest_test_toolchain_binds_only_the_selected_repository_checkout tests/test_environment.py::CapabilityTests::test_toolchain_descriptor_binds_the_selected_repository_checkout tests/test_environment.py::CapabilityTests::test_declared_toolchain_never_falls_back_to_ambient_path tests/test_composition.py",
+      "result": "PASS; 16 passed in 0.37 seconds"
+    },
+    "vertical_proof": {
+      "command": "python3 scripts/vertical_proof.py",
+      "result": "PASS",
+      "temporary_session": "ses_1e2140b024578ddf",
+      "checkpoint": "chk_188d43725a736fb0",
+      "handoff": "hff_e54d940c828a90e1",
+      "fresh_process_resume": true,
+      "handoff_accepted_by_new_consumer": true,
+      "protected_language_write_denied": true,
+      "persistence_scope": "explicit test-owned temporary Store; not canonical Environment Store"
+    },
+    "static_checks": [
+      "python3 -m compileall -q mncs_env tests/test_environment.py tests/test_composition.py scripts/vertical_proof.py",
+      "git diff --check"
+    ],
+    "full_suite": {
+      "command": "python3 -m pytest tests/ -q",
+      "result": "UNKNOWN; the Control terminal request timed out without returning pytest output"
+    }
+  },
+  "campaign_state_before_append": {
+    "checkpoint_id": "chk_37fd5c439cecbdd9",
+    "evidence_count": 187
+  },
+  "protected_claims_rechecked": [
+    {
+      "repository": "mncs-compiler",
+      "claim_id": "claim:mncs-compiler",
+      "session_id": "ses_d2537acde8b8a875",
+      "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+      "version": 63,
+      "status": "held",
+      "exclusive": true,
+      "expires_at": "2027-08-03T10:31:10+00:00"
+    },
+    {
+      "repository": "mncs-forge",
+      "claim_id": "claim:mncs-forge",
+      "session_id": "ses_95c3aa35b8544042",
+      "consumer_id": "luna-compiler-self-consumption",
+      "version": 28,
+      "status": "held",
+      "exclusive": true,
+      "expires_at": "2027-03-07T23:49:59+00:00"
+    }
+  ],
+  "readiness": {
+    "declared_runtime_toolchain_binding": "PASS",
+    "canonical_environment_session_revalidation": "PASS",
+    "fresh_process_session_resume_and_handoff": "PASS in isolated test Store",
+    "full_environment_suite": "UNKNOWN due Control request timeout; focused protected tests passed",
+    "compiler_and_forge_candidate_delivery": "NOT_ATTEMPTED; exclusive claims remain held and Environment handoffs have not been supplied",
+    "compiler_resource_feedback_execution": "OPEN"
+  }
+}

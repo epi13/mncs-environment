@@ -95,6 +95,15 @@ Bindings should answer at least:
 
 Bindings must not contain duplicate business semantics from the provider.
 
+An exact repository toolchain named by a selected provider's invocation may
+be resolved as a read-only runtime dependency. Environment records its Git
+checkout identity and revision in binding provenance and rechecks that identity
+for drift. This dependency can address the declared invocation only; it does
+not enter `selected_checkouts`, gain write authority, or become an effect
+target. External toolchain checkouts must match their manifest repository and
+be clean when resolved. An unavailable or changed dependency leaves the
+provider invocation unavailable or stale.
+
 ### 4. Authority projection
 
 Rights and policy may be owned elsewhere, but Environment must project the effective authority into the session so the consumer can reason before acting.
