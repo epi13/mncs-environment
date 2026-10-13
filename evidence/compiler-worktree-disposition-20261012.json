@@ -1,4 +1,104 @@
 {
+  "schema_version": "mncs.environment.git-worktree-disposition/2",
+  "identity": "ev_environment_compiler_worktree_disposition_20261012",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "recorded_at": "2026-10-13T00:05:25Z",
+  "prior_observed_at": "2026-10-12T18:21:42Z",
+  "owner": "mncs-environment",
+  "repository": {
+    "name": "mncs-compiler",
+    "main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "origin_main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "worktree_count": 66,
+    "branch_ref_count": 62,
+    "branch_worktree_count": 54,
+    "detached_worktree_count": 12,
+    "claim_snapshot": {
+      "claim_id": "claim:mncs-compiler",
+      "identity": "clm_5871ad9917e5210d",
+      "version": 63,
+      "live": true,
+      "status": "held",
+      "owner_session_id": "ses_d2537acde8b8a875",
+      "consumer_id": "luna-compiler-self-consumption-admission-20261009",
+      "scope": {
+        "branch": null,
+        "checkout": null,
+        "exclusive": true,
+        "kind": "repository",
+        "paths": null,
+        "repository": "mncs-compiler"
+      },
+      "expires_at": "2027-08-03T10:31:10+00:00",
+      "revalidated_at": "2026-10-12T23:56:47Z"
+    }
+  },
+  "environment_observer": {
+    "session_id": "ses_7226fbcfe65820f7",
+    "consumer_id": "local-agent",
+    "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "environment_claim_id": "claim:mncs-environment",
+    "environment_claim_version": 34
+  },
+  "worktree_identity_basis": "Git administrative worktree registration directory name from .git/worktrees/<id>/gitdir, not registered absolute path",
+  "project_bwrap_observation": {
+    "source": "mncs_control terminal Git status in protected mncs-compiler project bwrap",
+    "observed_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "observed_origin_main": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "registrations": 66,
+    "visible_paths": 44,
+    "unavailable_paths": 22,
+    "dirty": 6,
+    "clean": 38,
+    "root_status": [
+      "?? .worktrees/",
+      "?? evidence/campaign-20261006-imported-nominal-ssa.json",
+      "?? evidence/campaign-20261006-pressure-suite-results.json",
+      "?? evidence/campaign-20261006-project-results.json"
+    ]
+  },
+  "retirement_dry_run": {
+    "source": "mncs_env.cli retire --repository /workspace/mncs-compiler --inventory --dry-run",
+    "session_id": "ses_7226fbcfe65820f7",
+    "campaign_id": "cmp_mncs_continuity_20261010",
+    "observed_at": "2026-10-12T23:52:52+00:00",
+    "execution_scope": {
+      "mode": "authorized-root",
+      "root": "/home/epi13/Documents/Projects/mncs-compiler"
+    },
+    "dry_run": true,
+    "mutation_performed": false,
+    "summary": {
+      "branch_count": 62,
+      "branches_by_classification": {
+        "canonical-branch": 1,
+        "protected-by-another-consumer": 61
+      },
+      "worktree_count": 66,
+      "worktrees_by_access_disposition": {
+        "not-probed-protected": 3,
+        "outside-current-execution-scope": 63
+      },
+      "worktrees_by_classification": {
+        "protected-by-another-consumer": 66
+      }
+    }
+  },
+  "disposition_counts": {
+    "current_project_bwrap": {
+      "protected by another consumer": 44,
+      "unavailable in the current execution namespace": 22
+    },
+    "physical_status": {
+      "dirty": 6,
+      "clean": 38,
+      "unavailable_current_namespace": 22
+    },
+    "retirement_dry_run": {
+      "protected-by-another-consumer": 66
+    }
+  },
   "candidate_reconciliation": {
     "action": "retain; no test, merge, modification, or retirement under the live foreign claim",
     "branch": "campaign/keyword-local-index-delivery-20261010",
@@ -10,38 +110,93 @@
     "patch_equivalent_to_main": true,
     "worktree_disposition": "unavailable in the current execution namespace",
     "worktree_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
-    "observed_patch_relation": "git cherry -v main candidate reports '-' for this commit, indicating patch-equivalent change on main"
+    "observed_patch_relation": "git cherry -v main candidate reports '-' for this commit, indicating patch-equivalent change on main",
+    "revalidated_at": "2026-10-12T23:56:47Z",
+    "main_only_commits": 14,
+    "candidate_only_commits": 1,
+    "evidence_only_tip": true,
+    "evidence_paths_at_tip": [
+      "evidence/SELF-HOST-MATRIX.json"
+    ],
+    "unique_patch_commit_count": 0,
+    "exact_delivery_record_present_on_main": true,
+    "retirement_classification": "protected-by-another-consumer",
+    "retireable_after_review": false
   },
-  "claim_snapshot": {
-    "claim_id": "claim:mncs-compiler",
-    "live": true,
-    "owner_session_id": "ses_d2537acde8b8a875",
-    "scope": "repository-wide exclusive",
-    "status": "held",
-    "version": 63,
-    "revalidated_at": "2026-10-12T18:20:53Z"
-  },
-  "detached_count": 12,
-  "inventory_source": "Git worktree registration plus read-only per-checkout status where traversable in the protected namespace",
-  "observed_at": "2026-10-12T18:21:42Z",
-  "origin_main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
-  "report_limitations": [
-    "Unavailable registered paths are classified by current protected-namespace visibility only and are not considered deleted.",
-    "The live repository-wide claim protects all worktrees; no checkout was adopted, tested, modified, merged, or retired.",
-    "Dirty state is reported only for traversable physical checkouts."
+  "unregistered_branch_refs": [
+    {
+      "branch": "campaign/backend-independent-frontend-cache-20261009",
+      "head": "3707c08b0d7ad27cd17587344367491430e917be",
+      "canonical_reachable": true,
+      "ahead": 0,
+      "behind": 108,
+      "classification": "protected-by-another-consumer",
+      "retireable_after_review": false
+    },
+    {
+      "branch": "campaign/compiler-probe-telemetry-20261008",
+      "head": "00e941c93a6bf37ca30cd68d6097cb9683dce130",
+      "canonical_reachable": true,
+      "ahead": 0,
+      "behind": 123,
+      "classification": "protected-by-another-consumer",
+      "retireable_after_review": false
+    },
+    {
+      "branch": "campaign/decl-path-evidence-identity-fix-20261010",
+      "head": "7b3829ee1586c178b1bdf606066014a8696bd491",
+      "canonical_reachable": true,
+      "ahead": 0,
+      "behind": 68,
+      "classification": "protected-by-another-consumer",
+      "retireable_after_review": false
+    },
+    {
+      "branch": "campaign/decl-path-resource-evidence-20261010",
+      "head": "cbe7eefec90eed81b410c86daabe0f95f2230cec",
+      "canonical_reachable": true,
+      "ahead": 0,
+      "behind": 69,
+      "classification": "protected-by-another-consumer",
+      "retireable_after_review": false
+    },
+    {
+      "branch": "campaign/flow-runtime-profile-capture-20261009",
+      "head": "422c84460b0af958fab1203ce1c89ba9ed8db89f",
+      "canonical_reachable": true,
+      "ahead": 0,
+      "behind": 107,
+      "classification": "protected-by-another-consumer",
+      "retireable_after_review": false
+    },
+    {
+      "branch": "campaign/keyword-local-index-20261010",
+      "head": "29e3ec3dd3f8b128c6e02d6275ee8ead165abd09",
+      "canonical_reachable": true,
+      "ahead": 0,
+      "behind": 14,
+      "classification": "protected-by-another-consumer",
+      "retireable_after_review": false
+    },
+    {
+      "branch": "campaign/lexer-word-prefix-count-20261010",
+      "head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+      "canonical_reachable": true,
+      "ahead": 0,
+      "behind": 0,
+      "classification": "protected-by-another-consumer",
+      "retireable_after_review": false
+    },
+    {
+      "branch": "campaign/session-admission-telemetry-20261010",
+      "head": "45eb4f4abee05196db3a60c40eade7cb75ff3c51",
+      "canonical_reachable": true,
+      "ahead": 0,
+      "behind": 2,
+      "classification": "protected-by-another-consumer",
+      "retireable_after_review": false
+    }
   ],
-  "repository": "mncs-compiler",
-  "repository_main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
-  "retirement_performed": false,
-  "root_status": [
-    "## main...origin/main",
-    "?? .worktrees/",
-    "?? evidence/campaign-20261006-imported-nominal-ssa.json",
-    "?? evidence/campaign-20261006-pressure-suite-results.json",
-    "?? evidence/campaign-20261006-project-results.json"
-  ],
-  "schema_version": "mncs.environment.git-worktree-disposition/1",
-  "worktree_count": 66,
   "worktrees": [
     {
       "branch": "main",
@@ -57,8 +212,29 @@
       "owner_session_id": "ses_d2537acde8b8a875",
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "dirty",
-      "registered_path": "/workspace/mncs-compiler",
-      "worktree_identity": "main"
+      "registered_path": "/home/epi13/Documents/Projects/mncs-compiler",
+      "worktree_identity": "main",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "same_as_main",
+      "previous_dirty_path_count": 5,
+      "current_project_status": {
+        "visible": true,
+        "status": "dirty",
+        "entries": [
+          "?? .worktrees/",
+          "?? evidence/campaign-20261006-imported-nominal-ssa.json",
+          "?? evidence/campaign-20261006-pressure-suite-results.json",
+          "?? evidence/campaign-20261006-project-results.json"
+        ]
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "not-probed-protected",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false,
+      "prior_reported_registered_path": "/workspace/mncs-compiler"
     },
     {
       "branch": "campaign/compiler-evidence-identity-20261009",
@@ -75,7 +251,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-evidence-identity-20261009",
-      "worktree_identity": "compiler-evidence-identity-20261009"
+      "worktree_identity": "compiler-evidence-identity-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/compiler-identity-correction-20261009",
@@ -92,7 +283,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-identity-correction-20261009",
-      "worktree_identity": "compiler-identity-correction-20261009"
+      "worktree_identity": "compiler-identity-correction-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/probe-telemetry-20261008",
@@ -109,7 +315,24 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "dirty",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/compiler-probe-telemetry-20261008",
-      "worktree_identity": "compiler-probe-telemetry-20261008"
+      "worktree_identity": "compiler-probe-telemetry-20261008",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 1,
+      "current_project_status": {
+        "visible": true,
+        "status": "dirty",
+        "entries": [
+          "?? .bootstrap"
+        ]
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/decl-bounded-scan-20261009",
@@ -126,7 +349,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/decl-bounded-scan-20261009",
-      "worktree_identity": "decl-bounded-scan-20261009"
+      "worktree_identity": "decl-bounded-scan-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/decl-path-early-exit-20261009",
@@ -143,7 +381,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/decl-path-early-exit-20261009",
-      "worktree_identity": "decl-path-early-exit-20261009"
+      "worktree_identity": "decl-path-early-exit-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/evidence-current-delivery-ledger-20261009",
@@ -160,7 +413,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/evidence-current-delivery-ledger-20261009",
-      "worktree_identity": "evidence-current-delivery-ledger-20261009"
+      "worktree_identity": "evidence-current-delivery-ledger-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": null,
@@ -177,7 +445,29 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "dirty",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-compiler-run-20261009",
-      "worktree_identity": "flow-hir-prelude-compiler-run-20261009"
+      "worktree_identity": "flow-hir-prelude-compiler-run-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 6,
+      "current_project_status": {
+        "visible": true,
+        "status": "dirty",
+        "entries": [
+          " M mncs-language.lock.json",
+          " M src/compiler/lexer.mncs",
+          " M tools/measure_compiler_probe.py",
+          " M tools/probe_compiler_module_frontier.py",
+          " M tools/stage0-probe/src/main.rs",
+          " M tools/test_measure_compiler_probe.py"
+        ]
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": true,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/flow-hir-prelude-evidence-20261009",
@@ -194,7 +484,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-hir-prelude-evidence-20261009",
-      "worktree_identity": "flow-hir-prelude-evidence-20261009"
+      "worktree_identity": "flow-hir-prelude-evidence-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/flow-measurement-rss-cap-20261009",
@@ -211,7 +516,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-measurement-rss-cap-20261009",
-      "worktree_identity": "flow-measurement-rss-cap-20261009"
+      "worktree_identity": "flow-measurement-rss-cap-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/flow-profile-resource-evidence-20261009",
@@ -228,7 +548,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/flow-profile-resource-evidence-20261009",
-      "worktree_identity": "flow-profile-resource-evidence-20261009"
+      "worktree_identity": "flow-profile-resource-evidence-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": null,
@@ -245,7 +580,25 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "dirty",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/import-signature-baseline-20261009",
-      "worktree_identity": "import-signature-baseline-20261009"
+      "worktree_identity": "import-signature-baseline-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 2,
+      "current_project_status": {
+        "visible": true,
+        "status": "dirty",
+        "entries": [
+          " M src/compiler/decl.mncs",
+          "?? .bootstrap"
+        ]
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": true,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/import-signature-scan-20261009",
@@ -262,7 +615,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/import-signature-scan-20261009",
-      "worktree_identity": "import-signature-scan-20261009"
+      "worktree_identity": "import-signature-scan-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lazy-keyword-classification-20261009",
@@ -279,7 +647,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/lazy-keyword-classification-20261009",
-      "worktree_identity": "lazy-keyword-classification-20261009"
+      "worktree_identity": "lazy-keyword-classification-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-batched-window-20261009",
@@ -296,7 +679,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-batched-window-20261009",
-      "worktree_identity": "lexer-batched-window-20261009"
+      "worktree_identity": "lexer-batched-window-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-head-byte-pair-window-20261009",
@@ -313,7 +711,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-pair-window-20261009",
-      "worktree_identity": "lexer-head-byte-pair-window-20261009"
+      "worktree_identity": "lexer-head-byte-pair-window-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-head-byte-window-20261009",
@@ -330,7 +743,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-head-byte-window-20261009",
-      "worktree_identity": "lexer-head-byte-window-20261009"
+      "worktree_identity": "lexer-head-byte-window-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-initial-window-reuse-20261010",
@@ -347,7 +775,24 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "dirty",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-initial-window-reuse-20261010",
-      "worktree_identity": "lexer-initial-window-reuse-20261010"
+      "worktree_identity": "lexer-initial-window-reuse-20261010",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 1,
+      "current_project_status": {
+        "visible": true,
+        "status": "dirty",
+        "entries": [
+          " M src/compiler/lexer.mncs"
+        ]
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-keyword-dispatch-20261009",
@@ -364,7 +809,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-dispatch-20261009",
-      "worktree_identity": "lexer-keyword-dispatch-20261009"
+      "worktree_identity": "lexer-keyword-dispatch-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-keyword-windows-20261009",
@@ -381,7 +841,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-keyword-windows-20261009",
-      "worktree_identity": "lexer-keyword-windows-20261009"
+      "worktree_identity": "lexer-keyword-windows-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-proof-20261009",
@@ -398,7 +873,24 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "dirty",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-proof-20261009",
-      "worktree_identity": "lexer-proof-20261009"
+      "worktree_identity": "lexer-proof-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 1,
+      "current_project_status": {
+        "visible": true,
+        "status": "dirty",
+        "entries": [
+          "?? .bootstrap"
+        ]
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-scan-window-arg-20261009",
@@ -415,7 +907,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-scan-window-arg-20261009",
-      "worktree_identity": "lexer-scan-window-arg-20261009"
+      "worktree_identity": "lexer-scan-window-arg-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-keyword-byte-reuse-20261010",
@@ -432,7 +939,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-token-frame-carry-20261010",
-      "worktree_identity": "lexer-token-frame-carry-20261010"
+      "worktree_identity": "lexer-token-frame-carry-20261010",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-trivia-prefix-budget-20261010",
@@ -449,7 +971,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-trivia-prefix-budget-20261010",
-      "worktree_identity": "lexer-trivia-prefix-budget-20261010"
+      "worktree_identity": "lexer-trivia-prefix-budget-20261010",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-window-slide-evidence-20261010",
@@ -466,7 +1003,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/lexer-window-slide-evidence-20261010",
-      "worktree_identity": "lexer-window-slide-evidence-20261010"
+      "worktree_identity": "lexer-window-slide-evidence-20261010",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/nested-match-early-exit-20261009",
@@ -483,7 +1035,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-nested-match-early-exit-20261009",
-      "worktree_identity": "mncs-compiler-nested-match-early-exit-20261009"
+      "worktree_identity": "mncs-compiler-nested-match-early-exit-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": null,
@@ -500,7 +1067,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/mncs-compiler-runtime-candidate-20261009",
-      "worktree_identity": "mncs-compiler-runtime-candidate-20261009"
+      "worktree_identity": "mncs-compiler-runtime-candidate-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": true,
+      "retireable_after_review": false
     },
     {
       "branch": null,
@@ -517,7 +1099,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-baseline-20261009",
-      "worktree_identity": "probe-admission-baseline-20261009"
+      "worktree_identity": "probe-admission-baseline-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": true,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/probe-admission-reuse-20261009",
@@ -534,7 +1131,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-admission-reuse-20261009",
-      "worktree_identity": "probe-admission-reuse-20261009"
+      "worktree_identity": "probe-admission-reuse-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/probe-outcome-classification-20261009",
@@ -551,7 +1163,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-outcome-classification-20261009",
-      "worktree_identity": "probe-outcome-classification-20261009"
+      "worktree_identity": "probe-outcome-classification-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/probe-phase-resource-samples-20261009",
@@ -568,7 +1195,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/probe-phase-resource-samples-20261009",
-      "worktree_identity": "probe-phase-resource-samples-20261009"
+      "worktree_identity": "probe-phase-resource-samples-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/project-provider-body-retention-20261010",
@@ -585,7 +1227,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/project-provider-body-retention-20261010",
-      "worktree_identity": "project-provider-body-retention-20261010"
+      "worktree_identity": "project-provider-body-retention-20261010",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/project-schema-pages-20261009",
@@ -602,7 +1259,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/project-schema-pages-20261009",
-      "worktree_identity": "project-schema-pages-20261009"
+      "worktree_identity": "project-schema-pages-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/reference-argument-validation-cache-20261010",
@@ -619,7 +1291,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/reference-argument-validation-cache-20261010/mncs-compiler",
-      "worktree_identity": "mncs-compiler1"
+      "worktree_identity": "mncs-compiler1",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/runtime-frame-profile-20261008",
@@ -636,7 +1323,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/runtime-frame-profile-20261008/mncs-compiler",
-      "worktree_identity": "mncs-compiler"
+      "worktree_identity": "mncs-compiler",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/source-initial-byte-window-20261010",
@@ -653,7 +1355,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-20261010",
-      "worktree_identity": "source-initial-byte-window-20261010"
+      "worktree_identity": "source-initial-byte-window-20261010",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": null,
@@ -670,7 +1387,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-initial-byte-window-baseline-20261010",
-      "worktree_identity": "source-initial-byte-window-baseline-20261010"
+      "worktree_identity": "source-initial-byte-window-baseline-20261010",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": true,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/source-keyword-local-byte-window-20261010",
@@ -687,7 +1419,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-keyword-local-byte-window-20261010",
-      "worktree_identity": "source-keyword-local-byte-window-20261010"
+      "worktree_identity": "source-keyword-local-byte-window-20261010",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/source-local-byte-window-20261010",
@@ -704,7 +1451,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-20261010",
-      "worktree_identity": "source-local-byte-window-20261010"
+      "worktree_identity": "source-local-byte-window-20261010",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": null,
@@ -721,7 +1483,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-local-byte-window-baseline-control-20261010",
-      "worktree_identity": "source-local-byte-window-baseline-control-20261010"
+      "worktree_identity": "source-local-byte-window-baseline-control-20261010",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": true,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/source-page-validation-20261009",
@@ -738,7 +1515,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/source-page-validation-20261009",
-      "worktree_identity": "source-page-validation-20261009"
+      "worktree_identity": "source-page-validation-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/streaming-probe-cache-20261009",
@@ -755,7 +1547,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/.worktrees/streaming-probe-cache-20261009",
-      "worktree_identity": "streaming-probe-cache-20261009"
+      "worktree_identity": "streaming-probe-cache-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/keyword-window4-20261009",
@@ -772,7 +1579,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/keyword-window4-20261009",
-      "worktree_identity": "keyword-window4-20261009"
+      "worktree_identity": "keyword-window4-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "not-probed-protected",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/probe-stage0-oracle-skip-20261009",
@@ -789,7 +1611,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "clean",
       "registered_path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/probe-stage0-oracle-skip-20261009",
-      "worktree_identity": "probe-stage0-oracle-skip-20261009"
+      "worktree_identity": "probe-stage0-oracle-skip-20261009",
+      "previous_disposition": "protected by another consumer",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": 0,
+      "current_project_status": {
+        "visible": true,
+        "status": "clean",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "not-probed-protected",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": null,
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/common-probe-cache-20261010",
@@ -806,7 +1643,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-common-probe-cache-20261010",
-      "worktree_identity": "mncs-compiler-common-probe-cache-20261010"
+      "worktree_identity": "mncs-compiler-common-probe-cache-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/decl-name-token-reuse-20261010",
@@ -823,7 +1675,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-decl-name-reuse-20261010",
-      "worktree_identity": "mncs-compiler-decl-name-reuse-20261010"
+      "worktree_identity": "mncs-compiler-decl-name-reuse-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/decl-scalar-window-20261010",
@@ -840,7 +1707,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-decl-scalar-window-20261010",
-      "worktree_identity": "mncs-compiler-decl-scalar-window-20261010"
+      "worktree_identity": "mncs-compiler-decl-scalar-window-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/decl-significant-direct-repeat-20261010",
@@ -857,7 +1739,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-delivery-20261010",
-      "worktree_identity": "mncs-compiler-delivery-20261010"
+      "worktree_identity": "mncs-compiler-delivery-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": null,
@@ -874,7 +1771,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-flow-stage0-baseline-20261010",
-      "worktree_identity": "mncs-compiler-flow-stage0-baseline-20261010"
+      "worktree_identity": "mncs-compiler-flow-stage0-baseline-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": true,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/flow-stage0-pin-profile-20261010",
@@ -891,7 +1803,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-flow-stage0-pin-profile-20261010",
-      "worktree_identity": "mncs-compiler-flow-stage0-pin-profile-20261010"
+      "worktree_identity": "mncs-compiler-flow-stage0-pin-profile-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": null,
@@ -908,7 +1835,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-flow-wordscan-baseline-20261010",
-      "worktree_identity": "mncs-compiler-flow-wordscan-baseline-20261010"
+      "worktree_identity": "mncs-compiler-flow-wordscan-baseline-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": true,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-keyword-global-local-fast-path-20261010",
@@ -925,7 +1867,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-keyword-global-page-local-20261010",
-      "worktree_identity": "mncs-compiler-keyword-global-page-local-20261010"
+      "worktree_identity": "mncs-compiler-keyword-global-page-local-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/keyword-local-index-delivery-20261010",
@@ -942,7 +1899,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-keyword-local-index-20261010",
-      "worktree_identity": "mncs-compiler-keyword-local-index-20261010"
+      "worktree_identity": "mncs-compiler-keyword-local-index-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "diverged_from_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-full-frontier-20261010",
@@ -959,7 +1931,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-lexer-full-frontier-20261010",
-      "worktree_identity": "mncs-compiler-lexer-full-frontier-20261010"
+      "worktree_identity": "mncs-compiler-lexer-full-frontier-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-self-ingest-repair-20261010",
@@ -976,7 +1963,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-lexer-self-ingest-repair-20261010",
-      "worktree_identity": "mncs-compiler-lexer-self-ingest-repair-20261010"
+      "worktree_identity": "mncs-compiler-lexer-self-ingest-repair-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-window-inline-20261010",
@@ -993,7 +1995,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-lexer-window-inline-20261010",
-      "worktree_identity": "mncs-compiler-lexer-window-inline-20261010"
+      "worktree_identity": "mncs-compiler-lexer-window-inline-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": null,
@@ -1010,7 +2027,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-matched-baseline-a181-20261010",
-      "worktree_identity": "mncs-compiler-matched-baseline-a181-20261010"
+      "worktree_identity": "mncs-compiler-matched-baseline-a181-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": true,
+      "retireable_after_review": false
     },
     {
       "branch": null,
@@ -1027,7 +2059,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-runtime-boundary-baseline-20261010",
-      "worktree_identity": "mncs-compiler-runtime-boundary-baseline-20261010"
+      "worktree_identity": "mncs-compiler-runtime-boundary-baseline-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": true,
+      "retireable_after_review": false
     },
     {
       "branch": null,
@@ -1044,7 +2091,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-runtime-boundary-validation-20261010",
-      "worktree_identity": "mncs-compiler-runtime-boundary-validation-20261010"
+      "worktree_identity": "mncs-compiler-runtime-boundary-validation-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": true,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-word-scan-select-20261010",
@@ -1061,7 +2123,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-session-admission-telemetry-20261010",
-      "worktree_identity": "mncs-compiler-session-admission-telemetry-20261010"
+      "worktree_identity": "mncs-compiler-session-admission-telemetry-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "same_as_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": null,
@@ -1078,7 +2155,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-stage0-isolation-baseline-3c-20261010",
-      "worktree_identity": "mncs-compiler-stage0-isolation-baseline-3c-20261010"
+      "worktree_identity": "mncs-compiler-stage0-isolation-baseline-3c-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": true,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/stage0-language-pin-20261010",
@@ -1095,7 +2187,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-stage0-language-pin-20261010",
-      "worktree_identity": "mncs-compiler-stage0-language-pin-20261010"
+      "worktree_identity": "mncs-compiler-stage0-language-pin-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-word-scan-inline-20261010",
@@ -1112,7 +2219,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-word-scan-inline-20261010",
-      "worktree_identity": "mncs-compiler-word-scan-inline-20261010"
+      "worktree_identity": "mncs-compiler-word-scan-inline-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-word-scan8-20261010",
@@ -1129,7 +2251,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-compiler-word-scan8-20261010",
-      "worktree_identity": "mncs-compiler-word-scan8-20261010"
+      "worktree_identity": "mncs-compiler-word-scan8-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "same_as_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-significant-trivia-inline-20261010",
@@ -1146,7 +2283,22 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-lexer-significant-trivia-20261010",
-      "worktree_identity": "mncs-lexer-significant-trivia-20261010"
+      "worktree_identity": "mncs-lexer-significant-trivia-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     },
     {
       "branch": "campaign/lexer-token-result-boundary-20261010",
@@ -1163,26 +2315,57 @@
       "ownership_status": "protected by live repository-wide exclusive claim",
       "physical_checkout_status": "unavailable_current_namespace",
       "registered_path": "/tmp/mncs-lexer-token-result-20261010",
-      "worktree_identity": "mncs-lexer-token-result-20261010"
+      "worktree_identity": "mncs-lexer-token-result-20261010",
+      "previous_disposition": "unavailable in the current execution namespace",
+      "history_relation": "ancestor_of_main",
+      "previous_dirty_path_count": null,
+      "current_project_status": {
+        "visible": false,
+        "status": "unobserved_path_unavailable",
+        "entries": []
+      },
+      "current_retirement_classification": "protected-by-another-consumer",
+      "current_retirement_access": "outside-current-execution-scope",
+      "current_retirement_path_available": null,
+      "current_retirement_clean": null,
+      "git_prunable_reason": "gitdir file points to non-existent location",
+      "evidence_relevant": null,
+      "retireable_after_review": false
     }
   ],
-  "campaign_id": "cmp_mncs_continuity_20261010",
-  "environment_observer": {
-    "session_id": "ses_7226fbcfe65820f7",
-    "consumer_id": "local-agent",
-    "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
-    "environment_claim_id": "claim:mncs-environment",
-    "environment_claim_version": 33
+  "retirement_performed": false,
+  "report_limitations": [
+    "Unavailable registered paths are classified by current protected-namespace visibility only and are not considered deleted.",
+    "The live repository-wide claim protects all worktrees; no checkout was adopted, tested, modified, merged, or retired.",
+    "Dirty state is reported only for traversable physical checkouts.",
+    "Environment retirement dry-run marked all 66 checkouts protected by another consumer; none was retireable. It could not probe 63 paths outside the authenticated root.",
+    "Protected project Git status found six dirty and 38 clean checkouts among 44 visible paths. The other 22 paths remain unavailable; prunable metadata does not establish host deletion."
+  ],
+  "summary": "All 66 Compiler worktrees remain protected by the live repository-wide foreign exclusive claim. The current dry-run found zero retireable worktrees. Six visible checkouts are dirty, 38 visible checkouts are clean, and 22 registered paths remain unavailable. The keyword-local-index commit is an evidence-only delivery record already present on main; its stale branch and unavailable checkout remain protected.",
+  "prior_observation": {
+    "observed_at": "2026-10-12T18:21:42Z",
+    "inventory_source": "Git worktree registration plus read-only per-checkout status where traversable in the protected namespace",
+    "root_status": [
+      "## main...origin/main",
+      "?? .worktrees/",
+      "?? evidence/campaign-20261006-imported-nominal-ssa.json",
+      "?? evidence/campaign-20261006-pressure-suite-results.json",
+      "?? evidence/campaign-20261006-project-results.json"
+    ],
+    "repository_main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "origin_main_head": "4e4bf038b46b6090900994bce7121dbe5eafd44f",
+    "worktree_count": 66,
+    "detached_count": 12,
+    "disposition_counts": {
+      "protected by another consumer": 44,
+      "unavailable in the current execution namespace": 22
+    },
+    "physical_status_counts": {
+      "dirty": 6,
+      "clean": 38,
+      "unavailable_current_namespace": 22
+    },
+    "retirement_performed": false
   },
-  "disposition_counts": {
-    "protected by another consumer": 44,
-    "unavailable in the current execution namespace": 22
-  },
-  "physical_status_counts": {
-    "dirty": 6,
-    "clean": 38,
-    "unavailable_current_namespace": 22
-  },
-  "worktree_identity_basis": "Git administrative worktree registration directory name from .git/worktrees/<id>/gitdir, not registered absolute path",
-  "summary": "All Compiler worktrees remain protected by the live repository-wide foreign exclusive claim. Accessible worktrees were inspected read-only; inaccessible registrations and all possibly dirty checkouts are retained."
+  "path_observation_note": "Worktree identity is based on Git administrative registration identity. Absolute registered paths are retained as observations and may vary by execution namespace; path differences do not establish checkout deletion."
 }
