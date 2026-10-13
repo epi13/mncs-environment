@@ -38,7 +38,7 @@ from . import testcmd as testcmd_module
 from . import verification as verification_module
 from . import workspace as workspace_module
 from .persist import read_json
-from .session_store import SnapshotConflict, open_store
+from .session_store import ClaimBatchConflict, SnapshotConflict, open_store
 from .store_backend import StoreIntegrityFailure, StoreUnavailable
 
 DEFAULT_STATE_DIR = Path.home() / ".local" / "share" / "mncs-environment"
@@ -1105,6 +1105,18 @@ def cmd_fail(args: argparse.Namespace) -> int:
 
 
 def cmd_claims(args: argparse.Namespace) -> int:
+    expected_generation = getattr(args, "expected_store_generation", None)
+    if expected_generation is not None:
+        if type(expected_generation) is not int or expected_generation < 0:
+            return fail("expected Store generation must be a non-negative integer")
+        if not args.acquire or any((
+            args.release, args.transfer_to, args.claim_id, args.explain,
+            args.repository is not None, args.offset is not None,
+            args.limit is not None,
+        )):
+            return fail(
+                "--expected-store-generation requires --acquire and cannot be combined with other claim operations"
+            )
     if args.repository is None and (args.offset is not None or args.limit is not None):
         return fail("claim pagination requires --repository")
     if args.repository is not None:
@@ -1126,6 +1138,18 @@ def cmd_claims(args: argparse.Namespace) -> int:
             return fail("claim page requires offset >= 0 and limit between 1 and 128")
     store = open_store(args.state_dir, args.persistence, session_id=args.session)
     try:
+        if expected_generation is not None and not callable(
+            getattr(getattr(store, "backend", None), "generation", None)
+        ):
+            return fail(
+                "--expected-store-generation requires canonical Store persistence; file-backed debug sessions have no canonical generation",
+                code=3,
+                diagnostics={
+                    "code": "persistence-unavailable",
+                    "operation": "claim-acquire",
+                    "publication_completed": False,
+                },
+            )
         if args.release:
             session = _resume_session(args, store=store)
             try:
@@ -1154,7 +1178,25 @@ def cmd_claims(args: argparse.Namespace) -> int:
                 })
             return 0
         if args.acquire:
-            session = _resume_session(args, store=store)
+            if expected_generation is not None:
+                # Resuming writes an event and snapshot. Open read-only here so
+                # the caller's generation token fences the claim publication.
+                session = sessions_module.Session.open(
+                    state_dir=args.state_dir, session_id=args.session,
+                    backend=args.persistence, store=store,
+                )
+                lifecycle = session.snapshot.get("lifecycle")
+                if lifecycle in ("completed", "failed"):
+                    return fail(
+                        f"session {args.session} is terminal and cannot acquire a claim"
+                    )
+                if lifecycle == "abandoned":
+                    return fail(
+                        "an abandoned session must be explicitly resumed before a generation-fenced claim; "
+                        "resume it, read the current Store generation, then retry"
+                    )
+            else:
+                session = _resume_session(args, store=store)
             scope = None
             branch = args.branch
             if args.paths or args.worktree:
@@ -1173,10 +1215,30 @@ def cmd_claims(args: argparse.Namespace) -> int:
                          "checkout": checkout, "branch": branch,
                          "paths": args.paths}
             basis = claims_module.BASIS_ADOPTION if args.adopt else args.basis
+            request_id = os.environ.get("MNCS_ENV_RPC_REQUEST_ID") or None
+            if expected_generation is not None and request_id is None:
+                request_id = _request_operation(args)
             try:
                 out(session.acquire_claim(args.acquire, basis=basis, reason=args.reason,
                                           ttl_hours=args.ttl, scope=scope,
-                                          request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID")))
+                                          request_id=request_id,
+                                          expected_store_generation=expected_generation))
+            except ClaimBatchConflict as error:
+                supplied = (
+                    error.supplied_generation
+                    if error.supplied_generation is not None
+                    else expected_generation
+                )
+                return fail(str(error), code=3, diagnostics={
+                    "code": "publication-conflict",
+                    "conflict_kind": "store-generation",
+                    "conflict_stage": error.stage,
+                    "expected_store_generation": supplied,
+                    "publication_expected_generation": error.expected_generation,
+                    "observed_store_generation": error.observed_generation,
+                    "publication_completed": False,
+                    "next": "read the current Store generation and submit a new authorized claim request",
+                })
             except claims_module.ClaimConflict as error:
                 return fail(str(error), code=3, diagnostics={
                     "code": "claim-conflict", "publication_completed": False,
@@ -1932,6 +1994,9 @@ def cmd_store(args: argparse.Namespace) -> int:
         if args.verify:
             out(store.backend.verify())
             return 0
+        if args.generation:
+            out({"generation": store.backend.generation()})
+            return 0
         out({"generation": store.backend.generation(),
              "commit_feed": store.backend.commit_feed().hex()})
         return 0
@@ -2280,6 +2345,10 @@ def build_parser() -> argparse.ArgumentParser:
     claims = sub.add_parser("claims", help="inspect or manage workspace claims")
     claims.add_argument("session")
     claims.add_argument("--acquire", default=None)
+    claims.add_argument(
+        "--expected-store-generation", type=int, default=None,
+        help="fence this claim against the current canonical Store generation",
+    )
     claims.add_argument("--release", default=None)
     claims.add_argument(
         "--claim-id", default=None,
@@ -2328,7 +2397,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--session", default=None,
         help="use this session's selected mncs-store checkout",
     )
-    store.add_argument("--verify", action="store_true")
+    store_reads = store.add_mutually_exclusive_group()
+    store_reads.add_argument("--generation", action="store_true",
+                             help="read the selected canonical Store generation only")
+    store_reads.add_argument("--verify", action="store_true")
     store.set_defaults(func=cmd_store)
 
     artifact_read = sub.add_parser(

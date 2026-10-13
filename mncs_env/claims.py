@@ -67,15 +67,24 @@ def _acquire_request_digest(
     *, repository: str, session_id: str, consumer_id: str, basis: str,
     ttl_hours: int, scope: dict[str, Any],
     checkout_facts: dict[str, Any],
+    expected_store_generation: int | None = None,
 ) -> str:
     # ``reason`` is descriptive provenance, not an effect selector. Replaying
     # the same operation identity may improve its note without republishing a
     # different lease; the original committed reason remains authoritative.
-    return _operation_digest(
-        "claim-acquire/1", repository=repository, session_id=session_id,
-        consumer_id=consumer_id, basis=basis,
-        ttl_hours=ttl_hours, scope=scope, checkout_facts=checkout_facts,
-    )
+    payload = {
+        "repository": repository,
+        "session_id": session_id,
+        "consumer_id": consumer_id,
+        "basis": basis,
+        "ttl_hours": ttl_hours,
+        "scope": scope,
+        "checkout_facts": checkout_facts,
+    }
+    # Keep unguarded request digests stable for existing durable retries.
+    if expected_store_generation is not None:
+        payload["expected_store_generation"] = expected_store_generation
+    return _operation_digest("claim-acquire/1", **payload)
 
 
 def _release_request_digest(
@@ -588,6 +597,7 @@ def acquire(
     workspace_root: str | None = None,
     now: datetime | None = None,
     request_id: str | None = None,
+    expected_store_generation: int | None = None,
 ) -> dict[str, Any]:
     """Claim a scope; conflicts and unknown-work adoption fail closed.
 
@@ -603,6 +613,10 @@ def acquire(
         raise ValueError(f"unknown claim basis {basis!r}")
     if type(ttl_hours) is not int or not 1 <= ttl_hours <= MAX_TTL_HOURS:
         raise ValueError(f"claim TTL must be an integer from 1 to {MAX_TTL_HOURS} hours")
+    if (expected_store_generation is not None
+            and (type(expected_store_generation) is not int
+                 or expected_store_generation < 0)):
+        raise ValueError("expected Store generation must be a non-negative integer")
     resolved = normalize_scope(scope, repository)
     if resolved["kind"] == "worktree":
         from pathlib import Path
@@ -623,6 +637,7 @@ def acquire(
         repository=repository, session_id=session_id, consumer_id=consumer_id,
         basis=basis, ttl_hours=ttl_hours, scope=resolved,
         checkout_facts=facts,
+        expected_store_generation=expected_store_generation,
     )
     from .session_store import ClaimBatchConflict, ClaimVersionConflict
 
@@ -631,6 +646,11 @@ def acquire(
         generation = store.claim_generation()
         records = store.read_claims()
         if store.claim_generation() != generation:
+            if expected_store_generation is not None:
+                raise ClaimBatchConflict(
+                    generation, store.claim_generation(), stage="generation-read",
+                    supplied_generation=expected_store_generation,
+                )
             continue
         if request_id is not None:
             matching = [record for record in records
@@ -660,6 +680,13 @@ def acquire(
                     return requested
                 raise ClaimConflict(
                     "claim request identity is already bound to another transition")
+        if (expected_store_generation is not None
+                and generation != expected_store_generation):
+            raise ClaimBatchConflict(
+                expected_store_generation, generation,
+                stage="generation-precondition",
+                supplied_generation=expected_store_generation,
+            )
         live = active_claims(records)
         conflicts = []
         for other_id, other in live.items():
@@ -739,6 +766,8 @@ def acquire(
         if request_id is not None:
             record["provenance"]["operation_request_id"] = request_id
             record["provenance"]["operation_request_digest"] = request_digest
+        if expected_store_generation is not None:
+            record["provenance"]["expected_store_generation"] = expected_store_generation
         if basis in ADOPTION_BASES:
             record["provenance"]["adopted_head"] = facts.get("head")
             record["provenance"]["adopted_dirty"] = facts.get("dirty")
@@ -756,7 +785,13 @@ def acquire(
             store.put_claim_batch(
                 [*recovered, record], expected_generation=generation)
             return record
-        except ClaimBatchConflict:
+        except ClaimBatchConflict as error:
+            if expected_store_generation is not None:
+                raise ClaimBatchConflict(
+                    error.expected_generation, error.observed_generation,
+                    stage="store-cas",
+                    supplied_generation=expected_store_generation,
+                ) from error
             continue
         except ClaimVersionConflict as error:
             raise ClaimConflict(

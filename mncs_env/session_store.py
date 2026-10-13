@@ -58,9 +58,18 @@ class ClaimVersionConflict(Exception):
 class ClaimBatchConflict(Exception):
     """The claim set advanced before an atomic multi-claim publication."""
 
-    def __init__(self, expected_generation: int, observed_generation: int):
+    def __init__(
+        self,
+        expected_generation: int,
+        observed_generation: int,
+        *,
+        stage: str = "store-cas",
+        supplied_generation: int | None = None,
+    ):
         self.expected_generation = expected_generation
         self.observed_generation = observed_generation
+        self.stage = stage
+        self.supplied_generation = supplied_generation
         super().__init__(
             f"claim publication expected generation {expected_generation}, "
             f"observed {observed_generation}"

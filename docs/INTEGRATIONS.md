@@ -93,6 +93,25 @@ Environment should avoid requiring every consumer to poll raw Git state, parse l
 
 Where useful, capability invocations should carry a session/provenance correlation handle. This allows service-owned results and events to be associated with a session without making the provider dependent on Environment's internal implementation.
 
+### Generation-fenced claim acquisition
+
+For a claim that must be admitted only against a caller-observed canonical
+Store state, read the current generation with
+`mncs-env store --session <session-id> --generation`, then pass it to
+`mncs-env claims <session-id> --acquire <repository> --expected-store-generation <generation>`. The guarded command
+opens the Environment session without first publishing a resume event, binds
+the generation to its stable request identity and claim provenance, then uses
+the Store owner's atomic generation CAS for publication. A stale precondition
+or a race at publication returns `publication-conflict` with
+`publication_completed: false` and a stage identifying where it was detected.
+Retry only after reading the new canonical generation and reconciling the
+request; replaying the same request identity returns its prior admitted claim.
+
+This option requires canonical Store persistence. The file-backed debug
+projection has no canonical Store generation and is rejected for guarded
+acquisition. Environment retains its authority and scope checks, and callers
+do not receive Store paths or descriptors.
+
 ### Artifact and state references
 
 Prefer stable, revisioned references:

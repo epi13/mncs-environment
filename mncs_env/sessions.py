@@ -3323,6 +3323,7 @@ class Session:
         checkout_facts: dict[str, Any] | None = None,
         workspace_root: str | None = None,
         request_id: str | None = None,
+        expected_store_generation: int | None = None,
     ) -> dict[str, Any]:
         # A claim is an Environment-owned lease request. The caller must
         # already have effective write intent for its repository; merely
@@ -3383,6 +3384,7 @@ class Session:
             basis=basis, reason=reason, ttl_hours=ttl_hours,
             scope=scope, checkout_facts=checkout_facts,
             workspace_root=workspace_root, request_id=request_id,
+            expected_store_generation=expected_store_generation,
         )
         campaign = dict(self.snapshot.get("campaign") or {})
         claim_ids = list(campaign.get("claim_ids", []))
