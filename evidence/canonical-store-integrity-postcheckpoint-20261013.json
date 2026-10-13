@@ -1,0 +1,42 @@
+{
+  "schema_version": "mncs.environment.canonical-store-integrity-verification/1",
+  "identity": "ev_env_canonical_store_postcheckpoint_integrity_20261013",
+  "date": "2026-10-13",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "repository": "mncs-environment",
+  "source_commit": "de7153696f2cee0294418dcfc4eb3017569b6ce5",
+  "store_commit": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055",
+  "checkpoint_before_scan": {
+    "identity": "chk_47fcf2f9c340a70e",
+    "sequence": 300
+  },
+  "execution": {
+    "project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "network": false,
+    "transport": "mncs-control-environment-rpc",
+    "canonical_store_path": "/home/epi13/.local/share/mncs-environment/store",
+    "direct_path_access": "not granted"
+  },
+  "verification": {
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "exit_code": 0,
+    "ok": true,
+    "generation": 48148,
+    "objects": 48150,
+    "relations": 0,
+    "provenance_records": 0,
+    "recovery": "RECOVERED_OLD",
+    "chunk_size": 65536,
+    "fanout": 31,
+    "commit_feed": "4d430100000000000000bc140000bc16000000000000000045b4d220b76cc375964c67f90402dae4ad261b52816073e291134e375e42f832",
+    "artifact_backend": "mncs-research-bytecode",
+    "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+    "toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs"
+  },
+  "result": "Canonical Store integrity verification passed after campaign checkpoint sequence 300 through the authenticated read transport.",
+  "limitations": [
+    "This read-only verification does not inject a stale Store-generation publication conflict; that test remains separate."
+  ]
+}
