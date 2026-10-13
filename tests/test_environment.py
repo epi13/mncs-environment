@@ -961,6 +961,32 @@ class CampaignContinuityTests(unittest.TestCase):
 
 
 class StoreTransportDiagnosticsTests(unittest.TestCase):
+    def test_control_rpc_without_grant_fails_closed_without_local_store(self) -> None:
+        from mncs_env import cli as cli_module
+        from mncs_env import rpc_client
+
+        stdout = io.StringIO()
+        with mock.patch.dict(os.environ, {
+            "MNCS_ENV_PERSISTENCE_TRANSPORT": "control-rpc",
+        }, clear=True), mock.patch.object(
+            cli_module, "open_store",
+            side_effect=AssertionError("direct Store fallback must not run"),
+        ) as open_store, mock.patch.object(
+            rpc_client, "_exchange",
+        ) as exchange, redirect_stdout(stdout):
+            code = cli_module.main([
+                "checkpoint", "ses_missing_rpc_grant", "--progress",
+                "this checkpoint must remain unpublished",
+            ])
+
+        self.assertEqual(code, 3)
+        open_store.assert_not_called()
+        exchange.assert_not_called()
+        diagnostic = json.loads(stdout.getvalue())["diagnostics"]
+        self.assertEqual(diagnostic["code"], "persistence-service-unavailable")
+        self.assertEqual(diagnostic["transport"], "mncs-control-environment-rpc")
+        self.assertFalse(diagnostic["publication_completed"])
+
     def test_campaign_checkpoint_conflict_has_structured_publication_diagnostic(self) -> None:
         from mncs_env import cli as cli_module
 
