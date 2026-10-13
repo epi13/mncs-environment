@@ -9,7 +9,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from mncs_env import claims, cli
+from mncs_env import claims, cli, rpc_client
 from mncs_env.session_store import ClaimBatchConflict
 
 
@@ -177,6 +177,29 @@ class ClaimGenerationCliTests(unittest.TestCase):
         self.assertEqual(response["diagnostics"]["conflict_kind"], "store-generation")
         self.assertEqual(response["diagnostics"]["conflict_stage"], "generation-precondition")
         self.assertFalse(response["diagnostics"]["publication_completed"])
+
+    def test_rpc_projection_preserves_bounded_generation_conflict_details(self):
+        details = rpc_client._domain_diagnostic_details(
+            "publication-conflict",
+            {
+                "code": "publication-conflict",
+                "conflict_kind": "store-generation",
+                "conflict_stage": "store-cas",
+                "expected_store_generation": 28,
+                "publication_expected_generation": 28,
+                "observed_store_generation": 29,
+                "credential": "must not cross the RPC boundary",
+            },
+        )
+
+        self.assertEqual(details, {
+            "cause_code": "publication-conflict",
+            "conflict_kind": "store-generation",
+            "conflict_stage": "store-cas",
+            "expected_store_generation": 28,
+            "publication_expected_generation": 28,
+            "observed_store_generation": 29,
+        })
 
 
 class StoreGenerationCliTests(unittest.TestCase):

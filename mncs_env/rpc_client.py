@@ -244,6 +244,23 @@ def _domain_diagnostic_details(
     are not forwarded.
     """
     if (cause_code == "publication-conflict"
+            and diagnostics.get("conflict_kind") == "store-generation"):
+        result: dict[str, Any] = {
+            "cause_code": cause_code,
+            "conflict_kind": "store-generation",
+        }
+        stage = diagnostics.get("conflict_stage")
+        if stage in ("generation-precondition", "generation-read", "store-cas"):
+            result["conflict_stage"] = stage
+        for key in (
+            "expected_store_generation", "publication_expected_generation",
+            "observed_store_generation",
+        ):
+            value = diagnostics.get(key)
+            if type(value) is int and value >= 0:
+                result[key] = value
+        return result
+    if (cause_code == "publication-conflict"
             and diagnostics.get("conflict_kind") == "campaign-state-base-checkpoint"):
         result = {"cause_code": cause_code}
         for key in (
