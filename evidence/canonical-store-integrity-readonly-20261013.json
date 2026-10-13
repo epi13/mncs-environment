@@ -1,0 +1,74 @@
+{
+  "schema_version": "mncs.environment.store-integrity-verification/1",
+  "identity": "ev_env_canonical_store_integrity_readonly_20261013",
+  "recorded_at": "2026-10-13 09:21:48 UTC",
+  "owner": "mncs-environment",
+  "campaign_id": "cmp_mncs_continuity_20261010",
+  "session_id": "ses_7226fbcfe65820f7",
+  "source_identities": {
+    "environment_commit": "e88b36acd5609c21db83f2768a3905a4d3626706",
+    "store_commit": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055"
+  },
+  "invocation": {
+    "command": "./scripts/mncs-env store --session ses_7226fbcfe65820f7 --verify",
+    "control_project": "mncs-environment",
+    "sandbox_backend": "bwrap",
+    "scope": "project",
+    "network": false,
+    "tracked_job_id": "term-502ce66687d8ab66fbdb7c66",
+    "started_at": "2026-10-13T09:18:04.648265Z",
+    "completed_at": "2026-10-13T09:20:24.145789Z",
+    "duration_seconds": 139.4975,
+    "exit_code": 0,
+    "timed_out": false,
+    "publication_or_mutation_requested": false
+  },
+  "transport": {
+    "provider": "authenticated MNCS Control Environment RPC",
+    "agent_store_filesystem_access": "none",
+    "backend": "mncs canonical Store selected by the active Environment session",
+    "temporary_or_debug_store": false
+  },
+  "result": {
+    "status": "PASS",
+    "ok": true,
+    "generation": 48094,
+    "objects": 48096,
+    "relations": 0,
+    "provenance_records": 0,
+    "commit_feed": "4d430100000000000000bbde0000bbe000000000000000005b6390f784577b94fb3fe4d25ad9500274c22e809784dfd542753453cd4bb47d",
+    "chunk_size": 65536,
+    "fanout": 31,
+    "recovery": "RECOVERED_OLD",
+    "recovery_interpretation": "The Store adapter's read-only open path sets RECOVERED_OLD after reading the committed generation head. It does not run Store recovery, initialize directories, create locks, or mutate files.",
+    "compiler_artifact": {
+      "backend": "mncs-research-bytecode",
+      "artifact_sha256": "dca4d73fd237ba61d95a1458a157403f50fdb3b9adb35a7d601f91b14f9c56bf",
+      "toolchain": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs"
+    }
+  },
+  "implementation_basis": [
+    {
+      "repository": "mncs-environment",
+      "commit": "e88b36acd5609c21db83f2768a3905a4d3626706",
+      "path": "mncs_env/session_store.py",
+      "claim": "open_store defaults to deferred mutation for canonical Store sessions."
+    },
+    {
+      "repository": "mncs-store",
+      "commit": "40dc47cd250d12ccf3e9f2cf89998f512fdc0055",
+      "path": "python/mncs_store/embedded.py",
+      "claim": "read_only open reads only committed generation; verify reads every generation entry with payload verification."
+    }
+  ],
+  "related_campaign_readback": {
+    "campaign_state_checkpoint": "chk_2b33b8def52f5d3f",
+    "campaign_evidence_count": 200,
+    "environment_disposition_evidence": "ev_env_compiler_worktree_disposition_20261013",
+    "environment_test_evidence": "ev_env_store_entry_test_isolation_20261013"
+  },
+  "limitations": [
+    "This establishes a full read-only integrity scan and checkpoint visibility in canonical Store, not canonical claim acquire/release or stale-CAS acceptance.",
+    "Compiler and Forge exclusive claims remain held by their prior owners; this scan did not test their candidate changes or execute Compiler through Forge."
+  ]
+}
