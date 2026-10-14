@@ -55,8 +55,14 @@ a retirement claim.
 acquisition basis, adoption, liveness, release, and transfer. Claims are
 Store-backed. Foreign branch, dirty tree, and linked worktree observations
 remain protection evidence. Family-wide ownership outside Environment is a
-Control integration pressure; Environment does not adopt other agents' work
-as an entry or recovery ritual.
+Control integration pressure. A normal claim follows the session's exact
+selected worktree and is nonexclusive; repository-wide scope is explicit for
+mutations that genuinely span the repository. Disjoint worktrees can proceed
+independently, while overlapping scopes still conflict. If a same-operator
+claim blocks an ordinary selected-worktree acquisition, Control fences the
+owner, checks host processes, jobs, grants, and user services, then atomically
+retires the old claim and transfers its scope to the selected worktree. Store
+generation CAS and stale-owner fencing remain authoritative.
 
 ## 6. Provider addressing is explicit
 

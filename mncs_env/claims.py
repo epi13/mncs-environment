@@ -223,12 +223,14 @@ def scopes_conflict(left: dict[str, Any], right: dict[str, Any]) -> str | None:
     """Deterministic overlap verdict for two scopes on the same repository.
 
     Returns a reason string on conflict, None when the scopes coexist.
-    Checkouts are separate directories: same-branch work across different
-    checkouts still shares refs, so whole-checkout or overlapping paths
-    on one branch conflict; different branches coexist.
+    Repository scopes are deliberately broad and conflict with every scope.
+    Worktree scopes are isolated by checkout; across linked checkouts only
+    overlapping paths on the same branch conflict because they share refs.
     """
     if left.get("repository") != right.get("repository"):
         return None
+    if left.get("kind") == "repository" or right.get("kind") == "repository":
+        return "repository-wide scope overlaps every checkout"
     same_checkout = (left.get("checkout") or None) == (right.get("checkout") or None)
     if same_checkout:
         if _paths_overlap(left.get("paths"), right.get("paths")):
@@ -536,25 +538,26 @@ class ClaimAdoptionRequired(Exception):
 def _validate_owner_recovery_authorization(
     authorization: dict[str, Any], *, repository: str, claim_id: str,
     owner_session_id: str, requester_session_id: str,
+    target_scope: dict[str, Any],
 ) -> None:
     """Validate the narrow Control owner attestation used for live-owner recovery.
 
     This attestation is accepted only by the Environment/Control owner API;
     the ordinary ``mncs-env claims --basis recovery`` surface never accepts
     caller-supplied liveness evidence. Control binds the record to an exact
-    configured approval, session, claim generation, and host observation.
+    source claim, target scope, session, claim generation, and host observation.
     """
     required = {
         "schema_version", "authorization_id", "campaign_id",
-        "requester_session_id", "requester_principal_id",
+        "requester_session_id", "requester_principal_id", "recovery_basis",
         "operator_approval_reference", "claim_id", "repository",
         "expected_claim_version", "owner_session_id", "owner_consumer_id",
-        "host_observation",
+        "owner_scope", "target_scope", "host_observation",
         "host_observation_digest",
     }
     if set(authorization) != required:
         raise ValueError("owner recovery authorization fields are invalid")
-    if authorization.get("schema_version") != "mncs.environment.control-owner-claim-recovery/1":
+    if authorization.get("schema_version") != "mncs.environment.control-owner-claim-recovery/2":
         raise ValueError("owner recovery authorization schema is unsupported")
     if (authorization.get("repository") != repository
             or authorization.get("claim_id") != claim_id
@@ -567,12 +570,27 @@ def _validate_owner_recovery_authorization(
     if (type(authorization.get("expected_claim_version")) is not int
             or authorization["expected_claim_version"] < 1):
         raise ValueError("owner recovery authorization claim version is invalid")
-    for field in (
-        "campaign_id", "requester_principal_id", "operator_approval_reference",
-    ):
+    for field in ("campaign_id", "requester_principal_id"):
         value = authorization.get(field)
         if not isinstance(value, str) or not value.strip() or len(value) > 256 or "\x00" in value:
             raise ValueError(f"owner recovery authorization {field} is invalid")
+    basis = authorization.get("recovery_basis")
+    approval = authorization.get("operator_approval_reference")
+    if basis == "same-principal-host-liveness":
+        if approval is not None:
+            raise ValueError("automatic owner recovery cannot claim an operator approval")
+    elif basis == "operator-approved-config":
+        if (not isinstance(approval, str) or not approval.strip()
+                or len(approval) > 256 or "\x00" in approval):
+            raise ValueError("operator-approved recovery needs its configured approval reference")
+    else:
+        raise ValueError("owner recovery basis is unsupported")
+    owner_scope = normalize_scope(authorization.get("owner_scope"), repository)
+    authorized_target_scope = normalize_scope(authorization.get("target_scope"), repository)
+    if (claim_identity(repository, owner_scope) != claim_id
+            or authorized_target_scope != normalize_scope(target_scope, repository)
+            or scopes_conflict(owner_scope, authorized_target_scope) is None):
+        raise ValueError("owner recovery scope transition is not the exact authorized overlap")
     observation = authorization.get("host_observation")
     if not isinstance(observation, dict):
         raise TypeError("owner recovery host observation must be an object")
@@ -580,12 +598,13 @@ def _validate_owner_recovery_authorization(
         "schema_version", "observed_at", "host_boot_id", "control_owner_pid",
         "control_owner_start_ticks", "process_view", "processes_examined",
         "same_uid_processes_examined", "user_units_examined", "active_jobs",
-        "active_owner_grants", "revoked_owner_grants", "active_owner_requests", "matching_processes",
+        "active_owner_grants", "revoked_owner_grants", "active_owner_requests",
+        "current_request_processes_excluded", "matching_processes",
         "matching_user_services", "resident_services", "complete",
     }
     if set(observation) != observation_fields:
         raise ValueError("owner recovery host observation fields are invalid")
-    if (observation.get("schema_version") != "mncs.control.host-execution-liveness/1"
+    if (observation.get("schema_version") != "mncs.control.host-execution-liveness/2"
             or observation.get("process_view") != "host-procfs"
             or observation.get("complete") is not True
             or observation.get("active_jobs") != 0
@@ -594,6 +613,15 @@ def _validate_owner_recovery_authorization(
             or observation.get("matching_processes") != []
             or observation.get("matching_user_services") != []):
         raise ValueError("owner recovery requires a complete host observation with no live former-owner execution")
+    excluded = observation.get("current_request_processes_excluded")
+    if (not isinstance(excluded, list) or len(excluded) > 128
+            or any(not isinstance(item, dict)
+                   or set(item) != {"pid", "start_ticks"}
+                   or type(item.get("pid")) is not int or item["pid"] <= 0
+                   or not isinstance(item.get("start_ticks"), str)
+                   or not item["start_ticks"]
+                   for item in excluded)):
+        raise ValueError("owner recovery current-request process identities are invalid")
     resident_services = observation.get("resident_services")
     if (not isinstance(resident_services, list) or len(resident_services) > 64
             or any(not isinstance(item, dict)
@@ -636,7 +664,8 @@ def _validate_owner_recovery_authorization(
         key: authorization[key]
         for key in (
             "schema_version", "campaign_id", "requester_session_id",
-            "requester_principal_id", "operator_approval_reference",
+            "requester_principal_id", "recovery_basis",
+            "operator_approval_reference", "owner_scope", "target_scope",
             "claim_id", "repository", "expected_claim_version",
             "owner_session_id", "owner_consumer_id",
         )
@@ -742,19 +771,20 @@ def acquire(
             and (type(expected_store_generation) is not int
                  or expected_store_generation < 0)):
         raise ValueError("expected Store generation must be a non-negative integer")
+    resolved = normalize_scope(scope, repository)
     if owner_recovery_authorization is not None:
         _validate_owner_recovery_authorization(
             owner_recovery_authorization,
             repository=repository,
-            claim_id=claim_identity(repository, normalize_scope(scope, repository)),
+            claim_id=str(owner_recovery_authorization.get("claim_id", "")),
             owner_session_id=str(owner_recovery_authorization.get("owner_session_id", "")),
             requester_session_id=session_id,
+            target_scope=resolved,
         )
         if basis != BASIS_RECOVERY:
             raise ValueError("owner-authorized recovery requires the recovery claim basis")
         if request_id is None:
             raise ValueError("owner-authorized recovery requires a stable request identity")
-    resolved = normalize_scope(scope, repository)
     if resolved["kind"] == "worktree":
         from pathlib import Path
         checkout = Path(str(resolved["checkout"]))
@@ -845,7 +875,8 @@ def acquire(
                     or target.get("session_id") != target_owner
                     or int(target.get("version", 0)) != target_version
                     or target.get("repository") != repository
-                    or target.get("scope") != resolved):
+                    or target.get("scope") != recovery.get("owner_scope")
+                    or recovery.get("target_scope") != resolved):
                 raise ClaimConflict(
                     "owner-authorized recovery no longer matches the exact held claim generation")
             if len(conflicts) != 1 or conflicts[0][0] != target_id:

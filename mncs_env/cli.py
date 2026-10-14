@@ -73,14 +73,24 @@ def load_definition(path: Path) -> dict:
 def resolve_workspace_root(args: argparse.Namespace, definition: dict) -> str:
     """Workspace root for a command.
 
-    A relative ``workspace_root`` in the definition resolves against the
-    definition file's directory. Provider-bound definitions must receive an
-    explicit root from their caller because the provider owns workspace
-    selection; inferring it from the definition's checkout can select the
-    wrong workspace when that checkout is nested or isolated.
+    A project definition may opt into its containing Git checkout and derives
+    the workspace from that repository's Git common directory. Other relative
+    ``workspace_root`` values resolve against the definition file's directory.
+    Provider-bound definitions still require an explicit workspace root.
     """
+    working_checkout = entry_module.current_working_checkout(
+        definition, getattr(args, "definition", None),
+    )
     if args.workspace:
+        if (working_checkout is not None
+                and Path(args.workspace).expanduser().resolve()
+                != Path(working_checkout["workspace_root"])):
+            raise ValueError(
+                "--workspace must match the current checkout's authenticated workspace root"
+            )
         return args.workspace
+    if working_checkout is not None:
+        return working_checkout["workspace_root"]
     scope = definition.get("workspace_scope")
     if definition.get("workspace_provider") or (
         isinstance(scope, dict) and scope.get("kind") == "campaign"
@@ -110,6 +120,9 @@ def cmd_resolve(args: argparse.Namespace) -> int:
         environment = sessions_module.resolve_environment(
             definition=definition,
             workspace_root=workspace_root,
+            working_checkout=entry_module.current_working_checkout(
+                definition, args.definition,
+            ),
             state_dir=args.state_dir,
             consumer_id=args.consumer,
             backend=args.persistence,
@@ -127,12 +140,16 @@ def cmd_enter(args: argparse.Namespace) -> int:
         definition, definition_path = entry_module.select_definition(args.definition, args.workspace)
         args.definition = definition_path
         workspace_root = resolve_workspace_root(args, definition)
+        working_checkout = entry_module.current_working_checkout(
+            definition, definition_path,
+        )
         result = entry_module.enter(definition=definition, definition_path=definition_path,
                                workspace_root=workspace_root, state_dir=args.state_dir,
                                backend=args.persistence, consumer_id=args.consumer,
                                consumer_kind=args.consumer_kind, new_session=args.new_session,
                                campaign_id=args.campaign_id,
                                task_identity=args.task_identity,
+                               working_checkout=working_checkout,
                                authenticated_principal_id=os.environ.get(
                                    "MNCS_ENV_AUTH_PRINCIPAL_ID"
                                ),

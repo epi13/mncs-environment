@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import errno
 import fcntl
+import subprocess
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -70,6 +71,107 @@ def select_definition(definition_path: Path | None, workspace_root: str | None) 
     return {"name": "mncs-orientation", "workspace_root": str(root),
             "intent": {"goal": "discover the selected MNCS workspace and available capabilities",
                        "repositories": [], "forbidden_actions": ["write", "mutate", "execute", "publish", "merge", "delete"]}}, None
+
+
+def current_working_checkout(
+    definition: dict,
+    definition_path: Path | None,
+) -> dict[str, str] | None:
+    """Resolve a project-local definition to the Git checkout that contains it."""
+    mode = definition.get("working_checkout")
+    if mode is None:
+        return None
+    if mode != "current":
+        raise EntryError(
+            "working_checkout supports only the current Git checkout",
+            "definition-invalid",
+        )
+    if definition_path is None:
+        raise EntryError(
+            "working_checkout=current requires a project-local Environment definition",
+            "working-checkout-unavailable",
+        )
+    raw_path = Path(definition_path).expanduser()
+    if (raw_path.is_symlink() or raw_path.parent.name != ".mncs"
+            or not raw_path.is_file()):
+        raise EntryError(
+            "working_checkout=current requires .mncs/environment.json at a repository root",
+            "working-checkout-unavailable",
+            path=str(raw_path),
+        )
+    raw_checkout = raw_path.parent.parent
+    if raw_checkout.is_symlink():
+        raise EntryError(
+            "current Git checkout cannot be a symbolic link",
+            "working-checkout-unavailable",
+            path=str(raw_checkout),
+        )
+    path = raw_path.resolve(strict=True)
+    checkout = raw_checkout.resolve(strict=True)
+    try:
+        top_level = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=checkout, capture_output=True, text=True, timeout=10, check=False,
+        )
+        common = subprocess.run(
+            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+            cwd=checkout, capture_output=True, text=True, timeout=10, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise EntryError(
+            "Git could not identify the checkout containing the Environment definition",
+            "working-checkout-unavailable",
+            path=str(checkout),
+        ) from error
+    if top_level.returncode != 0 or common.returncode != 0:
+        raise EntryError(
+            "Git could not identify the checkout containing the Environment definition",
+            "working-checkout-unavailable",
+            path=str(checkout),
+        )
+    observed_checkout = Path(top_level.stdout.strip()).resolve(strict=True)
+    common_dir = Path(common.stdout.strip()).resolve(strict=True)
+    repository_root = common_dir.parent if common_dir.name == ".git" else None
+    manifest = read_json(checkout / ".mncs" / "project.json")
+    repository = manifest.get("repository") if isinstance(manifest, dict) else None
+    if (observed_checkout != checkout or repository_root is None
+            or not isinstance(repository, str) or not repository
+            or not (repository_root / ".git").exists()):
+        raise EntryError(
+            "current checkout lacks a verifiable MNCS repository identity",
+            "working-checkout-unavailable",
+            path=str(checkout),
+        )
+    try:
+        relative = checkout.relative_to(repository_root)
+    except ValueError as error:
+        raise EntryError(
+            "current checkout does not belong to its Git common repository",
+            "working-checkout-unavailable",
+            path=str(checkout),
+        ) from error
+    if relative.parts and not (
+        len(relative.parts) == 2 and relative.parts[0] == ".worktrees"
+    ):
+        raise EntryError(
+            "current checkout must be the repository root or one immediate linked worktree",
+            "working-checkout-unavailable",
+            path=str(checkout),
+        )
+    observed = workspace.inspect_repo(checkout, _refresh=True)
+    if (observed is None or observed.git_error or not observed.head
+            or observed.manifest_repository != repository):
+        raise EntryError(
+            "current checkout does not match its MNCS repository manifest",
+            "working-checkout-unavailable",
+            path=str(checkout),
+            repository=repository,
+        )
+    return {
+        "repository": repository,
+        "path": str(checkout),
+        "workspace_root": str(repository_root.parent.resolve(strict=True)),
+    }
 
 
 @contextmanager
@@ -497,6 +599,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
           state_dir: Path, backend: str, consumer_id: str, consumer_kind: str,
           new_session: bool = False, campaign_id: str | None = None,
           task_identity: str | None = None,
+          working_checkout: dict[str, str] | None = None,
           authenticated_principal_id: str | None = None,
           continuation_request_id: str | None = None) -> dict:
     # Invalid inputs fail before persistence or provider startup.
@@ -504,6 +607,39 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
     if backend not in ("store", "file") or not consumer_id.strip() or not consumer_kind.strip():
         raise EntryError("entry requires a valid persistence backend and nonempty consumer identity/kind", "entry-invalid")
     root = workspace.validate_workspace_root(workspace_root, definition=definition)
+    observed_working_checkout = current_working_checkout(definition, definition_path)
+    if working_checkout is not None and working_checkout != observed_working_checkout:
+        raise EntryError(
+            "working checkout context changed before Environment entry",
+            "working-checkout-unavailable",
+        )
+    working_checkout = observed_working_checkout
+    if working_checkout is not None:
+        if Path(working_checkout["workspace_root"]).resolve() != root:
+            raise EntryError(
+                "working checkout does not belong to the selected workspace root",
+                "working-checkout-unavailable",
+                path=working_checkout["path"],
+                workspace_root=str(root),
+            )
+        selected_repositories = workspace.repository_selection(definition)
+        if (selected_repositories is None
+                or working_checkout["repository"] not in selected_repositories):
+            raise EntryError(
+                "working checkout repository is outside workspace_scope.repositories",
+                "working-checkout-unavailable",
+                repository=working_checkout["repository"],
+            )
+        if any(
+            isinstance(item, dict)
+            and item.get("repository") == working_checkout["repository"]
+            for item in definition.get("managed_checkouts", [])
+        ):
+            raise EntryError(
+                "working_checkout=current cannot override a provider-managed checkout",
+                "definition-invalid",
+                repository=working_checkout["repository"],
+            )
     try:
         budget = context_budget.validate(definition)
     except ValueError as error:
@@ -963,6 +1099,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                         )
                 environment = sessions.resolve_environment(definition=definition, workspace_root=root,
                                                             state_dir=state_dir, consumer_id=consumer_id, backend=backend,
+                                                            working_checkout=working_checkout,
                                                             store=store)
                 environment["configuration"] = {"source": str(definition_path) if definition_path else "orientation-default",
                                                 "name": definition.get("name"), "definition_id": definition_id}

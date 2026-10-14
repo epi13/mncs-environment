@@ -1197,6 +1197,7 @@ def resolve_environment(
     workspace_root: str | Path,
     state_dir: str | Path,
     consumer_id: str,
+    working_checkout: dict[str, str] | None = None,
     store: SessionStore | None = None,
     backend: str = "store",
     verify_on_open: bool = True,
@@ -1236,6 +1237,50 @@ def resolve_environment(
             selected_facts[name] = {"repository": name, "path": str(path), "head": record.get("head"),
                                     "branch": record.get("branch"), "clean": not record.get("dirty"),
                                     "source_ref": "explicit-workspace-selection", "authoritative_head": record.get("head")}
+    if working_checkout is not None:
+        repository = str(working_checkout.get("repository", ""))
+        checkout = Path(str(working_checkout.get("path", ""))).resolve(strict=True)
+        if (repository not in (repository_selection or [])
+                or repository in {
+                    str(item.get("repository", ""))
+                    for item in definition.get("managed_checkouts", [])
+                    if isinstance(item, dict)
+                }):
+            raise workspace_module.WorkspaceResolutionError(
+                "current checkout is outside the declared workspace selection",
+                diagnostics={"code": "working-checkout-unavailable",
+                             "repository": repository},
+            )
+        repository_root = (resolved_root / repository).resolve(strict=True)
+        if repository_root.parent != resolved_root or checkout != repository_root and not (
+            checkout.parent == repository_root / ".worktrees"
+        ):
+            raise workspace_module.WorkspaceResolutionError(
+                "current checkout must be the repository root or a direct linked worktree",
+                diagnostics={"code": "working-checkout-unavailable",
+                             "repository": repository, "path": str(checkout)},
+            )
+        observed = workspace_module.inspect_repo(checkout, _refresh=True)
+        if (observed is None or observed.git_error or not observed.head
+                or observed.manifest_repository != repository):
+            raise workspace_module.WorkspaceResolutionError(
+                "current checkout does not match its MNCS repository identity",
+                diagnostics={"code": "working-checkout-unavailable",
+                             "repository": repository, "path": str(checkout)},
+            )
+        selected_roots[repository] = checkout
+        selected_facts[repository] = {
+            "repository": repository,
+            "path": str(checkout),
+            "branch": observed.branch,
+            "head": observed.head,
+            "clean": not bool(observed.dirty),
+            "source_ref": "current-working-checkout",
+            "authoritative_head": observed.head,
+            **workspace_module.repository_checkout_identity(
+                resolved_root, repository, checkout,
+            ),
+        }
     runtime_toolchain_roots: dict[str, Path] = {}
     runtime_toolchain_facts: dict[str, dict[str, Any]] = {}
     runtime_toolchain_diagnostics: dict[str, dict[str, str]] = {}
@@ -2398,7 +2443,7 @@ class Session:
             or expected_version < 1
             or record.get("version") != expected_version + 2
             or recovery.get("schema_version") != (
-                "mncs.environment.control-owner-claim-recovery/1"
+                "mncs.environment.control-owner-claim-recovery/2"
             )
             or recovery.get("campaign_id") != campaign_id
             or recovery.get("claim_id") != record.get("claim_id")
@@ -2411,7 +2456,8 @@ class Session:
             return False
         stable_fields = (
             "schema_version", "campaign_id", "requester_session_id",
-            "requester_principal_id", "operator_approval_reference",
+            "requester_principal_id", "recovery_basis",
+            "operator_approval_reference", "owner_scope", "target_scope",
             "claim_id", "repository", "expected_claim_version",
             "owner_session_id", "owner_consumer_id",
         )
@@ -3564,6 +3610,17 @@ class Session:
                 )
         selected = self.snapshot.get("selected_checkouts", {}).get(repository)
         if selected is not None:
+            if scope is None:
+                # The ordinary claim follows the checkout already selected
+                # for this session. Reserving the entire repository is only
+                # appropriate when a caller explicitly requests repository
+                # scope for a genuinely shared mutation.
+                scope = {
+                    "kind": "worktree",
+                    "checkout": str(selected.get("path", "")),
+                    "branch": selected.get("branch"),
+                    "exclusive": False,
+                }
             if scope and scope.get("kind") == "worktree":
                 scope = self._canonical_scope(repository, scope)
                 requested = Path(str(scope.get("checkout", ""))).resolve()
@@ -3646,7 +3703,7 @@ class Session:
         reason: str,
         ttl_hours: int = 24,
     ) -> dict[str, Any]:
-        """Recover one exact exclusive claim after Control's host-side fence.
+        """Recover one exact claim scope after Control's host-side fence.
 
         This is an owner operation called only by Control's authenticated
         Environment service. Ordinary claim acquisition keeps its liveness
@@ -3662,6 +3719,7 @@ class Session:
                 claim_id=claim_id,
                 owner_session_id=owner_session_id,
                 requester_session_id=self.session_id,
+                target_scope=authorization.get("target_scope"),
             )
         except (TypeError, ValueError) as error:
             raise AuthorityDenied(str(error)) from error
@@ -3684,36 +3742,52 @@ class Session:
         if repository in authority.get("protected_repositories", []):
             raise AuthorityDenied(f"repository scope is protected for this campaign: {repository}")
 
+        owner_scope = claims_module.normalize_scope(
+            authorization.get("owner_scope"), repository,
+        )
+        target_scope = claims_module.normalize_scope(
+            authorization.get("target_scope"), repository,
+        )
+        target_claim_id = claims_module.claim_identity(repository, target_scope)
         live = claims_module.active_claims(self.store.read_claims())
-        existing = live.get(claim_id)
-        if (existing is not None
-                and existing.get("session_id") == self.session_id
-                and existing.get("repository") == repository
-                and existing.get("provenance", {}).get("owner_recovery", {}).get(
+        recovered_target = live.get(target_claim_id)
+        if (recovered_target is not None
+                and recovered_target.get("session_id") == self.session_id
+                and recovered_target.get("repository") == repository
+                and recovered_target.get("provenance", {}).get("owner_recovery", {}).get(
                     "authorization_id") == authorization.get("authorization_id")):
-            record = existing
+            record = recovered_target
         else:
-            if (existing is None or existing.get("session_id") != owner_session_id
-                    or int(existing.get("version", 0)) != expected_version
-                    or existing.get("consumer_id") != authorization.get("owner_consumer_id")
-                    or existing.get("repository") != repository
-                    or existing.get("scope", {}).get("exclusive") is not True):
+            source = live.get(claim_id)
+            if (source is None or source.get("session_id") != owner_session_id
+                    or int(source.get("version", 0)) != expected_version
+                    or source.get("consumer_id") != authorization.get("owner_consumer_id")
+                    or source.get("repository") != repository
+                    or source.get("scope") != owner_scope):
                 raise claims_module.ClaimConflict(
-                    "owner recovery no longer matches the exact active exclusive claim")
+                    "owner recovery no longer matches the exact active source claim")
+            owner_snapshot = self.store.load_snapshot(owner_session_id)
+            if (authorization.get("recovery_basis") == "same-principal-host-liveness"
+                    and (not isinstance(owner_snapshot, dict)
+                         or owner_snapshot.get("authenticated_principal_id")
+                         != authenticated_principal_id)):
+                raise AuthorityDenied(
+                    "automatic claim recovery is limited to the same authenticated operator"
+                )
             record = self.acquire_claim(
                 repository,
                 basis=claims_module.BASIS_RECOVERY,
                 reason=reason,
                 ttl_hours=ttl_hours,
-                scope=dict(existing.get("scope", {})),
-                checkout_facts={"dirty": False, "foreign_signals": []},
+                scope=target_scope,
                 request_id=request_id,
                 _owner_recovery_authorization=authorization,
             )
 
         operation_digest = digest_hex({
-            "operation": "environment-owner-claim-recovery/1",
+            "operation": "environment-owner-claim-recovery/2",
             "claim_id": claim_id,
+            "target_claim_id": target_claim_id,
             "repository": repository,
             "old_session_id": owner_session_id,
             "old_version": expected_version,
@@ -3723,14 +3797,20 @@ class Session:
         }, length=64)
         recovery_payload = {
             "claim_id": claim_id,
+            "target_claim_id": target_claim_id,
             "repository": repository,
             "owner_session_id": owner_session_id,
             "superseded_version": expected_version,
             "new_session_id": self.session_id,
-            "fencing_generation": int(record.get("version", 0)),
+            "fencing_generation": expected_version + 1,
+            "new_claim_version": int(record.get("version", 0)),
             "recovery_authorization_id": authorization.get("authorization_id"),
-            "operator_approval_reference": authorization.get("operator_approval_reference"),
+            "recovery_basis": authorization.get("recovery_basis"),
         }
+        if authorization.get("operator_approval_reference") is not None:
+            recovery_payload["operator_approval_reference"] = authorization[
+                "operator_approval_reference"
+            ]
         old_session = Session(self.store, owner_session_id)
         old_authority = dict(old_session.snapshot.get("authority") or {})
         fences = [
@@ -3744,7 +3824,8 @@ class Session:
             "repository": repository,
             "claim_id": claim_id,
             "superseded_version": expected_version,
-            "fencing_generation": int(record.get("version", 0)),
+            "target_claim_id": target_claim_id,
+            "fencing_generation": expected_version + 1,
             "recovery_authorization_id": authorization.get("authorization_id"),
         })
         old_authority["claim_fences"] = fences[-64:]
@@ -3788,9 +3869,11 @@ class Session:
         return {
             "status": "recovered",
             "claim": record,
+            "source_claim_id": claim_id,
+            "target_claim_id": target_claim_id,
             "old_session_id": owner_session_id,
             "new_session_id": self.session_id,
-            "fencing_generation": int(record.get("version", 0)),
+            "fencing_generation": expected_version + 1,
             "recovery_authorization_id": authorization.get("authorization_id"),
             "continuation_state": "recoverable",
             "reconciled_sessions": [owner_session_id, self.session_id],

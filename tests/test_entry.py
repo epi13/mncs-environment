@@ -682,6 +682,58 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(second["session_id"], first["session_id"])
         self.assertEqual(sentinel.read_text(), "protected work\n")
 
+    def test_local_definition_selects_its_current_linked_worktree(self):
+        project_manifest = self.project / ".mncs" / "project.json"
+        project_manifest.write_text(json.dumps({"repository": "fixture"}))
+        self.config = {
+            "name": "fixture-worktree-development",
+            "working_checkout": "current",
+            "workspace_scope": {
+                "kind": "workspace", "repositories": ["fixture"],
+            },
+            "intent": {
+                "goal": "enter the checkout containing this local definition",
+                "repositories": ["fixture"],
+            },
+        }
+        self.definition.write_text(json.dumps(self.config))
+        subprocess.run(
+            ["git", "-C", str(self.project), "add", ".mncs/project.json",
+             ".mncs/environment.json"],
+            check=True, capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self.project), "commit", "-m",
+             "add local worktree development definition"],
+            check=True, capture_output=True,
+        )
+        checkout = self.project / ".worktrees" / "agent-local"
+        subprocess.run(
+            ["git", "-C", str(self.project), "worktree", "add", "-b",
+             "campaign/agent-local", str(checkout), "HEAD"],
+            check=True, capture_output=True,
+        )
+
+        code, context = self.enter("--campaign-id", "cmp_local_worktree_entry",
+                                   cwd=checkout)
+        self.assertEqual(code, 0, context)
+        self.assertEqual(context["workspace_root"], str(self.base.resolve()))
+        inspect_code, inspected = self.run_cli("inspect", context["session_id"],
+                                                cwd=checkout)
+        self.assertEqual(inspect_code, 0, inspected)
+        self.assertEqual(
+            Path(inspected["selected_checkouts"]["fixture"]["path"]),
+            checkout.resolve(),
+        )
+        claim_code, claim = self.run_cli(
+            "claims", context["session_id"], "--acquire", "fixture",
+            "--reason", "claim the checkout selected by local entry",
+            cwd=checkout,
+        )
+        self.assertEqual(claim_code, 0, claim)
+        self.assertEqual(claim["scope"]["kind"], "worktree")
+        self.assertEqual(claim["scope"]["checkout"], str(checkout.resolve()))
+
     def test_invalid_repository_selection_fails_before_state_is_created(self):
         for selection in (["../fixture"], ["fixture", "fixture"], ["missing"]):
             self.config.update(workspace_root="../..", workspace_scope={"kind": "workspace", "repositories": selection})

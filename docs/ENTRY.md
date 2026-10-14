@@ -20,6 +20,12 @@ an unrelated current project's configuration. Definition-relative
 `workspace_root` resolves against the definition's directory. Campaign
 definitions still require explicit workspace selection.
 
+A project may declare `"working_checkout": "current"` to bind the checkout
+containing its `.mncs/environment.json`, including a linked worktree. Entry
+derives the workspace root from Git's common directory and persists the exact
+checkout, so a local Compiler definition works the same from its main checkout
+and a session-specific worktree.
+
 `--state-dir` chooses persistence, defaulting to
 `~/.local/share/mncs-environment`. Store is canonical; `--persistence file`
 is the existing debug projection. Invalid definition/root/selection failures
@@ -36,6 +42,14 @@ unavailable in the protected namespace. `env_status` and `system_status`
 report whether the Control-owned transport is ready; direct CLI use outside
 that execution reports a structured persistence error instead of switching
 to file persistence.
+
+Claims acquired without an explicit scope follow the session's selected
+worktree and are nonexclusive. Repository-wide claims require an explicit
+scope. When ordinary acquisition encounters one exact conflicting claim held
+by the same authenticated operator, Control checks host liveness, fences the
+old execution, and atomically transfers the claim into the selected scope.
+Foreign owners, multiple overlapping claims, active executions, or incomplete
+host observations still fail closed.
 
 The authenticated project continuation capsule may select one Environment
 session for that short-lived grant. Control can then expose a narrow,
@@ -164,7 +178,10 @@ item count. `foreign_claims` lists held claims in the selected Store, including
 the exact claim identity and version, owner session and consumer, effective
 lease expiry, and a bounded scope summary. A held status describes the Store
 lease; `effective_expires_at` applies the current lease bound. Process liveness
-is established through the claim recovery protocol. Workspace-related claims
+is established through Control's host-side claim recovery protocol, not inferred
+from Environment session activity. Ordinary acquisition can recover one exact
+same-operator overlap after Control fences the owner and proves its execution
+has stopped. Workspace-related claims
 are ordered first, followed by other claims in the selected Store, so a
 protected checkout outside the current namespace remains visible.
 `workspace_related` marks that projection. Worktree checkout paths are omitted

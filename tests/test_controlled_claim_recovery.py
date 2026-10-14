@@ -6,14 +6,17 @@ import tempfile
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from mncs_env import authority, claims, sessions
 from mncs_env.session_store import open_store
 
 
-def owner_authorization(*, owner: dict, requester_session: str) -> dict:
+def owner_authorization(*, owner: dict, requester_session: str,
+                        target_scope: dict | None = None,
+                        recovery_basis: str = "operator-approved-config") -> dict:
     observation = {
-        "schema_version": "mncs.control.host-execution-liveness/1",
+        "schema_version": "mncs.control.host-execution-liveness/2",
         "observed_at": claims.utcnow(),
         "host_boot_id": "00000000-0000-0000-0000-000000000000",
         "control_owner_pid": 12,
@@ -26,22 +29,29 @@ def owner_authorization(*, owner: dict, requester_session: str) -> dict:
         "active_owner_grants": 0,
         "revoked_owner_grants": 0,
         "active_owner_requests": 0,
+        "current_request_processes_excluded": [],
         "matching_processes": [],
         "matching_user_services": [],
         "resident_services": [],
         "complete": True,
     }
     authorization = {
-        "schema_version": "mncs.environment.control-owner-claim-recovery/1",
+        "schema_version": "mncs.environment.control-owner-claim-recovery/2",
         "campaign_id": "cmp_recovery_fixture",
         "requester_session_id": requester_session,
         "requester_principal_id": "ctrl_fixture",
-        "operator_approval_reference": "user-approval:exact-fixture-claim",
+        "recovery_basis": recovery_basis,
+        "operator_approval_reference": (
+            "user-approval:exact-fixture-claim"
+            if recovery_basis == "operator-approved-config" else None
+        ),
         "claim_id": owner["claim_id"],
         "repository": owner["repository"],
         "expected_claim_version": owner["version"],
         "owner_session_id": owner["session_id"],
         "owner_consumer_id": owner["consumer_id"],
+        "owner_scope": owner["scope"],
+        "target_scope": target_scope or owner["scope"],
         "host_observation": observation,
         "host_observation_digest": claims.digest_hex(observation, length=64),
     }
@@ -49,7 +59,8 @@ def owner_authorization(*, owner: dict, requester_session: str) -> dict:
         key: authorization[key]
         for key in (
             "schema_version", "campaign_id", "requester_session_id",
-            "requester_principal_id", "operator_approval_reference",
+            "requester_principal_id", "recovery_basis",
+            "operator_approval_reference", "owner_scope", "target_scope",
             "claim_id", "repository", "expected_claim_version",
             "owner_session_id", "owner_consumer_id",
         )
@@ -82,8 +93,9 @@ class ControlledClaimRecoveryTests(unittest.TestCase):
             consumer_id="new-consumer",
             basis=claims.BASIS_RECOVERY,
             reason="explicit Control owner recovery",
-            scope=owner["scope"],
+            scope=authorization["target_scope"],
             checkout_facts={"dirty": False, "foreign_signals": []},
+            workspace_root=self.temp.name,
             request_id=request_id,
             owner_recovery_authorization=authorization,
         )
@@ -104,6 +116,45 @@ class ControlledClaimRecoveryTests(unittest.TestCase):
         self.assertEqual([item["status"] for item in history],
                          ["held", "superseded", "held"])
         self.assertEqual(history[1]["provenance"]["owner_recovery"], proof)
+
+    def test_orphan_repository_scope_narrows_atomically_to_selected_worktree(self) -> None:
+        owner = self.owner()
+        checkout = Path(self.temp.name) / "compiler-worktree"
+        checkout.mkdir()
+        target_scope = claims.normalize_scope({
+            "kind": "worktree", "checkout": str(checkout),
+            "branch": "campaign/recovered", "exclusive": False,
+        }, "mncs-fixture")
+        proof = owner_authorization(
+            owner=owner,
+            requester_session="ses_new_owner",
+            target_scope=target_scope,
+            recovery_basis="same-principal-host-liveness",
+        )
+        batches: list[tuple[list[dict], int]] = []
+        original_put_claim_batch = self.store.put_claim_batch
+
+        def record_batch(claim_records: list[dict], *, expected_generation: int) -> None:
+            batches.append((claim_records, expected_generation))
+            original_put_claim_batch(
+                claim_records, expected_generation=expected_generation,
+            )
+
+        self.store.put_claim_batch = record_batch
+        before_generation = self.store.claim_generation()
+
+        recovered = self.recover(
+            owner, "ses_new_owner", "req-narrow-orphan", proof,
+        )
+
+        active = claims.active_claims(self.store.read_claims())
+        self.assertNotIn(owner["claim_id"], active)
+        self.assertEqual(recovered["scope"], target_scope)
+        self.assertNotEqual(recovered["claim_id"], owner["claim_id"])
+        self.assertEqual(active[recovered["claim_id"]]["session_id"], "ses_new_owner")
+        self.assertEqual(len(batches), 1)
+        self.assertEqual(len(batches[0][0]), 2)
+        self.assertEqual(batches[0][1], before_generation)
 
     def test_idle_resident_provider_is_recorded_without_becoming_old_owner(self) -> None:
         owner = self.owner()
@@ -134,7 +185,8 @@ class ControlledClaimRecoveryTests(unittest.TestCase):
             key: proof[key]
             for key in (
                 "schema_version", "campaign_id", "requester_session_id",
-                "requester_principal_id", "operator_approval_reference",
+                "requester_principal_id", "recovery_basis",
+                "operator_approval_reference", "owner_scope", "target_scope",
                 "claim_id", "repository", "expected_claim_version",
                 "owner_session_id", "owner_consumer_id",
             )
@@ -287,7 +339,7 @@ class ControlledClaimRecoveryTests(unittest.TestCase):
         )
 
         self.assertEqual(result["status"], "recovered")
-        self.assertEqual(result["fencing_generation"], owner_record["version"] + 2)
+        self.assertEqual(result["fencing_generation"], owner_record["version"] + 1)
         self.assertEqual(
             requester.check(action="write", target="mncs-fixture")["verdict"],
             "allow",

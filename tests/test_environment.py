@@ -551,6 +551,94 @@ class ClaimTests(unittest.TestCase):
                                consumer_id="b", basis=claims.BASIS_EXPLICIT,
                                reason="whole")
 
+    def test_worktree_claims_are_local_and_repository_scope_stays_explicit(self) -> None:
+        repository = claims.normalize_scope(None, "r")
+        first = claims.normalize_scope({
+            "kind": "worktree", "checkout": "/repo/.worktrees/first",
+            "branch": "campaign/first", "exclusive": False,
+        }, "r")
+        other = claims.normalize_scope({
+            "kind": "worktree", "checkout": "/repo/.worktrees/other",
+            "branch": "campaign/other", "exclusive": False,
+        }, "r")
+        same_checkout = claims.normalize_scope({
+            "kind": "worktree", "checkout": "/repo/.worktrees/first",
+            "branch": "campaign/first", "exclusive": False,
+        }, "r")
+
+        self.assertIsNone(claims.scopes_conflict(first, other))
+        self.assertIsNotNone(claims.scopes_conflict(first, same_checkout))
+        self.assertIsNotNone(claims.scopes_conflict(repository, first))
+
+    def test_disjoint_worktree_owners_coexist_but_same_checkout_is_fenced(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first_checkout = root / "first"
+            second_checkout = root / "second"
+            first_checkout.mkdir()
+            second_checkout.mkdir()
+            store = open_store(root / "state", "file")
+            first = claims.acquire(
+                store, repository="r", session_id="ses_a", consumer_id="a",
+                basis=claims.BASIS_EXPLICIT, reason="first worktree",
+                workspace_root=str(root),
+                scope={"kind": "worktree", "checkout": str(first_checkout),
+                       "branch": "campaign/a", "exclusive": False},
+            )
+            second = claims.acquire(
+                store, repository="r", session_id="ses_b", consumer_id="b",
+                basis=claims.BASIS_EXPLICIT, reason="second worktree",
+                workspace_root=str(root),
+                scope={"kind": "worktree", "checkout": str(second_checkout),
+                       "branch": "campaign/b", "exclusive": False},
+            )
+            self.assertNotEqual(first["claim_id"], second["claim_id"])
+            self.assertEqual(len(claims.holders(store.read_claims())["r"]), 2)
+            with self.assertRaises(claims.ClaimConflict):
+                claims.acquire(
+                    store, repository="r", session_id="ses_c", consumer_id="c",
+                    basis=claims.BASIS_EXPLICIT, reason="same checkout",
+                    workspace_root=str(root),
+                    scope={"kind": "worktree", "checkout": str(first_checkout),
+                           "branch": "campaign/a", "exclusive": False},
+                )
+
+    def test_default_claim_uses_selected_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "compiler-worktree"
+            checkout.mkdir()
+            store = open_store(root / "state", "file")
+            environment = sessions.resolve_environment(
+                definition=definition(intent={
+                    "goal": "exercise the selected worktree claim default",
+                    "repositories": ["mncs-compiler"],
+                }),
+                workspace_root=root,
+                state_dir=root / "state",
+                consumer_id="claim-scope-test",
+                store=store,
+            )
+            session = sessions.Session.create(
+                state_dir=root / "state", environment=environment,
+                consumer_id="claim-scope-test", backend="file", store=store,
+            )
+            session.transition("resolving", "claim scope test")
+            session.transition("ready", "claim scope test")
+            session.transition("active", "claim scope test")
+            session.snapshot["selected_checkouts"] = {"mncs-compiler": {
+                "path": str(checkout), "branch": "campaign/claim-scope",
+                "head": "fixture", "clean": True,
+            }}
+            claim = session.acquire_claim(
+                "mncs-compiler", reason="default follows selected checkout",
+            )
+            self.assertEqual(claim["scope"]["kind"], "worktree")
+            self.assertEqual(claim["scope"]["checkout"], str(checkout))
+            self.assertEqual(claim["scope"]["branch"], "campaign/claim-scope")
+            self.assertFalse(claim["scope"]["exclusive"])
+            session.close()
+
     def test_dirty_checkout_requires_adoption(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = open_store(directory, "file")

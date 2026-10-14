@@ -140,20 +140,24 @@ def _recovered_claim(
     requester_session = requester_session or claim_session
     owner_session = "ses_fixture_former_owner"
     authorization = {
-        "schema_version": "mncs.environment.control-owner-claim-recovery/1",
+        "schema_version": "mncs.environment.control-owner-claim-recovery/2",
         "campaign_id": CAMPAIGN,
         "requester_session_id": requester_session,
         "requester_principal_id": PRINCIPAL,
+        "recovery_basis": "operator-approved-config",
         "operator_approval_reference": "user-approval:fixture-recovery",
         "claim_id": claim_id,
         "repository": repository,
         "expected_claim_version": 3,
         "owner_session_id": owner_session,
         "owner_consumer_id": "former-consumer",
+        "owner_scope": scope,
+        "target_scope": scope,
     }
     stable_fields = (
         "schema_version", "campaign_id", "requester_session_id",
-        "requester_principal_id", "operator_approval_reference", "claim_id",
+        "requester_principal_id", "recovery_basis",
+        "operator_approval_reference", "owner_scope", "target_scope", "claim_id",
         "repository", "expected_claim_version", "owner_session_id",
         "owner_consumer_id",
     )
