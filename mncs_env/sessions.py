@@ -14,11 +14,13 @@ identical re-put is idempotent.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import secrets
 import shlex
+import stat
 import sys
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -83,11 +85,90 @@ CONTINUATION_MAX_CAMPAIGN_EVIDENCE = 32
 CAMPAIGN_DELIVERY_REPOSITORIES_MAX = 16
 CAMPAIGN_STATE_INPUT_MAX_BYTES = 48 * 1024
 CAMPAIGN_STATE_READ_MAX_BYTES = 56 * 1024
+MAX_PRESERVED_CAMPAIGN_EVIDENCE_FILES = 32
+MAX_PRESERVED_CAMPAIGN_EVIDENCE_FILE_BYTES = 1024 * 1024
+MAX_PRESERVED_CAMPAIGN_EVIDENCE_TOTAL_BYTES = 8 * 1024 * 1024
 
 _CAMPAIGN_REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
 _CAMPAIGN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$")
 _GIT_OBJECT_ID_PATTERN = re.compile(r"^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$")
 _SHA256_PATTERN = re.compile(r"^[0-9a-fA-F]{64}$")
+
+
+def _preserved_campaign_evidence(
+    checkout: Path, dirty_files: list[str], *, dirty_truncated: bool,
+    untracked_count: int,
+) -> dict[str, Any] | None:
+    """Digest a bounded set of existing campaign JSON evidence without adopting code.
+
+    Recovery scope admission can preserve untracked campaign evidence only
+    when those JSON files are the complete dirty set. The inventory is
+    attached to the immutable scope grant so continuation can check that the
+    same evidence was present when the owner approved the scope.
+    """
+    if (dirty_truncated or not dirty_files
+            or len(dirty_files) > MAX_PRESERVED_CAMPAIGN_EVIDENCE_FILES
+            or untracked_count != len(dirty_files)):
+        return None
+    try:
+        root = checkout.resolve(strict=True)
+        evidence_dir = root / "evidence"
+        evidence_root = evidence_dir.resolve(strict=True)
+        if evidence_dir.is_symlink() or evidence_root.parent != root:
+            return None
+    except OSError:
+        return None
+
+    entries: list[dict[str, Any]] = []
+    total_bytes = 0
+    for status_line in sorted(dirty_files):
+        if not status_line.startswith("?? "):
+            return None
+        relative = status_line[3:]
+        if not re.fullmatch(
+            r"evidence/campaign-[A-Za-z0-9][A-Za-z0-9._-]{0,159}\.json",
+            relative,
+        ):
+            return None
+        path = root / relative
+        try:
+            if path.is_symlink() or path.parent.resolve(strict=True) != evidence_root:
+                return None
+            fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+            with os.fdopen(fd, "rb") as handle:
+                before = os.fstat(handle.fileno())
+                if (not stat.S_ISREG(before.st_mode)
+                        or before.st_size > MAX_PRESERVED_CAMPAIGN_EVIDENCE_FILE_BYTES):
+                    return None
+                raw = handle.read(MAX_PRESERVED_CAMPAIGN_EVIDENCE_FILE_BYTES + 1)
+                after = os.fstat(handle.fileno())
+            if (len(raw) != before.st_size or len(raw) > MAX_PRESERVED_CAMPAIGN_EVIDENCE_FILE_BYTES
+                    or (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+                    != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)):
+                return None
+            document = json.loads(raw)
+            if not isinstance(document, dict):
+                return None
+        except (OSError, ValueError, json.JSONDecodeError):
+            return None
+        total_bytes += len(raw)
+        if total_bytes > MAX_PRESERVED_CAMPAIGN_EVIDENCE_TOTAL_BYTES:
+            return None
+        identity = document.get("identity")
+        entries.append({
+            "path": relative,
+            "byte_count": len(raw),
+            "sha256": hashlib.sha256(raw).hexdigest(),
+            "identity": identity if isinstance(identity, str) else None,
+            "schema_version": document.get("schema_version"),
+        })
+    return {
+        "schema_version": "mncs.environment.preserved-campaign-evidence/1",
+        "file_count": len(entries),
+        "byte_count": total_bytes,
+        "files_digest": digest_hex(entries, length=64),
+        "files": entries,
+    }
 
 # Allowed lifecycle transitions. Every transition records a reason; an
 # illegal transition raises LifecycleError. Completion paths below match
@@ -2194,10 +2275,6 @@ class Session:
         observed = workspace_module.inspect_repo(resolved_checkout, _refresh=True)
         if observed is None or observed.git_error or not observed.head:
             raise AuthorityDenied("repository scope requires a fresh Git identity observation")
-        if observed.dirty:
-            raise AuthorityDenied(
-                f"repository scope admission refuses unproven dirty work: {repository}"
-            )
         rights = self.snapshot.get("rights") or {}
         right_subjects = rights.get("subjects") if isinstance(rights, dict) else None
         if isinstance(right_subjects, dict) and right_subjects.get(repository) == "blocked":
@@ -2218,10 +2295,33 @@ class Session:
                 f"repository scope has an existing live claim: {repository}",
                 next_step="obtain the recorded owner's handoff or wait for a valid recovery condition",
             )
+        preserved_evidence = None
+        if observed.dirty:
+            if len(same_session_recovery) != 1:
+                raise AuthorityDenied(
+                    f"repository scope admission refuses unproven dirty work: {repository}"
+                )
+            preserved_evidence = _preserved_campaign_evidence(
+                resolved_checkout, observed.dirty_files,
+                dirty_truncated=observed.dirty_truncated,
+                untracked_count=observed.untracked_count,
+            )
+            if preserved_evidence is None:
+                raise AuthorityDenied(
+                    "recovered repository scope may preserve only a bounded set of "
+                    "untracked campaign evidence JSON files"
+                )
 
-        repository_identity = _repository_checkout_identity(
-            workspace_root, repository, resolved_checkout
-        )
+        repository_identity: dict[str, Any] = {
+            **_repository_checkout_identity(
+                workspace_root, repository, resolved_checkout
+            ),
+            "branch": observed.branch,
+            "head": observed.head,
+            "clean": not bool(observed.dirty),
+        }
+        if preserved_evidence is not None:
+            repository_identity["preserved_untracked_evidence"] = preserved_evidence
         scope_grant: dict[str, Any] = {
             "schema_version": "mncs.environment.authority-scope-grant/1",
             "identity": "scope_" + digest_hex({
@@ -2240,12 +2340,7 @@ class Session:
             "authority_revision_before": current_revision,
             "admitted_by": "mncs-environment",
             "admitted_at": utcnow(),
-            "repository_identity": {
-                **repository_identity,
-                "branch": observed.branch,
-                "head": observed.head,
-                "clean": True,
-            },
+            "repository_identity": repository_identity,
         }
         after = dict(current)
         after["writable"] = sorted(set(current.get("writable", [])) | {repository})
@@ -2460,6 +2555,24 @@ class Session:
                 report["skipped"].append({
                     "repository": repository,
                     "reason": "checkout-observation-unavailable",
+                })
+                continue
+
+            expected_evidence = expected_identity.get(
+                "preserved_untracked_evidence"
+            )
+            observed_evidence = (
+                _preserved_campaign_evidence(
+                    resolved_checkout, observed.dirty_files,
+                    dirty_truncated=observed.dirty_truncated,
+                    untracked_count=observed.untracked_count,
+                )
+                if observed.dirty else None
+            )
+            if expected_evidence != observed_evidence:
+                report["skipped"].append({
+                    "repository": repository,
+                    "reason": "preserved-campaign-evidence-identity-mismatch",
                 })
                 continue
 

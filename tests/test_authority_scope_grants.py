@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -392,6 +393,58 @@ def test_scope_grant_rejects_foreign_or_nonrecovery_claims(
             _grant(session)
         assert session.authority_scope_grants() == []
         assert "mncs-control-mcp" not in session.effective_authority()["writable"]
+    finally:
+        session.close()
+
+
+def test_recovered_scope_records_and_revalidates_preserved_campaign_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        evidence_dir = workspace / "mncs-control-mcp" / "evidence"
+        evidence_dir.mkdir()
+        evidence_path = evidence_dir / "campaign-retained-fixture.json"
+        raw = b'{"identity":"ev_retained_fixture","schema_version":1}\n'
+        evidence_path.write_bytes(raw)
+        _recovered_claim(session, "mncs-control-mcp")
+
+        grant = _grant(session)
+        inventory = grant["repository_identity"]["preserved_untracked_evidence"]
+        assert grant["repository_identity"]["clean"] is False
+        assert inventory["file_count"] == 1
+        assert inventory["files"][0]["path"] == "evidence/campaign-retained-fixture.json"
+        assert inventory["files"][0]["sha256"] == hashlib.sha256(raw).hexdigest()
+        assert session._compose_authorized_scope_checkouts()["composed"] == [
+            "mncs-control-mcp"
+        ]
+
+        evidence_path.write_bytes(b'{"identity":"changed"}\n')
+        report = session._compose_authorized_scope_checkouts()
+        assert "mncs-control-mcp" in report["removed"]
+        assert "mncs-control-mcp" not in session.snapshot["selected_checkouts"]
+    finally:
+        session.close()
+
+
+@pytest.mark.parametrize("dirty_path", ["notes.py", "evidence/other-results.json"])
+def test_recovered_scope_rejects_untracked_source_or_noncampaign_data(
+    tmp_path: Path, dirty_path: str,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        dirty = workspace / "mncs-control-mcp" / dirty_path
+        dirty.parent.mkdir(parents=True, exist_ok=True)
+        dirty.write_text("unreviewed existing work\n", encoding="utf-8")
+        _recovered_claim(session, "mncs-control-mcp")
+
+        with pytest.raises(sessions.AuthorityDenied):
+            _grant(session)
+        assert session.authority_scope_grants() == []
     finally:
         session.close()
 
