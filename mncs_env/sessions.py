@@ -3208,9 +3208,12 @@ class Session:
                     "provider input artifact requires one exact current source binding"
                 )
             source_binding = matches[0]
-            if source_binding.get("effects") != ["read"]:
+            shareable_artifacts = source_binding.get("shareable_artifacts", [])
+            if (source_binding.get("effects") != ["read"]
+                    and (not isinstance(shareable_artifacts, list)
+                         or item.get("path") not in shareable_artifacts)):
                 raise AuthorityDenied(
-                    "provider input artifact source must be authorized as read-only"
+                    "provider input artifact source must be read-only or declare this exact shareable artifact"
                 )
             verdict = self.check(action="invoke", target=source_capability)
             if verdict.get("verdict") != "allow":

@@ -126,6 +126,7 @@ def bind(
     entrypoint: str,
     address: str | None,
     effects: list[str] | None = None,
+    shareable_artifacts: list[str] | None = None,
     event_types: list[str] | None = None,
     provenance: dict[str, Any] | None = None,
     provider_root: str | None = None,
@@ -154,6 +155,7 @@ def bind(
         "timeout_seconds": timeout_seconds,
         "working_directory": working_directory,
         "effects": list(effects or ["read"]),
+        "shareable_artifacts": list(shareable_artifacts or []),
         "event_types": list(event_types if event_types is not None else ["unknown"]),
         "availability": {"status": "unknown", "reason": "not yet probed", "observed_at": None},
         "provenance": provenance or {},
@@ -859,6 +861,14 @@ def _from_semantic_contracts(
                 or any(effect not in {"read", "verify", "write", "execute", "publish"}
                        for effect in effects)):
             continue
+        shareable_artifacts = entry.get("shareable_artifacts", [])
+        if (not isinstance(shareable_artifacts, list)
+                or any(not isinstance(name, str)
+                       or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", name)
+                       or name in {".", ".."}
+                       for name in shareable_artifacts)
+                or len(set(shareable_artifacts)) != len(shareable_artifacts)):
+            continue
         output_limit_bytes = entry.get("output_limit_bytes")
         if (output_limit_bytes is not None
                 and (type(output_limit_bytes) is not int
@@ -938,6 +948,14 @@ def _from_manifest(
                 or any(effect not in {"read", "verify", "write", "execute", "publish"}
                        for effect in effects)):
             continue
+        shareable_artifacts = entry.get("shareable_artifacts", [])
+        if (not isinstance(shareable_artifacts, list)
+                or any(not isinstance(name, str)
+                       or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", name)
+                       or name in {".", ".."}
+                       for name in shareable_artifacts)
+                or len(set(shareable_artifacts)) != len(shareable_artifacts)):
+            continue
         output_limit_bytes = entry.get("output_limit_bytes")
         if (output_limit_bytes is not None
                 and (type(output_limit_bytes) is not int
@@ -955,6 +973,7 @@ def _from_manifest(
             fixed_argv=declared["fixed_argv"],
             fixed_env=declared["fixed_env"],
             effects=list(effects),
+            shareable_artifacts=list(shareable_artifacts),
             event_types=["unknown"],
             output_limit_bytes=output_limit_bytes,
             provenance={"source": f"{repo.name}/.mncs/project.json",

@@ -3412,6 +3412,86 @@ class SessionTests(unittest.TestCase):
                     )
             provider.assert_not_called()
 
+    def test_shareable_provider_artifact_is_exact_and_manifest_declared(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            source_capability = "mncs-forge:provider-artifact-execution"
+            consumer_capability = "mncs-system-monitor:system-resource-sample"
+            source_binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-forge", capability=source_capability,
+                contract_revision="2", entrypoint="execute", address="/bin/echo",
+                effects=["execute"],
+                shareable_artifacts=["forge-execution-receipt.json"],
+            ))
+            session.snapshot["bindings"] = [source_binding]
+            session._save()
+            metadata = {
+                "store_reference": "mncs-store:invocation-result:receipt",
+                "path": "forge-execution-receipt.json",
+                "sha256": "a" * 64,
+                "byte_count": 7,
+            }
+            with (
+                mock.patch.object(
+                    session, "check", return_value={"verdict": "allow"},
+                ),
+                mock.patch.object(
+                    sessions.invocation_artifacts_module,
+                    "read_latest_invocation_file",
+                    return_value=(metadata, b"receipt"),
+                ) as read_latest,
+            ):
+                prepared = session._read_provider_input_artifacts([{
+                    "name": "forge-receipt",
+                    "capability": source_capability,
+                    "binding_id": source_binding["binding_id"],
+                    "path": "forge-execution-receipt.json",
+                }])
+                self.assertEqual(prepared[0]["content"], b"receipt")
+                self.assertEqual(read_latest.call_count, 1)
+                with self.assertRaises(sessions.AuthorityDenied):
+                    session._read_provider_input_artifacts([{
+                        "name": "forge-receipt",
+                        "capability": source_capability,
+                        "binding_id": source_binding["binding_id"],
+                        "path": "compiler-vm-task.json",
+                    }])
+                with self.assertRaises(sessions.AuthorityDenied):
+                    session._read_provider_input_artifacts([{
+                        "name": "forge-receipt",
+                        "capability": source_capability,
+                        "binding_id": source_binding["binding_id"],
+                        "path": "../forge-execution-receipt.json",
+                    }])
+                self.assertEqual(read_latest.call_count, 1)
+
+    def test_manifest_binding_retains_shareable_artifact_declaration(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            repo = workspace / "mncs-forge"
+            (repo / ".mncs").mkdir(parents=True)
+            (repo / "provider.py").write_text("print('ready')\n", encoding="utf-8")
+            (repo / ".mncs" / "project.json").write_text(json.dumps({
+                "repository": "mncs-forge",
+                "contracts": {"provides": [{
+                    "contract": "provider-artifact-execution",
+                    "version": "2",
+                    "effects": ["execute"],
+                    "shareable_artifacts": ["forge-execution-receipt.json"],
+                    "invocation": {
+                        "kind": "python",
+                        "path": "provider.py",
+                        "fixed_argv": [],
+                    },
+                }]},
+            }), encoding="utf-8")
+            bound = capabilities._from_manifest(repo, workspace, "mncs")
+            self.assertEqual(len(bound), 1)
+            self.assertEqual(
+                bound[0]["shareable_artifacts"],
+                ["forge-execution-receipt.json"],
+            )
+
     def test_session_invoke_delivers_store_artifact_to_real_protected_child(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
