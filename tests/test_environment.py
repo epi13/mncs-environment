@@ -1407,6 +1407,14 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
                     "details": {
                         "host_process_view": True,
                         "user_service_view": False,
+                        "process_diagnostics": {
+                            "request_process_tree_complete": False,
+                            "incomplete_reasons": [
+                                {"reason": "request_process_root_unreadable", "count": 1},
+                                {"reason": "private_process_data", "count": 99},
+                            ],
+                        },
+                        "next": "repair the host process observation and retry this claim acquisition",
                         "processes": [{"pid": 10, "command": "must not cross"}],
                     },
                 },
@@ -1420,12 +1428,22 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
         diagnostics = result["diagnostics"]
         self.assertEqual(diagnostics["code"], "publication-rejected")
         self.assertEqual(
+            diagnostics["next"],
+            "repair the host process observation and retry this claim acquisition",
+        )
+        self.assertEqual(
             diagnostics["cause_code"], "ENVIRONMENT_OWNER_LIVENESS_UNKNOWN"
         )
         self.assertEqual(diagnostics["domain_details"], {
             "cause_code": "ENVIRONMENT_OWNER_LIVENESS_UNKNOWN",
             "host_process_view": True,
             "user_service_view": False,
+            "process_diagnostics": {
+                "request_process_tree_complete": False,
+                "incomplete_reasons": [
+                    {"reason": "request_process_root_unreadable", "count": 1},
+                ],
+            },
         })
         self.assertNotIn("must not cross", json.dumps(result))
 

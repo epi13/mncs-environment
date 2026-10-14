@@ -337,6 +337,46 @@ def _control_error_domain_details(
         for key in ("host_process_view", "user_service_view"):
             if isinstance(details.get(key), bool):
                 result[key] = details[key]
+        process_diagnostics = details.get("process_diagnostics")
+        if isinstance(process_diagnostics, dict):
+            projected: dict[str, Any] = {}
+            tree_complete = process_diagnostics.get(
+                "request_process_tree_complete"
+            )
+            if isinstance(tree_complete, bool):
+                projected["request_process_tree_complete"] = tree_complete
+            reasons = process_diagnostics.get("incomplete_reasons")
+            if isinstance(reasons, list):
+                bounded_reasons = []
+                allowed_reasons = {
+                    "host_procfs_unavailable",
+                    "host_boot_identity_unavailable",
+                    "current_request_process_tree_incomplete",
+                    "same_uid_process_observation_unreadable",
+                    "shared_repository_root_process_ambiguous",
+                    "matching_process_start_identity_unavailable",
+                    "matching_process_context_unreadable",
+                    "current_request_roots_unavailable",
+                    "request_process_parent_observation_unreadable",
+                    "request_process_root_unreadable",
+                    "request_process_start_identity_unavailable",
+                }
+                for item in reasons[:16]:
+                    if not isinstance(item, dict):
+                        continue
+                    reason = item.get("reason")
+                    count = item.get("count")
+                    if (not isinstance(reason, str) or reason not in allowed_reasons
+                            or not isinstance(count, int) or isinstance(count, bool)
+                            or count < 0 or count > 1_000_000):
+                        continue
+                    bounded_reasons.append({"reason": reason, "count": count})
+                if bounded_reasons:
+                    projected["incomplete_reasons"] = bounded_reasons
+                    if len(reasons) > 16:
+                        projected["incomplete_reasons_truncated"] = True
+            if projected:
+                result["process_diagnostics"] = projected
         return result
     if cause_code == "ENVIRONMENT_OWNER_EXECUTION_ACTIVE":
         counts = {
