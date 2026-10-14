@@ -5349,6 +5349,24 @@ class Session:
         assert isinstance(summary, str)
         assert isinstance(request_digest, str)
         completion_request_identity = request_id or "complete_" + request_digest
+        completion_checkpoint_request_id = "req_completion_checkpoint_" + digest_hex({
+            "session_id": self.session_id,
+            "completion_request_identity": completion_request_identity,
+            "request_digest": request_digest,
+        }, length=32)
+
+        def publish_completion_checkpoint() -> str:
+            checkpoint = self.checkpoint(
+                progress=summary or f"Session completed: {outcome}",
+                remaining=[],
+                request_id=completion_checkpoint_request_id,
+            )
+            identity = checkpoint.get("identity")
+            if not isinstance(identity, str) or not identity.startswith("chk_"):
+                raise LifecycleError(
+                    "completion checkpoint publication returned no durable identity"
+                )
+            return identity
 
         existing_completion = self.snapshot.get("completion")
         lifecycle = self.snapshot.get("lifecycle")
@@ -5357,6 +5375,22 @@ class Session:
                 raise LifecycleError(
                     "session was completed by a different request identity"
                 )
+            checkpoint_id = existing_completion.get("checkpoint_id")
+            checkpoint_record = (
+                self.store.load_checkpoint(self.session_id, checkpoint_id)
+                if isinstance(checkpoint_id, str)
+                and checkpoint_id.startswith("chk_") else None
+            )
+            if (not isinstance(checkpoint_record, dict)
+                    or checkpoint_record.get("request_id")
+                    != completion_checkpoint_request_id):
+                # Upgrade a completion written by an earlier Environment
+                # revision, or reconcile a crash after the terminal
+                # transition but before its checkpoint link was saved.
+                checkpoint_id = publish_completion_checkpoint()
+                existing_completion["checkpoint_id"] = checkpoint_id
+                self.snapshot["completion"] = existing_completion
+                self._save()
             if existing_completion.get("claims_release_error"):
                 claims_report = self._release_own_claims(
                     f"session completed: {outcome}",
@@ -5398,6 +5432,17 @@ class Session:
             self.snapshot["completion_pending"] = pending
             self._save()
 
+        # Publish an idempotent checkpoint before making the session terminal
+        # or releasing any owned claims. If the process stops at any later
+        # boundary, retry_pending repeats this exact checkpoint request and
+        # then resumes claim settlement without creating duplicate history.
+        checkpoint_id = publish_completion_checkpoint()
+        pending = dict(pending)
+        pending["checkpoint_id"] = checkpoint_id
+        pending["checkpoint_request_id"] = completion_checkpoint_request_id
+        self.snapshot["completion_pending"] = pending
+        self._save()
+
         if self.snapshot.get("lifecycle") in live_lifecycles:
             self.transition("completed", outcome)
         elif self.snapshot.get("lifecycle") != "completed":
@@ -5413,6 +5458,7 @@ class Session:
             "at": pending.get("requested_at", utcnow()),
             "request_id": request_id,
             "request_digest": request_digest,
+            "checkpoint_id": checkpoint_id,
             "requested_by": requested_by,
             "claims_released": claims_report["released"],
             "claims_release_error": claims_report["error"],
@@ -5429,6 +5475,7 @@ class Session:
                 "session.completed", str(requested_by.get("consumer_id", "unknown")),
                 {
                     "outcome": outcome,
+                    "checkpoint_id": checkpoint_id,
                     "claims_released": claims_report["released"],
                     "request_id": request_id,
                     "request_digest": request_digest,

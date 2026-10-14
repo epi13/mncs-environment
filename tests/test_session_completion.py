@@ -48,6 +48,7 @@ class StubStore:
     def __init__(self, snapshot: dict[str, Any], claim_records: list[dict[str, Any]]):
         self.snapshot = copy.deepcopy(snapshot)
         self.claim_records = list(claim_records)
+        self.checkpoints: dict[str, dict[str, Any]] = {}
         self.events: list[dict[str, Any]] = []
         self.saved: list[dict[str, Any]] = []
         self.save_count = 0
@@ -75,6 +76,22 @@ class StubStore:
 
     def read_claims(self) -> list[dict[str, Any]]:
         return [dict(record) for record in self.claim_records]
+
+    def list_checkpoints(self, session_id: str) -> list[dict[str, Any]]:
+        return [copy.deepcopy(record) for record in self.checkpoints.values()
+                if record.get("session_id") == session_id]
+
+    def load_checkpoint(
+        self, session_id: str, identity: str,
+    ) -> dict[str, Any] | None:
+        record = self.checkpoints.get(identity)
+        if record is None or record.get("session_id") != session_id:
+            return None
+        return copy.deepcopy(record)
+
+    def save_checkpoint(self, session_id: str, record: dict[str, Any]) -> None:
+        assert record.get("session_id") == session_id
+        self.checkpoints[str(record["identity"])] = copy.deepcopy(record)
 
     def put_claim(self, claim: dict[str, Any]) -> None:
         self.claim_records.append(dict(claim))
@@ -149,6 +166,65 @@ class CompletionReleasesClaimsTests(unittest.TestCase):
             {(r["session_id"], r["repository"]) for r in live.values()},
             {("ses_other", "mncs-other")})
 
+    def test_complete_publishes_linked_checkpoint_before_releasing_claims(self):
+        store = StubStore(_snapshot(), [_record("ses_test", "mncs-demo")])
+        completion = _session(store).complete(
+            outcome="done", summary="verified source and tests",
+            request_id="req_complete_with_checkpoint",
+            authenticated_principal_id="principal-test",
+        )
+
+        checkpoint_id = completion["checkpoint_id"]
+        checkpoint = store.load_checkpoint("ses_test", checkpoint_id)
+        self.assertIsNotNone(checkpoint)
+        self.assertEqual(checkpoint["progress"], "verified source and tests")
+        self.assertEqual(store.snapshot["checkpoints"], [checkpoint_id])
+        self.assertEqual(completion["claims_released"], ["claim:mncs-demo"])
+        event_types = [event.get("type") for event in store.events]
+        self.assertLess(
+            event_types.index("session.checkpointed"),
+            event_types.index("lease.released"),
+        )
+        self.assertLess(
+            event_types.index("lease.released"),
+            event_types.index("session.completed"),
+        )
+
+        restarted = sessions_module.Session.open(
+            state_dir=".", session_id="ses_test", store=store,
+        )
+        replay = restarted.complete(
+            outcome="done", summary="verified source and tests",
+            request_id="req_complete_with_checkpoint",
+            authenticated_principal_id="principal-test",
+        )
+        self.assertEqual(replay["checkpoint_id"], checkpoint_id)
+        self.assertEqual(len(store.checkpoints), 1)
+
+    def test_terminal_completion_reconciles_a_missing_checkpoint(self):
+        store = StubStore(_snapshot(), [])
+        first = _session(store).complete(
+            outcome="done", summary="verified",
+            request_id="req_legacy_completion_checkpoint",
+            authenticated_principal_id="principal-test",
+        )
+        store.checkpoints.clear()
+        store.snapshot["checkpoints"] = []
+
+        restarted = sessions_module.Session.open(
+            state_dir=".", session_id="ses_test", store=store,
+        )
+        replay = restarted.complete(
+            outcome="done", summary="verified",
+            request_id="req_legacy_completion_checkpoint",
+            authenticated_principal_id="principal-test",
+        )
+
+        self.assertEqual(replay["request_digest"], first["request_digest"])
+        self.assertTrue(replay["checkpoint_id"].startswith("chk_"))
+        self.assertEqual(len(store.checkpoints), 1)
+        self.assertEqual(store.snapshot["checkpoints"], [replay["checkpoint_id"]])
+
     def test_fail_releases_own_live_claims(self):
         store = StubStore(_snapshot(), [_record("ses_test", "mncs-demo")])
         result = _session(store).fail(reason="boom")
@@ -213,7 +289,7 @@ class CompletionReleasesClaimsTests(unittest.TestCase):
             )
 
     def test_completion_recovers_before_intent_transition_and_final_snapshot(self):
-        for fail_save_call in (1, 2, 3):
+        for fail_save_call in (1, 2, 3, 4, 5, 6):
             with self.subTest(fail_save_call=fail_save_call):
                 store = StubStore(
                     _snapshot(), [_record("ses_test", "mncs-demo")],
@@ -255,6 +331,8 @@ class CompletionReleasesClaimsTests(unittest.TestCase):
                     completion["claims_released"], ["claim:mncs-demo"],
                 )
                 self.assertIsNone(completion["claims_release_error"])
+                self.assertTrue(completion["checkpoint_id"].startswith("chk_"))
+                self.assertEqual(len(store.checkpoints), 1)
                 self.assertEqual(
                     sum(event.get("type") == "session.completed"
                         for event in store.events),
