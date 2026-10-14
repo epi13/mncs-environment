@@ -2302,6 +2302,11 @@ class CapabilityTests(unittest.TestCase):
                             "argv": ["python3", "tools/check.py", "stable"],
                             "working_directory": ".",
                             "timeout_seconds": 42,
+                            "effects": ["verify"],
+                            "shareable_artifacts": [
+                                "run/native-application-build.json",
+                                "run/native-application-build-vm-result.json",
+                            ],
                         },
                     }, {
                         "identity": "mncs-compiler.example-bootstrap",
@@ -2312,6 +2317,18 @@ class CapabilityTests(unittest.TestCase):
                             "argv": ["bash", "tools/check.sh", "stable"],
                             "working_directory": ".",
                             "timeout_seconds": 43,
+                        },
+                    }, {
+                        "identity": "mncs-compiler.example-unsafe-shareable",
+                        "executor": {
+                            "provider": "mncs-compiler",
+                            "kind": "external_integration",
+                            "entrypoint": "python3 tools/check.py",
+                            "argv": ["python3", "tools/check.py"],
+                            "working_directory": ".",
+                            "timeout_seconds": 42,
+                            "effects": ["verify"],
+                            "shareable_artifacts": ["../escape.json"],
                         },
                     }],
                 }), encoding="utf-8")
@@ -2328,6 +2345,14 @@ class CapabilityTests(unittest.TestCase):
             self.assertEqual(binding["provider_root"], str(selected.resolve()))
             self.assertEqual(binding["address"], f"python:{selected.resolve()}/tools/check.py")
             self.assertEqual(binding["timeout_seconds"], 42)
+            self.assertEqual(binding["shareable_artifacts"], [
+                "run/native-application-build.json",
+                "run/native-application-build-vm-result.json",
+            ])
+            self.assertFalse(any(
+                item["capability"] == "mncs-compiler:verification-executor/mncs-compiler.example-unsafe-shareable"
+                for item in bindings
+            ))
 
             result = capabilities.invoke(binding, ["campaign"])
 

@@ -25,6 +25,8 @@ from .identity import digest_hex
 SCHEMA = "mncs.environment.capability-binding/1"
 DEFAULT_OUTPUT_LIMIT_BYTES = 64 * 1024
 MAX_OUTPUT_LIMIT_BYTES = 2 * 1024 * 1024
+MAX_SHAREABLE_ARTIFACTS = 64
+MAX_SHAREABLE_ARTIFACT_PATH_CHARS = 1024
 
 #: Doctor's projection-health binding, consumed by structure conformance and
 #: projection reconciliation. Single spelling; capability renames land here.
@@ -165,6 +167,29 @@ def bind(
             output_limit_bytes
         )
     return record
+
+
+def _validated_shareable_artifacts(value: Any) -> list[str] | None:
+    """Validate exact relative artifact paths exposed through Store reads."""
+    if (not isinstance(value, list) or len(value) > MAX_SHAREABLE_ARTIFACTS):
+        return None
+    paths: list[str] = []
+    for item in value:
+        if (not isinstance(item, str)
+                or not item
+                or len(item) > MAX_SHAREABLE_ARTIFACT_PATH_CHARS
+                or "\\" in item
+                or "\x00" in item):
+            return None
+        segments = item.split("/")
+        if any(
+            segment in {".", ".."}
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", segment)
+            for segment in segments
+        ):
+            return None
+        paths.append(item)
+    return paths if len(set(paths)) == len(paths) else None
 
 
 _PROTECTED_TOOLCHAIN_ENV = {
@@ -786,6 +811,11 @@ def _from_verification_inventory(repo: Path) -> list[dict[str, Any]]:
         else:
             effects = ["write"]
             ephemeral = None
+        shareable_artifacts = _validated_shareable_artifacts(
+            executor.get("shareable_artifacts", [])
+        )
+        if shareable_artifacts is None:
+            continue
         capability = f"{manifest['repository']}:verification-executor/{identity}"
         out.append(bind(
             provider=str(manifest["repository"]),
@@ -794,6 +824,7 @@ def _from_verification_inventory(repo: Path) -> list[dict[str, Any]]:
             entrypoint=entrypoint,
             address=address,
             effects=effects,
+            shareable_artifacts=shareable_artifacts,
             event_types=["verification.completed"],
             provenance={
                 "source": str(relative_inventory),
