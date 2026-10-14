@@ -1377,6 +1377,18 @@ def cmd_pressures(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_claim_recover(args: argparse.Namespace) -> int:
+    """Keep owner-authorized recovery exclusively behind Control's RPC boundary."""
+    return fail(
+        "claim recovery is available only through the authenticated Control owner operation",
+        code=3,
+        diagnostics={
+            "code": "control-owner-recovery-required",
+            "next": "run claim-recover from the selected Environment project through MNCS Control",
+        },
+    )
+
+
 def cmd_workspace(args: argparse.Namespace) -> int:
     document = workspace_module.discover_workspace(args.root)
     if args.summary:
@@ -2382,6 +2394,19 @@ def build_parser() -> argparse.ArgumentParser:
     claims.add_argument("--explain", default=None,
                         help="explain one claim id as live/stale/recoverable/not-recoverable")
     claims.set_defaults(func=cmd_claims)
+
+    claim_recover = sub.add_parser(
+        "claim-recover", help="request one Control-owner-approved claim recovery"
+    )
+    claim_recover.add_argument("session")
+    claim_recover.add_argument("--campaign-id", required=True)
+    claim_recover.add_argument("--claim-id", required=True)
+    claim_recover.add_argument("--repository", required=True)
+    claim_recover.add_argument("--owner-session-id", required=True)
+    claim_recover.add_argument("--expected-version", type=int, required=True)
+    claim_recover.add_argument("--approval-reference", required=True)
+    claim_recover.add_argument("--reason", required=True)
+    claim_recover.set_defaults(func=cmd_claim_recover)
 
     pressures = sub.add_parser("pressures", help="record or list pressures")
     pressures.add_argument("--record", type=Path, default=None)

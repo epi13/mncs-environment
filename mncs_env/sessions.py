@@ -2013,16 +2013,27 @@ class Session:
         authority = dict(self.snapshot.get("authority") or {})
         grants = self.authority_scope_grants()
         protected = set(authority.get("protected_repositories", []))
+        claim_fences = authority.get("claim_fences", [])
+        fenced = {
+            str(item.get("repository"))
+            for item in claim_fences
+            if isinstance(item, dict) and isinstance(item.get("repository"), str)
+        }
         granted = {
             str(item["repository"])
             for item in grants
             if isinstance(item.get("repository"), str)
         }
         authority["writable"] = sorted(
-            (set(authority.get("writable", [])) | granted) - protected
+            (set(authority.get("writable", [])) | granted) - protected - fenced
         )
         authority["scope_grants"] = grants
-        authority["scope_grant_repositories"] = sorted(granted - protected)
+        authority["scope_grant_repositories"] = sorted(granted - protected - fenced)
+        authority["claim_fences"] = sorted(
+            (dict(item) for item in claim_fences if isinstance(item, dict)),
+            key=lambda item: (str(item.get("repository", "")),
+                              str(item.get("claim_id", ""))),
+        )
         authority["revision"] = self.authority_revision(authority)
         return authority
 
@@ -2030,7 +2041,7 @@ class Session:
     def authority_revision(authority: dict[str, Any]) -> str:
         """Hash only authority law, excluding changing claim-holder observations."""
         grants = authority.get("scope_grants", [])
-        return digest_hex({
+        payload = {
             "subject": authority.get("subject"),
             "writable": sorted(set(authority.get("writable", []))),
             "protected_repositories": sorted(set(authority.get("protected_repositories", []))),
@@ -2044,7 +2055,17 @@ class Session:
                 )}
                 for item in grants if isinstance(item, dict)
             ],
-        }, length=64)
+        }
+        fences = authority.get("claim_fences", [])
+        if fences:
+            payload["claim_fences"] = [
+                {key: item.get(key) for key in (
+                    "repository", "claim_id", "superseded_version",
+                    "fencing_generation", "recovery_authorization_id",
+                )}
+                for item in fences if isinstance(item, dict)
+            ]
+        return digest_hex(payload, length=64)
 
     def grant_repository_scope(
         self,
@@ -3324,6 +3345,7 @@ class Session:
         workspace_root: str | None = None,
         request_id: str | None = None,
         expected_store_generation: int | None = None,
+        _owner_recovery_authorization: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         # A claim is an Environment-owned lease request. The caller must
         # already have effective write intent for its repository; merely
@@ -3346,7 +3368,8 @@ class Session:
                 raise AuthorityDenied(
                     f"claim denied: {repository} is protected in this Environment session"
                 )
-            if not isinstance(writable, list) or repository not in writable:
+            if (_owner_recovery_authorization is None
+                    and (not isinstance(writable, list) or repository not in writable)):
                 raise AuthorityDenied(
                     f"claim denied: {repository} is outside this Environment session's writable authority"
                 )
@@ -3385,6 +3408,7 @@ class Session:
             scope=scope, checkout_facts=checkout_facts,
             workspace_root=workspace_root, request_id=request_id,
             expected_store_generation=expected_store_generation,
+            owner_recovery_authorization=_owner_recovery_authorization,
         )
         campaign = dict(self.snapshot.get("campaign") or {})
         claim_ids = list(campaign.get("claim_ids", []))
@@ -3396,12 +3420,192 @@ class Session:
         )
         self.snapshot["campaign"] = campaign
         self._refresh_holders()
-        self._emit("lease.acquired", self.snapshot.get("consumer_id", "unknown"),
-                   {"repository": repository, "basis": basis,
-                    "claim_id": record["identity"],
-                    "scope": record.get("scope", {})})
+        event_type = (
+            "lease.owner-recovered"
+            if _owner_recovery_authorization is not None
+            else "lease.acquired"
+        )
+        event_payload = {
+            "repository": repository,
+            "basis": basis,
+            "claim_id": record["identity"],
+            "claim_identity": record.get("claim_id"),
+            "claim_version": record.get("version"),
+            "scope": record.get("scope", {}),
+        }
+        if _owner_recovery_authorization is not None:
+            event_payload.update({
+                "owner_session_id": _owner_recovery_authorization["owner_session_id"],
+                "owner_claim_version": _owner_recovery_authorization["expected_claim_version"],
+                "recovery_authorization_id": _owner_recovery_authorization["authorization_id"],
+            })
+        self._emit(event_type, self.snapshot.get("consumer_id", "unknown"),
+                   event_payload)
         self._save()
         return record
+
+    def recover_claim_controlled(
+        self,
+        *,
+        claim_id: str,
+        repository: str,
+        owner_session_id: str,
+        expected_version: int,
+        authorization: dict[str, Any],
+        authenticated_principal_id: str,
+        request_id: str,
+        reason: str,
+        ttl_hours: int = 24,
+    ) -> dict[str, Any]:
+        """Recover one exact exclusive claim after Control's host-side fence.
+
+        This is an owner operation called only by Control's authenticated
+        Environment service. Ordinary claim acquisition keeps its liveness
+        classification unchanged and cannot supply this authorization.
+        """
+        if (not isinstance(request_id, str)
+                or not re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", request_id)):
+            raise AuthorityDenied("owner claim recovery requires the authenticated Control request identity")
+        try:
+            claims_module._validate_owner_recovery_authorization(
+                authorization,
+                repository=repository,
+                claim_id=claim_id,
+                owner_session_id=owner_session_id,
+                requester_session_id=self.session_id,
+            )
+        except (TypeError, ValueError) as error:
+            raise AuthorityDenied(str(error)) from error
+        if (not isinstance(authenticated_principal_id, str)
+                or authenticated_principal_id != self.snapshot.get("authenticated_principal_id")
+                or authenticated_principal_id != authorization.get("requester_principal_id")):
+            raise AuthorityDenied("owner claim recovery principal does not own the selected Environment session")
+        campaign_id = str((self.snapshot.get("campaign") or {}).get("identity", ""))
+        if campaign_id != authorization.get("campaign_id"):
+            raise AuthorityDenied("owner claim recovery campaign does not match the exact approval")
+        if (authorization.get("requester_session_id") != self.session_id
+                or authorization.get("claim_id") != claim_id
+                or authorization.get("repository") != repository
+                or authorization.get("owner_session_id") != owner_session_id
+                or authorization.get("expected_claim_version") != expected_version):
+            raise AuthorityDenied("owner claim recovery request does not match the exact authorized transition")
+        if self.snapshot.get("lifecycle") in ("completed", "failed"):
+            raise AuthorityDenied("terminal Environment sessions cannot recover repository ownership")
+        authority = self.effective_authority()
+        if repository in authority.get("protected_repositories", []):
+            raise AuthorityDenied(f"repository scope is protected for this campaign: {repository}")
+
+        live = claims_module.active_claims(self.store.read_claims())
+        existing = live.get(claim_id)
+        if (existing is not None
+                and existing.get("session_id") == self.session_id
+                and existing.get("repository") == repository
+                and existing.get("provenance", {}).get("owner_recovery", {}).get(
+                    "authorization_id") == authorization.get("authorization_id")):
+            record = existing
+        else:
+            if (existing is None or existing.get("session_id") != owner_session_id
+                    or int(existing.get("version", 0)) != expected_version
+                    or existing.get("consumer_id") != authorization.get("owner_consumer_id")
+                    or existing.get("repository") != repository
+                    or existing.get("scope", {}).get("exclusive") is not True):
+                raise claims_module.ClaimConflict(
+                    "owner recovery no longer matches the exact active exclusive claim")
+            record = self.acquire_claim(
+                repository,
+                basis=claims_module.BASIS_RECOVERY,
+                reason=reason,
+                ttl_hours=ttl_hours,
+                scope=dict(existing.get("scope", {})),
+                checkout_facts={"dirty": False, "foreign_signals": []},
+                request_id=request_id,
+                _owner_recovery_authorization=authorization,
+            )
+
+        operation_digest = digest_hex({
+            "operation": "environment-owner-claim-recovery/1",
+            "claim_id": claim_id,
+            "repository": repository,
+            "old_session_id": owner_session_id,
+            "old_version": expected_version,
+            "new_session_id": self.session_id,
+            "new_version": int(record.get("version", 0)),
+            "authorization_id": authorization.get("authorization_id"),
+        }, length=64)
+        recovery_payload = {
+            "claim_id": claim_id,
+            "repository": repository,
+            "owner_session_id": owner_session_id,
+            "superseded_version": expected_version,
+            "new_session_id": self.session_id,
+            "fencing_generation": int(record.get("version", 0)),
+            "recovery_authorization_id": authorization.get("authorization_id"),
+            "operator_approval_reference": authorization.get("operator_approval_reference"),
+        }
+        old_session = Session(self.store, owner_session_id)
+        old_authority = dict(old_session.snapshot.get("authority") or {})
+        fences = [
+            dict(item) for item in old_authority.get("claim_fences", [])
+            if isinstance(item, dict)
+            and not (item.get("claim_id") == claim_id
+                     and item.get("recovery_authorization_id")
+                     == authorization.get("authorization_id"))
+        ]
+        fences.append({
+            "repository": repository,
+            "claim_id": claim_id,
+            "superseded_version": expected_version,
+            "fencing_generation": int(record.get("version", 0)),
+            "recovery_authorization_id": authorization.get("authorization_id"),
+        })
+        old_authority["claim_fences"] = fences[-64:]
+        old_session.snapshot["authority"] = old_authority
+        old_campaign = dict(old_session.snapshot.get("campaign") or {})
+        old_campaign["claim_ids"] = [
+            item for item in old_campaign.get("claim_ids", [])
+            if str(item) != claim_id
+        ]
+        old_campaign["repository_refs"] = old_session._campaign_repository_refs(
+            claims_module.active_claims(self.store.read_claims())
+        )
+        old_session.snapshot["campaign"] = old_campaign
+        old_session._refresh_holders()
+        already_fenced = any(
+            event.get("type") == "lease.recovered-away"
+            and event.get("payload", {}).get("recovery_authorization_id")
+            == authorization.get("authorization_id")
+            for event in old_session._log()
+        )
+        if not already_fenced:
+            old_session._emit(
+                "lease.recovered-away", "mncs-control-mcp", recovery_payload,
+                request_id=request_id, operation_digest=operation_digest,
+            )
+        old_session._save()
+
+        already_reconciled = any(
+            event.get("type") == "lease.owner-recovery-reconciled"
+            and event.get("payload", {}).get("recovery_authorization_id")
+            == authorization.get("authorization_id")
+            for event in self._log()
+        )
+        if not already_reconciled:
+            self._emit(
+                "lease.owner-recovery-reconciled", "mncs-control-mcp",
+                recovery_payload, request_id=request_id,
+                operation_digest=operation_digest,
+            )
+        self._save()
+        return {
+            "status": "recovered",
+            "claim": record,
+            "old_session_id": owner_session_id,
+            "new_session_id": self.session_id,
+            "fencing_generation": int(record.get("version", 0)),
+            "recovery_authorization_id": authorization.get("authorization_id"),
+            "continuation_state": "recoverable",
+            "reconciled_sessions": [owner_session_id, self.session_id],
+        }
 
     def release_claim(self, repository: str, reason: str = "",
                       claim_id: str | None = None,

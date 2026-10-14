@@ -140,6 +140,18 @@ def evaluate(
     if action in context.get("denied", []):
         return {"verdict": "deny", "reason": f"action {action} is forbidden by intent"}
     repo = target.split("/")[0] if "/" in target else target
+    if action in MUTATING_ACTIONS or action in ("publish", "verify"):
+        fence = next((item for item in context.get("claim_fences", [])
+                      if isinstance(item, dict)
+                      and item.get("repository") == repo), None)
+        if fence is not None:
+            return {
+                "verdict": "deny",
+                "reason": (
+                    f"{repo} authority was fenced after claim generation "
+                    f"{fence.get('fencing_generation')} superseded this session"
+                ),
+            }
     holders = _holder_list(
         claims if claims is not None else context.get("claim_holders", {}), repo)
     others = [h for h in holders if h["session_id"] != session_id]

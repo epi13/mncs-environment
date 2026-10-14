@@ -27,6 +27,7 @@ checks cap an overlong lease at acquisition plus the current maximum.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -68,6 +69,7 @@ def _acquire_request_digest(
     ttl_hours: int, scope: dict[str, Any],
     checkout_facts: dict[str, Any],
     expected_store_generation: int | None = None,
+    owner_recovery_authorization: dict[str, Any] | None = None,
 ) -> str:
     # ``reason`` is descriptive provenance, not an effect selector. Replaying
     # the same operation identity may improve its note without republishing a
@@ -84,6 +86,8 @@ def _acquire_request_digest(
     # Keep unguarded request digests stable for existing durable retries.
     if expected_store_generation is not None:
         payload["expected_store_generation"] = expected_store_generation
+    if owner_recovery_authorization is not None:
+        payload["owner_recovery_authorization"] = owner_recovery_authorization
     return _operation_digest("claim-acquire/1", **payload)
 
 
@@ -529,6 +533,119 @@ class ClaimAdoptionRequired(Exception):
         self.facts = facts or {}
 
 
+def _validate_owner_recovery_authorization(
+    authorization: dict[str, Any], *, repository: str, claim_id: str,
+    owner_session_id: str, requester_session_id: str,
+) -> None:
+    """Validate the narrow Control owner attestation used for live-owner recovery.
+
+    This attestation is accepted only by the Environment/Control owner API;
+    the ordinary ``mncs-env claims --basis recovery`` surface never accepts
+    caller-supplied liveness evidence. Control binds the record to an exact
+    configured approval, session, claim generation, and host observation.
+    """
+    required = {
+        "schema_version", "authorization_id", "campaign_id",
+        "requester_session_id", "requester_principal_id",
+        "operator_approval_reference", "claim_id", "repository",
+        "expected_claim_version", "owner_session_id", "owner_consumer_id",
+        "host_observation",
+        "host_observation_digest",
+    }
+    if set(authorization) != required:
+        raise ValueError("owner recovery authorization fields are invalid")
+    if authorization.get("schema_version") != "mncs.environment.control-owner-claim-recovery/1":
+        raise ValueError("owner recovery authorization schema is unsupported")
+    if (authorization.get("repository") != repository
+            or authorization.get("claim_id") != claim_id
+            or authorization.get("owner_session_id") != owner_session_id
+            or authorization.get("requester_session_id") != requester_session_id):
+        raise ValueError("owner recovery authorization does not match the exact claim transition")
+    if (not isinstance(authorization.get("owner_consumer_id"), str)
+            or not authorization["owner_consumer_id"]):
+        raise ValueError("owner recovery consumer identity is invalid")
+    if (type(authorization.get("expected_claim_version")) is not int
+            or authorization["expected_claim_version"] < 1):
+        raise ValueError("owner recovery authorization claim version is invalid")
+    for field in (
+        "campaign_id", "requester_principal_id", "operator_approval_reference",
+    ):
+        value = authorization.get(field)
+        if not isinstance(value, str) or not value.strip() or len(value) > 256 or "\x00" in value:
+            raise ValueError(f"owner recovery authorization {field} is invalid")
+    observation = authorization.get("host_observation")
+    if not isinstance(observation, dict):
+        raise TypeError("owner recovery host observation must be an object")
+    observation_fields = {
+        "schema_version", "observed_at", "host_boot_id", "control_owner_pid",
+        "control_owner_start_ticks", "process_view", "processes_examined",
+        "same_uid_processes_examined", "user_units_examined", "active_jobs",
+        "active_owner_grants", "revoked_owner_grants", "active_owner_requests", "matching_processes",
+        "matching_user_services", "resident_services", "complete",
+    }
+    if set(observation) != observation_fields:
+        raise ValueError("owner recovery host observation fields are invalid")
+    if (observation.get("schema_version") != "mncs.control.host-execution-liveness/1"
+            or observation.get("process_view") != "host-procfs"
+            or observation.get("complete") is not True
+            or observation.get("active_jobs") != 0
+            or observation.get("active_owner_grants") != 0
+            or observation.get("active_owner_requests") != 0
+            or observation.get("matching_processes") != []
+            or observation.get("matching_user_services") != []):
+        raise ValueError("owner recovery requires a complete host observation with no live former-owner execution")
+    resident_services = observation.get("resident_services")
+    if (not isinstance(resident_services, list) or len(resident_services) > 64
+            or any(not isinstance(item, dict)
+                   or set(item) != {
+                       "pid", "ppid", "start_ticks", "module", "environment_readable",
+                   }
+                   or type(item.get("pid")) is not int or item["pid"] <= 0
+                   or type(item.get("ppid")) is not int or item["ppid"] <= 0
+                   or not isinstance(item.get("start_ticks"), str)
+                   or not item["start_ticks"]
+                   or not isinstance(item.get("module"), str)
+                   or not item["module"].endswith(".server")
+                   or type(item.get("environment_readable")) is not bool
+                   for item in resident_services)):
+        raise ValueError("owner recovery resident integration service identities are invalid")
+    if (type(observation.get("control_owner_pid")) is not int
+            or observation["control_owner_pid"] <= 0
+            or not isinstance(observation.get("control_owner_start_ticks"), str)
+            or not observation["control_owner_start_ticks"]
+            or not isinstance(observation.get("host_boot_id"), str)
+            or not re.fullmatch(r"[0-9a-f-]{36}", observation["host_boot_id"])):
+        raise ValueError("owner recovery host identity is invalid")
+    if (type(observation.get("revoked_owner_grants")) is not int
+            or observation["revoked_owner_grants"] < 0):
+        raise ValueError("owner recovery revoked-grant count is invalid")
+    if any(type(observation.get(field)) is not int or observation[field] < 0
+           for field in ("processes_examined", "same_uid_processes_examined",
+                         "user_units_examined")):
+        raise ValueError("owner recovery host inspection counts are invalid")
+    observed_at = _parse_time(observation.get("observed_at"))
+    if observed_at is None:
+        raise ValueError("owner recovery host observation timestamp is invalid")
+    age = datetime.now(timezone.utc) - observed_at
+    if age < timedelta(seconds=-30) or age > timedelta(minutes=2):
+        raise ValueError("owner recovery host observation is not current")
+    expected_observation_digest = digest_hex(observation, length=64)
+    if authorization.get("host_observation_digest") != expected_observation_digest:
+        raise ValueError("owner recovery host observation digest is invalid")
+    stable_authorization = {
+        key: authorization[key]
+        for key in (
+            "schema_version", "campaign_id", "requester_session_id",
+            "requester_principal_id", "operator_approval_reference",
+            "claim_id", "repository", "expected_claim_version",
+            "owner_session_id", "owner_consumer_id",
+        )
+    }
+    expected_authorization_id = digest_hex(stable_authorization, length=64)
+    if authorization.get("authorization_id") != expected_authorization_id:
+        raise ValueError("owner recovery authorization identity is invalid")
+
+
 def _with_identity(record: dict[str, Any]) -> dict[str, Any]:
     record = dict(record)
     record["identity"] = "clm_" + digest_hex(
@@ -546,13 +663,23 @@ def _record(store, record: dict[str, Any]) -> dict[str, Any]:
 def _recovery_records(records: list[dict[str, Any]],
                       victims: list[tuple[str, dict[str, Any]]], *,
                       session_id: str, consumer_id: str,
-                      reason: str) -> list[dict[str, Any]]:
+                      reason: str,
+                      owner_recovery_authorization: dict[str, Any] | None = None,
+                      ) -> list[dict[str, Any]]:
     """Prepare superseding records for the caller's atomic claim batch."""
     moment = datetime.now(timezone.utc).isoformat(timespec="seconds")
     written: list[dict[str, Any]] = []
     for victim_id, victim in victims:
         versions = [int(record.get("version", 0)) for record in records
                     if str(record.get("claim_id", "")) == victim_id]
+        provenance: dict[str, Any] = {
+            "recovered_by": session_id,
+            "recovered_consumer": consumer_id,
+            "recovered_from_version": int(victim.get("version", 0)),
+            "recovery_reason": reason,
+        }
+        if owner_recovery_authorization is not None:
+            provenance["owner_recovery"] = owner_recovery_authorization
         supersede = {
             "schema_version": SCHEMA,
             "claim_id": victim_id,
@@ -567,10 +694,7 @@ def _recovery_records(records: list[dict[str, Any]],
             "acquired_at": str(victim.get("acquired_at", "")),
             "expires_at": str(victim.get("expires_at", "")),
             "superseded_at": moment,
-            "provenance": {"recovered_by": session_id,
-                           "recovered_consumer": consumer_id,
-                           "recovered_from_version": int(victim.get("version", 0)),
-                           "recovery_reason": reason},
+            "provenance": provenance,
         }
         written.append(_with_identity(supersede))
     return written
@@ -598,6 +722,7 @@ def acquire(
     now: datetime | None = None,
     request_id: str | None = None,
     expected_store_generation: int | None = None,
+    owner_recovery_authorization: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Claim a scope; conflicts and unknown-work adoption fail closed.
 
@@ -617,6 +742,18 @@ def acquire(
             and (type(expected_store_generation) is not int
                  or expected_store_generation < 0)):
         raise ValueError("expected Store generation must be a non-negative integer")
+    if owner_recovery_authorization is not None:
+        _validate_owner_recovery_authorization(
+            owner_recovery_authorization,
+            repository=repository,
+            claim_id=claim_identity(repository, normalize_scope(scope, repository)),
+            owner_session_id=str(owner_recovery_authorization.get("owner_session_id", "")),
+            requester_session_id=session_id,
+        )
+        if basis != BASIS_RECOVERY:
+            raise ValueError("owner-authorized recovery requires the recovery claim basis")
+        if request_id is None:
+            raise ValueError("owner-authorized recovery requires a stable request identity")
     resolved = normalize_scope(scope, repository)
     if resolved["kind"] == "worktree":
         from pathlib import Path
@@ -638,6 +775,7 @@ def acquire(
         basis=basis, ttl_hours=ttl_hours, scope=resolved,
         checkout_facts=facts,
         expected_store_generation=expected_store_generation,
+        owner_recovery_authorization=owner_recovery_authorization,
     )
     from .session_store import ClaimBatchConflict, ClaimVersionConflict
 
@@ -696,7 +834,29 @@ def acquire(
             if reason_ is not None:
                 conflicts.append((other_id, other, reason_))
         recovered: list[dict[str, Any]] = []
-        if conflicts and basis == BASIS_RECOVERY:
+        if owner_recovery_authorization is not None:
+            recovery = owner_recovery_authorization
+            target_id = str(recovery["claim_id"])
+            target_version = int(recovery["expected_claim_version"])
+            target_owner = str(recovery["owner_session_id"])
+            target = live.get(target_id)
+            if (target is None
+                    or target.get("status") != "held"
+                    or target.get("session_id") != target_owner
+                    or int(target.get("version", 0)) != target_version
+                    or target.get("repository") != repository
+                    or target.get("scope") != resolved):
+                raise ClaimConflict(
+                    "owner-authorized recovery no longer matches the exact held claim generation")
+            if len(conflicts) != 1 or conflicts[0][0] != target_id:
+                raise ClaimConflict(
+                    "owner-authorized recovery cannot supersede unrelated overlapping claims")
+            recovered = _recovery_records(
+                records, [(target_id, target)], session_id=session_id,
+                consumer_id=consumer_id, reason=reason,
+                owner_recovery_authorization=recovery,
+            )
+        elif conflicts and basis == BASIS_RECOVERY:
             assessments = []
             for other_id, other, reason_ in conflicts:
                 verdict = explain(other, store, now=now)
@@ -780,6 +940,8 @@ def acquire(
                  "owner_session": str(item["session_id"])}
                 for item in recovered
             ]
+            if owner_recovery_authorization is not None:
+                record["provenance"]["owner_recovery"] = owner_recovery_authorization
         record = _with_identity(record)
         try:
             store.put_claim_batch(
