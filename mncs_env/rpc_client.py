@@ -126,12 +126,7 @@ def dispatch(argv: list[str]) -> int:
                 "ENVIRONMENT_PERSISTENCE_UNAVAILABLE": "persistence-service-unavailable",
                 "ENVIRONMENT_UNAVAILABLE": "persistence-service-unavailable",
             }.get(code, "publication-rejected")
-            domain_details = None
-            if code == "ENVIRONMENT_OPERATION_UNAVAILABLE":
-                domain_details = {
-                    key: details[key] for key in ("operation", "status")
-                    if isinstance(details.get(key), str)
-                }
+            domain_details = _control_error_domain_details(code, details)
             return _fail(
                 category,
                 str(error.get("message", code)),
@@ -319,6 +314,44 @@ def _domain_diagnostic_details(
         result = {key: result[key] for key in minimal_keys if key in result}
         result["details_truncated"] = True
     return result
+
+
+def _control_error_domain_details(
+    cause_code: str, details: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Project a small allowlist of Control-owned Environment failures.
+
+    In particular, claim recovery must tell an unattended caller whether
+    host process inspection, user-service inspection, or a live conflicting
+    execution prevented recovery. Raw process identities and command lines
+    stay inside Control.
+    """
+    if cause_code == "ENVIRONMENT_OPERATION_UNAVAILABLE":
+        result: dict[str, Any] = {"cause_code": cause_code}
+        for key in ("operation", "status"):
+            if isinstance(details.get(key), str):
+                result[key] = details[key][:MAX_DIAGNOSTIC_TEXT]
+        return result
+    if cause_code == "ENVIRONMENT_OWNER_LIVENESS_UNKNOWN":
+        result = {"cause_code": cause_code}
+        for key in ("host_process_view", "user_service_view"):
+            if isinstance(details.get(key), bool):
+                result[key] = details[key]
+        return result
+    if cause_code == "ENVIRONMENT_OWNER_EXECUTION_ACTIVE":
+        counts = {
+            "active_jobs": "active_jobs",
+            "active_owner_requests": "active_owner_requests",
+            "matching_processes": "active_processes",
+            "matching_user_services": "active_user_services",
+        }
+        result = {"cause_code": cause_code}
+        for source, target in counts.items():
+            value = details.get(source)
+            if isinstance(value, list):
+                result[target] = len(value)
+        return result
+    return None
 
 
 def _bounded_diagnostic_value(value: Any, *, depth: int = 0) -> Any:

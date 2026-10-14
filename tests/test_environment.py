@@ -1385,9 +1385,73 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
             diagnostics["cause_code"], "ENVIRONMENT_OPERATION_UNAVAILABLE"
         )
         self.assertEqual(diagnostics["domain_details"], {
+            "cause_code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
             "operation": "doctor", "status": "unknown",
         })
         self.assertFalse(diagnostics["publication_completed"])
+
+    def test_rpc_client_preserves_bounded_claim_recovery_liveness_reason(self) -> None:
+        from mncs_env import rpc_client
+
+        with tempfile.TemporaryDirectory() as directory:
+            grant = Path(directory) / "grant"
+            grant.write_text("test-grant", encoding="ascii")
+            with mock.patch.dict(os.environ, {
+                "MNCS_ENV_RPC_SOCKET": "/run/test.sock",
+                "MNCS_ENV_RPC_GRANT_FILE": str(grant),
+            }), mock.patch.object(rpc_client, "_exchange", return_value={
+                "ok": False,
+                "error": {
+                    "code": "ENVIRONMENT_OWNER_LIVENESS_UNKNOWN",
+                    "message": "Control could not complete host inspection",
+                    "details": {
+                        "host_process_view": True,
+                        "user_service_view": False,
+                        "processes": [{"pid": 10, "command": "must not cross"}],
+                    },
+                },
+            }), redirect_stdout(io.StringIO()) as output:
+                code = rpc_client.dispatch([
+                    "claims", "ses_requester", "--acquire", "mncs-compiler",
+                ])
+
+        self.assertEqual(code, 3)
+        result = json.loads(output.getvalue())
+        diagnostics = result["diagnostics"]
+        self.assertEqual(diagnostics["code"], "publication-rejected")
+        self.assertEqual(
+            diagnostics["cause_code"], "ENVIRONMENT_OWNER_LIVENESS_UNKNOWN"
+        )
+        self.assertEqual(diagnostics["domain_details"], {
+            "cause_code": "ENVIRONMENT_OWNER_LIVENESS_UNKNOWN",
+            "host_process_view": True,
+            "user_service_view": False,
+        })
+        self.assertNotIn("must not cross", json.dumps(result))
+
+    def test_rpc_client_projects_live_claim_conflict_counts_without_process_data(self) -> None:
+        from mncs_env import rpc_client
+
+        projected = rpc_client._control_error_domain_details(
+            "ENVIRONMENT_OWNER_EXECUTION_ACTIVE",
+            {
+                "owner_session_id": "ses_owner",
+                "active_jobs": [{"job_id": "job_private"}],
+                "active_owner_requests": [],
+                "matching_processes": [{"pid": 100, "comm": "python"}],
+                "matching_user_services": ["private.service"],
+            },
+        )
+
+        self.assertEqual(projected, {
+            "cause_code": "ENVIRONMENT_OWNER_EXECUTION_ACTIVE",
+            "active_jobs": 1,
+            "active_owner_requests": 0,
+            "active_processes": 1,
+            "active_user_services": 1,
+        })
+        self.assertNotIn("job_private", json.dumps(projected))
+        self.assertNotIn("private.service", json.dumps(projected))
 
     def test_rpc_client_preserves_campaign_checkpoint_conflict_version(self) -> None:
         from mncs_env import rpc_client
