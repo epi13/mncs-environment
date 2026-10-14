@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -122,6 +123,71 @@ def _grant(session: sessions.Session, *, revision: str | None = None,
         authenticated_principal_id=principal,
         request_id=request_id,
     )
+
+
+def _recovered_claim(
+    session: sessions.Session, repository: str, *,
+    claim_session: str | None = None,
+    requester_session: str | None = None,
+    bad_authorization_id: bool = False,
+    basis: str = claims.BASIS_RECOVERY,
+) -> dict:
+    """Publish a fixture claim with the provenance shape Control recovery creates."""
+    scope = claims.normalize_scope(None, repository)
+    claim_id = claims.claim_identity(repository, scope)
+    claim_session = claim_session or session.session_id
+    requester_session = requester_session or claim_session
+    owner_session = "ses_fixture_former_owner"
+    authorization = {
+        "schema_version": "mncs.environment.control-owner-claim-recovery/1",
+        "campaign_id": CAMPAIGN,
+        "requester_session_id": requester_session,
+        "requester_principal_id": PRINCIPAL,
+        "operator_approval_reference": "user-approval:fixture-recovery",
+        "claim_id": claim_id,
+        "repository": repository,
+        "expected_claim_version": 3,
+        "owner_session_id": owner_session,
+        "owner_consumer_id": "former-consumer",
+    }
+    stable_fields = (
+        "schema_version", "campaign_id", "requester_session_id",
+        "requester_principal_id", "operator_approval_reference", "claim_id",
+        "repository", "expected_claim_version", "owner_session_id",
+        "owner_consumer_id",
+    )
+    authorization["authorization_id"] = claims.digest_hex(
+        {field: authorization[field] for field in stable_fields}, length=64,
+    )
+    if bad_authorization_id:
+        authorization["authorization_id"] = "0" * 64
+    now = datetime.now(timezone.utc)
+    record = {
+        "schema_version": claims.SCHEMA,
+        "claim_id": claim_id,
+        "version": 5,
+        "repository": repository,
+        "scope": scope,
+        "session_id": claim_session,
+        "consumer_id": session.snapshot["consumer_id"],
+        "basis": basis,
+        "reason": "fixture owner-authorized recovery",
+        "status": "held",
+        "acquired_at": now.isoformat(timespec="seconds"),
+        "expires_at": (now + timedelta(hours=12)).isoformat(timespec="seconds"),
+        "provenance": {
+            "owner_recovery": authorization,
+            "recovered_from": [{
+                "claim_id": claim_id,
+                "version": 3,
+                "superseded_version": 4,
+                "owner_session": owner_session,
+            }],
+        },
+    }
+    record = claims._with_identity(record)
+    session.store.put_claim(record)
+    return record
 
 
 def test_grant_is_store_durable_and_claimable_after_fresh_open(tmp_path: Path) -> None:
@@ -280,6 +346,50 @@ def test_scope_grant_rejects_unowned_stale_or_dirty_requests(
                 authenticated_principal_id=principal,
                 request_id="req_fixture_rejected_scope_grant",
             )
+        assert session.authority_scope_grants() == []
+        assert "mncs-control-mcp" not in session.effective_authority()["writable"]
+    finally:
+        session.close()
+
+
+def test_scope_grant_accepts_exact_recovered_claim_held_by_current_session(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        recovered = _recovered_claim(session, "mncs-control-mcp")
+        grant = _grant(session)
+
+        assert grant["repository"] == "mncs-control-mcp"
+        assert recovered["session_id"] == session.session_id
+        assert "mncs-control-mcp" in session.effective_authority()["writable"]
+        assert session.authority_scope_grants() == [grant]
+    finally:
+        session.close()
+
+
+@pytest.mark.parametrize(
+    "claim_options",
+    [
+        {"claim_session": "ses_foreign_recovered_owner"},
+        {"requester_session": "ses_other_requester"},
+        {"bad_authorization_id": True},
+        {"basis": claims.BASIS_EXPLICIT},
+    ],
+)
+def test_scope_grant_rejects_foreign_or_nonrecovery_claims(
+    tmp_path: Path, claim_options: dict,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        _recovered_claim(session, "mncs-control-mcp", **claim_options)
+
+        with pytest.raises(sessions.AuthorityScopeConflict):
+            _grant(session)
         assert session.authority_scope_grants() == []
         assert "mncs-control-mcp" not in session.effective_authority()["writable"]
     finally:

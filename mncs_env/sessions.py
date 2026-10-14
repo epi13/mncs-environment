@@ -2208,7 +2208,11 @@ class Session:
             item for item in claims.values()
             if item.get("repository") == repository
         ]
-        if competing:
+        same_session_recovery = [
+            item for item in competing
+            if self._is_owner_recovered_claim(item, repository, campaign_id)
+        ]
+        if competing and (len(competing) != 1 or len(same_session_recovery) != 1):
             raise AuthorityScopeConflict(
                 "authority-scope-conflict",
                 f"repository scope has an existing live claim: {repository}",
@@ -2268,6 +2272,75 @@ class Session:
                 next_step="use a canonical Store provider with generation compare-and-swap support",
             ) from error
         return scope_grant
+
+    def _is_owner_recovered_claim(
+        self, record: dict[str, Any], repository: str, campaign_id: str,
+    ) -> bool:
+        """Allow scope admission through this session's exact recovered lease.
+
+        Claim recovery and repository scope admission are separate authority
+        steps. The recovered lease is the one live claim that may accompany
+        the second step; ordinary, transferred, foreign, or malformed claims
+        still block scope admission.
+        """
+        scope = claims_module.normalize_scope(None, repository)
+        provenance = record.get("provenance")
+        provenance = provenance if isinstance(provenance, dict) else {}
+        recovery = provenance.get("owner_recovery")
+        if not isinstance(recovery, dict):
+            return False
+        expected_version = recovery.get("expected_claim_version")
+        if (
+            record.get("schema_version") != claims_module.SCHEMA
+            or record.get("claim_id") != claims_module.claim_identity(repository, scope)
+            or record.get("repository") != repository
+            or record.get("scope") != scope
+            or record.get("status") != "held"
+            or record.get("basis") != claims_module.BASIS_RECOVERY
+            or record.get("session_id") != self.session_id
+            or record.get("consumer_id") != self.snapshot.get("consumer_id")
+            or type(expected_version) is not int
+            or expected_version < 1
+            or record.get("version") != expected_version + 2
+            or recovery.get("schema_version") != (
+                "mncs.environment.control-owner-claim-recovery/1"
+            )
+            or recovery.get("campaign_id") != campaign_id
+            or recovery.get("claim_id") != record.get("claim_id")
+            or recovery.get("repository") != repository
+            or recovery.get("owner_session_id") == self.session_id
+            or recovery.get("requester_session_id") != self.session_id
+            or recovery.get("requester_principal_id")
+            != self.snapshot.get("authenticated_principal_id")
+        ):
+            return False
+        stable_fields = (
+            "schema_version", "campaign_id", "requester_session_id",
+            "requester_principal_id", "operator_approval_reference",
+            "claim_id", "repository", "expected_claim_version",
+            "owner_session_id", "owner_consumer_id",
+        )
+        if any(field not in recovery for field in stable_fields):
+            return False
+        if recovery.get("authorization_id") != digest_hex(
+            {field: recovery[field] for field in stable_fields}, length=64,
+        ):
+            return False
+        recovered_from = provenance.get("recovered_from")
+        if not isinstance(recovered_from, list) or not any(
+            isinstance(item, dict)
+            and item.get("claim_id") == record.get("claim_id")
+            and item.get("owner_session") == recovery.get("owner_session_id")
+            and item.get("version") == expected_version
+            and item.get("superseded_version") == expected_version + 1
+            for item in recovered_from
+        ):
+            return False
+        try:
+            expected_record = claims_module._with_identity(record)
+        except (KeyError, TypeError, ValueError):
+            return False
+        return record.get("identity") == expected_record.get("identity")
 
     def _compose_authorized_scope_checkouts(self) -> dict[str, Any]:
         """Add only explicitly granted repositories with this session's live claim.
