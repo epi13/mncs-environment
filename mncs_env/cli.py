@@ -780,9 +780,16 @@ def cmd_artifact_read(args: argparse.Namespace) -> int:
                     },
                 )
             binding = matches[0]
-            if binding.get("effects") != ["read"]:
+            shareable_artifacts = binding.get("shareable_artifacts", [])
+            read_only = binding.get("effects") == ["read"]
+            explicitly_shareable = (
+                isinstance(shareable_artifacts, list)
+                and relative.as_posix() in shareable_artifacts
+            )
+            if not read_only and not explicitly_shareable:
                 return fail(
-                    "artifact read requires a capability declared with read effects only",
+                    "artifact read requires read-only effects or an exact "
+                    "declared shareable path",
                     code=3,
                     diagnostics={"code": "artifact-effect-denied"},
                 )

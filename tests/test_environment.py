@@ -3283,6 +3283,89 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(payload["sha256"], hashlib.sha256(expected).hexdigest())
             self.assertFalse((state / "sessions" / session_id).exists())
 
+    def test_artifact_read_allows_exact_shareable_execute_output_after_fresh_reopen(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            session_id = session.session_id
+            capability = "mncs-forge:provider-artifact-execution"
+            binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-forge",
+                capability=capability,
+                contract_revision="2",
+                entrypoint="execute",
+                address="/bin/echo",
+                effects=["execute"],
+                shareable_artifacts=["forge-execution-receipt.json"],
+            ))
+            session.snapshot["bindings"].append(binding)
+            session._save()
+            expected = b'{"schema_version":"mncs.execution-receipt/1"}\n'
+
+            def invoke(_binding, _argv, **kwargs):
+                root = Path(kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+                (root / "forge-execution-receipt.json").write_bytes(expected)
+                (root / "compiler-vm-task.json").write_text(
+                    "task witness", encoding="utf-8"
+                )
+                return {"status": "ok", "returncode": 0, "stdout": "ok", "stderr": ""}
+
+            with (
+                mock.patch.object(session, "check", return_value={"verdict": "allow"}),
+                mock.patch.object(
+                    sessions.capabilities_module, "invoke", side_effect=invoke
+                ),
+            ):
+                result = session.invoke(capability, [])
+            self.assertEqual(result["status"], "ok")
+            reference = result["artifact_store_ref"]
+            binding_id = binding["binding_id"]
+            session.close()
+
+            reopened = sessions.Session.open(
+                state_dir=state, session_id=session_id, backend="store",
+                verify_on_open=False,
+            )
+            stdout = io.StringIO()
+            args = argparse.Namespace(
+                state_dir=state,
+                persistence="store",
+                session=session_id,
+                capability=capability,
+                binding_id=binding_id,
+                path="forge-execution-receipt.json",
+            )
+            with (
+                mock.patch.object(reopened, "check", return_value={"verdict": "allow"}),
+                mock.patch.object(cli, "_open", return_value=reopened),
+                redirect_stdout(stdout),
+            ):
+                code = cli.cmd_artifact_read(args)
+            self.assertEqual(code, 0)
+            payload = json.loads(stdout.getvalue())
+            content = base64.b64decode(payload["content_base64"], validate=True)
+            self.assertEqual(payload["store_reference"], reference)
+            self.assertEqual(payload["path"], "forge-execution-receipt.json")
+            self.assertEqual(content, expected)
+            self.assertEqual(payload["sha256"], hashlib.sha256(expected).hexdigest())
+
+            stderr = io.StringIO()
+            args.path = "compiler-vm-task.json"
+            with (
+                mock.patch.object(reopened, "check", return_value={"verdict": "allow"}),
+                mock.patch.object(cli, "_open", return_value=reopened),
+                redirect_stderr(stderr),
+            ):
+                denied = cli.cmd_artifact_read(args)
+            self.assertEqual(denied, 3)
+            self.assertEqual(
+                json.loads(stderr.getvalue())["diagnostics"]["code"],
+                "artifact-effect-denied",
+            )
+            reopened.close()
+
     def test_session_invoke_passes_authorized_store_artifact_as_private_input(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))
