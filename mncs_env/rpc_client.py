@@ -345,6 +345,11 @@ def _control_error_domain_details(
             )
             if isinstance(tree_complete, bool):
                 projected["request_process_tree_complete"] = tree_complete
+            tracked_tree_complete = process_diagnostics.get(
+                "tracked_job_process_tree_complete"
+            )
+            if isinstance(tracked_tree_complete, bool):
+                projected["tracked_job_process_tree_complete"] = tracked_tree_complete
             reasons = process_diagnostics.get("incomplete_reasons")
             if isinstance(reasons, list):
                 bounded_reasons = []
@@ -360,6 +365,16 @@ def _control_error_domain_details(
                     "request_process_parent_observation_unreadable",
                     "request_process_root_unreadable",
                     "request_process_start_identity_unavailable",
+                    "request_process_root_identity_invalid",
+                    "request_process_root_identity_unavailable",
+                    "request_process_root_identity_changed",
+                    "tracked_job_process_tree_incomplete",
+                    "tracked_job_process_parent_observation_unreadable",
+                    "tracked_job_process_root_unreadable",
+                    "tracked_job_process_start_identity_unavailable",
+                    "tracked_job_process_root_identity_invalid",
+                    "tracked_job_process_root_identity_unavailable",
+                    "tracked_job_process_root_identity_changed",
                 }
                 for item in reasons[:16]:
                     if not isinstance(item, dict):

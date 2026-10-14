@@ -1409,8 +1409,10 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
                         "user_service_view": False,
                         "process_diagnostics": {
                             "request_process_tree_complete": False,
+                            "tracked_job_process_tree_complete": False,
                             "incomplete_reasons": [
                                 {"reason": "request_process_root_unreadable", "count": 1},
+                                {"reason": "tracked_job_process_root_identity_changed", "count": 1},
                                 {"reason": "private_process_data", "count": 99},
                             ],
                         },
@@ -1440,8 +1442,10 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
             "user_service_view": False,
             "process_diagnostics": {
                 "request_process_tree_complete": False,
+                "tracked_job_process_tree_complete": False,
                 "incomplete_reasons": [
                     {"reason": "request_process_root_unreadable", "count": 1},
+                    {"reason": "tracked_job_process_root_identity_changed", "count": 1},
                 ],
             },
         })
