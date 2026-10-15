@@ -6,8 +6,182 @@
     "per_artifact_limit_bytes": 2097152,
     "test_sha256": "f68697e759ff44810903f4f58dc78a610a20748b4447a4b1a8c6331998fc1a0b"
   },
+  "integrated_execution": {
+    "additional_integrated_cases": [
+      {
+        "application_result": {
+          "failed": 0,
+          "outcome": "Completed",
+          "passed": 3,
+          "skipped": 1,
+          "summary": "PASS",
+          "total": 4,
+          "unsupported": 0
+        },
+        "call_identity": "sha256:ff5e158a6118070ecf86a8b7f6bab2bcb85902dedb9be541294feb4353d97e75",
+        "forge_receipt_identity": "cc10fb2dfbd5fd51ea7d1a9bc9ae9fb69b23273472eb1dc8af0be5bd6acfeece",
+        "fresh_process_store_readback": true,
+        "resource_measurement": {
+          "cpu_microseconds": 429046,
+          "peak_cgroup_memory_bytes": 18829312,
+          "peak_processes": 2,
+          "resource_limit_events": 0
+        },
+        "result_sha256": "362d13383cce20d1b2fe25dc076329983c73efb53509e30d99533aa01398d7f9",
+        "store_reference": "mncs-store:ses_3d9102d7ed4704cd:capability-invocation-artifacts:b092bbd6c6d5c8b0cc5fd2fa2150d8d9eb392fd0e9852bbd276e9782d6021740",
+        "workload": "Native readiness application success case"
+      },
+      {
+        "application_result": {
+          "error": "InvalidTestCount",
+          "expected": 4,
+          "found": 3,
+          "outcome": "Rejected"
+        },
+        "call_identity": "sha256:bc2d1475f8814b83dc6f7c030bc5e004df34dc27e78b05060758e4f634c1f51b",
+        "forge_receipt_identity": "76b3179df2444a85fae39c099b84e84dc2de7e57b16372de82bbbe09aeee68aa",
+        "fresh_process_store_readback": true,
+        "resource_measurement": {
+          "cpu_microseconds": 370723,
+          "peak_cgroup_memory_bytes": 18636800,
+          "peak_processes": 2,
+          "resource_limit_events": 0
+        },
+        "result_sha256": "adecee4a8fa39c2c2845b00c8485852bf5da26d6ca1752cdfd7a3b515b7afeb1",
+        "store_reference": "mncs-store:ses_3d9102d7ed4704cd:capability-invocation-artifacts:1462115b177a16e5f687e2db81624d1862c8970a834aea635117f30d8b387bf8",
+        "workload": "Native readiness application typed error case"
+      }
+    ],
+    "compiler_build": {
+      "artifact_identity": "sha256:745914f65bf3aa29efccea50f8925459ceb7198d5142effaa59d1f1341c4085b",
+      "artifact_sha256": "5ad764c2f606ae1d3005d2b31a6e8c02f6fe2ab5014716c38169aff1fcee65ff",
+      "build_binding_id": "cap_7523d8bba5efca66",
+      "build_store_reference": "mncs-store:ses_3d9102d7ed4704cd:capability-invocation-artifacts:97ad6784b6d279fda658753df934c5a679499d45bc4ffc493c98858cd9ae5fcb",
+      "compiler_checkout_revision": "78af040600c01494c0301bdd6d56398ba0b9dd4a",
+      "compiler_producer_identity": "sha256:69ecbee246ceb1f056ed0f9d6eb50ac0e2d47a607b1fcc11c63d74307a6bda42",
+      "dependency_graph_identity": "sha256:35de1895844f29d860b609792d30771926fe4bb39671bdaf32feb1133932c4c3",
+      "entry_status": "verified",
+      "interface_identity": "sha256:3c08227564c44096355994ec3689e817d710ca5848581880dc278d5cd7e434f9",
+      "provider_output_bytes": 1071468,
+      "response_schema": "mncs.compiler.application-build/4",
+      "source_snapshot_identity": "sha256:23dba371f8f644ac0ac68028d88cdbee11e3868a9b81cf0b5ddbc6dfd1f9c26f",
+      "status": "verified",
+      "unresolved_capability_dispatch_obligations": 0
+    },
+    "contract_fixes": {
+      "aggregate_input_limit_bytes": 4194304,
+      "control_commit": "8d6526f8bb249801f733d519c396551941aedf9b",
+      "control_tool_result_limit_bytes": 2097152,
+      "environment_commit": "1c4fdd82ea4c0768a7f53fe1e16d74a020f5216a",
+      "forge_commit": "3f2f295917e96a5b18512b120f0f94ed3221ba1b",
+      "input_artifact_limit_bytes": 2097152
+    },
+    "failed_execution_safety": {
+      "environment_latest_failed_source_artifact_rejected": true,
+      "environment_regression_test": "SessionTests.test_artifact_read_does_not_fall_back_after_latest_failed_invocation",
+      "environment_regression_test_passed": true,
+      "interrupted_forge_process_fault_injected": false,
+      "pre_fix_forge_rejection": {
+        "environment_published_failure_artifact": true,
+        "false_success_published": false,
+        "reason": "Compiler build artifact exceeds the 1 MiB input bound",
+        "status": "failed"
+      },
+      "scope": "Observed a real provider failure and verified no successful result fallback; no Forge process kill was injected."
+    },
+    "forge_execution": {
+      "application_result": {
+        "assertion_count": 3,
+        "failed": 2,
+        "failure_cap": 1,
+        "failure_count": 2,
+        "failures_omitted": 1,
+        "first_failure": {
+          "actual": 41,
+          "assertion_code": 2101,
+          "column": 3,
+          "expected": 42,
+          "line": 12,
+          "name": "first-failure",
+          "source": "digest-contract"
+        },
+        "passed": 1,
+        "returned_run_artifact_identity": "sha256:745914f65bf3aa29efccea50f8925459ceb7198d5142effaa59d1f1341c4085b",
+        "skipped": 1,
+        "total": 4,
+        "unsupported": 0,
+        "verdict": "FAIL"
+      },
+      "binding_id": "cap_07ea8bcfb58ff902",
+      "call_identity": "sha256:ad9317ee41589af8504587aaaba777214c5afc48b9198fcbc0fd1929fd58ca32",
+      "capability": "mncs-forge:native-application-execution",
+      "execution_boundary": "Application semantics ran in the canonical VM. Stage-0 Forge/host adapters handled admission, process control, typed request transport, artifact publication, and resource measurement.",
+      "exit_code": 0,
+      "forge_receipt": {
+        "action_identity": "workflow-action:a35ecd283ace08e4a7feafe922a53966429ca83772e07e70fbc75a98221b7b32",
+        "bytes": 7752,
+        "path": "forge-execution-receipt.json",
+        "receipt_identity": "80e1e44e31289663f62e5b106dd2a03bc48a1605e9558ee18d4388267f2e6724",
+        "sha256": "2c810a892974700b709cad2e9bc7ee79d49b51dc63d4e7650009c219a988deee"
+      },
+      "measurement_scope": "This one selected invocation only; it is not a general compiler or application performance guarantee.",
+      "published_bundle_store_reference": "mncs-store:ses_3d9102d7ed4704cd:capability-invocation-artifacts:6f8e8b212c3cf283de92ab621b503669c31956a697f2775b636369122c0e394f",
+      "resource_observation": {
+        "cpu_microseconds": 407748,
+        "forge_wall_seconds": 0.468075,
+        "high_memory_bytes": 268435456,
+        "max_concurrency": 1,
+        "max_memory_bytes": 536870912,
+        "max_swap_bytes": 0,
+        "max_tasks": 64,
+        "peak_cgroup_memory_bytes": 20045824,
+        "peak_processes": 2,
+        "resource_limit_events": {
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "process_limit": 0
+        },
+        "runtime_limit_seconds": 45
+      },
+      "result_artifact": {
+        "bytes": 55747,
+        "path": "native-application-execution.json",
+        "sha256": "c8c80774f83f361041bd5804b8bcb3be6c70b21c6571aa85392af0820c4feef6"
+      },
+      "runtime_identity": "sha256:6c1fbb04378721881788fb2ff08dbb08e819767d89e4d8f6ab02663c6859a7bf",
+      "runtime_revision": "1c19a94732c9d24029dd00e2d5af13710f481d02",
+      "status": "completed"
+    },
+    "gate_c_assessment": "The selected real mncs-test operation completed the canonical Compiler \u2192 Forge \u2192 VM \u2192 Environment \u2192 Store path and fresh-process readback. This proves that workload and this published contract path; it does not prove the full production mncs-test command, Monitor correlation, Automation eligibility, nor all failed/interrupted paths.",
+    "store_readback": {
+      "control_revision": "8d6526f8bb249801f733d519c396551941aedf9b",
+      "forge_receipt_sha256_verified": true,
+      "fresh_process": true,
+      "interface": "normal authenticated LocalEnvironmentMCP continuation + artifact_read; no presentation override",
+      "readback_store_reference": "mncs-store:ses_3d9102d7ed4704cd:capability-invocation-artifacts:6f8e8b212c3cf283de92ab621b503669c31956a697f2775b636369122c0e394f",
+      "result_sha256_verified": true,
+      "session_id": "ses_3d9102d7ed4704cd"
+    },
+    "workload": {
+      "entry": {
+        "function": "build_digest",
+        "module": "mncs.test.digest"
+      },
+      "input_shape": "Typed DigestRequest with max_failures=1 and four PASS/FAIL/FAIL/SKIP rows, including three assertion rows and structured first-failure source coordinates.",
+      "repository": "mncs-test",
+      "revision": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "source_identities": {
+        "mncs.test.assertions": "sha256:9456ccc069591b3dc2a53af64d3a196e98162d2f8d640410ae50f5487570919b",
+        "mncs.test.digest": "sha256:fa45534cdebb4de683675bfb70eed15cfa177a5198f036c0e3b7fcab68b91c30",
+        "mncs.test.suite": "sha256:86019047090fd28f2ec29a51bc08b36c6ad39d16cbf03961d6586ea2fe4dc2d5",
+        "stdlib_application": "sha256:5669f67e921e71c0f54742325f06fddfe3b11692c1fe3d27ee515f8a3fd30c7e"
+      }
+    }
+  },
   "kind": "mncs-environment-provider-input-artifact-capacity",
-  "next_step": "Retry mncs.test.digest::build_digest from its current Compiler Store artifact through the real Forge path, then confirm canonical Store result readback from a fresh process.",
+  "next_step": "Continue toward the production mncs-test retained-session and batch workflow, then deepen Compiler-owned incremental reuse; the normal failed-artifact fallback regression already passes, while a Forge process-interruption fixture remains untested.",
   "observation": {
     "previous_per_artifact_limit_bytes": 1048576,
     "rejection": {
@@ -24,13 +198,17 @@
     "target_binding_id": "cap_07ea8bcfb58ff902",
     "target_capability": "mncs-forge:native-application-execution"
   },
-  "observed_at": "2026-10-15T06:08:07.594958+00:00",
+  "observed_at": "2026-10-15T06:20:15Z",
   "schema_version": "mncs.environment.provider-input-artifact-capacity/1",
-  "status": "implementation_verified_integration_retry_pending",
+  "status": "integrated_native_digest_execution_and_fresh_readback_verified",
   "verification": {
     "acceptance_fixture_bytes": 1071468,
+    "control_tool_result_limit_bytes": 2097152,
     "failed_invocation_artifacts_are_not_reused_as_successful_inputs": true,
     "focused_tests_passed": 5,
+    "forge_input_artifact_limit_bytes": 2097152,
+    "integrated_invocation_status": "passed",
+    "normal_fresh_process_artifact_readback": true,
     "test_ids": [
       "SessionTests.test_session_invoke_accepts_bounded_native_application_artifact_over_one_mib",
       "SessionTests.test_session_invoke_passes_authorized_store_artifact_as_private_input",
