@@ -1,0 +1,42 @@
+{
+  "change": {
+    "aggregate_limit_bytes": 4194304,
+    "artifact_count_limit": 8,
+    "implementation_sha256": "3516fd398c4e22d530946458cc3bc3b4c6582351bf98b0ba270ab056eadeaecf",
+    "per_artifact_limit_bytes": 2097152,
+    "test_sha256": "f68697e759ff44810903f4f58dc78a610a20748b4447a4b1a8c6331998fc1a0b"
+  },
+  "kind": "mncs-environment-provider-input-artifact-capacity",
+  "next_step": "Retry mncs.test.digest::build_digest from its current Compiler Store artifact through the real Forge path, then confirm canonical Store result readback from a fresh process.",
+  "observation": {
+    "previous_per_artifact_limit_bytes": 1048576,
+    "rejection": {
+      "diagnostic_code": "provider-input-artifact-invalid",
+      "error": "requested capability artifact exceeds the read size bound",
+      "forge_provider_invoked": false,
+      "publication_completed": false
+    },
+    "source_artifact_bytes": 1071468,
+    "source_artifact_path": "native-application-build.json",
+    "source_artifact_store_reference": "mncs-store:ses_3d9102d7ed4704cd:capability-invocation-artifacts:97ad6784b6d279fda658753df934c5a679499d45bc4ffc493c98858cd9ae5fcb",
+    "source_binding_id": "cap_7523d8bba5efca66",
+    "source_capability": "mncs-compiler:native-application-build",
+    "target_binding_id": "cap_07ea8bcfb58ff902",
+    "target_capability": "mncs-forge:native-application-execution"
+  },
+  "observed_at": "2026-10-15T06:08:07.594958+00:00",
+  "schema_version": "mncs.environment.provider-input-artifact-capacity/1",
+  "status": "implementation_verified_integration_retry_pending",
+  "verification": {
+    "acceptance_fixture_bytes": 1071468,
+    "failed_invocation_artifacts_are_not_reused_as_successful_inputs": true,
+    "focused_tests_passed": 5,
+    "test_ids": [
+      "SessionTests.test_session_invoke_accepts_bounded_native_application_artifact_over_one_mib",
+      "SessionTests.test_session_invoke_passes_authorized_store_artifact_as_private_input",
+      "SessionTests.test_session_invoke_rejects_non_read_store_artifact_inputs",
+      "SessionTests.test_session_invoke_input_rejects_latest_failed_source_artifact",
+      "SessionTests.test_artifact_read_does_not_fall_back_after_latest_failed_invocation"
+    ]
+  }
+}

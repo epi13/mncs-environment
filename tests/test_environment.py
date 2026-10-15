@@ -3687,6 +3687,76 @@ class SessionTests(unittest.TestCase):
             )
             self.assertEqual(len(target_request_ids), 1)
 
+    def test_session_invoke_accepts_bounded_native_application_artifact_over_one_mib(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            source_capability = "mncs-compiler:native-application-build"
+            consumer_capability = "mncs-forge:native-application-execution"
+            source_binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-compiler", capability=source_capability,
+                contract_revision="1", entrypoint="build", address="/bin/echo",
+                effects=["read"],
+                shareable_artifacts=["native-application-build.json"],
+            ))
+            consumer_binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-forge", capability=consumer_capability,
+                contract_revision="1", entrypoint="execute", address="/bin/echo",
+                effects=["read"],
+            ))
+            session.snapshot["bindings"] = [source_binding, consumer_binding]
+            session._save()
+            artifact_bytes = (
+                b'{"schema_version":"mncs.vm.artifact/1","payload":"'
+                + b"x" * (1_071_468 - len(b'{"schema_version":"mncs.vm.artifact/1","payload":"') - 2)
+                + b'"}'
+            )
+            target_request_ids: list[str] = []
+
+            def invoke(binding, _argv, **kwargs):
+                output_root = Path(kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+                if binding["capability"] == source_capability:
+                    (output_root / "native-application-build.json").write_bytes(artifact_bytes)
+                    return {"status": "ok", "returncode": 0,
+                            "stdout": "build stored", "stderr": ""}
+
+                env = kwargs["env"]
+                input_root = Path(env["MNCS_ENV_INPUT_ARTIFACT_DIR"])
+                target_request_ids.append(env["MNCS_ENV_RPC_REQUEST_ID"])
+                manifest = json.loads(env["MNCS_ENV_INPUT_ARTIFACTS_JSON"])
+                source = manifest["artifacts"][0]
+                self.assertEqual(source["byte_count"], 1_071_468)
+                self.assertEqual(source["sha256"], hashlib.sha256(artifact_bytes).hexdigest())
+                self.assertEqual(
+                    (input_root / source["local_path"]).read_bytes(), artifact_bytes,
+                )
+                (output_root / "native-application-execution.json").write_text(
+                    json.dumps({"artifact_identity": source["sha256"]}), encoding="utf-8",
+                )
+                return {"status": "ok", "returncode": 0,
+                        "stdout": "application executed", "stderr": ""}
+
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke", side_effect=invoke,
+            ):
+                built = session.invoke(source_capability, [])
+                executed = session.invoke(
+                    consumer_capability, ["execute"],
+                    input_artifacts=[{
+                        "name": "native-application-build",
+                        "capability": source_capability,
+                        "binding_id": source_binding["binding_id"],
+                        "path": "native-application-build.json",
+                    }],
+                )
+
+            self.assertEqual(built["status"], "ok")
+            self.assertEqual(executed["status"], "ok")
+            self.assertEqual(executed["input_artifacts"][0]["byte_count"], 1_071_468)
+            self.assertEqual(
+                executed["input_artifacts"][0]["sha256"], hashlib.sha256(artifact_bytes).hexdigest(),
+            )
+            self.assertEqual(len(target_request_ids), 1)
+
     def test_session_invoke_rejects_non_read_store_artifact_inputs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))
