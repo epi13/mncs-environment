@@ -2456,18 +2456,43 @@ class CapabilityTests(unittest.TestCase):
             entry = {"canonical_entrypoint": "demo run",
                      "invocation": {"kind": "executable", "path": "bin/run.sh",
                                     "toolchain": "toolchain/mncs",
-                                    "toolchain_env": "MNCS"}}
+                                    "toolchain_env": "MNCS",
+                                    "timeout_seconds": 120}}
             resolved = capabilities.descriptor_invocation(entry, repo, root)
             self.assertEqual(resolved["addressing"], "descriptor")
             self.assertEqual(resolved["address"], str(exe))
             self.assertEqual(resolved["toolchain_address"], str(tool))
             self.assertEqual(resolved["toolchain_env"], "MNCS")
+            self.assertEqual(resolved["timeout_seconds"], 120)
+            invalid_timeout = capabilities.descriptor_invocation(
+                {"invocation": {"kind": "executable", "path": "bin/run.sh",
+                                "timeout_seconds": 86401}}, repo, root)
+            self.assertEqual(invalid_timeout["addressing"], "none")
+            self.assertIn("timeout_seconds", invalid_timeout["detail"])
             missing = capabilities.descriptor_invocation(
                 {"invocation": {"kind": "executable", "path": "nope"}}, repo, root)
             self.assertEqual(missing["addressing"], "none")
             self.assertIsNone(missing["address"])
             plain = capabilities.descriptor_invocation({}, repo, root)
             self.assertEqual(plain["addressing"], "none")
+
+            (repo / "scripts").mkdir()
+            (repo / "scripts" / "provider.py").write_text("pass\n")
+            (repo / ".mncs").mkdir()
+            (repo / ".mncs" / "project.json").write_text(json.dumps({
+                "repository": "demo",
+                "contracts": {"provides": [{
+                    "contract": "bounded-run",
+                    "version": "1",
+                    "invocation": {"kind": "python", "path": "scripts/provider.py",
+                                   "timeout_seconds": 321},
+                }]},
+            }))
+            bindings = capabilities.discover_capabilities(
+                root, repository_roots={"demo": repo})
+            binding = next(item for item in bindings
+                           if item["capability"] == "demo:bounded-run")
+            self.assertEqual(binding["timeout_seconds"], 321)
 
     def test_unresolvable_invocation_names_its_cause(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

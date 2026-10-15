@@ -343,7 +343,7 @@ def descriptor_invocation(
 
     Returns ``{"address", "toolchain_address", "toolchain_env",
     "fixed_argv", "adapter_library_paths",
-    "addressing", "detail"}``. ``addressing`` is ``"descriptor"`` when the
+    ``timeout_seconds``, ``addressing", "detail"}``. ``addressing`` is ``"descriptor"`` when the
     entry carries a usable declaration, else ``"none"`` with ``detail``
     naming the failure so availability can distinguish a missing
     declaration from an unresolvable one. Paths in ``path``
@@ -361,7 +361,8 @@ def descriptor_invocation(
     """
     empty = {"address": None, "toolchain_address": None,
              "toolchain_env": None, "fixed_argv": [],
-             "adapter_library_paths": [], "fixed_env": {}, "addressing": "none",
+             "adapter_library_paths": [], "fixed_env": {}, "timeout_seconds": None,
+             "addressing": "none",
              "detail": None}
 
     def unusable(detail):
@@ -375,6 +376,11 @@ def descriptor_invocation(
         not isinstance(argument, str) for argument in fixed_argv
     ):
         return unusable("invocation fixed_argv malformed")
+    timeout_seconds = spec.get("timeout_seconds")
+    if timeout_seconds is not None and (
+        type(timeout_seconds) is not int or timeout_seconds < 1 or timeout_seconds > 86400
+    ):
+        return unusable("invocation timeout_seconds must be an integer from 1 to 86400")
     kind = spec.get("kind")
     address: str | None = None
     relative = Path(str(spec.get("path", "")))
@@ -445,7 +451,7 @@ def descriptor_invocation(
     return {"address": address, "toolchain_address": toolchain_address,
             "toolchain_env": toolchain_env, "fixed_argv": list(fixed_argv),
             "adapter_library_paths": adapter_library_paths, "fixed_env": fixed_env,
-            "addressing": "descriptor"}
+            "timeout_seconds": timeout_seconds, "addressing": "descriptor"}
 
 
 def probe_availability(binding: dict[str, Any]) -> dict[str, Any]:
@@ -918,6 +924,7 @@ def _from_semantic_contracts(
             fixed_env=declared["fixed_env"],
             effects=[str(effect) for effect in effects],
             event_types=["unknown"],
+            timeout_seconds=declared["timeout_seconds"],
             output_limit_bytes=output_limit_bytes,
             provenance={"source": f"{repo.name}/family-semantic-contracts-v1.json",
                         "status": entry.get("status"), "addressing": addressing,
@@ -1006,6 +1013,7 @@ def _from_manifest(
             effects=list(effects),
             shareable_artifacts=list(shareable_artifacts),
             event_types=["unknown"],
+            timeout_seconds=declared["timeout_seconds"],
             output_limit_bytes=output_limit_bytes,
             provenance={"source": f"{repo.name}/.mncs/project.json",
                         "kind": entry.get("kind"), "stability": entry.get("stability"),
