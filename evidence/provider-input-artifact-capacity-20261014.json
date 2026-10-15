@@ -155,6 +155,14 @@
       "status": "completed"
     },
     "gate_c_assessment": "The selected real mncs-test operation completed the canonical Compiler \u2192 Forge \u2192 VM \u2192 Environment \u2192 Store path and fresh-process readback. This proves that workload and this published contract path; it does not prove the full production mncs-test command, Monitor correlation, Automation eligibility, nor all failed/interrupted paths.",
+    "provider_timeout_observation": {
+      "compiler_build_binding_id": "cap_7523d8bba5efca66",
+      "compiler_build_timeout_seconds": 120,
+      "current_live_projection_matches_manifest": true,
+      "forge_execution_binding_id": "cap_07ea8bcfb58ff902",
+      "forge_execution_timeout_seconds": 120,
+      "forge_resource_envelope_runtime_seconds": 45
+    },
     "store_readback": {
       "control_revision": "8d6526f8bb249801f733d519c396551941aedf9b",
       "forge_receipt_sha256_verified": true,
@@ -198,7 +206,7 @@
     "target_binding_id": "cap_07ea8bcfb58ff902",
     "target_capability": "mncs-forge:native-application-execution"
   },
-  "observed_at": "2026-10-15T06:20:15Z",
+  "observed_at": "2026-10-15T06:29:24Z",
   "schema_version": "mncs.environment.provider-input-artifact-capacity/1",
   "status": "integrated_native_digest_execution_and_fresh_readback_verified",
   "verification": {
