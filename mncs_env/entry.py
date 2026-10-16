@@ -492,11 +492,13 @@ def _legacy_repository_reference_matches(
             return False
     recorded_path = reference.get("observed_path") or reference.get("path")
     current_path = working_checkout.get("path")
-    return not (
-        isinstance(recorded_path, str)
-        and isinstance(current_path, str)
-        and os.path.abspath(recorded_path) != os.path.abspath(current_path)
-    )
+    if isinstance(recorded_path, str) and isinstance(current_path, str):
+        recorded_checkout = Path(recorded_path)
+        if not recorded_checkout.is_absolute():
+            recorded_checkout = Path(workspace_root) / recorded_checkout
+        if os.path.abspath(recorded_checkout) != os.path.abspath(current_path):
+            return False
+    return True
 
 
 def _session_selection_details(

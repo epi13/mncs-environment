@@ -784,6 +784,7 @@ class EntryContractTests(unittest.TestCase):
             "workspace": {"root": str(self.base.resolve())},
             "campaign": {"repository_refs": [{
                 "repository": "fixture",
+                "observed_path": "fixture",
                 "branch": "main",
                 "head": "a" * 40,
             }]},
@@ -797,6 +798,10 @@ class EntryContractTests(unittest.TestCase):
         wrong_workspace = json.loads(json.dumps(legacy))
         wrong_workspace["workspace"]["root"] = str(self.base.parent.resolve())
         self.assertFalse(entry._working_checkout_matches_snapshot(wrong_workspace, checkout))
+
+        wrong_path = json.loads(json.dumps(legacy))
+        wrong_path["campaign"]["repository_refs"][0]["observed_path"] = "other-fixture"
+        self.assertFalse(entry._working_checkout_matches_snapshot(wrong_path, checkout))
 
         duplicate_reference = json.loads(json.dumps(legacy))
         duplicate_reference["campaign"]["repository_refs"].append(
