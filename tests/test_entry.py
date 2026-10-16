@@ -770,6 +770,104 @@ class EntryContractTests(unittest.TestCase):
             checkout.resolve(),
         )
 
+    def test_authenticated_campaign_selection_is_scoped_to_registered_checkout(self):
+        (self.project / ".mncs" / "project.json").write_text(json.dumps({
+            "repository": "fixture",
+        }))
+        self.config = {
+            "name": "fixture-worktree-campaign-selection",
+            "working_checkout": "current",
+            "workspace_scope": {
+                "kind": "workspace", "repositories": ["fixture"],
+            },
+            "intent": {
+                "goal": "continue the campaign attached to this registered checkout",
+                "repositories": ["fixture"],
+            },
+        }
+        self.definition.write_text(json.dumps(self.config))
+        subprocess.run(
+            ["git", "-C", str(self.project), "add", ".mncs/project.json",
+             ".mncs/environment.json"],
+            check=True, capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self.project), "-c", "user.name=Entry Test",
+             "-c", "user.email=entry@example.invalid", "commit", "-m",
+             "add checkout-scoped campaign definition"],
+            check=True, capture_output=True,
+        )
+        nested = self.project / ".worktrees" / "registered" / "nested-checkout"
+        nested.parent.mkdir(parents=True)
+        subprocess.run(
+            ["git", "-C", str(self.project), "worktree", "add", "-b",
+             "campaign/nested-checkout", str(nested), "HEAD"],
+            check=True, capture_output=True,
+        )
+        auth_env = dict(os.environ, MNCS_ENV_AUTH_PRINCIPAL_ID="principal-checkout-selection")
+
+        main_code, main_first = self.enter(cwd=self.project, env=auth_env)
+        nested_code, nested_first = self.enter(cwd=nested, env=auth_env)
+        self.assertEqual(main_code, 0, main_first)
+        self.assertEqual(nested_code, 0, nested_first)
+        self.assertNotEqual(main_first["session_id"], nested_first["session_id"])
+        self.assertNotEqual(
+            main_first["continuation"]["identity"],
+            nested_first["continuation"]["identity"],
+        )
+
+        main_resume_code, main_resume = self.enter(cwd=self.project, env=auth_env)
+        nested_resume_code, nested_resume = self.enter(cwd=nested, env=auth_env)
+        self.assertEqual(main_resume_code, 0, main_resume)
+        self.assertEqual(nested_resume_code, 0, nested_resume)
+        self.assertEqual(main_resume["session_id"], main_first["session_id"])
+        self.assertEqual(nested_resume["session_id"], nested_first["session_id"])
+
+        wrong_checkout_code, wrong_checkout = self.enter(
+            "--campaign-id", nested_first["continuation"]["identity"],
+            cwd=self.project, env=auth_env,
+        )
+        self.assertEqual(wrong_checkout_code, 2, wrong_checkout)
+        self.assertEqual(
+            wrong_checkout["diagnostics"]["code"], "campaign-checkout-mismatch",
+        )
+
+        duplicate_code, duplicate = self.enter(
+            "--campaign-id", "cmp_same_checkout_duplicate",
+            "--new-session", cwd=self.project, env=auth_env,
+        )
+        self.assertEqual(duplicate_code, 0, duplicate)
+        ambiguous_code, ambiguous = self.enter(cwd=self.project, env=auth_env)
+        self.assertEqual(ambiguous_code, 2, ambiguous)
+        self.assertEqual(
+            ambiguous["diagnostics"]["code"], "campaign-continuation-ambiguous",
+        )
+        conflicts = ambiguous["diagnostics"]["conflicting_contexts"]
+        inspect_code, main_inspected = self.run_cli(
+            "inspect", main_first["session_id"], cwd=self.project,
+        )
+        self.assertEqual(inspect_code, 0, main_inspected)
+        self.assertEqual({item["selected_checkout"]["checkout_identity"]
+                          for item in conflicts}, {
+            main_inspected["selected_checkouts"]["fixture"]["checkout_identity"],
+        })
+        self.assertEqual({item["selected_checkout"]["path"] for item in conflicts}, {
+            str(self.project.resolve()),
+        })
+
+        subprocess.run(
+            ["git", "-C", str(self.project), "checkout", "-b",
+             "campaign/changed-checkout-branch"],
+            check=True, capture_output=True,
+        )
+        branch_mismatch_code, branch_mismatch = self.enter(
+            cwd=self.project, env=auth_env,
+        )
+        self.assertEqual(branch_mismatch_code, 2, branch_mismatch)
+        self.assertEqual(
+            branch_mismatch["diagnostics"]["code"], "campaign-checkout-mismatch",
+        )
+
     def test_registered_checkout_identity_rejects_symlinks_and_unrelated_clones(self):
         (self.project / ".mncs" / "project.json").write_text(json.dumps({
             "repository": "fixture",

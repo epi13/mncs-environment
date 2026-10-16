@@ -392,18 +392,103 @@ def ambient_tick(session, definition, *, fresh=False, upgraded=False, lock_waite
     return incremental.tick(session, definition, runners, fresh=fresh)
 
 
+def _working_checkout_matches_snapshot(
+    snapshot: dict,
+    working_checkout: dict[str, str] | None,
+) -> bool:
+    """Match durable continuation to the exact registered checkout when known."""
+    if working_checkout is None:
+        return True
+    repository = working_checkout.get("repository")
+    selected_checkouts = snapshot.get("selected_checkouts")
+    selected = (
+        selected_checkouts.get(repository)
+        if isinstance(selected_checkouts, dict) and isinstance(repository, str)
+        else None
+    )
+    if not isinstance(selected, dict):
+        return False
+    current_identity = working_checkout.get("checkout_identity")
+    selected_identity = selected.get("checkout_identity")
+    if isinstance(current_identity, str) and isinstance(selected_identity, str):
+        selected_common = selected.get("git_common_directory_identity")
+        current_common = working_checkout.get("git_common_directory_identity")
+        return (
+            current_identity == selected_identity
+            and selected.get("repository", repository) == repository
+            and (selected.get("branch") or "") == (working_checkout.get("branch") or "")
+            and not (
+                isinstance(selected_common, str)
+                and isinstance(current_common, str)
+                and selected_common != current_common
+            )
+        )
+
+    # Older snapshots predate checkout identities but retain their selected
+    # path and branch. Use both as a compatibility match; a missing checkout
+    # record remains unknown and is never treated as a match.
+    current_path = working_checkout.get("path")
+    selected_path = selected.get("path")
+    if not isinstance(current_path, str) or not isinstance(selected_path, str):
+        return False
+    if current_path != selected_path:
+        return False
+    if (selected.get("branch") or "") != (working_checkout.get("branch") or ""):
+        return False
+    current_common = working_checkout.get("git_common_directory_identity")
+    selected_common = selected.get("git_common_directory_identity")
+    return not (
+        isinstance(current_common, str)
+        and isinstance(selected_common, str)
+        and current_common != selected_common
+    )
+
+
+def _session_selection_details(
+    session_id: str,
+    snapshot: dict,
+    working_checkout: dict[str, str] | None,
+) -> dict:
+    repository = working_checkout.get("repository") if working_checkout else None
+    selected_checkouts = snapshot.get("selected_checkouts")
+    selected = (
+        selected_checkouts.get(repository)
+        if isinstance(selected_checkouts, dict) and isinstance(repository, str)
+        else None
+    )
+    checkout = None
+    if isinstance(selected, dict):
+        checkout = {
+            key: selected.get(key)
+            for key in (
+                "repository", "path", "checkout_identity",
+                "git_common_directory_identity", "branch", "head",
+            )
+            if selected.get(key) is not None
+        }
+    return {
+        "session_id": session_id,
+        "campaign_id": (snapshot.get("campaign") or {}).get("identity"),
+        "definition_id": snapshot.get("provenance", {}).get("definition_id"),
+        "workspace_root": snapshot.get("workspace", {}).get("root"),
+        "selected_checkout": checkout,
+    }
+
+
 def _validate_campaign_identity(store, *, campaign_id: str,
                                 authenticated_principal_id: str | None,
                                 definition_id: str, workspace_root: Path,
                                 selected_session_id: str | None,
-                                pending_handoff: tuple | None) -> None:
+                                pending_handoff: tuple | None,
+                                working_checkout: dict[str, str] | None = None) -> None:
     """Refuse parallel campaign sessions unless entry selected one exact context.
 
     A campaign identity is durable across consumer restarts. If it already
     names live work in another Environment definition or workspace, silently
     creating a new session would split its ownership record and can resume the
     wrong authority. A unique session already selected by the authenticated
-    principal, campaign, definition, and workspace remains resumable when
+    principal, campaign, definition, workspace, and registered checkout
+    remains resumable when
     unrelated same-principal sessions use other contexts. Duplicate exact
     contexts remain ambiguous, and the existing session id and context are
     returned so the caller can choose the intended continuation.
@@ -469,6 +554,9 @@ def _validate_campaign_identity(store, *, campaign_id: str,
             "repositories": repositories,
             "delivery": delivery,
             "unresolved_pressures": pressures[:8],
+            "selected_checkout": _session_selection_details(
+                session_id, snapshot, working_checkout,
+            )["selected_checkout"],
         }
         if observations["latest_checkpoint"] is not None:
             result["latest_checkpoint"] = observations["latest_checkpoint"]
@@ -510,6 +598,7 @@ def _validate_campaign_identity(store, *, campaign_id: str,
             session_id for session_id, snapshot in snapshots.items()
             if snapshot.get("provenance", {}).get("definition_id") == definition_id
             and snapshot.get("workspace", {}).get("root") == str(workspace_root)
+            and _working_checkout_matches_snapshot(snapshot, working_checkout)
         ]
         if (len(exact_context) == 1
                 and selected_session_id == exact_context[0]):
@@ -520,6 +609,10 @@ def _validate_campaign_identity(store, *, campaign_id: str,
             campaign_id=campaign_id,
             sessions=live,
             continuations=[continuation(session_id) for session_id in live],
+            conflicting_contexts=[
+                _session_selection_details(session_id, snapshots[session_id], working_checkout)
+                for session_id in live
+            ],
             next="resume the intended recorded session or assign a distinct campaign identity to independent work",
         )
     only = live[0]
@@ -528,6 +621,21 @@ def _validate_campaign_identity(store, *, campaign_id: str,
     prior = snapshots[only]
     prior_definition = prior.get("provenance", {}).get("definition_id")
     prior_workspace = prior.get("workspace", {}).get("root")
+    if (prior_definition == definition_id
+            and prior_workspace == str(workspace_root)
+            and not _working_checkout_matches_snapshot(prior, working_checkout)):
+        raise EntryError(
+            "campaign identity is already attached to a different or unknown registered checkout",
+            "campaign-checkout-mismatch",
+            campaign_id=campaign_id,
+            session_id=only,
+            current_checkout=working_checkout,
+            prior_checkout=_session_selection_details(only, prior, working_checkout)[
+                "selected_checkout"
+            ],
+            continuation=continuation(only),
+            next="resume from the recorded checkout or start an independent campaign for this registered worktree",
+        )
     if prior_definition != definition_id or prior_workspace != str(workspace_root):
         raise EntryError(
             "campaign identity already belongs to live work in a different Environment definition or workspace",
@@ -637,6 +745,11 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
             "intent_id": intent["identity"],
             "definition_id": definition_id,
             "workspace": str(root),
+            **({
+                "campaign_identity_version": 2,
+                "checkout_identity": working_checkout["checkout_identity"],
+            } if isinstance(working_checkout, dict)
+                and isinstance(working_checkout.get("checkout_identity"), str) else {}),
         })
     )
     if (not isinstance(campaign_id, str) or not campaign_id.strip()
@@ -739,6 +852,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                             snapshot.get("provenance", {}).get("definition_id") == definition_id
                             and snapshot.get("workspace", {}).get("root") == str(root)
                             and snapshot.get("authenticated_principal_id") == authenticated_principal_id
+                            and _working_checkout_matches_snapshot(snapshot, working_checkout)
                             and snapshot.get("lifecycle") in (
                                 "active", "blocked", "waiting", "checkpointed", "abandoned"
                             )
@@ -777,6 +891,13 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                             "campaign-continuation-ambiguous",
                             campaigns=sorted(discovered_campaigns),
                             sessions=discovered,
+                            conflicting_contexts=[
+                                _session_selection_details(
+                                    session_id, store.load_snapshot(session_id) or {},
+                                    working_checkout,
+                                )
+                                for session_id in discovered
+                            ],
                             next="select the intended campaign identity; Environment will not choose between active campaigns",
                         )
                     if discovered_campaigns:
@@ -803,6 +924,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                 == intent["identity"]
                                 and snapshot.get("workspace", {}).get("root")
                                 == str(root)
+                                and _working_checkout_matches_snapshot(snapshot, working_checkout)
                                 and snapshot.get("lifecycle") not in (
                                     "completed", "failed",
                                 )
@@ -823,6 +945,13 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                 "campaign-continuation-ambiguous",
                                 campaigns=sorted(intent_campaigns),
                                 sessions=sorted(intent_sessions),
+                                conflicting_contexts=[
+                                    _session_selection_details(
+                                        session_id, store.load_snapshot(session_id) or {},
+                                        working_checkout,
+                                    )
+                                    for session_id in intent_sessions
+                                ],
                                 next="select the intended campaign identity; Environment will not choose between continuations",
                             )
                         if intent_campaigns:
@@ -841,6 +970,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                         lambda snapshot: (
                             snapshot.get("provenance", {}).get("definition_id") == definition_id
                             and snapshot.get("workspace", {}).get("root") == str(root)
+                            and _working_checkout_matches_snapshot(snapshot, working_checkout)
                             and snapshot.get("lifecycle") == "handed_off"
                             and (
                                 isinstance(snapshot.get("pending_handoff_id"), str)
@@ -925,6 +1055,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                     common = (
                         snapshot.get("provenance", {}).get("definition_id") == definition_id
                         and snapshot.get("workspace", {}).get("root") == str(root)
+                        and _working_checkout_matches_snapshot(snapshot, working_checkout)
                     )
                     lifecycle = snapshot.get("lifecycle") in (
                         "active", "blocked", "waiting", "checkpointed", "abandoned"
@@ -990,6 +1121,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                     definition_id=definition_id, workspace_root=root,
                     selected_session_id=selected_session_id,
                     pending_handoff=pending_handoff,
+                    working_checkout=working_checkout,
                 )
                 if backend == "store" and selected_session_id is not None:
                     upgraded = upgrade_session_store_provider(
