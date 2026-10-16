@@ -804,12 +804,19 @@ class EntryContractTests(unittest.TestCase):
         )
         self.assertFalse(entry._working_checkout_matches_snapshot(duplicate_reference, checkout))
 
-        # An explicitly recorded but empty modern selection is authoritative;
-        # legacy references cannot fill in missing current selection data.
-        modern_without_selection = json.loads(json.dumps(legacy))
-        modern_without_selection["selected_checkouts"] = {}
+        # Some old snapshots materialize the absent selection map as empty.
+        # A nonempty partial modern map stays authoritative and cannot fall
+        # back to an unrelated legacy repository reference.
+        empty_selection = json.loads(json.dumps(legacy))
+        empty_selection["selected_checkouts"] = {}
+        self.assertTrue(entry._working_checkout_matches_snapshot(empty_selection, checkout))
+
+        partial_selection = json.loads(json.dumps(legacy))
+        partial_selection["selected_checkouts"] = {"other-repository": {
+            "branch": "main", "head": "a" * 40,
+        }}
         self.assertFalse(
-            entry._working_checkout_matches_snapshot(modern_without_selection, checkout)
+            entry._working_checkout_matches_snapshot(partial_selection, checkout)
         )
 
     def test_authenticated_campaign_selection_is_scoped_to_registered_checkout(self):

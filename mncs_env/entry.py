@@ -407,8 +407,11 @@ def _working_checkout_matches_snapshot(
     # exact branch and HEAD of the already-verified registered checkout.
     # Current snapshots with an explicit selected_checkouts field never fall
     # back to older, weaker evidence when the requested repository is absent.
-    if "selected_checkouts" not in snapshot:
+    if ("selected_checkouts" not in snapshot
+            or selected_checkouts == {}):
         return _legacy_repository_reference_matches(snapshot, working_checkout)
+    if not isinstance(selected_checkouts, dict):
+        return False
     selected = (
         selected_checkouts.get(repository)
         if isinstance(selected_checkouts, dict) and isinstance(repository, str)
