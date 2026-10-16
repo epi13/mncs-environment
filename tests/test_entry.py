@@ -809,9 +809,8 @@ class EntryContractTests(unittest.TestCase):
         )
         self.assertFalse(entry._working_checkout_matches_snapshot(duplicate_reference, checkout))
 
-        # Some old snapshots materialize the absent selection map as empty.
-        # A nonempty partial modern map stays authoritative and cannot fall
-        # back to an unrelated legacy repository reference.
+        # Selection maps are per repository, so an empty map or a selection
+        # for another repository may use the exact legacy reference here.
         empty_selection = json.loads(json.dumps(legacy))
         empty_selection["selected_checkouts"] = {}
         self.assertTrue(entry._working_checkout_matches_snapshot(empty_selection, checkout))
@@ -820,8 +819,18 @@ class EntryContractTests(unittest.TestCase):
         partial_selection["selected_checkouts"] = {"other-repository": {
             "branch": "main", "head": "a" * 40,
         }}
+        self.assertTrue(entry._working_checkout_matches_snapshot(partial_selection, checkout))
+
+        mismatched_target_selection = json.loads(json.dumps(legacy))
+        mismatched_target_selection["selected_checkouts"] = {"fixture": {
+            "repository": "fixture",
+            "path": str(self.project.resolve()),
+            "checkout_identity": "checkout-from-another-worktree",
+            "git_common_directory_identity": "common-fixture",
+            "branch": "main",
+        }}
         self.assertFalse(
-            entry._working_checkout_matches_snapshot(partial_selection, checkout)
+            entry._working_checkout_matches_snapshot(mismatched_target_selection, checkout)
         )
 
     def test_authenticated_campaign_selection_is_scoped_to_registered_checkout(self):

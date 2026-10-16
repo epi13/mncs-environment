@@ -405,18 +405,16 @@ def _working_checkout_matches_snapshot(
     # repository reference in the campaign. Accept that record only when it
     # names this repository in the same authorized workspace and pins the
     # exact branch and HEAD of the already-verified registered checkout.
-    # Current snapshots with an explicit selected_checkouts field never fall
-    # back to older, weaker evidence when the requested repository is absent.
-    if ("selected_checkouts" not in snapshot
-            or selected_checkouts == {}):
+    # Selection maps are per repository. A selected checkout for another
+    # repository does not invalidate an exact legacy reference for this one.
+    # An explicit record for this repository remains authoritative.
+    if "selected_checkouts" not in snapshot:
         return _legacy_repository_reference_matches(snapshot, working_checkout)
     if not isinstance(selected_checkouts, dict):
         return False
-    selected = (
-        selected_checkouts.get(repository)
-        if isinstance(selected_checkouts, dict) and isinstance(repository, str)
-        else None
-    )
+    if not isinstance(repository, str) or repository not in selected_checkouts:
+        return _legacy_repository_reference_matches(snapshot, working_checkout)
+    selected = selected_checkouts.get(repository)
     if not isinstance(selected, dict):
         return False
     current_identity = working_checkout.get("checkout_identity")
