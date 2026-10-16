@@ -129,27 +129,200 @@ def _worktrees(
     *,
     deadline: float | None = None,
 ) -> list[dict[str, str]]:
-    completed = _git(repo, "worktree", "list", "--porcelain", deadline=deadline)
+    completed = _git(repo, "worktree", "list", "--porcelain", "-z", deadline=deadline)
     if completed is None or completed.returncode != 0:
-        return []
+        completed = _git(repo, "worktree", "list", "--porcelain", deadline=deadline)
+        if completed is None or completed.returncode != 0:
+            return []
     entries: list[dict[str, str]] = []
     current: dict[str, str] = {}
-    for line in completed.stdout.splitlines():
-        if line.startswith("worktree "):
+    fields = (completed.stdout.split("\x00") if "\x00" in completed.stdout
+              else completed.stdout.splitlines())
+    for field in fields:
+        if not field:
             if current:
                 entries.append(current)
-            current = {"path": line[len("worktree "):]}
-        elif line.startswith("HEAD "):
-            current["head"] = line[len("HEAD "):]
-        elif line.startswith("branch "):
-            current["branch"] = line[len("branch "):]
-        elif line == "bare":
+                current = {}
+        elif field.startswith("worktree "):
+            if current:
+                entries.append(current)
+            current = {"path": field.removeprefix("worktree ")}
+        elif field.startswith("HEAD "):
+            current["head"] = field[len("HEAD "):]
+        elif field.startswith("branch "):
+            current["branch"] = field[len("branch "):]
+        elif field == "bare":
             current["bare"] = "true"
-        elif line == "detached":
+        elif field == "detached":
             current["detached"] = "true"
+        elif field.startswith("locked"):
+            current["locked"] = field[len("locked"):].strip() or "true"
+        elif field.startswith("prunable"):
+            current["prunable"] = field[len("prunable"):].strip() or "true"
     if current:
         entries.append(current)
     return entries
+
+
+def verify_registered_checkout(
+    checkout: str | Path,
+    *,
+    repository: str | None = None,
+    workspace_root: str | Path | None = None,
+    expected_repository_root: str | Path | None = None,
+    expected_branch: str | None = None,
+    expected_head: str | None = None,
+) -> dict[str, str]:
+    """Verify one canonical, registered Git checkout inside an authorized workspace.
+
+    Git's common directory and worktree registry are the source of checkout
+    identity. Directory layout is intentionally not part of the identity, so
+    nested registered worktrees work while symlink aliases, unrelated clones,
+    and forged MNCS manifests remain rejected.
+    """
+
+    def reject(message: str, code: str = "working-checkout-unavailable") -> None:
+        raise WorkspaceResolutionError(
+            message,
+            diagnostics={"code": code, "path": str(checkout),
+                         **({"repository": repository} if repository else {})},
+        )
+
+    raw_checkout = Path(checkout).expanduser()
+    try:
+        absolute_checkout = Path(os.path.abspath(raw_checkout))
+        resolved_checkout = absolute_checkout.resolve(strict=True)
+    except OSError as error:
+        reject(f"Git checkout is unavailable: {error}")
+    if absolute_checkout != resolved_checkout:
+        reject("Git checkout path traverses a symbolic link")
+    if not resolved_checkout.is_dir():
+        reject("Git checkout is not a directory")
+
+    top_level = _git(resolved_checkout, "rev-parse", "--show-toplevel")
+    common = _git(
+        resolved_checkout, "rev-parse", "--path-format=absolute", "--git-common-dir"
+    )
+    head = _git(resolved_checkout, "rev-parse", "HEAD")
+    branch = _git(resolved_checkout, "symbolic-ref", "--quiet", "--short", "HEAD")
+    if (top_level is None or top_level.returncode != 0
+            or common is None or common.returncode != 0
+            or head is None or head.returncode != 0
+            or branch is None or branch.returncode not in (0, 1)):
+        reject("Git could not establish the checkout, branch, and common-directory identities")
+    try:
+        observed_top_level = Path(top_level.stdout.strip()).resolve(strict=True)
+        raw_common = Path(os.path.abspath(common.stdout.strip()))
+        common_directory = raw_common.resolve(strict=True)
+    except OSError as error:
+        reject(f"Git checkout identity could not be resolved: {error}")
+    if observed_top_level != resolved_checkout:
+        reject("Git top-level path does not match the selected checkout")
+    if raw_common != common_directory or common_directory.name != ".git" \
+            or not common_directory.is_dir():
+        reject("Git common directory is not a canonical repository directory")
+
+    repository_root = common_directory.parent
+    try:
+        if workspace_root is None:
+            raw_workspace = repository_root.parent
+        else:
+            raw_workspace = Path(workspace_root).expanduser()
+        absolute_workspace = Path(os.path.abspath(raw_workspace))
+        resolved_workspace = absolute_workspace.resolve(strict=True)
+    except OSError as error:
+        reject(f"authorized workspace root is unavailable: {error}")
+    if absolute_workspace != resolved_workspace or not resolved_workspace.is_dir():
+        reject("authorized workspace root is not canonical")
+    if repository_root.parent != resolved_workspace:
+        reject("Git common repository is not an immediate repository in the authorized workspace")
+    if expected_repository_root is not None:
+        try:
+            raw_expected_root = Path(expected_repository_root).expanduser()
+            absolute_expected_root = Path(os.path.abspath(raw_expected_root))
+            resolved_expected_root = absolute_expected_root.resolve(strict=True)
+        except OSError as error:
+            reject(f"expected repository root is unavailable: {error}")
+        if absolute_expected_root != resolved_expected_root or resolved_expected_root != repository_root:
+            reject("Git common directory does not match the selected repository root")
+
+    for manifest_root in (repository_root, resolved_checkout):
+        manifest_directory = manifest_root / ".mncs"
+        manifest_path = manifest_directory / "project.json"
+        if manifest_directory.is_symlink() or manifest_path.is_symlink():
+            reject("MNCS repository manifest identity cannot traverse a symbolic link")
+
+    actual_repository = repository
+    root_manifest = _manifest(repository_root)
+    checkout_manifest = _manifest(resolved_checkout)
+    if actual_repository is None:
+        actual_repository = (
+            root_manifest.get("repository") if isinstance(root_manifest, dict) else None
+        )
+    if (not isinstance(actual_repository, str) or not actual_repository
+            or repository_root.name != actual_repository
+            or not isinstance(root_manifest, dict)
+            or not isinstance(checkout_manifest, dict)
+            or root_manifest.get("repository") != actual_repository
+            or checkout_manifest.get("repository") != actual_repository):
+        reject("Git checkout and repository manifest identities do not match")
+    if resolved_workspace / actual_repository != repository_root:
+        reject("repository manifest identity does not name the selected workspace checkout")
+
+    try:
+        relative_checkout = resolved_checkout.relative_to(resolved_workspace)
+    except ValueError:
+        reject("Git checkout escapes the authorized workspace")
+    cursor = resolved_workspace
+    for part in relative_checkout.parts:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            reject("Git checkout path traverses a symbolic link")
+
+    registered = []
+    for row in _worktrees(repository_root):
+        raw_registered_path = row.get("path")
+        if not raw_registered_path:
+            continue
+        try:
+            absolute_registered_path = Path(os.path.abspath(raw_registered_path))
+            resolved_registered_path = absolute_registered_path.resolve(strict=False)
+        except OSError:
+            continue
+        if (absolute_registered_path == resolved_registered_path
+                and resolved_registered_path == resolved_checkout):
+            registered.append(row)
+    if len(registered) != 1 or "prunable" in registered[0]:
+        reject("Git checkout is not one unique registered, available worktree")
+    registered_head = registered[0].get("head")
+    registered_branch = registered[0].get("branch")
+    if registered_branch and registered_branch.startswith("refs/heads/"):
+        registered_branch = registered_branch[len("refs/heads/"):]
+    observed_branch = branch.stdout.strip() if branch.returncode == 0 else None
+    observed_head = head.stdout.strip()
+    if (registered_head != observed_head
+            or registered_branch != observed_branch
+            or (expected_branch is not None and expected_branch != (observed_branch or ""))
+            or (expected_head is not None and expected_head != observed_head)):
+        reject("registered worktree branch or revision does not match the observed checkout")
+
+    identity = repository_checkout_identity(
+        resolved_workspace, actual_repository, resolved_checkout
+    )
+    return {
+        "repository": actual_repository,
+        "path": str(resolved_checkout),
+        "workspace_root": str(resolved_workspace),
+        "repository_root": str(repository_root),
+        "git_common_directory": str(common_directory),
+        "branch": observed_branch or "",
+        "head": observed_head,
+        "manifest_identity": digest_hex({
+            "repository": actual_repository,
+            "schema_version": root_manifest.get("schema_version"),
+        }),
+        **identity,
+    }
 
 
 @dataclass

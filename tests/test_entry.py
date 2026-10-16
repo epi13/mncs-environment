@@ -39,6 +39,12 @@ print(json.dumps({"schema_version": value.get("schema", "fixture.status/1"), **v
 
 
 class EntryContractTests(unittest.TestCase):
+    def test_project_definition_symlink_is_rejected(self):
+        alias = self.project / ".mncs" / "environment-alias.json"
+        alias.symlink_to(self.definition.name)
+        with self.assertRaisesRegex(entry.EntryError, "symbolic link"):
+            entry.select_definition(alias, None)
+
     def test_declared_invocation_is_not_presented_as_undeclared(self):
         bindings = capabilities.discover_capabilities(self.project)
         binding = next(item for item in bindings if item["capability"] == "fixture.status/1")
@@ -707,7 +713,8 @@ class EntryContractTests(unittest.TestCase):
              "add local worktree development definition"],
             check=True, capture_output=True,
         )
-        checkout = self.project / ".worktrees" / "agent-local"
+        checkout = self.project / ".worktrees" / "nested" / "agent-local"
+        checkout.parent.mkdir(parents=True)
         subprocess.run(
             ["git", "-C", str(self.project), "worktree", "add", "-b",
              "campaign/agent-local", str(checkout), "HEAD"],
@@ -733,6 +740,99 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(claim_code, 0, claim)
         self.assertEqual(claim["scope"]["kind"], "worktree")
         self.assertEqual(claim["scope"]["checkout"], str(checkout.resolve()))
+        self.assertEqual(
+            inspected["selected_checkouts"]["fixture"]["checkout_identity"],
+            workspace.verify_registered_checkout(
+                checkout, repository="fixture", workspace_root=self.base,
+                expected_repository_root=self.project,
+            )["checkout_identity"],
+        )
+
+        resume_code, resumed = self.run_cli(
+            "resume", context["session_id"], "--revalidate", cwd=checkout,
+        )
+        self.assertEqual(resume_code, 0, resumed)
+        self.assertEqual(
+            Path(resumed["selected_checkouts"]["fixture"]["path"]),
+            checkout.resolve(),
+        )
+        checkpoint_code, checkpoint = self.run_cli(
+            "checkpoint", context["session_id"], "--progress",
+            "nested registered checkout retained through revalidation",
+            cwd=checkout,
+        )
+        self.assertEqual(checkpoint_code, 0, checkpoint)
+        fresh_code, fresh = self.run_cli("inspect", context["session_id"], cwd=checkout)
+        self.assertEqual(fresh_code, 0, fresh)
+        self.assertEqual(len(fresh["checkpoints"]), 1)
+        self.assertEqual(
+            Path(fresh["selected_checkouts"]["fixture"]["path"]),
+            checkout.resolve(),
+        )
+
+    def test_registered_checkout_identity_rejects_symlinks_and_unrelated_clones(self):
+        (self.project / ".mncs" / "project.json").write_text(json.dumps({
+            "repository": "fixture",
+        }))
+        subprocess.run(
+            ["git", "-C", str(self.project), "add", ".mncs/project.json"],
+            check=True, capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self.project), "-c", "user.name=Entry Test",
+             "-c", "user.email=entry@example.invalid", "commit", "-m",
+             "add repository identity"],
+            check=True, capture_output=True,
+        )
+        nested = self.project / ".worktrees" / "nested" / "fixture"
+        nested.parent.mkdir(parents=True)
+        subprocess.run(
+            ["git", "-C", str(self.project), "worktree", "add", "-b",
+             "campaign/nested-fixture", str(nested), "HEAD"],
+            check=True, capture_output=True,
+        )
+        alias = self.project / ".worktrees" / "alias"
+        alias.symlink_to(nested, target_is_directory=True)
+        with self.assertRaisesRegex(workspace.WorkspaceResolutionError, "symbolic link"):
+            workspace.verify_registered_checkout(
+                alias, repository="fixture", workspace_root=self.base,
+                expected_repository_root=self.project,
+            )
+
+        clone = self.project / ".worktrees" / "unregistered-clone"
+        subprocess.run(
+            ["git", "clone", "--quiet", "--shared", str(self.project), str(clone)],
+            check=True, capture_output=True,
+        )
+        with self.assertRaisesRegex(
+            workspace.WorkspaceResolutionError, "not an immediate repository"
+        ):
+            workspace.verify_registered_checkout(
+                clone, repository="fixture", workspace_root=self.base,
+                expected_repository_root=self.project,
+            )
+
+        with self.assertRaisesRegex(
+            workspace.WorkspaceResolutionError, "branch or revision"
+        ):
+            workspace.verify_registered_checkout(
+                nested, repository="fixture", workspace_root=self.base,
+                expected_repository_root=self.project,
+                expected_branch="campaign/not-the-registered-branch",
+            )
+
+    def test_registered_checkout_identity_rejects_manifest_symlink(self):
+        external = self.base / "manifest.json"
+        external.write_text(json.dumps({"repository": "fixture"}))
+        manifest = self.project / ".mncs" / "project.json"
+        manifest.symlink_to(external)
+        with self.assertRaisesRegex(
+            workspace.WorkspaceResolutionError, "manifest identity cannot traverse"
+        ):
+            workspace.verify_registered_checkout(
+                self.project, repository="fixture", workspace_root=self.base,
+                expected_repository_root=self.project,
+            )
 
     def test_invalid_repository_selection_fails_before_state_is_created(self):
         for selection in (["../fixture"], ["fixture", "fixture"], ["missing"]):

@@ -10,10 +10,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from mncs_env import retry
+from mncs_env import retry, workspace
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKSPACE = ROOT.parent
+WORKSPACE = Path(workspace.verify_registered_checkout(ROOT)["workspace_root"])
 
 
 def _language_checkout() -> Path:

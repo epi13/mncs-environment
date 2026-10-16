@@ -28,6 +28,31 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
+
+def git_workspace_root(repository: Path) -> Path:
+    """Resolve sibling repositories from Git identity, including nested worktrees."""
+    common = subprocess.run(
+        ["git", "-C", str(repository), "rev-parse", "--path-format=absolute",
+         "--git-common-dir"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    if common.returncode != 0:
+        raise RuntimeError(
+            f"cannot resolve Git common directory for {repository}: {common.stderr.strip()}"
+        )
+    common_directory = Path(common.stdout.strip()).resolve(strict=True)
+    if common_directory.name != ".git":
+        raise RuntimeError(
+            f"Git common directory is not a repository .git directory: {common_directory}"
+        )
+    return common_directory.parent.parent
+
+
+WORKSPACE_ROOT = git_workspace_root(REPO)
+
 from mncs_env import sessions  # noqa: E402
 
 WORKSPACE_OVERRIDE = os.environ.get("MNCS_VERTICAL_WORKSPACE")
@@ -71,7 +96,8 @@ def main() -> int:
             workspace.mkdir()
             for repository in ("mncs-atlas", "mncs-language"):
                 subprocess.run(["git", "clone", "--shared", "--quiet",
-                                str(REPO.parent / repository), str(workspace / repository)], check=True)
+                                str(WORKSPACE_ROOT / repository),
+                                str(workspace / repository)], check=True)
         atlas = workspace / "mncs-atlas"
         definition = json.loads(
             (REPO / "examples" / "development-environment" / "environment.json").read_text()

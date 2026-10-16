@@ -1239,7 +1239,6 @@ def resolve_environment(
                                     "source_ref": "explicit-workspace-selection", "authoritative_head": record.get("head")}
     if working_checkout is not None:
         repository = str(working_checkout.get("repository", ""))
-        checkout = Path(str(working_checkout.get("path", ""))).resolve(strict=True)
         if (repository not in (repository_selection or [])
                 or repository in {
                     str(item.get("repository", ""))
@@ -1251,15 +1250,24 @@ def resolve_environment(
                 diagnostics={"code": "working-checkout-unavailable",
                              "repository": repository},
             )
-        repository_root = (resolved_root / repository).resolve(strict=True)
-        if repository_root.parent != resolved_root or checkout != repository_root and not (
-            checkout.parent == repository_root / ".worktrees"
-        ):
+        if working_checkout.get("workspace_root") != str(resolved_root):
             raise workspace_module.WorkspaceResolutionError(
-                "current checkout must be the repository root or a direct linked worktree",
+                "current checkout identity belongs to a different workspace root",
                 diagnostics={"code": "working-checkout-unavailable",
-                             "repository": repository, "path": str(checkout)},
+                             "repository": repository,
+                             "path": str(working_checkout.get("path", "")),
+                             "workspace_root": str(working_checkout.get("workspace_root", "")),
+                             "expected_workspace_root": str(resolved_root)},
             )
+        verified_checkout = workspace_module.verify_registered_checkout(
+            str(working_checkout.get("path", "")),
+            repository=repository,
+            workspace_root=resolved_root,
+            expected_repository_root=resolved_root / repository,
+            expected_branch=working_checkout.get("branch"),
+            expected_head=working_checkout.get("head"),
+        )
+        checkout = Path(verified_checkout["path"])
         observed = workspace_module.inspect_repo(checkout, _refresh=True)
         if (observed is None or observed.git_error or not observed.head
                 or observed.manifest_repository != repository):
@@ -1272,14 +1280,18 @@ def resolve_environment(
         selected_facts[repository] = {
             "repository": repository,
             "path": str(checkout),
-            "branch": observed.branch,
-            "head": observed.head,
+            "branch": verified_checkout["branch"] or None,
+            "head": verified_checkout["head"],
             "clean": not bool(observed.dirty),
             "source_ref": "current-working-checkout",
-            "authoritative_head": observed.head,
-            **workspace_module.repository_checkout_identity(
-                resolved_root, repository, checkout,
-            ),
+            "authoritative_head": verified_checkout["head"],
+            **{
+                key: verified_checkout[key]
+                for key in (
+                    "checkout_identity", "git_common_directory_identity",
+                    "observed_path",
+                )
+            },
         }
     runtime_toolchain_roots: dict[str, Path] = {}
     runtime_toolchain_facts: dict[str, dict[str, Any]] = {}

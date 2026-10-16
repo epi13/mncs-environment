@@ -1,5 +1,6 @@
 {
   "name": "control-rpc-entry-proof",
+  "working_checkout": "current",
   "intent": {
     "goal": "exercise canonical Environment persistence through the Control socket",
     "repositories": ["mncs-environment"],

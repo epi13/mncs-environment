@@ -16,10 +16,14 @@ from pathlib import Path
 
 import pytest
 
-from mncs_env import family, sessions
+from mncs_env import family, sessions, workspace
 from mncs_env.projection_store import ProjectionConflict
 from mncs_env.session_store import open_store
 from test_family import _draft, _git, _write_repo
+
+MNCS_WORKSPACE_ROOT = Path(workspace.verify_registered_checkout(
+    Path(__file__).resolve().parents[1]
+)["workspace_root"])
 
 
 def _session(root, state, role, selected, backend):
@@ -112,7 +116,7 @@ def _run(ctx, state, backend, requests, change):
 def test_concurrent_family_sessions_recovery_and_quiet_state(tmp_path, monkeypatch, backend):
     binary = os.environ.get("MNCS_BINARY", "/home/epi13/Documents/Projects/mncs-language/target/release/mncs")
     library = os.environ.get("MNCS_LIBRARY_ROOT", "/home/epi13/Documents/Projects/mncs-stdlib/library")
-    commons = os.environ.get("MNCS_COMMONS_ROOT", str(Path(__file__).resolve().parents[2] / "MNCS-Commons"))
+    commons = os.environ.get("MNCS_COMMONS_ROOT", str(MNCS_WORKSPACE_ROOT / "MNCS-Commons"))
     if not Path(binary).is_file() or not Path(library).is_dir() or not (Path(commons) / family.CHANGE_SOURCE).is_file():
         pytest.skip("selected native proof providers unavailable")
     monkeypatch.setenv("MNCS_BIN", binary)
@@ -224,7 +228,7 @@ def _closing_store(state, backend):
 def test_same_repository_worktrees_do_not_share_adoption(tmp_path, monkeypatch, backend):
     binary = os.environ.get("MNCS_BINARY", "/home/epi13/Documents/Projects/mncs-language/target/release/mncs")
     library = os.environ.get("MNCS_LIBRARY_ROOT", "/home/epi13/Documents/Projects/mncs-stdlib/library")
-    commons = os.environ.get("MNCS_COMMONS_ROOT", str(Path(__file__).resolve().parents[2] / "MNCS-Commons"))
+    commons = os.environ.get("MNCS_COMMONS_ROOT", str(MNCS_WORKSPACE_ROOT / "MNCS-Commons"))
     if not Path(binary).is_file() or not Path(library).is_dir():
         pytest.skip("selected native proof providers unavailable")
     monkeypatch.setenv("MNCS_BIN", binary)

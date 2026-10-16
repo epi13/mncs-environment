@@ -8,10 +8,13 @@ from unittest.mock import patch
 
 import pytest
 
-from mncs_env import coherence, family, observations
+from mncs_env import coherence, family, observations, workspace
 from mncs_env.session_store import open_store
 
-AUTOMATION = Path(__file__).resolve().parents[2] / 'mncs-automation'
+MNCS_WORKSPACE_ROOT = Path(workspace.verify_registered_checkout(
+    Path(__file__).resolve().parents[1]
+)["workspace_root"])
+AUTOMATION = MNCS_WORKSPACE_ROOT / 'mncs-automation'
 BINARY = os.environ.get('MNCS_BIN') or os.environ.get('MNCS_BINARY')
 
 

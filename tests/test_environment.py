@@ -6054,7 +6054,10 @@ class EntryFrictionTests(unittest.TestCase):
             self.assertIn("bindings", detailed)
             self.assertIn("lifecycle_history", detailed)
             self.assertGreater(detailed["event_count"], 0)
-            self.assertGreater(len(json.dumps(detailed)), len(json.dumps(context)))
+            self.assertNotIn("repo_facts", context)
+            self.assertNotIn("latest_events", context)
+            self.assertIn("repo_facts", detailed)
+            self.assertIn("latest_events", detailed)
 
     def test_authenticated_entry_discovers_unique_campaign_without_campaign_id(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

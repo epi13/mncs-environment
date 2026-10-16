@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import errno
 import fcntl
-import subprocess
+import os
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -59,7 +59,22 @@ def select_definition(definition_path: Path | None, workspace_root: str | None) 
             if (candidate / ".git").exists() or workspace_root:
                 break
     if selected is not None:
-        selected = selected.expanduser().resolve()
+        raw_selected = selected.expanduser()
+        try:
+            absolute_selected = Path(os.path.abspath(raw_selected))
+            selected = raw_selected.resolve(strict=True)
+        except OSError as error:
+            raise EntryError(
+                f"environment definition is unavailable: {error}",
+                "definition-invalid",
+                path=str(raw_selected),
+            ) from error
+        if absolute_selected != selected:
+            raise EntryError(
+                "environment definition path cannot traverse a symbolic link",
+                "definition-invalid",
+                path=str(raw_selected),
+            )
         raw = read_json(selected)
         if not isinstance(raw, dict):
             raise EntryError(f"environment definition is missing or not an object: {selected}",
@@ -95,82 +110,25 @@ def current_working_checkout(
     if (raw_path.is_symlink() or raw_path.parent.name != ".mncs"
             or not raw_path.is_file()):
         raise EntryError(
-            "working_checkout=current requires .mncs/environment.json at a repository root",
+            "working_checkout=current requires a project-local definition inside .mncs at a Git checkout root",
             "working-checkout-unavailable",
             path=str(raw_path),
         )
-    raw_checkout = raw_path.parent.parent
-    if raw_checkout.is_symlink():
-        raise EntryError(
-            "current Git checkout cannot be a symbolic link",
-            "working-checkout-unavailable",
-            path=str(raw_checkout),
-        )
-    path = raw_path.resolve(strict=True)
-    checkout = raw_checkout.resolve(strict=True)
     try:
-        top_level = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            cwd=checkout, capture_output=True, text=True, timeout=10, check=False,
-        )
-        common = subprocess.run(
-            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
-            cwd=checkout, capture_output=True, text=True, timeout=10, check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired) as error:
+        observed = workspace.verify_registered_checkout(raw_path.parent.parent)
+    except workspace.WorkspaceResolutionError as error:
         raise EntryError(
-            "Git could not identify the checkout containing the Environment definition",
+            str(error),
             "working-checkout-unavailable",
-            path=str(checkout),
+            **error.diagnostics,
         ) from error
-    if top_level.returncode != 0 or common.returncode != 0:
-        raise EntryError(
-            "Git could not identify the checkout containing the Environment definition",
-            "working-checkout-unavailable",
-            path=str(checkout),
-        )
-    observed_checkout = Path(top_level.stdout.strip()).resolve(strict=True)
-    common_dir = Path(common.stdout.strip()).resolve(strict=True)
-    repository_root = common_dir.parent if common_dir.name == ".git" else None
-    manifest = read_json(checkout / ".mncs" / "project.json")
-    repository = manifest.get("repository") if isinstance(manifest, dict) else None
-    if (observed_checkout != checkout or repository_root is None
-            or not isinstance(repository, str) or not repository
-            or not (repository_root / ".git").exists()):
-        raise EntryError(
-            "current checkout lacks a verifiable MNCS repository identity",
-            "working-checkout-unavailable",
-            path=str(checkout),
-        )
-    try:
-        relative = checkout.relative_to(repository_root)
-    except ValueError as error:
-        raise EntryError(
-            "current checkout does not belong to its Git common repository",
-            "working-checkout-unavailable",
-            path=str(checkout),
-        ) from error
-    if relative.parts and not (
-        len(relative.parts) == 2 and relative.parts[0] == ".worktrees"
-    ):
-        raise EntryError(
-            "current checkout must be the repository root or one immediate linked worktree",
-            "working-checkout-unavailable",
-            path=str(checkout),
-        )
-    observed = workspace.inspect_repo(checkout, _refresh=True)
-    if (observed is None or observed.git_error or not observed.head
-            or observed.manifest_repository != repository):
-        raise EntryError(
-            "current checkout does not match its MNCS repository manifest",
-            "working-checkout-unavailable",
-            path=str(checkout),
-            repository=repository,
-        )
     return {
-        "repository": repository,
-        "path": str(checkout),
-        "workspace_root": str(repository_root.parent.resolve(strict=True)),
+        key: observed[key]
+        for key in (
+            "repository", "path", "workspace_root", "branch", "head",
+            "git_common_directory", "manifest_identity", "checkout_identity",
+            "git_common_directory_identity", "observed_path",
+        )
     }
 
 
