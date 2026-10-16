@@ -5912,6 +5912,73 @@ class EntryFrictionTests(unittest.TestCase):
             "campaign-continuation-ambiguous",
         )
 
+    def test_legacy_continuation_keeps_checkout_path_for_stale_head_selection(self) -> None:
+        from mncs_env import entry as entry_module
+
+        root = Path(tempfile.mkdtemp(prefix="mncs-legacy-campaign-workspace-"))
+        self.addCleanup(shutil.rmtree, root)
+        checkout = {
+            "repository": "mncs-compiler",
+            "path": str(root / "mncs-compiler"),
+            "workspace_root": str(root),
+            "branch": "campaign/native-app-readiness",
+            "head": "b" * 40,
+        }
+        reference = {
+            "repository": "mncs-compiler",
+            "observed_path": "mncs-compiler",
+            "branch": checkout["branch"],
+            "head": "a" * 40,
+        }
+
+        class MemoryStore:
+            def list_sessions(self) -> list[str]:
+                return ["ses_a", "ses_b"]
+
+            def load_snapshot(self, session_id: str) -> dict:
+                return {
+                    "campaign": {
+                        "identity": "cmp_nested-compiler",
+                        "repository_refs": [reference],
+                    },
+                    "lifecycle": "active",
+                    "authenticated_principal_id": "principal-test",
+                    "provenance": {"definition_id": "env-nested"},
+                    "workspace": {"root": str(root)},
+                    "consumer_id": f"consumer-{session_id}",
+                    "checkpoints": [],
+                }
+
+        with mock.patch.object(
+            entry_module.sessions, "continuation_observations",
+            side_effect=self._campaign_observations,
+        ), self.assertRaises(entry_module.EntryError) as raised:
+            entry_module._validate_campaign_identity(
+                MemoryStore(), campaign_id="cmp_nested-compiler",
+                authenticated_principal_id="principal-test",
+                definition_id="env-nested", workspace_root=root,
+                selected_session_id=None, pending_handoff=None,
+                working_checkout=checkout,
+            )
+
+        self.assertEqual(
+            raised.exception.diagnostics["code"],
+            "campaign-continuation-ambiguous",
+        )
+        continuation = raised.exception.diagnostics["continuations"][0]
+        self.assertEqual(
+            continuation["repositories"][0]["observed_path"], "mncs-compiler"
+        )
+        projected_snapshot = {
+            "workspace": {"root": str(root)},
+            "campaign": {"repository_refs": continuation["repositories"]},
+        }
+        self.assertTrue(
+            entry_module._working_checkout_matches_snapshot(
+                projected_snapshot, checkout,
+            )
+        )
+
     def test_exact_context_selection_does_not_override_foreign_campaign_owner(self) -> None:
         from mncs_env import entry as entry_module
 

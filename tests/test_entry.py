@@ -791,9 +791,29 @@ class EntryContractTests(unittest.TestCase):
         }
         self.assertTrue(entry._working_checkout_matches_snapshot(legacy, checkout))
 
-        wrong_head = json.loads(json.dumps(legacy))
-        wrong_head["campaign"]["repository_refs"][0]["head"] = "b" * 40
-        self.assertFalse(entry._working_checkout_matches_snapshot(wrong_head, checkout))
+        advanced_head = json.loads(json.dumps(legacy))
+        advanced_head["campaign"]["repository_refs"][0]["head"] = "b" * 40
+        self.assertTrue(entry._working_checkout_matches_snapshot(advanced_head, checkout))
+
+        # HEAD movement is continuation only when the immutable legacy path
+        # still resolves to this already-verified registered checkout.
+        advanced_head_without_path = json.loads(json.dumps(advanced_head))
+        advanced_head_without_path["campaign"]["repository_refs"][0].pop("observed_path")
+        self.assertFalse(
+            entry._working_checkout_matches_snapshot(advanced_head_without_path, checkout)
+        )
+
+        advanced_head_wrong_identity = json.loads(json.dumps(advanced_head))
+        advanced_head_wrong_identity["campaign"]["repository_refs"][0][
+            "git_common_directory_identity"
+        ] = "common-from-another-repository"
+        self.assertFalse(
+            entry._working_checkout_matches_snapshot(advanced_head_wrong_identity, checkout)
+        )
+
+        changed_branch = json.loads(json.dumps(advanced_head))
+        changed_branch["campaign"]["repository_refs"][0]["branch"] = "other-branch"
+        self.assertFalse(entry._working_checkout_matches_snapshot(changed_branch, checkout))
 
         wrong_workspace = json.loads(json.dumps(legacy))
         wrong_workspace["workspace"]["root"] = str(self.base.parent.resolve())

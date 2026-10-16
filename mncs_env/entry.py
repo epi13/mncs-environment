@@ -488,8 +488,7 @@ def _legacy_repository_reference_matches(
     current_head = working_checkout.get("head")
     if (not isinstance(current_branch, str) or not current_branch
             or not isinstance(current_head, str) or not current_head
-            or reference.get("branch") != current_branch
-            or reference.get("head") != current_head):
+            or reference.get("branch") != current_branch):
         return False
 
     recorded_path = reference.get("observed_path") or reference.get("path")
@@ -507,6 +506,14 @@ def _legacy_repository_reference_matches(
     elif not same_workspace:
         # Without a recorded path there is no way to bridge two workspace
         # roots safely, even when their branch and HEAD happen to match.
+        return False
+
+    # The current checkout has already been verified against Git's registered
+    # worktree list, its common directory, repository manifest, and authorized
+    # workspace. When the legacy record names that exact checkout path and
+    # branch, a newer HEAD is normal continuation after commits. Keep the old
+    # revision as a fallback identity only when no exact path was recorded.
+    if reference.get("head") != current_head and not exact_recorded_path:
         return False
 
     # Checkout identity hashes include the workspace-relative path. When an
@@ -601,8 +608,9 @@ def _validate_campaign_identity(store, *, campaign_id: str,
         for item in repository_refs[:16]:
             if isinstance(item, dict):
                 repositories.append({key: item.get(key) for key in (
-                    "repository", "checkout_identity", "git_common_directory_identity",
-                    "branch", "head", "clean", "observation",
+                    "repository", "observed_path", "checkout_identity",
+                    "git_common_directory_identity", "branch", "head", "clean",
+                    "observation",
                 )})
         checkpoint_ids = snapshot.get("checkpoints", [])
         claim_ids = observations["claim_ids"]
