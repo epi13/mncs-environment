@@ -401,6 +401,14 @@ def _working_checkout_matches_snapshot(
         return True
     repository = working_checkout.get("repository")
     selected_checkouts = snapshot.get("selected_checkouts")
+    # Snapshots created before checkout identity was added still carry a
+    # repository reference in the campaign. Accept that record only when it
+    # names this repository in the same authorized workspace and pins the
+    # exact branch and HEAD of the already-verified registered checkout.
+    # Current snapshots with an explicit selected_checkouts field never fall
+    # back to older, weaker evidence when the requested repository is absent.
+    if "selected_checkouts" not in snapshot:
+        return _legacy_repository_reference_matches(snapshot, working_checkout)
     selected = (
         selected_checkouts.get(repository)
         if isinstance(selected_checkouts, dict) and isinstance(repository, str)
@@ -441,6 +449,50 @@ def _working_checkout_matches_snapshot(
         isinstance(current_common, str)
         and isinstance(selected_common, str)
         and current_common != selected_common
+    )
+
+
+def _legacy_repository_reference_matches(
+    snapshot: dict,
+    working_checkout: dict[str, str],
+) -> bool:
+    """Resolve a pre-checkout-identity session from its exact recorded revision."""
+    repository = working_checkout.get("repository")
+    workspace_root = working_checkout.get("workspace_root")
+    snapshot_workspace = snapshot.get("workspace")
+    campaign = snapshot.get("campaign")
+    references = campaign.get("repository_refs") if isinstance(campaign, dict) else None
+    if (not isinstance(repository, str) or not repository
+            or not isinstance(workspace_root, str) or not workspace_root
+            or not isinstance(snapshot_workspace, dict)
+            or snapshot_workspace.get("root") != workspace_root
+            or not isinstance(references, list)):
+        return False
+    matches = [item for item in references
+               if isinstance(item, dict) and item.get("repository") == repository]
+    if len(matches) != 1:
+        return False
+    reference = matches[0]
+    current_branch = working_checkout.get("branch")
+    current_head = working_checkout.get("head")
+    if (not isinstance(current_branch, str) or not current_branch
+            or not isinstance(current_head, str) or not current_head
+            or reference.get("branch") != current_branch
+            or reference.get("head") != current_head):
+        return False
+
+    # If the old record retained stronger identities, they must agree too.
+    for key in ("checkout_identity", "git_common_directory_identity"):
+        recorded = reference.get(key)
+        current = working_checkout.get(key)
+        if isinstance(recorded, str) and isinstance(current, str) and recorded != current:
+            return False
+    recorded_path = reference.get("observed_path") or reference.get("path")
+    current_path = working_checkout.get("path")
+    return not (
+        isinstance(recorded_path, str)
+        and isinstance(current_path, str)
+        and os.path.abspath(recorded_path) != os.path.abspath(current_path)
     )
 
 

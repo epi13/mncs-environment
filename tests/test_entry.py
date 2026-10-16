@@ -770,6 +770,48 @@ class EntryContractTests(unittest.TestCase):
             checkout.resolve(),
         )
 
+    def test_legacy_campaign_reference_matches_only_exact_verified_checkout(self):
+        checkout = {
+            "repository": "fixture",
+            "path": str(self.project.resolve()),
+            "workspace_root": str(self.base.resolve()),
+            "branch": "main",
+            "head": "a" * 40,
+            "checkout_identity": "checkout-fixture-main",
+            "git_common_directory_identity": "common-fixture",
+        }
+        legacy = {
+            "workspace": {"root": str(self.base.resolve())},
+            "campaign": {"repository_refs": [{
+                "repository": "fixture",
+                "branch": "main",
+                "head": "a" * 40,
+            }]},
+        }
+        self.assertTrue(entry._working_checkout_matches_snapshot(legacy, checkout))
+
+        wrong_head = json.loads(json.dumps(legacy))
+        wrong_head["campaign"]["repository_refs"][0]["head"] = "b" * 40
+        self.assertFalse(entry._working_checkout_matches_snapshot(wrong_head, checkout))
+
+        wrong_workspace = json.loads(json.dumps(legacy))
+        wrong_workspace["workspace"]["root"] = str(self.base.parent.resolve())
+        self.assertFalse(entry._working_checkout_matches_snapshot(wrong_workspace, checkout))
+
+        duplicate_reference = json.loads(json.dumps(legacy))
+        duplicate_reference["campaign"]["repository_refs"].append(
+            dict(duplicate_reference["campaign"]["repository_refs"][0])
+        )
+        self.assertFalse(entry._working_checkout_matches_snapshot(duplicate_reference, checkout))
+
+        # An explicitly recorded but empty modern selection is authoritative;
+        # legacy references cannot fill in missing current selection data.
+        modern_without_selection = json.loads(json.dumps(legacy))
+        modern_without_selection["selected_checkouts"] = {}
+        self.assertFalse(
+            entry._working_checkout_matches_snapshot(modern_without_selection, checkout)
+        )
+
     def test_authenticated_campaign_selection_is_scoped_to_registered_checkout(self):
         (self.project / ".mncs" / "project.json").write_text(json.dumps({
             "repository": "fixture",
