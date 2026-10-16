@@ -464,11 +464,21 @@ def _legacy_repository_reference_matches(
     campaign = snapshot.get("campaign")
     references = campaign.get("repository_refs") if isinstance(campaign, dict) else None
     if (not isinstance(repository, str) or not repository
-            or not isinstance(workspace_root, str) or not workspace_root
             or not isinstance(snapshot_workspace, dict)
-            or snapshot_workspace.get("root") != workspace_root
             or not isinstance(references, list)):
         return False
+    snapshot_root_value = snapshot_workspace.get("root")
+    if (not isinstance(snapshot_root_value, str) or not snapshot_root_value
+            or not Path(snapshot_root_value).is_absolute()
+            or not isinstance(workspace_root, str) or not workspace_root):
+        return False
+    try:
+        snapshot_root = Path(snapshot_root_value).resolve(strict=True)
+    except OSError:
+        return False
+    if os.path.abspath(snapshot_root_value) != str(snapshot_root):
+        return False
+    same_workspace = str(snapshot_root) == os.path.abspath(workspace_root)
     matches = [item for item in references
                if isinstance(item, dict) and item.get("repository") == repository]
     if len(matches) != 1:
@@ -482,19 +492,32 @@ def _legacy_repository_reference_matches(
             or reference.get("head") != current_head):
         return False
 
-    # If the old record retained stronger identities, they must agree too.
-    for key in ("checkout_identity", "git_common_directory_identity"):
-        recorded = reference.get(key)
-        current = working_checkout.get(key)
-        if isinstance(recorded, str) and isinstance(current, str) and recorded != current:
-            return False
     recorded_path = reference.get("observed_path") or reference.get("path")
     current_path = working_checkout.get("path")
+    exact_recorded_path = False
     if isinstance(recorded_path, str) and isinstance(current_path, str):
         recorded_checkout = Path(recorded_path)
         if not recorded_checkout.is_absolute():
-            recorded_checkout = Path(workspace_root) / recorded_checkout
-        if os.path.abspath(recorded_checkout) != os.path.abspath(current_path):
+            recorded_checkout = snapshot_root / recorded_checkout
+        exact_recorded_path = (
+            os.path.abspath(recorded_checkout) == os.path.abspath(current_path)
+        )
+        if not exact_recorded_path:
+            return False
+    elif not same_workspace:
+        # Without a recorded path there is no way to bridge two workspace
+        # roots safely, even when their branch and HEAD happen to match.
+        return False
+
+    # Checkout identity hashes include the workspace-relative path. When an
+    # older campaign uses a nested workspace, the exact recorded path above
+    # is the cross-root identity proof and its hashes are not comparable to
+    # the newly verified workspace-relative identities.
+    for key in ("checkout_identity", "git_common_directory_identity"):
+        recorded = reference.get(key)
+        current = working_checkout.get(key)
+        if (same_workspace and isinstance(recorded, str)
+                and isinstance(current, str) and recorded != current):
             return False
     return True
 

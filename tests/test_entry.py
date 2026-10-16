@@ -833,6 +833,31 @@ class EntryContractTests(unittest.TestCase):
             entry._working_checkout_matches_snapshot(mismatched_target_selection, checkout)
         )
 
+        campaign_root = self.base / "campaign-root"
+        nested_checkout = campaign_root / "fixture"
+        nested_checkout.mkdir(parents=True)
+        nested_workspace_snapshot = {
+            "workspace": {"root": str(campaign_root.resolve())},
+            "campaign": {"repository_refs": [{
+                "repository": "fixture",
+                "observed_path": "fixture",
+                "checkout_identity": "workspace-relative-checkout-identity",
+                "git_common_directory_identity": "workspace-relative-common-identity",
+                "branch": "main",
+                "head": "a" * 40,
+            }]},
+        }
+        nested_working_checkout = {
+            **checkout,
+            "path": str(nested_checkout.resolve()),
+            "workspace_root": str(self.base.resolve()),
+            "checkout_identity": "projects-relative-checkout-identity",
+            "git_common_directory_identity": "projects-relative-common-identity",
+        }
+        self.assertTrue(entry._working_checkout_matches_snapshot(
+            nested_workspace_snapshot, nested_working_checkout,
+        ))
+
     def test_authenticated_campaign_selection_is_scoped_to_registered_checkout(self):
         (self.project / ".mncs" / "project.json").write_text(json.dumps({
             "repository": "fixture",
