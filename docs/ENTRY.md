@@ -143,15 +143,20 @@ rights, lifecycle, and claim checks still apply. The typed Control `env_enter`
 MCP operation exposes optional `task_identity` and forwards it through the
 authenticated Environment persistence transport. It selects a campaign but grants no rights or ownership.
 
-On first use, an existing campaign is never adopted from the selector alone.
-Inspect the project continuation capsule and pass the intended `campaign_id`
-with `task_identity` once. If no prior campaign exists, Environment derives a
-deterministic task campaign identity and binds it after session creation. A
-retry after interrupted publication reads the immutable binding back; a
-different campaign mapping conflicts. Later entries can pass only the same
-stable task identity and resume its campaign without a session or campaign ID.
-Independent work needs a different task identity and campaign. A task selector
-cannot be combined with `--new-session`.
+On first use, Environment may adopt a prior campaign only when the authenticated
+principal, Environment definition, workspace, registered checkout identity,
+and live lifecycle together identify exactly one session. Environment then
+binds the task selector to that campaign and session. Other campaigns on
+independent registered checkouts do not interfere. If duplicate sessions or
+campaigns match the same exact checkout, entry reports their identities and
+does not choose one. An explicit campaign ID that conflicts with the unique
+continuation is also rejected. If no prior continuation matches, Environment
+derives a deterministic task campaign identity and binds it after session
+creation. A retry after interrupted publication reads the immutable binding
+back; a different campaign mapping conflicts. Later entries can pass only the
+same stable task identity and resume its campaign without a session or
+campaign ID. Independent work needs a different task identity and campaign. A
+task selector cannot be combined with `--new-session`.
 
 Entry and `reconcile` use a nonblocking process lock per state directory and
 backend. A concurrent operation returns `entry-busy`, with a retry action.

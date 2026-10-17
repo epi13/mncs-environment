@@ -343,24 +343,11 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(code, 0, first)
         campaign_id = first["continuation"]["identity"]
 
-        # A task selector never adopts existing work merely because it is the
-        # only campaign in a project. The first binding names its campaign.
+        # A fresh process can continue one uniquely identified campaign
+        # without asking the operator to copy its campaign ID.
         auth_env["MNCS_ENV_RPC_REQUEST_ID"] = "req_task_selector_unbound"
-        code, unbound = self.run_cli(
-            "enter", "--consumer", "task-selector-process-2",
-            "--task-identity", task_identity,
-            backend="store", env=auth_env,
-        )
-        self.assertNotEqual(code, 0)
-        self.assertEqual(
-            unbound["diagnostics"]["code"], "campaign-task-selector-unbound"
-        )
-        self.assertEqual(unbound["diagnostics"]["campaigns"], [campaign_id])
-
-        auth_env["MNCS_ENV_RPC_REQUEST_ID"] = "req_task_selector_initial_binding"
         code, bound = self.run_cli(
             "enter", "--consumer", "task-selector-process-2",
-            "--campaign-id", campaign_id,
             "--task-identity", task_identity,
             backend="store", env=auth_env,
         )
@@ -421,6 +408,64 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(
             conflict["diagnostics"]["code"], "campaign-task-selector-conflict"
         )
+
+    def test_unbound_task_selector_refuses_duplicate_exact_checkout_continuations(self):
+        self.ready()
+        principal = "control-principal-task-selector-duplicate"
+        task_identity = "durable-task-with-duplicate-candidates"
+        auth_env = {
+            **os.environ,
+            "MNCS_ENV_AUTH_PRINCIPAL_ID": principal,
+            "MNCS_ENV_RPC_REQUEST_ID": "req_task_duplicate_first",
+        }
+        code, first = self.run_cli(
+            "enter", "--consumer", "duplicate-process-1",
+            "--campaign-id", "cmp_duplicate_first",
+            backend="store", env=auth_env,
+        )
+        self.assertEqual(code, 0, first)
+        auth_env["MNCS_ENV_RPC_REQUEST_ID"] = "req_task_duplicate_second"
+        code, second = self.run_cli(
+            "enter", "--consumer", "duplicate-process-2",
+            "--campaign-id", "cmp_duplicate_second", "--new-session",
+            backend="store", env=auth_env,
+        )
+        self.assertEqual(code, 0, second)
+
+        auth_env["MNCS_ENV_RPC_REQUEST_ID"] = "req_task_duplicate_lookup"
+        code, ambiguous = self.run_cli(
+            "enter", "--consumer", "duplicate-process-3",
+            "--task-identity", task_identity,
+            backend="store", env=auth_env,
+        )
+        self.assertNotEqual(code, 0)
+        diagnostics = ambiguous["diagnostics"]
+        self.assertEqual(diagnostics["code"], "campaign-continuation-ambiguous")
+        self.assertEqual(
+            diagnostics["campaigns"],
+            ["cmp_duplicate_first", "cmp_duplicate_second"],
+        )
+        self.assertEqual(
+            set(diagnostics["sessions"]), {first["session_id"], second["session_id"]}
+        )
+        self.assertEqual(
+            {item["session_id"] for item in diagnostics["conflicting_contexts"]},
+            {first["session_id"], second["session_id"]},
+        )
+
+        selector = campaign_selector.selector_identity(
+            task_identity,
+            authenticated_principal_id=principal,
+            definition_id=identity.environment_id(self.config),
+            workspace_root=str(self.project.resolve()),
+        )
+        store = sessions.open_store(
+            self.state, "store", verify_on_open=False, defer_mutation=False
+        )
+        try:
+            self.assertIsNone(campaign_selector.read_binding(store, selector))
+        finally:
+            store.close()
 
     def test_task_selector_recovers_session_created_before_binding_publication(self):
         self.ready()
@@ -958,6 +1003,17 @@ class EntryContractTests(unittest.TestCase):
             self.assertEqual(
                 parallel_resume["session_id"], first_entry["session_id"],
             )
+
+        # A new task selector adopts the unique main-checkout continuation;
+        # the other registered worktrees do not create false ambiguity.
+        auth_env["MNCS_ENV_RPC_REQUEST_ID"] = "req_nested_task_selector_main"
+        task_code, task_resume = self.enter(
+            "--task-identity", "continue-main-checkout", cwd=self.project,
+            env=auth_env,
+        )
+        self.assertEqual(task_code, 0, task_resume)
+        self.assertEqual(task_resume["session_id"], main_first["session_id"])
+        self.assertEqual(task_resume["entry"]["task_selector"]["status"], "bound")
 
         wrong_checkout_code, wrong_checkout = self.enter(
             "--campaign-id", nested_first["continuation"]["identity"],

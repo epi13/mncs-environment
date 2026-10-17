@@ -2093,7 +2093,7 @@ def build_parser() -> argparse.ArgumentParser:
     enter.add_argument(
         "--task-identity", default=None,
         help=("select a durable campaign using an authenticated, project-scoped task identity; "
-              "first binding requires an explicit campaign when prior work exists"),
+              "a unique exact continuation is adopted; duplicate candidates remain ambiguous"),
     )
     enter.add_argument("--new-session", action="store_true", help="create independent work instead of reusing matching work")
     enter.set_defaults(func=cmd_enter)

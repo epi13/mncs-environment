@@ -1097,25 +1097,40 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                     discovered_sessions = list(discovered)
                     if (task_selector_identity is not None and task_binding is None
                             and discovered_campaigns):
-                        if campaign_id not in discovered_campaigns:
+                        if (requested_campaign_id is not None
+                                and requested_campaign_id not in discovered_campaigns):
                             raise EntryError(
-                                "task identity is not yet bound and existing project campaigns cannot be adopted implicitly",
-                                "campaign-task-selector-unbound",
+                                "explicit campaign identity does not match the existing continuation selected for this task",
+                                "campaign-task-selector-conflict",
                                 campaigns=sorted(discovered_campaigns),
                                 sessions=sorted(discovered_sessions),
-                                next="inspect the authenticated project continuation capsule, select the intended campaign identity once, then enter with --task-identity and --campaign-id",
+                                requested_campaign_id=requested_campaign_id,
+                                next="use the exact existing campaign identity or a different task identity for independent work",
                             )
-                        # A new task's campaign identity is derived from its
-                        # scoped selector. If a process stopped after session
-                        # creation but before publishing the immutable link,
-                        # this exact identity is sufficient to finish that
-                        # same binding; other project campaigns stay ignored.
-                        discovered_campaigns = {campaign_id}
-                        discovered_sessions = [
-                            session_id for session_id in discovered_sessions
-                            if (store.load_snapshot(session_id) or {})
-                            .get("campaign", {}).get("identity") == campaign_id
-                        ]
+                        if (len(discovered_campaigns) != 1
+                                or len(discovered_sessions) != 1):
+                            raise EntryError(
+                                "an unbound task identity matches multiple authenticated campaign continuations",
+                                "campaign-continuation-ambiguous",
+                                campaigns=sorted(discovered_campaigns),
+                                sessions=sorted(discovered_sessions),
+                                conflicting_contexts=[
+                                    _session_selection_details(
+                                        session_id,
+                                        store.load_snapshot(session_id) or {},
+                                        working_checkout,
+                                    )
+                                    for session_id in discovered_sessions
+                                ],
+                                next="select the intended campaign when duplicate continuations share this exact checkout",
+                            )
+                        # The unbound task selector is only a lookup hint. Its
+                        # candidate is adopted only when authenticated owner,
+                        # Environment definition, workspace, checkout identity,
+                        # and lifecycle select exactly one session above.
+                        # Binding then makes this choice durable for later
+                        # process restarts; disjoint checkouts remain isolated.
+                        campaign_id = next(iter(discovered_campaigns))
                     if len(discovered_campaigns) > 1:
                         raise EntryError(
                             "multiple durable campaigns match this authenticated consumer and selected environment",
