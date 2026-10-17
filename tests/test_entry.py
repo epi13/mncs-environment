@@ -924,12 +924,40 @@ class EntryContractTests(unittest.TestCase):
             nested_first["continuation"]["identity"],
         )
 
+        parallel_sessions = []
+        for index in range(3):
+            parallel = (
+                self.project / ".worktrees" / "parallel" / str(index)
+                / "registered" / "fixture"
+            )
+            parallel.parent.mkdir(parents=True)
+            subprocess.run(
+                ["git", "-C", str(self.project), "worktree", "add", "-b",
+                 f"campaign/parallel-{index}", str(parallel), "HEAD"],
+                check=True, capture_output=True,
+            )
+            parallel_code, parallel_entry = self.enter(cwd=parallel, env=auth_env)
+            self.assertEqual(parallel_code, 0, parallel_entry)
+            parallel_sessions.append((parallel, parallel_entry))
+        self.assertEqual(len({
+            main_first["session_id"], nested_first["session_id"],
+            *(entry["session_id"] for _, entry in parallel_sessions),
+        }), 5)
+
         main_resume_code, main_resume = self.enter(cwd=self.project, env=auth_env)
         nested_resume_code, nested_resume = self.enter(cwd=nested, env=auth_env)
         self.assertEqual(main_resume_code, 0, main_resume)
         self.assertEqual(nested_resume_code, 0, nested_resume)
         self.assertEqual(main_resume["session_id"], main_first["session_id"])
         self.assertEqual(nested_resume["session_id"], nested_first["session_id"])
+        for parallel, first_entry in parallel_sessions:
+            parallel_resume_code, parallel_resume = self.enter(
+                cwd=parallel, env=auth_env,
+            )
+            self.assertEqual(parallel_resume_code, 0, parallel_resume)
+            self.assertEqual(
+                parallel_resume["session_id"], first_entry["session_id"],
+            )
 
         wrong_checkout_code, wrong_checkout = self.enter(
             "--campaign-id", nested_first["continuation"]["identity"],

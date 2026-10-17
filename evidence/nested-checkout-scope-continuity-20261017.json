@@ -1,0 +1,59 @@
+{
+  "campaign": {
+    "checkpoint_before_change": "chk_8e863c8c7bcab2b2",
+    "identity": "cmp_mncs_environment_nested_checkout_fix_20261015",
+    "sequence_before_change": 8,
+    "session_id": "ses_64cf5689fc7da3cc"
+  },
+  "created_at": "2026-10-17T14:04:53.157035+00:00",
+  "implementation": {
+    "behavior": [
+      "Repository scope grants resolve the selected checkout through the shared registered Git worktree verifier.",
+      "Nested linked worktrees retain branch, common-directory, manifest, workspace, and checkout identities.",
+      "Grants record the exact checkout path and admit narrow worktree claims; other branches in independent worktrees coexist.",
+      "Composition revalidates the same checkout and accepts either a matching current worktree claim or a legacy repository-wide claim.",
+      "Owner-recovered worktree claims require canonical owner and target scope, exact Store identity, and recovery provenance; bounded untracked campaign evidence is preserved and rechecked.",
+      "Entry selection resumes the exact same campaign for each of five unrelated registered checkout contexts; a duplicate same-checkout session remains ambiguous."
+    ],
+    "branch": "campaign/environment-continuity-20261015",
+    "implementation_diff_sha256": "edfff296f1f0385eacff667cffda244a13416d69bd0ecabbeb462e8e6288917a",
+    "main_revision": "c587bc12ff5997b34451a75d489cac9fed992fd8",
+    "repository": "mncs-environment",
+    "source_files": {
+      "mncs_env/sessions.py": "0e467842eca1d2ec465aa8495c44f4c8c4b6971859564e4b8da9b6ea637590e4",
+      "tests/test_authority_scope_grants.py": "dbc428e3f0095f975c43876769dfb20cf694a4d0a1e72efa3549cffed47ad7b4",
+      "tests/test_entry.py": "647e9517daa1948efc5ff42917509ea0800c4923c06738ed6f4d4bd4aa33e57c"
+    },
+    "tested_parent_revision": "cea11775d00cdb73cdb9872455f16c3ee55e109a"
+  },
+  "limitations": [
+    "The owner-approved Control scope grant for mncs-language remains unavailable in the Compiler campaign.",
+    "Environment merge and publish authority is escalation-required; this revision is retained on its campaign branch."
+  ],
+  "result": "passed",
+  "schema_version": "mncs.environment.nested-checkout-scope-continuity/1",
+  "verification": {
+    "authority_scope_tests": {
+      "command": "python3 -m pytest -q tests/test_authority_scope_grants.py",
+      "duration_seconds": 68.42,
+      "passed": 26
+    },
+    "multiple_checkout_continuation": {
+      "command": "python3 -m pytest -q tests/test_entry.py::EntryContractTests::test_authenticated_campaign_selection_is_scoped_to_registered_checkout",
+      "duration_seconds": 2.86,
+      "passed": 1,
+      "registered_checkout_contexts": 5
+    },
+    "resource_measurements": "not collected; these targeted tests exercise Git and Store lifecycle behavior rather than compiler builds",
+    "static_checks": [
+      "python3 -m ruff check --select I mncs_env/sessions.py tests/test_authority_scope_grants.py tests/test_entry.py",
+      "python3 -m py_compile mncs_env/sessions.py tests/test_authority_scope_grants.py tests/test_entry.py",
+      "git diff --check"
+    ],
+    "symlink_and_unrelated_clone_rejection": {
+      "command": "python3 -m pytest -q tests/test_entry.py::EntryContractTests::test_registered_checkout_identity_rejects_symlinks_and_unrelated_clones",
+      "duration_seconds": 0.21,
+      "passed": 1
+    }
+  }
+}

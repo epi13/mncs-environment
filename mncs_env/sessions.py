@@ -27,10 +27,9 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from . import authority as authority_module
-from . import campaign_selector
+from . import campaign_selector, composition
 from . import capabilities as capabilities_module
 from . import claims as claims_module
-from . import composition
 from . import events as events_module
 from . import invocation_artifacts as invocation_artifacts_module
 from . import readiness as readiness_module
@@ -902,6 +901,54 @@ def _repository_checkout_identity(
     return workspace_module.repository_checkout_identity(
         workspace_root, repository, checkout
     )
+
+
+def _verified_scope_checkout(
+    workspace_root: str | Path,
+    repository: str,
+    selected: dict[str, Any] | None = None,
+) -> tuple[Path, dict[str, str]]:
+    """Resolve the selected registered checkout, including nested worktrees.
+
+    Repository grants may target the currently selected linked worktree. When
+    no checkout has been selected for the repository, the workspace checkout
+    remains the compatibility default. In both cases Git's worktree registry,
+    common directory, repository manifest, and authorized workspace establish
+    identity; directory depth is not part of acceptance.
+    """
+    root = Path(workspace_root).resolve(strict=True)
+    expected_repository_root = root / repository
+    if selected is None:
+        requested_path = expected_repository_root
+        expected_branch = None
+    else:
+        if selected.get("repository", repository) != repository:
+            raise ValueError("selected checkout names a different repository")
+        raw_path = selected.get("path")
+        if not isinstance(raw_path, str) or not raw_path:
+            raise ValueError("selected checkout has no canonical path")
+        requested_path = Path(raw_path)
+        if not requested_path.is_absolute():
+            requested_path = root / requested_path
+        expected_branch = selected.get("branch")
+        if expected_branch is not None and not isinstance(expected_branch, str):
+            raise ValueError("selected checkout branch is malformed")
+
+    observed = workspace_module.verify_registered_checkout(
+        requested_path,
+        repository=repository,
+        workspace_root=root,
+        expected_repository_root=expected_repository_root,
+        expected_branch=expected_branch,
+    )
+    if selected is not None:
+        for field in (
+            "checkout_identity", "git_common_directory_identity", "observed_path",
+        ):
+            recorded = selected.get(field)
+            if isinstance(recorded, str) and observed.get(field) != recorded:
+                raise ValueError(f"selected checkout {field} changed")
+    return Path(observed["path"]), observed
 
 
 def _resolve_declared_runtime_toolchain_checkouts(
@@ -2320,17 +2367,24 @@ class Session:
         if not isinstance(workspace_root_value, str) or not workspace_root_value:
             raise AuthorityDenied("Environment session has no owner-mapped workspace root")
         workspace_root = Path(workspace_root_value).resolve(strict=True)
-        checkout = workspace_root / repository
+        selected_checkouts = self.snapshot.get("selected_checkouts")
+        selected = (
+            selected_checkouts.get(repository)
+            if isinstance(selected_checkouts, dict) else None
+        )
         try:
-            resolved_checkout = checkout.resolve(strict=True)
-            if (checkout.is_symlink() or resolved_checkout.parent != workspace_root
-                    or not resolved_checkout.is_dir()):
-                raise AuthorityDenied("repository scope must be one immediate, non-symlink workspace checkout")
-        except OSError as error:
-            raise AuthorityDenied(f"repository checkout is unavailable: {repository}") from error
-
+            resolved_checkout, checkout_facts = _verified_scope_checkout(
+                workspace_root, repository,
+                selected if isinstance(selected, dict) else None,
+            )
+        except (OSError, ValueError, workspace_module.WorkspaceResolutionError) as error:
+            raise AuthorityDenied(
+                f"repository scope requires one registered checkout inside the authorized workspace: {repository}"
+            ) from error
         observed = workspace_module.inspect_repo(resolved_checkout, _refresh=True)
-        if observed is None or observed.git_error or not observed.head:
+        if (observed is None or observed.git_error or not observed.head
+                or observed.head != checkout_facts.get("head")
+                or (observed.branch or "") != checkout_facts.get("branch")):
             raise AuthorityDenied("repository scope requires a fresh Git identity observation")
         rights = self.snapshot.get("rights") or {}
         right_subjects = rights.get("subjects") if isinstance(rights, dict) else None
@@ -2342,14 +2396,34 @@ class Session:
             item for item in claims.values()
             if item.get("repository") == repository
         ]
+        requested_scope = claims_module.normalize_scope({
+            "kind": "worktree",
+            "checkout": str(resolved_checkout),
+            "branch": observed.branch,
+        }, repository)
+        conflicting = []
+        for item in competing:
+            try:
+                existing_scope = claims_module.normalize_scope(
+                    item.get("scope") if isinstance(item.get("scope"), dict) else None,
+                    repository,
+                )
+            except (TypeError, ValueError):
+                # Malformed live ownership is conflicting by default.
+                conflicting.append(item)
+                continue
+            if claims_module.scopes_conflict(requested_scope, existing_scope):
+                conflicting.append(item)
         same_session_recovery = [
-            item for item in competing
+            item for item in conflicting
             if self._is_owner_recovered_claim(item, repository, campaign_id)
         ]
-        if competing and (len(competing) != 1 or len(same_session_recovery) != 1):
+        if conflicting and (
+            len(conflicting) != 1 or len(same_session_recovery) != 1
+        ):
             raise AuthorityScopeConflict(
                 "authority-scope-conflict",
-                f"repository scope has an existing live claim: {repository}",
+                f"selected worktree scope has an existing live claim: {repository}",
                 next_step="obtain the recorded owner's handoff or wait for a valid recovery condition",
             )
         preserved_evidence = None
@@ -2373,6 +2447,7 @@ class Session:
             **_repository_checkout_identity(
                 workspace_root, repository, resolved_checkout
             ),
+            "path": str(resolved_checkout),
             "branch": observed.branch,
             "head": observed.head,
             "clean": not bool(observed.dirty),
@@ -2435,11 +2510,32 @@ class Session:
         the second step; ordinary, transferred, foreign, or malformed claims
         still block scope admission.
         """
-        scope = claims_module.normalize_scope(None, repository)
+        raw_scope = record.get("scope")
+        if not isinstance(raw_scope, dict):
+            return False
+        try:
+            scope = claims_module.normalize_scope(raw_scope, repository)
+        except (TypeError, ValueError):
+            return False
+        if raw_scope != scope:
+            return False
         provenance = record.get("provenance")
         provenance = provenance if isinstance(provenance, dict) else {}
         recovery = provenance.get("owner_recovery")
         if not isinstance(recovery, dict):
+            return False
+        owner_scope = recovery.get("owner_scope")
+        target_scope = recovery.get("target_scope")
+        if not isinstance(owner_scope, dict) or not isinstance(target_scope, dict):
+            return False
+        try:
+            normalized_owner_scope = claims_module.normalize_scope(
+                owner_scope, repository,
+            )
+            normalized_target_scope = claims_module.normalize_scope(
+                target_scope, repository,
+            )
+        except (TypeError, ValueError):
             return False
         expected_version = recovery.get("expected_claim_version")
         if (
@@ -2447,6 +2543,12 @@ class Session:
             or record.get("claim_id") != claims_module.claim_identity(repository, scope)
             or record.get("repository") != repository
             or record.get("scope") != scope
+            or normalized_owner_scope != owner_scope
+            or normalized_target_scope != target_scope
+            or normalized_target_scope != scope
+            or claims_module.scopes_conflict(
+                normalized_owner_scope, normalized_target_scope,
+            ) is None
             or record.get("status") != "held"
             or record.get("basis") != claims_module.BASIS_RECOVERY
             or record.get("session_id") != self.session_id
@@ -2555,28 +2657,37 @@ class Session:
                 })
                 continue
 
-            matching_claims = [
-                item for item in observed_claims
-                if item.get("repository") == repository
-            ]
-            if len(matching_claims) != 1:
+            expected_identity = grant.get("repository_identity")
+            if not isinstance(expected_identity, dict):
                 report["skipped"].append({
                     "repository": repository,
-                    "reason": ("no-live-exclusive-claim"
-                               if not matching_claims
-                               else "multiple-live-claims"),
+                    "reason": "scope-grant-checkout-identity-missing",
                 })
                 continue
-            claim = matching_claims[0]
-            claim_scope = claim.get("scope")
-            if (claim.get("session_id") != self.session_id
-                    or not isinstance(claim_scope, dict)
-                    or claim_scope.get("kind") != "repository"
-                    or claim_scope.get("repository") != repository
-                    or claim_scope.get("exclusive") is not True):
+
+            selected_for_grant = None
+            if isinstance(expected_identity.get("path"), str):
+                selected_for_grant = {
+                    "path": expected_identity["path"],
+                    "branch": expected_identity.get("branch"),
+                }
+            try:
+                resolved_checkout, checkout_facts = _verified_scope_checkout(
+                    workspace_root, repository,
+                    selected_for_grant,
+                )
+                observed = workspace_module.inspect_repo(resolved_checkout, _refresh=True)
+                if (observed is None or observed.git_error or not observed.head
+                        or observed.head != checkout_facts.get("head")
+                        or (observed.branch or "") != checkout_facts.get("branch")):
+                    raise ValueError("checkout Git identity is unavailable")
+                current_identity = _repository_checkout_identity(
+                    workspace_root, repository, resolved_checkout
+                )
+            except (OSError, RuntimeError, ValueError):
                 report["skipped"].append({
                     "repository": repository,
-                    "reason": "claim-not-owned-exclusive-repository-scope",
+                    "reason": "checkout-observation-unavailable",
                 })
                 continue
 
@@ -2589,30 +2700,58 @@ class Session:
                 })
                 continue
 
-            expected_identity = grant.get("repository_identity")
-            if not isinstance(expected_identity, dict):
+            target_scope = claims_module.normalize_scope({
+                "kind": "worktree",
+                "checkout": str(resolved_checkout),
+                "branch": observed.branch,
+            }, repository)
+            conflicting_claims = []
+            malformed_scope = False
+            for item in observed_claims:
+                if item.get("repository") != repository:
+                    continue
+                raw_scope = item.get("scope")
+                try:
+                    current_scope = claims_module.normalize_scope(
+                        raw_scope if isinstance(raw_scope, dict) else None,
+                        repository,
+                    )
+                except (TypeError, ValueError):
+                    malformed_scope = True
+                    continue
+                if claims_module.scopes_conflict(target_scope, current_scope):
+                    conflicting_claims.append(item)
+            if malformed_scope or len(conflicting_claims) != 1:
                 report["skipped"].append({
                     "repository": repository,
-                    "reason": "scope-grant-checkout-identity-missing",
+                    "reason": (
+                        "malformed-live-claim-scope" if malformed_scope else
+                        "no-live-checkout-claim" if not conflicting_claims else
+                        "multiple-live-checkout-claims"
+                    ),
                 })
                 continue
-
-            checkout = workspace_root / repository
-            try:
-                resolved_checkout = checkout.resolve(strict=True)
-                if (checkout.is_symlink() or resolved_checkout.parent != workspace_root
-                        or not resolved_checkout.is_dir()):
-                    raise ValueError("checkout is not one immediate workspace repository")
-                observed = workspace_module.inspect_repo(resolved_checkout, _refresh=True)
-                if observed is None or observed.git_error or not observed.head:
-                    raise ValueError("checkout Git identity is unavailable")
-                current_identity = _repository_checkout_identity(
-                    workspace_root, repository, resolved_checkout
-                )
-            except (OSError, RuntimeError, ValueError):
+            claim = conflicting_claims[0]
+            claim_scope = claim.get("scope")
+            same_worktree_claim = (
+                isinstance(claim_scope, dict)
+                and claim_scope.get("kind") == "worktree"
+                and claim_scope.get("checkout") == str(resolved_checkout)
+                and claim_scope.get("repository") == repository
+                and (claim_scope.get("branch") or None)
+                == (observed.branch or None)
+            )
+            legacy_repository_claim = (
+                isinstance(claim_scope, dict)
+                and claim_scope.get("kind") == "repository"
+                and claim_scope.get("repository") == repository
+                and claim_scope.get("exclusive") is True
+            )
+            if (claim.get("session_id") != self.session_id
+                    or not (same_worktree_claim or legacy_repository_claim)):
                 report["skipped"].append({
                     "repository": repository,
-                    "reason": "checkout-observation-unavailable",
+                    "reason": "claim-not-owned-matching-checkout-scope",
                 })
                 continue
 

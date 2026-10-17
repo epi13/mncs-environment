@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -12,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from mncs_env import authority, claims, intent, sessions
+from mncs_env import workspace as workspace_module
 from mncs_env.session_store import open_store
 
 PRINCIPAL = "ctrl_scope_grant_fixture"
@@ -41,7 +43,10 @@ def _checkout(workspace: Path, name: str, *, dirty: bool = False) -> dict:
     _git(root, "config", "user.name", "Environment Scope Test")
     _git(root, "config", "user.email", "scope-test@example.invalid")
     (root / "README.md").write_text(f"{name}\n", encoding="utf-8")
-    _git(root, "add", "README.md")
+    manifest = root / ".mncs" / "project.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"repository": name}) + "\n", encoding="utf-8")
+    _git(root, "add", "README.md", ".mncs/project.json")
     _git(root, "commit", "-m", "fixture")
     if dirty:
         (root / "README.md").write_text("unproven change\n", encoding="utf-8")
@@ -126,15 +131,62 @@ def _grant(session: sessions.Session, *, revision: str | None = None,
     )
 
 
+def _nested_target_checkout(
+    session: sessions.Session,
+    workspace: Path,
+    slug: str,
+    branch: str,
+) -> tuple[Path, dict[str, str]]:
+    """Create a registered linked checkout inside the repository's worktrees."""
+    repository_root = workspace / "mncs-control-mcp"
+    manifest = repository_root / ".mncs" / "project.json"
+    if not manifest.exists():
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text(
+            json.dumps({"repository": "mncs-control-mcp"}) + "\n",
+            encoding="utf-8",
+        )
+        _git(repository_root, "add", ".mncs/project.json")
+        _git(repository_root, "commit", "-m", "add repository identity")
+    common = Path(_git(repository_root, "rev-parse", "--git-common-dir"))
+    if not common.is_absolute():
+        common = repository_root / common
+    exclude = common / "info" / "exclude"
+    current_excludes = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
+    if ".worktrees/" not in current_excludes:
+        exclude.write_text(current_excludes + "\n.worktrees/\n", encoding="utf-8")
+    checkout = repository_root / ".worktrees" / slug / "mncs-control-mcp"
+    checkout.parent.mkdir(parents=True, exist_ok=True)
+    _git(repository_root, "worktree", "add", "-b", branch, str(checkout), "HEAD")
+    observed = workspace_module.verify_registered_checkout(
+        checkout,
+        repository="mncs-control-mcp",
+        workspace_root=workspace,
+        expected_repository_root=repository_root,
+    )
+    session.snapshot.setdefault("selected_checkouts", {})[
+        "mncs-control-mcp"
+    ] = {
+        **observed,
+        "repository": "mncs-control-mcp",
+        "path": str(checkout.resolve()),
+        "branch": branch,
+        "head": observed["head"],
+        "clean": True,
+    }
+    return checkout.resolve(), observed
+
+
 def _recovered_claim(
     session: sessions.Session, repository: str, *,
     claim_session: str | None = None,
     requester_session: str | None = None,
     bad_authorization_id: bool = False,
     basis: str = claims.BASIS_RECOVERY,
+    scope: dict | None = None,
 ) -> dict:
     """Publish a fixture claim with the provenance shape Control recovery creates."""
-    scope = claims.normalize_scope(None, repository)
+    scope = claims.normalize_scope(scope, repository)
     claim_id = claims.claim_identity(repository, scope)
     claim_session = claim_session or session.session_id
     requester_session = requester_session or claim_session
@@ -573,10 +625,155 @@ def test_revalidation_composes_only_the_granted_checkout_with_owned_claim(
         session.close()
 
 
+def test_nested_registered_scope_uses_one_worktree_and_coexists_with_other_branch(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        first_checkout, first_facts = _nested_target_checkout(
+            session, workspace, "first", "campaign/scope-first",
+        )
+        first_selection = session.snapshot["selected_checkouts"]["mncs-control-mcp"]
+
+        # A live lease in a different registered worktree on a different
+        # branch must not block this exact checkout's authenticated grant.
+        second_checkout = workspace / "mncs-control-mcp" / ".worktrees" / "second" / "mncs-control-mcp"
+        second_checkout.parent.mkdir(parents=True, exist_ok=True)
+        _git(
+            workspace / "mncs-control-mcp", "worktree", "add", "-b",
+            "campaign/scope-second", str(second_checkout), "HEAD",
+        )
+        second_facts = workspace_module.verify_registered_checkout(
+            second_checkout,
+            repository="mncs-control-mcp",
+            workspace_root=workspace,
+            expected_repository_root=workspace / "mncs-control-mcp",
+        )
+        other_claim = claims.acquire(
+            session.store,
+            repository="mncs-control-mcp",
+            session_id="ses_independent_worktree_owner",
+            consumer_id="independent-worktree-owner",
+            basis=claims.BASIS_EXPLICIT,
+            reason="independent registered worktree",
+            scope={
+                "kind": "worktree",
+                "checkout": str(second_checkout.resolve()),
+                "branch": "campaign/scope-second",
+            },
+            checkout_facts={"dirty": False, "foreign_signals": []},
+            request_id="req_independent_worktree_claim",
+        )
+        target_scope = claims.normalize_scope({
+            "kind": "worktree",
+            "checkout": str(first_checkout),
+            "branch": "campaign/scope-first",
+        }, "mncs-control-mcp")
+        other_scope = claims.normalize_scope(other_claim["scope"], "mncs-control-mcp")
+        assert claims.scopes_conflict(target_scope, other_scope) is None
+
+        grant = _grant(session)
+        assert grant["repository_identity"]["path"] == str(first_checkout)
+        assert grant["repository_identity"]["checkout_identity"] == first_facts[
+            "checkout_identity"
+        ]
+        assert first_selection["path"] == str(first_checkout)
+
+        claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="exact nested worktree claim",
+            request_id="req_nested_worktree_scope_claim",
+        )
+        assert claim["scope"]["kind"] == "worktree"
+        assert claim["scope"]["checkout"] == str(first_checkout)
+        report = session.revalidate()
+        assert report["scope_composition"]["status"] == "ready"
+        assert report["scope_composition"]["retained"] == ["mncs-control-mcp"]
+        selected = session.snapshot["selected_checkouts"]["mncs-control-mcp"]
+        assert selected["path"] == str(first_checkout)
+        assert selected["checkout_identity"] == first_facts["checkout_identity"]
+        assert second_facts["checkout_identity"] != first_facts["checkout_identity"]
+        session_id = session.session_id
+        session.close()
+        reopened_store = open_store(tmp_path / "state", "store", verify_on_open=False)
+        resumed = sessions.Session.open(
+            state_dir=tmp_path / "state",
+            session_id=session_id,
+            backend="store",
+            verify_on_open=False,
+            store=reopened_store,
+        )
+        try:
+            resumed_report = resumed.revalidate()
+            assert resumed_report["scope_composition"]["status"] == "ready"
+            resumed_selected = resumed.snapshot["selected_checkouts"]["mncs-control-mcp"]
+            assert resumed_selected["path"] == str(first_checkout)
+            assert resumed_selected["checkout_identity"] == first_facts[
+                "checkout_identity"
+            ]
+        finally:
+            resumed.close()
+        session = None
+    finally:
+        if session is not None:
+            session.close()
+
+
+def test_nested_registered_scope_recovers_only_exact_owner_fenced_worktree(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        checkout, facts = _nested_target_checkout(
+            session, workspace, "recovered", "campaign/scope-recovered",
+        )
+        evidence = checkout / "evidence" / "campaign-retained-fixture.json"
+        evidence.parent.mkdir()
+        raw_evidence = b'{"identity":"ev_nested_retained_fixture"}\n'
+        evidence.write_bytes(raw_evidence)
+        recovered = _recovered_claim(
+            session,
+            "mncs-control-mcp",
+            scope={
+                "kind": "worktree",
+                "checkout": str(checkout),
+                "branch": "campaign/scope-recovered",
+            },
+        )
+        assert session._is_owner_recovered_claim(
+            recovered, "mncs-control-mcp", CAMPAIGN,
+        )
+
+        grant = _grant(session)
+        preserved = grant["repository_identity"]["preserved_untracked_evidence"]
+        assert grant["repository_identity"]["path"] == str(checkout)
+        assert grant["repository_identity"]["checkout_identity"] == facts[
+            "checkout_identity"
+        ]
+        assert preserved["file_count"] == 1
+        assert preserved["files"][0]["path"] == "evidence/campaign-retained-fixture.json"
+        assert preserved["files"][0]["sha256"] == hashlib.sha256(
+            raw_evidence
+        ).hexdigest()
+
+        composition = session._compose_authorized_scope_checkouts()
+        assert composition["status"] == "ready"
+        assert composition["retained"] == ["mncs-control-mcp"]
+        assert session.snapshot["selected_checkouts"]["mncs-control-mcp"][
+            "checkout_identity"
+        ] == facts["checkout_identity"]
+    finally:
+        session.close()
+
+
 @pytest.mark.parametrize(
     ("foreign_claim", "expected_reason"),
-    [(False, "no-live-exclusive-claim"),
-     (True, "claim-not-owned-exclusive-repository-scope")],
+    [(False, "no-live-checkout-claim"),
+     (True, "claim-not-owned-matching-checkout-scope")],
 )
 def test_revalidation_does_not_compose_without_current_session_claim(
     tmp_path: Path, foreign_claim: bool, expected_reason: str,
