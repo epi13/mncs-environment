@@ -2261,7 +2261,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     invoke.add_argument("capability")
     invoke.add_argument("--cwd", default=None)
-    invoke.add_argument("--timeout", type=int, default=120)
+    # Let Session.invoke use the binding's validated descriptor timeout unless
+    # the caller explicitly narrows or extends it. The capability layer keeps
+    # the existing 120-second fallback for bindings without a declaration.
+    invoke.add_argument("--timeout", type=int, default=None)
     invoke.add_argument("--output-limit-bytes", type=int,
                         default=None,
                         help=f"bounded stdout/stderr capture limit (max {capabilities_module.MAX_OUTPUT_LIMIT_BYTES})")

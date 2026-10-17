@@ -2393,6 +2393,24 @@ class CapabilityTests(unittest.TestCase):
                 capabilities.bind(provider="p", capability="c", contract_revision="1",
                                   entrypoint="e", address=None), [])
 
+    def test_invoke_uses_declared_timeout_when_no_override_is_supplied(self) -> None:
+        binding = capabilities.bind(
+            provider="p", capability="bounded", contract_revision="1",
+            entrypoint="e", address="/bin/echo", timeout_seconds=321,
+        )
+        expected = {
+            "binding_id": binding["binding_id"], "capability": "bounded",
+            "status": "ok", "returncode": 0, "stdout": "ok", "stderr": "",
+            "truncated": False,
+        }
+        with mock.patch.object(
+            capabilities, "_run_bounded", return_value=expected,
+        ) as run:
+            result = capabilities.invoke(binding, ["ok"])
+
+        self.assertEqual(result, expected)
+        self.assertEqual(run.call_args.kwargs["timeout_seconds"], 321)
+
     def test_output_is_bounded(self) -> None:
         binding = capabilities.probe_availability(
             capabilities.bind(provider="p", capability="c", contract_revision="1",

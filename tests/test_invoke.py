@@ -58,3 +58,30 @@ def test_invoke_closes_session_after_complete_success() -> None:
 
     assert result == 0
     session.close.assert_called_once_with()
+
+
+def test_invoke_uses_declared_timeout_unless_caller_overrides_it() -> None:
+    args = cli.build_parser().parse_args(
+        ["invoke", "ses_invoke", "provider:receipt"],
+    )
+    assert args.timeout is None
+    explicit = cli.build_parser().parse_args(
+        ["invoke", "ses_invoke", "provider:receipt", "--timeout", "37"],
+    )
+    assert explicit.timeout == 37
+
+    session = mock.Mock()
+    session.invoke.return_value = {
+        "status": "ok", "returncode": 0, "stdout": "complete",
+        "stderr": "", "truncated": False,
+    }
+    with (
+        mock.patch.object(cli.sessions_module.Session, "resume",
+                          return_value=session),
+        mock.patch.object(cli, "out"),
+        mock.patch("sys.stderr"),
+    ):
+        result = cli.cmd_invoke(args)
+
+    assert result == 0
+    assert session.invoke.call_args.kwargs["timeout_seconds"] is None
