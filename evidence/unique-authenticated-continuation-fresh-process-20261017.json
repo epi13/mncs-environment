@@ -1,0 +1,56 @@
+{
+  "acceptance": {
+    "duplicate_exact_checkout_is_refused": true,
+    "environment_and_compiler_exact_nested_checkouts_continue_independently": true,
+    "independent_registered_worktree_scope_coexists": true,
+    "symlink_escape_and_unrelated_clone_are_rejected": true,
+    "unique_authenticated_session_selected_without_campaign_id": true
+  },
+  "compiler_self_consumption": "unchanged",
+  "fresh_process_continuation": [
+    {
+      "branch": "campaign/environment-continuity-20261015",
+      "campaign_id": "cmp_mncs_environment_nested_checkout_fix_20261015",
+      "cwd": ".worktrees/environment-continuity-20261015",
+      "head": "5e1f9dcab0d8b74ba210991ed243538fafc3923f",
+      "lifecycle": "active",
+      "project": "mncs-environment",
+      "selected_session_id": "ses_64cf5689fc7da3cc",
+      "status": "ready"
+    },
+    {
+      "branch": "campaign/native-application-readiness-20261013",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "checkpoint_id": "chk_fe73ab3428774eab",
+      "checkpoint_sequence": 243,
+      "cwd": ".worktrees/native-app-readiness-20261013/mncs-compiler",
+      "head": "cd01e5efaf5e4e17ba284cd6eb74e4d8934c3b71",
+      "lifecycle": "active",
+      "project": "mncs-compiler",
+      "selected_session_id": "ses_164edc158d9b1637",
+      "status": "ready"
+    }
+  ],
+  "identity": "ev_environment_unique_authenticated_continuation_fresh_process_20261017",
+  "implementation": {
+    "branch": "campaign/environment-continuity-20261015",
+    "repository": "mncs-environment",
+    "source_head_before_evidence": "5e1f9dcab0d8b74ba210991ed243538fafc3923f",
+    "worktree": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/environment-continuity-20261015"
+  },
+  "language_fact_reuse": "not implemented by this Environment change",
+  "native_application_execution": "unchanged",
+  "schema_version": "mncs.environment.continuation-selection-evidence/1",
+  "verification": [
+    {
+      "command": "python3 -m pytest -q tests/test_entry.py::EntryContractTests::test_authenticated_campaign_selection_is_scoped_to_registered_checkout tests/test_entry.py::EntryContractTests::test_explicit_campaign_recovers_its_unique_nested_checkout_from_repo_root tests/test_entry.py::EntryContractTests::test_registered_checkout_identity_rejects_symlinks_and_unrelated_clones tests/test_entry.py::EntryContractTests::test_registered_checkout_identity_rejects_manifest_symlink tests/test_entry.py::EntryContractTests::test_unbound_task_selector_refuses_duplicate_exact_checkout_continuations",
+      "result": "passed",
+      "summary": "5 passed in 12.69s"
+    },
+    {
+      "command": "python3 -m pytest -q tests/test_authority_scope_grants.py::test_nested_registered_scope_uses_one_worktree_and_coexists_with_other_branch tests/test_authority_scope_grants.py::test_nested_registered_scope_recovers_only_exact_owner_fenced_worktree tests/test_entry.py::EntryContractTests::test_local_definition_selects_its_current_linked_worktree",
+      "result": "passed",
+      "summary": "3 passed in 7.67s"
+    }
+  ]
+}
