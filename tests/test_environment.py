@@ -3525,6 +3525,55 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(payload["sha256"], hashlib.sha256(expected).hexdigest())
             self.assertFalse((state / "sessions" / session_id).exists())
 
+    def test_artifact_read_returns_large_native_build_after_fresh_reopen(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            session = make_session(state)
+            session_id = session.session_id
+            capability = "mncs-compiler:native-application-build"
+            binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-compiler", capability=capability,
+                contract_revision="1", entrypoint="build", address="/bin/echo",
+                effects=["read"],
+                shareable_artifacts=["native-application-build.json"],
+            ))
+            session.snapshot["bindings"].append(binding)
+            session._save()
+            expected = b"x" * 1_119_428
+
+            def invoke(_binding, _argv, **kwargs):
+                root = Path(kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"])
+                (root / "native-application-build.json").write_bytes(expected)
+                return {"status": "ok", "returncode": 0, "stdout": "ok", "stderr": ""}
+
+            with mock.patch.object(sessions.capabilities_module, "invoke", side_effect=invoke):
+                result = session.invoke(capability, [])
+            self.assertEqual(result["status"], "ok")
+            reference = result["artifact_store_ref"]
+            binding_id = binding["binding_id"]
+            session.close()
+
+            reopened = sessions.Session.open(
+                state_dir=state, session_id=session_id, backend="store",
+                verify_on_open=False,
+            )
+            stdout = io.StringIO()
+            args = argparse.Namespace(
+                state_dir=state, persistence="store", session=session_id,
+                capability=capability, binding_id=binding_id,
+                path="native-application-build.json",
+            )
+            with mock.patch.object(cli, "_open", return_value=reopened), redirect_stdout(stdout):
+                code = cli.cmd_artifact_read(args)
+            self.assertEqual(code, 0)
+            payload = json.loads(stdout.getvalue())
+            content = base64.b64decode(payload["content_base64"], validate=True)
+            self.assertEqual(payload["store_reference"], reference)
+            self.assertEqual(payload["path"], "native-application-build.json")
+            self.assertEqual(payload["byte_count"], len(expected))
+            self.assertEqual(payload["sha256"], hashlib.sha256(expected).hexdigest())
+            self.assertEqual(content, expected)
+
     def test_artifact_read_allows_exact_shareable_execute_output_after_fresh_reopen(
         self,
     ) -> None:
@@ -4057,7 +4106,7 @@ class SessionTests(unittest.TestCase):
                 "latest-invocation-unsuccessful",
             )
 
-    def test_artifact_read_enforces_one_mib_file_bound(self) -> None:
+    def test_artifact_read_enforces_configured_file_bound(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)
             session = make_session(state)
@@ -4073,7 +4122,9 @@ class SessionTests(unittest.TestCase):
 
             def invoke(_binding, _argv, **kwargs):
                 root = Path(kwargs["env"]["MNCS_ENV_SESSION_ARTIFACT_DIR"])
-                (root / "system-resource-sample.json").write_bytes(b"x" * (1024 * 1024 + 1))
+                (root / "system-resource-sample.json").write_bytes(
+                    b"x" * (cli.MAX_ARTIFACT_READ_BYTES + 1)
+                )
                 return {"status": "ok", "returncode": 0, "stdout": "ok", "stderr": ""}
 
             with mock.patch.object(sessions.capabilities_module, "invoke", side_effect=invoke):

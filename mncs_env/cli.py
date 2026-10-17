@@ -42,7 +42,9 @@ from .session_store import ClaimBatchConflict, SnapshotConflict, open_store
 from .store_backend import StoreIntegrityFailure, StoreUnavailable
 
 DEFAULT_STATE_DIR = Path.home() / ".local" / "share" / "mncs-environment"
-MAX_ARTIFACT_READ_BYTES = 1024 * 1024
+# Leave room for the largest currently supported native application-build
+# artifact while keeping artifact-read output explicitly bounded.
+MAX_ARTIFACT_READ_BYTES = 1_300_000
 MAX_CLAIM_PAGE_OUTPUT_BYTES = 48 * 1024
 
 
