@@ -935,10 +935,8 @@ class EntryContractTests(unittest.TestCase):
             "--campaign-id", nested_first["continuation"]["identity"],
             cwd=self.project, env=auth_env,
         )
-        self.assertEqual(wrong_checkout_code, 2, wrong_checkout)
-        self.assertEqual(
-            wrong_checkout["diagnostics"]["code"], "campaign-checkout-mismatch",
-        )
+        self.assertEqual(wrong_checkout_code, 0, wrong_checkout)
+        self.assertEqual(wrong_checkout["session_id"], nested_first["session_id"])
 
         duplicate_code, duplicate = self.enter(
             "--campaign-id", "cmp_same_checkout_duplicate",
@@ -974,6 +972,70 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(branch_mismatch_code, 2, branch_mismatch)
         self.assertEqual(
             branch_mismatch["diagnostics"]["code"], "campaign-checkout-mismatch",
+        )
+
+    def test_explicit_campaign_recovers_its_unique_nested_checkout_from_repo_root(self):
+        (self.project / ".mncs" / "project.json").write_text(json.dumps({
+            "repository": "fixture",
+        }))
+        self.config = {
+            "name": "fixture-nested-campaign-recovery",
+            "working_checkout": "current",
+            "workspace_scope": {
+                "kind": "workspace", "repositories": ["fixture"],
+            },
+            "intent": {
+                "goal": "continue the campaign attached to its registered checkout",
+                "repositories": ["fixture"],
+            },
+        }
+        self.definition.write_text(json.dumps(self.config))
+        subprocess.run(
+            ["git", "-C", str(self.project), "add", ".mncs/project.json",
+             ".mncs/environment.json"],
+            check=True, capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self.project), "-c", "user.name=Entry Test",
+             "-c", "user.email=entry@example.invalid", "commit", "-m",
+             "add nested campaign recovery definition"],
+            check=True, capture_output=True,
+        )
+        nested = self.project / ".worktrees" / "recovery" / "compiler"
+        nested.parent.mkdir(parents=True)
+        subprocess.run(
+            ["git", "-C", str(self.project), "worktree", "add", "-b",
+             "campaign/nested-recovery", str(nested), "HEAD"],
+            check=True, capture_output=True,
+        )
+        auth_env = dict(os.environ, MNCS_ENV_AUTH_PRINCIPAL_ID="principal-nested-recovery")
+        campaign_id = "cmp_nested_root_continuation"
+
+        nested_code, nested_entry = self.enter(
+            "--campaign-id", campaign_id, cwd=nested, env=auth_env,
+        )
+        self.assertEqual(nested_code, 0, nested_entry)
+        nested_inspect_code, nested_inspected = self.run_cli(
+            "inspect", nested_entry["session_id"], cwd=nested,
+        )
+        self.assertEqual(nested_inspect_code, 0, nested_inspected)
+        self.assertEqual(
+            Path(nested_inspected["selected_checkouts"]["fixture"]["path"]),
+            nested.resolve(),
+        )
+
+        root_code, root_entry = self.enter(
+            "--campaign-id", campaign_id, cwd=self.project, env=auth_env,
+        )
+        self.assertEqual(root_code, 0, root_entry)
+        self.assertEqual(root_entry["session_id"], nested_entry["session_id"])
+        root_inspect_code, root_inspected = self.run_cli(
+            "inspect", root_entry["session_id"], cwd=self.project,
+        )
+        self.assertEqual(root_inspect_code, 0, root_inspected)
+        self.assertEqual(
+            Path(root_inspected["selected_checkouts"]["fixture"]["path"]),
+            nested.resolve(),
         )
 
     def test_registered_checkout_identity_rejects_symlinks_and_unrelated_clones(self):
@@ -1017,6 +1079,52 @@ class EntryContractTests(unittest.TestCase):
                 clone, repository="fixture", workspace_root=self.base,
                 expected_repository_root=self.project,
             )
+
+        current_checkout = workspace.verify_registered_checkout(
+            self.project, repository="fixture", workspace_root=self.base,
+            expected_repository_root=self.project,
+        )
+        clone_branch = subprocess.run(
+            ["git", "-C", str(clone), "symbolic-ref", "--quiet", "--short", "HEAD"],
+            check=True, capture_output=True, text=True,
+        ).stdout.strip()
+        clone_identity = workspace.repository_checkout_identity(
+            self.base, "fixture", clone,
+        )
+        invalid_snapshot = {
+            "campaign": {"identity": "cmp_unregistered_campaign_checkout"},
+            "authenticated_principal_id": "principal-invalid-checkout",
+            "provenance": {"definition_id": identity.environment_id(self.config)},
+            "workspace": {"root": str(self.base.resolve())},
+            "lifecycle": "active",
+            "selected_checkouts": {"fixture": {
+                "repository": "fixture",
+                "path": str(clone.resolve()),
+                "branch": clone_branch,
+                **clone_identity,
+            }},
+        }
+
+        class InvalidCheckoutStore:
+            def load_snapshot(self, session_id):
+                self_session = session_id
+                return invalid_snapshot if self_session == "ses_invalid_checkout" else None
+
+        with mock.patch(
+            "mncs_env.selection.select", return_value=["ses_invalid_checkout"],
+        ), self.assertRaises(entry.EntryError) as invalid_recovery:
+            entry._campaign_checkout_from_store(
+                InvalidCheckoutStore(),
+                campaign_id="cmp_unregistered_campaign_checkout",
+                authenticated_principal_id="principal-invalid-checkout",
+                definition_id=identity.environment_id(self.config),
+                workspace_root=self.base.resolve(),
+                working_checkout=current_checkout,
+            )
+        self.assertEqual(
+            invalid_recovery.exception.diagnostics["code"],
+            "campaign-checkout-invalid",
+        )
 
         with self.assertRaisesRegex(
             workspace.WorkspaceResolutionError, "branch or revision"
