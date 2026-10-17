@@ -1,0 +1,38 @@
+{
+  "schema_version": "mncs.environment.continuation-selection-evidence/1",
+  "identity": "ev_environment_unique_authenticated_continuation_20261017",
+  "implementation": {
+    "repository": "mncs-environment",
+    "commit": "35ad4f78664f1ed5691190b750cb93db315ec4cd",
+    "branch": "campaign/environment-continuity-20261015",
+    "worktree": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/environment-continuity-20261015"
+  },
+  "behavior": {
+    "unique_candidate": "An unbound task selector resumes and binds the only authenticated live session matching Environment definition, workspace, registered checkout identity, and lifecycle.",
+    "duplicate_candidates": "Two matching campaigns or sessions return campaign and session identities with conflicting checkout context; no task-selector binding is published.",
+    "independent_worktrees": "Sessions on other registered checkouts do not make the selected checkout ambiguous."
+  },
+  "verification": [
+    {
+      "command": "python -m pytest -q tests/test_entry.py -k 'authenticated_task_selector or unbound_task_selector or authenticated_campaign_selection_is_scoped_to_registered_checkout'",
+      "result": "passed",
+      "summary": "3 passed, 53 deselected in 27.29s"
+    },
+    {
+      "command": "python -m pytest -q tests/test_authority_scope_grants.py -k 'nested_registered_scope'",
+      "result": "passed",
+      "summary": "2 passed, 24 deselected in 6.98s"
+    },
+    {
+      "command": "python -m ruff check mncs_env/entry.py mncs_env/cli.py",
+      "result": "passed"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "language_fact_reuse": "not implemented by this Environment change",
+  "native_application_execution": "unchanged",
+  "compiler_self_consumption": "unchanged"
+}
