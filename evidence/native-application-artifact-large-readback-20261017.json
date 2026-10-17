@@ -1,0 +1,114 @@
+{
+  "schema_version": "mncs.environment.native-application-artifact-large-readback/1",
+  "identity": "ev_environment_native_application_artifact_large_readback_20261017",
+  "observed_at": "2026-10-17T07:12:41Z",
+  "environment_change": {
+    "repository": "mncs-environment",
+    "branch": "campaign/environment-continuity-20261015",
+    "revision": "2719a0a2ff33fc4933070dc236414eda4f746570",
+    "summary": "The fresh-process artifact reader admits bounded native application build files up to 1,300,000 bytes; its prior 1 MiB limit rejected the real 1,119,428-byte digest_app build artifact.",
+    "test_command": "python3 -m pytest tests/test_environment.py::SessionTests::test_artifact_read_returns_large_native_build_after_fresh_reopen tests/test_environment.py::SessionTests::test_artifact_read_enforces_configured_file_bound -q",
+    "test_result": "2 passed in 7.67s"
+  },
+  "compiler_build": {
+    "repository": "mncs-compiler",
+    "revision": "6be13d5af5b901e07b9d7f6bdb9221f1111fe8ff",
+    "session_id": "ses_164edc158d9b1637",
+    "capability": "mncs-compiler:native-application-build",
+    "binding_id": "cap_d482bb83036992ed",
+    "events": [
+      {
+        "sequence": 1617,
+        "identity": "evt_18ca2e0fb42aa16e",
+        "type": "capability.invoked",
+        "observed_at": "2026-10-17T07:08:07+00:00",
+        "provider_request_id": "req_2d638f8531135b9875cdf0b8a2e78a127fffd3397c9ad787"
+      },
+      {
+        "sequence": 1618,
+        "identity": "evt_7737c9a91b2a2d34",
+        "type": "invocation.completed",
+        "observed_at": "2026-10-17T07:08:09+00:00",
+        "status": "ok",
+        "returncode": 0,
+        "store_reference": "mncs-store:ses_164edc158d9b1637:capability-invocation-artifacts:bba478572b427be571bafd317abc7095fb20ced5f1c546e1d9e486cf7ecda6c6"
+      }
+    ],
+    "request": {
+      "schema_version": "mncs.compiler.application-build-request/1",
+      "path": ".build/native-app-readiness/effectful-digest-application-build-request.json",
+      "byte_count": 19951,
+      "sha256": "a3f097a3e1c62a8267126998398747821fa2025d61b50f2638fec3a06e1062d6",
+      "entry": "mncs.test.digest::digest_app",
+      "source_hashes": {
+        "mncs.test.digest": "fa45534cdebb4de683675bfb70eed15cfa177a5198f036c0e3b7fcab68b91c30",
+        "mncs.test.assertions": "9456ccc069591b3dc2a53af64d3a196e98162d2f8d640410ae50f5487570919b",
+        "mncs.test.suite": "86019047090fd28f2ec29a51bc08b36c6ad39d16cbf03961d6586ea2fe4dc2d5",
+        "mncs.std.application.v1": "5669f67e921e71c0f54742325f06fddfe3b11692c1fe3d27ee515f8a3fd30c7e"
+      }
+    },
+    "build": {
+      "response_schema": "mncs.compiler.application-build/4",
+      "status": "verified",
+      "entry_interface_identity": "sha256:6f2f19db351c5d3c8e86c3c2ff34848fafd314cda62e97f758b364dfb5f8aee2",
+      "source_snapshot_identity": "sha256:23dba371f8f644ac0ac68028d88cdbee11e3868a9b81cf0b5ddbc6dfd1f9c26f",
+      "dependency_graph_identity": "sha256:35de1895844f29d860b609792d30771926fe4bb39671bdaf32feb1133932c4c3",
+      "vm_artifact_identity": "sha256:a5bf2f51f4cfbf4b0106313d2682deabe0ed9237c29f676b216924d33d951316",
+      "vm_artifact_schema": "mncs.vm.artifact/1",
+      "capability_dispatch_status": "verified",
+      "capability_dispatch_bindings": [
+        {
+          "capability_identity": "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact",
+          "function_identity": "mncs:0.2:function:mncs.test.digest::digest_app",
+          "runtime_capability_key": "test_artifact",
+          "operation": "structured_read",
+          "instruction_identity": "mncs:0.4:ssa:instruction:65e2655c0f2ca6d0825bf94ba247f15e55609551b8c3f11100db5e6099138c50"
+        },
+        {
+          "capability_identity": "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact",
+          "function_identity": "mncs:0.2:function:mncs.test.digest::digest_app",
+          "runtime_capability_key": "test_artifact",
+          "operation": "structured_write",
+          "instruction_identity": "mncs:0.4:ssa:instruction:4f634d2d3dbe6a1d983ea04fd8cc331d2a19727b32c1350091f06f0d7aa53f2b"
+        }
+      ],
+      "diagnostics": [],
+      "unresolved_obligations": []
+    }
+  },
+  "fresh_process_store_readback": {
+    "status": "passed",
+    "session_id": "ses_164edc158d9b1637",
+    "capability": "mncs-compiler:native-application-build",
+    "binding_id": "cap_d482bb83036992ed",
+    "store_reference": "mncs-store:ses_164edc158d9b1637:capability-invocation-artifacts:bba478572b427be571bafd317abc7095fb20ced5f1c546e1d9e486cf7ecda6c6",
+    "path": "native-application-build.json",
+    "byte_count": 1119428,
+    "sha256": "c2fe9c396953518d80e29931ce29253eb61ced9138befb996762fb0f5a9d9eaf",
+    "decoded_byte_count_matches": true,
+    "decoded_sha256_matches": true
+  },
+  "forge_execution_boundary": {
+    "forge_execution_performed": false,
+    "selected_compiler_campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "selected_compiler_campaign_repositories": ["mncs-compiler"],
+    "environment_project_session_id": "ses_64cf5689fc7da3cc",
+    "environment_session_writable_repositories": ["mncs-environment"],
+    "environment_session_forge_execution_binding_present": false,
+    "control_continuation": {
+      "project": "mncs-environment",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "status": "not-found",
+      "campaigns_count": 1,
+      "continuations_count": 0,
+      "next": "verify the campaign identity and that this repository belongs to its recorded work intent"
+    },
+    "limitation": "The current Compiler campaign work intent does not include mncs-environment or mncs-forge; the separate Environment session has no Forge execution binding. No claim takeover or unscoped execution was attempted."
+  },
+  "scope": {
+    "language_verified_facts_reused": 0,
+    "canonical_vm_execution_performed": false,
+    "forge_execution_receipt_published": false,
+    "language_write_grant_present": false
+  }
+}
