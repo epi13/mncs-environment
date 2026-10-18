@@ -1122,6 +1122,68 @@ class EntryContractTests(unittest.TestCase):
             nested.resolve(),
         )
 
+    def test_unique_authenticated_campaign_recovers_nested_checkout_without_campaign_id(self):
+        (self.project / ".mncs" / "project.json").write_text(json.dumps({
+            "repository": "fixture",
+        }))
+        self.config = {
+            "name": "fixture-implicit-nested-campaign-recovery",
+            "working_checkout": "current",
+            "workspace_scope": {
+                "kind": "workspace", "repositories": ["fixture"],
+            },
+            "intent": {
+                "goal": "continue the unique campaign attached to its registered checkout",
+                "repositories": ["fixture"],
+            },
+        }
+        self.definition.write_text(json.dumps(self.config))
+        subprocess.run(
+            ["git", "-C", str(self.project), "add", ".mncs/project.json",
+             ".mncs/environment.json"],
+            check=True, capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self.project), "-c", "user.name=Entry Test",
+             "-c", "user.email=entry@example.invalid", "commit", "-m",
+             "add implicit nested campaign recovery definition"],
+            check=True, capture_output=True,
+        )
+        nested = self.project / ".worktrees" / "implicit-recovery" / "compiler"
+        nested.parent.mkdir(parents=True)
+        subprocess.run(
+            ["git", "-C", str(self.project), "worktree", "add", "-b",
+             "campaign/implicit-nested-recovery", str(nested), "HEAD"],
+            check=True, capture_output=True,
+        )
+        auth_env = dict(
+            os.environ,
+            MNCS_ENV_AUTH_PRINCIPAL_ID="principal-implicit-nested-recovery",
+        )
+
+        nested_code, nested_entry = self.enter(cwd=nested, env=auth_env)
+        self.assertEqual(nested_code, 0, nested_entry)
+        root_code, root_entry = self.enter(cwd=self.project, env=auth_env)
+        self.assertEqual(root_code, 0, root_entry)
+        self.assertEqual(root_entry["session_id"], nested_entry["session_id"])
+        root_inspect_code, root_inspected = self.run_cli(
+            "inspect", root_entry["session_id"], cwd=self.project,
+        )
+        self.assertEqual(root_inspect_code, 0, root_inspected)
+        self.assertEqual(
+            Path(root_inspected["selected_checkouts"]["fixture"]["path"]),
+            nested.resolve(),
+        )
+
+        # A distinct task identity remains independent and cannot be adopted
+        # from the unique existing campaign by checkout proximity alone.
+        task_code, task_entry = self.enter(
+            "--task-identity", "independent-root-task",
+            cwd=self.project, env=auth_env,
+        )
+        self.assertEqual(task_code, 0, task_entry)
+        self.assertNotEqual(task_entry["session_id"], nested_entry["session_id"])
+
     def test_registered_checkout_identity_rejects_symlinks_and_unrelated_clones(self):
         (self.project / ".mncs" / "project.json").write_text(json.dumps({
             "repository": "fixture",

@@ -1,0 +1,52 @@
+{
+  "schema_version": "mncs.environment.continuation-recovery-evidence/1",
+  "kind": "unique-authenticated-nested-checkout-recovery",
+  "observed_at": "2026-10-18T09:35:49Z",
+  "campaign_identity": "cmp_mncs_environment_nested_checkout_fix_20261015",
+  "source": {
+    "branch": "campaign/environment-continuity-20261015",
+    "parent_revision": "7dffc07301942ef39d64eea554f450560c1b69fd",
+    "implementation_patch_sha256": "09b4ce2819b469bdff3f31bc3a92dbd7918206a834073e0cd871dea930278e15",
+    "files": {
+      "mncs_env/entry.py": "4a319041e4a1b85f10118deda4f80cc1bec50a79ff3b4b9e21f702028aa09a81",
+      "tests/test_entry.py": "0ecb30df0a9b1c3645db75bc93bfb29b3c6a450099ad2f2d7d89892cd815d22b"
+    }
+  },
+  "behavior": {
+    "automatic_recovery_basis": [
+      "authenticated principal",
+      "durable work-intent identity",
+      "Environment definition identity",
+      "authorized workspace root",
+      "repository identity",
+      "Git common-directory identity",
+      "one active durable session"
+    ],
+    "repository_root_entry_only": true,
+    "recorded_worktree_revalidation": "The existing verifier checks Git registration, canonical path, branch, repository manifest, Environment definition, checkout identity, and common-directory identity before recovering a nested checkout.",
+    "independent_worktrees": "Distinct registered checkout identities remain separate; selected linked-worktree entry and explicit task identity do not adopt another checkout's session.",
+    "duplicate_same_checkout": "Multiple live sessions for one selected checkout return campaign-continuation-ambiguous with exact session and checkout identities.",
+    "branch_mismatch": "A changed current branch falls through to the existing campaign-checkout-mismatch path."
+  },
+  "verification": {
+    "targeted_tests": {
+      "command": "python3 -m pytest tests/test_entry.py tests/test_selection.py tests/test_claim_generation_cas.py tests/test_controlled_claim_recovery.py -q",
+      "status": "passed",
+      "passed": 78,
+      "failed": 0,
+      "elapsed_seconds": 74.88
+    },
+    "vertical_proof": {
+      "command": "python3 scripts/vertical_proof.py",
+      "status": "passed",
+      "fresh_process_resume": true,
+      "resumed_events": 9,
+      "protected_language_write_denied": true,
+      "checkpoint": "chk_317daad84d253144",
+      "handoff_accepted": true
+    },
+    "new_regression": "A fresh CLI entry from the repository root resumed the unique authenticated session attached to a nested registered worktree; a distinct task identity created independent work."
+  },
+  "resource_measurement": "No separate performance benchmark was run; this change adjusts continuation selection only and does not change compiler build or VM execution paths.",
+  "claim_boundary": "This proves unique authenticated continuation recovery and preserves selected worktree and claim conflict checks. It does not grant additional repository authority or establish Language verified-fact reuse."
+}

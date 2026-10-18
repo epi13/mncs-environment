@@ -454,6 +454,135 @@ def _working_checkout_matches_snapshot(
     )
 
 
+def _implicit_campaign_for_registered_checkout(
+    store,
+    *,
+    authenticated_principal_id: str | None,
+    intent_id: str,
+    definition_id: str,
+    workspace_root: Path,
+    working_checkout: dict[str, str] | None,
+) -> str | None:
+    """Find one owned campaign whose registered worktree matches this checkout.
+
+    A caller entering at a repository root may have an unambiguous campaign
+    whose selected worktree is nested below that root. Recover it only when
+    the authenticated principal, Environment definition, workspace, Git
+    common directory, repository, and lifecycle identify one durable session.
+    Independent worktrees remain separate; duplicate sessions for one exact
+    checkout are reported instead of selected arbitrarily.
+    """
+    if (authenticated_principal_id is None or working_checkout is None):
+        return None
+    repository = working_checkout.get("repository")
+    common_identity = working_checkout.get("git_common_directory_identity")
+    current_path = working_checkout.get("path")
+    common_directory = working_checkout.get("git_common_directory")
+    if (not isinstance(repository, str) or not repository
+            or not isinstance(common_identity, str) or not common_identity
+            or not isinstance(current_path, str)
+            or not isinstance(common_directory, str)
+            or os.path.abspath(current_path)
+            != os.path.abspath(Path(common_directory).parent)):
+        return None
+
+    from . import selection
+
+    selector = {
+        "principal_id": authenticated_principal_id,
+        "work_intent_id": intent_id,
+        "definition": definition_id,
+        "workspace": str(workspace_root),
+        "repository": repository,
+        "git_common_directory_identity": common_identity,
+        "implicit_campaign_checkout_recovery": True,
+    }
+
+    def matches(snapshot: dict) -> bool:
+        campaign = snapshot.get("campaign") or {}
+        intent = snapshot.get("intent") or {}
+        provenance = snapshot.get("provenance") or {}
+        selected_checkouts = snapshot.get("selected_checkouts")
+        selected = (
+            selected_checkouts.get(repository)
+            if isinstance(selected_checkouts, dict) else None
+        )
+        return (
+            snapshot.get("authenticated_principal_id") == authenticated_principal_id
+            and intent.get("identity") == intent_id
+            and provenance.get("definition_id") == definition_id
+            and (snapshot.get("workspace") or {}).get("root") == str(workspace_root)
+            and snapshot.get("lifecycle") in (
+                "active", "blocked", "waiting", "checkpointed", "abandoned"
+            )
+            and isinstance(campaign.get("identity"), str)
+            and isinstance(selected, dict)
+            and selected.get("repository", repository) == repository
+            and selected.get("git_common_directory_identity") == common_identity
+            and isinstance(selected.get("path"), str)
+        )
+
+    session_ids = selection.select(
+        store,
+        selector,
+        matches,
+    )
+    if not session_ids:
+        return None
+
+    snapshots = {
+        session_id: store.load_snapshot(session_id) or {}
+        for session_id in session_ids
+    }
+    if len(session_ids) > 1:
+        duplicate_contexts: set[str] = set()
+        current_branch = working_checkout.get("branch")
+        for field in ("checkout_identity", "path"):
+            grouped: dict[str, list[str]] = {}
+            for session_id, snapshot in snapshots.items():
+                selected = snapshot.get("selected_checkouts", {}).get(repository, {})
+                value = selected.get(field)
+                if isinstance(value, str) and value:
+                    grouped.setdefault(value, []).append(session_id)
+            for sessions_for_context in grouped.values():
+                if len(sessions_for_context) <= 1:
+                    continue
+                if any(
+                    snapshots[session_id]
+                    .get("selected_checkouts", {})
+                    .get(repository, {})
+                    .get("branch") == current_branch
+                    for session_id in sessions_for_context
+                ):
+                    duplicate_contexts.update(sessions_for_context)
+        if duplicate_contexts:
+            duplicates = sorted(duplicate_contexts)
+            raise EntryError(
+                "multiple live campaign sessions identify the same registered checkout",
+                "campaign-continuation-ambiguous",
+                campaigns=sorted({
+                    str(snapshots[session_id].get("campaign", {}).get("identity"))
+                    for session_id in duplicates
+                }),
+                sessions=duplicates,
+                conflicting_contexts=[
+                    _session_selection_details(
+                        session_id, snapshots[session_id], working_checkout,
+                    )
+                    for session_id in duplicates
+                ],
+                next="resume the intended recorded session; Environment will not choose between duplicate checkout owners",
+            )
+        # More than one distinct worktree is legitimate concurrent work. The
+        # caller's exact checkout or task identity must decide which one, if
+        # any, is the intended continuation.
+        return None
+
+    campaign = snapshots[session_ids[0]].get("campaign", {})
+    campaign_id = campaign.get("identity") if isinstance(campaign, dict) else None
+    return campaign_id if isinstance(campaign_id, str) and campaign_id else None
+
+
 def _campaign_checkout_from_store(
     store,
     *,
@@ -1059,6 +1188,18 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                         )
             has_persistence = (Path(state_dir) / ("store" if backend == "store" else "sessions")).exists()
             if not new_session and has_persistence:
+                if requested_campaign_id is None and task_selector_identity is None:
+                    implicit_campaign_id = _implicit_campaign_for_registered_checkout(
+                        store,
+                        authenticated_principal_id=authenticated_principal_id,
+                        intent_id=intent["identity"],
+                        definition_id=definition_id,
+                        workspace_root=root,
+                        working_checkout=working_checkout,
+                    )
+                    if implicit_campaign_id is not None:
+                        requested_campaign_id = implicit_campaign_id
+                        campaign_id = implicit_campaign_id
                 working_checkout = _campaign_checkout_from_store(
                     store,
                     campaign_id=requested_campaign_id,
