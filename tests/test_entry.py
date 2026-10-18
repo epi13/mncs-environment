@@ -1184,6 +1184,113 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(task_code, 0, task_entry)
         self.assertNotEqual(task_entry["session_id"], nested_entry["session_id"])
 
+    def test_campaign_checkout_accepts_project_environment_definition_by_identity(self):
+        (self.project / ".mncs" / "project.json").write_text(json.dumps({
+            "repository": "fixture",
+        }))
+        config = {
+            "name": "fixture-project-environment",
+            "working_checkout": "current",
+            "workspace_scope": {
+                "kind": "workspace", "repositories": ["fixture"],
+            },
+            "intent": {
+                "goal": "continue the campaign attached to this project definition",
+                "repositories": ["fixture"],
+            },
+        }
+        self.definition.unlink()
+        project_definition = self.project / ".mncs" / "project-environment.json"
+        project_definition.write_text(json.dumps(config))
+        subprocess.run(
+            ["git", "-C", str(self.project), "add", "-A", ".mncs"],
+            check=True, capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self.project), "-c", "user.name=Entry Test",
+             "-c", "user.email=entry@example.invalid", "commit", "-m",
+             "add project-owned Environment definition"],
+            check=True, capture_output=True,
+        )
+        nested = self.project / ".worktrees" / "project-environment" / "fixture"
+        nested.parent.mkdir(parents=True)
+        subprocess.run(
+            ["git", "-C", str(self.project), "worktree", "add", "-b",
+             "campaign/project-environment", str(nested), "HEAD"],
+            check=True, capture_output=True,
+        )
+
+        definition_id = identity.environment_id(config)
+        current_checkout = workspace.verify_registered_checkout(
+            self.project, repository="fixture", workspace_root=self.base,
+            expected_repository_root=self.project,
+        )
+        nested_checkout = workspace.verify_registered_checkout(
+            nested, repository="fixture", workspace_root=self.base,
+            expected_repository_root=self.project,
+            expected_branch="campaign/project-environment",
+        )
+        snapshot = {
+            "campaign": {"identity": "cmp_project_environment_checkout"},
+            "authenticated_principal_id": "principal-project-environment",
+            "provenance": {"definition_id": definition_id},
+            "workspace": {"root": str(self.base.resolve())},
+            "lifecycle": "active",
+            "selected_checkouts": {"fixture": nested_checkout},
+        }
+
+        class Store:
+            def load_snapshot(self, session_id):
+                return snapshot if session_id == "ses_project_environment" else None
+
+        def recover_checkout():
+            with mock.patch(
+                "mncs_env.selection.select", return_value=["ses_project_environment"],
+            ):
+                return entry._campaign_checkout_from_store(
+                    Store(),
+                    campaign_id="cmp_project_environment_checkout",
+                    authenticated_principal_id="principal-project-environment",
+                    definition_id=definition_id,
+                    workspace_root=self.base.resolve(),
+                    working_checkout=current_checkout,
+                )
+
+        recovered = recover_checkout()
+        self.assertEqual(Path(recovered["path"]), nested.resolve())
+        self.assertEqual(recovered["checkout_identity"], nested_checkout["checkout_identity"])
+
+        # A second regular file with the same verified identity is ambiguous;
+        # checkout recovery never chooses between definition paths arbitrarily.
+        nested_environment = nested / ".mncs" / "environment.json"
+        nested_environment.write_text(json.dumps(config))
+        with self.assertRaises(entry.EntryError) as duplicate:
+            recover_checkout()
+        self.assertEqual(duplicate.exception.diagnostics["code"], "campaign-checkout-invalid")
+        self.assertEqual(len(duplicate.exception.diagnostics["matching_definition_paths"]), 2)
+        nested_environment.unlink()
+
+        # A mismatched definition and a symlinked project definition cannot
+        # lend their identity to this registered checkout.
+        nested_config = dict(config, name="different-project-environment")
+        nested_project_definition = nested / ".mncs" / "project-environment.json"
+        nested_project_definition.write_text(json.dumps(nested_config))
+        with self.assertRaises(entry.EntryError) as mismatch:
+            recover_checkout()
+        self.assertEqual(mismatch.exception.diagnostics["code"], "campaign-checkout-invalid")
+        self.assertEqual(mismatch.exception.diagnostics["matching_definition_paths"], [])
+
+        external_definition = self.base / "external-project-environment.json"
+        external_definition.write_text(json.dumps(config))
+        nested_project_definition.unlink()
+        nested_project_definition.symlink_to(external_definition)
+        with self.assertRaises(entry.EntryError) as symlink:
+            recover_checkout()
+        self.assertEqual(symlink.exception.diagnostics["code"], "campaign-checkout-invalid")
+        self.assertIn(
+            str(nested_project_definition), symlink.exception.diagnostics["invalid_definition_paths"],
+        )
+
     def test_registered_checkout_identity_rejects_symlinks_and_unrelated_clones(self):
         (self.project / ".mncs" / "project.json").write_text(json.dumps({
             "repository": "fixture",

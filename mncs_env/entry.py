@@ -6,6 +6,7 @@ import errno
 import fcntl
 import json
 import os
+import stat
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -677,37 +678,67 @@ def _campaign_checkout_from_store(
                 next="inspect the campaign's exact checkout binding before continuing",
             )
 
-    nested_definition = Path(observed["path"]) / ".mncs" / "environment.json"
-    if nested_definition.is_symlink() or not nested_definition.is_file():
+    definition_directory = Path(observed["path"]) / ".mncs"
+    if definition_directory.is_symlink() or not definition_directory.is_dir():
         raise EntryError(
-            "the recorded campaign checkout does not contain a regular Environment definition",
+            "the recorded campaign checkout does not contain a regular .mncs directory",
             "campaign-checkout-invalid",
             campaign_id=campaign_id,
             session_id=session_ids[0],
             repository=repository,
-            path=str(nested_definition),
+            path=str(definition_directory),
         )
     try:
-        nested_value = json.loads(nested_definition.read_text(encoding="utf-8"))
-        nested_definition_id = identity.environment_id(nested_value)
-    except (OSError, json.JSONDecodeError, TypeError, ValueError) as error:
+        definition_root = definition_directory.resolve(strict=True)
+    except OSError as error:
         raise EntryError(
-            "the recorded campaign checkout has an invalid Environment definition",
+            "the recorded campaign checkout's .mncs directory is unavailable",
             "campaign-checkout-invalid",
             campaign_id=campaign_id,
             session_id=session_ids[0],
             repository=repository,
-            path=str(nested_definition),
+            path=str(definition_directory),
         ) from error
-    if nested_definition_id != definition_id:
+    matching_definitions: list[Path] = []
+    invalid_definitions: list[str] = []
+    # MNCS repositories use either the Environment-owned definition filename
+    # or the project-owned definition filename. Resolve both by their
+    # canonical Environment identity; never infer identity from path shape.
+    for filename in ("environment.json", "project-environment.json"):
+        candidate = definition_directory / filename
+        try:
+            metadata = candidate.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            invalid_definitions.append(str(candidate))
+            continue
+        if not stat.S_ISREG(metadata.st_mode):
+            invalid_definitions.append(str(candidate))
+            continue
+        try:
+            resolved_candidate = candidate.resolve(strict=True)
+            if resolved_candidate.parent != definition_root:
+                invalid_definitions.append(str(candidate))
+                continue
+            nested_value = json.loads(candidate.read_text(encoding="utf-8"))
+            nested_definition_id = identity.environment_id(nested_value)
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            invalid_definitions.append(str(candidate))
+            continue
+        if nested_definition_id == definition_id:
+            matching_definitions.append(candidate)
+
+    if len(matching_definitions) != 1:
         raise EntryError(
-            "the recorded campaign checkout's Environment definition has changed",
+            "the recorded campaign checkout must contain exactly one regular Environment definition matching the selected identity",
             "campaign-checkout-invalid",
             campaign_id=campaign_id,
             session_id=session_ids[0],
             repository=repository,
             recorded_definition_id=definition_id,
-            observed_definition_id=nested_definition_id,
+            matching_definition_paths=[str(path) for path in matching_definitions],
+            invalid_definition_paths=invalid_definitions,
         )
     return {
         key: observed[key]
