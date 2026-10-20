@@ -778,32 +778,91 @@ def _legacy_repository_reference_matches(
     same_workspace = str(snapshot_root) == os.path.abspath(workspace_root)
     matches = [item for item in references
                if isinstance(item, dict) and item.get("repository") == repository]
-    if len(matches) != 1:
+    if not matches:
         return False
-    reference = matches[0]
     current_branch = working_checkout.get("branch")
     current_head = working_checkout.get("head")
     if (not isinstance(current_branch, str) or not current_branch
             or not isinstance(current_head, str) or not current_head
-            or reference.get("branch") != current_branch):
+            or not isinstance(working_checkout.get("path"), str)):
         return False
 
-    recorded_path = reference.get("observed_path") or reference.get("path")
     current_path = working_checkout.get("path")
-    exact_recorded_path = False
-    if isinstance(recorded_path, str) and isinstance(current_path, str):
-        recorded_checkout = Path(recorded_path)
-        if not recorded_checkout.is_absolute():
-            recorded_checkout = snapshot_root / recorded_checkout
-        exact_recorded_path = (
-            os.path.abspath(recorded_checkout) == os.path.abspath(current_path)
-        )
-        if not exact_recorded_path:
-            return False
-    elif not same_workspace:
-        # Without a recorded path there is no way to bridge two workspace
-        # roots safely, even when their branch and HEAD happen to match.
+    def recorded_checkout_path(reference: dict) -> str | None:
+        value = reference.get("observed_path") or reference.get("path")
+        if not isinstance(value, str) or not value:
+            return None
+        path = Path(value)
+        if not path.is_absolute():
+            path = snapshot_root / path
+        return os.path.abspath(path)
+
+    # Older campaign snapshots can contain more than one reference for a
+    # repository. Resolve the one attached to this already verified checkout
+    # instead of rejecting the entire campaign because another worktree is
+    # also recorded. Path and checkout identity are authoritative; branch and
+    # HEAD alone only remain a compatibility fallback when the record is
+    # unique.
+    candidates: list[tuple[dict, bool]] = []
+    unresolved_same_branch = False
+    current_checkout_identity = working_checkout.get("checkout_identity")
+    current_common_identity = working_checkout.get("git_common_directory_identity")
+    for candidate in matches:
+        if candidate.get("branch") != current_branch:
+            continue
+        candidate_path = recorded_checkout_path(candidate)
+        if candidate_path is not None:
+            if candidate_path == os.path.abspath(current_path):
+                candidates.append((candidate, True))
+            continue
+
+        # A pathless reference can identify a checkout only through the
+        # existing canonical checkout identity, or through a common Git
+        # directory plus branch (one registered worktree can own a branch).
+        checkout_identity = candidate.get("checkout_identity")
+        common_identity = candidate.get("git_common_directory_identity")
+        if (isinstance(current_checkout_identity, str)
+                and isinstance(checkout_identity, str)):
+            if checkout_identity == current_checkout_identity:
+                candidates.append((candidate, False))
+            continue
+        if (isinstance(current_common_identity, str)
+                and isinstance(common_identity, str)):
+            if common_identity == current_common_identity:
+                candidates.append((candidate, False))
+            continue
+        if len(matches) == 1 and same_workspace:
+            if candidate.get("head") == current_head:
+                candidates.append((candidate, False))
+            continue
+        unresolved_same_branch = True
+
+    if not candidates or unresolved_same_branch:
         return False
+
+    # Duplicate records for one path are harmless when their canonical
+    # identity fields agree. Conflicting identities remain ambiguous. HEAD
+    # may differ for an exact path because ordinary commits advance that same
+    # registered checkout.
+    for key, current in (
+        ("checkout_identity", current_checkout_identity),
+        ("git_common_directory_identity", current_common_identity),
+    ):
+        identities = {
+            candidate.get(key) for candidate, _ in candidates
+            if isinstance(candidate.get(key), str)
+        }
+        if len(identities) > 1:
+            return False
+        if (same_workspace and isinstance(current, str) and identities
+                and next(iter(identities)) != current):
+            return False
+
+    exact_recorded_path = any(exact for _, exact in candidates)
+    reference = next(
+        (candidate for candidate, exact in candidates if exact),
+        candidates[0][0],
+    )
 
     # The current checkout has already been verified against Git's registered
     # worktree list, its common directory, repository manifest, and authorized
@@ -848,12 +907,32 @@ def _session_selection_details(
             )
             if selected.get(key) is not None
         }
+    campaign = snapshot.get("campaign")
+    references = campaign.get("repository_refs", []) if isinstance(campaign, dict) else []
+    recorded_references = []
+    if isinstance(references, list):
+        for reference in references:
+            if (not isinstance(reference, dict)
+                    or not isinstance(repository, str)
+                    or reference.get("repository") != repository):
+                continue
+            recorded_references.append({
+                key: reference.get(key)
+                for key in (
+                    "repository", "observed_path", "path", "checkout_identity",
+                    "git_common_directory_identity", "branch", "head",
+                )
+                if reference.get(key) is not None
+            })
+            if len(recorded_references) >= 16:
+                break
     return {
         "session_id": session_id,
         "campaign_id": (snapshot.get("campaign") or {}).get("identity"),
         "definition_id": snapshot.get("provenance", {}).get("definition_id"),
         "workspace_root": snapshot.get("workspace", {}).get("root"),
         "selected_checkout": checkout,
+        "recorded_repository_references": recorded_references,
     }
 
 

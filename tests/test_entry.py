@@ -872,7 +872,48 @@ class EntryContractTests(unittest.TestCase):
         duplicate_reference["campaign"]["repository_refs"].append(
             dict(duplicate_reference["campaign"]["repository_refs"][0])
         )
-        self.assertFalse(entry._working_checkout_matches_snapshot(duplicate_reference, checkout))
+        self.assertTrue(entry._working_checkout_matches_snapshot(duplicate_reference, checkout))
+
+        # Multiple worktrees for one repository are valid campaign evidence.
+        # The verified current checkout selects its exact path and branch.
+        other_worktree = dict(
+            legacy["campaign"]["repository_refs"][0],
+            observed_path="fixture/.worktrees/other",
+            branch="campaign/other-worktree",
+            head="b" * 40,
+            checkout_identity="checkout-fixture-other",
+        )
+        separate_worktree = json.loads(json.dumps(legacy))
+        separate_worktree["campaign"]["repository_refs"].append(other_worktree)
+        self.assertTrue(entry._working_checkout_matches_snapshot(separate_worktree, checkout))
+
+        # The same path cannot carry conflicting canonical checkout identities.
+        conflicting_duplicate = json.loads(json.dumps(legacy))
+        conflicting_duplicate["campaign"]["repository_refs"].append(
+            dict(
+                conflicting_duplicate["campaign"]["repository_refs"][0],
+                checkout_identity="checkout-from-another-path",
+            )
+        )
+        self.assertFalse(entry._working_checkout_matches_snapshot(conflicting_duplicate, checkout))
+
+        # Branch and HEAD cannot disambiguate a duplicate if neither record
+        # identifies its checkout path or canonical checkout identity.
+        pathless_duplicates = json.loads(json.dumps(legacy))
+        for reference in pathless_duplicates["campaign"]["repository_refs"]:
+            reference.pop("observed_path", None)
+        pathless_duplicates["campaign"]["repository_refs"].append(
+            dict(pathless_duplicates["campaign"]["repository_refs"][0])
+        )
+        self.assertFalse(entry._working_checkout_matches_snapshot(pathless_duplicates, checkout))
+        conflict_details = entry._session_selection_details(
+            "ses_pathless_duplicate", pathless_duplicates, checkout,
+        )
+        self.assertEqual(len(conflict_details["recorded_repository_references"]), 2)
+        self.assertEqual(
+            {item["branch"] for item in conflict_details["recorded_repository_references"]},
+            {"main"},
+        )
 
         # Selection maps are per repository, so an empty map or a selection
         # for another repository may use the exact legacy reference here.
