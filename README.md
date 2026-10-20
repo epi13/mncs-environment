@@ -137,7 +137,7 @@ A stable binding from a session to a capability provided by another MNCS service
 
 ### AuthorityContext
 
-The explicit limits under which the session operates: readable and writable resources, executable capabilities, protected work, required escalation, and provenance expectations.
+The explicit limits under which the session operates: readable and writable resources, executable capabilities, protected work, actions that always require escalation, actions that require a current scoped claim, and provenance expectations. `merge` and `publish` need a claim covering the exact selected destination checkout; disjoint worktrees remain independent. An isolated campaign may claim a different registered checkout only when it is anchored to the selected checkout's same Git common directory and repository identity. `delete` remains escalation-gated.
 
 ### Event / Trigger
 

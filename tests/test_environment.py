@@ -190,10 +190,100 @@ class AuthorityTests(unittest.TestCase):
             claims={}, repo_facts=CLEAN_FACTS)
         self.assertEqual(after["verdict"], "allow")
 
-    def test_unknown_scope_escalates_not_allows(self) -> None:
+    def test_merge_denies_repository_outside_writable_scope(self) -> None:
         verdict = authority.evaluate(context_for(), action="merge",
                                      target="something-new", session_id="ses_x")
-        self.assertEqual(verdict["verdict"], "escalate")
+        self.assertEqual(verdict["verdict"], "deny")
+        self.assertIn("outside this session's writable authority", verdict["reason"])
+
+    def test_scoped_claim_authorizes_merge_and_publish_without_escalation(self) -> None:
+        context = context_for()
+        self.assertNotIn("merge", context["escalation_required"])
+        self.assertNotIn("publish", context["escalation_required"])
+        self.assertTrue({"merge", "publish"}.issubset(
+            context["claim_required_actions"]))
+        scope = {
+            "kind": "worktree",
+            "repository": "mncs-atlas",
+            "checkout": "/workspace/mncs-atlas/.worktrees/destination",
+            "branch": "campaign/destination",
+            "paths": None,
+            "exclusive": False,
+        }
+        owned = {"mncs-atlas": [{"session_id": "ses_mine", "scope": scope}]}
+        for action in ("merge", "publish"):
+            with self.subTest(action=action):
+                verdict = authority.evaluate(
+                    context,
+                    action=action,
+                    target="mncs-atlas",
+                    session_id="ses_mine",
+                    claims=owned,
+                    repo_facts=DIRTY_FACTS,
+                    scope=scope,
+                )
+                self.assertEqual(verdict["verdict"], "allow", verdict)
+
+    def test_scoped_merge_and_publish_preserve_concurrent_writer_checks(self) -> None:
+        context = context_for()
+        destination = {
+            "kind": "worktree", "repository": "mncs-atlas",
+            "checkout": "/workspace/mncs-atlas/.worktrees/destination",
+            "branch": "campaign/destination", "paths": None,
+            "exclusive": False,
+        }
+        unrelated = {
+            **destination,
+            "checkout": "/workspace/mncs-atlas/.worktrees/other",
+            "branch": "campaign/other",
+        }
+        independent_holders = {"mncs-atlas": [
+            {"session_id": "ses_mine", "scope": destination},
+            {"session_id": "ses_other", "scope": unrelated},
+        ]}
+        overlapping_holders = {"mncs-atlas": [
+            {"session_id": "ses_mine", "scope": destination},
+            {"session_id": "ses_other", "scope": destination},
+        ]}
+        for action in ("merge", "publish"):
+            with self.subTest(action=action, case="independent"):
+                verdict = authority.evaluate(
+                    context, action=action, target="mncs-atlas",
+                    session_id="ses_mine", claims=independent_holders,
+                    repo_facts=DIRTY_FACTS, scope=destination,
+                )
+                self.assertEqual(verdict["verdict"], "allow", verdict)
+            with self.subTest(action=action, case="overlap"):
+                verdict = authority.evaluate(
+                    context, action=action, target="mncs-atlas",
+                    session_id="ses_mine", claims=overlapping_holders,
+                    repo_facts=DIRTY_FACTS, scope=destination,
+                )
+                self.assertEqual(verdict["verdict"], "deny", verdict)
+
+    def test_merge_and_publish_need_writable_exact_claims_even_on_clean_main(self) -> None:
+        context = context_for()
+        scope = {
+            "kind": "worktree", "repository": "mncs-atlas",
+            "checkout": "/workspace/mncs-atlas/.worktrees/destination",
+            "branch": "main", "paths": None, "exclusive": False,
+        }
+        for action in ("merge", "publish"):
+            with self.subTest(action=action, case="missing claim"):
+                verdict = authority.evaluate(
+                    context, action=action, target="mncs-atlas",
+                    session_id="ses_mine", claims={}, repo_facts=CLEAN_FACTS,
+                    scope=scope,
+                )
+                self.assertEqual(verdict["verdict"], "escalate", verdict)
+            with self.subTest(action=action, case="outside writable intent"):
+                verdict = authority.evaluate(
+                    {**context, "writable": []}, action=action,
+                    target="mncs-atlas", session_id="ses_mine",
+                    claims={"mncs-atlas": [{"session_id": "ses_mine", "scope": scope}]},
+                    repo_facts=CLEAN_FACTS, scope=scope,
+                )
+                self.assertEqual(verdict["verdict"], "deny", verdict)
 
     def test_unknown_action_denied(self) -> None:
         verdict = authority.evaluate(context_for(), action="teleport",
@@ -637,6 +727,213 @@ class ClaimTests(unittest.TestCase):
             self.assertEqual(claim["scope"]["checkout"], str(checkout))
             self.assertEqual(claim["scope"]["branch"], "campaign/claim-scope")
             self.assertFalse(claim["scope"]["exclusive"])
+            session.close()
+
+    def test_claim_can_target_another_registered_worktree_within_authorized_repo(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace_root = Path(directory) / "workspace"
+            repository_root = workspace_root / "mncs-compiler"
+            repository_root.mkdir(parents=True)
+            (repository_root / ".mncs").mkdir()
+            (repository_root / ".mncs" / "project.json").write_text(
+                json.dumps({"schema_version": "mncs.project/1",
+                            "repository": "mncs-compiler"}) + "\n",
+                encoding="utf-8",
+            )
+            (repository_root / "README.md").write_text("registered repository\n",
+                                                        encoding="utf-8")
+
+            def git(*args: str) -> None:
+                subprocess.run(["git", "-C", str(repository_root), *args],
+                               check=True, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, text=True)
+
+            git("init", "-b", "main")
+            git("config", "user.name", "MNCS Environment Test")
+            git("config", "user.email", "environment-test@example.invalid")
+            git("add", ".mncs/project.json", "README.md")
+            git("commit", "-m", "Create registered test checkout")
+            campaign_checkout = repository_root / ".worktrees" / "campaign"
+            campaign_checkout.parent.mkdir(parents=True)
+            git("worktree", "add", "-b", "campaign/test", str(campaign_checkout))
+
+            state = Path(directory) / "state"
+            session = make_session(
+                state,
+                intent={"goal": "integrate a completed campaign into main",
+                        "repositories": ["mncs-compiler"]},
+            )
+            git_head = subprocess.check_output(
+                ["git", "-C", str(campaign_checkout), "rev-parse", "HEAD"],
+                text=True,
+            ).strip()
+            session.snapshot["workspace"]["root"] = str(repository_root)
+            session.snapshot["selected_checkouts"] = {"mncs-compiler": {
+                "repository": "mncs-compiler",
+                "path": str(campaign_checkout),
+                "branch": "campaign/test",
+                "head": git_head,
+                "clean": True,
+            }}
+            session._save()
+
+            destination = session.acquire_claim(
+                "mncs-compiler",
+                scope={"kind": "worktree", "checkout": str(repository_root),
+                       "branch": "main", "exclusive": False},
+                reason="claim exact main destination for campaign integration",
+            )
+            self.assertEqual(destination["status"], "held")
+            self.assertEqual(destination["scope"]["checkout"], str(repository_root))
+            self.assertEqual(destination["scope"]["branch"], "main")
+            self.assertNotEqual(destination["scope"]["checkout"],
+                                str(campaign_checkout))
+
+            with self.assertRaises(claims.ClaimConflict):
+                claims.acquire(
+                    session.store,
+                    repository="mncs-compiler",
+                    session_id="ses_other_writer",
+                    consumer_id="other-writer",
+                    basis=claims.BASIS_EXPLICIT,
+                    reason="overlapping main destination must conflict",
+                    workspace_root=str(workspace_root),
+                    scope=destination["scope"],
+                    checkout_facts={"head": git_head, "branch": "main",
+                                    "dirty": False, "foreign_signals": []},
+                )
+
+            with self.assertRaisesRegex(ValueError, "branch or revision"):
+                session.acquire_claim(
+                    "mncs-compiler",
+                    scope={"kind": "worktree", "checkout": str(repository_root),
+                           "branch": "campaign/test"},
+                    reason="reject a branch mismatch",
+                )
+
+            unregistered = repository_root / ".worktrees" / "unregistered"
+            unregistered.mkdir()
+            (unregistered / ".mncs").mkdir()
+            (unregistered / ".mncs" / "project.json").write_text(
+                (repository_root / ".mncs" / "project.json").read_text(
+                    encoding="utf-8"),
+                encoding="utf-8",
+            )
+            init = subprocess.run(
+                ["git", "-C", str(unregistered), "init", "-b", "main"],
+                check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(init.returncode, 0)
+            with self.assertRaises(workspace.WorkspaceResolutionError):
+                session.acquire_claim(
+                    "mncs-compiler",
+                    scope={"kind": "worktree", "checkout": str(unregistered),
+                           "branch": "main"},
+                    reason="reject an unregistered lookalike checkout",
+                )
+            session.close()
+
+    def test_claim_can_target_main_checkout_from_isolated_campaign_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            projects = Path(directory) / "projects"
+            repository_root = projects / "mncs-compiler"
+            campaign_root = projects / "campaign"
+            campaign_checkout = campaign_root / "mncs-compiler"
+            repository_root.mkdir(parents=True)
+            campaign_checkout.parent.mkdir(parents=True)
+            (repository_root / ".mncs").mkdir()
+            (repository_root / ".mncs" / "project.json").write_text(
+                json.dumps({"schema_version": "mncs.project/1",
+                            "repository": "mncs-compiler"}) + "\n",
+                encoding="utf-8",
+            )
+            (repository_root / "README.md").write_text("registered repository\n",
+                                                        encoding="utf-8")
+
+            def git(*args: str) -> None:
+                subprocess.run(["git", "-C", str(repository_root), *args],
+                               check=True, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, text=True)
+
+            git("init", "-b", "main")
+            git("config", "user.name", "MNCS Environment Test")
+            git("config", "user.email", "environment-test@example.invalid")
+            git("add", ".mncs/project.json", "README.md")
+            git("commit", "-m", "Create registered test checkout")
+            git("worktree", "add", "-b", "campaign/test", str(campaign_checkout))
+
+            session = make_session(
+                Path(directory) / "state",
+                intent={"goal": "integrate a campaign from its isolated workspace",
+                        "repositories": ["mncs-compiler"]},
+            )
+            campaign_head = subprocess.check_output(
+                ["git", "-C", str(campaign_checkout), "rev-parse", "HEAD"],
+                text=True,
+            ).strip()
+            session.snapshot["workspace"]["root"] = str(campaign_root)
+            session.snapshot["selected_checkouts"] = {"mncs-compiler": {
+                "repository": "mncs-compiler",
+                "path": str(campaign_checkout),
+                "branch": "campaign/test",
+                "head": campaign_head,
+                "clean": True,
+            }}
+            session._save()
+
+            destination = session.acquire_claim(
+                "mncs-compiler",
+                scope={"kind": "worktree", "checkout": str(repository_root),
+                       "branch": "main", "exclusive": False},
+                reason="claim the registered main checkout for campaign integration",
+            )
+            self.assertEqual(destination["status"], "held")
+            self.assertEqual(destination["scope"]["checkout"], str(repository_root))
+            self.assertEqual(destination["scope"]["branch"], "main")
+
+            main_alias = projects / "compiler-main-alias"
+            main_alias.symlink_to(repository_root, target_is_directory=True)
+            with self.assertRaises(workspace.WorkspaceResolutionError):
+                session.acquire_claim(
+                    "mncs-compiler",
+                    scope={"kind": "worktree", "checkout": str(main_alias),
+                           "branch": "main"},
+                    reason="reject a symlink alias for the destination checkout",
+                )
+
+            anchor_alias = campaign_root / "compiler-alias"
+            anchor_alias.symlink_to(campaign_checkout, target_is_directory=True)
+            selected = session.snapshot["selected_checkouts"]["mncs-compiler"]
+            selected_path = selected["path"]
+            selected["path"] = str(anchor_alias)
+            with self.assertRaisesRegex(ValueError, "symbolic link"):
+                session.acquire_claim(
+                    "mncs-compiler",
+                    scope={"kind": "worktree", "checkout": str(repository_root),
+                           "branch": "main"},
+                    reason="reject a symlink alias for the authorized checkout",
+                )
+            selected["path"] = selected_path
+
+            unrelated_root = projects / "mncs-other"
+            unrelated_root.mkdir()
+            (unrelated_root / ".mncs").mkdir()
+            (unrelated_root / ".mncs" / "project.json").write_text(
+                json.dumps({"schema_version": "mncs.project/1",
+                            "repository": "mncs-other"}) + "\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "-C", str(unrelated_root), "init", "-b", "main"],
+                           check=True, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, text=True)
+            with self.assertRaises(workspace.WorkspaceResolutionError):
+                session.acquire_claim(
+                    "mncs-compiler",
+                    scope={"kind": "worktree", "checkout": str(unrelated_root),
+                           "branch": "main"},
+                    reason="reject an unrelated repository outside the campaign workspace",
+                )
             session.close()
 
     def test_dirty_checkout_requires_adoption(self) -> None:
@@ -2788,6 +3085,58 @@ class ToolchainTests(unittest.TestCase):
 
 
 class SessionTests(unittest.TestCase):
+    def test_effective_authority_reprojects_legacy_merge_and_publish_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory), intent={
+                "goal": "continue scoped repository work",
+                "repositories": ["mncs-atlas"],
+            })
+            session.snapshot["authority"].update({
+                "escalation_required": ["delegate", "delete", "merge", "publish"],
+                "denied": ["delete"],
+            })
+
+            authority_context = session.effective_authority()
+
+            self.assertEqual(authority_context["escalation_required"], [])
+            self.assertEqual(
+                authority_context["claim_required_actions"],
+                ["delegate", "merge", "publish", "retire"],
+            )
+
+    def test_merge_and_publish_use_the_selected_worktree_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(
+                Path(directory),
+                intent={"goal": "integrate one scoped checkout",
+                        "repositories": ["mncs-atlas"]},
+            )
+            checkout = "/selected/mncs-atlas/.worktrees/destination"
+            session.snapshot["selected_checkouts"] = {"mncs-atlas": {
+                "path": checkout, "branch": "campaign/destination",
+            }}
+            scope = {
+                "kind": "worktree", "repository": "mncs-atlas",
+                "checkout": checkout, "branch": "campaign/destination",
+                "paths": None, "exclusive": False,
+            }
+            session.snapshot["claim_holders"]["mncs-atlas"] = [{
+                "session_id": session.session_id, "scope": scope,
+            }]
+            inspected = sessions.workspace_module.RepoState(
+                name="mncs-atlas", path=checkout,
+                manifest_repository="mncs-atlas", manifest_revision=1,
+                branch="campaign/destination", head="fixture", dirty=True,
+            )
+            with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
+                sessions.workspace_module, "inspect_repo", return_value=inspected,
+            ) as inspect_repo:
+                for action in ("merge", "publish"):
+                    with self.subTest(action=action):
+                        verdict = session.check(action=action, target="mncs-atlas")
+                        self.assertEqual(verdict["verdict"], "allow", verdict)
+            self.assertEqual(inspect_repo.call_count, 2)
+
     def test_resume_request_retry_deduplicates_published_participation_event(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)

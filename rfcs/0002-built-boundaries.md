@@ -43,6 +43,18 @@ escalation never spawn provider processes. Sensitive invocation effects
 require the corresponding action authority. Rights/provenance evaluation
 composes the owning provider's host gate; unknown rights remain explicit.
 
+`merge` and `publish` are claim-required actions, not unconditional approval
+gates. They require declared writable intent and a current session claim that
+covers the exact destination checkout or narrower path. Selected-checkout
+resolution supplies that destination when the caller names only the
+repository; explicit scopes remain available for a separate merge target.
+When an isolated campaign needs a destination outside its checkout directory,
+Environment accepts only a registered worktree anchored to the selected
+checkout's same Git common directory and repository manifest identity; it does
+not widen authority to unrelated repositories or symlink aliases.
+Overlapping foreign claims deny the operation, while independent worktrees
+remain eligible to proceed. `delete` remains escalation-gated.
+
 Local Git retirement is a separate `retire` action. It requires declared
 writable intent and a current session-owned claim covering the requested
 repository or worktree scope, in addition to the retirement adapter's Git

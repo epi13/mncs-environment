@@ -50,6 +50,12 @@ EFFECT_ACTIONS = {
 
 MUTATING_ACTIONS = ("write", "mutate", "execute", "retire")
 
+# These are invariant user-approval gates. Repository-integrating actions
+# instead require a live claim over the exact destination scope; a claim is
+# the authenticated authorization, not a reason to ask for another approval.
+ESCALATION_ACTIONS = ("delete",)
+CLAIM_REQUIRED_ACTIONS = ("delegate", "merge", "publish", "retire")
+
 
 def build_context(
     *,
@@ -60,7 +66,6 @@ def build_context(
 ) -> dict[str, Any]:
     """Project effective authority for a consumer from intent + workspace facts."""
     forbidden = set(intent.get("forbidden_actions", []))
-    escalate_actions = {"publish", "merge", "delete", "delegate"}
     context = {
         "schema_version": SCHEMA,
         "subject": subject,
@@ -69,7 +74,12 @@ def build_context(
         "invocable": ["*"],
         "protected_repositories": sorted(set(protected_repos)),
         "claim_holders": dict(claim_holders or {}),
-        "escalation_required": sorted(action for action in escalate_actions if action not in forbidden),
+        "escalation_required": sorted(
+            action for action in ESCALATION_ACTIONS if action not in forbidden
+        ),
+        "claim_required_actions": sorted(
+            action for action in CLAIM_REQUIRED_ACTIONS if action not in forbidden
+        ),
         "denied": sorted(forbidden),
         "grants": list(intent.get("authority_requirements", [])),
     }
@@ -130,17 +140,18 @@ def evaluate(
     clean, on its main branch, shows no foreign-work signals, sits in
     declared writable scope, and no other session holds an overlapping
     scope. Anything else escalates; protected, forbidden, or
-    foreign-claimed scope denies. Escalate and deny never authorize
-    execution. The separate ``retire`` action always requires a current
-    claim covering its exact repository or worktree scope; generic
-    ``delete`` retains its escalation policy.
+    foreign-claimed scope denies. ``merge`` and ``publish`` require a current
+    claim covering the exact destination scope; a clean checkout alone is
+    insufficient. Escalate and deny never authorize execution. The separate
+    ``retire`` action also requires a current claim covering its exact
+    repository or worktree scope; generic ``delete`` remains escalation-gated.
     """
     if action not in ACTIONS:
         return {"verdict": "deny", "reason": f"unknown action {action!r}"}
     if action in context.get("denied", []):
         return {"verdict": "deny", "reason": f"action {action} is forbidden by intent"}
     repo = target.split("/")[0] if "/" in target else target
-    if action in MUTATING_ACTIONS or action in ("publish", "verify"):
+    if action in MUTATING_ACTIONS or action in ("publish", "merge", "verify"):
         fence = next((item for item in context.get("claim_fences", [])
                       if isinstance(item, dict)
                       and item.get("repository") == repo), None)
@@ -156,7 +167,9 @@ def evaluate(
         claims if claims is not None else context.get("claim_holders", {}), repo)
     others = [h for h in holders if h["session_id"] != session_id]
     own = [h for h in holders if h["session_id"] == session_id]
-    mutating = action in ("write", "mutate", "merge", "delete", "execute", "retire")
+    mutating = action in (
+        "write", "mutate", "merge", "delete", "execute", "retire", "publish"
+    )
     # Verification executes provider code inside a checkout, so foreign
     # ownership conflicts deny exactly like mutation; unlike mutation,
     # dirt and branch are the *subject* under verification, not a bar.
@@ -188,11 +201,21 @@ def evaluate(
             "reason": f"{repo} is protected scope for this session",
         }
     if action in ("publish", "merge"):
-        if any((h.get("scope") or {}).get("kind") == "repository"
-               and (h.get("scope") or {}).get("repository", repo) == repo
-               for h in own):
-            return {"verdict": "allow",
-                    "reason": f"{action} by repository claim on {repo}"}
+        if repo not in context.get("writable", []):
+            return {"verdict": "deny",
+                    "reason": f"{repo} is outside this session's writable authority"}
+        owned = any(
+            _covers(holder.get("scope") or {}, requested or {}) for holder in own
+        )
+        if not owned:
+            return {
+                "verdict": "escalate",
+                "reason": (
+                    f"{action} requires a current session claim covering the "
+                    "exact destination scope"
+                ),
+            }
+        return {"verdict": "allow", "reason": f"{action} by scoped claim on {repo}"}
     if action == "delegate":
         # Asking an external system to verify a repository scope the
         # session owns is explicit intent, like publish. Anything else

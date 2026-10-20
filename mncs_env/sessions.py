@@ -907,6 +907,8 @@ def _verified_scope_checkout(
     workspace_root: str | Path,
     repository: str,
     selected: dict[str, Any] | None = None,
+    *,
+    authorized_checkout: dict[str, Any] | None = None,
 ) -> tuple[Path, dict[str, str]]:
     """Resolve the selected registered checkout, including nested worktrees.
 
@@ -918,6 +920,19 @@ def _verified_scope_checkout(
     """
     root = Path(workspace_root).resolve(strict=True)
     expected_repository_root = root / repository
+    identity_workspace_root = root
+    repository_root_is_workspace = (
+        root.name == repository
+        and isinstance(workspace_module._manifest(root), dict)
+        and workspace_module._manifest(root).get("repository") == repository
+    )
+    if repository_root_is_workspace:
+        # Some existing project definitions use the repository root itself
+        # as their authorized workspace. Verify Git's common directory from
+        # its canonical parent, then confine the accepted checkout to this
+        # exact repository root.
+        expected_repository_root = root
+        identity_workspace_root = root.parent
     if selected is None:
         requested_path = expected_repository_root
         expected_branch = None
@@ -934,13 +949,72 @@ def _verified_scope_checkout(
         if expected_branch is not None and not isinstance(expected_branch, str):
             raise ValueError("selected checkout branch is malformed")
 
-    observed = workspace_module.verify_registered_checkout(
-        requested_path,
-        repository=repository,
-        workspace_root=root,
-        expected_repository_root=expected_repository_root,
-        expected_branch=expected_branch,
-    )
+    if authorized_checkout is not None and not repository_root_is_workspace:
+        # A campaign workspace can contain one registered worktree while the
+        # repository's main checkout lives elsewhere. Permit that exact
+        # destination only after anchoring it to the selected checkout's Git
+        # common directory and confirming the anchor is inside this session's
+        # workspace. The repository name in the intent is not, by itself,
+        # authority to follow an arbitrary path outside that workspace.
+        anchor_value = authorized_checkout.get("path")
+        if not isinstance(anchor_value, str) or not anchor_value:
+            raise ValueError("authorized checkout has no canonical path")
+        anchor_path = Path(anchor_value)
+        if not anchor_path.is_absolute():
+            anchor_path = root / anchor_path
+        try:
+            absolute_anchor = Path(os.path.abspath(anchor_path))
+            anchor_path = absolute_anchor.resolve(strict=True)
+            if absolute_anchor != anchor_path:
+                raise ValueError("authorized checkout path traverses a symbolic link")
+            anchor_relative = anchor_path.relative_to(root)
+        except (OSError, ValueError) as error:
+            if isinstance(error, ValueError) and "symbolic link" in str(error):
+                raise
+            raise ValueError("authorized checkout escapes its Environment workspace") from None
+        cursor = root
+        for part in anchor_relative.parts:
+            cursor = cursor / part
+            if cursor.is_symlink():
+                raise ValueError("authorized checkout path traverses a symbolic link")
+        anchor_facts = workspace_module.verify_registered_checkout(
+            anchor_path,
+            repository=repository,
+            expected_branch=authorized_checkout.get("branch"),
+        )
+        for field in (
+            "checkout_identity", "git_common_directory_identity", "observed_path",
+        ):
+            recorded = authorized_checkout.get(field)
+            if isinstance(recorded, str) and anchor_facts.get(field) != recorded:
+                raise ValueError(f"authorized checkout {field} changed")
+        anchor_repository_root = Path(anchor_facts["repository_root"])
+        observed = workspace_module.verify_registered_checkout(
+            requested_path,
+            repository=repository,
+            workspace_root=anchor_repository_root.parent,
+            expected_repository_root=anchor_repository_root,
+            expected_branch=expected_branch,
+        )
+        if observed.get("git_common_directory_identity") != anchor_facts.get(
+            "git_common_directory_identity"
+        ):
+            raise ValueError(
+                "claim checkout is not registered under the authorized checkout's Git common directory"
+            )
+    else:
+        observed = workspace_module.verify_registered_checkout(
+            requested_path,
+            repository=repository,
+            workspace_root=identity_workspace_root,
+            expected_repository_root=expected_repository_root,
+            expected_branch=expected_branch,
+        )
+    if repository_root_is_workspace:
+        try:
+            Path(observed["path"]).resolve(strict=True).relative_to(root)
+        except (OSError, ValueError):
+            raise ValueError("selected worktree escapes its repository-root workspace") from None
     if selected is not None:
         for field in (
             "checkout_identity", "git_common_directory_identity", "observed_path",
@@ -2196,6 +2270,18 @@ class Session:
     def effective_authority(self) -> dict[str, Any]:
         """Return the durable authority projection, including admitted grants."""
         authority = dict(self.snapshot.get("authority") or {})
+        denied = set(authority.get("denied", []))
+        # Older durable sessions stored merge and publish as unconditional
+        # escalation actions. Reproject these stable policy categories at
+        # read time so resumed sessions expose the same rules as new entries.
+        authority["escalation_required"] = sorted(
+            action for action in authority_module.ESCALATION_ACTIONS
+            if action not in denied
+        )
+        authority["claim_required_actions"] = sorted(
+            action for action in authority_module.CLAIM_REQUIRED_ACTIONS
+            if action not in denied
+        )
         grants = self.authority_scope_grants()
         protected = set(authority.get("protected_repositories", []))
         claim_fences = authority.get("claim_fences", [])
@@ -3100,7 +3186,9 @@ class Session:
         if not path.is_absolute() and isinstance(workspace_root, str) and workspace_root:
             path = Path(workspace_root) / path
         normalized = dict(scope)
-        normalized["checkout"] = str(path.resolve())
+        # Keep symlink spelling intact until Git validates the full canonical
+        # path at the mutation boundary; resolving here would hide an escape.
+        normalized["checkout"] = str(Path(os.path.abspath(path)))
         return normalized
 
     def check(
@@ -3119,15 +3207,35 @@ class Session:
             # broad discovery is unnecessary on a quiet observational entry.
             self._refresh_holders()
             selected = self.snapshot.get("selected_checkouts", {}).get(repository)
-            if repo_facts is None and isinstance(selected, dict) and selected.get("path"):
+            needs_selected_scope = (
+                action in ("publish", "merge")
+                and normalized_scope is None
+                and target == repository
+            )
+            if (
+                (repo_facts is None or needs_selected_scope)
+                and isinstance(selected, dict)
+                and selected.get("path")
+            ):
                 root = Path(self.snapshot.get("workspace", {}).get("root", "."))
-                inspected = workspace_module.inspect_repo((root / selected["path"]).resolve(), _refresh=True)
+                selected_path = Path(str(selected["path"]))
+                if not selected_path.is_absolute():
+                    selected_path = root / selected_path
+                selected_path = selected_path.resolve()
+                inspected = workspace_module.inspect_repo(selected_path, _refresh=True)
                 if inspected is None or inspected.git_error:
                     raise LifecycleError("selected checkout observation unavailable at mutation boundary")
                 record = inspected.record()
                 record["name"] = repository
-                repo_facts = {**self.snapshot.get("repo_facts", {}),
-                              **_repo_facts({"repositories": [record]})}
+                if needs_selected_scope:
+                    normalized_scope = self._canonical_scope(repository, {
+                        "kind": "worktree",
+                        "checkout": record["path"],
+                        "branch": record.get("branch"),
+                    })
+                if repo_facts is None:
+                    repo_facts = {**self.snapshot.get("repo_facts", {}),
+                                  **_repo_facts({"repositories": [record]})}
         verdict = authority_module.evaluate(
             self.effective_authority(),
             action=action,
@@ -3760,34 +3868,38 @@ class Session:
                     f"claim denied: {repository} is outside this Environment session's writable authority"
                 )
         selected = self.snapshot.get("selected_checkouts", {}).get(repository)
-        if selected is not None:
-            if scope is None:
-                # The ordinary claim follows the checkout already selected
-                # for this session. Reserving the entire repository is only
-                # appropriate when a caller explicitly requests repository
-                # scope for a genuinely shared mutation.
-                scope = {
-                    "kind": "worktree",
-                    "checkout": str(selected.get("path", "")),
-                    "branch": selected.get("branch"),
-                    "exclusive": False,
-                }
-            if scope and scope.get("kind") == "worktree":
-                scope = self._canonical_scope(repository, scope)
-                requested = Path(str(scope.get("checkout", ""))).resolve()
-                observed = Path(str(selected.get("path", "")))
-                if not observed.is_absolute():
-                    root = self.snapshot.get("workspace", {}).get("root")
-                    if root:
-                        observed = Path(str(root)) / observed
-                observed = observed.resolve()
-                if requested != observed:
-                    raise ValueError(
-                        f"claim checkout does not match the session-selected checkout for {repository}"
-                    )
-                scope = dict(scope)
-                scope["checkout"] = str(observed)
-                scope.setdefault("branch", selected.get("branch"))
+        explicit_scope = scope is not None
+        if workspace_root is None:
+            workspace_root = self.snapshot.get("workspace", {}).get("root")
+        claim_workspace_root = workspace_root
+        if selected is not None and scope is None:
+            # The ordinary claim follows the checkout already selected for
+            # this session. A caller may name a different exact worktree
+            # below, but that checkout must independently pass the same
+            # workspace, Git registry, common-directory, manifest, and branch
+            # identity checks as any selected checkout.
+            scope = {
+                "kind": "worktree",
+                "checkout": str(selected.get("path", "")),
+                "branch": selected.get("branch"),
+                "exclusive": False,
+            }
+        if (scope and scope.get("kind") == "worktree"
+                and selected is not None and not explicit_scope):
+            # The selected checkout has already passed entry/resume
+            # verification. Preserve this default for callers that omit a
+            # scope; explicit destinations below receive a fresh Git identity
+            # check before the lease can be published.
+            scope = self._canonical_scope(repository, scope)
+            observed = Path(str(selected.get("path", "")))
+            if not observed.is_absolute() and workspace_root:
+                observed = Path(workspace_root) / observed
+            scope = {
+                **scope,
+                "checkout": str(observed.resolve()),
+                "branch": selected.get("branch"),
+                "exclusive": False,
+            }
             if checkout_facts is None:
                 clean = bool(selected.get("clean", False))
                 checkout_facts = {
@@ -3796,14 +3908,55 @@ class Session:
                     "dirty": not clean,
                     "foreign_signals": [] if clean else ["dirty-tree"],
                 }
-        if workspace_root is None:
-            workspace_root = self.snapshot.get("workspace", {}).get("root")
+        elif scope and scope.get("kind") == "worktree":
+            scope = self._canonical_scope(repository, scope)
+            requested_path = str(scope.get("checkout", ""))
+            resolved_checkout, checkout_identity = _verified_scope_checkout(
+                workspace_root or ".",
+                repository,
+                {
+                    "path": requested_path,
+                    "branch": scope.get("branch"),
+                },
+                authorized_checkout=selected,
+            )
+            claim_workspace_root = checkout_identity.get("workspace_root") or workspace_root
+            inspected = workspace_module.inspect_repo(
+                resolved_checkout, _refresh=True
+            )
+            if (inspected is None or inspected.git_error or not inspected.head
+                    or inspected.head != checkout_identity.get("head")
+                    or (inspected.branch or "") != checkout_identity.get("branch")):
+                raise ValueError(
+                    f"claim checkout identity changed while resolving {repository}"
+                )
+            scope = {
+                **scope,
+                "checkout": str(resolved_checkout),
+                "branch": inspected.branch,
+                "exclusive": False,
+            }
+            if checkout_facts is None:
+                checkout_facts = {
+                    "head": inspected.head,
+                    "branch": inspected.branch,
+                    "dirty": bool(inspected.dirty),
+                    "foreign_signals": ["dirty-tree"] if inspected.dirty else [],
+                }
+        elif checkout_facts is None and selected is not None:
+            clean = bool(selected.get("clean", False))
+            checkout_facts = {
+                "head": selected.get("head"),
+                "branch": selected.get("branch"),
+                "dirty": not clean,
+                "foreign_signals": [] if clean else ["dirty-tree"],
+            }
         record = claims_module.acquire(
             self.store, repository=repository, session_id=self.session_id,
             consumer_id=self.snapshot.get("consumer_id", "unknown"),
             basis=basis, reason=reason, ttl_hours=ttl_hours,
             scope=scope, checkout_facts=checkout_facts,
-            workspace_root=workspace_root, request_id=request_id,
+            workspace_root=claim_workspace_root, request_id=request_id,
             expected_store_generation=expected_store_generation,
             owner_recovery_authorization=_owner_recovery_authorization,
         )
@@ -5816,6 +5969,7 @@ class Session:
                 "invocable": list(authority.get("invocable", [])),
                 "protected_repositories": protected,
                 "escalation_required": list(authority.get("escalation_required", [])),
+                "claim_required_actions": list(authority.get("claim_required_actions", [])),
                 "scope_grants": list(authority.get("scope_grants", [])),
                 "revision": authority.get("revision"),
             },
