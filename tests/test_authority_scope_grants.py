@@ -721,6 +721,191 @@ def test_nested_registered_scope_uses_one_worktree_and_coexists_with_other_branc
             session.close()
 
 
+def test_nested_worktree_root_resolves_its_claim_against_git_common_identity(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        checkout, facts = _nested_target_checkout(
+            session, workspace, "workspace-root", "campaign/worktree-workspace-root",
+        )
+        _grant(session, request_id="req_nested_workspace_root_scope_grant")
+
+        claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="claim from registered linked-worktree Environment root",
+            scope={
+                "kind": "worktree",
+                "checkout": str(checkout),
+                "branch": "campaign/worktree-workspace-root",
+            },
+            workspace_root=str(checkout),
+            request_id="req_nested_workspace_root_claim",
+        )
+
+        assert claim["scope"]["checkout"] == str(checkout)
+        assert claim["scope"]["branch"] == "campaign/worktree-workspace-root"
+        resolved, observed = sessions._verified_scope_checkout(
+            checkout,
+            "mncs-control-mcp",
+            session.snapshot["selected_checkouts"]["mncs-control-mcp"],
+            authorized_checkout=session.snapshot["selected_checkouts"]["mncs-control-mcp"],
+        )
+        assert resolved == checkout
+        assert observed["checkout_identity"] == facts["checkout_identity"]
+        assert observed["git_common_directory_identity"] == facts[
+            "git_common_directory_identity"
+        ]
+    finally:
+        session.close()
+
+
+def test_exact_session_owned_claim_anchors_scope_when_selection_projection_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        linked_checkout, linked_facts = _nested_target_checkout(
+            session, workspace, "retained-anchor", "campaign/retained-anchor",
+        )
+        _grant(session, request_id="req_missing_selection_scope_grant")
+        linked_claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="retain the campaign's registered linked checkout",
+            scope={
+                "kind": "worktree",
+                "checkout": str(linked_checkout),
+                "branch": "campaign/retained-anchor",
+            },
+            ttl_hours=1,
+            request_id="req_missing_selection_anchor_claim",
+        )
+        assert linked_claim["scope"]["checkout"] == str(linked_checkout)
+        repository_root = workspace / "mncs-control-mcp"
+        second_checkout = (
+            repository_root / ".worktrees" / "retained-anchor-two" / "mncs-control-mcp"
+        )
+        second_checkout.parent.mkdir(parents=True)
+        _git(
+            repository_root, "worktree", "add", "-b",
+            "campaign/retained-anchor-two", str(second_checkout), "HEAD",
+        )
+        second_claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="retain a second worktree of the same canonical repository",
+            scope={
+                "kind": "worktree",
+                "checkout": str(second_checkout),
+                "branch": "campaign/retained-anchor-two",
+            },
+            ttl_hours=1,
+            request_id="req_missing_selection_second_anchor_claim",
+        )
+        session.snapshot["selected_checkouts"] = {}
+        session._save()
+
+        class ExpiredClaimClock(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime.now(tz) + timedelta(hours=2)
+
+        monkeypatch.setattr(claims, "datetime", ExpiredClaimClock)
+        active = claims.active_claims(session.store.read_claims())
+        assert linked_claim["claim_id"] not in active
+        assert second_claim["claim_id"] not in active
+
+        main_claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="claim the exact repository root using its retained checkout anchor",
+            scope={
+                "kind": "worktree",
+                "checkout": str(repository_root),
+                "branch": "main",
+            },
+            request_id="req_missing_selection_main_claim",
+        )
+
+        assert main_claim["scope"]["checkout"] == str(repository_root)
+        assert main_claim["scope"]["branch"] == "main"
+        assert main_claim["session_id"] == session.session_id
+        observed = workspace_module.verify_registered_checkout(
+            main_claim["scope"]["checkout"],
+            repository="mncs-control-mcp",
+            expected_repository_root=repository_root,
+            expected_branch="main",
+        )
+        assert observed["git_common_directory_identity"] == linked_facts[
+            "git_common_directory_identity"
+        ]
+    finally:
+        session.close()
+
+
+def test_session_owned_claims_from_different_git_common_directories_remain_ambiguous(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        linked_checkout, _ = _nested_target_checkout(
+            session, workspace, "first-anchor", "campaign/first-anchor",
+        )
+        _grant(session, request_id="req_ambiguous_claim_scope_grant")
+        session.acquire_claim(
+            "mncs-control-mcp",
+            reason="retain the registered checkout anchor",
+            scope={
+                "kind": "worktree",
+                "checkout": str(linked_checkout),
+                "branch": "campaign/first-anchor",
+            },
+            request_id="req_ambiguous_first_anchor_claim",
+        )
+        session.snapshot["selected_checkouts"] = {}
+        session._save()
+
+        unrelated_root = workspace / "unrelated" / "mncs-control-mcp"
+        unrelated_root.parent.mkdir(parents=True)
+        subprocess.run(
+            ["git", "clone", "--quiet", "--shared",
+             str(workspace / "mncs-control-mcp"), str(unrelated_root)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        _recovered_claim(
+            session,
+            "mncs-control-mcp",
+            scope={
+                "kind": "worktree",
+                "checkout": str(unrelated_root),
+                "branch": "main",
+            },
+        )
+
+        with pytest.raises(ValueError, match="multiple Git common directories") as error:
+            session.acquire_claim(
+                "mncs-control-mcp",
+                reason="reject an ambiguous repository anchor",
+                scope={
+                    "kind": "worktree",
+                    "checkout": str(workspace / "mncs-control-mcp"),
+                    "branch": "main",
+                },
+                request_id="req_ambiguous_target_claim",
+            )
+
+        assert str(workspace / "mncs-control-mcp" / ".git") in str(error.value)
+        assert str(unrelated_root / ".git") in str(error.value)
+    finally:
+        session.close()
+
+
 def test_nested_registered_scope_recovers_only_exact_owner_fenced_worktree(
     tmp_path: Path,
 ) -> None:

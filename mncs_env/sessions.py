@@ -921,10 +921,27 @@ def _verified_scope_checkout(
     root = Path(workspace_root).resolve(strict=True)
     expected_repository_root = root / repository
     identity_workspace_root = root
-    repository_root_is_workspace = (
+    root_matches_repository = (
         root.name == repository
         and isinstance(workspace_module._manifest(root), dict)
         and workspace_module._manifest(root).get("repository") == repository
+    )
+    root_checkout_facts = None
+    if root_matches_repository:
+        # A selected linked worktree can itself be the Environment workspace.
+        # Its manifest matches the repository name, but its Git common
+        # directory still points at the actual repository root. Resolve that
+        # identity through the shared checkout verifier before treating this
+        # path as the common repository root.
+        try:
+            root_checkout_facts = workspace_module.verify_registered_checkout(
+                root, repository=repository,
+            )
+        except workspace_module.WorkspaceResolutionError:
+            pass
+    repository_root_is_workspace = (
+        root_checkout_facts is not None
+        and Path(root_checkout_facts["repository_root"]) == root
     )
     if repository_root_is_workspace:
         # Some existing project definitions use the repository root itself
@@ -933,8 +950,15 @@ def _verified_scope_checkout(
         # exact repository root.
         expected_repository_root = root
         identity_workspace_root = root.parent
+    elif root_checkout_facts is not None:
+        # The Environment is rooted at a registered linked worktree. Keep its
+        # checkout as the default target and use the Git-verified repository
+        # identity for registration checks. Alternate linked checkouts are
+        # accepted only through the authorized-checkout anchor below.
+        expected_repository_root = Path(root_checkout_facts["repository_root"])
+        identity_workspace_root = Path(root_checkout_facts["workspace_root"])
     if selected is None:
-        requested_path = expected_repository_root
+        requested_path = root if root_checkout_facts is not None else expected_repository_root
         expected_branch = None
     else:
         if selected.get("repository", repository) != repository:
@@ -1003,6 +1027,14 @@ def _verified_scope_checkout(
                 "claim checkout is not registered under the authorized checkout's Git common directory"
             )
     else:
+        if root_checkout_facts is not None and not repository_root_is_workspace:
+            try:
+                if requested_path.resolve(strict=True) != root:
+                    raise ValueError(
+                        "claim checkout is outside the selected linked-worktree workspace"
+                    )
+            except OSError as error:
+                raise ValueError("selected linked-worktree checkout is unavailable") from error
         observed = workspace_module.verify_registered_checkout(
             requested_path,
             repository=repository,
@@ -3867,8 +3899,94 @@ class Session:
                 raise AuthorityDenied(
                     f"claim denied: {repository} is outside this Environment session's writable authority"
                 )
-        selected = self.snapshot.get("selected_checkouts", {}).get(repository)
+        selected_checkouts = self.snapshot.get("selected_checkouts")
+        selected = (
+            selected_checkouts.get(repository)
+            if isinstance(selected_checkouts, dict) else None
+        )
         explicit_scope = scope is not None
+        if selected is None and explicit_scope:
+            # A campaign can retain its exact checkout binding after the
+            # time-limited mutation claim expires. That record remains
+            # historical identity evidence, but never grants mutation rights:
+            # every new claim below still passes normal live-conflict and
+            # Store-publication checks. Keep only each claim's latest record,
+            # and consider held worktree claims from this exact session.
+            latest_owner_claims: dict[str, dict[str, Any]] = {}
+            for record in self.store.read_claims():
+                claim_id = record.get("claim_id")
+                if (record.get("repository") != repository
+                        or record.get("session_id") != self.session_id
+                        or not isinstance(claim_id, str)):
+                    continue
+                previous = latest_owner_claims.get(claim_id)
+                try:
+                    version = int(record.get("version", 0))
+                    previous_version = int(previous.get("version", 0)) if previous else -1
+                except (TypeError, ValueError):
+                    continue
+                if previous is None or version > previous_version:
+                    latest_owner_claims[claim_id] = record
+
+            verified_anchors: list[dict[str, str]] = []
+            for record in latest_owner_claims.values():
+                if record.get("status") != "held":
+                    continue
+                owned_scope = record.get("scope")
+                if (not isinstance(owned_scope, dict)
+                        or owned_scope.get("kind") != "worktree"
+                        or not isinstance(owned_scope.get("checkout"), str)
+                        or not isinstance(owned_scope.get("branch"), str)):
+                    continue
+                try:
+                    anchor_facts = workspace_module.verify_registered_checkout(
+                        owned_scope["checkout"],
+                        repository=repository,
+                        expected_branch=owned_scope["branch"],
+                    )
+                except workspace_module.WorkspaceResolutionError:
+                    # Removed, replaced, or branch-mismatched worktrees are
+                    # not usable provenance. Other exact current claims may
+                    # still provide a unique repository identity.
+                    continue
+                verified_anchors.append(anchor_facts)
+
+            common_directories = {
+                facts["git_common_directory"]
+                for facts in verified_anchors
+            }
+            if len(common_directories) > 1:
+                conflicts = sorted({
+                    (
+                        facts["git_common_directory"],
+                        facts["git_common_directory_identity"],
+                        facts["path"],
+                    )
+                    for facts in verified_anchors
+                })
+                raise ValueError(
+                    "session-owned worktree claims resolve to multiple Git common directories: "
+                    + ", ".join(
+                        f"{common_directory} ({identity}) at {path}"
+                        for common_directory, identity, path in conflicts
+                    )
+                )
+            if verified_anchors:
+                # Multiple exact claims in separate worktrees of one common
+                # repository establish the same repository identity. Choose a
+                # stable in-workspace anchor; the requested checkout is still
+                # verified independently against this common directory.
+                anchor_facts = min(
+                    verified_anchors,
+                    key=lambda item: (item["path"], item["branch"] or ""),
+                )
+                selected = {
+                    **anchor_facts,
+                    "repository": repository,
+                    "path": anchor_facts["path"],
+                    "branch": anchor_facts["branch"],
+                    "head": anchor_facts["head"],
+                }
         if workspace_root is None:
             workspace_root = self.snapshot.get("workspace", {}).get("root")
         claim_workspace_root = workspace_root
