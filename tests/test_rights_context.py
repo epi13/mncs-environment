@@ -122,7 +122,7 @@ class RightsContextTests(unittest.TestCase):
             )
             self.assertEqual(
                 [item["relation"] for item in context["provenance"]["projection"]["relationships"]],
-                ["generated-from", "generated-from", "transformed-by"],
+                ["generated-from", "generated-from", "referenced", "transformed-by"],
             )
             self.assertLess(len(json.dumps(context)), 8192)
 

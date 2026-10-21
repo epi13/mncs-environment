@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -1456,6 +1457,162 @@ class EntryContractTests(unittest.TestCase):
                 expected_repository_root=self.project,
                 expected_branch="campaign/not-the-registered-branch",
             )
+
+    def test_registered_nested_checkout_resolves_through_control_mount_alias(self):
+        (self.project / ".mncs" / "project.json").write_text(
+            json.dumps(
+                {
+                    "repository": "fixture",
+                }
+            )
+        )
+        subprocess.run(
+            ["git", "-C", str(self.project), "add", ".mncs/project.json"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(self.project),
+                "-c",
+                "user.name=Entry Test",
+                "-c",
+                "user.email=entry@example.invalid",
+                "commit",
+                "-m",
+                "add identity for aliased checkout",
+            ],
+            check=True,
+            capture_output=True,
+        )
+        nested = self.project / ".worktrees" / "registered" / "nested-checkout"
+        nested.parent.mkdir(parents=True)
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(self.project),
+                "worktree",
+                "add",
+                "-b",
+                "campaign/aliased-checkout",
+                str(nested),
+                "HEAD",
+            ],
+            check=True,
+            capture_output=True,
+        )
+        registered = next(
+            row
+            for row in workspace._worktrees(self.project)
+            if row.get("path") == str(nested)
+        )
+        actual_git_directory = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(nested),
+                "rev-parse",
+                "--path-format=absolute",
+                "--absolute-git-dir",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        head = subprocess.run(
+            ["git", "-C", str(nested), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        branch = "campaign/aliased-checkout"
+
+        sandbox_workspace = self.base / "control-sandbox"
+        sandbox_repository = sandbox_workspace / "fixture"
+        sandbox_checkout = (
+            sandbox_repository / ".worktrees" / "registered" / "nested-checkout"
+        )
+        sandbox_admin = (
+            sandbox_repository / ".git" / "worktrees" / Path(actual_git_directory).name
+        )
+        sandbox_checkout.mkdir(parents=True)
+        sandbox_admin.mkdir(parents=True)
+        for checkout in (sandbox_repository, sandbox_checkout):
+            (checkout / ".mncs").mkdir(parents=True, exist_ok=True)
+            shutil.copy2(self.project / ".mncs" / "project.json", checkout / ".mncs")
+        (sandbox_admin / "gitdir").write_text(str(nested / ".git"))
+        (sandbox_checkout / ".git").write_text(f"gitdir: {actual_git_directory}\n")
+
+        selected = {"path": sandbox_checkout, "git_directory": sandbox_admin}
+
+        def fake_git(_repo, *args, deadline=None):
+            outputs = {
+                ("rev-parse", "--show-toplevel"): (str(selected["path"]), 0),
+                ("rev-parse", "--path-format=absolute", "--git-common-dir"): (
+                    str(sandbox_repository / ".git"),
+                    0,
+                ),
+                ("rev-parse", "--path-format=absolute", "--absolute-git-dir"): (
+                    str(selected["git_directory"]),
+                    0,
+                ),
+                ("rev-parse", "HEAD"): (head, 0),
+                ("symbolic-ref", "--quiet", "--short", "HEAD"): (branch, 0),
+            }
+            output, code = outputs.get(tuple(args), ("", 1))
+            return subprocess.CompletedProcess(args, code, output, "")
+
+        identity = {
+            "checkout_identity": "checkout:aliased-nested",
+            "git_common_directory_identity": "git-common:aliased-nested",
+            "observed_path": ".worktrees/registered/nested-checkout",
+        }
+        original_resolve = Path.resolve
+
+        def resolve_from_sandbox(path, strict=False):
+            if Path(os.path.abspath(path)) == nested:
+                return original_resolve(sandbox_checkout, strict=True)
+            return original_resolve(path, strict=strict)
+
+        with (
+            mock.patch.object(workspace, "_git", side_effect=fake_git),
+            mock.patch.object(workspace, "_worktrees", return_value=[registered]),
+            mock.patch.object(
+                workspace, "repository_checkout_identity", return_value=identity
+            ),
+            mock.patch.object(Path, "resolve", new=resolve_from_sandbox),
+        ):
+            observed = workspace.verify_registered_checkout(
+                sandbox_checkout,
+                repository="fixture",
+                workspace_root=sandbox_workspace,
+                expected_repository_root=sandbox_repository,
+                expected_branch=branch,
+                expected_head=head,
+            )
+            self.assertEqual(observed["path"], str(sandbox_checkout.resolve()))
+            self.assertEqual(observed["branch"], branch)
+            self.assertEqual(observed["head"], head)
+
+            forged = sandbox_repository / ".worktrees" / "lookalike" / "fixture"
+            forged.mkdir(parents=True)
+            (forged / ".mncs").mkdir()
+            shutil.copy2(self.project / ".mncs" / "project.json", forged / ".mncs")
+            (forged / ".git").write_text(f"gitdir: {actual_git_directory}\n")
+            selected["path"] = forged
+            with self.assertRaisesRegex(
+                workspace.WorkspaceResolutionError,
+                "not one unique registered, available worktree",
+            ):
+                workspace.verify_registered_checkout(
+                    forged,
+                    repository="fixture",
+                    workspace_root=sandbox_workspace,
+                    expected_repository_root=sandbox_repository,
+                )
 
     def test_registered_checkout_identity_rejects_manifest_symlink(self):
         external = self.base / "manifest.json"

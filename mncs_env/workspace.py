@@ -164,6 +164,88 @@ def _worktrees(
     return entries
 
 
+def _registered_worktree_alias_matches(
+    checkout: Path,
+    repository_root: Path,
+    common_directory: Path,
+    git_directory: Path,
+    registered_path: str,
+) -> bool:
+    """Match a Git worktree through a verified mount-namespace path alias.
+
+    Control can expose the selected checkout under a scoped ``/workspace``
+    path while the linked-worktree registry retains the host checkout path.
+    In that case, lexical path equality is unavailable. Git's per-worktree
+    admin directory and reciprocal ``gitdir`` record still identify one
+    registered checkout; the path relative to its repository root must also
+    agree on both sides of the alias.
+    """
+    git_file = checkout / ".git"
+    if git_file.is_symlink() or not git_file.is_file():
+        return False
+    try:
+        git_file_lines = git_file.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+    if len(git_file_lines) != 1:
+        return False
+    prefix, separator, raw_git_directory = git_file_lines[0].partition(":")
+    raw_git_directory = raw_git_directory.strip()
+    if prefix != "gitdir" or not separator or not raw_git_directory:
+        return False
+
+    host_git_directory = Path(raw_git_directory)
+    if not host_git_directory.is_absolute():
+        return False
+    normalized_host_git_directory = Path(os.path.abspath(host_git_directory))
+    if normalized_host_git_directory != host_git_directory:
+        return False
+    if (
+        host_git_directory.parent.name != "worktrees"
+        or host_git_directory.parent.parent.name != ".git"
+    ):
+        return False
+    host_repository_root = host_git_directory.parents[2]
+    if host_repository_root.name != repository_root.name:
+        return False
+
+    worktrees_root = common_directory / "worktrees"
+    try:
+        relative_admin = git_directory.relative_to(worktrees_root)
+        absolute_registered_path = Path(os.path.abspath(registered_path))
+        checkout_relative = checkout.relative_to(repository_root)
+        registered_relative = absolute_registered_path.relative_to(host_repository_root)
+    except (OSError, ValueError):
+        return False
+    if (
+        len(relative_admin.parts) != 1
+        or relative_admin.name != host_git_directory.name
+        or checkout_relative != registered_relative
+        or str(absolute_registered_path) != registered_path
+    ):
+        return False
+
+    admin_directory = worktrees_root / relative_admin
+    admin_backlink = admin_directory / "gitdir"
+    if (
+        worktrees_root.is_symlink()
+        or admin_directory.is_symlink()
+        or admin_backlink.is_symlink()
+        or not admin_backlink.is_file()
+    ):
+        return False
+    try:
+        raw_backlink = admin_backlink.read_text(encoding="utf-8").strip()
+    except OSError:
+        return False
+    backlink = Path(raw_backlink)
+    return (
+        backlink.is_absolute()
+        and Path(os.path.abspath(backlink)) == backlink
+        and backlink == absolute_registered_path / ".git"
+    )
+
+
 def verify_registered_checkout(
     checkout: str | Path,
     *,
@@ -181,11 +263,19 @@ def verify_registered_checkout(
     and forged MNCS manifests remain rejected.
     """
 
-    def reject(message: str, code: str = "working-checkout-unavailable") -> None:
+    def reject(
+        message: str,
+        code: str = "working-checkout-unavailable",
+        **details: Any,
+    ) -> None:
         raise WorkspaceResolutionError(
             message,
-            diagnostics={"code": code, "path": str(checkout),
-                         **({"repository": repository} if repository else {})},
+            diagnostics={
+                "code": code,
+                "path": str(checkout),
+                **({"repository": repository} if repository else {}),
+                **details,
+            },
         )
 
     raw_checkout = Path(checkout).expanduser()
@@ -203,24 +293,44 @@ def verify_registered_checkout(
     common = _git(
         resolved_checkout, "rev-parse", "--path-format=absolute", "--git-common-dir"
     )
+    git_directory = _git(
+        resolved_checkout, "rev-parse", "--path-format=absolute", "--absolute-git-dir"
+    )
     head = _git(resolved_checkout, "rev-parse", "HEAD")
     branch = _git(resolved_checkout, "symbolic-ref", "--quiet", "--short", "HEAD")
-    if (top_level is None or top_level.returncode != 0
-            or common is None or common.returncode != 0
-            or head is None or head.returncode != 0
-            or branch is None or branch.returncode not in (0, 1)):
-        reject("Git could not establish the checkout, branch, and common-directory identities")
+    if (
+        top_level is None
+        or top_level.returncode != 0
+        or common is None
+        or common.returncode != 0
+        or git_directory is None
+        or git_directory.returncode != 0
+        or head is None
+        or head.returncode != 0
+        or branch is None
+        or branch.returncode not in (0, 1)
+    ):
+        reject(
+            "Git could not establish the checkout, branch, and common-directory identities"
+        )
     try:
         observed_top_level = Path(top_level.stdout.strip()).resolve(strict=True)
         raw_common = Path(os.path.abspath(common.stdout.strip()))
         common_directory = raw_common.resolve(strict=True)
+        raw_git_directory = Path(os.path.abspath(git_directory.stdout.strip()))
+        absolute_git_directory = raw_git_directory.resolve(strict=True)
     except OSError as error:
         reject(f"Git checkout identity could not be resolved: {error}")
     if observed_top_level != resolved_checkout:
         reject("Git top-level path does not match the selected checkout")
-    if raw_common != common_directory or common_directory.name != ".git" \
-            or not common_directory.is_dir():
+    if (
+        raw_common != common_directory
+        or common_directory.name != ".git"
+        or not common_directory.is_dir()
+    ):
         reject("Git common directory is not a canonical repository directory")
+    if raw_git_directory != absolute_git_directory:
+        reject("Git administrative directory traverses a symbolic link")
 
     repository_root = common_directory.parent
     try:
@@ -280,7 +390,8 @@ def verify_registered_checkout(
             reject("Git checkout path traverses a symbolic link")
 
     registered = []
-    for row in _worktrees(repository_root):
+    worktree_rows = _worktrees(repository_root)
+    for row in worktree_rows:
         raw_registered_path = row.get("path")
         if not raw_registered_path:
             continue
@@ -289,11 +400,37 @@ def verify_registered_checkout(
             resolved_registered_path = absolute_registered_path.resolve(strict=False)
         except OSError:
             continue
-        if (absolute_registered_path == resolved_registered_path
-                and resolved_registered_path == resolved_checkout):
+        direct_match = (
+            absolute_registered_path == resolved_registered_path
+            and resolved_registered_path == resolved_checkout
+        )
+        alias_match = (
+            resolved_registered_path == resolved_checkout
+            and _registered_worktree_alias_matches(
+                resolved_checkout,
+                repository_root,
+                common_directory,
+                absolute_git_directory,
+                raw_registered_path,
+            )
+        )
+        if direct_match or alias_match:
             registered.append(row)
     if len(registered) != 1 or "prunable" in registered[0]:
-        reject("Git checkout is not one unique registered, available worktree")
+        candidates = [
+            {
+                "path": row.get("path"),
+                "branch": row.get("branch"),
+                "head": row.get("head"),
+                "prunable": row.get("prunable"),
+            }
+            for row in registered
+        ]
+        reject(
+            "Git checkout is not one unique registered, available worktree",
+            registered_worktree_candidates=candidates,
+            matching_worktree_count=len(registered),
+        )
     registered_head = registered[0].get("head")
     registered_branch = registered[0].get("branch")
     if registered_branch and registered_branch.startswith("refs/heads/"):
