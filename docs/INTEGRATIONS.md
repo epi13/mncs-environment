@@ -57,7 +57,7 @@ an ambient config path nor interprets Forge configuration.
 | Automation | scheduled/triggered work capability and resulting events | automation scheduler semantics |
 | Memory | durable memory/context references required by a session | memory storage/retrieval semantics |
 | Store | durable object/state references and revisioned retrieval | generic persistence semantics |
-| Rights / Provenance | authority grants, restrictions, provenance identities and records | rights decisions or provenance policy |
+| Rights / Provenance | rights claims, license evidence, provenance identities and records | rights decisions or provenance policy |
 | Debug | structured diagnosis capabilities/results | diagnosis policy and debugging semantics |
 | Doctor | health/readiness capabilities/results | system-health policy |
 | Atlas | ecosystem/repository/service knowledge and discoverable topology | Atlas knowledge ownership or dashboard state |
@@ -131,6 +131,30 @@ session -> copied compiler metadata with no revision identity
 session -> private shadow memory
 session -> local reimplementation of rights decisions
 ```
+
+### Rights and provenance context
+
+The versioned binding contract is defined in
+[`rights-context-binding-1.schema.json`](rights-context-binding-1.schema.json).
+
+An Environment definition may bind one Rights manifest and one governance
+profile by workspace-relative references. The Rights provider validates and
+projects the selected records into a bounded
+`mncs.rights-provenance.agent-context/1` view at session admission. Environment
+stores that projection and the exact input digests; it does not duplicate
+license or provenance decision logic.
+
+The binding is the authority source. A manifest, license file, dependency
+metadata, or governance profile cannot name its own issuer or expand policy
+scope. Rights declarations and evidence remain separate from operational
+agent guidance. Unknown ownership, origin, license terms, or compatibility
+stay reviewable and do not block entry by themselves.
+
+On revalidation, unchanged digests reuse the current context identity. A
+changed manifest or profile creates a new identity and a replayable
+`rights.context.changed` event. The compact view contains source references,
+known term summaries, current unknowns, and actionable findings; the full
+manifest and lineage remain available through Rights-owned records.
 
 ## Atlas versus Environment
 

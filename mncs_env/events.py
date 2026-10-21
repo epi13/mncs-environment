@@ -38,6 +38,7 @@ TYPES = (
     "workspace.changed",
     "workspace.checkout-composed",
     "workspace.protection_raised",
+    "rights.context.changed",
     "capability.bound",
     "capability.changed",
     "capability.unbound",

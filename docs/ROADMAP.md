@@ -11,7 +11,10 @@ environment entry are implemented and proven
 (`python3 scripts/vertical_proof.py`; `python3 scripts/campaign_proofs.py`;
 69 tests). Sessions persist on the canonical Store backend. Human-facing
 projection, Memory/rights integration, and provider push events remain
-pressures in `pressures/registry.json`.
+pressures in `pressures/registry.json`. The first Rights context slice is
+implemented: Environment admission binds a Rights manifest and governance
+profile, projects compact evidence and guidance, and emits a change event
+when their digests change.
 
 ## Foundation
 

@@ -5048,8 +5048,40 @@ class SessionTests(unittest.TestCase):
     def test_relative_worktree_claim_matches_bound_absolute_provider_path(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            repository_root = root / "mncs-store"
+            repository_root.mkdir()
             checkout = root / "worktrees" / "campaign"
-            checkout.mkdir(parents=True)
+            checkout.parent.mkdir(parents=True)
+            subprocess.run(
+                ["git", "-C", str(repository_root), "init", "-b", "main"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "config", "user.name", "MNCS test"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "config", "user.email", "mncs-test@example.invalid"],
+                check=True, capture_output=True, text=True,
+            )
+            (repository_root / ".mncs").mkdir()
+            (repository_root / ".mncs" / "project.json").write_text(
+                json.dumps({"repository": "mncs-store"}) + "\n"
+            )
+            (repository_root / "seed.txt").write_text("registered worktree fixture\n")
+            subprocess.run(
+                ["git", "-C", str(repository_root), "add", ".mncs/project.json", "seed.txt"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "commit", "-m", "seed test worktree"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "worktree", "add", "-b",
+                 "campaign/store", str(checkout), "HEAD"],
+                check=True, capture_output=True, text=True,
+            )
             session = make_session(
                 root,
                 intent={"goal": "adopt a selected campaign checkout",

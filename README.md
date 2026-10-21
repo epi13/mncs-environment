@@ -188,6 +188,8 @@ state, not prose. The hardening campaign added:
 - ownership/acquisition authority with tri-state enforcement (`mncs_env/authority.py`);
 - verified local branch/worktree retirement gated by the session's exact live claim; general delete authority remains separate;
 - rights/provenance gate over `mncs-rights-provenance` (`mncs_env/rights.py`);
+- bounded first-use Rights & Provenance context from an explicit Environment
+  binding, with digest-based revalidation and `rights.context.changed` events;
 - provider-declared `invocation` addressing with toolchain env (`mncs_env/capabilities.py`);
 - generation-based Store-feed observer: own writes re-baseline, external
   advances become events (`Session.observe_store`);
@@ -310,8 +312,8 @@ fail-closed behavior, restart missed-event recovery, live
 language-service deltas, health, idle/resource bounds, brief/ack
 context, session reuse, and memory protection. Sessions persist on the
 canonical Store backend and a background reconciler maintains them with
-durable cursors. Remaining work is broader bindings, provider push
-events, and Memory/rights integration as owning repositories publish
-the needed contracts (see pressures).
+durable cursors. Remaining work is broader bindings, provider push events,
+Memory integration, and deeper compiler/Forge artifact propagation as owning
+repositories publish the needed contracts (see pressures).
 
 Licensed under Apache-2.0.

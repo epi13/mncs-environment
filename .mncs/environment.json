@@ -17,7 +17,8 @@
       "mncs-automation",
       "mncs-doc",
       "mncs-debug",
-      "mncs-doctor"
+      "mncs-doctor",
+      "mncs-rights-provenance"
     ]
   },
   "required_capabilities": [
@@ -178,6 +179,20 @@
     "constraints": [
       "preserve foreign branches and uncommitted work; acquire explicit claims before provider writes"
     ]
+  },
+  "rights_context": {
+    "schema_version": "mncs.environment.rights-context-binding/1",
+    "manifest": "mncs-rights-provenance/RIGHTS.json",
+    "governance_profile": "mncs-rights-provenance/governance/agent-governance.json",
+    "profile_id": "mncs-rights-provenance/native-open@0.1.0",
+    "authority": {
+      "identity": "mncs-environment",
+      "basis": "explicit-environment-owner-binding",
+      "source_ref": ".mncs/environment.json#/rights_context",
+      "scope": ["workspace"]
+    },
+    "external_metadata_authoritative": false,
+    "context_budget_bytes": 8192
   },
   "execution_roles": {
     "reference": {

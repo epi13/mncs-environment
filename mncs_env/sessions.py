@@ -1591,6 +1591,11 @@ def resolve_environment(
         workspace_repos=repo_names,
         records=rights_module.load_claim_records(definition, resolved_root),
     )
+    rights_context_binding = definition.get("rights_context")
+    rights_context_result = rights_module.load_agent_context(
+        rights_context_binding if isinstance(rights_context_binding, dict) else None,
+        resolved_root,
+    )
     authority_context = authority_module.build_context(
         subject=consumer_id,
         intent=intent,
@@ -1624,6 +1629,8 @@ def resolve_environment(
         "intent": intent["identity"],
         "claim_holders": claim_holders,
     }
+    if rights_context_result.get("context") is not None:
+        inputs["rights_context"] = rights_context_result.get("inputs", {})
     definition_id = environment_id(definition)
     environment = {
         "schema_version": ENVIRONMENT_SCHEMA,
@@ -1651,6 +1658,11 @@ def resolve_environment(
         "authority": authority_context,
         "claim_holders": claim_holders,
         "rights": rights,
+        **({
+            "rights_context": rights_context_result["context"],
+            "rights_context_binding": dict(rights_context_binding),
+            "rights_context_inputs": rights_context_result.get("inputs", {}),
+        } if rights_context_result.get("context") is not None and isinstance(rights_context_binding, dict) else {}),
         "event_sources": [
             {"kind": "session-log", "replay": True},
             {"kind": "adapter:git-poll", "replay": False,
@@ -1893,6 +1905,11 @@ class Session:
             "intent": environment.get("intent"),
             "authority": environment.get("authority"),
             "rights": environment.get("rights", {}),
+            **({
+                "rights_context": environment["rights_context"],
+                "rights_context_binding": environment.get("rights_context_binding"),
+                "rights_context_inputs": environment.get("rights_context_inputs", {}),
+            } if isinstance(environment.get("rights_context"), dict) else {}),
             "workspace": environment.get("workspace", {}),
             "selected_checkouts": environment.get("selected_checkouts", {}),
             "toolchain": environment.get("toolchain"),
@@ -4836,6 +4853,39 @@ class Session:
                     operation_digest=operation_digest,
                 )
         self.snapshot["bindings"] = new_bindings
+        rights_context_binding = self.snapshot.get("rights_context_binding")
+        if isinstance(rights_context_binding, dict):
+            refreshed_rights_context = rights_module.load_agent_context(
+                rights_context_binding,
+                workspace_root or self.snapshot.get("workspace", {}).get("root", "."),
+                previous_context=self.snapshot.get("rights_context"),
+                previous_inputs=self.snapshot.get("rights_context_inputs"),
+            )
+            next_context = refreshed_rights_context.get("context")
+            prior_context = self.snapshot.get("rights_context")
+            prior_identity = (
+                prior_context.get("identity") if isinstance(prior_context, dict) else None
+            )
+            next_identity = (
+                next_context.get("identity") if isinstance(next_context, dict) else None
+            )
+            self.snapshot["rights_context_inputs"] = refreshed_rights_context.get("inputs", {})
+            if isinstance(next_context, dict):
+                self.snapshot["rights_context"] = next_context
+            changed = prior_identity != next_identity
+            report["rights_context_changed"] = changed
+            if changed:
+                self._emit(
+                    "rights.context.changed",
+                    "mncs-rights-provenance",
+                    {
+                        "previous_identity": prior_identity,
+                        "current_identity": next_identity,
+                        "status": next_context.get("status") if isinstance(next_context, dict) else "unavailable",
+                    },
+                    request_id=request_id,
+                    operation_digest=operation_digest,
+                )
         selectors = self.snapshot.get("execution_roles", {})
         self.snapshot["execution_stack"] = composition.resolve(
             selectors, new_bindings, self.snapshot.get("toolchain"), self.snapshot.get("execution_stack"),
@@ -6065,6 +6115,8 @@ class Session:
             "readiness": readiness_module.summarize(self.snapshot),
             "service_operations": self.snapshot.get("service_operations", []),
             "doctor": self.doctor_summary(),
+            **({"rights_context": self.snapshot["rights_context"]}
+               if isinstance(self.snapshot.get("rights_context"), dict) else {}),
             "projects": [{"repository": repo.get("manifest_repository") or repo.get("name"),
                           "path": repo.get("path"), "branch": repo.get("branch"),
                           "dirty": repo.get("dirty")}
@@ -6258,6 +6310,10 @@ class Session:
             "intent": self.snapshot.get("intent"),
             "authority": self.effective_authority(),
             "rights": self.snapshot.get("rights", {}),
+            **({
+                "rights_context": self.snapshot["rights_context"],
+                "rights_context_inputs": self.snapshot.get("rights_context_inputs", {}),
+            } if isinstance(self.snapshot.get("rights_context"), dict) else {}),
             "workspace": self.snapshot.get("workspace", {}),
             "selected_checkouts": self.snapshot.get("selected_checkouts", {}),
             "repo_facts": self.snapshot.get("repo_facts", {}),
