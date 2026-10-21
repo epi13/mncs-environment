@@ -1,0 +1,39 @@
+{
+  "schema_version": "0.3.0",
+  "artifact": {
+    "id": "mncs-environment",
+    "class": "source-code",
+    "repository": "mncs-environment",
+    "paths": ["."]
+  },
+  "provenance": {
+    "origin_classification": "origin-uncertain",
+    "participants": [],
+    "process_evidence": [],
+    "notes": "Repository history and existing records remain the authoritative provenance evidence. This manifest does not establish complete authorship or contributor authority."
+  },
+  "rights": {
+    "distribution_license": "Apache-2.0",
+    "copyright_status": "unresolved",
+    "rights_basis": "unknown-needs-review",
+    "third_party_material": "unknown",
+    "sources": [
+      {
+        "kind": "file",
+        "reference": "LICENSE",
+        "license_status": "unknown",
+        "license": "Apache-2.0",
+        "confidence": "observed-declaration",
+        "notes": "The existing repository license declaration was observed; it does not prove that every contributor had authority to grant rights or that all included material is covered.",
+        "evidence": [{"kind": "external-record", "reference": "LICENSE"}]
+      }
+    ],
+    "notes": "Apache-2.0 is the existing repository declaration. This manifest neither replaces that license nor changes terms for existing contributions."
+  },
+  "review": {
+    "technical_validation": "not-run",
+    "provenance_validation": "incomplete",
+    "human_acceptance": "not-reviewed",
+    "notes": "Contributor authority, copyright ownership, and third-party inventory remain unresolved."
+  }
+}

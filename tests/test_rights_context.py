@@ -67,8 +67,9 @@ def _governance() -> dict:
 
 def _binding(scope: list[str] | None = None) -> dict:
     return {
-        "schema_version": "mncs.environment.rights-context-binding/1",
+        "schema_version": "mncs.environment.rights-context-binding/2",
         "manifest": "RIGHTS.json",
+        "manifest_scope": "workspace",
         "governance_profile": "governance.json",
         "profile_id": PROFILE_ID,
         "authority": {
@@ -88,6 +89,51 @@ def _write_sources(root: Path) -> None:
 
 
 class RightsContextTests(unittest.TestCase):
+    def test_project_environment_binds_its_own_rights_manifest(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        project_definition = json.loads(
+            (repo_root / ".mncs" / "project-environment.json").read_text()
+        )
+        binding = project_definition["rights_context"]
+        environment_binding = json.loads(
+            (repo_root / ".mncs" / "environment.json").read_text()
+        )["rights_context"]
+        self.assertEqual(environment_binding["manifest"], "RIGHTS.json")
+        self.assertEqual(environment_binding["manifest_scope"], "working-checkout")
+        self.assertEqual(environment_binding["authority"]["scope"], ["mncs-environment"])
+        self.assertEqual(binding["manifest"], environment_binding["manifest"])
+
+        with tempfile.TemporaryDirectory() as directory:
+            family = Path(directory)
+            project = family / "mncs-environment"
+            project.mkdir()
+            (project / "RIGHTS.json").write_bytes((repo_root / "RIGHTS.json").read_bytes())
+            governance = family / "mncs-rights-provenance" / "governance"
+            governance.mkdir(parents=True)
+            (governance / "agent-governance.json").write_text(
+                json.dumps(_governance()) + "\n"
+            )
+
+            resolved = rights.load_agent_context(
+                binding, family, working_checkout_root=project
+            )
+
+        context = resolved["context"]
+        self.assertEqual(resolved["inputs"]["status"], "available")
+        self.assertEqual(
+            resolved["inputs"]["manifest"]["reference"],
+            "RIGHTS.json",
+        )
+        self.assertEqual(resolved["inputs"]["manifest"]["source_root"], str(project))
+        self.assertEqual(context["rights"]["distribution_license"], "Apache-2.0")
+        self.assertEqual(context["rights"]["copyright_status"], "unresolved")
+        self.assertEqual(context["provenance"]["evidence_state"], "declared-unverified")
+        self.assertEqual(context["governance"]["status"], "authorized")
+        self.assertEqual(
+            context["governance"]["authority"]["scope"], ["mncs-environment"]
+        )
+        self.assertLess(len(json.dumps(context).encode("utf-8")), 8192)
+
     def test_environment_admission_projects_compact_authorized_context(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -125,6 +171,45 @@ class RightsContextTests(unittest.TestCase):
                 ["generated-from", "generated-from", "referenced", "transformed-by"],
             )
             self.assertLess(len(json.dumps(context)), 8192)
+
+    def test_working_checkout_manifest_is_read_from_selected_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            family = Path(directory)
+            checkout = family / "repo-a"
+            (checkout / ".git").mkdir(parents=True)
+            family_manifest = _manifest()
+            family_manifest["rights"]["distribution_license"] = "MIT"
+            (family / "RIGHTS.json").write_text(json.dumps(family_manifest))
+            (checkout / "RIGHTS.json").write_text(json.dumps(_manifest()))
+            (family / "governance.json").write_text(json.dumps(_governance()))
+            binding = _binding(["repo-a"])
+            binding["manifest_scope"] = "working-checkout"
+            binding["authority"]["identity"] = "repo-a"
+            state = family / "state"
+            store = open_store(state, "file", verify_on_open=False)
+            environment = sessions.resolve_environment(
+                definition={
+                    "name": "rights-selected-checkout",
+                    "workspace_scope": {"repositories": ["repo-a"]},
+                    "rights_context": binding,
+                },
+                workspace_root=family,
+                state_dir=state,
+                consumer_id="test-agent",
+                backend="file",
+                store=store,
+            )
+            session = sessions.Session.create(
+                state_dir=state, environment=environment, consumer_id="test-agent",
+                backend="file", store=store,
+            )
+            context = session.context()["rights_context"]
+
+        self.assertEqual(context["rights"]["distribution_license"], "Apache-2.0")
+        self.assertEqual(
+            session.snapshot["rights_context_inputs"]["manifest"]["source_root"],
+            str(checkout),
+        )
 
     def test_policy_file_change_emits_incremental_context_event(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -297,6 +382,22 @@ class RightsContextTests(unittest.TestCase):
                     "rights-context-binding-invalid",
                     {item["code"] for item in result["context"]["diagnostics"]},
                 )
+
+    def test_v1_binding_is_rejected_until_authoritative_definition_is_upgraded(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_sources(root)
+            binding = _binding()
+            binding["schema_version"] = "mncs.environment.rights-context-binding/1"
+            binding.pop("manifest_scope")
+
+            result = rights.load_agent_context(binding, root)
+
+        self.assertEqual(result["inputs"]["status"], "review")
+        self.assertIn(
+            "rights-context-binding-invalid",
+            {item["code"] for item in result["context"]["diagnostics"]},
+        )
 
 
 if __name__ == "__main__":

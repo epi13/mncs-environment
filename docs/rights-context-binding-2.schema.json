@@ -1,12 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "mncs.environment.rights-context-binding/1",
+  "$id": "mncs.environment.rights-context-binding/2",
   "title": "MNCS Environment rights-context binding",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version",
     "manifest",
+    "manifest_scope",
     "governance_profile",
     "profile_id",
     "authority",
@@ -14,8 +15,9 @@
     "context_budget_bytes"
   ],
   "properties": {
-    "schema_version": { "const": "mncs.environment.rights-context-binding/1" },
+    "schema_version": { "const": "mncs.environment.rights-context-binding/2" },
     "manifest": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "manifest_scope": { "enum": ["workspace", "working-checkout"] },
     "governance_profile": { "type": "string", "minLength": 1, "maxLength": 512 },
     "profile_id": { "type": "string", "minLength": 1, "maxLength": 160 },
     "authority": {

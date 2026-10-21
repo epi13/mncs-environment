@@ -1592,9 +1592,20 @@ def resolve_environment(
         records=rights_module.load_claim_records(definition, resolved_root),
     )
     rights_context_binding = definition.get("rights_context")
+    rights_working_checkout_root = None
+    if isinstance(rights_context_binding, dict) and rights_context_binding.get(
+        "manifest_scope"
+    ) == "working-checkout":
+        rights_authority = rights_context_binding.get("authority")
+        rights_repository = (
+            rights_authority.get("identity") if isinstance(rights_authority, dict) else None
+        )
+        if isinstance(rights_repository, str):
+            rights_working_checkout_root = selected_roots.get(rights_repository)
     rights_context_result = rights_module.load_agent_context(
         rights_context_binding if isinstance(rights_context_binding, dict) else None,
         resolved_root,
+        working_checkout_root=rights_working_checkout_root,
     )
     authority_context = authority_module.build_context(
         subject=consumer_id,
@@ -4875,9 +4886,21 @@ class Session:
         self.snapshot["bindings"] = new_bindings
         rights_context_binding = self.snapshot.get("rights_context_binding")
         if isinstance(rights_context_binding, dict):
+            rights_working_checkout_root = None
+            if rights_context_binding.get("manifest_scope") == "working-checkout":
+                rights_authority = rights_context_binding.get("authority")
+                rights_repository = (
+                    rights_authority.get("identity")
+                    if isinstance(rights_authority, dict) else None
+                )
+                selected = self.snapshot.get("selected_checkouts", {})
+                checkout = selected.get(rights_repository) if isinstance(selected, dict) else None
+                if isinstance(checkout, dict) and isinstance(checkout.get("path"), str):
+                    rights_working_checkout_root = checkout["path"]
             refreshed_rights_context = rights_module.load_agent_context(
                 rights_context_binding,
                 workspace_root or self.snapshot.get("workspace", {}).get("root", "."),
+                working_checkout_root=rights_working_checkout_root,
                 previous_context=self.snapshot.get("rights_context"),
                 previous_inputs=self.snapshot.get("rights_context_inputs"),
             )

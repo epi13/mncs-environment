@@ -24,7 +24,7 @@ class RightsBlocked(Exception):
 
 
 RIGHTS_CONTEXT_SCHEMA = "mncs.rights-provenance.agent-context/1"
-RIGHTS_CONTEXT_BINDING_SCHEMA = "mncs.environment.rights-context-binding/1"
+RIGHTS_CONTEXT_BINDING_SCHEMA = "mncs.environment.rights-context-binding/2"
 MAX_RIGHTS_CONTEXT_SOURCE_BYTES = 256 * 1024
 MAX_RIGHTS_CONTEXT_BYTES = 8192
 
@@ -126,13 +126,18 @@ def _minimal_context(
 def _normalize_context_binding(binding: Any) -> tuple[dict[str, Any], list[dict[str, str]]]:
     if not isinstance(binding, dict):
         binding = {}
-    allowed_fields = {
+    common_fields = {
         "schema_version", "manifest", "governance_profile", "profile_id",
         "authority", "external_metadata_authoritative", "context_budget_bytes",
     }
     errors: list[str] = []
-    if binding.get("schema_version") != RIGHTS_CONTEXT_BINDING_SCHEMA:
+    schema_version = binding.get("schema_version")
+    allowed_fields = common_fields | {"manifest_scope"}
+    manifest_scope = binding.get("manifest_scope")
+    if schema_version != RIGHTS_CONTEXT_BINDING_SCHEMA:
         errors.append("rights-context binding schema version is missing or unsupported")
+    if manifest_scope not in {"workspace", "working-checkout"}:
+        errors.append("rights-context manifest_scope must be workspace or working-checkout")
     if set(binding) != allowed_fields:
         errors.append("rights-context binding fields do not match the supported contract")
     manifest_ref = _bounded_text(binding.get("manifest"), 512)
@@ -172,8 +177,9 @@ def _normalize_context_binding(binding: Any) -> tuple[dict[str, Any], list[dict[
     if external_metadata_authoritative is not False:
         errors.append("external metadata cannot be an Environment authority source")
     normalized = {
-        "schema_version": binding.get("schema_version"),
+        "schema_version": schema_version,
         "manifest": manifest_ref,
+        "manifest_scope": manifest_scope,
         "governance_profile": governance_ref,
         "profile_id": profile_id,
         "authority": ({
@@ -200,6 +206,7 @@ def load_agent_context(
     binding: dict[str, Any] | None,
     workspace_root: str | Path,
     *,
+    working_checkout_root: str | Path | None = None,
     previous_context: dict[str, Any] | None = None,
     previous_inputs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -214,7 +221,7 @@ def load_agent_context(
     inputs: dict[str, Any] = {
         "status": "review",
         "provider_contract": RIGHTS_CONTEXT_SCHEMA,
-        "binding_contract": RIGHTS_CONTEXT_BINDING_SCHEMA,
+        "binding_contract": normalized.get("schema_version"),
         "binding": normalized,
     }
     diagnostics: list[dict[str, str]] = []
@@ -225,6 +232,7 @@ def load_agent_context(
     manifest_raw: bytes | None = None
     governance_raw: bytes | None = None
     root: Path | None = None
+    manifest_root: Path | None = None
     build_agent_context = None
     resolver_identity = None
     provider_error: ImportError | None = None
@@ -239,8 +247,22 @@ def load_agent_context(
         inputs["license_resolver"] = {"status": "unavailable"}
     try:
         root = Path(workspace_root).expanduser().resolve(strict=True)
-        manifest_raw, manifest_digest, _ = _read_bound_bytes(root, normalized.get("manifest"))
-        inputs["manifest"] = {"reference": normalized.get("manifest"), "sha256": manifest_digest}
+        if normalized.get("manifest_scope") == "working-checkout":
+            if working_checkout_root is None:
+                raise RightsContextSourceError(
+                    "bound working checkout source is unavailable for this manifest"
+                )
+            manifest_root = Path(working_checkout_root).expanduser().resolve(strict=True)
+        else:
+            manifest_root = root
+        manifest_raw, manifest_digest, _ = _read_bound_bytes(
+            manifest_root, normalized.get("manifest")
+        )
+        inputs["manifest"] = {
+            "reference": normalized.get("manifest"),
+            "source_root": str(manifest_root),
+            "sha256": manifest_digest,
+        }
     except (OSError, RightsContextSourceError) as error:
         diagnostics.append({
             "code": "rights-manifest-unavailable",
@@ -249,7 +271,11 @@ def load_agent_context(
             "evidence_ref": str(normalized.get("manifest", "RIGHTS.json"))[:256],
             "remedy": "restore-or-repair-bound-manifest",
         })
-        inputs["manifest"] = {"reference": normalized.get("manifest"), "status": "unavailable"}
+        inputs["manifest"] = {
+            "reference": normalized.get("manifest"),
+            **({"source_root": str(manifest_root)} if manifest_root is not None else {}),
+            "status": "unavailable",
+        }
     try:
         root = root or Path(workspace_root).expanduser().resolve(strict=True)
         governance_raw, governance_digest, _ = _read_bound_bytes(root, normalized.get("governance_profile"))
@@ -277,6 +303,8 @@ def load_agent_context(
         and (previous_inputs or {}).get("license_resolver", {}).get("identity") == resolver_identity
     ):
         reused_inputs = dict(previous_inputs or {})
+        reused_inputs["manifest"] = inputs["manifest"]
+        reused_inputs["governance"] = inputs["governance"]
         reused_inputs["resolution_reused"] = True
         return {"context": previous_context, "inputs": reused_inputs}
 

@@ -181,15 +181,16 @@
     ]
   },
   "rights_context": {
-    "schema_version": "mncs.environment.rights-context-binding/1",
-    "manifest": "mncs-rights-provenance/RIGHTS.json",
+    "schema_version": "mncs.environment.rights-context-binding/2",
+    "manifest": "RIGHTS.json",
+    "manifest_scope": "working-checkout",
     "governance_profile": "mncs-rights-provenance/governance/agent-governance.json",
     "profile_id": "mncs-rights-provenance/native-open@0.1.0",
     "authority": {
       "identity": "mncs-environment",
       "basis": "explicit-environment-owner-binding",
       "source_ref": ".mncs/environment.json#/rights_context",
-      "scope": ["workspace"]
+      "scope": ["mncs-environment"]
     },
     "external_metadata_authoritative": false,
     "context_budget_bytes": 8192

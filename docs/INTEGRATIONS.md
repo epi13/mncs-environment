@@ -135,14 +135,26 @@ session -> local reimplementation of rights decisions
 ### Rights and provenance context
 
 The versioned binding contract is defined in
-[`rights-context-binding-1.schema.json`](rights-context-binding-1.schema.json).
+[`rights-context-binding-2.schema.json`](rights-context-binding-2.schema.json).
 
 An Environment definition may bind one Rights manifest and one governance
-profile by workspace-relative references. The Rights provider validates and
+profile. V2 declares whether the manifest is workspace-relative or relative to
+the authoritative selected working checkout; the governance profile remains
+workspace-relative. The Rights provider validates and
 projects the selected records into a bounded
 `mncs.rights-provenance.agent-context/1` view at session admission. Environment
 stores that projection and the exact input digests; it does not duplicate
 license or provenance decision logic.
+
+Project-scoped Control entry may select `.mncs/project-environment.json`
+instead of the broader `.mncs/environment.json`; the selected definition must
+carry its own Rights binding. The `mncs-environment` project binds its own
+`RIGHTS.json` from the selected checkout and the shared agent-governance profile. This
+keeps a feature worktree from accidentally reading a different checkout's
+manifest. The manifest records
+Apache-2.0 as the existing license declaration while leaving copyright,
+contributor authority, provenance completeness, and third-party inventory
+unresolved. The Rights manifest is evidence, not legal approval.
 
 The binding is the authority source. A manifest, license file, dependency
 metadata, or governance profile cannot name its own issuer or expand policy
@@ -151,8 +163,8 @@ agent guidance. Unknown ownership, origin, license terms, or compatibility
 stay reviewable and do not block entry by themselves.
 
 On revalidation, Environment reuses the current context identity only when the
-binding, manifest digest, governance-profile digest, and Rights license-resolver
-identity are unchanged. A change to any of these inputs creates a new identity
+binding, manifest source and digest, governance-profile digest, and Rights
+license-resolver identity are unchanged. A change to any of these inputs creates a new identity
 and a replayable `rights.context.changed` event. The compact view contains
 source references, known term summaries, current unknowns, and actionable
 findings; the full manifest and lineage remain available through Rights-owned
