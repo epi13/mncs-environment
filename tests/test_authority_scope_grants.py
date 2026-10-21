@@ -845,6 +845,92 @@ def test_exact_session_owned_claim_anchors_scope_when_selection_projection_is_mi
         session.close()
 
 
+def test_out_of_workspace_expired_claim_does_not_steer_nested_scope_selection(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        nested_checkout, nested_facts = _nested_target_checkout(
+            session, workspace, "continuation-anchor", "campaign/continuation-anchor",
+        )
+        _grant(session, request_id="req_workspace_anchor_filter_grant")
+
+        repository_root = workspace / "mncs-control-mcp"
+        main_claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="retain a historical main checkout identity",
+            scope={
+                "kind": "worktree",
+                "checkout": str(repository_root),
+                "branch": "main",
+            },
+            ttl_hours=1,
+            request_id="req_workspace_anchor_filter_main_claim",
+        )
+        nested_claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="retain the campaign's nested registered checkout identity",
+            scope={
+                "kind": "worktree",
+                "checkout": str(nested_checkout),
+                "branch": "campaign/continuation-anchor",
+            },
+            ttl_hours=1,
+            request_id="req_workspace_anchor_filter_nested_claim",
+        )
+
+        # Model a resumed campaign whose authorized root is now the nested
+        # workspace. The old main checkout remains registered, but it must not
+        # become the identity anchor merely because its path sorts first.
+        authorized_root = nested_checkout.parent
+        session.snapshot["workspace"]["root"] = str(authorized_root)
+        session.snapshot["selected_checkouts"] = {}
+        session._save()
+
+        class ExpiredClaimClock(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime.now(tz) + timedelta(hours=2)
+
+        monkeypatch.setattr(claims, "datetime", ExpiredClaimClock)
+        active = claims.active_claims(session.store.read_claims())
+        assert main_claim["claim_id"] not in active
+        assert nested_claim["claim_id"] not in active
+
+        target_checkout = authorized_root / "mncs-control-mcp-target"
+        _git(
+            repository_root, "worktree", "add", "-b",
+            "campaign/continuation-target", str(target_checkout), "HEAD",
+        )
+        target_claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="claim a new nested checkout after continuation",
+            scope={
+                "kind": "worktree",
+                "checkout": str(target_checkout),
+                "branch": "campaign/continuation-target",
+            },
+            request_id="req_workspace_anchor_filter_target_claim",
+        )
+
+        assert target_claim["scope"]["checkout"] == str(target_checkout)
+        assert target_claim["scope"]["branch"] == "campaign/continuation-target"
+        observed = workspace_module.verify_registered_checkout(
+            target_claim["scope"]["checkout"],
+            repository="mncs-control-mcp",
+            workspace_root=repository_root.parent,
+            expected_repository_root=repository_root,
+            expected_branch="campaign/continuation-target",
+        )
+        assert observed["git_common_directory_identity"] == nested_facts[
+            "git_common_directory_identity"
+        ]
+    finally:
+        session.close()
+
+
 def test_session_owned_claims_from_different_git_common_directories_remain_ambiguous(
     tmp_path: Path,
 ) -> None:

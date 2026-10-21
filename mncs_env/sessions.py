@@ -3922,6 +3922,17 @@ class Session:
             if isinstance(selected_checkouts, dict) else None
         )
         explicit_scope = scope is not None
+        if workspace_root is None:
+            workspace_root = self.snapshot.get("workspace", {}).get("root")
+        authorized_workspace = None
+        if isinstance(workspace_root, str) and workspace_root:
+            try:
+                authorized_workspace = Path(workspace_root).resolve(strict=True)
+            except OSError:
+                # The canonical scope verifier below reports an unavailable
+                # workspace. Do not let historical claims select an anchor
+                # when the current boundary cannot be established.
+                authorized_workspace = None
         if selected is None and explicit_scope:
             # A campaign can retain its exact checkout binding after the
             # time-limited mutation claim expires. That record remains
@@ -3966,6 +3977,17 @@ class Session:
                     # not usable provenance. Other exact current claims may
                     # still provide a unique repository identity.
                     continue
+                if authorized_workspace is None:
+                    continue
+                try:
+                    Path(anchor_facts["path"]).resolve(strict=True).relative_to(
+                        authorized_workspace
+                    )
+                except (OSError, ValueError):
+                    # A retained claim outside this session's current
+                    # workspace is historical identity only. It cannot steer
+                    # selection of the checkout authorized for this claim.
+                    continue
                 verified_anchors.append(anchor_facts)
 
             common_directories = {
@@ -4004,8 +4026,6 @@ class Session:
                     "branch": anchor_facts["branch"],
                     "head": anchor_facts["head"],
                 }
-        if workspace_root is None:
-            workspace_root = self.snapshot.get("workspace", {}).get("root")
         claim_workspace_root = workspace_root
         if selected is not None and scope is None:
             # The ordinary claim follows the checkout already selected for
