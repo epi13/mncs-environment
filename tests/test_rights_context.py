@@ -122,7 +122,7 @@ class RightsContextTests(unittest.TestCase):
             )
             self.assertEqual(
                 [item["relation"] for item in context["provenance"]["projection"]["relationships"]],
-                ["generated-from", "generated-from", "transformed-by"],
+                ["generated-from", "generated-from", "referenced", "transformed-by"],
             )
             self.assertLess(len(json.dumps(context)), 8192)
 
@@ -158,6 +158,43 @@ class RightsContextTests(unittest.TestCase):
             changed = session.revalidate(workspace_root=root)
             self.assertTrue(changed["rights_context_changed"])
             self.assertNotEqual(session.context()["rights_context"]["identity"], original)
+            changes = [event for event in session._log() if event["type"] == "rights.context.changed"]
+            self.assertEqual(len(changes), 1)
+            self.assertEqual(changes[0]["payload"]["previous_identity"], original)
+
+    def test_license_resolver_change_invalidates_cached_context(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_sources(root)
+            state = root / "state"
+            store = open_store(state, "file", verify_on_open=False)
+            environment = sessions.resolve_environment(
+                definition={"name": "rights-test", "rights_context": _binding()},
+                workspace_root=root, state_dir=state, consumer_id="test-agent",
+                backend="file", store=store,
+            )
+            session = sessions.Session.create(
+                state_dir=state, environment=environment, consumer_id="test-agent",
+                backend="file", store=store,
+            )
+            original = session.context()["rights_context"]["identity"]
+            original_resolver = session.snapshot["rights_context_inputs"]["license_resolver"]["identity"]
+
+            with patch(
+                "mncs_rights_provenance.license_resolution._CANDIDATE_REGISTRY_DIGEST",
+                "sha256:" + "a" * 64,
+            ):
+                changed = session.revalidate(workspace_root=root)
+                context = session.context()["rights_context"]
+
+            self.assertTrue(changed["rights_context_changed"])
+            self.assertNotEqual(
+                session.snapshot["rights_context_inputs"]["license_resolver"]["identity"],
+                original_resolver,
+            )
+            self.assertNotEqual(context["identity"], original)
+            self.assertEqual(context["sources"]["license_resolver"]["sha256"],
+                             session.snapshot["rights_context_inputs"]["license_resolver"]["identity"])
             changes = [event for event in session._log() if event["type"] == "rights.context.changed"]
             self.assertEqual(len(changes), 1)
             self.assertEqual(changes[0]["payload"]["previous_identity"], original)

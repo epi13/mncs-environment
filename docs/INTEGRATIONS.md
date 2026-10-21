@@ -150,11 +150,13 @@ scope. Rights declarations and evidence remain separate from operational
 agent guidance. Unknown ownership, origin, license terms, or compatibility
 stay reviewable and do not block entry by themselves.
 
-On revalidation, unchanged digests reuse the current context identity. A
-changed manifest or profile creates a new identity and a replayable
-`rights.context.changed` event. The compact view contains source references,
-known term summaries, current unknowns, and actionable findings; the full
-manifest and lineage remain available through Rights-owned records.
+On revalidation, Environment reuses the current context identity only when the
+binding, manifest digest, governance-profile digest, and Rights license-resolver
+identity are unchanged. A change to any of these inputs creates a new identity
+and a replayable `rights.context.changed` event. The compact view contains
+source references, known term summaries, current unknowns, and actionable
+findings; the full manifest and lineage remain available through Rights-owned
+records.
 
 ## Atlas versus Environment
 

@@ -102,6 +102,7 @@ def _minimal_context(
         "sources": {
             "rights_manifest": {"reference": binding.get("manifest"), "sha256": None},
             "governance_profile": {"reference": binding.get("governance_profile"), "sha256": None},
+            "license_resolver": {"identity": None, "status": "unavailable"},
         },
         "rights": {
             "distribution_license": None,
@@ -224,6 +225,18 @@ def load_agent_context(
     manifest_raw: bytes | None = None
     governance_raw: bytes | None = None
     root: Path | None = None
+    build_agent_context = None
+    resolver_identity = None
+    provider_error: ImportError | None = None
+    try:
+        from mncs_rights_provenance.agent_context import build_agent_context
+        from mncs_rights_provenance.license_resolution import license_resolver_identity
+
+        resolver_identity = license_resolver_identity()
+        inputs["license_resolver"] = {"identity": resolver_identity}
+    except ImportError as error:
+        provider_error = error
+        inputs["license_resolver"] = {"status": "unavailable"}
     try:
         root = Path(workspace_root).expanduser().resolve(strict=True)
         manifest_raw, manifest_digest, _ = _read_bound_bytes(root, normalized.get("manifest"))
@@ -258,8 +271,10 @@ def load_agent_context(
         and (previous_inputs or {}).get("binding") == normalized
         and manifest_digest is not None
         and governance_digest is not None
+        and resolver_identity is not None
         and previous_manifest.get("sha256") == manifest_digest
         and previous_governance.get("sha256") == governance_digest
+        and (previous_inputs or {}).get("license_resolver", {}).get("identity") == resolver_identity
     ):
         reused_inputs = dict(previous_inputs or {})
         reused_inputs["resolution_reused"] = True
@@ -284,9 +299,8 @@ def load_agent_context(
         else:
             governance = value
 
-    try:
-        from mncs_rights_provenance.agent_context import build_agent_context
-    except ImportError as error:
+    if provider_error is not None or build_agent_context is None:
+        error = provider_error or ImportError("MNCS Rights & Provenance context provider is unavailable")
         diagnostics.append({
             "code": "rights-provider-unavailable",
             "severity": "review",
