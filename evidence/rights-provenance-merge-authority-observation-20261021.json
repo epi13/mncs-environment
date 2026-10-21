@@ -1,0 +1,54 @@
+{
+  "schema_version": "mncs.rights-provenance.merge-authority-observation/1",
+  "observed_at": "2026-10-21T11:29:39Z",
+  "campaign_identity": "cmp_f26d4bfbff7b94e6",
+  "repository": "mncs-environment",
+  "authority_query": {
+    "session_id": "ses_618710caf00d9e4a",
+    "action": "merge",
+    "target": "mncs-environment",
+    "verdict": "deny",
+    "reason": "mncs-environment overlaps scope claimed by another session (ses_fb57424feb72607c): same checkout with overlapping paths"
+  },
+  "live_environment_claims": [
+    {
+      "session_id": "ses_f13d176c86a23e69",
+      "session_lifecycle": "active",
+      "claim_id": "claim:mncs-environment:worktree:5053f3907a1c",
+      "branch": "main",
+      "checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/merge-main-authority-20261020",
+      "claim_status": "held",
+      "claim_expires_at": "2026-10-22T07:20:46Z"
+    },
+    {
+      "session_id": "ses_fb57424feb72607c",
+      "session_lifecycle": "active",
+      "claim_id": "claim:mncs-environment:worktree:f2655c1e1c4e",
+      "branch": "campaign/scoped-merge-publish-authority-20261020",
+      "checkout": "/home/epi13/Documents/Projects/mncs-environment",
+      "claim_status": "held",
+      "claim_expires_at": "2026-10-22T09:00:09Z",
+      "claim_reason": "Refresh the Environment campaign checkout to the merged continuity fix"
+    }
+  ],
+  "our_work": {
+    "session_id": "ses_618710caf00d9e4a",
+    "claim_id": "claim:mncs-environment:worktree:3174feea3a68",
+    "branch": "campaign/luna-max-rights-cache-invalidation-20261021",
+    "head": "5f59cb66d60f04af867080db071ee19c96e23c04",
+    "origin_head": "5f59cb66d60f04af867080db071ee19c96e23c04",
+    "origin_main_head": "28132dd3a1ffb7014163b27a828e09d6f7a42412",
+    "main_is_ancestor": true,
+    "worktree_clean": true
+  },
+  "coordination_result": {
+    "authority_denial_obeyed": true,
+    "shared_main_or_root_checkout_modified": false,
+    "other_session_work_modified": false,
+    "main_integration": "deferred while the Environment authority evaluator reports an overlapping live claim"
+  },
+  "evidence_limits": [
+    "Claim leases are time-bounded and may change after this observation.",
+    "An active Environment session lifecycle does not independently prove a running process or current unrecorded activity."
+  ]
+}
