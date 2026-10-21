@@ -113,6 +113,13 @@ class RightsContextTests(unittest.TestCase):
             self.assertEqual(context["rights"]["compatibility"]["status"], "unknown")
             self.assertEqual(context["provenance"]["evidence_state"], "declared-unverified")
             self.assertEqual(context["governance"]["status"], "authorized")
+            self.assertIn(
+                "rights-basis-unknown",
+                {item["code"] for item in context["diagnostics"]},
+            )
+            self.assertEqual(
+                session.inspect()["rights_context"]["identity"], context["identity"]
+            )
             self.assertEqual(
                 [item["relation"] for item in context["provenance"]["projection"]["relationships"]],
                 ["generated-from", "generated-from", "transformed-by"],
