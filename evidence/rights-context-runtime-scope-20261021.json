@@ -1,0 +1,46 @@
+{
+  "schema_version": "mncs.rights-provenance.runtime-scope-check/1",
+  "recorded_at": "2026-10-21T11:17:35Z",
+  "campaign_id": "cmp_f26d4bfbff7b94e6",
+  "live_context_session": "ses_916cf2228c86e996",
+  "control": {
+    "server": "mncs-control-mcp",
+    "version": "0.4.10",
+    "runtime_revision": "9b505c6772d34ffe6fb08d17c97847566547b44c",
+    "source_revision": "9b505c6772d34ffe6fb08d17c97847566547b44c",
+    "restart_required": false,
+    "environment_path_rule": "workspace_root / repositories.environment (default mncs-environment)",
+    "resolved_environment_path": "/home/epi13/Documents/Projects/mncs-environment"
+  },
+  "provider_checkout": {
+    "branch": "campaign/scoped-merge-publish-authority-20261020",
+    "head": "28132dd3a1ffb7014163b27a828e09d6f7a42412",
+    "same_as_origin_main": true,
+    "rights_context_binding_present": false,
+    "binding_source": ".mncs/project-environment.json#/rights_context"
+  },
+  "feature_checkout": {
+    "branch": "campaign/luna-max-rights-cache-invalidation-20261021",
+    "head": "a03403008974372bdb585e5ea48c2b85ca82da31",
+    "rights_context_binding_present": true,
+    "binding_schema": "mncs.environment.rights-context-binding/2",
+    "binding_source": ".mncs/project-environment.json#/rights_context"
+  },
+  "observed_result": {
+    "canonical_context_rights_context_present": true,
+    "canonical_context_identity": "sha256:d4a022541cbab675f686633a2ee44525ca12ecd634126607016b41172d7b8693",
+    "live_mcp_context_rights_context_present": false,
+    "live_mcp_inspect_rights_context_present": false,
+    "explanation": "Control's configured Environment provider loads the root checkout. The Rights context binding exists on the pushed feature checkout, not the currently configured provider tree. The Control service source is current; integration of the binding into Environment main remains pending."
+  },
+  "coordination": {
+    "active_owner_session": "ses_f13d176c86a23e69",
+    "active_main_claim": "claim:mncs-environment:worktree:5053f3907a1c",
+    "active_feature_claim": "claim:mncs-environment:worktree:a76c547054b5",
+    "integration_deferred": true
+  },
+  "limitations": [
+    "This records the configured provider path and observed checkout metadata; it does not establish legal compliance.",
+    "Live MCP admission must be rechecked after the Environment branch is integrated into main."
+  ]
+}
