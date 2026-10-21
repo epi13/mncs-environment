@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -210,6 +211,59 @@ class RightsContextTests(unittest.TestCase):
             session.snapshot["rights_context_inputs"]["manifest"]["source_root"],
             str(checkout),
         )
+
+    def test_working_checkout_manifest_change_invalidates_session_context(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            family = Path(directory)
+            checkout = family / "repo-a"
+            checkout.mkdir()
+            subprocess.run(["git", "init", "-q", str(checkout)], check=True)
+            subprocess.run(["git", "-C", str(checkout), "config", "user.email",
+                            "rights-context-test@example.invalid"], check=True)
+            subprocess.run(["git", "-C", str(checkout), "config", "user.name",
+                            "Rights Context Test"], check=True)
+            (checkout / "RIGHTS.json").write_text(json.dumps(_manifest()) + "\n")
+            subprocess.run(["git", "-C", str(checkout), "add", "RIGHTS.json"], check=True)
+            subprocess.run(["git", "-C", str(checkout), "commit", "-q", "-m",
+                            "fixture rights manifest"], check=True)
+            (family / "governance.json").write_text(json.dumps(_governance()) + "\n")
+            binding = _binding(["repo-a"])
+            binding["manifest_scope"] = "working-checkout"
+            binding["authority"]["identity"] = "repo-a"
+            state = family / "state"
+            store = open_store(state, "file", verify_on_open=False)
+            environment = sessions.resolve_environment(
+                definition={
+                    "name": "rights-selected-checkout-revalidation",
+                    "workspace_scope": {"repositories": ["repo-a"]},
+                    "rights_context": binding,
+                },
+                workspace_root=family,
+                state_dir=state,
+                consumer_id="test-agent",
+                backend="file",
+                store=store,
+            )
+            session = sessions.Session.create(
+                state_dir=state, environment=environment, consumer_id="test-agent",
+                backend="file", store=store,
+            )
+            original = session.context()["rights_context"]["identity"]
+            changed_manifest = _manifest()
+            changed_manifest["rights"]["distribution_license"] = "MIT"
+            (checkout / "RIGHTS.json").write_text(json.dumps(changed_manifest) + "\n")
+
+            report = session.revalidate(workspace_root=family)
+            context = session.context()["rights_context"]
+            changes = [
+                event for event in session._log()
+                if event["type"] == "rights.context.changed"
+            ]
+
+        self.assertTrue(report["rights_context_changed"])
+        self.assertEqual(context["rights"]["distribution_license"], "MIT")
+        self.assertNotEqual(context["identity"], original)
+        self.assertEqual(len(changes), 1)
 
     def test_policy_file_change_emits_incremental_context_event(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
