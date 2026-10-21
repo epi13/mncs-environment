@@ -1,0 +1,88 @@
+{
+  "schema_version": "mncs.rights-provenance.environment-admission-evidence/1",
+  "observed_date": "2026-10-21",
+  "scope": "bounded-project-admission",
+  "source_revisions": {
+    "mncs-environment": "728cdbd3ca4abb177b77a2c9d344c512749f1e7e",
+    "mncs-control-mcp": "9b505c6772d34ffe6fb08d17c97847566547b44c",
+    "mncs-rights-provenance": "750a9b1acdf811ed13458ce2ea8e1e19bae7ca60"
+  },
+  "entry": {
+    "interface": "mncs_env.cli enter",
+    "definition_ref": ".mncs/project-environment.json",
+    "temporary_store": true,
+    "exit_code": 0
+  },
+  "rights_context": {
+    "identity": "sha256:d4a022541cbab675f686633a2ee44525ca12ecd634126607016b41172d7b8693",
+    "status": "review",
+    "context_bytes": 5945,
+    "binding": {
+      "schema_version": "mncs.environment.rights-context-binding/2",
+      "manifest_ref": "RIGHTS.json",
+      "manifest_scope": "working-checkout",
+      "authority": "mncs-environment",
+      "authority_scope": ["mncs-environment"],
+      "external_metadata_authoritative": false
+    },
+    "rights": {
+      "distribution_license": "Apache-2.0",
+      "declaration_state": "declared",
+      "copyright_status": "unresolved",
+      "rights_basis": "unknown-needs-review",
+      "third_party_material": "unknown",
+      "compatibility": "unknown"
+    },
+    "provenance": {
+      "origin_classification": "origin-uncertain",
+      "evidence_state": "declared-unverified"
+    },
+    "governance": {
+      "profile_id": "mncs-rights-provenance/native-open@0.1.0",
+      "status": "authorized",
+      "rules": {
+        "external_material": "verify",
+        "incompatible_rights": "resolve-before-inclusion",
+        "unknown_rights": "investigate",
+        "lineage": "preserve",
+        "transformations": "record",
+        "external_inputs": "identify",
+        "unverifiable_claims": "distinguish",
+        "copying_external_implementations": "authorization-required",
+        "independent_implementation": "permitted-when-lawful",
+        "rights_conflict": "explain-and-escalate",
+        "provenance_loss": "diagnose-and-recover"
+      }
+    },
+    "sources": {
+      "rights_manifest": {
+        "reference": "RIGHTS.json",
+        "sha256": "sha256:e1b777984b6d9ea65c018f27c79a4c20e73bbaf3e511cde783264d6ce1bc49bc"
+      },
+      "governance_profile": {
+        "reference": "mncs-rights-provenance/governance/agent-governance.json",
+        "sha256": "sha256:bf7a1444d17f31e74edc204fa11c9a17917697cb93633ab92a1e68059d6e1666"
+      },
+      "license_resolver": {
+        "reference": "mncs_rights_provenance.license_resolution/1",
+        "identity": "sha256:631113dee6aac437a087538993b14defcb34c46bafadb569c6b02d2b2cd7cb29"
+      }
+    },
+    "findings": [
+      {"code": "copyright-status-unresolved", "remedy": "review-copyright-basis"},
+      {"code": "rights-basis-unknown", "remedy": "record-rights-evidence"},
+      {"code": "third-party-material-unknown", "remedy": "identify-external-material"},
+      {"code": "provenance-origin-uncertain", "remedy": "add-evidence-or-preserve-uncertainty"},
+      {"code": "source-license-unknown", "remedy": "investigate-external-rights"},
+      {"code": "lineage-reference-missing", "remedy": "diagnose-and-recover-lineage"}
+    ]
+  },
+  "assessment": {
+    "legal_conclusion": "NOT_MADE",
+    "release_readiness": "not-established",
+    "limitations": [
+      "Declared license evidence does not establish contributor authority or complete title.",
+      "This proof covers context admission; it does not prove legal compliance or artifact release readiness."
+    ]
+  }
+}
