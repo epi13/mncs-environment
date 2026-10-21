@@ -1,0 +1,47 @@
+{
+  "schema_version": "mncs.rights-provenance.coordination-observation/1",
+  "observed_at": "2026-10-21T11:22:17Z",
+  "campaign_identity": "cmp_f26d4bfbff7b94e6",
+  "observation_method": "MNCS Environment canonical Store-backed session, claim, campaign, and Git worktree reads",
+  "repository": "mncs-environment",
+  "observations": {
+    "our_session": {
+      "session_id": "ses_618710caf00d9e4a",
+      "claim_id": "claim:mncs-environment:worktree:3174feea3a68",
+      "branch": "campaign/luna-max-rights-cache-invalidation-20261021",
+      "checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/luna-max-rights-cache-invalidation-20261021",
+      "claim_status": "held",
+      "claim_exclusive": false,
+      "worktree_clean": true,
+      "head": "aa01461e480bd3168792e11399006e9fbb598517",
+      "remote_head": "aa01461e480bd3168792e11399006e9fbb598517",
+      "commits_ahead_of_origin_main": 6
+    },
+    "concurrent_session": {
+      "session_id": "ses_f13d176c86a23e69",
+      "lifecycle": "active",
+      "main_claim_id": "claim:mncs-environment:worktree:5053f3907a1c",
+      "main_branch": "main",
+      "main_checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/merge-main-authority-20261020",
+      "main_claim_status": "held",
+      "main_claim_expires_at": "2026-10-22T07:20:46Z",
+      "main_worktree_clean": true,
+      "main_head": "28132dd3a1ffb7014163b27a828e09d6f7a42412",
+      "main_remote_head": "28132dd3a1ffb7014163b27a828e09d6f7a42412",
+      "rights_feature_claim_id": "claim:mncs-environment:worktree:a76c547054b5",
+      "rights_feature_branch": "campaign/luna-max-rights-context-20261020",
+      "rights_feature_claim_status": "held"
+    },
+    "coordination_result": {
+      "separate_worktrees": true,
+      "shared_main_mutation_attempted": false,
+      "other_agent_work_modified": false,
+      "our_feature_is_fast_forward_from_main": true,
+      "environment_main_integration": "deferred while the live main claim is held by the concurrent session"
+    }
+  },
+  "evidence_limits": [
+    "Lease state is time-bounded and may change after this observation.",
+    "A declared claim is recorded coordination state; this observation does not infer the other agent's unrecorded intent or current activity beyond lifecycle and lease records."
+  ]
+}
