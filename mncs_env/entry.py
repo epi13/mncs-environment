@@ -26,6 +26,9 @@ from . import (
     verification,
     workspace,
 )
+from . import (
+    claims as claims_module,
+)
 from . import coherence as incremental
 from .intent import parse as parse_intent
 from .persist import read_json
@@ -453,6 +456,153 @@ def _working_checkout_matches_snapshot(
         and isinstance(selected_common, str)
         and current_common != selected_common
     )
+
+
+def _authoritative_duplicate_session(
+    store,
+    session_ids: list[str],
+    working_checkout: dict[str, str] | None,
+) -> tuple[str | None, dict]:
+    """Resolve duplicate sessions only from one exact checkout's durable facts.
+
+    A distinct registered checkout selects its own continuation directly.
+    When duplicate sessions name the same checkout, a unique active claim
+    overlapping that checkout is the strongest ownership evidence. If there
+    are no such claims, one session-specific checkpoint can identify the
+    continuation. Equal evidence and overlapping owners remain ambiguous.
+    """
+    candidates = sorted(set(session_ids))
+    snapshots = {
+        session_id: store.load_snapshot(session_id) or {}
+        for session_id in candidates
+    }
+    exact = [
+        session_id
+        for session_id in candidates
+        if _working_checkout_matches_snapshot(
+            snapshots[session_id],
+            working_checkout,
+        )
+    ]
+    if len(exact) == 1:
+        return exact[0], {"basis": "unique_registered_checkout"}
+    if len(exact) < 2:
+        return None, {
+            "basis": "no_unique_registered_checkout",
+            "candidate_sessions": candidates,
+            "exact_checkout_sessions": exact,
+        }
+
+    read_claims = getattr(store, "read_claims", None)
+    if not callable(read_claims):
+        return None, {
+            "basis": "canonical_claims_unavailable",
+            "candidate_sessions": exact,
+        }
+
+    active = claims_module.active_claims(read_claims())
+    overlapping_claims: list[dict[str, str]] = []
+    exact_claim_owners: set[str] = set()
+    conflicting_owners: set[str] = set()
+    repository = (
+        working_checkout.get("repository")
+        if isinstance(working_checkout, dict)
+        else None
+    )
+    checkout_path = (
+        working_checkout.get("path") if isinstance(working_checkout, dict) else None
+    )
+    branch = (
+        working_checkout.get("branch") if isinstance(working_checkout, dict) else None
+    )
+    target_scope = None
+    if (
+        isinstance(repository, str)
+        and repository
+        and isinstance(checkout_path, str)
+        and checkout_path
+        and isinstance(branch, str)
+        and branch
+    ):
+        target_scope = claims_module.normalize_scope(
+            {
+                "kind": "worktree",
+                "checkout": checkout_path,
+                "branch": branch,
+            },
+            repository,
+        )
+        for claim_id, record in active.items():
+            if record.get("repository") != repository:
+                continue
+            owner = record.get("session_id")
+            if not isinstance(owner, str) or not owner:
+                owner = "<unknown>"
+            raw_scope = record.get("scope")
+            scope = claims_module.normalize_scope(
+                raw_scope if isinstance(raw_scope, dict) else None,
+                repository,
+            )
+            if claims_module.scopes_conflict(scope, target_scope) is None:
+                continue
+            conflicting_owners.add(owner)
+            overlapping_claims.append(
+                {
+                    "claim_id": str(record.get("claim_id", claim_id)),
+                    "session_id": owner,
+                }
+            )
+            exact_scope = scope.get("kind") == "repository" or (
+                scope.get("kind") == "worktree"
+                and scope.get("checkout") == checkout_path
+                and scope.get("branch") == branch
+            )
+            if exact_scope:
+                exact_claim_owners.add(owner)
+
+    if conflicting_owners:
+        if (
+            len(conflicting_owners) == 1
+            and conflicting_owners == exact_claim_owners
+            and next(iter(conflicting_owners)) in exact
+        ):
+            owner = next(iter(conflicting_owners))
+            return owner, {
+                "basis": "unique_active_checkout_claim",
+                "claim_ids": sorted(
+                    item["claim_id"]
+                    for item in overlapping_claims
+                    if item["session_id"] == owner
+                ),
+            }
+        return None, {
+            "basis": "overlapping_claim_conflict",
+            "candidate_sessions": exact,
+            "overlapping_claims": sorted(
+                overlapping_claims,
+                key=lambda item: (item["session_id"], item["claim_id"]),
+            ),
+        }
+
+    checkpoint_sessions = []
+    for session_id in exact:
+        snapshot = snapshots[session_id]
+        observations = sessions.continuation_observations(
+            store, snapshot, session_id,
+        )
+        if isinstance(observations.get("latest_checkpoint"), dict):
+            checkpoint_sessions.append(session_id)
+    if len(checkpoint_sessions) == 1:
+        return checkpoint_sessions[0], {
+            "basis": "unique_session_checkpoint",
+            "checkpoint_session": checkpoint_sessions[0],
+        }
+    return None, {
+        "basis": "duplicate_checkout_evidence",
+        "candidate_sessions": exact,
+        "checkpoint_sessions": checkpoint_sessions,
+        "overlapping_claims": [],
+    }
 
 
 def _implicit_campaign_for_registered_checkout(
@@ -1062,8 +1212,16 @@ def _validate_campaign_identity(store, *, campaign_id: str,
             and snapshot.get("workspace", {}).get("root") == str(workspace_root)
             and _working_checkout_matches_snapshot(snapshot, working_checkout)
         ]
-        if (len(exact_context) == 1
-                and selected_session_id == exact_context[0]):
+        authoritative_session, selection_evidence = (
+            _authoritative_duplicate_session(
+                store,
+                exact_context,
+                working_checkout,
+            )
+            if exact_context else (None, {"basis": "no_exact_context"})
+        )
+        if (authoritative_session is not None
+                and selected_session_id == authoritative_session):
             return
         raise EntryError(
             "multiple live Environment sessions share this campaign identity",
@@ -1075,6 +1233,7 @@ def _validate_campaign_identity(store, *, campaign_id: str,
                 _session_selection_details(session_id, snapshots[session_id], working_checkout)
                 for session_id in live
             ],
+            selection_evidence=selection_evidence,
             next="resume the intended recorded session or assign a distinct campaign identity to independent work",
         )
     only = live[0]
@@ -1358,8 +1517,7 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                 requested_campaign_id=requested_campaign_id,
                                 next="use the exact existing campaign identity or a different task identity for independent work",
                             )
-                        if (len(discovered_campaigns) != 1
-                                or len(discovered_sessions) != 1):
+                        if len(discovered_campaigns) != 1:
                             raise EntryError(
                                 "an unbound task identity matches multiple authenticated campaign continuations",
                                 "campaign-continuation-ambiguous",
@@ -1375,6 +1533,32 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                 ],
                                 next="select the intended campaign when duplicate continuations share this exact checkout",
                             )
+                        if len(discovered_sessions) > 1:
+                            selected_duplicate, selection_evidence = (
+                                _authoritative_duplicate_session(
+                                    store,
+                                    discovered_sessions,
+                                    working_checkout,
+                                )
+                            )
+                            if selected_duplicate is None:
+                                raise EntryError(
+                                    "an unbound task identity matches duplicate sessions for one campaign and checkout",
+                                    "campaign-continuation-ambiguous",
+                                    campaigns=sorted(discovered_campaigns),
+                                    sessions=sorted(discovered_sessions),
+                                    conflicting_contexts=[
+                                        _session_selection_details(
+                                            session_id,
+                                            store.load_snapshot(session_id) or {},
+                                            working_checkout,
+                                        )
+                                        for session_id in discovered_sessions
+                                    ],
+                                    selection_evidence=selection_evidence,
+                                    next="reconcile the recorded claim owner or checkpoint before selecting a duplicate continuation",
+                                )
+                            discovered_sessions = [selected_duplicate]
                         # The unbound task selector is only a lookup hint. Its
                         # candidate is adopted only when authenticated owner,
                         # Environment definition, workspace, checkout identity,
@@ -1590,8 +1774,31 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                 next="request an explicit handoff from the recorded owner",
                             )
                 if len(matches) > 1:
-                    raise EntryError("multiple matching sessions exist; resume a specific session or use --new-session",
-                                     "entry-session-ambiguous", sessions=sorted(matches), next="resume <session> --revalidate")
+                    selected_duplicate, selection_evidence = (
+                        _authoritative_duplicate_session(
+                            store,
+                            matches,
+                            working_checkout,
+                        )
+                    )
+                    if selected_duplicate is not None:
+                        matches = [selected_duplicate]
+                    else:
+                        raise EntryError(
+                            "multiple matching sessions exist for this campaign and registered checkout",
+                            "entry-session-ambiguous",
+                            sessions=sorted(matches),
+                            conflicting_contexts=[
+                                _session_selection_details(
+                                    session_id,
+                                    store.load_snapshot(session_id) or {},
+                                    working_checkout,
+                                )
+                                for session_id in matches
+                            ],
+                            selection_evidence=selection_evidence,
+                            next="resume the uniquely owned claim or checkpointed session; equal duplicates remain ambiguous",
+                        )
                 if pending_handoff is not None and matches:
                     raise EntryError(
                         "an existing session and an owner-issued handoff both match this campaign",

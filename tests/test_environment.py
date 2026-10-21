@@ -6305,6 +6305,265 @@ class EntryFrictionTests(unittest.TestCase):
                 selected_session_id="ses_exact", pending_handoff=None,
             )
 
+    def test_duplicate_exact_checkout_resolves_from_one_live_claim_owner(self) -> None:
+        from mncs_env import entry as entry_module
+
+        root = Path("/workspace/mncs-compiler")
+        checkout = root / ".worktrees" / "campaign" / "mncs-compiler"
+        branch = "campaign/native-application-readiness-20261013"
+        checkout_identity = "checkout-native-application-readiness"
+        common_identity = "common-mncs-compiler"
+
+        def snapshot(session_id: str) -> dict:
+            return {
+                "campaign": {"identity": "cmp_duplicate_exact_checkout"},
+                "lifecycle": "active",
+                "authenticated_principal_id": "principal-test",
+                "provenance": {"definition_id": "env-compiler"},
+                "workspace": {"root": str(root.parent)},
+                "consumer_id": f"consumer-{session_id}",
+                "selected_checkouts": {
+                    "mncs-compiler": {
+                        "repository": "mncs-compiler",
+                        "path": str(checkout),
+                        "checkout_identity": checkout_identity,
+                        "git_common_directory_identity": common_identity,
+                        "branch": branch,
+                    }
+                },
+            }
+
+        class MemoryStore:
+            def __init__(self) -> None:
+                self.snapshots = {
+                    "ses_claim_owner": snapshot("ses_claim_owner"),
+                    "ses_empty_duplicate": snapshot("ses_empty_duplicate"),
+                }
+
+            def load_snapshot(self, session_id: str) -> dict:
+                return self.snapshots[session_id]
+
+            def list_sessions(self) -> list[str]:
+                return sorted(self.snapshots)
+
+            def read_claims(self) -> list[dict]:
+                return [
+                    {
+                        "claim_id": "claim:mncs-compiler:worktree:owner",
+                        "version": 1,
+                        "repository": "mncs-compiler",
+                        "session_id": "ses_claim_owner",
+                        "status": "held",
+                        "acquired_at": "2026-10-20T00:00:00+00:00",
+                        "expires_at": "2026-10-23T00:00:00+00:00",
+                        "scope": {
+                            "kind": "worktree",
+                            "checkout": str(checkout),
+                            "branch": branch,
+                        },
+                    }
+                ]
+
+        with mock.patch.object(
+            entry_module.sessions,
+            "continuation_observations",
+            side_effect=self._campaign_observations,
+        ):
+            selected, evidence = entry_module._authoritative_duplicate_session(
+                MemoryStore(),
+                ["ses_empty_duplicate", "ses_claim_owner"],
+                {
+                    "repository": "mncs-compiler",
+                    "path": str(checkout),
+                    "checkout_identity": checkout_identity,
+                    "git_common_directory_identity": common_identity,
+                    "branch": branch,
+                },
+            )
+
+        self.assertEqual(selected, "ses_claim_owner")
+        self.assertEqual(evidence["basis"], "unique_active_checkout_claim")
+        with mock.patch.object(
+            entry_module.sessions,
+            "continuation_observations",
+            side_effect=self._campaign_observations,
+        ):
+            entry_module._validate_campaign_identity(
+                MemoryStore(),
+                campaign_id="cmp_duplicate_exact_checkout",
+                authenticated_principal_id="principal-test",
+                definition_id="env-compiler",
+                workspace_root=root.parent,
+                selected_session_id="ses_claim_owner",
+                pending_handoff=None,
+                working_checkout={
+                    "repository": "mncs-compiler",
+                    "path": str(checkout),
+                    "checkout_identity": checkout_identity,
+                    "git_common_directory_identity": common_identity,
+                    "branch": branch,
+                },
+            )
+
+    def test_duplicate_exact_checkout_respects_foreign_overlapping_claim(self) -> None:
+        from mncs_env import entry as entry_module
+
+        root = Path("/workspace/mncs-compiler")
+        checkout = root / ".worktrees" / "campaign" / "mncs-compiler"
+        branch = "campaign/native-application-readiness-20261013"
+        checkout_identity = "checkout-native-application-readiness"
+        common_identity = "common-mncs-compiler"
+
+        def snapshot(session_id: str) -> dict:
+            return {
+                "campaign": {"identity": "cmp_duplicate_with_foreign_claim"},
+                "lifecycle": "active",
+                "authenticated_principal_id": "principal-test",
+                "provenance": {"definition_id": "env-compiler"},
+                "workspace": {"root": str(root.parent)},
+                "consumer_id": f"consumer-{session_id}",
+                "selected_checkouts": {
+                    "mncs-compiler": {
+                        "repository": "mncs-compiler",
+                        "path": str(checkout),
+                        "checkout_identity": checkout_identity,
+                        "git_common_directory_identity": common_identity,
+                        "branch": branch,
+                    }
+                },
+            }
+
+        class MemoryStore:
+            def __init__(self) -> None:
+                self.snapshots = {
+                    "ses_candidate_a": snapshot("ses_candidate_a"),
+                    "ses_candidate_b": snapshot("ses_candidate_b"),
+                }
+
+            def load_snapshot(self, session_id: str) -> dict:
+                return self.snapshots[session_id]
+
+            def read_claims(self) -> list[dict]:
+                return [
+                    {
+                        "claim_id": "claim:mncs-compiler:worktree:foreign",
+                        "version": 1,
+                        "repository": "mncs-compiler",
+                        "session_id": "ses_foreign_writer",
+                        "status": "held",
+                        "acquired_at": "2026-10-20T00:00:00+00:00",
+                        "expires_at": "2026-10-23T00:00:00+00:00",
+                        "scope": {
+                            "kind": "worktree",
+                            "checkout": str(checkout),
+                            "branch": branch,
+                        },
+                    }
+                ]
+
+        with mock.patch.object(
+            entry_module.sessions,
+            "continuation_observations",
+            side_effect=self._campaign_observations,
+        ):
+            selected, evidence = entry_module._authoritative_duplicate_session(
+                MemoryStore(),
+                ["ses_candidate_a", "ses_candidate_b"],
+                {
+                    "repository": "mncs-compiler",
+                    "path": str(checkout),
+                    "checkout_identity": checkout_identity,
+                    "git_common_directory_identity": common_identity,
+                    "branch": branch,
+                },
+            )
+
+        self.assertIsNone(selected)
+        self.assertEqual(evidence["basis"], "overlapping_claim_conflict")
+        self.assertEqual(
+            evidence["overlapping_claims"],
+            [
+                {
+                    "claim_id": "claim:mncs-compiler:worktree:foreign",
+                    "session_id": "ses_foreign_writer",
+                }
+            ],
+        )
+
+    def test_duplicate_exact_checkout_uses_one_checkpoint_only_without_live_claims(
+        self,
+    ) -> None:
+        from mncs_env import entry as entry_module
+
+        root = Path("/workspace/mncs-compiler")
+        checkout = root / ".worktrees" / "campaign" / "mncs-compiler"
+        branch = "campaign/native-application-readiness-20261013"
+        checkout_identity = "checkout-native-application-readiness"
+        common_identity = "common-mncs-compiler"
+
+        def snapshot(session_id: str) -> dict:
+            return {
+                "campaign": {"identity": "cmp_duplicate_exact_checkpoint"},
+                "lifecycle": "active",
+                "authenticated_principal_id": "principal-test",
+                "provenance": {"definition_id": "env-compiler"},
+                "workspace": {"root": str(root.parent)},
+                "consumer_id": f"consumer-{session_id}",
+                "selected_checkouts": {
+                    "mncs-compiler": {
+                        "repository": "mncs-compiler",
+                        "path": str(checkout),
+                        "checkout_identity": checkout_identity,
+                        "git_common_directory_identity": common_identity,
+                        "branch": branch,
+                    }
+                },
+            }
+
+        class MemoryStore:
+            def __init__(self) -> None:
+                self.snapshots = {
+                    "ses_checkpoint_owner": snapshot("ses_checkpoint_owner"),
+                    "ses_uncheckpointed_duplicate": snapshot(
+                        "ses_uncheckpointed_duplicate"
+                    ),
+                }
+
+            def load_snapshot(self, session_id: str) -> dict:
+                return self.snapshots[session_id]
+
+            def read_claims(self) -> list[dict]:
+                return []
+
+        def observations(_store: object, _snapshot: dict, session_id: str) -> dict:
+            return {
+                "latest_checkpoint": (
+                    {"identity": "chk_unique", "sequence": 8}
+                    if session_id == "ses_checkpoint_owner"
+                    else None
+                )
+            }
+
+        with mock.patch.object(
+            entry_module.sessions,
+            "continuation_observations",
+            side_effect=observations,
+        ):
+            selected, evidence = entry_module._authoritative_duplicate_session(
+                MemoryStore(),
+                ["ses_uncheckpointed_duplicate", "ses_checkpoint_owner"],
+                {
+                    "repository": "mncs-compiler",
+                    "path": str(checkout),
+                    "checkout_identity": checkout_identity,
+                    "git_common_directory_identity": common_identity,
+                    "branch": branch,
+                },
+            )
+
+        self.assertEqual(selected, "ses_checkpoint_owner")
+        self.assertEqual(evidence["basis"], "unique_session_checkpoint")
+
     def test_duplicate_exact_context_remains_ambiguous_even_when_one_is_selected(self) -> None:
         from mncs_env import entry as entry_module
 
