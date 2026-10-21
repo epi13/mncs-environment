@@ -1,14 +1,11 @@
-"""Rights/provenance gate for session environments.
+"""Rights/provenance integration for Environment sessions.
 
-Claim records come from the environment definition (``rights_claims``
-inline, or ``rights_claims_file`` pointing at a JSON list resolved
-relative to the workspace root). Evaluation delegates to the generic
-host surface in ``mncs_rights_provenance.host_gate`` -- this module
-holds no rights logic of its own.
-
-When the rights package is unavailable the gate reports ``review``
-for every subject with ``available: false``: unknown provenance never
-passes silently, and it never blocks on a missing library either.
+``load_agent_context`` resolves an explicitly authorized, bounded binding
+to Rights manifest and agent-governance sources, then delegates the compact
+context projection to ``mncs_rights_provenance.agent_context``. Missing or
+invalid evidence remains visible as review diagnostics. The existing
+claim-record gate below delegates its separate verdicts to
+``mncs_rights_provenance.host_gate``.
 """
 
 from __future__ import annotations
