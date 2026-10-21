@@ -1,0 +1,72 @@
+{
+  "schema_version": "mncs.rights-provenance.live-context-check/1",
+  "recorded_at": "2026-10-21T11:12:37Z",
+  "campaign_id": "cmp_f26d4bfbff7b94e6",
+  "session_id": "ses_916cf2228c86e996",
+  "entry": {
+    "operation": "mncs_environment.enter",
+    "project": "mncs-environment",
+    "cwd": ".worktrees/luna-max-rights-cache-invalidation-20261021",
+    "environment_id": "renv_d5cd2f106fdc53dd",
+    "lifecycle": "active",
+    "writable_repositories": ["mncs-environment"],
+    "selected_checkout": {
+      "repository": "mncs-environment",
+      "branch": "campaign/luna-max-rights-cache-invalidation-20261021",
+      "head": "e5b969a8238e624a61883a2745e209ad389fbc12"
+    }
+  },
+  "canonical_environment_context": {
+    "source": "mncs-env context <session-id>",
+    "rights_context_present": true,
+    "identity": "sha256:d4a022541cbab675f686633a2ee44525ca12ecd634126607016b41172d7b8693",
+    "status": "review",
+    "context_budget_bytes": 8192,
+    "distribution_license": "Apache-2.0",
+    "declaration_state": "declared",
+    "license_terms_status": "reference-summary",
+    "source_license_status": "unknown",
+    "compatibility": "unknown",
+    "third_party_material": "unknown",
+    "provenance_evidence_state": "declared-unverified",
+    "governance": {
+      "profile_id": "mncs-rights-provenance/native-open@0.1.0",
+      "status": "authorized",
+      "authority_basis": "explicit-project-environment-binding"
+    },
+    "diagnostic_codes": [
+      "copyright-status-unresolved",
+      "rights-basis-unknown",
+      "third-party-material-unknown",
+      "provenance-origin-uncertain",
+      "source-license-unknown",
+      "lineage-reference-missing"
+    ],
+    "legal_conclusion_asserted": false
+  },
+  "live_mcp_projection": {
+    "context_operation_schema": "mncs.environment.entry-context/1",
+    "context_operation_rights_context_present": false,
+    "inspect_operation_rights_context_present": false,
+    "same_project_worktree_cwd_used": true,
+    "cause": "unresolved"
+  },
+  "control_source": {
+    "repository": "mncs-control-mcp",
+    "main_commit": "9b505c6772d34ffe6fb08d17c97847566547b44c",
+    "compact_context_preserves_provider_rights_context": true,
+    "service_reload_performed_by_this_session": false,
+    "loaded_service_revision": "unknown"
+  },
+  "coordination": {
+    "environment_main_head": "28132dd3a1ffb7014163b27a828e09d6f7a42412",
+    "active_owner_session": "ses_f13d176c86a23e69",
+    "active_main_claim": "claim:mncs-environment:worktree:5053f3907a1c",
+    "main_integration_deferred": true
+  },
+  "limitations": [
+    "The canonical Environment CLI context proves the persisted Rights projection for this session; the live MCP response did not expose that field.",
+    "The Control source contains the Rights context passthrough, but the loaded service revision was not observable.",
+    "The declaration and provenance evidence do not prove ownership, completeness, compatibility, or legal compliance."
+  ]
+}
