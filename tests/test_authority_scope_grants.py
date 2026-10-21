@@ -135,8 +135,8 @@ def _nested_target_checkout(
     session: sessions.Session,
     workspace: Path,
     slug: str,
-    branch: str,
-) -> tuple[Path, dict[str, str]]:
+    branch: str | None,
+) -> tuple[Path, dict[str, str | None]]:
     """Create a registered linked checkout inside the repository's worktrees."""
     repository_root = workspace / "mncs-control-mcp"
     manifest = repository_root / ".mncs" / "project.json"
@@ -157,7 +157,10 @@ def _nested_target_checkout(
         exclude.write_text(current_excludes + "\n.worktrees/\n", encoding="utf-8")
     checkout = repository_root / ".worktrees" / slug / "mncs-control-mcp"
     checkout.parent.mkdir(parents=True, exist_ok=True)
-    _git(repository_root, "worktree", "add", "-b", branch, str(checkout), "HEAD")
+    if branch is None:
+        _git(repository_root, "worktree", "add", "--detach", str(checkout), "HEAD")
+    else:
+        _git(repository_root, "worktree", "add", "-b", branch, str(checkout), "HEAD")
     observed = workspace_module.verify_registered_checkout(
         checkout,
         repository="mncs-control-mcp",
@@ -175,6 +178,63 @@ def _nested_target_checkout(
         "clean": True,
     }
     return checkout.resolve(), observed
+
+
+def test_detached_registered_checkouts_do_not_block_scope_admission(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        target_checkout, target_facts = _nested_target_checkout(
+            session, workspace, "detached-target", None,
+        )
+        repository_root = workspace / "mncs-control-mcp"
+        other_checkout = (
+            repository_root / ".worktrees" / "detached-other" / "mncs-control-mcp"
+        )
+        other_checkout.parent.mkdir(parents=True, exist_ok=True)
+        _git(repository_root, "worktree", "add", "--detach", str(other_checkout), "HEAD")
+        other_facts = workspace_module.verify_registered_checkout(
+            other_checkout,
+            repository="mncs-control-mcp",
+            workspace_root=workspace,
+            expected_repository_root=repository_root,
+            expected_branch=None,
+        )
+        assert target_facts["branch"] in (None, "")
+        assert other_facts["branch"] in (None, "")
+        other_claim = claims.acquire(
+            session.store,
+            repository="mncs-control-mcp",
+            session_id="ses_independent_detached_owner",
+            consumer_id="independent-detached-owner",
+            basis=claims.BASIS_EXPLICIT,
+            reason="independent detached registered worktree",
+            scope={
+                "kind": "worktree",
+                "checkout": str(other_checkout.resolve()),
+                "branch": None,
+            },
+            checkout_facts={"dirty": False, "foreign_signals": []},
+            request_id="req_independent_detached_worktree_claim",
+        )
+        assert other_claim["scope"]["branch"] is None
+
+        grant = _grant(session, request_id="req_detached_scope_grant")
+        assert grant["repository_identity"]["path"] == str(target_checkout)
+        assert grant["repository_identity"]["branch"] is None
+        claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="exact detached worktree claim",
+            request_id="req_detached_scope_claim",
+        )
+        assert claim["scope"]["checkout"] == str(target_checkout)
+        assert claim["scope"]["branch"] is None
+        assert len(claims.holders(session.store.read_claims())["mncs-control-mcp"]) == 2
+    finally:
+        session.close()
 
 
 def _recovered_claim(

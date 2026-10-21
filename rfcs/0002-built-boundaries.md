@@ -70,8 +70,11 @@ remain protection evidence. Family-wide ownership outside Environment is a
 Control integration pressure. A normal claim follows the session's exact
 selected worktree and is nonexclusive; repository-wide scope is explicit for
 mutations that genuinely span the repository. Disjoint worktrees can proceed
-independently, while overlapping scopes still conflict. If a same-operator
-claim blocks an ordinary selected-worktree acquisition, Control fences the
+independently. Across different checkouts, overlapping paths conflict only
+when both claims name the same attached branch; detached worktrees have
+private `HEAD` identities and do not share a branch reference. The same
+checkout and repository-wide scopes still fence overlapping writers. If a
+same-operator claim blocks an ordinary selected-worktree acquisition, Control fences the
 owner, checks host processes, jobs, grants, and user services, then atomically
 retires the old claim and transfers its scope to the selected worktree. Store
 generation CAS and stale-owner fencing remain authoritative.

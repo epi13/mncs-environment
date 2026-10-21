@@ -1,0 +1,48 @@
+{
+  "cross_repository_integration": {
+    "capability": "mncs-compiler:verification-executor/mncs-compiler.native-test-digest-effectful-app-canonical-vm",
+    "claim_takeover": false,
+    "compiler_evidence_path": "evidence/native-app-readiness-test-digest-app-20261021T193413.686644Z-3854775.json",
+    "compiler_evidence_sha256": "1932ee5ccdfddda3f0954a00002d79605829d7eb67e6f2ded976999d1c33df27",
+    "compiler_session": "ses_164edc158d9b1637",
+    "environment_artifact_store_ref": "mncs-store:ses_164edc158d9b1637:capability-invocation-artifacts:6786c095cdd126b273fc171a2ef995f8bdc85f108701b420c559513ee46b0cc2",
+    "environment_session": "ses_fb57424feb72607c",
+    "exit_code": 0,
+    "outcome": "ok",
+    "previous_denial": "Two distinct registered detached Compiler checkouts both had branch=null and were incorrectly treated as sharing a branch."
+  },
+  "implementation": {
+    "branch": "campaign/scoped-merge-publish-authority-20261020",
+    "changed_paths": [
+      "mncs_env/claims.py",
+      "tests/test_environment.py",
+      "tests/test_authority_scope_grants.py",
+      "rfcs/0002-built-boundaries.md"
+    ],
+    "claim_rule": "Different registered worktrees conflict on overlapping paths only when both name the same attached branch. Detached worktrees have private HEADs and coexist. Same-checkout overlap and repository-wide scope remain fenced.",
+    "repository": "mncs-environment"
+  },
+  "limits": [
+    "This proof covers Environment claim coexistence and the bound canonical VM verification capability. It does not establish Forge application execution or Forge execution-receipt publication."
+  ],
+  "objective": "Allow independent registered detached worktrees to hold narrow claims while preserving same-checkout and shared-branch fencing.",
+  "schema_version": "mncs.environment.detached-worktree-claim-proof/1",
+  "verification": [
+    {
+      "command": "python3 -m pytest -q tests/test_environment.py::ClaimTests",
+      "result": "26 passed in 5.67s"
+    },
+    {
+      "command": "python3 -m pytest -q tests/test_authority_scope_grants.py",
+      "result": "31 passed in 83.76s"
+    },
+    {
+      "command": "python3 -m py_compile mncs_env/claims.py tests/test_environment.py tests/test_authority_scope_grants.py",
+      "result": "passed"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ]
+}

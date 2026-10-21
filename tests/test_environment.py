@@ -660,6 +660,72 @@ class ClaimTests(unittest.TestCase):
         self.assertIsNotNone(claims.scopes_conflict(first, same_checkout))
         self.assertIsNotNone(claims.scopes_conflict(repository, first))
 
+    def test_same_attached_branch_conflicts_across_worktrees(self) -> None:
+        first = claims.normalize_scope({
+            "kind": "worktree", "checkout": "/repo/.worktrees/first",
+            "branch": "main", "exclusive": False,
+        }, "r")
+        second = claims.normalize_scope({
+            "kind": "worktree", "checkout": "/repo/.worktrees/second",
+            "branch": "main", "exclusive": False,
+        }, "r")
+
+        self.assertEqual(
+            claims.scopes_conflict(first, second),
+            "shared branch with overlapping paths across checkouts",
+        )
+
+    def test_detached_worktrees_coexist_but_same_checkout_is_fenced(self) -> None:
+        first = claims.normalize_scope({
+            "kind": "worktree", "checkout": "/repo/.worktrees/first",
+            "branch": None, "exclusive": False,
+        }, "r")
+        second = claims.normalize_scope({
+            "kind": "worktree", "checkout": "/repo/.worktrees/second",
+            "branch": None, "exclusive": False,
+        }, "r")
+        same_checkout = claims.normalize_scope({
+            "kind": "worktree", "checkout": "/repo/.worktrees/first",
+            "branch": None, "exclusive": False,
+        }, "r")
+
+        self.assertIsNone(claims.scopes_conflict(first, second))
+        self.assertIsNotNone(claims.scopes_conflict(first, same_checkout))
+
+    def test_detached_worktree_owners_can_claim_distinct_checkouts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first_checkout = root / "first"
+            second_checkout = root / "second"
+            first_checkout.mkdir()
+            second_checkout.mkdir()
+            store = open_store(root / "state", "file")
+            first = claims.acquire(
+                store, repository="r", session_id="ses_detached_a",
+                consumer_id="detached-a", basis=claims.BASIS_EXPLICIT,
+                reason="first detached worktree", workspace_root=str(root),
+                scope={"kind": "worktree", "checkout": str(first_checkout),
+                       "branch": None, "exclusive": False},
+            )
+            second = claims.acquire(
+                store, repository="r", session_id="ses_detached_b",
+                consumer_id="detached-b", basis=claims.BASIS_EXPLICIT,
+                reason="second detached worktree", workspace_root=str(root),
+                scope={"kind": "worktree", "checkout": str(second_checkout),
+                       "branch": None, "exclusive": False},
+            )
+
+            self.assertNotEqual(first["claim_id"], second["claim_id"])
+            self.assertEqual(len(claims.holders(store.read_claims())["r"]), 2)
+            with self.assertRaises(claims.ClaimConflict):
+                claims.acquire(
+                    store, repository="r", session_id="ses_detached_c",
+                    consumer_id="detached-c", basis=claims.BASIS_EXPLICIT,
+                    reason="same detached checkout", workspace_root=str(root),
+                    scope={"kind": "worktree", "checkout": str(first_checkout),
+                           "branch": None, "exclusive": False},
+                )
+
     def test_disjoint_worktree_owners_coexist_but_same_checkout_is_fenced(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
