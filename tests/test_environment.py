@@ -6286,6 +6286,165 @@ class EntryFrictionTests(unittest.TestCase):
             "campaign_state": None, "foreign_claims_count": 0,
         }
 
+    def test_campaign_checkout_recovers_one_worktree_from_duplicate_sessions(self) -> None:
+        from mncs_env import entry as entry_module, selection as selection_module
+
+        with tempfile.TemporaryDirectory(prefix="mncs-campaign-checkout-") as directory:
+            root = Path(directory).resolve()
+            checkout = root / "mncs-compiler" / ".worktrees" / "campaign" / "mncs-compiler"
+            definition_root = checkout / ".mncs"
+            definition_root.mkdir(parents=True)
+            environment_definition = {
+                "name": "campaign-checkout-recovery",
+                "intent": {"goal": "resume the authenticated worktree"},
+            }
+            (definition_root / "environment.json").write_text(
+                json.dumps(environment_definition), encoding="utf-8"
+            )
+            definition_id = identity.environment_id(environment_definition)
+            branch = "campaign/native-application-readiness-20261013"
+            selected = {
+                "repository": "mncs-compiler",
+                "path": str(checkout),
+                "checkout_identity": "checkout-native-application-readiness",
+                "git_common_directory_identity": "common-mncs-compiler",
+                "branch": branch,
+            }
+            snapshots = {
+                session_id: {
+                    "campaign": {"identity": "cmp_checkout_recovery"},
+                    "lifecycle": "active",
+                    "authenticated_principal_id": "principal-test",
+                    "provenance": {"definition_id": definition_id},
+                    "workspace": {"root": str(root)},
+                    "selected_checkouts": {"mncs-compiler": dict(selected)},
+                }
+                for session_id in ("ses_checkpointed", "ses_duplicate")
+            }
+
+            class MemoryStore:
+                def load_snapshot(self, session_id: str) -> dict:
+                    return snapshots[session_id]
+
+            observed = {
+                "repository": "mncs-compiler",
+                "path": str(checkout),
+                "workspace_root": str(root),
+                "repository_root": str(root / "mncs-compiler"),
+                "branch": branch,
+                "head": "a" * 40,
+                "git_common_directory": str(root / "mncs-compiler" / ".git"),
+                "manifest_identity": "manifest-mncs-compiler",
+                "checkout_identity": selected["checkout_identity"],
+                "git_common_directory_identity": selected["git_common_directory_identity"],
+                "observed_path": "mncs-compiler/.worktrees/campaign/mncs-compiler",
+            }
+            current = {
+                "repository": "mncs-compiler",
+                "path": str(root / "mncs-compiler"),
+                "workspace_root": str(root),
+                "repository_root": str(root / "mncs-compiler"),
+                "branch": "main",
+                "head": "b" * 40,
+                "checkout_identity": "checkout-main",
+                "git_common_directory_identity": "common-mncs-compiler",
+            }
+
+            with (
+                mock.patch.object(
+                    selection_module, "select", return_value=sorted(snapshots)
+                ),
+                mock.patch.object(
+                    entry_module.workspace,
+                    "verify_registered_checkout",
+                    return_value=observed,
+                ) as verify,
+            ):
+                recovered = entry_module._campaign_checkout_from_store(
+                    MemoryStore(),
+                    campaign_id="cmp_checkout_recovery",
+                    authenticated_principal_id="principal-test",
+                    definition_id=definition_id,
+                    workspace_root=root,
+                    working_checkout=current,
+                )
+
+            self.assertEqual(recovered, observed)
+            verify.assert_called_once_with(
+                checkout,
+                repository="mncs-compiler",
+                workspace_root=root,
+                expected_repository_root=current["repository_root"],
+                expected_branch=branch,
+            )
+
+    def test_campaign_checkout_keeps_distinct_worktrees_separate(self) -> None:
+        from mncs_env import entry as entry_module, selection as selection_module
+
+        root = Path("/workspace")
+        snapshots = {}
+        for session_id, name, branch in (
+            ("ses_worktree_a", "a", "campaign/a"),
+            ("ses_worktree_b", "b", "campaign/b"),
+        ):
+            snapshots[session_id] = {
+                "campaign": {"identity": "cmp_checkout_recovery"},
+                "lifecycle": "active",
+                "authenticated_principal_id": "principal-test",
+                "provenance": {"definition_id": "env-compiler"},
+                "workspace": {"root": str(root)},
+                "selected_checkouts": {
+                    "mncs-compiler": {
+                        "repository": "mncs-compiler",
+                        "path": str(root / "mncs-compiler" / ".worktrees" / name),
+                        "checkout_identity": f"checkout-{name}",
+                        "git_common_directory_identity": "common-mncs-compiler",
+                        "branch": branch,
+                    }
+                },
+            }
+
+        class MemoryStore:
+            def load_snapshot(self, session_id: str) -> dict:
+                return snapshots[session_id]
+
+        current = {
+            "repository": "mncs-compiler",
+            "path": str(root / "mncs-compiler"),
+            "workspace_root": str(root),
+            "repository_root": str(root / "mncs-compiler"),
+            "branch": "main",
+            "head": "a" * 40,
+            "checkout_identity": "checkout-main",
+            "git_common_directory_identity": "common-mncs-compiler",
+        }
+        with (
+            mock.patch.object(
+                selection_module, "select", return_value=sorted(snapshots)
+            ),
+            mock.patch.object(
+                entry_module.workspace, "verify_registered_checkout"
+            ) as verify,
+            self.assertRaises(entry_module.EntryError) as raised,
+        ):
+            entry_module._campaign_checkout_from_store(
+                MemoryStore(),
+                campaign_id="cmp_checkout_recovery",
+                authenticated_principal_id="principal-test",
+                definition_id="env-compiler",
+                workspace_root=root,
+                working_checkout=current,
+            )
+
+        self.assertEqual(
+            raised.exception.diagnostics["code"], "campaign-checkout-ambiguous"
+        )
+        contexts = raised.exception.diagnostics["conflicting_contexts"]
+        self.assertEqual([item["sessions"] for item in contexts], [
+            ["ses_worktree_a"], ["ses_worktree_b"]
+        ])
+        verify.assert_not_called()
+
     def test_selected_unique_exact_context_resumes_alongside_other_same_principal_context(self) -> None:
         from mncs_env import entry as entry_module
 

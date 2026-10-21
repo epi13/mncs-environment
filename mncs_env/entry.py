@@ -746,9 +746,10 @@ def _campaign_checkout_from_store(
     """Recover one campaign's verified checkout when entry starts at its repo root.
 
     The campaign id and authenticated principal must already be known. A
-    unique durable session may then supply its registered linked-worktree
-    identity when the caller's project alias resolves to the repository root.
-    Multiple sessions, owners, or worktrees never get an arbitrary choice.
+    unique registered worktree identity may then supply its linked-worktree
+    path when the caller's project alias resolves to the repository root.
+    Duplicate sessions for that same checkout are resolved later from claim
+    and checkpoint provenance; distinct worktrees remain ambiguous here.
     """
     if (campaign_id is None or authenticated_principal_id is None
             or working_checkout is None):
@@ -768,27 +769,85 @@ def _campaign_checkout_from_store(
             )
         ),
     )
-    if len(session_ids) != 1:
-        return working_checkout
-    snapshot = store.load_snapshot(session_ids[0]) or {}
-    if _working_checkout_matches_snapshot(snapshot, working_checkout):
+    repository = working_checkout.get("repository")
+    snapshots = {
+        session_id: store.load_snapshot(session_id) or {}
+        for session_id in session_ids
+    }
+    # An exact caller checkout is stronger evidence than campaign-level
+    # inference. This keeps independent linked worktrees usable even when
+    # they share one campaign identity.
+    if any(
+        _working_checkout_matches_snapshot(snapshot, working_checkout)
+        for snapshot in snapshots.values()
+    ):
         return working_checkout
 
-    repository = working_checkout.get("repository")
-    selected_checkouts = snapshot.get("selected_checkouts")
-    selected = (
-        selected_checkouts.get(repository)
-        if isinstance(selected_checkouts, dict) and isinstance(repository, str)
-        else None
-    )
-    if not isinstance(selected, dict):
+    recorded_checkouts: list[tuple[str, dict]] = []
+    checkout_contexts: dict[tuple[str, str], list[tuple[str, dict]]] = {}
+    for session_id, snapshot in snapshots.items():
+        selected_checkouts = snapshot.get("selected_checkouts")
+        if (not isinstance(selected_checkouts, dict)
+                or not isinstance(repository, str)
+                or repository not in selected_checkouts):
+            continue
+        selected = selected_checkouts[repository]
+        if not isinstance(selected, dict):
+            raise EntryError(
+                "the campaign has an invalid selected checkout record",
+                "campaign-checkout-invalid",
+                campaign_id=campaign_id,
+                session_id=session_id,
+                repository=repository,
+            )
+        selected_path = selected.get("path")
+        selected_branch = selected.get("branch")
+        if (not isinstance(selected_path, str) or not selected_path
+                or not isinstance(selected_branch, str) or not selected_branch
+                or selected.get("repository", repository) != repository):
+            raise EntryError(
+                "the campaign has an incomplete selected checkout identity",
+                "campaign-checkout-invalid",
+                campaign_id=campaign_id,
+                session_id=session_id,
+                repository=repository,
+                recorded_checkout={
+                    key: selected.get(key)
+                    for key in ("repository", "path", "branch", "checkout_identity",
+                                "git_common_directory_identity")
+                    if selected.get(key) is not None
+                },
+            )
+        candidate_path = Path(selected_path)
+        if not candidate_path.is_absolute():
+            candidate_path = workspace_root / candidate_path
+        context = (os.path.abspath(candidate_path), selected_branch)
+        recorded_checkouts.append((session_id, selected))
+        checkout_contexts.setdefault(context, []).append((session_id, selected))
+
+    if len(checkout_contexts) > 1:
+        conflicting_contexts = [
+            {
+                "path": path,
+                "branch": branch,
+                "sessions": sorted(session_id for session_id, _ in candidates),
+            }
+            for (path, branch), candidates in sorted(checkout_contexts.items())
+        ]
+        raise EntryError(
+            "the campaign has multiple registered worktrees for this repository; checkout context is required",
+            "campaign-checkout-ambiguous",
+            campaign_id=campaign_id,
+            repository=repository,
+            conflicting_contexts=conflicting_contexts,
+            next="enter from the intended registered worktree or use its durable task identity",
+        )
+    if not recorded_checkouts:
         return working_checkout
+
+    session_id, selected = sorted(recorded_checkouts, key=lambda item: item[0])[0]
     selected_path = selected.get("path")
     selected_branch = selected.get("branch")
-    if (not isinstance(selected_path, str) or not selected_path
-            or not isinstance(selected_branch, str) or not selected_branch
-            or selected.get("repository", repository) != repository):
-        return working_checkout
     path = Path(selected_path)
     if not path.is_absolute():
         path = workspace_root / path
@@ -805,28 +864,29 @@ def _campaign_checkout_from_store(
             "the unique campaign checkout no longer verifies as its recorded registered worktree",
             "campaign-checkout-invalid",
             campaign_id=campaign_id,
-            session_id=session_ids[0],
+            session_id=session_id,
             repository=repository,
             recorded_checkout=selected_path,
             checkout_diagnostics=error.diagnostics,
             next="restore the recorded registered checkout identity or resume from its exact checkout",
         ) from error
 
-    for key in ("checkout_identity", "git_common_directory_identity", "observed_path"):
-        recorded = selected.get(key)
-        if isinstance(recorded, str) and observed.get(key) != recorded:
-            raise EntryError(
-                "the unique campaign checkout identity differs from its registered worktree",
-                "campaign-checkout-invalid",
-                campaign_id=campaign_id,
-                session_id=session_ids[0],
-                repository=repository,
-                recorded_checkout=selected_path,
-                identity_field=key,
-                recorded_identity=recorded,
-                observed_identity=observed.get(key),
-                next="inspect the campaign's exact checkout binding before continuing",
-            )
+    for candidate_session_id, candidate in recorded_checkouts:
+        for key in ("checkout_identity", "git_common_directory_identity", "observed_path"):
+            recorded = candidate.get(key)
+            if isinstance(recorded, str) and observed.get(key) != recorded:
+                raise EntryError(
+                    "a campaign checkout identity differs from its registered worktree",
+                    "campaign-checkout-invalid",
+                    campaign_id=campaign_id,
+                    session_id=candidate_session_id,
+                    repository=repository,
+                    recorded_checkout=selected_path,
+                    identity_field=key,
+                    recorded_identity=recorded,
+                    observed_identity=observed.get(key),
+                    next="inspect the campaign's exact checkout binding before continuing",
+                )
 
     definition_directory = Path(observed["path"]) / ".mncs"
     if definition_directory.is_symlink() or not definition_directory.is_dir():
@@ -834,7 +894,7 @@ def _campaign_checkout_from_store(
             "the recorded campaign checkout does not contain a regular .mncs directory",
             "campaign-checkout-invalid",
             campaign_id=campaign_id,
-            session_id=session_ids[0],
+            session_id=session_id,
             repository=repository,
             path=str(definition_directory),
         )
@@ -845,7 +905,7 @@ def _campaign_checkout_from_store(
             "the recorded campaign checkout's .mncs directory is unavailable",
             "campaign-checkout-invalid",
             campaign_id=campaign_id,
-            session_id=session_ids[0],
+            session_id=session_id,
             repository=repository,
             path=str(definition_directory),
         ) from error
@@ -884,7 +944,7 @@ def _campaign_checkout_from_store(
             "the recorded campaign checkout must contain exactly one regular Environment definition matching the selected identity",
             "campaign-checkout-invalid",
             campaign_id=campaign_id,
-            session_id=session_ids[0],
+            session_id=session_id,
             repository=repository,
             recorded_definition_id=definition_id,
             matching_definition_paths=[str(path) for path in matching_definitions],
