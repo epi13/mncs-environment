@@ -964,6 +964,34 @@ class EntryContractTests(unittest.TestCase):
             nested_workspace_snapshot, nested_working_checkout,
         ))
 
+    def test_pathless_legacy_reference_tracks_one_registered_branch_after_commits(self):
+        (self.project / ".mncs" / "project.json").write_text(
+            json.dumps({"repository": "fixture"}),
+        )
+        checkout = workspace.verify_registered_checkout(
+            self.project, repository="fixture", workspace_root=self.base,
+            expected_repository_root=self.project,
+        )
+        legacy = {
+            "workspace": {"root": str(self.base.resolve())},
+            "campaign": {"repository_refs": [{
+                "repository": "fixture",
+                "branch": checkout["branch"],
+                "head": "b" * 40,
+            }]},
+        }
+        self.assertNotEqual(legacy["campaign"]["repository_refs"][0]["head"],
+                            checkout["head"])
+        self.assertTrue(entry._working_checkout_matches_snapshot(legacy, checkout))
+
+        registered = workspace._worktrees(self.project)[0]
+        duplicate_branch = dict(registered)
+        duplicate_branch["path"] = str(self.base / "fixture" / ".worktrees" / "duplicate")
+        with mock.patch.object(
+            workspace, "_worktrees", return_value=[registered, duplicate_branch],
+        ):
+            self.assertFalse(entry._working_checkout_matches_snapshot(legacy, checkout))
+
     def test_authenticated_campaign_selection_is_scoped_to_registered_checkout(self):
         (self.project / ".mncs" / "project.json").write_text(json.dumps({
             "repository": "fixture",

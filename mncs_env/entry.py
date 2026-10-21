@@ -955,6 +955,7 @@ def _legacy_repository_reference_matches(
     # unique.
     candidates: list[tuple[dict, bool]] = []
     unresolved_same_branch = False
+    registered_branch_identity = False
     current_checkout_identity = working_checkout.get("checkout_identity")
     current_common_identity = working_checkout.get("git_common_directory_identity")
     for candidate in matches:
@@ -982,6 +983,27 @@ def _legacy_repository_reference_matches(
                 candidates.append((candidate, False))
             continue
         if len(matches) == 1 and same_workspace:
+            repository_root = working_checkout.get("repository_root")
+            if isinstance(repository_root, str) and repository_root:
+                registry = workspace._worktrees(Path(repository_root))
+                same_branch = []
+                for row in registry:
+                    registered_branch = row.get("branch", "")
+                    if isinstance(registered_branch, str) and registered_branch.startswith(
+                        "refs/heads/"
+                    ):
+                        registered_branch = registered_branch.removeprefix("refs/heads/")
+                    if (registered_branch == current_branch
+                            and "prunable" not in row
+                            and isinstance(row.get("path"), str)):
+                        same_branch.append(row)
+                if (len(same_branch) == 1
+                        and os.path.abspath(same_branch[0]["path"])
+                        == os.path.abspath(current_path)
+                        and same_branch[0].get("head") == current_head):
+                    candidates.append((candidate, False))
+                    registered_branch_identity = True
+                    continue
             if candidate.get("head") == current_head:
                 candidates.append((candidate, False))
             continue
@@ -1019,7 +1041,9 @@ def _legacy_repository_reference_matches(
     # workspace. When the legacy record names that exact checkout path and
     # branch, a newer HEAD is normal continuation after commits. Keep the old
     # revision as a fallback identity only when no exact path was recorded.
-    if reference.get("head") != current_head and not exact_recorded_path:
+    if (reference.get("head") != current_head
+            and not exact_recorded_path
+            and not registered_branch_identity):
         return False
 
     # Checkout identity hashes include the workspace-relative path. When an
