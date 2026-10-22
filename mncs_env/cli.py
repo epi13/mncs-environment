@@ -687,11 +687,32 @@ def cmd_scope_grant(args: argparse.Namespace) -> int:
     """Admit one Control-authorized repository scope into Environment state."""
     session = _open(args)
     try:
+        owner_authorized_checkout = None
+        if args.owner_authorized_checkout_json is not None:
+            try:
+                owner_authorized_checkout = json.loads(
+                    args.owner_authorized_checkout_json
+                )
+            except (TypeError, json.JSONDecodeError) as error:
+                return fail(
+                    f"Control-provided repository checkout identity is invalid: {error}",
+                    code=3,
+                    diagnostics={"code": "authority-denied", "publication_completed": False},
+                )
+            if (not isinstance(owner_authorized_checkout, dict)
+                    or any(not isinstance(key, str) or not isinstance(value, str)
+                           for key, value in owner_authorized_checkout.items())):
+                return fail(
+                    "Control-provided repository checkout identity is malformed",
+                    code=3,
+                    diagnostics={"code": "authority-denied", "publication_completed": False},
+                )
         grant = session.grant_repository_scope(
             repository=args.repository,
             campaign_id=args.campaign_id,
             expected_authority_revision=args.expected_authority_revision,
             approval_reference=args.approval_reference,
+            owner_authorized_checkout=owner_authorized_checkout,
             authenticated_principal_id=os.environ.get("MNCS_ENV_AUTH_PRINCIPAL_ID"),
             request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"),
         )
@@ -2248,6 +2269,7 @@ def build_parser() -> argparse.ArgumentParser:
     scope_grant.add_argument("--repository", required=True)
     scope_grant.add_argument("--expected-authority-revision", required=True)
     scope_grant.add_argument("--approval-reference", required=True)
+    scope_grant.add_argument("--owner-authorized-checkout-json", default=None)
     scope_grant.set_defaults(func=cmd_scope_grant)
 
     invoke = session_parser("invoke", "invoke a bound capability")

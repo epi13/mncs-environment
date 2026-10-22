@@ -118,7 +118,8 @@ def _session(state_dir: Path, workspace: Path, *, dirty_target: bool = False):
 
 def _grant(session: sessions.Session, *, revision: str | None = None,
            principal: str = PRINCIPAL,
-           request_id: str = "req_fixture_control_scope_grant") -> dict:
+           request_id: str = "req_fixture_control_scope_grant",
+           owner_authorized_checkout: dict[str, str] | None = None) -> dict:
     return session.grant_repository_scope(
         repository="mncs-control-mcp",
         campaign_id=CAMPAIGN,
@@ -126,6 +127,7 @@ def _grant(session: sessions.Session, *, revision: str | None = None,
             revision or session.effective_authority()["revision"]
         ),
         approval_reference=APPROVAL,
+        owner_authorized_checkout=owner_authorized_checkout,
         authenticated_principal_id=principal,
         request_id=request_id,
     )
@@ -364,6 +366,84 @@ def test_grant_is_store_durable_and_claimable_after_fresh_open(tmp_path: Path) -
     except Exception:
         reopened_store.close()
         raise
+
+
+def test_owner_grant_admits_exact_registered_worktree_outside_campaign_workspace(
+    tmp_path: Path,
+) -> None:
+    campaign_workspace = tmp_path / "campaign-workspace"
+    campaign_workspace.mkdir()
+    configured_workspace = tmp_path / "configured-projects"
+    configured_workspace.mkdir()
+    session = _session(tmp_path / "state", campaign_workspace)
+    try:
+        repository = _checkout(configured_workspace, "mncs-control-mcp")
+        repository_root = configured_workspace / repository["name"]
+        checkout = repository_root / ".worktrees" / "compiler-scope" / repository["name"]
+        checkout.parent.mkdir(parents=True)
+        _git(
+            repository_root, "worktree", "add", "-b",
+            "campaign/compiler-scope", str(checkout), "HEAD",
+        )
+        checkout_facts = workspace_module.verify_registered_checkout(
+            checkout,
+            repository=repository["name"],
+            workspace_root=configured_workspace,
+            expected_repository_root=repository_root,
+            expected_branch="campaign/compiler-scope",
+        )
+
+        grant = _grant(
+            session,
+            owner_authorized_checkout=checkout_facts,
+            request_id="req_external_owner_scope_grant",
+        )
+
+        identity = grant["repository_identity"]
+        assert identity["path"] == str(checkout.resolve())
+        assert identity["repository_root"] == str(repository_root.resolve())
+        assert identity["checkout_identity"] == checkout_facts["checkout_identity"]
+        claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="claim the exact owner-approved registered worktree",
+            request_id="req_external_owner_scope_claim",
+        )
+        assert claim["scope"]["checkout"] == str(checkout.resolve())
+        assert claim["scope"]["branch"] == "campaign/compiler-scope"
+        assert claim["scope"]["exclusive"] is False
+        session_id = session.session_id
+        assert session.release_claim(
+            "mncs-control-mcp",
+            claim_id=claim["claim_id"],
+            reason="exercise exact checkout continuation after restart",
+            request_id="req_external_owner_scope_release",
+        ) is True
+        session.close()
+        session = None
+
+        reopened_store = open_store(
+            tmp_path / "state", "store", verify_on_open=False,
+        )
+        resumed = sessions.Session.open(
+            state_dir=tmp_path / "state",
+            session_id=session_id,
+            backend="store",
+            verify_on_open=False,
+            store=reopened_store,
+        )
+        try:
+            resumed_claim = resumed.acquire_claim(
+                "mncs-control-mcp",
+                reason="resume the exact owner-approved worktree claim",
+                request_id="req_external_owner_scope_reclaim",
+            )
+            assert resumed_claim["scope"]["checkout"] == str(checkout.resolve())
+            assert resumed_claim["scope"]["branch"] == "campaign/compiler-scope"
+        finally:
+            resumed.close()
+    finally:
+        if session is not None:
+            session.close()
 
 
 def test_scope_grant_retry_is_idempotent_and_payload_fenced(tmp_path: Path) -> None:
