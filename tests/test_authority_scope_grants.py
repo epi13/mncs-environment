@@ -239,6 +239,98 @@ def test_detached_registered_checkouts_do_not_block_scope_admission(
         session.close()
 
 
+def test_owner_authorized_worktree_inside_campaign_workspace_is_scoped_exactly(
+    tmp_path: Path,
+) -> None:
+    global_workspace = tmp_path / "projects"
+    global_workspace.mkdir()
+    campaign_workspace = global_workspace / "compiler-campaign"
+    campaign_workspace.mkdir()
+    vm_root = _checkout(global_workspace, "mncs-vm")["path"]
+    vm_repository = global_workspace / vm_root
+    selected_vm = (
+        campaign_workspace / ".worktrees" / "selected-vm" / "mncs-vm"
+    )
+    selected_vm.parent.mkdir(parents=True)
+    _git(vm_repository, "worktree", "add", "--detach", str(selected_vm), "HEAD")
+    owner_facts = workspace_module.verify_registered_checkout(
+        selected_vm,
+        repository="mncs-vm",
+        workspace_root=global_workspace,
+        expected_repository_root=vm_repository,
+        expected_branch=None,
+    )
+    session = _session(tmp_path / "state", campaign_workspace)
+    session.snapshot["rights"]["subjects"]["mncs-vm"] = "allowed"
+    try:
+        grant = session.grant_repository_scope(
+            repository="mncs-vm",
+            campaign_id=CAMPAIGN,
+            expected_authority_revision=session.effective_authority()["revision"],
+            approval_reference=APPROVAL,
+            owner_authorized_checkout=owner_facts,
+            authenticated_principal_id=PRINCIPAL,
+            request_id="req_campaign_workspace_vm_scope_grant",
+        )
+        assert grant["repository_identity"]["path"] == str(selected_vm.resolve())
+        assert grant["repository_identity"]["repository_root"] == str(vm_repository)
+        assert grant["repository_identity"]["workspace_root"] == str(global_workspace)
+
+        claim = session.acquire_claim(
+            "mncs-vm",
+            reason="exact campaign VM worktree",
+            scope={
+                "kind": "worktree",
+                "checkout": str(selected_vm.resolve()),
+                "branch": None,
+            },
+            request_id="req_campaign_workspace_vm_worktree_claim",
+        )
+        assert claim["scope"] == {
+            "kind": "worktree",
+            "checkout": str(selected_vm.resolve()),
+            "branch": None,
+            "paths": None,
+            "repository": "mncs-vm",
+            "exclusive": False,
+        }
+
+        outside_campaign = global_workspace / "other-campaign" / "mncs-vm"
+        outside_campaign.parent.mkdir()
+        _git(
+            vm_repository, "worktree", "add", "--detach",
+            str(outside_campaign), "HEAD",
+        )
+        outside_facts = workspace_module.verify_registered_checkout(
+            outside_campaign,
+            repository="mncs-vm",
+            workspace_root=global_workspace,
+            expected_repository_root=vm_repository,
+            expected_branch=None,
+        )
+        with pytest.raises(
+            ValueError,
+            match="outside its repository and campaign workspace",
+        ):
+            sessions._verified_scope_checkout(
+                campaign_workspace,
+                "mncs-vm",
+                owner_authorized_checkout=outside_facts,
+            )
+
+        linked_alias = campaign_workspace / "vm-alias"
+        linked_alias.symlink_to(selected_vm, target_is_directory=True)
+        symlink_facts = {**owner_facts, "path": str(linked_alias)}
+        with pytest.raises(ValueError, match="symbolic link"):
+            sessions._verified_scope_checkout(
+                campaign_workspace,
+                "mncs-vm",
+                owner_authorized_checkout=symlink_facts,
+            )
+    finally:
+        session.close()
+
+
 def _recovered_claim(
     session: sessions.Session, repository: str, *,
     claim_session: str | None = None,

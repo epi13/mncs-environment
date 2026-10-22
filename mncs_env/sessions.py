@@ -919,7 +919,10 @@ def _verified_scope_checkout(
     common directory, repository manifest, and authorized workspace establish
     identity; directory depth is not part of acceptance.
     """
-    root = Path(workspace_root).resolve(strict=True)
+    raw_root = Path(workspace_root)
+    root = raw_root.resolve(strict=True)
+    if Path(os.path.abspath(raw_root)) != root or not root.is_dir():
+        raise ValueError("authorized Environment workspace root is not canonical")
     if owner_authorized_checkout is not None:
         # Cross-repository campaign scopes are admitted by the authenticated
         # Control owner grant. Control supplies the configured repository root
@@ -950,12 +953,30 @@ def _verified_scope_checkout(
             raise ValueError("owner-authorized checkout path traverses a symbolic link")
         if repository_root.name != repository:
             raise ValueError("owner-authorized repository root names a different repository")
+        if checkout_path == repository_root:
+            raise ValueError(
+                "cross-repository scope must identify one selected worktree"
+            )
         try:
             checkout_path.relative_to(repository_root)
+            checkout_is_repository_scoped = True
         except ValueError:
-            raise ValueError("owner-authorized checkout is outside its configured repository") from None
-        if checkout_path == repository_root:
-            raise ValueError("cross-repository scope must identify one selected worktree")
+            checkout_is_repository_scoped = False
+        if not checkout_is_repository_scoped:
+            try:
+                workspace_relative = checkout_path.relative_to(root)
+            except ValueError:
+                raise ValueError(
+                    "owner-authorized checkout is outside its repository "
+                    "and campaign workspace"
+                ) from None
+            cursor = root
+            for part in workspace_relative.parts:
+                cursor = cursor / part
+                if cursor.is_symlink():
+                    raise ValueError(
+                        "owner-authorized checkout path traverses a symbolic link"
+                    )
         expected_branch = owner_authorized_checkout.get("branch")
         observed = workspace_module.verify_registered_checkout(
             checkout_path,
