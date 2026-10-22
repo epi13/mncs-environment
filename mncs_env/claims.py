@@ -178,7 +178,7 @@ def normalize_scope(scope: dict[str, Any] | None, repository: str) -> dict[str, 
         raise ValueError("worktree scope needs a checkout path")
     if kind != "worktree":
         checkout = None
-    return {
+    result = {
         "kind": kind,
         "repository": repository,
         "checkout": checkout,
@@ -186,6 +186,18 @@ def normalize_scope(scope: dict[str, Any] | None, repository: str) -> dict[str, 
         "paths": paths,
         "exclusive": bool(scope.get("exclusive", kind == "repository")),
     }
+    if kind == "worktree":
+        for key in (
+            "git_common_directory_identity", "checkout_identity",
+            "manifest_identity",
+        ):
+            if key not in scope:
+                continue
+            value = scope[key]
+            if not isinstance(value, str) or not value:
+                raise ValueError(f"worktree scope {key} must be nonempty text")
+            result[key] = value
+    return result
 
 
 def migrate_record(record: dict[str, Any]) -> dict[str, Any]:
@@ -203,7 +215,11 @@ def claim_identity(repository: str, scope: dict[str, Any]) -> str:
         return f"claim:{repository}"
     digest = digest_hex(
         {"kind": scope["kind"], "checkout": scope["checkout"],
-         "branch": scope["branch"], "paths": scope["paths"]}
+         "branch": scope["branch"], "paths": scope["paths"],
+         **{key: scope[key] for key in (
+             "git_common_directory_identity", "checkout_identity",
+             "manifest_identity",
+         ) if key in scope}}
     )[:12]
     return f"claim:{repository}:{scope['kind']}:{digest}"
 

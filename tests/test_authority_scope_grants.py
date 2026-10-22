@@ -902,6 +902,130 @@ def test_nested_worktree_root_resolves_its_claim_against_git_common_identity(
         session.close()
 
 
+def test_exact_declared_nested_provider_checkout_is_claimable_and_authorized(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        _checkout(workspace, "mncs-forge")
+        compiler_checkout = Path(_checkout(workspace, "mncs-compiler")["path"])
+        compiler_root = workspace / compiler_checkout
+        provider_root = (
+            compiler_root / ".worktrees" / "native-application" / "mncs-forge"
+        )
+        provider_root.mkdir(parents=True)
+        subprocess.run(
+            ["git", "init", "-b", "main", str(provider_root)],
+            check=True, capture_output=True, text=True,
+        )
+        _git(provider_root, "config", "user.name", "Environment Scope Test")
+        _git(provider_root, "config", "user.email", "scope-test@example.invalid")
+        (provider_root / "README.md").write_text("declared provider\n", encoding="utf-8")
+        manifest = provider_root / ".mncs" / "project.json"
+        manifest.parent.mkdir()
+        manifest.write_text(json.dumps({"repository": "mncs-forge"}) + "\n")
+        _git(provider_root, "add", "README.md", ".mncs/project.json")
+        _git(provider_root, "commit", "-m", "declared provider checkout")
+
+        session.snapshot["authority"]["writable"] = [
+            "mncs-environment", "mncs-forge",
+        ]
+        session.snapshot["bindings"] = [{
+            "provider": "mncs-forge",
+            "capability": "mncs-forge:native-application-execution",
+            "effects": ["execute"],
+            "provider_root": str(provider_root),
+        }]
+        session._save()
+
+        claim = session.acquire_claim(
+            "mncs-forge",
+            reason="native application provider writes its exact declared checkout",
+            scope={
+                "kind": "worktree",
+                "checkout": str(provider_root),
+                "branch": "main",
+            },
+            request_id="req_declared_nested_provider_claim",
+        )
+        assert claim["scope"]["kind"] == "worktree"
+        assert claim["scope"]["repository"] == "mncs-forge"
+        assert claim["scope"]["checkout"] == str(provider_root)
+        assert claim["scope"]["branch"] == "main"
+        assert claim["scope"]["exclusive"] is False
+        assert claim["scope"]["checkout_identity"]
+        assert claim["scope"]["git_common_directory_identity"]
+        assert claim["scope"]["manifest_identity"]
+
+        verdict = session.check(
+            action="execute",
+            target="mncs-forge",
+            scope={
+                "kind": "worktree",
+                "checkout": str(provider_root),
+                "branch": "main",
+                "git_common_directory_identity": claim["scope"][
+                    "git_common_directory_identity"
+                ],
+                "checkout_identity": claim["scope"]["checkout_identity"],
+                "manifest_identity": claim["scope"]["manifest_identity"],
+            },
+        )
+        assert verdict == {
+            "verdict": "allow",
+            "reason": "mncs-forge mutation by claim",
+        }
+        mismatched_identity = session.check(
+            action="execute",
+            target="mncs-forge",
+            scope={
+                "kind": "worktree",
+                "checkout": str(provider_root),
+                "branch": "main",
+                "git_common_directory_identity": "git-common:replacement",
+                "checkout_identity": "checkout:replacement",
+                "manifest_identity": claim["scope"]["manifest_identity"],
+            },
+        )
+        assert mismatched_identity["verdict"] == "escalate"
+
+        lookalike = (
+            compiler_root / ".worktrees" / "unbound-lookalike" / "mncs-forge"
+        )
+        lookalike.mkdir(parents=True)
+        subprocess.run(
+            ["git", "init", "-b", "main", str(lookalike)],
+            check=True, capture_output=True, text=True,
+        )
+        _git(lookalike, "config", "user.name", "Environment Scope Test")
+        _git(lookalike, "config", "user.email", "scope-test@example.invalid")
+        (lookalike / "README.md").write_text("lookalike\n", encoding="utf-8")
+        lookalike_manifest = lookalike / ".mncs" / "project.json"
+        lookalike_manifest.parent.mkdir()
+        lookalike_manifest.write_text(json.dumps({"repository": "mncs-forge"}) + "\n")
+        _git(lookalike, "add", "README.md", ".mncs/project.json")
+        _git(lookalike, "commit", "-m", "unbound lookalike")
+
+        with pytest.raises(
+            workspace_module.WorkspaceResolutionError,
+            match="Git common repository is not an immediate repository in the authorized workspace",
+        ):
+            session.acquire_claim(
+                "mncs-forge",
+                reason="an unrelated matching manifest is not a provider checkout",
+                scope={
+                    "kind": "worktree",
+                    "checkout": str(lookalike),
+                    "branch": "main",
+                },
+                request_id="req_declared_provider_lookalike_rejected",
+            )
+    finally:
+        session.close()
+
+
 def test_exact_session_owned_claim_anchors_scope_when_selection_projection_is_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

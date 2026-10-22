@@ -285,6 +285,12 @@ def _covers(held: dict[str, Any], requested: dict[str, Any]) -> bool:
     wanted_branch = requested.get("branch") or None
     if held_branch and wanted_branch and held_branch != wanted_branch:
         return False
+    for key in (
+        "git_common_directory_identity", "checkout_identity", "manifest_identity",
+    ):
+        wanted_identity = requested.get(key)
+        if wanted_identity is not None and held.get(key) != wanted_identity:
+            return False
     held_paths = held.get("paths")
     if held_paths is None:
         return True

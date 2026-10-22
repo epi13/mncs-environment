@@ -1118,6 +1118,99 @@ def _verified_scope_checkout(
     return Path(observed["path"]), observed
 
 
+def _verified_declared_provider_checkout(
+    snapshot: dict[str, Any], repository: str, checkout: str | Path,
+    *, expected_branch: str | None = None,
+) -> dict[str, str] | None:
+    """Verify an exact nested checkout named by a bound provider.
+
+    Some application providers are declared by a campaign checkout but execute
+    from a separate repository root nested beneath it. Such a checkout is not
+    necessarily a linked worktree of the repository's workspace root. It is
+    still an admissible narrow claim target when the durable capability
+    binding names that exact provider root, Git verifies its repository and
+    manifest identities, and the path stays inside the session workspace.
+
+    This does not make arbitrary nested Git directories claimable: the request
+    must match a provider root already present in the authenticated session.
+    """
+    candidate_value = Path(checkout).expanduser()
+    try:
+        absolute_candidate = Path(os.path.abspath(candidate_value))
+        candidate = absolute_candidate.resolve(strict=True)
+    except OSError as error:
+        raise ValueError("declared provider checkout is unavailable") from error
+    if absolute_candidate != candidate:
+        raise ValueError("declared provider checkout traverses a symbolic link")
+
+    declared = []
+    bindings = snapshot.get("bindings", [])
+    if isinstance(bindings, list):
+        for binding in bindings:
+            if (not isinstance(binding, dict)
+                    or binding.get("provider") != repository):
+                continue
+            raw_root = binding.get("provider_root")
+            if not isinstance(raw_root, str) or not raw_root:
+                continue
+            try:
+                absolute_root = Path(os.path.abspath(Path(raw_root).expanduser()))
+            except OSError:
+                continue
+            if absolute_root == candidate:
+                declared.append(binding)
+    if not declared:
+        return None
+
+    workspace_value = (snapshot.get("workspace") or {}).get("root")
+    if not isinstance(workspace_value, str) or not workspace_value:
+        raise ValueError("session has no authorized workspace for its provider checkout")
+    try:
+        absolute_workspace = Path(os.path.abspath(Path(workspace_value).expanduser()))
+        authorized_workspace = absolute_workspace.resolve(strict=True)
+        relative = candidate.relative_to(authorized_workspace)
+    except (OSError, ValueError) as error:
+        raise ValueError("declared provider checkout escapes the session workspace") from error
+    if absolute_workspace != authorized_workspace:
+        raise ValueError("session workspace traverses a symbolic link")
+    cursor = authorized_workspace
+    for component in relative.parts:
+        cursor = cursor / component
+        if cursor.is_symlink():
+            raise ValueError("declared provider checkout traverses a symbolic link")
+
+    common = workspace_module._git(
+        candidate, "rev-parse", "--path-format=absolute", "--git-common-dir",
+    )
+    if common is None or common.returncode != 0:
+        raise ValueError("declared provider checkout has no verifiable Git common directory")
+    try:
+        common_directory = Path(os.path.abspath(common.stdout.strip())).resolve(strict=True)
+    except OSError as error:
+        raise ValueError("declared provider Git common directory is unavailable") from error
+    repository_root = common_directory.parent
+    observed = workspace_module.verify_registered_checkout(
+        candidate,
+        repository=repository,
+        workspace_root=repository_root.parent,
+        expected_repository_root=repository_root,
+        expected_branch=expected_branch,
+    )
+    for binding in declared:
+        provenance = binding.get("provenance")
+        recorded = provenance.get("checkout") if isinstance(provenance, dict) else None
+        if not isinstance(recorded, dict):
+            continue
+        for field in (
+            "path", "repository_root", "git_common_directory_identity",
+            "checkout_identity", "branch", "head",
+        ):
+            expected = recorded.get(field)
+            if isinstance(expected, str) and observed.get(field) != expected:
+                raise ValueError(f"declared provider checkout {field} changed")
+    return observed
+
+
 def _resolve_declared_runtime_toolchain_checkouts(
     workspace_root: str | Path,
     provider_roots: dict[str, Path],
@@ -3748,6 +3841,28 @@ class Session:
                     branch = checkout.get("branch") or (
                         selected_checkout.get("branch") if selected_checkout else None
                     )
+                    try:
+                        declared_provider = _verified_declared_provider_checkout(
+                            self.snapshot, provider, selected_path,
+                            expected_branch=(
+                                branch if isinstance(branch, str) and branch else None
+                            ),
+                        )
+                    except (OSError, RuntimeError, ValueError,
+                            workspace_module.WorkspaceResolutionError) as error:
+                        raise AuthorityDenied(
+                            f"capability {capability!r} provider checkout identity "
+                            f"is unavailable: {error}"
+                        ) from None
+                    if declared_provider is not None:
+                        branch = declared_provider.get("branch") or branch
+                        for identity_key in (
+                            "git_common_directory_identity", "checkout_identity",
+                            "manifest_identity",
+                        ):
+                            identity_value = declared_provider.get(identity_key)
+                            if isinstance(identity_value, str) and identity_value:
+                                effect_scope[identity_key] = identity_value
                     if isinstance(branch, str) and branch:
                         effect_scope["branch"] = branch
                 effect_verdict = self.check(
@@ -4091,6 +4206,18 @@ class Session:
                     # not usable provenance. Other exact current claims may
                     # still provide a unique repository identity.
                     continue
+                if any(
+                    isinstance(owned_scope.get(field), str)
+                    and owned_scope.get(field) != anchor_facts.get(field)
+                    for field in (
+                        "git_common_directory_identity", "checkout_identity",
+                        "manifest_identity",
+                    )
+                ):
+                    # A replacement Git repository at the same path and
+                    # branch cannot inherit a claim with stronger identity
+                    # provenance.
+                    continue
                 if authorized_workspace is None:
                     continue
                 try:
@@ -4187,6 +4314,7 @@ class Session:
             requested_checkout = Path(requested_path)
             if not requested_checkout.is_absolute() and workspace_root:
                 requested_checkout = Path(workspace_root) / requested_checkout
+            declared_provider: dict[str, str] | None = None
             if owner_authorized_selection:
                 if requested_checkout.resolve() != Path(str(selected.get("path"))).resolve():
                     raise ValueError(
@@ -4198,15 +4326,26 @@ class Session:
                     owner_authorized_checkout=selected,
                 )
             else:
-                resolved_checkout, checkout_identity = _verified_scope_checkout(
-                    workspace_root or ".",
-                    repository,
-                    {
-                        "path": requested_path,
-                        "branch": scope.get("branch"),
-                    },
-                    authorized_checkout=selected,
+                declared_provider = _verified_declared_provider_checkout(
+                    self.snapshot, repository, requested_checkout,
+                    expected_branch=(
+                        scope.get("branch")
+                        if isinstance(scope.get("branch"), str) else None
+                    ),
                 )
+                if declared_provider is not None:
+                    resolved_checkout = Path(declared_provider["path"])
+                    checkout_identity = declared_provider
+                else:
+                    resolved_checkout, checkout_identity = _verified_scope_checkout(
+                        workspace_root or ".",
+                        repository,
+                        {
+                            "path": requested_path,
+                            "branch": scope.get("branch"),
+                        },
+                        authorized_checkout=selected,
+                    )
             claim_workspace_root = checkout_identity.get("workspace_root") or workspace_root
             inspected = workspace_module.inspect_repo(
                 resolved_checkout, _refresh=True
@@ -4223,12 +4362,25 @@ class Session:
                 "branch": inspected.branch,
                 "exclusive": False,
             }
+            if declared_provider is not None:
+                for identity_key in (
+                    "git_common_directory_identity", "checkout_identity",
+                    "manifest_identity",
+                ):
+                    identity_value = declared_provider.get(identity_key)
+                    if isinstance(identity_value, str) and identity_value:
+                        scope[identity_key] = identity_value
             if checkout_facts is None:
                 checkout_facts = {
                     "head": inspected.head,
                     "branch": inspected.branch,
                     "dirty": bool(inspected.dirty),
                     "foreign_signals": ["dirty-tree"] if inspected.dirty else [],
+                    "checkout_identity": checkout_identity.get("checkout_identity"),
+                    "git_common_directory_identity": checkout_identity.get(
+                        "git_common_directory_identity"
+                    ),
+                    "manifest_identity": checkout_identity.get("manifest_identity"),
                 }
         elif checkout_facts is None and selected is not None:
             clean = bool(selected.get("clean", False))
