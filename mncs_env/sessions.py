@@ -2603,11 +2603,18 @@ class Session:
                 raise
             except SequenceTaken as error:
                 last_error = error
-                self._next_seq_hint = None
                 if expected_generation is not None:
+                    self._next_seq_hint = None
                     raise EventGenerationConflict(
                         expected_generation, self.store.generation()
                     ) from error
+                # A conflicting immutable event identity is reserved even
+                # when its Store binding is absent (for example, a prior
+                # process stopped after staging the manifest). Retry at the
+                # next sequence instead of repeatedly rebuilding different
+                # bytes under that same logical identity. Gaps are valid in
+                # this append-only log; order remains strictly increasing.
+                self._next_seq_hint = sequence + 1
                 continue
         raise LifecycleError(f"event log unwritable after retries: {last_error}")
 
