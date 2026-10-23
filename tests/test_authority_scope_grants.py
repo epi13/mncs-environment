@@ -475,7 +475,7 @@ def test_grant_is_store_durable_and_claimable_after_fresh_open(tmp_path: Path) -
 
 
 def test_owner_grant_admits_exact_registered_worktree_outside_campaign_workspace(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     campaign_workspace = tmp_path / "campaign-workspace"
     campaign_workspace.mkdir()
@@ -545,6 +545,21 @@ def test_owner_grant_admits_exact_registered_worktree_outside_campaign_workspace
             )
             assert resumed_claim["scope"]["checkout"] == str(checkout.resolve())
             assert resumed_claim["scope"]["branch"] == "campaign/compiler-scope"
+            discovered_roots: dict[str, Path] = {}
+
+            def capture_discovery(_workspace_root, *, repository_roots, **_kwargs):
+                discovered_roots.update(repository_roots)
+                return []
+
+            monkeypatch.setattr(
+                sessions.capabilities_module,
+                "discover_capabilities",
+                capture_discovery,
+            )
+            report = resumed.revalidate()
+            assert report["scope_composition"]["status"] == "ready"
+            assert "mncs-control-mcp" in report["scope_composition"]["composed"]
+            assert discovered_roots["mncs-control-mcp"] == checkout.resolve()
         finally:
             resumed.close()
     finally:

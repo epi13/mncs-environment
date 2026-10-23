@@ -3381,18 +3381,30 @@ class Session:
                     "path": expected_identity["path"],
                     "branch": expected_identity.get("branch"),
                 }
+            owner_authorized_identity = (
+                expected_identity
+                if all(isinstance(expected_identity.get(field), str)
+                       and expected_identity.get(field)
+                       for field in ("path", "repository_root", "workspace_root"))
+                else None
+            )
             try:
                 resolved_checkout, checkout_facts = _verified_scope_checkout(
                     workspace_root, repository,
                     selected_for_grant,
+                    owner_authorized_checkout=owner_authorized_identity,
                 )
                 observed = workspace_module.inspect_repo(resolved_checkout, _refresh=True)
                 if (observed is None or observed.git_error or not observed.head
                         or observed.head != checkout_facts.get("head")
                         or (observed.branch or "") != checkout_facts.get("branch")):
                     raise ValueError("checkout Git identity is unavailable")
+                identity_workspace = (
+                    Path(owner_authorized_identity["repository_root"]).parent
+                    if owner_authorized_identity is not None else workspace_root
+                )
                 current_identity = _repository_checkout_identity(
-                    workspace_root, repository, resolved_checkout
+                    identity_workspace, repository, resolved_checkout
                 )
             except (OSError, RuntimeError, ValueError):
                 report["skipped"].append({
@@ -5506,7 +5518,6 @@ class Session:
                 report = prior[-1].get("payload", {}).get("report", {})
                 return dict(report) if isinstance(report, dict) else {}
 
-        scope_composition = self._compose_authorized_scope_checkouts()
         selected_workspace = (
             workspace_root or self.snapshot.get("workspace", {}).get("root")
         )
@@ -5518,6 +5529,11 @@ class Session:
                 request_id=request_id,
                 operation_digest=operation_digest,
             )
+        # Refresh the campaign-root observation first. Exact cross-repository
+        # scopes are composed immediately afterward from their canonical grant
+        # and live claim, so an external checkout cannot be marked missing just
+        # because the campaign workspace scanner does not enumerate its path.
+        scope_composition = self._compose_authorized_scope_checkouts()
 
         old_bindings = list(self.snapshot.get("bindings", []))
         selected = self.snapshot.get("selected_checkouts", {})
@@ -5525,6 +5541,10 @@ class Session:
         if workspace_root and selected:
             roots: dict[str, Path] = {}
             facts: dict[str, dict[str, Any]] = {}
+            composed_scope_repositories = set(
+                scope_composition.get("composed", [])
+                + scope_composition.get("retained", [])
+            )
             for repository, record in sorted(selected.items()):
                 raw_path = Path(str(record.get("path", "")))
                 path = raw_path if raw_path.is_absolute() else Path(workspace_root) / raw_path
@@ -5532,7 +5552,14 @@ class Session:
                 try:
                     path.relative_to(Path(workspace_root).resolve())
                 except ValueError:
-                    continue
+                    # Cross-repository owner grants may select a registered
+                    # checkout outside the campaign workspace. The preceding
+                    # scope-composition pass has just reverified its immutable
+                    # owner grant, exact Git identity, and live matching claim;
+                    # only those exact composed records may extend discovery.
+                    if (record.get("source_ref") != "authenticated-scope-grant"
+                            or repository not in composed_scope_repositories):
+                        continue
                 if record.get("missing") or path.is_symlink() or not path.is_dir():
                     continue
                 roots[str(repository)] = path
