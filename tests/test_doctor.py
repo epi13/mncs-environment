@@ -65,6 +65,10 @@ class DoctorFixture(unittest.TestCase):
         self.project.mkdir()
         self.state = self.base / "state"
         (self.project / ".mncs").mkdir()
+        (self.project / ".mncs" / "project.json").write_text(
+            json.dumps({"schema_version": "mncs.project/1", "repository": "fixture"})
+            + "\n"
+        )
         self.definition = self.project / ".mncs" / "environment.json"
         self.manifest = self.project / "family-semantic-contracts-v1.json"
         self.provider = self.project / "provider.py"

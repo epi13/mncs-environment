@@ -122,9 +122,13 @@ class RightsContextTests(unittest.TestCase):
             )
             self.assertEqual(
                 [item["relation"] for item in context["provenance"]["projection"]["relationships"]],
-                ["generated-from", "generated-from", "referenced", "transformed-by"],
+                [
+                    "generated-from", "generated-from", "referenced",
+                    "referenced", "transformed-by",
+                ],
             )
-            self.assertLess(len(json.dumps(context)), 8192)
+            compact_context = json.dumps(context, separators=(",", ":"))
+            self.assertLess(len(compact_context.encode("utf-8")), 8192)
 
     def test_policy_file_change_emits_incremental_context_event(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

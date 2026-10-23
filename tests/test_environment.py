@@ -5032,6 +5032,8 @@ class SessionTests(unittest.TestCase):
     def test_provider_write_uses_exact_selected_worktree_claim_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))
+            session.snapshot["intent"]["repositories"] = ["MNCS-Commons"]
+            session.snapshot["authority"]["writable"] = ["MNCS-Commons"]
             checkout = "/selected/MNCS-Commons/.worktrees/campaign"
             binding = capabilities.probe_availability(
                 capabilities.bind(
@@ -5057,6 +5059,14 @@ class SessionTests(unittest.TestCase):
             # This case isolates path mapping; provide current transport facts
             # for its synthetic checkout and manually supplied claim fixture.
             with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
+                sessions, "_verified_declared_provider_checkout",
+                return_value={
+                    "path": checkout,
+                    "branch": "campaign/commons-parity",
+                    "head": "fixture",
+                    "workspace_root": "/selected/MNCS-Commons",
+                },
+            ), mock.patch.object(
                 sessions.workspace_module, "inspect_repo", return_value=sessions.workspace_module.RepoState(
                     name="MNCS-Commons", path=str(checkout), manifest_repository="MNCS-Commons",
                     manifest_revision=1, branch="campaign/commons-parity", head="fixture", dirty=False)), mock.patch.object(
@@ -5064,7 +5074,7 @@ class SessionTests(unittest.TestCase):
                 return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
             ) as invoke:
                 result = session.invoke("campaign-writer", ["fixture"])
-            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["status"], "ok", result)
             self.assertEqual(invoke.call_count, 1)
 
     def test_provider_effect_resolves_relative_checkout_from_campaign_root(self) -> None:
@@ -6604,6 +6614,7 @@ class EntryFrictionTests(unittest.TestCase):
                 return sorted(self.snapshots)
 
             def read_claims(self) -> list[dict]:
+                observed_at = datetime.now(timezone.utc)
                 return [
                     {
                         "claim_id": "claim:mncs-compiler:worktree:owner",
@@ -6611,8 +6622,10 @@ class EntryFrictionTests(unittest.TestCase):
                         "repository": "mncs-compiler",
                         "session_id": "ses_claim_owner",
                         "status": "held",
-                        "acquired_at": "2026-10-20T00:00:00+00:00",
-                        "expires_at": "2026-10-23T00:00:00+00:00",
+                        "acquired_at": observed_at.isoformat(timespec="seconds"),
+                        "expires_at": (observed_at + timedelta(hours=12)).isoformat(
+                            timespec="seconds"
+                        ),
                         "scope": {
                             "kind": "worktree",
                             "checkout": str(checkout),
@@ -6701,6 +6714,7 @@ class EntryFrictionTests(unittest.TestCase):
                 return self.snapshots[session_id]
 
             def read_claims(self) -> list[dict]:
+                observed_at = datetime.now(timezone.utc)
                 return [
                     {
                         "claim_id": "claim:mncs-compiler:worktree:foreign",
@@ -6708,8 +6722,10 @@ class EntryFrictionTests(unittest.TestCase):
                         "repository": "mncs-compiler",
                         "session_id": "ses_foreign_writer",
                         "status": "held",
-                        "acquired_at": "2026-10-20T00:00:00+00:00",
-                        "expires_at": "2026-10-23T00:00:00+00:00",
+                        "acquired_at": observed_at.isoformat(timespec="seconds"),
+                        "expires_at": (observed_at + timedelta(hours=12)).isoformat(
+                            timespec="seconds"
+                        ),
                         "scope": {
                             "kind": "worktree",
                             "checkout": str(checkout),

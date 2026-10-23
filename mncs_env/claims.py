@@ -248,6 +248,14 @@ def scopes_conflict(left: dict[str, Any], right: dict[str, Any]) -> str | None:
         return None
     if left.get("kind") == "repository" or right.get("kind") == "repository":
         return "repository-wide scope overlaps every checkout"
+    # A paths scope has no checkout identity and names repository-relative
+    # state. It therefore cannot prove that a linked-worktree mutation is on
+    # an independent branch. Conservatively treat intersecting path sets as
+    # overlapping while preserving disjoint path sets.
+    if left.get("kind") == "paths" or right.get("kind") == "paths":
+        if _paths_overlap(left.get("paths"), right.get("paths")):
+            return "repository-relative paths overlap"
+        return None
     same_checkout = (left.get("checkout") or None) == (right.get("checkout") or None)
     if same_checkout:
         if _paths_overlap(left.get("paths"), right.get("paths")):

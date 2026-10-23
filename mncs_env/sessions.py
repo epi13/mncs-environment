@@ -1162,7 +1162,15 @@ def _verified_declared_provider_checkout(
     except OSError as error:
         raise ValueError("declared provider checkout is unavailable") from error
     if absolute_candidate != candidate:
-        raise ValueError("declared provider checkout traverses a symbolic link")
+        raise workspace_module.WorkspaceResolutionError(
+            "declared provider checkout traverses a symbolic link",
+            diagnostics={
+                "code": "working-checkout-unavailable",
+                "repository": repository,
+                "path": str(candidate_value),
+                "reason": "symbolic-link-escape",
+            },
+        )
 
     declared = []
     bindings = snapshot.get("bindings", [])
@@ -2474,7 +2482,14 @@ class Session:
         return intent
 
     def authority_scope_grants(self) -> list[dict[str, Any]]:
-        """Project Environment-admitted repository grants from immutable events."""
+        """Project the current grant for each repository from immutable events.
+
+        A grant refresh is a new immutable event linked to the grant it
+        supersedes. Older records remain in the Store log for provenance, but
+        only the latest correctly linked record contributes current authority.
+        Grants created before refresh links were introduced retain their
+        original append-order projection.
+        """
         grants: dict[str, dict[str, Any]] = {}
         for event in self._log():
             if event.get("type") != "authority.scope-granted":
@@ -2487,8 +2502,18 @@ class Session:
                     or grant.get("campaign_id") != (self.snapshot.get("campaign") or {}).get("identity")):
                 continue
             repository = grant.get("repository")
-            if isinstance(repository, str) and repository:
-                grants[repository] = dict(grant)
+            if not isinstance(repository, str) or not repository:
+                continue
+            prior = grants.get(repository)
+            refresh_of = grant.get("refresh_of")
+            if refresh_of is not None:
+                if (prior is None
+                        or not isinstance(refresh_of, str)
+                        or refresh_of != prior.get("identity")
+                        or not isinstance(grant.get("identity"), str)
+                        or grant.get("identity") == refresh_of):
+                    continue
+            grants[repository] = dict(grant)
         return [grants[key] for key in sorted(grants)]
 
     def effective_authority(self) -> dict[str, Any]:
@@ -2668,11 +2693,32 @@ class Session:
             )
         if repository in current.get("protected_repositories", []):
             raise AuthorityDenied(f"repository scope is protected for this campaign: {repository}")
-        if repository in current.get("writable", []):
+        existing_grants = [
+            item for item in self.authority_scope_grants()
+            if item.get("repository") == repository
+        ]
+        prior_grant = existing_grants[0] if len(existing_grants) == 1 else None
+        if len(existing_grants) > 1:
+            raise AuthorityScopeConflict(
+                "authority-scope-conflict",
+                f"repository has multiple current scope grants: {repository}",
+                next_step="reconcile the immutable authority grant history before refreshing scope",
+            )
+        if repository in current.get("writable", []) and prior_grant is None:
             raise AuthorityScopeConflict(
                 "authority-scope-already-granted",
                 f"repository already appears in effective writable scope: {repository}",
                 next_step="inspect the existing authority grant and claim before continuing",
+            )
+        if prior_grant is not None and (
+            prior_grant.get("authorized_by_principal_id") != authenticated_principal_id
+            or prior_grant.get("approval_reference") != approval_reference
+            or prior_grant.get("scope") != {
+                "kind": "repository", "repository": repository,
+            }
+        ):
+            raise AuthorityDenied(
+                "repository scope refresh must retain the original authenticated owner and approval"
             )
 
         workspace_root_value = (self.snapshot.get("workspace") or {}).get("root")
@@ -2684,6 +2730,15 @@ class Session:
             selected_checkouts.get(repository)
             if isinstance(selected_checkouts, dict) else None
         )
+        prior_identity = (
+            prior_grant.get("repository_identity")
+            if isinstance(prior_grant, dict) else None
+        )
+        if selected is None and isinstance(prior_identity, dict):
+            # The durable grant is the checkout selection for a repository
+            # that was not in the original campaign closure. Keep refresh
+            # anchored to that exact path and stable Git identity.
+            selected = dict(prior_identity)
         try:
             resolved_checkout, checkout_facts = _verified_scope_checkout(
                 workspace_root, repository,
@@ -2731,16 +2786,23 @@ class Session:
             item for item in conflicting
             if self._is_owner_recovered_claim(item, repository, campaign_id)
         ]
-        if conflicting and (
-            len(conflicting) != 1 or len(same_session_recovery) != 1
-        ):
-            raise AuthorityScopeConflict(
-                "authority-scope-conflict",
-                f"selected worktree scope has an existing live claim: {repository}",
-                next_step="obtain the recorded owner's handoff or wait for a valid recovery condition",
-            )
         preserved_evidence = None
-        if observed.dirty:
+        if prior_grant is None:
+            if conflicting and (
+                len(conflicting) != 1 or len(same_session_recovery) != 1
+            ):
+                raise AuthorityScopeConflict(
+                    "authority-scope-conflict",
+                    f"selected worktree scope has an existing live claim: {repository}",
+                    next_step="obtain the recorded owner's handoff or wait for a valid recovery condition",
+                )
+        elif conflicting:
+            # Refresh ownership is checked below against a single exact
+            # worktree claim after the selected checkout identity is known.
+            # In particular, an existing grant never makes a foreign claim
+            # eligible for transfer.
+            pass
+        if observed.dirty and prior_grant is None:
             if len(same_session_recovery) != 1:
                 raise AuthorityDenied(
                     f"repository scope admission refuses unproven dirty work: {repository}"
@@ -2781,6 +2843,68 @@ class Session:
             "head": observed.head,
             "clean": not bool(observed.dirty),
         }
+
+        refresh_of = None
+        if prior_grant is not None:
+            if not isinstance(prior_identity, dict):
+                raise AuthorityScopeConflict(
+                    "authority-scope-conflict",
+                    f"existing repository scope grant has no checkout identity: {repository}",
+                    next_step="reconcile the durable grant before refreshing it",
+                )
+            stable_identity_fields = (
+                "path", "branch", "repository_root", "workspace_root",
+                "git_common_directory", "manifest_identity", "checkout_identity",
+                "git_common_directory_identity", "observed_path",
+            )
+            changed_identity = [
+                field for field in stable_identity_fields
+                if (field in prior_identity
+                    and prior_identity.get(field) != repository_identity.get(field))
+            ]
+            if changed_identity:
+                raise AuthorityScopeConflict(
+                    "authority-scope-checkout-conflict",
+                    f"repository scope refresh selected a different registered checkout: {repository}",
+                    next_step="continue in the exact worktree recorded by the existing owner grant",
+                )
+
+            live_claims = claims_module.active_claims(self.store.read_claims())
+            overlapping: list[dict[str, Any]] = []
+            malformed = False
+            for item in live_claims.values():
+                if item.get("repository") != repository:
+                    continue
+                try:
+                    existing_scope = claims_module.normalize_scope(
+                        item.get("scope") if isinstance(item.get("scope"), dict) else None,
+                        repository,
+                    )
+                except (TypeError, ValueError):
+                    malformed = True
+                    continue
+                if claims_module.scopes_conflict(requested_scope, existing_scope):
+                    overlapping.append(item)
+            exact_claims = [
+                item for item in overlapping
+                if item.get("session_id") == self.session_id
+                and item.get("consumer_id") == self.snapshot.get("consumer_id")
+                and item.get("scope") == requested_scope
+            ]
+            if malformed or len(overlapping) != 1 or len(exact_claims) != 1:
+                raise AuthorityScopeConflict(
+                    "authority-scope-conflict",
+                    f"repository scope refresh requires this session's single live claim on the exact worktree: {repository}",
+                    next_step="acquire or renew the exact registered worktree claim, then retry the owner-approved refresh",
+                )
+            refresh_of = str(prior_grant.get("identity", "")) or None
+            if refresh_of is None:
+                raise AuthorityScopeConflict(
+                    "authority-scope-conflict",
+                    f"existing repository scope grant has no immutable identity: {repository}",
+                    next_step="reconcile the durable grant before refreshing it",
+                )
+
         if preserved_evidence is not None:
             repository_identity["preserved_untracked_evidence"] = preserved_evidence
         scope_grant: dict[str, Any] = {
@@ -2803,6 +2927,8 @@ class Session:
             "admitted_at": utcnow(),
             "repository_identity": repository_identity,
         }
+        if refresh_of is not None:
+            scope_grant["refresh_of"] = refresh_of
         after = dict(current)
         after["writable"] = sorted(set(current.get("writable", [])) | {repository})
         after["scope_grants"] = [*current.get("scope_grants", []), scope_grant]

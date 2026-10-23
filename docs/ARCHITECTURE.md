@@ -117,6 +117,13 @@ The session should distinguish between:
 - actions requiring escalation or approval,
 - explicitly prohibited actions.
 
+Control-admitted repository scopes are recorded as immutable Store events. A
+continuing session may refresh the checkout observation after its worktree
+advances or becomes dirty only under the same authenticated owner and approval,
+for the same registered checkout, while one live session claim still covers
+that exact worktree. The refreshed event links to the prior grant; an expired
+claim, changed checkout, or overlapping foreign claim cannot refresh it.
+
 ### 5. Event connection
 
 Environment is event-aware. A capability may be useful because the consumer can call it, because it can emit events, or both.

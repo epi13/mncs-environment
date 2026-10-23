@@ -235,6 +235,10 @@ class EntryContractTests(unittest.TestCase):
         self.project.mkdir()
         self.state = self.base / "state with spaces"
         (self.project / ".mncs").mkdir()
+        (self.project / ".mncs" / "project.json").write_text(
+            json.dumps({"schema_version": "mncs.project/1", "repository": "fixture"})
+            + "\n"
+        )
         self.definition = self.project / ".mncs" / "environment.json"
         self.manifest = self.project / "family-semantic-contracts-v1.json"
         self.provider = self.project / "provider.py"
@@ -1618,6 +1622,7 @@ class EntryContractTests(unittest.TestCase):
         external = self.base / "manifest.json"
         external.write_text(json.dumps({"repository": "fixture"}))
         manifest = self.project / ".mncs" / "project.json"
+        manifest.unlink()
         manifest.symlink_to(external)
         with self.assertRaisesRegex(
             workspace.WorkspaceResolutionError, "manifest identity cannot traverse"
