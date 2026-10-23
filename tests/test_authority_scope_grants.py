@@ -950,39 +950,159 @@ def test_scope_grant_refresh_requires_one_live_matching_claim(
         session.close()
 
 
-def test_scope_grant_refresh_rejects_a_different_registered_worktree(
+def test_scope_grant_refresh_rebinds_to_an_owner_verified_registered_worktree(
     tmp_path: Path,
 ) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     session = _session(tmp_path / "state", workspace)
     try:
-        first_checkout, first_facts = _nested_target_checkout(
-            session, workspace, "refresh-original", "campaign/scope-refresh-original",
-        )
-        first = _grant(
-            session,
-            request_id="req_refresh_path_initial",
-            owner_authorized_checkout=first_facts,
-        )
-        session.acquire_claim(
+        first = _grant(session, request_id="req_refresh_path_initial")
+        first_claim = session.acquire_claim(
             "mncs-control-mcp",
             reason="own the original selected worktree",
             request_id="req_refresh_path_claim",
         )
+        session.revalidate()
+        initial_selection = session.snapshot["selected_checkouts"]["mncs-control-mcp"]
+        assert initial_selection["source_ref"] == "authenticated-scope-grant"
+        assert session.release_claim(
+            "mncs-control-mcp",
+            claim_id=first_claim["claim_id"],
+            reason="finish the original worktree scope before rebinding",
+            request_id="req_refresh_path_claim_release",
+        )
+
         second_checkout, second_facts = _nested_target_checkout(
             session, workspace, "refresh-other", "campaign/scope-refresh-other",
+        )
+        # A registered worktree must be selected through the owner grant, not
+        # inferred from the campaign's old checkout projection.
+        session.snapshot["selected_checkouts"]["mncs-control-mcp"] = initial_selection
+        refreshed = _grant(
+            session,
+            revision=session.effective_authority()["revision"],
+            request_id="req_refresh_path_update",
+            owner_authorized_checkout=second_facts,
+        )
+
+        assert refreshed["refresh_of"] == first["identity"]
+        assert refreshed["repository_identity"]["path"] == str(second_checkout)
+        assert session.authority_scope_grants() == [refreshed]
+
+        target_claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="claim the newly owner-authorized Language worktree",
+            scope={
+                "kind": "worktree",
+                "checkout": str(second_checkout),
+                "branch": "campaign/scope-refresh-other",
+            },
+            request_id="req_refresh_path_target_claim",
+        )
+        report = session.revalidate()
+        selected = session.snapshot["selected_checkouts"]["mncs-control-mcp"]
+        assert report["scope_composition"]["composed"] == ["mncs-control-mcp"]
+        assert selected["path"] == str(second_checkout)
+        assert selected["scope_grant_identity"] == refreshed["identity"]
+        assert target_claim["scope"]["checkout"] == str(second_checkout)
+    finally:
+        session.close()
+
+
+def test_scope_grant_rebind_requires_control_verified_checkout_facts(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        first = _grant(session, request_id="req_refresh_unverified_initial")
+        second_checkout, _ = _nested_target_checkout(
+            session, workspace, "refresh-unverified", "campaign/scope-refresh-unverified",
         )
         with pytest.raises(sessions.AuthorityScopeConflict) as error:
             _grant(
                 session,
                 revision=session.effective_authority()["revision"],
-                request_id="req_refresh_path_update",
-                owner_authorized_checkout=second_facts,
+                request_id="req_refresh_unverified_update",
             )
 
         assert error.value.diagnostics["code"] == "authority-scope-checkout-conflict"
-        assert first_checkout != second_checkout
+        assert first["repository_identity"]["path"] != str(second_checkout)
+        assert session.authority_scope_grants() == [first]
+    finally:
+        session.close()
+
+
+def test_scope_grant_rebind_does_not_take_a_foreign_target_claim(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        first = _grant(session, request_id="req_refresh_foreign_target_initial")
+        second_checkout, second_facts = _nested_target_checkout(
+            session, workspace, "refresh-foreign-target",
+            "campaign/scope-refresh-foreign-target",
+        )
+        claims.acquire(
+            session.store,
+            repository="mncs-control-mcp",
+            session_id="ses_foreign_scope_rebind",
+            consumer_id="foreign-scope-rebind",
+            basis=claims.BASIS_EXPLICIT,
+            reason="foreign writer owns the selected target worktree",
+            scope={
+                "kind": "worktree",
+                "checkout": str(second_checkout),
+                "branch": "campaign/scope-refresh-foreign-target",
+            },
+            checkout_facts={"dirty": False, "foreign_signals": []},
+            request_id="req_refresh_foreign_target_claim",
+        )
+        with pytest.raises(sessions.AuthorityScopeConflict) as error:
+            _grant(
+                session,
+                revision=session.effective_authority()["revision"],
+                request_id="req_refresh_foreign_target_update",
+                owner_authorized_checkout=second_facts,
+            )
+
+        assert error.value.diagnostics["code"] == "authority-scope-conflict"
+        assert session.authority_scope_grants() == [first]
+    finally:
+        session.close()
+
+
+def test_scope_grant_rebind_requires_releasing_the_prior_worktree_claim(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        first = _grant(session, request_id="req_refresh_prior_claim_initial")
+        session.acquire_claim(
+            "mncs-control-mcp",
+            reason="keep the first selected worktree fenced during rebind",
+            request_id="req_refresh_prior_claim_live",
+        )
+        _, second_facts = _nested_target_checkout(
+            session, workspace, "refresh-prior-live",
+            "campaign/scope-refresh-prior-live",
+        )
+
+        with pytest.raises(sessions.AuthorityScopeConflict) as error:
+            _grant(
+                session,
+                revision=session.effective_authority()["revision"],
+                request_id="req_refresh_prior_claim_update",
+                owner_authorized_checkout=second_facts,
+            )
+
+        assert error.value.diagnostics["code"] == "authority-scope-conflict"
         assert session.authority_scope_grants() == [first]
     finally:
         session.close()

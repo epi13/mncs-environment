@@ -2737,13 +2737,33 @@ class Session:
         )
         if selected is None and isinstance(prior_identity, dict):
             # The durable grant is the checkout selection for a repository
-            # that was not in the original campaign closure. Keep refresh
-            # anchored to that exact path and stable Git identity.
+            # that was not in the original campaign closure. Start from that
+            # identity unless a later owner grant explicitly rebinds it.
             selected = dict(prior_identity)
+        selected_for_verification = selected
+        if (
+            prior_grant is not None
+            and owner_authorized_checkout is not None
+            and isinstance(selected, dict)
+            and isinstance(prior_identity, dict)
+            and isinstance(selected.get("path"), str)
+            and isinstance(prior_identity.get("path"), str)
+            and Path(os.path.abspath(selected["path"]))
+            == Path(os.path.abspath(prior_identity["path"]))
+            and isinstance(owner_authorized_checkout.get("path"), str)
+            and Path(os.path.abspath(owner_authorized_checkout["path"]))
+            != Path(os.path.abspath(prior_identity["path"]))
+        ):
+            # A Control-verified owner grant can move this repository's
+            # selected checkout. The prior selection is only a projection of
+            # the grant being refreshed, so it must not make that exact,
+            # authenticated rebind look like a competing selection.
+            selected_for_verification = None
         try:
             resolved_checkout, checkout_facts = _verified_scope_checkout(
                 workspace_root, repository,
-                selected if isinstance(selected, dict) else None,
+                selected_for_verification
+                if isinstance(selected_for_verification, dict) else None,
                 owner_authorized_checkout=owner_authorized_checkout,
             )
         except (OSError, ValueError, workspace_module.WorkspaceResolutionError) as error:
@@ -2863,14 +2883,47 @@ class Session:
                 if (field in prior_identity
                     and prior_identity.get(field) != repository_identity.get(field))
             ]
-            if changed_identity:
+            checkout_rebind = bool(changed_identity and owner_authorized_checkout is not None)
+            if changed_identity and not checkout_rebind:
                 raise AuthorityScopeConflict(
                     "authority-scope-checkout-conflict",
                     f"repository scope refresh selected a different registered checkout: {repository}",
-                    next_step="continue in the exact worktree recorded by the existing owner grant",
+                    next_step=(
+                        "request a Control-verified owner scope for the selected registered worktree"
+                    ),
                 )
 
             live_claims = claims_module.active_claims(self.store.read_claims())
+            if checkout_rebind:
+                old_path = prior_identity.get("path")
+                old_branch = prior_identity.get("branch")
+                if isinstance(old_path, str):
+                    old_scope = claims_module.normalize_scope({
+                        "kind": "worktree",
+                        "checkout": old_path,
+                        "branch": old_branch if isinstance(old_branch, str) else None,
+                    }, repository)
+                    old_owned_claims = []
+                    for item in live_claims.values():
+                        if (item.get("repository") != repository
+                                or item.get("session_id") != self.session_id):
+                            continue
+                        try:
+                            existing_scope = claims_module.normalize_scope(
+                                item.get("scope")
+                                if isinstance(item.get("scope"), dict) else None,
+                                repository,
+                            )
+                        except (TypeError, ValueError):
+                            continue
+                        if claims_module.scopes_conflict(old_scope, existing_scope):
+                            old_owned_claims.append(item)
+                    if old_owned_claims:
+                        raise AuthorityScopeConflict(
+                            "authority-scope-conflict",
+                            f"release this session's existing worktree claim before rebinding repository scope: {repository}",
+                            next_step="release the exact prior worktree claim, then retry the owner-authorized scope rebind",
+                        )
             overlapping: list[dict[str, Any]] = []
             malformed = False
             for item in live_claims.values():
@@ -2892,11 +2945,18 @@ class Session:
                 and item.get("consumer_id") == self.snapshot.get("consumer_id")
                 and item.get("scope") == requested_scope
             ]
-            if malformed or len(overlapping) != 1 or len(exact_claims) != 1:
+            target_claim_invalid = (
+                (len(overlapping) != 1 or len(exact_claims) != 1)
+                if not checkout_rebind else
+                bool(overlapping) and (len(overlapping) != 1 or len(exact_claims) != 1)
+            )
+            if malformed or target_claim_invalid:
                 raise AuthorityScopeConflict(
                     "authority-scope-conflict",
-                    f"repository scope refresh requires this session's single live claim on the exact worktree: {repository}",
-                    next_step="acquire or renew the exact registered worktree claim, then retry the owner-approved refresh",
+                    f"repository scope refresh conflicts with a live claim on the selected worktree: {repository}",
+                    next_step=(
+                        "resolve the overlapping claim through its owner, or acquire the exact selected worktree claim"
+                    ),
                 )
             refresh_of = str(prior_grant.get("identity", "")) or None
             if refresh_of is None:
@@ -3432,6 +3492,7 @@ class Session:
                 continue
 
             prior = selected.get(repository)
+            rebound_prior = False
             if isinstance(prior, dict):
                 prior_path = Path(str(prior.get("path", "")))
                 if not prior_path.is_absolute():
@@ -3444,11 +3505,19 @@ class Session:
                 if (not same_path
                         or (isinstance(prior_identity, str)
                             and prior_identity != current_identity["checkout_identity"])):
-                    report["skipped"].append({
-                        "repository": repository,
-                        "reason": "selected-checkout-identity-conflict",
-                    })
-                    continue
+                    owner_rebind = (
+                        bool(grant.get("refresh_of"))
+                        and prior.get("source_ref") == "authenticated-scope-grant"
+                        and prior.get("scope_grant_identity")
+                        in (None, grant.get("refresh_of"))
+                    )
+                    if not owner_rebind:
+                        report["skipped"].append({
+                            "repository": repository,
+                            "reason": "selected-checkout-identity-conflict",
+                        })
+                        continue
+                    rebound_prior = True
 
             facts = {
                 "repository": repository,
@@ -3457,6 +3526,7 @@ class Session:
                 "head": observed.head,
                 "clean": not bool(observed.dirty),
                 "source_ref": "authenticated-scope-grant",
+                "scope_grant_identity": grant.get("identity"),
                 "authoritative_head": observed.head,
                 **current_identity,
             }
@@ -3487,7 +3557,7 @@ class Session:
                 operation_digest=operation_digest,
             )
             eligible_repositories.add(repository)
-            if not isinstance(prior, dict):
+            if not isinstance(prior, dict) or rebound_prior:
                 additions[repository] = facts
                 report["composed"].append(repository)
             elif prior.get("source_ref") == "authenticated-scope-grant":
@@ -4460,6 +4530,28 @@ class Session:
             selected_checkouts.get(repository)
             if isinstance(selected_checkouts, dict) else None
         )
+        if isinstance(selected, dict) and selected.get("source_ref") == "authenticated-scope-grant":
+            current_grants = [
+                grant for grant in self.authority_scope_grants()
+                if grant.get("repository") == repository
+            ]
+            current_identity = (
+                current_grants[0].get("repository_identity")
+                if len(current_grants) == 1 else None
+            )
+            if (
+                len(current_grants) == 1
+                and current_grants[0].get("refresh_of")
+                and isinstance(current_identity, dict)
+                and isinstance(current_identity.get("path"), str)
+                and isinstance(selected.get("path"), str)
+                and Path(os.path.abspath(current_identity["path"]))
+                != Path(os.path.abspath(selected["path"]))
+            ):
+                # The selected checkout still reflects the previous owner
+                # grant. Re-resolve the new exact checkout from that grant so
+                # the next claim can be acquired before capability composition.
+                selected = None
         explicit_scope = scope is not None
         owner_authorized_selection = False
         if selected is None:
