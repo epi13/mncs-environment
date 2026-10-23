@@ -3203,6 +3203,111 @@ class ToolchainTests(unittest.TestCase):
 
 
 class SessionTests(unittest.TestCase):
+    def test_declared_provider_accepts_exact_authenticated_external_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            family = root / "Projects"
+            repository_root = CapabilityTests._git_checkout(
+                family / "mncs-forge", "mncs-forge", {"schema_version": 1}
+            )
+            branch = "campaign/provider-scope"
+            checkout = repository_root / ".worktrees" / "provider"
+            checkout.parent.mkdir()
+            subprocess.run([
+                "git", "-C", str(repository_root), "worktree", "add", "-q",
+                "-b", branch, str(checkout),
+            ], check=True)
+            checkout = checkout.resolve(strict=True)
+            session_workspace = root / "compiler-campaign"
+            session_workspace.mkdir()
+            session_id = "ses_provider_scope_test"
+            campaign_id = "cmp_provider_scope_test"
+            identity = workspace.verify_registered_checkout(
+                checkout,
+                repository="mncs-forge",
+                workspace_root=family,
+                expected_repository_root=repository_root,
+                expected_branch=branch,
+            )
+            grant_id = "scope_provider_scope_test"
+            grant = {
+                "schema_version": "mncs.environment.authority-scope-grant/1",
+                "identity": grant_id,
+                "session_id": session_id,
+                "campaign_id": campaign_id,
+                "repository": "mncs-forge",
+                "scope": {"kind": "repository", "repository": "mncs-forge"},
+                "repository_identity": identity,
+            }
+            selected = {
+                **identity,
+                "source_ref": "authenticated-scope-grant",
+                "scope_grant_identity": grant_id,
+            }
+            snapshot = {
+                "session_id": session_id,
+                "campaign": {"identity": campaign_id},
+                "workspace": {"root": str(session_workspace)},
+                "selected_checkouts": {"mncs-forge": selected},
+                "bindings": [{
+                    "provider": "mncs-forge",
+                    "provider_root": str(checkout),
+                    "provenance": {"checkout": identity},
+                }],
+            }
+
+            observed = sessions._verified_declared_provider_checkout(
+                snapshot, "mncs-forge", checkout,
+                expected_branch=branch,
+                authority_scope_grants=[grant],
+            )
+
+            self.assertEqual(observed, identity)
+
+            with self.assertRaisesRegex(ValueError, "escapes the session workspace"):
+                sessions._verified_declared_provider_checkout(
+                    snapshot, "mncs-forge", checkout,
+                    expected_branch=branch,
+                )
+
+            mismatched_selection = {
+                **snapshot,
+                "selected_checkouts": {"mncs-forge": {
+                    **selected, "scope_grant_identity": "scope_other",
+                }},
+            }
+            with self.assertRaisesRegex(ValueError, "not composed from its scope grant"):
+                sessions._verified_declared_provider_checkout(
+                    mismatched_selection, "mncs-forge", checkout,
+                    expected_branch=branch,
+                    authority_scope_grants=[grant],
+                )
+
+            lookalike_root = CapabilityTests._git_checkout(
+                family / "other" / "mncs-forge", "mncs-forge", {"schema_version": 1}
+            )
+            lookalike = lookalike_root / ".worktrees" / "provider"
+            lookalike.parent.mkdir()
+            subprocess.run([
+                "git", "-C", str(lookalike_root), "worktree", "add", "-q",
+                "-b", branch, str(lookalike),
+            ], check=True)
+            lookalike = lookalike.resolve(strict=True)
+            lookalike_snapshot = {
+                **snapshot,
+                "bindings": [{
+                    "provider": "mncs-forge",
+                    "provider_root": str(lookalike),
+                    "provenance": {"checkout": identity},
+                }],
+            }
+            with self.assertRaisesRegex(ValueError, "differs from its scope grant"):
+                sessions._verified_declared_provider_checkout(
+                    lookalike_snapshot, "mncs-forge", lookalike,
+                    expected_branch=branch,
+                    authority_scope_grants=[grant],
+                )
+
     def test_effective_authority_reprojects_legacy_merge_and_publish_policy(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory), intent={

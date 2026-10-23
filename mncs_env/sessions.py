@@ -1143,15 +1143,18 @@ def _verified_scope_checkout(
 def _verified_declared_provider_checkout(
     snapshot: dict[str, Any], repository: str, checkout: str | Path,
     *, expected_branch: str | None = None,
+    authority_scope_grants: list[dict[str, Any]] | None = None,
 ) -> dict[str, str] | None:
     """Verify an exact nested checkout named by a bound provider.
 
     Some application providers are declared by a campaign checkout but execute
     from a separate repository root nested beneath it. Such a checkout is not
     necessarily a linked worktree of the repository's workspace root. It is
-    still an admissible narrow claim target when the durable capability
-    binding names that exact provider root, Git verifies its repository and
-    manifest identities, and the path stays inside the session workspace.
+    still an admissible narrow target when the durable capability binding
+    names that exact provider root. A checkout outside the session workspace
+    additionally needs the session's exact authenticated scope grant and
+    selected-checkout projection; Git verifies its registration and manifest
+    identities against that grant.
 
     This does not make arbitrary nested Git directories claimable: the request
     must match a provider root already present in the authenticated session.
@@ -1197,35 +1200,133 @@ def _verified_declared_provider_checkout(
         raise ValueError("session has no authorized workspace for its provider checkout")
     try:
         absolute_workspace = Path(os.path.abspath(Path(workspace_value).expanduser()))
-        authorized_workspace = absolute_workspace.resolve(strict=True)
-        relative = candidate.relative_to(authorized_workspace)
-    except (OSError, ValueError) as error:
-        raise ValueError("declared provider checkout escapes the session workspace") from error
-    if absolute_workspace != authorized_workspace:
-        raise ValueError("session workspace traverses a symbolic link")
-    cursor = authorized_workspace
-    for component in relative.parts:
-        cursor = cursor / component
-        if cursor.is_symlink():
-            raise ValueError("declared provider checkout traverses a symbolic link")
-
-    common = workspace_module._git(
-        candidate, "rev-parse", "--path-format=absolute", "--git-common-dir",
-    )
-    if common is None or common.returncode != 0:
-        raise ValueError("declared provider checkout has no verifiable Git common directory")
-    try:
-        common_directory = Path(os.path.abspath(common.stdout.strip())).resolve(strict=True)
+        session_workspace = absolute_workspace.resolve(strict=True)
     except OSError as error:
-        raise ValueError("declared provider Git common directory is unavailable") from error
-    repository_root = common_directory.parent
-    observed = workspace_module.verify_registered_checkout(
-        candidate,
-        repository=repository,
-        workspace_root=repository_root.parent,
-        expected_repository_root=repository_root,
-        expected_branch=expected_branch,
-    )
+        raise ValueError("session workspace is unavailable") from error
+    if absolute_workspace != session_workspace:
+        raise ValueError("session workspace traverses a symbolic link")
+
+    try:
+        candidate.relative_to(session_workspace)
+        inside_session_workspace = True
+    except ValueError:
+        inside_session_workspace = False
+
+    if inside_session_workspace:
+        relative = candidate.relative_to(session_workspace)
+        cursor = session_workspace
+        for component in relative.parts:
+            cursor = cursor / component
+            if cursor.is_symlink():
+                raise ValueError("declared provider checkout traverses a symbolic link")
+        common = workspace_module._git(
+            candidate, "rev-parse", "--path-format=absolute", "--git-common-dir",
+        )
+        if common is None or common.returncode != 0:
+            raise ValueError(
+                "declared provider checkout has no verifiable Git common directory"
+            )
+        try:
+            common_directory = Path(os.path.abspath(common.stdout.strip())).resolve(
+                strict=True
+            )
+        except OSError as error:
+            raise ValueError("declared provider Git common directory is unavailable") from error
+        repository_root = common_directory.parent
+        observed = workspace_module.verify_registered_checkout(
+            candidate,
+            repository=repository,
+            workspace_root=repository_root.parent,
+            expected_repository_root=repository_root,
+            expected_branch=expected_branch,
+        )
+    else:
+        campaign = snapshot.get("campaign")
+        campaign_id = campaign.get("identity") if isinstance(campaign, dict) else None
+        session_id = snapshot.get("session_id")
+        grants = authority_scope_grants or []
+        matching_grants = [
+            grant for grant in grants
+            if isinstance(grant, dict)
+            and grant.get("schema_version") == "mncs.environment.authority-scope-grant/1"
+            and grant.get("session_id") == session_id
+            and grant.get("campaign_id") == campaign_id
+            and grant.get("repository") == repository
+            and grant.get("scope") == {"kind": "repository", "repository": repository}
+        ]
+        selected_checkouts = snapshot.get("selected_checkouts")
+        selected = (
+            selected_checkouts.get(repository)
+            if isinstance(selected_checkouts, dict) else None
+        )
+        if len(matching_grants) != 1 or not isinstance(selected, dict):
+            raise ValueError("declared provider checkout escapes the session workspace")
+        grant = matching_grants[0]
+        grant_identity = grant.get("repository_identity")
+        if not isinstance(grant_identity, dict):
+            raise ValueError("provider scope grant has no canonical checkout identity")
+        if (selected.get("source_ref") != "authenticated-scope-grant"
+                or selected.get("scope_grant_identity") != grant.get("identity")):
+            raise ValueError("selected provider checkout is not composed from its scope grant")
+
+        def canonical_grant_path(value: Any, label: str) -> Path:
+            if not isinstance(value, str) or not value:
+                raise ValueError(f"provider scope grant has no {label}")
+            raw = Path(value).expanduser()
+            absolute = Path(os.path.abspath(raw))
+            try:
+                resolved = absolute.resolve(strict=True)
+            except OSError as error:
+                raise ValueError(f"provider scope grant {label} is unavailable") from error
+            if absolute != resolved:
+                raise ValueError(f"provider scope grant {label} traverses a symbolic link")
+            return resolved
+
+        grant_path = canonical_grant_path(grant_identity.get("path"), "checkout path")
+        repository_root = canonical_grant_path(
+            grant_identity.get("repository_root"), "repository root"
+        )
+        grant_workspace = canonical_grant_path(
+            grant_identity.get("workspace_root"), "workspace root"
+        )
+        if grant_path != candidate or selected.get("path") != str(candidate):
+            raise ValueError("declared provider checkout differs from its scope grant")
+        if repository_root.name != repository:
+            raise ValueError("provider scope grant names a different repository root")
+        try:
+            candidate.relative_to(repository_root)
+            repository_root.relative_to(grant_workspace)
+        except ValueError:
+            raise ValueError("provider checkout escapes its granted repository workspace") from None
+        if candidate == repository_root:
+            raise ValueError("provider scope grant must identify one registered worktree")
+
+        branch = grant_identity.get("branch")
+        if not isinstance(branch, str) or not branch:
+            raise ValueError("provider scope grant has no branch identity")
+        if expected_branch is not None and expected_branch != branch:
+            raise ValueError("declared provider branch differs from its scope grant")
+        observed = workspace_module.verify_registered_checkout(
+            candidate,
+            repository=repository,
+            workspace_root=grant_workspace,
+            expected_repository_root=repository_root,
+            expected_branch=branch,
+        )
+        stable_identity_fields = (
+            "path", "repository_root", "workspace_root", "git_common_directory",
+            "manifest_identity", "checkout_identity", "git_common_directory_identity",
+            "observed_path", "branch", "head",
+        )
+        for field in stable_identity_fields:
+            for source_name, source in (
+                ("scope grant", grant_identity), ("selected checkout", selected),
+            ):
+                recorded = source.get(field)
+                if isinstance(recorded, str) and observed.get(field) != recorded:
+                    raise ValueError(
+                        f"provider {source_name} {field} differs from the registered checkout"
+                    )
     for binding in declared:
         provenance = binding.get("provenance")
         recorded = provenance.get("checkout") if isinstance(provenance, dict) else None
@@ -4273,6 +4374,7 @@ class Session:
                             expected_branch=(
                                 branch if isinstance(branch, str) and branch else None
                             ),
+                            authority_scope_grants=self.authority_scope_grants(),
                         )
                     except (OSError, RuntimeError, ValueError,
                             workspace_module.WorkspaceResolutionError) as error:
@@ -4844,6 +4946,7 @@ class Session:
                         scope.get("branch")
                         if isinstance(scope.get("branch"), str) else None
                     ),
+                    authority_scope_grants=self.authority_scope_grants(),
                 )
                 if declared_provider is not None:
                     resolved_checkout = Path(declared_provider["path"])
