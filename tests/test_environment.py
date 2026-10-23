@@ -7208,6 +7208,7 @@ class EntryFrictionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "Projects"
             root.mkdir()
+            (root / workspace.MANAGED_WORKTREES_DIR).mkdir()
             for index in range(5):
                 (root / f"repository-{index}").mkdir()
             definition_path = Path(directory) / "environment.json"
@@ -7227,6 +7228,26 @@ class EntryFrictionTests(unittest.TestCase):
 
             self.assertEqual(raised.exception.diagnostics["code"], "workspace-too-broad")
             self.assertFalse(state.exists(), "invalid resolution must not create session state")
+
+    def test_campaign_root_worktree_container_does_not_consume_candidate_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "campaign-root"
+            root.mkdir()
+            for index in range(4):
+                (root / f"repository-{index}").mkdir()
+            (root / workspace.MANAGED_WORKTREES_DIR).mkdir()
+            definition_path = Path(directory) / "environment.json"
+            definition = self._campaign_definition(definition_path)
+
+            validated = workspace.validate_workspace_root(root, definition=definition)
+            view = workspace.discover_workspace(
+                validated,
+                repositories=workspace.repository_selection(definition),
+            )
+
+            self.assertEqual(validated, root.resolve())
+            self.assertEqual(view["scan"]["candidate_directories"], 4)
+            self.assertEqual(view["scan"]["status"], "complete")
 
     def test_slow_workspace_scan_returns_bounded_progress_diagnostic(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
