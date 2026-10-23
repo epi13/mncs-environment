@@ -1072,6 +1072,140 @@ def test_revalidation_composes_only_the_granted_checkout_with_owned_claim(
         session.close()
 
 
+def test_revalidation_keeps_base_intent_checkout_when_scope_grants_extend_closure(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    state_dir = tmp_path / "state"
+    session = _session(state_dir, workspace)
+    session_id = session.session_id
+    try:
+        old_claim = next(
+            record for record in claims.active_claims(session.store.read_claims()).values()
+            if record.get("repository") == "mncs-environment"
+            and record.get("session_id") == session_id
+        )
+        assert session.release_claim(
+            "mncs-environment", claim_id=old_claim["claim_id"],
+            reason="replace broad fixture claim with exact base checkout scope",
+            request_id="req_release_base_repository_claim",
+        )
+        base_checkout = workspace / "mncs-environment"
+        base_observed = workspace_module.inspect_repo(base_checkout, _refresh=True)
+        assert base_observed is not None and base_observed.head
+        session.acquire_claim(
+            "mncs-environment",
+            reason="campaign base repository worktree",
+            scope={
+                "kind": "worktree",
+                "checkout": str(base_checkout.resolve()),
+                "branch": base_observed.branch,
+            },
+            request_id="req_claim_base_intent_checkout",
+        )
+
+        grant = _grant(session)
+        session.acquire_claim(
+            "mncs-control-mcp",
+            reason="owner-granted provider checkout",
+            request_id="req_claim_granted_provider_checkout",
+        )
+        first = session.revalidate()
+        composition = first["scope_composition"]
+        assert composition["status"] == "ready"
+        assert composition["composed"] == ["mncs-environment", "mncs-control-mcp"]
+        assert session.snapshot["selected_checkouts"]["mncs-environment"][
+            "source_ref"
+        ] == "authenticated-intent-claim"
+        assert session.snapshot["selected_checkouts"]["mncs-control-mcp"][
+            "source_ref"
+        ] == "authenticated-scope-grant"
+        assert session.snapshot["workspace"]["selection"] == [
+            "mncs-control-mcp", "mncs-environment",
+        ]
+
+        session.close()
+        reopened_store = open_store(state_dir, "store", verify_on_open=False)
+        resumed = sessions.Session.open(
+            state_dir=state_dir,
+            session_id=session_id,
+            backend="store",
+            verify_on_open=False,
+            store=reopened_store,
+        )
+        try:
+            second = resumed.revalidate()["scope_composition"]
+            assert second["status"] == "ready"
+            assert second["retained"] == ["mncs-environment", "mncs-control-mcp"]
+            assert resumed.snapshot["selected_checkouts"]["mncs-environment"][
+                "checkout_identity"
+            ] == workspace_module.repository_checkout_identity(
+                workspace, "mncs-environment", base_checkout,
+            )["checkout_identity"]
+            assert resumed.snapshot["selected_checkouts"]["mncs-control-mcp"][
+                "checkout_identity"
+            ] == grant["repository_identity"]["checkout_identity"]
+            assert resumed.snapshot["selected_checkouts"]["mncs-control-mcp"][
+                "source_ref"
+            ] == "authenticated-scope-grant"
+        finally:
+            resumed.close()
+        session = None
+    finally:
+        if session is not None:
+            session.close()
+
+
+def test_base_intent_checkout_does_not_adopt_a_foreign_claim(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        own_claim = next(
+            record for record in claims.active_claims(session.store.read_claims()).values()
+            if record.get("repository") == "mncs-environment"
+            and record.get("session_id") == session.session_id
+        )
+        assert session.release_claim(
+            "mncs-environment", claim_id=own_claim["claim_id"],
+            reason="prepare foreign-claim composition fixture",
+            request_id="req_release_fixture_base_claim",
+        )
+        checkout = workspace / "mncs-environment"
+        observed = workspace_module.inspect_repo(checkout, _refresh=True)
+        assert observed is not None and observed.head
+        foreign_claim = claims.acquire(
+            session.store,
+            repository="mncs-environment",
+            session_id="ses_foreign_base_intent_owner",
+            consumer_id="foreign-base-intent-owner",
+            basis=claims.BASIS_EXPLICIT,
+            reason="independent foreign checkout owner",
+            scope={
+                "kind": "worktree",
+                "checkout": str(checkout.resolve()),
+                "branch": observed.branch,
+            },
+            checkout_facts={"head": observed.head, "dirty": False, "foreign_signals": []},
+            workspace_root=str(workspace),
+            request_id="req_foreign_base_intent_claim",
+        )
+        report = session._compose_authorized_scope_checkouts()
+        assert foreign_claim["session_id"] != session.session_id
+        assert report["composed"] == []
+        assert report["base_intent_skipped"] == [{
+            "repository": "mncs-environment",
+            "reason": "no-live-base-intent-checkout-claim",
+        }]
+        assert report["skipped"] == []
+        assert session.snapshot["selected_checkouts"] == {}
+    finally:
+        session.close()
+
+
 def test_nested_registered_scope_uses_one_worktree_and_coexists_with_other_branch(
     tmp_path: Path,
 ) -> None:

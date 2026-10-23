@@ -3053,25 +3053,40 @@ class Session:
         return record.get("identity") == expected_record.get("identity")
 
     def _compose_authorized_scope_checkouts(self) -> dict[str, Any]:
-        """Add only explicitly granted repositories with this session's live claim.
+        """Compose authorized base and granted checkouts with live claims.
 
         Scope grants and claims are the authority inputs. Workspace selection is
         a projection of those records: an identical consumer label, a sibling
         directory, or a historical claim is never enough to add a provider to
-        this session's capability closure.
+        this session's capability closure. A repository already named by the
+        campaign intent may also be composed from one exact same-session
+        worktree claim; additional repositories still require an owner grant.
         """
         selected = self.snapshot.get("selected_checkouts", {})
         if not isinstance(selected, dict):
             selected = {}
         grants = self.authority_scope_grants()
+        granted_repositories = {
+            str(item.get("repository"))
+            for item in grants if isinstance(item, dict)
+        }
+        intent = self.snapshot.get("intent", {})
+        intent_repositories = intent.get("repositories", []) if isinstance(intent, dict) else []
+        writable = set(self.effective_authority().get("writable", []))
+        base_repositories = sorted({
+            item for item in intent_repositories
+            if isinstance(item, str) and item in writable
+            and item not in granted_repositories
+        }) if isinstance(intent_repositories, list) else []
         report: dict[str, Any] = {
             "status": "unchanged",
             "composed": [],
             "retained": [],
             "removed": [],
             "skipped": [],
+            "base_intent_skipped": [],
         }
-        if not grants:
+        if not grants and not base_repositories:
             return report
 
         workspace_root_value = (self.snapshot.get("workspace") or {}).get("root")
@@ -3100,6 +3115,188 @@ class Session:
         observed_claims = list(active.values())
         additions: dict[str, dict[str, Any]] = {}
         eligible_repositories: set[str] = set()
+
+        # A campaign's base repository is already in its authenticated intent.
+        # Preserve it when one exact, live claim from this session anchors a
+        # registered worktree inside the campaign workspace. This keeps the
+        # base compiler available when owner grants extend the provider set.
+        rights = self.snapshot.get("rights") or {}
+        right_subjects = rights.get("subjects") if isinstance(rights, dict) else None
+        for repository in base_repositories:
+            prior = selected.get(repository)
+            if (isinstance(prior, dict)
+                    and prior.get("source_ref") != "authenticated-intent-claim"):
+                continue
+            if (not _CAMPAIGN_REPOSITORY_PATTERN.fullmatch(repository)
+                    or (isinstance(right_subjects, dict)
+                        and right_subjects.get(repository) == "blocked")):
+                report["base_intent_skipped"].append({
+                    "repository": repository,
+                    "reason": "base-intent-checkout-not-authorized",
+                })
+                continue
+
+            owned_claims: list[tuple[dict[str, Any], dict[str, Any]]] = []
+            malformed_claim_scope = False
+            for claim in observed_claims:
+                if (claim.get("repository") != repository
+                        or claim.get("session_id") != self.session_id
+                        or claim.get("consumer_id")
+                        != self.snapshot.get("consumer_id")):
+                    continue
+                raw_scope = claim.get("scope")
+                try:
+                    normalized_scope = claims_module.normalize_scope(
+                        raw_scope if isinstance(raw_scope, dict) else None,
+                        repository,
+                    )
+                except (TypeError, ValueError):
+                    malformed_claim_scope = True
+                    continue
+                if raw_scope != normalized_scope:
+                    malformed_claim_scope = True
+                    continue
+                if normalized_scope.get("kind") == "worktree":
+                    owned_claims.append((claim, normalized_scope))
+
+            if malformed_claim_scope or len(owned_claims) != 1:
+                report["base_intent_skipped"].append({
+                    "repository": repository,
+                    "reason": (
+                        "malformed-live-claim-scope" if malformed_claim_scope else
+                        "ambiguous-base-intent-checkout" if owned_claims else
+                        "no-live-base-intent-checkout-claim"
+                    ),
+                })
+                continue
+
+            claim, target_scope = owned_claims[0]
+            try:
+                if claim.get("claim_id") != claims_module.claim_identity(
+                    repository, target_scope,
+                ):
+                    raise ValueError("claim identity does not bind its exact scope")
+                expected_claim = claims_module._with_identity(claim)
+                if claim.get("identity") != expected_claim.get("identity"):
+                    raise ValueError("claim record identity is invalid")
+                raw_selected = {
+                    "repository": repository,
+                    "path": target_scope["checkout"],
+                    "branch": target_scope.get("branch"),
+                }
+                resolved_checkout, checkout_facts = _verified_scope_checkout(
+                    workspace_root, repository, raw_selected,
+                )
+                observed = workspace_module.inspect_repo(
+                    resolved_checkout, _refresh=True,
+                )
+                if (observed is None or observed.git_error or not observed.head
+                        or observed.head != checkout_facts.get("head")
+                        or (observed.branch or "")
+                        != (checkout_facts.get("branch") or "")):
+                    raise ValueError("checkout Git identity is unavailable")
+                current_identity = _repository_checkout_identity(
+                    workspace_root, repository, resolved_checkout,
+                )
+            except (OSError, RuntimeError, TypeError, ValueError,
+                    workspace_module.WorkspaceResolutionError):
+                report["base_intent_skipped"].append({
+                    "repository": repository,
+                    "reason": "base-intent-checkout-identity-unavailable",
+                })
+                continue
+
+            if isinstance(prior, dict):
+                prior_path = Path(str(prior.get("path", "")))
+                if not prior_path.is_absolute():
+                    prior_path = workspace_root / prior_path
+                try:
+                    same_path = prior_path.resolve() == resolved_checkout
+                except OSError:
+                    same_path = False
+                prior_identity = prior.get("checkout_identity")
+                if (not same_path
+                        or (isinstance(prior_identity, str)
+                            and prior_identity
+                            != current_identity["checkout_identity"])):
+                    report["skipped"].append({
+                        "repository": repository,
+                        "reason": "selected-checkout-identity-conflict",
+                    })
+                    continue
+
+            conflicting_claims = []
+            malformed_conflict = False
+            for item in observed_claims:
+                if item.get("repository") != repository:
+                    continue
+                raw_scope = item.get("scope")
+                try:
+                    current_scope = claims_module.normalize_scope(
+                        raw_scope if isinstance(raw_scope, dict) else None,
+                        repository,
+                    )
+                except (TypeError, ValueError):
+                    malformed_conflict = True
+                    continue
+                if claims_module.scopes_conflict(target_scope, current_scope):
+                    conflicting_claims.append(item)
+            if (malformed_conflict or len(conflicting_claims) != 1
+                    or conflicting_claims[0].get("claim_id")
+                    != claim.get("claim_id")):
+                report["base_intent_skipped"].append({
+                    "repository": repository,
+                    "reason": (
+                        "malformed-live-claim-scope" if malformed_conflict else
+                        "base-intent-checkout-conflict"
+                    ),
+                })
+                continue
+
+            composition = {
+                "session_id": self.session_id,
+                "campaign_id": (self.snapshot.get("campaign") or {}).get("identity"),
+                "authorization_basis": "campaign-intent",
+                "scope_grant_identity": None,
+                "claim_id": claim.get("claim_id"),
+                "claim_version": claim.get("version"),
+                "repository": repository,
+                "checkout_identity": current_identity["checkout_identity"],
+                "git_common_directory_identity": current_identity[
+                    "git_common_directory_identity"
+                ],
+                "branch": observed.branch,
+                "head": observed.head,
+                "clean": not bool(observed.dirty),
+            }
+            request_id = "req_intent_checkout_" + digest_hex(
+                composition, length=40,
+            )
+            operation_digest = digest_hex({
+                "operation": "environment-intent-checkout-compose/1",
+                **composition,
+            }, length=64)
+            self._emit(
+                "workspace.checkout-composed", "mncs-environment",
+                {"composition": composition},
+                request_id=request_id,
+                operation_digest=operation_digest,
+            )
+            eligible_repositories.add(repository)
+            additions[repository] = {
+                "repository": repository,
+                "path": str(resolved_checkout),
+                "branch": observed.branch,
+                "head": observed.head,
+                "clean": not bool(observed.dirty),
+                "source_ref": "authenticated-intent-claim",
+                "authoritative_head": observed.head,
+                **current_identity,
+            }
+            report["retained" if isinstance(prior, dict) else "composed"].append(
+                repository,
+            )
+
         for grant in grants:
             repository = grant.get("repository")
             if (not isinstance(repository, str)
@@ -3307,7 +3504,9 @@ class Session:
         removed = sorted(
             repository for repository, record in selected.items()
             if isinstance(record, dict)
-            and record.get("source_ref") == "authenticated-scope-grant"
+            and record.get("source_ref") in {
+                "authenticated-scope-grant", "authenticated-intent-claim",
+            }
             and repository not in eligible_repositories
         )
         updated_selected = dict(selected)
