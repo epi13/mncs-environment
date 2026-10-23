@@ -147,9 +147,13 @@ On first use, Environment may adopt a prior campaign only when the authenticated
 principal, Environment definition, workspace, registered checkout identity,
 and live lifecycle together identify exactly one session. Environment then
 binds the task selector to that campaign and session. Other campaigns on
-independent registered checkouts do not interfere. If duplicate sessions or
-campaigns match the same exact checkout, entry reports their identities and
-does not choose one. An explicit campaign ID that conflicts with the unique
+independent registered checkouts do not interfere. A branch change does not
+change the identity of the same registered checkout. If multiple live
+sessions or campaigns match one exact checkout, an active exact-worktree claim
+or a unique session checkpoint may identify the continuation. When neither
+provides unique evidence, entry reports every conflicting identity and leaves
+selection unresolved. A stale branch label alone cannot choose between
+duplicates. An explicit campaign ID that conflicts with the unique
 continuation is also rejected. If no prior continuation matches, Environment
 derives a deterministic task campaign identity and binds it after session
 creation. A retry after interrupted publication reads the immutable binding

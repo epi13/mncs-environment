@@ -893,44 +893,58 @@ def _implicit_campaign_for_registered_checkout(
         for session_id in session_ids
     }
     if len(session_ids) > 1:
+        current_path = working_checkout.get("path")
+        current_checkout_identity = working_checkout.get("checkout_identity")
+        current_manifest_identity = working_checkout.get("manifest_identity")
         duplicate_contexts: set[str] = set()
-        current_branch = working_checkout.get("branch")
-        for field in ("checkout_identity", "path"):
-            grouped: dict[str, list[str]] = {}
+        if isinstance(current_path, str) and current_path:
             for session_id, snapshot in snapshots.items():
-                selected = snapshot.get("selected_checkouts", {}).get(repository, {})
-                value = selected.get(field)
-                if isinstance(value, str) and value:
-                    grouped.setdefault(value, []).append(session_id)
-            for sessions_for_context in grouped.values():
-                if len(sessions_for_context) <= 1:
+                selected_checkouts = snapshot.get("selected_checkouts")
+                selected = (
+                    selected_checkouts.get(repository)
+                    if isinstance(selected_checkouts, dict) else None
+                )
+                if (not isinstance(selected, dict)
+                        or not isinstance(selected.get("path"), str)
+                        or os.path.abspath(selected["path"])
+                        != os.path.abspath(current_path)):
                     continue
-                if any(
-                    snapshots[session_id]
-                    .get("selected_checkouts", {})
-                    .get(repository, {})
-                    .get("branch") == current_branch
-                    for session_id in sessions_for_context
-                ):
-                    duplicate_contexts.update(sessions_for_context)
+                if (isinstance(current_checkout_identity, str)
+                        and selected.get("checkout_identity")
+                        != current_checkout_identity):
+                    continue
+                if (isinstance(current_manifest_identity, str)
+                        and isinstance(selected.get("manifest_identity"), str)
+                        and selected["manifest_identity"] != current_manifest_identity):
+                    continue
+                duplicate_contexts.add(session_id)
         if duplicate_contexts:
             duplicates = sorted(duplicate_contexts)
-            raise EntryError(
-                "multiple live campaign sessions identify the same registered checkout",
-                "campaign-continuation-ambiguous",
-                campaigns=sorted({
-                    str(snapshots[session_id].get("campaign", {}).get("identity"))
-                    for session_id in duplicates
-                }),
-                sessions=duplicates,
-                conflicting_contexts=[
-                    _session_selection_details(
-                        session_id, snapshots[session_id], working_checkout,
-                    )
-                    for session_id in duplicates
-                ],
-                next="resume the intended recorded session; Environment will not choose between duplicate checkout owners",
+            selected_duplicate, selection_evidence = (
+                _authoritative_duplicate_session(
+                    store, duplicates, working_checkout,
+                )
             )
+            if selected_duplicate is None:
+                raise EntryError(
+                    "multiple live campaign sessions identify the same registered checkout",
+                    "campaign-continuation-ambiguous",
+                    campaigns=sorted({
+                        str(snapshots[session_id].get("campaign", {}).get("identity"))
+                        for session_id in duplicates
+                    }),
+                    sessions=duplicates,
+                    conflicting_contexts=[
+                        _session_selection_details(
+                            session_id, snapshots[session_id], working_checkout,
+                        )
+                        for session_id in duplicates
+                    ],
+                    selection_evidence=selection_evidence,
+                    next="resume the uniquely owned claim or checkpointed session; equal duplicates remain ambiguous",
+                )
+            session_ids = [selected_duplicate]
+            snapshots = {selected_duplicate: snapshots[selected_duplicate]}
         # More than one distinct worktree is legitimate concurrent work. The
         # caller's exact checkout or task identity must decide which one, if
         # any, is the intended continuation.

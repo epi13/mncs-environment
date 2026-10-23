@@ -1124,12 +1124,17 @@ class EntryContractTests(unittest.TestCase):
              "campaign/changed-checkout-branch"],
             check=True, capture_output=True,
         )
-        branch_mismatch_code, branch_mismatch = self.enter(
+        auth_env["MNCS_ENV_RPC_REQUEST_ID"] = "req_campaign_checkout_branch_change"
+        branch_change_code, branch_change = self.enter(
             cwd=self.project, env=auth_env,
         )
-        self.assertEqual(branch_mismatch_code, 2, branch_mismatch)
+        self.assertEqual(branch_change_code, 2, branch_change)
         self.assertEqual(
-            branch_mismatch["diagnostics"]["code"], "campaign-checkout-mismatch",
+            branch_change["diagnostics"]["code"], "campaign-continuation-ambiguous",
+        )
+        self.assertEqual(
+            set(branch_change["diagnostics"]["sessions"]),
+            {main_first["session_id"], duplicate["session_id"]},
         )
 
     def test_explicit_campaign_recovers_its_unique_nested_checkout_from_repo_root(self):

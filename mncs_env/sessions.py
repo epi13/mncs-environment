@@ -1035,8 +1035,9 @@ def _verified_scope_checkout(
             expected_branch=expected_branch if isinstance(expected_branch, str) else None,
         )
         for field in (
-            "checkout_identity", "git_common_directory_identity", "observed_path",
-            "branch", "head", "repository_root", "workspace_root",
+            "checkout_identity", "git_common_directory_identity",
+            "manifest_identity", "observed_path", "branch", "head",
+            "repository_root", "workspace_root", "git_common_directory",
         ):
             recorded = owner_authorized_checkout.get(field)
             if isinstance(recorded, str) and observed.get(field) != recorded:
@@ -3538,12 +3539,86 @@ class Session:
                        for field in ("path", "repository_root", "workspace_root"))
                 else None
             )
-            try:
-                resolved_checkout, checkout_facts = _verified_scope_checkout(
-                    workspace_root, repository,
-                    selected_for_grant,
-                    owner_authorized_checkout=owner_authorized_identity,
+            owner_path_claims: list[tuple[dict[str, Any], dict[str, Any]]] = []
+            malformed_owner_claim_scope = False
+            owner_path = (
+                owner_authorized_identity.get("path")
+                if owner_authorized_identity is not None else None
+            )
+            if isinstance(owner_path, str):
+                for item in observed_claims:
+                    if item.get("repository") != repository:
+                        continue
+                    raw_scope = item.get("scope")
+                    try:
+                        normalized_scope = claims_module.normalize_scope(
+                            raw_scope if isinstance(raw_scope, dict) else None,
+                            repository,
+                        )
+                    except (TypeError, ValueError):
+                        malformed_owner_claim_scope = True
+                        continue
+                    if raw_scope != normalized_scope:
+                        malformed_owner_claim_scope = True
+                        continue
+                    if (normalized_scope.get("kind") == "worktree"
+                            and normalized_scope.get("checkout") == owner_path):
+                        owner_path_claims.append((item, normalized_scope))
+
+            same_owner_path_claim = False
+            if (not malformed_owner_claim_scope and len(owner_path_claims) == 1):
+                owner_path_claim, owner_path_scope = owner_path_claims[0]
+                expected_claim = claims_module._with_identity(owner_path_claim)
+                same_owner_path_claim = (
+                    owner_path_claim.get("session_id") == self.session_id
+                    and owner_path_claim.get("consumer_id")
+                    == self.snapshot.get("consumer_id")
+                    and all(
+                        owner_path_scope.get(field) is None
+                        or owner_path_scope.get(field) == expected_identity.get(field)
+                        for field in (
+                            "checkout_identity", "git_common_directory_identity",
+                            "manifest_identity",
+                        )
+                    )
+                    and owner_path_claim.get("claim_id")
+                    == claims_module.claim_identity(repository, owner_path_scope)
+                    and owner_path_claim.get("identity")
+                    == expected_claim.get("identity")
                 )
+            try:
+                try:
+                    resolved_checkout, checkout_facts = _verified_scope_checkout(
+                        workspace_root, repository,
+                        selected_for_grant,
+                        owner_authorized_checkout=owner_authorized_identity,
+                    )
+                except (OSError, RuntimeError, ValueError,
+                        workspace_module.WorkspaceResolutionError):
+                    if (not owner_path_claims or malformed_owner_claim_scope):
+                        raise
+                    if not same_owner_path_claim:
+                        report["skipped"].append({
+                            "repository": repository,
+                            "reason": "claim-not-owned-matching-checkout-scope",
+                        })
+                        continue
+                    if owner_authorized_identity is None:
+                        raise
+                    # Branch and HEAD are observations from when the owner
+                    # grant was issued. A branch rename or commit on the same
+                    # registered checkout may advance them only while this
+                    # exact current consumer still holds the claim for that
+                    # path. All stable repository, worktree, manifest, and
+                    # workspace identity checks remain mandatory.
+                    refreshed_owner_identity = dict(owner_authorized_identity)
+                    refreshed_owner_identity.pop("branch", None)
+                    refreshed_owner_identity.pop("head", None)
+                    resolved_checkout, checkout_facts = _verified_scope_checkout(
+                        workspace_root, repository,
+                        {"path": owner_path} if isinstance(owner_path, str) else None,
+                        owner_authorized_checkout=refreshed_owner_identity,
+                    )
                 observed = workspace_module.inspect_repo(resolved_checkout, _refresh=True)
                 if (observed is None or observed.git_error or not observed.head
                         or observed.head != checkout_facts.get("head")
@@ -3610,8 +3685,15 @@ class Session:
                 and claim_scope.get("kind") == "worktree"
                 and claim_scope.get("checkout") == str(resolved_checkout)
                 and claim_scope.get("repository") == repository
-                and (claim_scope.get("branch") or None)
-                == (observed.branch or None)
+                and (
+                    (claim_scope.get("branch") or None)
+                    == (observed.branch or None)
+                    or (
+                        same_owner_path_claim
+                        and claim.get("claim_id")
+                        == owner_path_claims[0][0].get("claim_id")
+                    )
+                )
             )
             legacy_repository_claim = (
                 isinstance(claim_scope, dict)
@@ -3620,6 +3702,8 @@ class Session:
                 and claim_scope.get("exclusive") is True
             )
             if (claim.get("session_id") != self.session_id
+                    or claim.get("consumer_id")
+                    != self.snapshot.get("consumer_id")
                     or not (same_worktree_claim or legacy_repository_claim)):
                 report["skipped"].append({
                     "repository": repository,
@@ -3726,6 +3810,11 @@ class Session:
                 additions[repository] = facts
                 report["retained"].append(repository)
             else:
+                # The granted checkout is the same canonical path and stable
+                # Git identity already selected for this session. Refresh its
+                # branch, head, and cleanliness observations from the live
+                # registry while recording the grant that now authorizes it.
+                additions[repository] = facts
                 report["retained"].append(repository)
 
         # A prior projection must stop contributing provider roots as soon as

@@ -1312,6 +1312,145 @@ def test_revalidation_composes_only_the_granted_checkout_with_owned_claim(
         session.close()
 
 
+def _rename_branch_and_advance_checkout(checkout: Path) -> tuple[str, str]:
+    old_branch = _git(checkout, "branch", "--show-current")
+    new_branch = "campaign/renamed-" + old_branch.rsplit("/", 1)[-1]
+    _git(checkout, "branch", "-m", new_branch)
+    readme = checkout / "README.md"
+    readme.write_text(readme.read_text(encoding="utf-8") + "advanced\n", encoding="utf-8")
+    _git(checkout, "add", "README.md")
+    _git(checkout, "commit", "-m", "advance renamed worktree")
+    return new_branch, _git(checkout, "rev-parse", "HEAD")
+
+
+def test_revalidation_refreshes_an_owned_granted_checkout_after_restart(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    state_dir = tmp_path / "state"
+    session = _session(state_dir, workspace)
+    session_id = session.session_id
+    session_closed = False
+    try:
+        checkout, checkout_facts = _nested_target_checkout(
+            session, workspace, "branch-rename", "campaign/scope-branch-rename",
+        )
+        grant = _grant(
+            session,
+            owner_authorized_checkout=checkout_facts,
+            request_id="req_branch_rename_owner_grant",
+        )
+        claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="hold the owner-approved checkout through branch rename",
+            request_id="req_branch_rename_owned_claim",
+        )
+        old_branch = claim["scope"]["branch"]
+        old_head = checkout_facts["head"]
+        new_branch, new_head = _rename_branch_and_advance_checkout(checkout)
+
+        first = session.revalidate()
+        assert first["scope_composition"]["status"] == "ready"
+        selected = session.snapshot["selected_checkouts"]["mncs-control-mcp"]
+        assert selected["path"] == str(checkout.resolve())
+        assert selected["branch"] == new_branch
+        assert selected["head"] == new_head
+        assert selected["checkout_identity"] == grant["repository_identity"][
+            "checkout_identity"
+        ]
+        assert selected["git_common_directory_identity"] == grant[
+            "repository_identity"
+        ]["git_common_directory_identity"]
+        assert claim["scope"]["branch"] == old_branch
+        assert old_head != new_head
+
+        session.close()
+        session_closed = True
+        reopened_store = open_store(state_dir, "store", verify_on_open=False)
+        resumed = sessions.Session.open(
+            state_dir=state_dir,
+            session_id=session_id,
+            backend="store",
+            verify_on_open=False,
+            store=reopened_store,
+        )
+        try:
+            second = resumed.revalidate()
+            assert second["scope_composition"]["status"] == "ready"
+            resumed_checkout = resumed.snapshot["selected_checkouts"][
+                "mncs-control-mcp"
+            ]
+            assert resumed_checkout["branch"] == new_branch
+            assert resumed_checkout["head"] == new_head
+            active_claim = claims.active_claims(
+                reopened_store.read_claims()
+            )[claim["claim_id"]]
+            assert active_claim["session_id"] == session_id
+            assert active_claim["scope"]["branch"] == old_branch
+        finally:
+            resumed.close()
+    finally:
+        if not session_closed:
+            session.close()
+
+
+def test_revalidation_rejects_branch_refresh_with_foreign_same_label_claim(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        checkout, checkout_facts = _nested_target_checkout(
+            session, workspace, "foreign-branch-rename",
+            "campaign/scope-foreign-branch-rename",
+        )
+        _grant(
+            session,
+            owner_authorized_checkout=checkout_facts,
+            request_id="req_foreign_branch_owner_grant",
+        )
+        session.snapshot["selected_checkouts"].pop("mncs-control-mcp", None)
+        old_scope = claims.normalize_scope({
+            "kind": "worktree",
+            "checkout": str(checkout.resolve()),
+            "branch": checkout_facts["branch"],
+        }, "mncs-control-mcp")
+        foreign = claims.acquire(
+            session.store,
+            repository="mncs-control-mcp",
+            session_id="ses_foreign_branch_rename_owner",
+            consumer_id=session.snapshot["consumer_id"],
+            basis=claims.BASIS_EXPLICIT,
+            reason="another session owns the same registered checkout path",
+            scope=old_scope,
+            checkout_facts={
+                "head": checkout_facts["head"],
+                "branch": checkout_facts["branch"],
+                "dirty": False,
+                "foreign_signals": [],
+            },
+            workspace_root=str(workspace),
+            request_id="req_foreign_branch_rename_claim",
+        )
+        new_branch, _ = _rename_branch_and_advance_checkout(checkout)
+
+        report = session.revalidate()
+
+        assert report["scope_composition"]["status"] == "unknown"
+        assert report["scope_composition"]["skipped"] == [{
+            "repository": "mncs-control-mcp",
+            "reason": "claim-not-owned-matching-checkout-scope",
+        }]
+        assert "mncs-control-mcp" not in session.snapshot["selected_checkouts"]
+        assert foreign["session_id"] != session.session_id
+        assert foreign["consumer_id"] == session.snapshot["consumer_id"]
+        assert new_branch != checkout_facts["branch"]
+    finally:
+        session.close()
+
+
 def test_revalidation_keeps_base_intent_checkout_when_scope_grants_extend_closure(
     tmp_path: Path,
 ) -> None:

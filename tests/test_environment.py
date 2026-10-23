@@ -6900,7 +6900,11 @@ class EntryFrictionTests(unittest.TestCase):
     def test_duplicate_exact_checkout_refreshes_branch_for_exact_claim_identity(self) -> None:
         from mncs_env import entry as entry_module
 
-        root = Path("/workspace/mncs-compiler")
+        temporary = tempfile.TemporaryDirectory(prefix="mncs-duplicate-claim-")
+        self.addCleanup(temporary.cleanup)
+        workspace_root = Path(temporary.name)
+        root = workspace_root / "mncs-compiler"
+        root.mkdir()
         checkout = root / ".worktrees" / "campaign" / "mncs-compiler"
         old_branch = "campaign/native-application-readiness-20261013"
         current_branch = "campaign/compiler-language-identity-index-20261023"
@@ -6914,7 +6918,7 @@ class EntryFrictionTests(unittest.TestCase):
                 "lifecycle": "active",
                 "authenticated_principal_id": "principal-test",
                 "provenance": {"definition_id": "env-compiler"},
-                "workspace": {"root": str(root.parent)},
+                "workspace": {"root": str(workspace_root)},
                 "consumer_id": f"consumer-{session_id}",
                 "selected_checkouts": {
                     "mncs-compiler": {
@@ -6984,7 +6988,7 @@ class EntryFrictionTests(unittest.TestCase):
                 entry_module.sessions.Session,
                 "authority_scope_grants",
                 return_value=[{
-                    "repository_identity": {"workspace_root": str(root.parent)},
+                    "repository_identity": {"workspace_root": str(workspace_root)},
                 }],
             ),
             mock.patch.object(
