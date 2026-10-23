@@ -5222,6 +5222,9 @@ class SessionTests(unittest.TestCase):
                     "branch": "campaign/commons-parity",
                     "head": "fixture",
                     "workspace_root": "/selected/MNCS-Commons",
+                    "checkout_identity": "checkout:fixture",
+                    "git_common_directory_identity": "git-common:fixture",
+                    "manifest_identity": "manifest:fixture",
                 },
             ), mock.patch.object(
                 sessions.workspace_module, "inspect_repo", return_value=sessions.workspace_module.RepoState(

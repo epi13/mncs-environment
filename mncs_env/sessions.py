@@ -4384,13 +4384,11 @@ class Session:
                         ) from None
                     if declared_provider is not None:
                         branch = declared_provider.get("branch") or branch
-                        for identity_key in (
-                            "git_common_directory_identity", "checkout_identity",
-                            "manifest_identity",
-                        ):
-                            identity_value = declared_provider.get(identity_key)
-                            if isinstance(identity_value, str) and identity_value:
-                                effect_scope[identity_key] = identity_value
+                        # The registered provider identity was checked above
+                        # against the current scope grant and binding. Keep
+                        # the effect request at the exact path-and-branch
+                        # scope so an existing narrow claim remains valid if
+                        # it predates optional identity fields on claim rows.
                     if isinstance(branch, str) and branch:
                         effect_scope["branch"] = branch
                 effect_verdict = self.check(
