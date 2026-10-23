@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import secrets
@@ -264,6 +265,35 @@ def _domain_diagnostic_details(
             value = diagnostics.get(key)
             if isinstance(value, str):
                 result[key] = value[:MAX_DIAGNOSTIC_TEXT]
+        return result
+    if cause_code == "workspace-scan-incomplete":
+        result = {"cause_code": cause_code}
+        root = diagnostics.get("root")
+        if isinstance(root, str):
+            result["root"] = root[:MAX_DIAGNOSTIC_TEXT]
+        next_step = diagnostics.get("next")
+        if isinstance(next_step, str):
+            result["next"] = next_step[:MAX_DIAGNOSTIC_TEXT]
+        scan = diagnostics.get("scan")
+        if isinstance(scan, dict):
+            bounded_scan: dict[str, Any] = {}
+            status = scan.get("status")
+            if isinstance(status, str):
+                bounded_scan["status"] = status[:MAX_DIAGNOSTIC_TEXT]
+            for key in ("candidate_directories", "inspected_directories"):
+                value = scan.get(key)
+                if type(value) is int and value >= 0:
+                    bounded_scan[key] = value
+            for key in ("elapsed_ms", "budget_seconds"):
+                value = scan.get(key)
+                if (type(value) in (int, float) and value >= 0
+                        and math.isfinite(value)):
+                    bounded_scan[key] = value
+            message = scan.get("message")
+            if isinstance(message, str):
+                bounded_scan["message"] = message[:MAX_DIAGNOSTIC_TEXT]
+            if bounded_scan:
+                result["scan"] = bounded_scan
         return result
     if not cause_code.startswith("campaign-"):
         return None
