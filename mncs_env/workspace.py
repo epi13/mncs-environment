@@ -254,13 +254,16 @@ def verify_registered_checkout(
     expected_repository_root: str | Path | None = None,
     expected_branch: str | None = None,
     expected_head: str | None = None,
+    allow_repository_root_ancestor: bool = False,
 ) -> dict[str, str]:
     """Verify one canonical, registered Git checkout inside an authorized workspace.
 
     Git's common directory and worktree registry are the source of checkout
     identity. Directory layout is intentionally not part of the identity, so
     nested registered worktrees work while symlink aliases, unrelated clones,
-    and forged MNCS manifests remain rejected.
+    and forged MNCS manifests remain rejected. When explicitly enabled, the
+    authorized workspace may itself be nested inside the registered
+    repository; the checkout must still remain inside that workspace.
     """
 
     def reject(
@@ -344,8 +347,19 @@ def verify_registered_checkout(
         reject(f"authorized workspace root is unavailable: {error}")
     if absolute_workspace != resolved_workspace or not resolved_workspace.is_dir():
         reject("authorized workspace root is not canonical")
+    repository_root_ancestor = False
     if repository_root.parent != resolved_workspace:
-        reject("Git common repository is not an immediate repository in the authorized workspace")
+        if allow_repository_root_ancestor:
+            try:
+                resolved_workspace.relative_to(repository_root)
+                repository_root_ancestor = True
+            except ValueError:
+                reject(
+                    "Git common repository is neither the authorized workspace repository "
+                    "nor an ancestor of that workspace"
+                )
+        else:
+            reject("Git common repository is not an immediate repository in the authorized workspace")
     if expected_repository_root is not None:
         try:
             raw_expected_root = Path(expected_repository_root).expanduser()
@@ -376,7 +390,8 @@ def verify_registered_checkout(
             or root_manifest.get("repository") != actual_repository
             or checkout_manifest.get("repository") != actual_repository):
         reject("Git checkout and repository manifest identities do not match")
-    if resolved_workspace / actual_repository != repository_root:
+    if (not repository_root_ancestor
+            and resolved_workspace / actual_repository != repository_root):
         reject("repository manifest identity does not name the selected workspace checkout")
 
     try:

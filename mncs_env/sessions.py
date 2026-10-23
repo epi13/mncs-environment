@@ -1121,8 +1121,9 @@ def _verified_scope_checkout(
             requested_path,
             repository=repository,
             workspace_root=identity_workspace_root,
-            expected_repository_root=expected_repository_root,
+            expected_repository_root=None,
             expected_branch=expected_branch,
+            allow_repository_root_ancestor=True,
         )
     if repository_root_is_workspace:
         try:
@@ -4459,6 +4460,7 @@ class Session:
             selected_checkouts.get(repository)
             if isinstance(selected_checkouts, dict) else None
         )
+        explicit_scope = scope is not None
         owner_authorized_selection = False
         if selected is None:
             owner_grants = [
@@ -4473,27 +4475,90 @@ class Session:
                     and isinstance(owner_identity.get("repository_root"), str)
                     and isinstance(owner_identity.get("path"), str)):
                 try:
-                    _resolved, verified_owner_identity = _verified_scope_checkout(
-                        workspace_root or self.snapshot.get("workspace", {}).get("root") or ".",
-                        repository,
-                        owner_authorized_checkout=owner_identity,
+                    owner_path = Path(owner_identity["path"])
+                    owner_repository_root = Path(owner_identity["repository_root"])
+                    owner_workspace_root = owner_identity.get("workspace_root")
+                    if not isinstance(owner_workspace_root, str):
+                        owner_workspace_root = str(owner_repository_root.parent)
+
+                    if explicit_scope:
+                        requested_path = Path(str(scope.get("checkout", "")))
+                        active_workspace_root = (
+                            workspace_root
+                            or self.snapshot.get("workspace", {}).get("root")
+                        )
+                        if (not requested_path.is_absolute()
+                                and isinstance(active_workspace_root, str)):
+                            requested_path = Path(active_workspace_root) / requested_path
+                        if Path(os.path.abspath(requested_path)) != Path(
+                            os.path.abspath(owner_path)
+                        ):
+                            raise ValueError(
+                                "explicit claim checkout differs from the owner-authorized checkout"
+                            )
+
+                    # Owner scope grants bind one exact registered worktree.
+                    # Its source head may have advanced while the previous
+                    # claim was held; validate stable Git identity and require
+                    # the granted revision to remain an ancestor so a reset
+                    # or replacement checkout cannot inherit the grant.
+                    verified_owner_identity = workspace_module.verify_registered_checkout(
+                        owner_path,
+                        repository=repository,
+                        workspace_root=owner_workspace_root,
+                        expected_repository_root=owner_repository_root,
+                        expected_branch=(
+                            owner_identity.get("branch")
+                            if isinstance(owner_identity.get("branch"), str)
+                            else None
+                        ),
                     )
+                    for field in (
+                        "checkout_identity", "git_common_directory_identity",
+                        "observed_path", "branch", "repository_root",
+                        "workspace_root", "git_common_directory",
+                        "manifest_identity",
+                    ):
+                        recorded = owner_identity.get(field)
+                        if (isinstance(recorded, str)
+                                and verified_owner_identity.get(field) != recorded):
+                            raise ValueError(
+                                f"owner-authorized checkout {field} changed"
+                            )
+                    recorded_head = owner_identity.get("head")
+                    current_head = verified_owner_identity.get("head")
+                    if (isinstance(recorded_head, str)
+                            and isinstance(current_head, str)
+                            and recorded_head != current_head):
+                        ancestry = workspace_module._git(
+                            owner_path, "merge-base", "--is-ancestor",
+                            recorded_head, current_head,
+                        )
+                        if ancestry is None or ancestry.returncode != 0:
+                            raise ValueError(
+                                "owner-authorized checkout revision is not an ancestor "
+                                "of the current worktree revision"
+                            )
+                    inspected_owner = workspace_module.inspect_repo(
+                        Path(verified_owner_identity["path"]), _refresh=True,
+                    )
+                    selected = {
+                        **verified_owner_identity,
+                        "repository": repository,
+                        "path": verified_owner_identity["path"],
+                        "clean": bool(
+                            inspected_owner is not None and not inspected_owner.dirty
+                        ),
+                    }
+                    owner_authorized_selection = True
                 except (OSError, ValueError, workspace_module.WorkspaceResolutionError):
                     # The grant is durable authorization, not a promise that
                     # the selected worktree still exists. Refuse claim
-                    # acquisition if its exact identity can no longer be
-                    # established.
+                    # acquisition if its exact identity or forward history can
+                    # no longer be established.
                     raise AuthorityDenied(
-                        f"owner-authorized repository checkout is no longer valid: {repository}"
+                        f"owner-authorized repository checkout cannot be resumed safely: {repository}"
                     ) from None
-                selected = {
-                    **verified_owner_identity,
-                    "repository": repository,
-                    "path": verified_owner_identity["path"],
-                    "clean": bool(owner_identity.get("clean", False)),
-                }
-                owner_authorized_selection = True
-        explicit_scope = scope is not None
         if workspace_root is None:
             workspace_root = self.snapshot.get("workspace", {}).get("root")
         authorized_workspace = None

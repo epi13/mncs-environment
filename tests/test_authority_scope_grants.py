@@ -552,6 +552,120 @@ def test_owner_grant_admits_exact_registered_worktree_outside_campaign_workspace
             session.close()
 
 
+def test_owner_worktree_claim_resumes_after_forward_head_advance(
+    tmp_path: Path,
+) -> None:
+    campaign_workspace = tmp_path / "campaign-workspace"
+    campaign_workspace.mkdir()
+    configured_workspace = tmp_path / "configured-projects"
+    configured_workspace.mkdir()
+    session = _session(tmp_path / "state", campaign_workspace)
+    try:
+        repository = _checkout(configured_workspace, "mncs-control-mcp")
+        repository_root = configured_workspace / repository["name"]
+        checkout = repository_root / ".worktrees" / "resume" / repository["name"]
+        checkout.parent.mkdir(parents=True)
+        branch = "campaign/owner-worktree-resume"
+        _git(repository_root, "worktree", "add", "-b", branch, str(checkout), "HEAD")
+        first_facts = workspace_module.verify_registered_checkout(
+            checkout,
+            repository=repository["name"],
+            workspace_root=configured_workspace,
+            expected_repository_root=repository_root,
+            expected_branch=branch,
+        )
+        first = _grant(
+            session,
+            owner_authorized_checkout=first_facts,
+            request_id="req_owner_resume_initial_grant",
+        )
+
+        (checkout / "README.md").write_text("continued worktree\n", encoding="utf-8")
+        _git(checkout, "add", "README.md")
+        _git(checkout, "commit", "-m", "advance the granted worktree")
+        current_facts = workspace_module.verify_registered_checkout(
+            checkout,
+            repository=repository["name"],
+            workspace_root=configured_workspace,
+            expected_repository_root=repository_root,
+            expected_branch=branch,
+        )
+        assert current_facts["head"] != first_facts["head"]
+
+        claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="resume the owner-approved worktree after its branch advanced",
+            scope={
+                "kind": "worktree",
+                "checkout": str(checkout),
+                "branch": branch,
+            },
+            request_id="req_owner_resume_claim",
+        )
+        assert claim["scope"]["checkout"] == str(checkout.resolve())
+        assert claim["scope"]["branch"] == branch
+        assert claim["scope"]["exclusive"] is False
+
+        refreshed = _grant(
+            session,
+            revision=session.effective_authority()["revision"],
+            owner_authorized_checkout=current_facts,
+            request_id="req_owner_resume_refresh",
+        )
+        assert refreshed["refresh_of"] == first["identity"]
+        assert refreshed["repository_identity"]["head"] == current_facts["head"]
+        assert refreshed["repository_identity"]["checkout_identity"] == first[
+            "repository_identity"
+        ]["checkout_identity"]
+    finally:
+        session.close()
+
+
+def test_registered_worktree_under_an_ancestor_repository_stays_workspace_scoped(
+    tmp_path: Path,
+) -> None:
+    configured_workspace = tmp_path / "configured-projects"
+    configured_workspace.mkdir()
+    repository = _checkout(configured_workspace, "mncs-compiler")
+    repository_root = configured_workspace / repository["name"]
+    campaign_workspace = repository_root / ".worktrees" / "campaign"
+    checkout = campaign_workspace / repository["name"]
+    checkout.parent.mkdir(parents=True)
+    branch = "campaign/nested-authorized-workspace"
+    _git(repository_root, "worktree", "add", "-b", branch, str(checkout), "HEAD")
+
+    facts = workspace_module.verify_registered_checkout(
+        checkout,
+        repository=repository["name"],
+        workspace_root=campaign_workspace,
+        expected_repository_root=repository_root,
+        expected_branch=branch,
+        allow_repository_root_ancestor=True,
+    )
+    assert facts["path"] == str(checkout.resolve())
+    assert facts["repository_root"] == str(repository_root.resolve())
+    assert facts["branch"] == branch
+    resolved, selected_facts = sessions._verified_scope_checkout(
+        campaign_workspace,
+        repository["name"],
+        {"path": str(checkout), "branch": branch},
+    )
+    assert resolved == checkout.resolve()
+    assert selected_facts["git_common_directory_identity"] == facts[
+        "git_common_directory_identity"
+    ]
+
+    lookalike_parent = campaign_workspace / "lookalikes"
+    lookalike = _checkout(lookalike_parent, "mncs-compiler")
+    with pytest.raises(workspace_module.WorkspaceResolutionError):
+        workspace_module.verify_registered_checkout(
+            lookalike_parent / lookalike["name"],
+            repository=repository["name"],
+            workspace_root=campaign_workspace,
+            allow_repository_root_ancestor=True,
+        )
+
+
 def test_scope_grant_retry_is_idempotent_and_payload_fenced(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
