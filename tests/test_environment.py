@@ -1412,6 +1412,46 @@ class CampaignContinuityTests(unittest.TestCase):
 
 
 class StoreTransportDiagnosticsTests(unittest.TestCase):
+    def test_resume_preserves_workspace_revalidation_diagnostic(self) -> None:
+        from mncs_env import cli as cli_module
+
+        details = {
+            "code": "workspace-scan-incomplete",
+            "root": "/workspace/mncs-compiler",
+            "scan": {
+                "status": "timed_out",
+                "candidate_directories": 12,
+                "inspected_directories": 4,
+                "elapsed_ms": 1500.5,
+                "budget_seconds": 1.5,
+                "message": "workspace scan exceeded its bounded time budget",
+            },
+            "next": "check workspace availability, then reconcile the session",
+        }
+        session = mock.Mock()
+        session.snapshot = {
+            "workspace": {"root": "/workspace/mncs-compiler"},
+            "consumer_id": "local-agent",
+        }
+        session.revalidate.side_effect = workspace.WorkspaceResolutionError(
+            "workspace revalidation stopped safely; keeping the previous complete observation",
+            diagnostics=details,
+        )
+        args = cli_module.build_parser().parse_args([
+            "resume", "ses_workspace_scan", "--revalidate",
+        ])
+        stderr = io.StringIO()
+        with mock.patch.object(
+            cli_module.sessions_module.Session, "resume", return_value=session,
+        ), redirect_stderr(stderr):
+            code = cli_module.cmd_resume(args)
+
+        self.assertEqual(code, 3)
+        result = json.loads(stderr.getvalue())
+        self.assertEqual(result["diagnostics"], details)
+        self.assertEqual(session.revalidate.call_args.kwargs["workspace_root"],
+                         "/workspace/mncs-compiler")
+
     def test_control_rpc_without_grant_fails_closed_without_local_store(self) -> None:
         from mncs_env import cli as cli_module
         from mncs_env import rpc_client
@@ -1878,6 +1918,56 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
         self.assertEqual(
             diagnostics["domain_details"]["current_checkpoint"], "chk_current"
         )
+
+    def test_rpc_client_preserves_bounded_workspace_scan_diagnostics(self) -> None:
+        from mncs_env import rpc_client
+
+        failed = {
+            "error": "workspace revalidation stopped safely",
+            "diagnostics": {
+                "code": "workspace-scan-incomplete",
+                "root": "/workspace/mncs-compiler",
+                "scan": {
+                    "status": "timed_out",
+                    "candidate_directories": 12,
+                    "inspected_directories": 4,
+                    "elapsed_ms": 1500.5,
+                    "budget_seconds": 1.5,
+                    "message": "scan exceeded its budget",
+                    "credential": "must not cross the Environment RPC boundary",
+                },
+                "next": "check workspace availability",
+                "credential": "must not cross the Environment RPC boundary",
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            grant = Path(directory) / "grant"
+            grant.write_text("test-grant", encoding="ascii")
+            with mock.patch.dict(os.environ, {
+                "MNCS_ENV_RPC_SOCKET": "/run/test.sock",
+                "MNCS_ENV_RPC_GRANT_FILE": str(grant),
+            }), mock.patch.object(rpc_client, "_exchange", return_value={
+                "ok": True,
+                "result": {
+                    "exit_code": 3,
+                    "stdout": "",
+                    "stderr": json.dumps(failed),
+                },
+            }), redirect_stdout(io.StringIO()) as output:
+                code = rpc_client.dispatch([
+                    "resume", "ses_workspace_scan", "--revalidate",
+                ])
+
+        self.assertEqual(code, 3)
+        result = json.loads(output.getvalue())
+        diagnostics = result["diagnostics"]
+        details = diagnostics["domain_details"]
+        self.assertEqual(diagnostics["code"], "publication-rejected")
+        self.assertEqual(diagnostics["cause_code"], "workspace-scan-incomplete")
+        self.assertEqual(details["cause_code"], "workspace-scan-incomplete")
+        self.assertEqual(details["scan"]["status"], "timed_out")
+        self.assertEqual(details["scan"]["inspected_directories"], 4)
+        self.assertNotIn("credential", json.dumps(result))
 
     def test_rpc_client_preserves_bounded_campaign_continuation_choices(self) -> None:
         from mncs_env import rpc_client

@@ -636,6 +636,9 @@ def cmd_resume(args: argparse.Namespace) -> int:
     try:
         session = _resume_session(args, request_operation=request_operation)
     except (sessions_module.LifecycleError, ValueError) as error:
+        diagnostics = getattr(error, "diagnostics", None)
+        if isinstance(diagnostics, dict) and diagnostics:
+            return fail(str(error), code=3, diagnostics=diagnostics)
         return fail(str(error))
     if args.revalidate:
         workspace_root = (
@@ -650,7 +653,11 @@ def cmd_resume(args: argparse.Namespace) -> int:
                 workspace_root=workspace_root,
             )
         except (sessions_module.LifecycleError, ValueError) as error:
-            return fail(str(error), code=3)
+            diagnostics = getattr(error, "diagnostics", None)
+            return fail(
+                str(error), code=3,
+                diagnostics=diagnostics if isinstance(diagnostics, dict) else None,
+            )
     else:
         revalidation = {"reprobed": 0, "changed": []}
     result = session.inspect()

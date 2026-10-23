@@ -1,0 +1,41 @@
+{
+  "campaign": {
+    "checkpoint_before_change": "chk_1b7f21000b3ee456",
+    "identity": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "sequence_before_change": 645,
+    "session_id": "ses_164edc158d9b1637"
+  },
+  "created_at": "2026-10-23T18:49:52.990149+00:00",
+  "implementation": {
+    "behavior": [
+      "The resume command preserves structured WorkspaceResolutionError diagnostics when session reopening or workspace revalidation fails.",
+      "The authenticated RPC client forwards only the workspace-scan-incomplete code, bounded root and next-step text, and an allowlist of scan status, counters, finite timing values, and message text.",
+      "Arbitrary diagnostic fields are discarded at the RPC boundary."
+    ],
+    "branch": "campaign/environment-resume-diagnostics-20261023",
+    "implementation_diff_sha256": "438911a36b4ed68fa9829894cd0418097538cc2f182b7abc7a6be085a6256354",
+    "repository": "mncs-environment",
+    "source_files": {
+      "mncs_env/cli.py": "5605b4cdf35c9c8a9ff52e1e28952941480d0c033b2884ff8d8131a933799094",
+      "mncs_env/rpc_client.py": "ff755cf40289f186380f730be37318b770f369db3597ed236d0a5074e380da1d",
+      "tests/test_environment.py": "3de681b82012c7724f9bb98f9518a0804240064c26fff831fe28fed83806accd"
+    },
+    "tested_parent_revision": "cee5295c2fa5e50dd813d4d22c76e79946f9a19d"
+  },
+  "limitations": [
+    "Live Control service end-to-end diagnostic readback remains to be rechecked after the Environment service loads this revision."
+  ],
+  "result": "passed",
+  "schema_version": "mncs.environment.workspace-revalidation-diagnostic-forwarding/1",
+  "verification": {
+    "diagnostic_test_group": {
+      "command": "python3 -m pytest -q tests/test_environment.py::StoreTransportDiagnosticsTests",
+      "duration_seconds": 0.2,
+      "passed": 20
+    },
+    "static_checks": [
+      "python3 -m py_compile mncs_env/cli.py mncs_env/rpc_client.py tests/test_environment.py",
+      "git diff --check"
+    ]
+  }
+}
