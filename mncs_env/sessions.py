@@ -903,6 +903,55 @@ def _repository_checkout_identity(
     )
 
 
+def _language_toolchain_selection(
+    selected_checkouts: dict[str, Any], *, workspace_root: str | Path | None = None,
+) -> dict[str, Any] | None:
+    """Bind the current Language checkout to its usable local compiler binary."""
+    language = selected_checkouts.get("mncs-language")
+    if not isinstance(language, dict):
+        return None
+    checkout_value = language.get("path")
+    if not isinstance(checkout_value, str) or not checkout_value:
+        return {
+            "repository": "mncs-language", "checkout": None,
+            "revision": language.get("head"), "binary": None,
+            "status": "unavailable",
+        }
+    raw_checkout = Path(checkout_value)
+    if not raw_checkout.is_absolute() and workspace_root is not None:
+        raw_checkout = Path(workspace_root) / raw_checkout
+    try:
+        checkout = raw_checkout.resolve(strict=True)
+    except OSError:
+        checkout = None
+    if (checkout is None or raw_checkout.is_symlink()
+            or not checkout.is_dir() or not (checkout / "Cargo.toml").is_file()):
+        return {
+            "repository": "mncs-language", "checkout": checkout_value,
+            "revision": language.get("head"), "binary": None,
+            "status": "unavailable",
+        }
+    binary = next((candidate for candidate in (
+        checkout / "target" / "release" / "mncs",
+        checkout / "target" / "debug" / "mncs",
+    ) if candidate.is_file() and not candidate.is_symlink()), None)
+    if binary is not None:
+        try:
+            binary = binary.resolve(strict=True)
+            binary.relative_to(checkout)
+        except (OSError, ValueError):
+            binary = None
+    if binary is not None and not os.access(binary, os.X_OK):
+        binary = None
+    return {
+        "repository": "mncs-language",
+        "checkout": str(checkout),
+        "revision": language.get("head"),
+        "binary": str(binary) if binary is not None else None,
+        "status": "available" if binary is not None else "unavailable",
+    }
+
+
 def _verified_scope_checkout(
     workspace_root: str | Path,
     repository: str,
@@ -4070,27 +4119,72 @@ class Session:
 
     def _selected_runtime_environment(self, binding: dict[str, Any]) -> dict[str, str]:
         selected_checkouts = self.snapshot.get("selected_checkouts", {})
-        if not isinstance(selected_checkouts, dict) or not all(
-            selected_checkouts.get(repository) for repository in ("mncs-store", "mncs-language")
-        ):
+        if not isinstance(selected_checkouts, dict):
             return {}
-        provider = store_provider_from_environment({
-            "workspace": self.snapshot.get("workspace", {}),
-            "selected_checkouts": selected_checkouts,
-            "toolchain": self.snapshot.get("toolchain"),
-            "execution_stack": self.snapshot.get("execution_stack"),
-        })
-        if provider is None:
+        language = selected_checkouts.get("mncs-language")
+        toolchain = self.snapshot.get("toolchain")
+        if not isinstance(language, dict) or not isinstance(toolchain, dict):
             return {}
-        runtime = provider.get("runtime_environment")
-        if not isinstance(runtime, dict):
+
+        checkout_value = language.get("path")
+        if not isinstance(checkout_value, str) or not checkout_value:
             return {}
+        checkout = Path(checkout_value)
+        workspace_root = (self.snapshot.get("workspace") or {}).get("root")
+        if not checkout.is_absolute() and isinstance(workspace_root, str):
+            checkout = Path(workspace_root) / checkout
+        try:
+            canonical_checkout = checkout.resolve(strict=True)
+        except OSError:
+            return {}
+        if (checkout.is_symlink() or not canonical_checkout.is_dir()
+                or not (canonical_checkout / "Cargo.toml").is_file()
+                or toolchain.get("status") != "available"
+                or toolchain.get("checkout") != str(canonical_checkout)
+                or toolchain.get("revision") != language.get("head")):
+            return {}
+        binary_value = toolchain.get("binary")
+        if not isinstance(binary_value, str) or not binary_value:
+            return {}
+        binary = Path(binary_value)
+        if binary.is_symlink():
+            return {}
+        try:
+            binary = binary.resolve(strict=True)
+            binary.relative_to(canonical_checkout)
+        except (OSError, ValueError):
+            return {}
+        embed_library = binary.parent / "libmncs_embed.so"
+        if (not binary.is_file() or not os.access(binary, os.X_OK)
+                or embed_library.is_symlink() or not embed_library.is_file()):
+            return {}
+
         contextual = {
-            **runtime,
-            "MNCS_STORE_PYTHON": provider["python_package"],
-            "MNCS_STORE_ARTIFACT_CACHE": str(self.store.state_dir.resolve() / "provider-cache" / "mncs-store"),
-            "MNCS_LANGUAGE_CHECKOUT": runtime["MNCS_LANGUAGE_ROOT"],
+            "MNCS_LANGUAGE_ROOT": str(canonical_checkout),
+            "MNCS_LANGUAGE_CHECKOUT": str(canonical_checkout),
+            "MNCS_BIN": str(binary),
+            "MNCS_EMBED_LIB": str(embed_library.resolve()),
         }
+        library = canonical_checkout / "library"
+        if library.is_dir() and not library.is_symlink():
+            contextual["MNCS_LIBRARY_ROOT"] = str(library.resolve())
+
+        if selected_checkouts.get("mncs-store"):
+            provider = store_provider_from_environment({
+                "workspace": self.snapshot.get("workspace", {}),
+                "selected_checkouts": selected_checkouts,
+                "toolchain": toolchain,
+                "execution_stack": self.snapshot.get("execution_stack"),
+            })
+            if provider is not None:
+                store_runtime = provider.get("runtime_environment")
+                if isinstance(store_runtime, dict):
+                    contextual.update(store_runtime)
+                    contextual["MNCS_STORE_PYTHON"] = provider["python_package"]
+                    contextual["MNCS_STORE_ARTIFACT_CACHE"] = str(
+                        self.store.state_dir.resolve()
+                        / "provider-cache" / "mncs-store"
+                    )
         declared = set((binding.get("fixed_env") or {}).keys())
         declared_toolchain_env = binding.get("toolchain_env")
         if isinstance(declared_toolchain_env, str) and declared_toolchain_env:
@@ -5696,15 +5790,18 @@ class Session:
         elif workspace_root:
             discovered = capabilities_module.discover_capabilities(workspace_root)
 
-        toolchain = self.snapshot.get("toolchain")
-        if isinstance(toolchain, dict):
-            checkout = Path(str(toolchain.get("checkout", "")))
-            candidates = (checkout / "target" / "release" / "mncs", checkout / "target" / "debug" / "mncs")
-            binary = next((path for path in candidates if path.is_file()), None)
-            language = self.snapshot.get("selected_checkouts", {}).get("mncs-language", {})
-            self.snapshot["toolchain"] = {**toolchain, "binary": str(binary) if binary else None,
-                                          "status": "available" if binary else "unavailable",
-                                          "revision": language.get("head", toolchain.get("revision"))}
+        language_toolchain = _language_toolchain_selection(
+            self.snapshot.get("selected_checkouts", {}),
+            workspace_root=(self.snapshot.get("workspace") or {}).get("root"),
+        )
+        if language_toolchain is not None:
+            self.snapshot["toolchain"] = language_toolchain
+        elif isinstance(self.snapshot.get("toolchain"), dict):
+            self.snapshot["toolchain"] = {
+                **self.snapshot["toolchain"],
+                "binary": None,
+                "status": "unavailable",
+            }
 
         prior_by_key = {(item.get("provider"), item.get("capability")): item
                         for item in old_bindings}

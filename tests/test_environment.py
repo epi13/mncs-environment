@@ -5087,10 +5087,13 @@ class SessionTests(unittest.TestCase):
             package_init = store_checkout / "python" / "mncs_store" / "__init__.py"
             package_init.parent.mkdir(parents=True)
             package_init.write_text("", encoding="utf-8")
+            (language_checkout / "Cargo.toml").parent.mkdir(parents=True)
+            (language_checkout / "Cargo.toml").write_text("[workspace]\n", encoding="utf-8")
             binary = language_checkout / "target" / "debug" / "mncs"
             embed = binary.parent / "libmncs_embed.so"
             embed.parent.mkdir(parents=True)
             binary.write_bytes(b"selected compiler")
+            binary.chmod(0o755)
             embed.write_bytes(b"selected embed library")
 
             session = sessions.Session.__new__(sessions.Session)
@@ -5121,6 +5124,65 @@ class SessionTests(unittest.TestCase):
                 session._selected_runtime_environment({"toolchain_env": "MNCS_BIN"}),
                 {key: value for key, value in selected.items() if key != "MNCS_BIN"},
             )
+
+    def test_invocation_environment_uses_selected_language_without_store_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            language_checkout = root / "mncs-language" / ".worktrees" / "campaign"
+            (language_checkout / "Cargo.toml").parent.mkdir(parents=True)
+            (language_checkout / "Cargo.toml").write_text("[workspace]\n", encoding="utf-8")
+            binary = language_checkout / "target" / "release" / "mncs"
+            embed = binary.parent / "libmncs_embed.so"
+            embed.parent.mkdir(parents=True)
+            binary.write_bytes(b"selected compiler")
+            binary.chmod(0o755)
+            embed.write_bytes(b"selected embed library")
+
+            session = sessions.Session.__new__(sessions.Session)
+            session.store = mock.Mock(state_dir=root / "state")
+            session.snapshot = {
+                "workspace": {"root": str(root)},
+                "selected_checkouts": {"mncs-language": {
+                    "path": str(language_checkout), "head": "language-revision",
+                }},
+                "toolchain": {
+                    "checkout": str(language_checkout), "revision": "language-revision",
+                    "binary": str(binary), "status": "available",
+                },
+            }
+
+            selected = session._selected_runtime_environment({})
+
+            self.assertEqual(selected["MNCS_LANGUAGE_ROOT"], str(language_checkout.resolve()))
+            self.assertEqual(selected["MNCS_BIN"], str(binary.resolve()))
+            self.assertEqual(selected["MNCS_EMBED_LIB"], str(embed.resolve()))
+            self.assertNotIn("MNCS_STORE_ROOT", selected)
+
+    def test_language_toolchain_selection_tracks_newly_composed_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            checkout = root / "mncs-language" / ".worktrees" / "campaign"
+            (checkout / "Cargo.toml").parent.mkdir(parents=True)
+            (checkout / "Cargo.toml").write_text("[workspace]\n", encoding="utf-8")
+            binary = checkout / "target" / "release" / "mncs"
+            binary.parent.mkdir(parents=True)
+            binary.write_bytes(b"selected compiler")
+            binary.chmod(0o755)
+            selected = {"mncs-language": {"path": str(checkout), "head": "language-revision"}}
+
+            toolchain = sessions._language_toolchain_selection(
+                selected, workspace_root=root,
+            )
+
+            self.assertEqual(toolchain["checkout"], str(checkout.resolve()))
+            self.assertEqual(toolchain["revision"], "language-revision")
+            self.assertEqual(toolchain["binary"], str(binary.resolve()))
+            self.assertEqual(toolchain["status"], "available")
+
+            binary.unlink()
+            stale = sessions._language_toolchain_selection(selected, workspace_root=root)
+            self.assertEqual(stale["binary"], None)
+            self.assertEqual(stale["status"], "unavailable")
 
     def test_store_inspection_accepts_selected_session(self) -> None:
         parsed = cli.build_parser().parse_args([
