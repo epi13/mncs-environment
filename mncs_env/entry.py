@@ -458,6 +458,159 @@ def _working_checkout_matches_snapshot(
     )
 
 
+def _working_checkout_identity_matches_snapshot(
+    snapshot: dict,
+    working_checkout: dict[str, str] | None,
+) -> bool:
+    """Match a registered worktree across branch changes using stable Git identity."""
+    if not isinstance(working_checkout, dict):
+        return False
+    repository = working_checkout.get("repository")
+    current_path = working_checkout.get("path")
+    selected_checkouts = snapshot.get("selected_checkouts")
+    selected = (
+        selected_checkouts.get(repository)
+        if isinstance(repository, str) and isinstance(selected_checkouts, dict)
+        else None
+    )
+    if (not isinstance(selected, dict)
+            or selected.get("repository", repository) != repository
+            or not isinstance(current_path, str)
+            or not isinstance(selected.get("path"), str)
+            or os.path.abspath(selected["path"]) != os.path.abspath(current_path)):
+        return False
+    for field in ("checkout_identity", "git_common_directory_identity"):
+        current = working_checkout.get(field)
+        recorded = selected.get(field)
+        if not isinstance(current, str) or not current or recorded != current:
+            return False
+    current_manifest = working_checkout.get("manifest_identity")
+    recorded_manifest = selected.get("manifest_identity")
+    return not (
+        isinstance(current_manifest, str)
+        and isinstance(recorded_manifest, str)
+        and current_manifest != recorded_manifest
+    )
+
+
+def _authorized_checkout_identity_roots(
+    store, session_id: str, snapshot: dict,
+) -> list[Path]:
+    """Return only workspace roots recorded by this session's Environment authority."""
+    roots: set[str] = set()
+    workspace_record = snapshot.get("workspace")
+    if isinstance(workspace_record, dict):
+        root = workspace_record.get("root")
+        if isinstance(root, str) and root:
+            roots.add(root)
+    try:
+        session = sessions.Session(store, session_id)
+        grants = session.authority_scope_grants()
+    except (KeyError, OSError, ValueError, sessions.LifecycleError):
+        grants = []
+    for grant in grants:
+        identity_record = grant.get("repository_identity")
+        root = identity_record.get("workspace_root") if isinstance(identity_record, dict) else None
+        if isinstance(root, str) and root:
+            roots.add(root)
+    result: list[Path] = []
+    for root in sorted(roots):
+        try:
+            resolved = Path(root).resolve(strict=True)
+        except OSError:
+            continue
+        if resolved not in result:
+            result.append(resolved)
+    return result
+
+
+def _working_checkout_identity_matches_claim(
+    store, session_id: str, snapshot: dict, claim_scope: dict,
+    working_checkout: dict[str, str] | None,
+) -> bool:
+    """Verify a held claim against this checkout under its recorded workspace root."""
+    if not isinstance(working_checkout, dict) or claim_scope.get("kind") != "worktree":
+        return False
+    repository = working_checkout.get("repository")
+    current_path = working_checkout.get("path")
+    claim_path = claim_scope.get("checkout")
+    if (not isinstance(repository, str) or not repository
+            or not isinstance(current_path, str) or not isinstance(claim_path, str)
+            or os.path.abspath(current_path) != os.path.abspath(claim_path)):
+        return False
+    current_manifest = working_checkout.get("manifest_identity")
+    claim_manifest = claim_scope.get("manifest_identity")
+    if (not isinstance(current_manifest, str) or not current_manifest
+            or not isinstance(claim_manifest, str) or claim_manifest != current_manifest):
+        return False
+    current_checkout_id = working_checkout.get("checkout_identity")
+    current_common_id = working_checkout.get("git_common_directory_identity")
+    claim_checkout_id = claim_scope.get("checkout_identity")
+    claim_common_id = claim_scope.get("git_common_directory_identity")
+    if (not all(isinstance(value, str) and value for value in (
+            current_checkout_id, current_common_id, claim_checkout_id, claim_common_id))):
+        return False
+    if (current_checkout_id == claim_checkout_id
+            and current_common_id == claim_common_id):
+        return True
+    checkout_path = Path(current_path)
+    for root in _authorized_checkout_identity_roots(store, session_id, snapshot):
+        try:
+            verified = workspace.verify_registered_checkout(
+                checkout_path, repository=repository, workspace_root=root,
+                expected_repository_root=(
+                    working_checkout.get("repository_root")
+                    if isinstance(working_checkout.get("repository_root"), str)
+                    else None
+                ),
+                expected_branch=(
+                    working_checkout.get("branch")
+                    if isinstance(working_checkout.get("branch"), str) else None
+                ),
+            )
+        except (OSError, ValueError, workspace.WorkspaceResolutionError):
+            continue
+        if verified.get("manifest_identity") != claim_manifest:
+            continue
+        if (verified.get("checkout_identity") == claim_checkout_id
+                and verified.get("git_common_directory_identity") == claim_common_id):
+            return True
+    return False
+
+
+def _active_checkout_claim_sessions(store, working_checkout: dict[str, str] | None) -> set[str]:
+    """Find sessions whose active exact-path claim verifies under their own authority roots."""
+    if not isinstance(working_checkout, dict):
+        return set()
+    read_claims = getattr(store, "read_claims", None)
+    if not callable(read_claims):
+        return set()
+    repository = working_checkout.get("repository")
+    checkout_path = working_checkout.get("path")
+    if not isinstance(repository, str) or not isinstance(checkout_path, str):
+        return set()
+    matches: set[str] = set()
+    for record in claims_module.active_claims(read_claims()).values():
+        if record.get("repository") != repository:
+            continue
+        session_id = record.get("session_id")
+        scope = record.get("scope")
+        if (not isinstance(session_id, str) or not isinstance(scope, dict)
+                or scope.get("kind") != "worktree"
+                or not isinstance(scope.get("checkout"), str)
+                or os.path.abspath(scope["checkout"]) != os.path.abspath(checkout_path)):
+            continue
+        try:
+            snapshot = store.load_snapshot(session_id) or {}
+        except (KeyError, OSError, ValueError):
+            snapshot = {}
+        if _working_checkout_identity_matches_claim(
+            store, session_id, snapshot, scope, working_checkout,
+        ):
+            matches.add(session_id)
+    return matches
+
+
 def _authoritative_duplicate_session(
     store,
     session_ids: list[str],
@@ -476,7 +629,8 @@ def _authoritative_duplicate_session(
         session_id: store.load_snapshot(session_id) or {}
         for session_id in candidates
     }
-    exact = [
+
+    branch_exact = [
         session_id
         for session_id in candidates
         if _working_checkout_matches_snapshot(
@@ -484,20 +638,25 @@ def _authoritative_duplicate_session(
             working_checkout,
         )
     ]
-    if len(exact) == 1:
-        return exact[0], {"basis": "unique_registered_checkout"}
-    if len(exact) < 2:
-        return None, {
-            "basis": "no_unique_registered_checkout",
-            "candidate_sessions": candidates,
-            "exact_checkout_sessions": exact,
-        }
-
+    # A branch switch changes provenance but not the identity of a registered
+    # worktree. Keep every snapshot for that exact checkout in the candidate
+    # set; a live claim or a unique checkpoint below decides which session owns
+    # continuation. Requiring the checkout and Git common-directory identities
+    # prevents a same-path replacement repository from inheriting the session.
+    identity_exact = [
+        session_id for session_id in candidates
+        if _working_checkout_identity_matches_snapshot(
+            snapshots[session_id], working_checkout,
+        )
+    ]
+    exact = sorted(set(identity_exact or branch_exact))
     read_claims = getattr(store, "read_claims", None)
     if not callable(read_claims):
+        if working_checkout is None and len(exact) == 1:
+            return exact[0], {"basis": "unique_registered_checkout"}
         return None, {
             "basis": "canonical_claims_unavailable",
-            "candidate_sessions": exact,
+            "candidate_sessions": exact or candidates,
         }
 
     active = claims_module.active_claims(read_claims())
@@ -539,10 +698,8 @@ def _authoritative_duplicate_session(
             if not isinstance(owner, str) or not owner:
                 owner = "<unknown>"
             raw_scope = record.get("scope")
-            scope = claims_module.normalize_scope(
-                raw_scope if isinstance(raw_scope, dict) else None,
-                repository,
-            )
+            raw_scope = raw_scope if isinstance(raw_scope, dict) else {}
+            scope = claims_module.normalize_scope(raw_scope, repository)
             if claims_module.scopes_conflict(scope, target_scope) is None:
                 continue
             conflicting_owners.add(owner)
@@ -552,14 +709,41 @@ def _authoritative_duplicate_session(
                     "session_id": owner,
                 }
             )
-            exact_scope = scope.get("kind") == "repository" or (
+            same_checkout_path = (
                 scope.get("kind") == "worktree"
                 and scope.get("checkout") == checkout_path
-                and scope.get("branch") == branch
+            )
+            owner_snapshot = snapshots.get(owner)
+            if owner_snapshot is None and owner != "<unknown>":
+                try:
+                    owner_snapshot = store.load_snapshot(owner) or {}
+                except (KeyError, OSError, ValueError):
+                    owner_snapshot = {}
+            stable_claim_identity = (
+                same_checkout_path
+                and owner != "<unknown>"
+                and _working_checkout_identity_matches_claim(
+                    store, owner, owner_snapshot or {}, raw_scope, working_checkout,
+                )
+            )
+            conflicting_identity = any(
+                isinstance(raw_scope.get(field), str)
+                and isinstance(working_checkout.get(field), str)
+                and raw_scope.get(field) != working_checkout.get(field)
+                for field in (
+                    "checkout_identity", "git_common_directory_identity",
+                    "manifest_identity",
+                )
+            ) and not stable_claim_identity
+            exact_scope = scope.get("kind") == "repository" or (
+                same_checkout_path
+                and not conflicting_identity
+                and (scope.get("branch") == branch or stable_claim_identity)
             )
             if exact_scope:
                 exact_claim_owners.add(owner)
 
+    exact = sorted(set(exact) | (exact_claim_owners & set(candidates)))
     if conflicting_owners:
         if (
             len(conflicting_owners) == 1
@@ -577,11 +761,34 @@ def _authoritative_duplicate_session(
             }
         return None, {
             "basis": "overlapping_claim_conflict",
-            "candidate_sessions": exact,
+            "candidate_sessions": exact or candidates,
             "overlapping_claims": sorted(
                 overlapping_claims,
                 key=lambda item: (item["session_id"], item["claim_id"]),
             ),
+        }
+
+    if len(exact) == 1:
+        selected = exact[0]
+        if selected in exact_claim_owners:
+            return selected, {
+                "basis": "unique_active_checkout_claim",
+                "claim_ids": sorted(
+                    item["claim_id"] for item in overlapping_claims
+                    if item["session_id"] == selected
+                ),
+            }
+        basis = (
+            "unique_checkout_identity"
+            if selected in identity_exact and selected not in branch_exact
+            else "unique_registered_checkout"
+        )
+        return selected, {"basis": basis}
+    if len(exact) < 2:
+        return None, {
+            "basis": "no_unique_registered_checkout",
+            "candidate_sessions": candidates,
+            "exact_checkout_sessions": exact,
         }
 
     checkpoint_sessions = []
@@ -777,9 +984,14 @@ def _campaign_checkout_from_store(
     # An exact caller checkout is stronger evidence than campaign-level
     # inference. This keeps independent linked worktrees usable even when
     # they share one campaign identity.
+    checkout_claim_sessions = _active_checkout_claim_sessions(
+        store, working_checkout,
+    )
     if any(
         _working_checkout_matches_snapshot(snapshot, working_checkout)
-        for snapshot in snapshots.values()
+        or _working_checkout_identity_matches_snapshot(snapshot, working_checkout)
+        or session_id in checkout_claim_sessions
+        for session_id, snapshot in snapshots.items()
     ):
         return working_checkout
 
@@ -1204,6 +1416,9 @@ def _validate_campaign_identity(store, *, campaign_id: str,
         return
     snapshots = {session_id: store.load_snapshot(session_id) or {}
                  for session_id in live}
+    checkout_claim_sessions = _active_checkout_claim_sessions(
+        store, working_checkout,
+    )
 
     def continuation(session_id: str) -> dict:
         snapshot = snapshots[session_id]
@@ -1294,7 +1509,11 @@ def _validate_campaign_identity(store, *, campaign_id: str,
             session_id for session_id, snapshot in snapshots.items()
             if snapshot.get("provenance", {}).get("definition_id") == definition_id
             and snapshot.get("workspace", {}).get("root") == str(workspace_root)
-            and _working_checkout_matches_snapshot(snapshot, working_checkout)
+            and (
+                _working_checkout_matches_snapshot(snapshot, working_checkout)
+                or _working_checkout_identity_matches_snapshot(snapshot, working_checkout)
+                or session_id in checkout_claim_sessions
+            )
         ]
         authoritative_session, selection_evidence = (
             _authoritative_duplicate_session(
@@ -1810,6 +2029,9 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                         pending_handoff = candidate
                         if requested_campaign_id is None:
                             campaign_id = candidate_campaign
+                checkout_claim_sessions = _active_checkout_claim_sessions(
+                    store, working_checkout,
+                )
                 selector = ({'campaign_id': campaign_id,
                              'principal_id': authenticated_principal_id,
                              'definition': definition_id, 'workspace': str(root)}
@@ -1820,7 +2042,11 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                     common = (
                         snapshot.get("provenance", {}).get("definition_id") == definition_id
                         and snapshot.get("workspace", {}).get("root") == str(root)
-                        and _working_checkout_matches_snapshot(snapshot, working_checkout)
+                        and (
+                            _working_checkout_matches_snapshot(snapshot, working_checkout)
+                            or _working_checkout_identity_matches_snapshot(snapshot, working_checkout)
+                            or snapshot.get("session_id") in checkout_claim_sessions
+                        )
                     )
                     lifecycle = snapshot.get("lifecycle") in (
                         "active", "blocked", "waiting", "checkpointed", "abandoned"

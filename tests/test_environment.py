@@ -6897,6 +6897,205 @@ class EntryFrictionTests(unittest.TestCase):
                 },
             )
 
+    def test_duplicate_exact_checkout_refreshes_branch_for_exact_claim_identity(self) -> None:
+        from mncs_env import entry as entry_module
+
+        root = Path("/workspace/mncs-compiler")
+        checkout = root / ".worktrees" / "campaign" / "mncs-compiler"
+        old_branch = "campaign/native-application-readiness-20261013"
+        current_branch = "campaign/compiler-language-identity-index-20261023"
+        checkout_identity = "checkout-native-application-readiness"
+        common_identity = "common-mncs-compiler"
+        manifest_identity = "manifest-mncs-compiler-v3"
+
+        def snapshot(session_id: str, branch: str) -> dict:
+            return {
+                "campaign": {"identity": "cmp_duplicate_branch_refresh"},
+                "lifecycle": "active",
+                "authenticated_principal_id": "principal-test",
+                "provenance": {"definition_id": "env-compiler"},
+                "workspace": {"root": str(root.parent)},
+                "consumer_id": f"consumer-{session_id}",
+                "selected_checkouts": {
+                    "mncs-compiler": {
+                        "repository": "mncs-compiler",
+                        "path": str(checkout),
+                        "checkout_identity": checkout_identity,
+                        "git_common_directory_identity": common_identity,
+                        "manifest_identity": manifest_identity,
+                        "branch": branch,
+                    }
+                },
+            }
+
+        claim = {
+            "schema_version": "mncs.environment.workspace-claim/2",
+            "claim_id": "claim:mncs-compiler:worktree:owner",
+            "version": 1,
+            "repository": "mncs-compiler",
+            "session_id": "ses_claim_owner",
+            "status": "held",
+            "acquired_at": "2026-10-20T00:00:00+00:00",
+            "expires_at": "2030-01-01T00:00:00+00:00",
+            "scope": {
+                "kind": "worktree",
+                "checkout": str(checkout),
+                "branch": old_branch,
+                "checkout_identity": "checkout:authorized-root-relative",
+                "git_common_directory_identity": "git-common:authorized-root-relative",
+                "manifest_identity": manifest_identity,
+            },
+        }
+
+        class MemoryStore:
+            def __init__(self, selected_claim: dict) -> None:
+                self.snapshots = {
+                    "ses_claim_owner": snapshot("ses_claim_owner", old_branch),
+                    "ses_empty_duplicate": snapshot(
+                        "ses_empty_duplicate", current_branch,
+                    ),
+                }
+                self.selected_claim = selected_claim
+
+            def load_snapshot(self, session_id: str) -> dict:
+                return self.snapshots[session_id]
+
+            def list_sessions(self) -> list[str]:
+                return sorted(self.snapshots)
+
+            def read_claims(self) -> list[dict]:
+                return [self.selected_claim]
+
+        working_checkout = {
+            "repository": "mncs-compiler",
+            "path": str(checkout),
+            "checkout_identity": checkout_identity,
+            "git_common_directory_identity": common_identity,
+            "manifest_identity": manifest_identity,
+            "branch": current_branch,
+        }
+        with (
+            mock.patch.object(
+                entry_module.sessions,
+                "continuation_observations",
+                side_effect=self._campaign_observations,
+            ),
+            mock.patch.object(
+                entry_module.sessions.Session,
+                "authority_scope_grants",
+                return_value=[{
+                    "repository_identity": {"workspace_root": str(root.parent)},
+                }],
+            ),
+            mock.patch.object(
+                entry_module.workspace,
+                "verify_registered_checkout",
+                return_value={
+                    "checkout_identity": "checkout:authorized-root-relative",
+                    "git_common_directory_identity": "git-common:authorized-root-relative",
+                    "manifest_identity": manifest_identity,
+                },
+            ),
+        ):
+            selected, evidence = entry_module._authoritative_duplicate_session(
+                MemoryStore(claim),
+                ["ses_empty_duplicate", "ses_claim_owner"],
+                working_checkout,
+            )
+
+            self.assertEqual(selected, "ses_claim_owner")
+            self.assertEqual(evidence["basis"], "unique_active_checkout_claim")
+
+            replaced_checkout_claim = {
+                **claim,
+                "scope": {**claim["scope"], "manifest_identity": "forged-manifest"},
+            }
+            selected, evidence = entry_module._authoritative_duplicate_session(
+                MemoryStore(replaced_checkout_claim),
+                ["ses_empty_duplicate", "ses_claim_owner"],
+                working_checkout,
+            )
+
+        self.assertIsNone(selected)
+        self.assertEqual(evidence["basis"], "overlapping_claim_conflict")
+
+
+    def test_claim_identity_revalidates_against_authorized_workspace_root(self) -> None:
+        from mncs_env import entry as entry_module
+
+        with tempfile.TemporaryDirectory() as temporary:
+            broad_root = Path(temporary)
+            narrow_root = broad_root / "campaign"
+            checkout = narrow_root / "mncs-compiler"
+            checkout.mkdir(parents=True)
+            snapshot = {
+                "session_id": "ses_claim_owner",
+                "workspace": {"root": str(narrow_root)},
+            }
+
+            class MemoryStore:
+                def load_snapshot(self, session_id: str) -> dict:
+                    return snapshot if session_id == "ses_claim_owner" else {}
+
+            claim_scope = {
+                "kind": "worktree",
+                "checkout": str(checkout),
+                "branch": "campaign/previous",
+                "checkout_identity": "checkout:workspace-root-relative-old",
+                "git_common_directory_identity": "git-common:workspace-root-relative-old",
+                "manifest_identity": "manifest:mncs-compiler-v3",
+            }
+            working_checkout = {
+                "repository": "mncs-compiler",
+                "path": str(checkout),
+                "branch": "campaign/current",
+                "checkout_identity": "checkout:campaign-workspace-relative",
+                "git_common_directory_identity": "git-common:campaign-workspace-relative",
+                "manifest_identity": "manifest:mncs-compiler-v3",
+            }
+            grants = [{
+                "repository_identity": {"workspace_root": str(broad_root)},
+            }]
+
+            def verify_registered_checkout(path, *, workspace_root, **kwargs):
+                if Path(workspace_root) == broad_root:
+                    return {
+                        "checkout_identity": claim_scope["checkout_identity"],
+                        "git_common_directory_identity": claim_scope[
+                            "git_common_directory_identity"
+                        ],
+                        "manifest_identity": claim_scope["manifest_identity"],
+                    }
+                return {
+                    "checkout_identity": "checkout:campaign-workspace-relative",
+                    "git_common_directory_identity": "git-common:campaign-workspace-relative",
+                    "manifest_identity": claim_scope["manifest_identity"],
+                }
+
+            with (
+                mock.patch.object(
+                    entry_module.sessions.Session,
+                    "authority_scope_grants",
+                    return_value=grants,
+                ),
+                mock.patch.object(
+                    entry_module.workspace,
+                    "verify_registered_checkout",
+                    side_effect=verify_registered_checkout,
+                ) as verify,
+            ):
+                self.assertTrue(
+                    entry_module._working_checkout_identity_matches_claim(
+                        MemoryStore(), "ses_claim_owner", snapshot,
+                        claim_scope, working_checkout,
+                    )
+                )
+
+            self.assertTrue(any(
+                call.kwargs.get("workspace_root") == broad_root
+                for call in verify.call_args_list
+            ))
+
     def test_duplicate_exact_checkout_respects_foreign_overlapping_claim(self) -> None:
         from mncs_env import entry as entry_module
 
