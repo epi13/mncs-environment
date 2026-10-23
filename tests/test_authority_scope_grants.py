@@ -1094,6 +1094,24 @@ def test_revalidation_keeps_base_intent_checkout_when_scope_grants_extend_closur
         base_checkout = workspace / "mncs-environment"
         base_observed = workspace_module.inspect_repo(base_checkout, _refresh=True)
         assert base_observed is not None and base_observed.head
+        base_identity = workspace_module.repository_checkout_identity(
+            workspace, "mncs-environment", base_checkout,
+        )
+        # Entry may already have selected the authenticated campaign checkout
+        # before owner grants extend the provider closure. Composition must
+        # validate and retain that exact identity instead of dropping it based
+        # on the earlier source label.
+        session.snapshot["selected_checkouts"]["mncs-environment"] = {
+            "repository": "mncs-environment",
+            "path": str(base_checkout.resolve()),
+            "branch": base_observed.branch,
+            "head": base_observed.head,
+            "checkout_identity": base_identity["checkout_identity"],
+            "git_common_directory_identity": base_identity[
+                "git_common_directory_identity"
+            ],
+            "source_ref": "authenticated-entry-selection",
+        }
         session.acquire_claim(
             "mncs-environment",
             reason="campaign base repository worktree",
@@ -1114,7 +1132,8 @@ def test_revalidation_keeps_base_intent_checkout_when_scope_grants_extend_closur
         first = session.revalidate()
         composition = first["scope_composition"]
         assert composition["status"] == "ready"
-        assert composition["composed"] == ["mncs-environment", "mncs-control-mcp"]
+        assert composition["composed"] == ["mncs-control-mcp"]
+        assert composition["retained"] == ["mncs-environment"]
         assert session.snapshot["selected_checkouts"]["mncs-environment"][
             "source_ref"
         ] == "authenticated-intent-claim"

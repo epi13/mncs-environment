@@ -3124,9 +3124,6 @@ class Session:
         right_subjects = rights.get("subjects") if isinstance(rights, dict) else None
         for repository in base_repositories:
             prior = selected.get(repository)
-            if (isinstance(prior, dict)
-                    and prior.get("source_ref") != "authenticated-intent-claim"):
-                continue
             if (not _CAMPAIGN_REPOSITORY_PATTERN.fullmatch(repository)
                     or (isinstance(right_subjects, dict)
                         and right_subjects.get(repository) == "blocked")):
