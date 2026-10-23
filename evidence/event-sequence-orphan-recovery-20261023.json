@@ -1,0 +1,55 @@
+{
+  "schema_version": "mncs.environment.event-sequence-recovery-evidence/1",
+  "identity": "ev_environment_store_event_sequence_recovery_20261023",
+  "recorded_at": "2026-10-23T23:31:38Z",
+  "campaign": {
+    "identity": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "previous_checkpoint": "chk_49e8d78bec2b25f4"
+  },
+  "observed_failure": {
+    "event_sequence": 5636,
+    "store_logical_id": "21b3a715fd77db92dfd85bbf",
+    "result": "A checkpoint event write failed on a valid staged v2 logical-name manifest left unpublished by an earlier interrupted write. The existing Store raised INTEGRITY_FAILURE before publishing a generation."
+  },
+  "implementation": {
+    "repository": "mncs-environment",
+    "commit": "be683da",
+    "branch": "campaign/event-sequence-orphan-recovery-20261023",
+    "base_main": "a20ffd0c6fef8b1ce31069976c073f4d0d41fbc7"
+  },
+  "behavior": {
+    "unfenced_event_append": "After SequenceTaken, retry at the next increasing sequence so an unpublished immutable identity cannot trap retries on the same sequence.",
+    "generation_fenced_append": "Clears the local hint and raises EventGenerationConflict as before.",
+    "checkpoint_result": "Pending one authenticated retry after Environment delivery. No claim is made that a checkpoint has succeeded yet."
+  },
+  "verification": [
+    {
+      "command": "python -m pytest tests/test_event_sequence_retry.py tests/test_session_completion.py tests/test_store_claim_transfer.py -q",
+      "result": "passed",
+      "summary": "24 passed in 35.08s"
+    },
+    {
+      "command": "python -m py_compile mncs_env/sessions.py tests/test_event_sequence_retry.py",
+      "result": "passed"
+    },
+    {
+      "command": "ruff check --output-format concise tests/test_event_sequence_retry.py",
+      "result": "passed"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "invariants": [
+    "No Store bytes or bindings were deleted or rewritten.",
+    "Concurrent generation fencing remains strict.",
+    "Event sequence order remains increasing; append-only gaps are tolerated."
+  ],
+  "store_recovery": {
+    "repository": "mncs-store",
+    "main_revision": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+    "behavior": "New immutable manifests are addressed by representation root. A changed retry gets a distinct manifest path; the older logical-name manifest remains immutable and unreferenced."
+  }
+}
