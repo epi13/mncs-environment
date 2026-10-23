@@ -725,6 +725,11 @@ def _candidate_directories(base: Path) -> list[Path]:
         return sorted(
             path for path in base.iterdir()
             if path.is_dir() and not path.is_symlink()
+            # A workspace-level worktree container is infrastructure, not a
+            # repository candidate. Discovery already skips it by name; keep
+            # it out of the candidate budget as well so it cannot make an
+            # otherwise bounded campaign root fail validation.
+            and path.name != MANAGED_WORKTREES_DIR
         )
     except OSError as error:
         raise WorkspaceResolutionError(
