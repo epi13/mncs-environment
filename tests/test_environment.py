@@ -2554,6 +2554,58 @@ class CapabilityTests(unittest.TestCase):
                 for item in unavailable
             ))
 
+    def test_external_provider_root_requires_exact_grant_backed_checkout_facts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            workspace = base / "campaign"
+            workspace.mkdir()
+            provider = self._git_checkout(
+                base / "configured-projects" / "mncs-provider",
+                "mncs-provider",
+                {"contracts": {"provides": [{
+                    "contract": "fixture.external-provider/1",
+                }]}},
+            )
+            provider_roots = {"mncs-provider": provider}
+
+            with self.assertRaisesRegex(
+                capabilities.CapabilityError,
+                "selected checkout for mncs-provider escapes workspace root",
+            ):
+                capabilities.discover_capabilities(
+                    workspace, repository_roots=provider_roots,
+                )
+            with self.assertRaisesRegex(
+                capabilities.CapabilityError,
+                "selected checkout for mncs-provider escapes workspace root",
+            ):
+                capabilities.discover_capabilities(
+                    workspace,
+                    repository_roots=provider_roots,
+                    checkout_facts={"mncs-provider": {
+                        "path": str(provider.resolve()),
+                        "source_ref": "authenticated-scope-grant",
+                    }},
+                )
+
+            bindings = capabilities.discover_capabilities(
+                workspace,
+                repository_roots=provider_roots,
+                checkout_facts={"mncs-provider": {
+                    "path": str(provider.resolve()),
+                    "source_ref": "authenticated-scope-grant",
+                    "checkout_identity": "checkout:fixture",
+                    "git_common_directory_identity": "git-common:fixture",
+                    "branch": "campaign/provider-scope",
+                    "head": "fixture-head",
+                    "clean": True,
+                }},
+            )
+            self.assertEqual(
+                [item["capability"] for item in bindings],
+                ["mncs-provider:fixture.external-provider/1"],
+            )
+
     def test_toolchain_descriptor_binds_the_selected_repository_checkout(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

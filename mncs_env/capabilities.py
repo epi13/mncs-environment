@@ -616,9 +616,20 @@ def discover_capabilities(
             try:
                 path.relative_to(root)
             except ValueError as error:
-                raise CapabilityError(
-                    f"selected checkout for {repository} escapes workspace root"
-                ) from error
+                facts = (checkout_facts or {}).get(repository, {})
+                grant_backed_checkout = (
+                    isinstance(facts, dict)
+                    and facts.get("source_ref") == "authenticated-scope-grant"
+                    and facts.get("path") == str(path)
+                    and isinstance(facts.get("checkout_identity"), str)
+                    and bool(facts.get("checkout_identity"))
+                    and isinstance(facts.get("git_common_directory_identity"), str)
+                    and bool(facts.get("git_common_directory_identity"))
+                )
+                if not grant_backed_checkout:
+                    raise CapabilityError(
+                        f"selected checkout for {repository} escapes workspace root"
+                    ) from error
             if not path.is_dir():
                 raise CapabilityError(f"selected checkout for {repository} is unavailable")
             repos.append(path)
