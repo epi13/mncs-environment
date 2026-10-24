@@ -4825,30 +4825,79 @@ class Session:
             selected_checkouts.get(repository)
             if isinstance(selected_checkouts, dict) else None
         )
+        owner_authorized_selection = False
         if isinstance(selected, dict) and selected.get("source_ref") == "authenticated-scope-grant":
             current_grants = [
                 grant for grant in self.authority_scope_grants()
                 if grant.get("repository") == repository
             ]
+            grant = current_grants[0] if len(current_grants) == 1 else None
             current_identity = (
-                current_grants[0].get("repository_identity")
-                if len(current_grants) == 1 else None
+                grant.get("repository_identity") if isinstance(grant, dict) else None
             )
-            if (
-                len(current_grants) == 1
-                and current_grants[0].get("refresh_of")
+            refreshed_selection = (
+                isinstance(grant, dict)
+                and bool(grant.get("refresh_of"))
                 and isinstance(current_identity, dict)
-                and isinstance(current_identity.get("path"), str)
-                and isinstance(selected.get("path"), str)
-                and Path(os.path.abspath(current_identity["path"]))
-                != Path(os.path.abspath(selected["path"]))
-            ):
+                and (
+                    selected.get("scope_grant_identity") != grant.get("identity")
+                    or selected.get("path") != current_identity.get("path")
+                )
+            )
+            if refreshed_selection:
                 # The selected checkout still reflects the previous owner
                 # grant. Re-resolve the new exact checkout from that grant so
                 # the next claim can be acquired before capability composition.
                 selected = None
+            elif (not isinstance(grant, dict)
+                    or not isinstance(current_identity, dict)
+                    or selected.get("scope_grant_identity") != grant.get("identity")
+                    or selected.get("path") != current_identity.get("path")):
+                raise AuthorityDenied(
+                    f"selected owner-authorized checkout no longer matches its grant: {repository}"
+                )
+            else:
+                session_workspace = (
+                    workspace_root
+                    or self.snapshot.get("workspace", {}).get("root")
+                )
+                try:
+                    _, verified_identity = _verified_scope_checkout(
+                        session_workspace or ".",
+                        repository,
+                        owner_authorized_checkout=current_identity,
+                    )
+                    observed_owner = workspace_module.inspect_repo(
+                        Path(verified_identity["path"]), _refresh=True,
+                    )
+                    if (observed_owner is None or observed_owner.git_error
+                            or observed_owner.head != verified_identity.get("head")
+                            or observed_owner.branch != verified_identity.get("branch")):
+                        raise ValueError("owner-authorized checkout changed during claim resolution")
+                except (OSError, RuntimeError, TypeError, ValueError,
+                        workspace_module.WorkspaceResolutionError):
+                    raise AuthorityDenied(
+                        f"owner-authorized repository checkout cannot be resumed safely: {repository}"
+                    ) from None
+                for field in (
+                    "checkout_identity", "git_common_directory_identity",
+                    "manifest_identity",
+                ):
+                    recorded = selected.get(field)
+                    if isinstance(recorded, str) and recorded != verified_identity.get(field):
+                        raise AuthorityDenied(
+                            f"selected owner-authorized checkout identity changed: {repository}"
+                        )
+                selected = {
+                    **verified_identity,
+                    "repository": repository,
+                    "path": verified_identity["path"],
+                    "clean": not bool(observed_owner.dirty),
+                    "source_ref": "authenticated-scope-grant",
+                    "scope_grant_identity": grant.get("identity"),
+                }
+                owner_authorized_selection = True
         explicit_scope = scope is not None
-        owner_authorized_selection = False
         if selected is None:
             owner_grants = [
                 grant for grant in self.authority_scope_grants()
@@ -5624,6 +5673,65 @@ class Session:
             )
         return matches[0]
 
+    def _external_scope_grant_repositories(
+        self, workspace_root: str | Path,
+    ) -> set[str]:
+        """Return exact granted checkouts that the campaign-root scan cannot enumerate.
+
+        This only narrows the immediate workspace scan. The following scope
+        composition pass independently verifies the authenticated grant, Git
+        registration and identity, and the live matching claim before these
+        checkouts can contribute provider roots.
+        """
+        selected_checkouts = self.snapshot.get("selected_checkouts")
+        if not isinstance(selected_checkouts, dict):
+            return set()
+        campaign = self.snapshot.get("campaign")
+        campaign_id = campaign.get("identity") if isinstance(campaign, dict) else None
+        grants = {
+            item.get("repository"): item
+            for item in self.authority_scope_grants()
+            if isinstance(item, dict)
+            and item.get("schema_version") == "mncs.environment.authority-scope-grant/1"
+            and item.get("session_id") == self.session_id
+            and item.get("campaign_id") == campaign_id
+            and item.get("scope") == {
+                "kind": "repository", "repository": item.get("repository"),
+            }
+        }
+        try:
+            root = Path(workspace_root).resolve(strict=True)
+        except OSError:
+            return set()
+
+        external: set[str] = set()
+        for repository, selected in selected_checkouts.items():
+            if (not isinstance(repository, str) or not isinstance(selected, dict)
+                    or selected.get("source_ref") != "authenticated-scope-grant"):
+                continue
+            grant = grants.get(repository)
+            identity = grant.get("repository_identity") if isinstance(grant, dict) else None
+            if (not isinstance(identity, dict)
+                    or selected.get("scope_grant_identity") != grant.get("identity")
+                    or not isinstance(identity.get("path"), str)
+                    or selected.get("path") != identity.get("path")):
+                continue
+            path = Path(identity["path"])
+            if not path.is_absolute():
+                continue
+            absolute = Path(os.path.abspath(path))
+            try:
+                resolved = absolute.resolve(strict=True)
+            except OSError:
+                continue
+            if absolute != resolved:
+                continue
+            try:
+                resolved.relative_to(root)
+            except ValueError:
+                external.add(repository)
+        return external
+
     def observe_workspace(
         self,
         workspace_root: str | Path,
@@ -5632,8 +5740,17 @@ class Session:
         operation_digest: str | None = None,
     ) -> list[dict[str, Any]]:
         """Adapter poll: selected checkout revision and state changes become events."""
+        selected_repositories = self.snapshot.get("workspace", {}).get("selection")
+        external_scope_repositories = self._external_scope_grant_repositories(
+            workspace_root,
+        )
+        scan_repositories = (
+            [name for name in selected_repositories
+             if name not in external_scope_repositories]
+            if isinstance(selected_repositories, list) else selected_repositories
+        )
         workspace = workspace_module.discover_workspace(
-            workspace_root, repositories=self.snapshot.get("workspace", {}).get("selection"))
+            workspace_root, repositories=scan_repositories)
         if workspace.get("error") or workspace.get("scan", {}).get("status") != "complete":
             raise workspace_module.WorkspaceResolutionError(
                 "workspace revalidation stopped safely; keeping the previous complete observation",
@@ -5651,10 +5768,17 @@ class Session:
                     None,
                 )
                 if match is None:
-                    current_checkouts[name] = {
-                        **previous_checkout, "head": None, "clean": False,
-                        "missing": True,
-                    }
+                    if name in external_scope_repositories:
+                        # This exact owner-granted checkout is intentionally
+                        # outside the campaign root. Preserve its last complete
+                        # observation until scope composition refreshes it from
+                        # the live claim and Git identity below.
+                        current_checkouts[name] = dict(previous_checkout)
+                    else:
+                        current_checkouts[name] = {
+                            **previous_checkout, "head": None, "clean": False,
+                            "missing": True,
+                        }
                 else:
                     current_checkouts[name] = {
                         **previous_checkout,
