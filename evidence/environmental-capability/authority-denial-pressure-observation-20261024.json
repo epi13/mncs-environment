@@ -1,0 +1,108 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_authority_denial_pressure_20261024",
+  "captured_at": "2026-10-24T18:09:50Z",
+  "measurement_basis": "authenticated-canonical-session-event-window-and-sanitized-authority-projection",
+  "observation": {
+    "kind": "authority-denial-pressure-observation",
+    "source_interface": "MNCS Environment environmental-capability projection over canonical Store session events",
+    "request": {
+      "session_id": "ses_c98eb637e20a5c14",
+      "event_page_before_sequence": 100,
+      "event_limit": 24
+    },
+    "outcome": {
+      "event_count": 222,
+      "selected_event_sequence_start": 76,
+      "selected_event_sequence_end": 99,
+      "selected_event_window_truncated": true,
+      "authority_denial_count": 2,
+      "authority_denial_pattern": {
+        "action": "merge",
+        "repository": "mncs-environment",
+        "reason_class": "outside-writable-authority",
+        "occurrence_count": 2,
+        "distinct_session_count": 1,
+        "recurrence_scope": "same-session-selected-event-window",
+        "causal_claim": "not-established"
+      },
+      "supporting_events": [
+        {
+          "identity": "evt_ff4ba1f567b8e58c",
+          "sequence": 89,
+          "type": "authority.denied"
+        },
+        {
+          "identity": "evt_5f766aaaacee13c0",
+          "sequence": 98,
+          "type": "authority.denied"
+        }
+      ],
+      "interpretation": "Two merge denials in one bounded session window justify inspecting repository target and worktree claim resolution. The intended target scope, appropriateness of either denial, and cause are not established by these events.",
+      "analysis_limit": "The event window includes only sequences 76 through 99 and is truncated. This observation does not establish cross-session recurrence or whether either denied operation was appropriate."
+    },
+    "source_session_context": {
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "work_intent_id": "int_8475157f281c835f",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "environment_id": "renv_1991cffb20bdf206",
+      "repository": "mncs-environment",
+      "repository_context_basis": "authenticated-session-campaign-context"
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_d3069fdad2b6c703",
+    "campaign_evidence_count_before_recording": 87,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_authority_0ab070c8e6dee6b2",
+    "title": "Repeated repository merge denials need exact checkout-scope diagnosis",
+    "category": "authority-and-work-scope",
+    "subsystem": "MNCS Environment Git authorization and worktree claim resolution",
+    "owner": "mncs-environment",
+    "recurrence": "not-established",
+    "basis": "One authenticated session window contains two merge authority.denied events classified as outside-writable-authority for mncs-environment.",
+    "actionable_recommendation": "Inspect the exact event references alongside the registered checkout identity and active worktree claim; preserve the denial unless the requested target is proven to match an authorized checkout.",
+    "not_measured": [
+      "whether either historical merge target matched the active claim",
+      "whether either denial reflected a parser limitation or a correct authority boundary",
+      "recurrence across independent sessions or campaigns",
+      "whether the observation or implementation changed subsequent agent outcomes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "event_identities": [
+        "evt_ff4ba1f567b8e58c",
+        "evt_5f766aaaacee13c0"
+      ]
+    }
+  ],
+  "not_measured": [
+    "cause or appropriateness of the individual historical denials",
+    "recurrence across independent sessions",
+    "effectiveness of subsequent authority changes"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

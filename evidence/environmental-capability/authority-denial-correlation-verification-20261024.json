@@ -1,0 +1,131 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_authority_denial_correlation_verification_20261024",
+  "captured_at": "2026-10-24T18:09:50Z",
+  "measurement_basis": "targeted-authority-and-projection-regressions-plus-independent-vertical-proof",
+  "observation": {
+    "kind": "authority-denial-correlation-verification",
+    "source_interface": "MNCS Environment targeted pytest, Ruff, Python compilation, and vertical proof",
+    "request": {
+      "implementation_commit": "66905f215fc8ff0c1f3dc88fc42515c3bf629bd0",
+      "verification_scope": [
+        "bounded authority.denied event projection",
+        "stable repository identity for registered checkout aliases",
+        "absolute target validation against an observed checkout",
+        "exact worktree claim enforcement",
+        "sanitized repeated-denial pressure candidates"
+      ]
+    },
+    "outcome": {
+      "tests": {
+        "tests_test_capability_intelligence": {
+          "passed": 58,
+          "failed": 0,
+          "status": "passed"
+        },
+        "tests_test_environment_authority_selection": {
+          "passed": 19,
+          "failed": 0,
+          "status": "passed"
+        },
+        "test_exact_declared_nested_provider_checkout_is_claimable_and_authorized": {
+          "passed": 1,
+          "failed": 0,
+          "status": "passed"
+        }
+      },
+      "vertical_proof": {
+        "status": "passed",
+        "events": 15,
+        "checkpoints": 3,
+        "handoffs": 1
+      },
+      "static_checks": {
+        "ruff_select": [
+          "E4",
+          "E7",
+          "E9",
+          "F"
+        ],
+        "ruff_status": "passed",
+        "py_compile_status": "passed",
+        "git_diff_check_status": "passed"
+      },
+      "verified_behavior": [
+        "registered absolute checkout targets resolve to stable manifest repository identity",
+        "merge authorization requires the exact matching current worktree claim",
+        "unknown absolute mutation targets remain denied",
+        "mismatched explicit worktree scopes remain denied",
+        "projection candidates retain event references and do not expose raw targets or free-form denial reasons"
+      ],
+      "analysis_limit": "The checks verify bounded projection and authority contracts. They do not establish that either historical denial was incorrect, nor do they measure subsequent agent outcomes or cross-session recurrence."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "absolute-repository-target-and-claim-resolution",
+      "identity": "ev_environment_authority_resolution_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "66905f215fc8ff0c1f3dc88fc42515c3bf629bd0",
+      "path": "mncs_env/authority.py",
+      "sha256": "32269976604b27602d9a62d1740b858331c752f463bea61704d3714754a95e19"
+    },
+    {
+      "kind": "bounded-authority-denial-correlation-projection",
+      "identity": "ev_environment_authority_denial_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "66905f215fc8ff0c1f3dc88fc42515c3bf629bd0",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8638a66e8a8ca65ed7509cebfaf76bba7be6b6801559c17c88630f7ad5f0ef75"
+    },
+    {
+      "kind": "session-absolute-target-boundary-validation",
+      "identity": "ev_environment_authority_session_boundary_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "66905f215fc8ff0c1f3dc88fc42515c3bf629bd0",
+      "path": "mncs_env/sessions.py",
+      "sha256": "17e21915510ea1298d641e7fe661562e50dd97fbd6e9a3789f19cebe0f926721"
+    },
+    {
+      "kind": "authority-and-context-regression-tests",
+      "identity": "ev_environment_authority_scope_tests_20261024",
+      "repository": "mncs-environment",
+      "commit": "66905f215fc8ff0c1f3dc88fc42515c3bf629bd0",
+      "path": "tests/test_environment.py",
+      "sha256": "981c9f762d29cdd2ede8bc85f0762993fff7b3930ab5c3bb0942f385afbc50bb"
+    },
+    {
+      "kind": "authority-denial-correlation-projection-regression-tests",
+      "identity": "ev_environment_authority_projection_tests_20261024",
+      "repository": "mncs-environment",
+      "commit": "66905f215fc8ff0c1f3dc88fc42515c3bf629bd0",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "f54dc04298e69cfa8d6916dbfb06df56c422a615c84104357372e7528cc5c364"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence",
+    "whether future agents need to inspect older non-RPC event types",
+    "whether the authority changes alter real agent outcomes"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
