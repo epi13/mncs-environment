@@ -1,0 +1,118 @@
+{
+  "captured_at": "2026-10-24T23:49:03Z",
+  "identity": "ev_environment_compiler_verification_resource_measurements_projection_readback_20261024",
+  "measurement_basis": "live bounded environmental-capability projection readback after implementation",
+  "not_measured": [
+    "independent Compiler-agent use after this readback",
+    "whether future compiler work is enabled or resource contention is reduced",
+    "long-term pressure recurrence or effectiveness"
+  ],
+  "observation": {
+    "kind": "compiler-verification-resource-measurement-projection-readback",
+    "outcome": {
+      "initial_improvement_relation": {
+        "effectiveness_assessment": "not-assessed",
+        "identity": "im_environment_compiler_verification_resource_measurements_20261024",
+        "subsequent_record_status": "not-recorded",
+        "verification_record_status": "record-integrity-verified-in-projection"
+      },
+      "interpretation": "The existing projection exposes the phase-specific measurements within its compact response. The supporting Compiler record remains outside selected checkouts; its content digest was verified through read-only workspace access. This readback does not measure later Compiler agent use or establish outcome improvement.",
+      "measurement_summary": {
+        "direct_measurements": {
+          "harness_process_peak_rss_kib": 98644,
+          "harness_process_system_seconds": 3.0,
+          "harness_process_user_seconds": 8.23,
+          "harness_process_wall_seconds": 11.11,
+          "stage0_bootstrap_cpu_percent": 185,
+          "stage0_bootstrap_peak_rss_kib": 1369204,
+          "stage0_bootstrap_system_seconds": 6.1,
+          "stage0_bootstrap_user_seconds": 420.77,
+          "stage0_bootstrap_wall_seconds": 230.6
+        },
+        "measurement_availability": {
+          "harness_process_peak_cgroup_memory_bytes": "null-in-source-record"
+        },
+        "observed_counts": {
+          "stage0_bootstrap_cargo_build_jobs": 2
+        },
+        "qualifications": [
+          "stage0_bootstrap: one-time isolated target compilation; excluded from this warm harness run",
+          "These verification-process measurements are not measurements of resource use attributable to the Compiler agent session."
+        ]
+      },
+      "measurement_summary_visible_in_compact_record": true,
+      "pressure_hypothesis_identity": "ph_environment_compiler_verification_resource_measurements_hidden_20261024",
+      "pressure_recurrence_status": "not-established",
+      "projection_observation_count": 15,
+      "projection_status": "partial",
+      "response_details_omitted": true,
+      "source_content_integrity_status": "workspace-read-only-content-integrity-verified",
+      "source_record_status": "outside-selected-session"
+    },
+    "request": {
+      "campaign_evidence_count": 33,
+      "campaign_state_checkpoint_id": "chk_d48fdcc821830400",
+      "evidence_limit": 32,
+      "projection_identity": "eci_20a3a96c4e22559e",
+      "session_id": "ses_c01ca32d0af155c1"
+    },
+    "source_interface": "mncs-env projections --interpret environmental-capability"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_92932f7be5cedb75",
+    "session_id": "ses_c01ca32d0af155c1"
+  },
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_92932f7be5cedb75",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "commit": "e874669dbd110c5a5f808249c20a086013d7e2be",
+      "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "kind": "committed-campaign-evidence",
+      "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+      "repository": "mncs-compiler",
+      "session_id": "ses_164edc158d9b1637",
+      "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e"
+    },
+    {
+      "commit": "71379b1211f9a96b38580614a106111bedc3c257",
+      "identity": "ev_environment_compiler_verification_resource_measurements_implementation_20261024",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "e1e7c51d6b4cbcf4d321f054b63e23fbe28726586a05fe9378e777b68864ce8c"
+    },
+    {
+      "commit": "c5499aa7afc32386b749e80f56d1c1366e442513",
+      "identity": "ev_environment_compiler_verification_resource_measurements_pressure_20261024",
+      "path": "evidence/environmental-capability/compiler-verification-resource-pressure-20261024.json",
+      "repository": "mncs-environment",
+      "sha256": "fad4a6b7826cf90cd87097c82751c918920a49d627c89a00de9609b95cf0d279"
+    },
+    {
+      "commit": "c5499aa7afc32386b749e80f56d1c1366e442513",
+      "identity": "ev_environment_compiler_verification_resource_measurements_verification_20261024",
+      "path": "evidence/environmental-capability/compiler-verification-resource-verification-20261024.json",
+      "repository": "mncs-environment",
+      "sha256": "c33bfe1d5ecf0fc202cc74e4c306f962c87ac25eac4fe1429ee56a5a0df3bccd"
+    },
+    {
+      "commit": "c5499aa7afc32386b749e80f56d1c1366e442513",
+      "identity": "ev_environment_compiler_verification_resource_measurements_improvement_20261024",
+      "path": "evidence/environmental-capability/compiler-verification-resource-improvement-20261024.json",
+      "repository": "mncs-environment",
+      "sha256": "31b58b50eef20e8e229cc1e5877f34213314a037aa9feed681c23db3d96b8010"
+    }
+  ]
+}

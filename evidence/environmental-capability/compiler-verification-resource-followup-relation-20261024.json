@@ -1,0 +1,100 @@
+{
+  "captured_at": "2026-10-24T23:49:03Z",
+  "identity": "ev_environment_compiler_verification_resource_measurements_followup_relation_20261024",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_compiler_verification_resource_measurements_hidden_20261024",
+    "basis": "After the verified code change, the live ECI query surfaces the real Compiler harness and one-time bootstrap measures in the compact observation. The Compiler source is still explicitly outside the selected checkout set, with content integrity verified through read-only workspace access. A future independent Compiler session is needed before assessing whether agents use this evidence or whether it changes outcomes.",
+    "identity": "im_environment_compiler_verification_resource_measurements_followup_20261024",
+    "implementation_reference": {
+      "commit": "71379b1211f9a96b38580614a106111bedc3c257",
+      "identity": "ev_environment_compiler_verification_resource_measurements_implementation_20261024",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "e1e7c51d6b4cbcf4d321f054b63e23fbe28726586a05fe9378e777b68864ce8c"
+    },
+    "not_measured": [
+      "independent agent use",
+      "subsequent compiler outcomes",
+      "cross-session recurrence",
+      "whether the measurement view reduces unnecessary investigations"
+    ],
+    "subsequent_observation_identity": "ev_environment_compiler_verification_resource_measurements_projection_readback_20261024",
+    "verification_observation_identity": "ev_environment_compiler_verification_resource_measurements_verification_20261024"
+  },
+  "measurement_basis": "same-campaign live projection readback linked to implementation and test verification",
+  "not_measured": [
+    "independent follow-up in a later Compiler session",
+    "empirical elimination of the resource-measurement visibility pressure"
+  ],
+  "observation": {
+    "kind": "environmental-capability-improvement-link-record",
+    "outcome": {
+      "basis": "The live projection returned the measurement summary after implementation and retained the selected-session boundary and source integrity state. This verifies that the evidence is inspectable through the existing route. It is not independent later Compiler activity and does not establish a change in development outcomes.",
+      "effectiveness_assessment": "not-assessed",
+      "relationship_recorded": true,
+      "subsequent_observation_status": "recorded-same-campaign-readback"
+    },
+    "request": {
+      "operation": "link observed compact projection readback to compiler resource-measurement pressure",
+      "pressure_identity": "ph_environment_compiler_verification_resource_measurements_hidden_20261024"
+    },
+    "source_interface": "mncs-environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_92932f7be5cedb75",
+    "session_id": "ses_c01ca32d0af155c1"
+  },
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_92932f7be5cedb75",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "commit": "e874669dbd110c5a5f808249c20a086013d7e2be",
+      "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "kind": "committed-campaign-evidence",
+      "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+      "repository": "mncs-compiler",
+      "session_id": "ses_164edc158d9b1637",
+      "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e"
+    },
+    {
+      "commit": "71379b1211f9a96b38580614a106111bedc3c257",
+      "identity": "ev_environment_compiler_verification_resource_measurements_implementation_20261024",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "e1e7c51d6b4cbcf4d321f054b63e23fbe28726586a05fe9378e777b68864ce8c"
+    },
+    {
+      "commit": "c5499aa7afc32386b749e80f56d1c1366e442513",
+      "identity": "ev_environment_compiler_verification_resource_measurements_pressure_20261024",
+      "path": "evidence/environmental-capability/compiler-verification-resource-pressure-20261024.json",
+      "repository": "mncs-environment",
+      "sha256": "fad4a6b7826cf90cd87097c82751c918920a49d627c89a00de9609b95cf0d279"
+    },
+    {
+      "commit": "c5499aa7afc32386b749e80f56d1c1366e442513",
+      "identity": "ev_environment_compiler_verification_resource_measurements_verification_20261024",
+      "path": "evidence/environmental-capability/compiler-verification-resource-verification-20261024.json",
+      "repository": "mncs-environment",
+      "sha256": "c33bfe1d5ecf0fc202cc74e4c306f962c87ac25eac4fe1429ee56a5a0df3bccd"
+    },
+    {
+      "commit": "c5499aa7afc32386b749e80f56d1c1366e442513",
+      "identity": "ev_environment_compiler_verification_resource_measurements_improvement_20261024",
+      "path": "evidence/environmental-capability/compiler-verification-resource-improvement-20261024.json",
+      "repository": "mncs-environment",
+      "sha256": "31b58b50eef20e8e229cc1e5877f34213314a037aa9feed681c23db3d96b8010"
+    }
+  ]
+}
