@@ -1,0 +1,76 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_source_registration_scope_compact_verified_verification_20261024",
+  "captured_at": "2026-10-24T16:53:10+00:00",
+  "measurement_basis": "direct-test-results-and-authenticated-bounded-projection-readback",
+  "observation": {
+    "kind": "compact-source-registration-scope-verification-with-digest",
+    "source_interface": "pytest, ruff, py_compile, git diff check, and authenticated Environment campaign-state projection",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-observation-live-context-20261024",
+      "implementation_commit": "35210c64185cb3eff02a4a4c38284fb942019dea",
+      "campaign_state_checkpoint_id": "chk_2e6cdf2dd15e2c01",
+      "projection_identity": "eci_afdca67c9659ddec",
+      "evidence_offset": 71,
+      "evidence_limit": 1
+    },
+    "outcome": {
+      "capability_tests": {"status": "passed", "passed": 56, "failed": 0},
+      "ruff": "passed",
+      "py_compile": "passed",
+      "git_diff_check": "passed",
+      "live_compact_projection": {
+        "status": "passed",
+        "projection_status": "partial",
+        "response_truncated": true,
+        "source_registration_status": "not-present-in-selected-campaign-evidence-window",
+        "registration_scope": "selected-campaign-evidence-window",
+        "source_content_integrity_status": "workspace-read-only-content-integrity-verified"
+      },
+      "analysis_limit": "This verifies one bounded Environment evidence page and the projection test. It does not establish the source pointer's registration status in other campaign pages or future agent impact."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_2e6cdf2dd15e2c01",
+    "campaign_evidence_count_before_recording": 75,
+    "claim_ids": ["claim:mncs-environment:worktree:567a0ed75512"]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "implementation",
+      "identity": "ev_environment_source_registration_scope_compact_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "35210c64185cb3eff02a4a4c38284fb942019dea",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "106f947215d307939a9b01feef3f8ec2e3d52f8179cf17a4d7a7f2285ff43b79"
+    },
+    {
+      "kind": "regression-test",
+      "identity": "ev_environment_source_registration_scope_compact_test_20261024",
+      "repository": "mncs-environment",
+      "commit": "35210c64185cb3eff02a4a4c38284fb942019dea",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "8a1d7f4f52f67c401a38d09aeff534f6d14cc9417e7b85c5d178d1795070b296"
+    }
+  ],
+  "not_measured": [
+    "agent interpretation of compact source-registration context",
+    "future cross-campaign recurrence",
+    "long-term effectiveness"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

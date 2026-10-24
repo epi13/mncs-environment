@@ -1,0 +1,77 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_source_registration_scope_compact_verified_improvement_20261024",
+  "captured_at": "2026-10-24T16:53:10+00:00",
+  "measurement_basis": "verified-implementation-link-over-digest-bearing-campaign-records",
+  "observation": {
+    "kind": "compact-source-registration-scope-improvement-relation",
+    "source_interface": "MNCS Environment capability-intelligence projection",
+    "outcome": {
+      "implementation_change": "Compact outcomes retain selected-window source-registration status, registration scope, observation and source identities, projection status, and content-integrity status.",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The implementation and one live readback are verified. Future independent agent activity is needed to assess whether this reduces cross-campaign context reconstruction."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_2e6cdf2dd15e2c01",
+    "campaign_evidence_count_before_recording": 75,
+    "claim_ids": ["claim:mncs-environment:worktree:567a0ed75512"]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_source_registration_scope_compact_verified_20261024",
+    "addresses_hypothesis_identity": "ph_environment_source_registration_scope",
+    "implementation_reference": {
+      "identity": "ev_environment_source_registration_scope_compact_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "35210c64185cb3eff02a4a4c38284fb942019dea",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "106f947215d307939a9b01feef3f8ec2e3d52f8179cf17a4d7a7f2285ff43b79"
+    },
+    "verification_observation_identity": "ev_environment_source_registration_scope_compact_verified_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_source_registration_scope_compact_verified_live_readback_20261024",
+    "basis": "A regression test verifies the fields survive compaction; a bounded authenticated campaign-state read confirms the live output retains the selected registration scope and separate source integrity status.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "future independent agent use of the clarified compact context",
+      "recurrence of this ambiguity across other evidence sources",
+      "long-term effect on cross-campaign investigation effort"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "verified-implementation",
+      "identity": "ev_environment_source_registration_scope_compact_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "35210c64185cb3eff02a4a4c38284fb942019dea",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "106f947215d307939a9b01feef3f8ec2e3d52f8179cf17a4d7a7f2285ff43b79"
+    },
+    {
+      "kind": "verification-observation",
+      "identity": "ev_environment_source_registration_scope_compact_verified_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "ba36a7b0d2037f0ff9a953360915f83598768ff7",
+      "path": "evidence/environmental-capability/source-registration-scope-compact-verified-verification-20261024.json",
+      "sha256": "156614fd0ef2f0d0c4dc58c8826bbd6edc1e87a704c0051a42dca4023f346c9e"
+    }
+  ],
+  "not_measured": [
+    "whether agent behavior changes because source scope survives compaction",
+    "future recurrence across other cross-campaign projections",
+    "effectiveness beyond this verification and live readback"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
