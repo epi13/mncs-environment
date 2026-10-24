@@ -416,7 +416,10 @@ The query considers at most 32 campaign evidence references, reads at most 16
 observation records of 64 KiB each within one 8 second Git-read budget, and
 caps its response at 48 KiB. If a response reaches that bound, operation
 payloads are summarized by digest and the exact evidence pointers remain
-available for inspection.
+available for inspection. Compacted views retain the newest observation and
+improvement-relation records by ledger offset, including when history pages are
+read newest-page-first. `observation_records_compacted_out_count` reports how
+many verified observation summaries did not fit the compact view.
 
 ## What the ambient pass refuses
 

@@ -721,6 +721,38 @@ def _compact_projection(
 
     compact_hypotheses = []
     observations = projection["observations"]
+    observation_order_by_identity: dict[str, tuple[int, int, int]] = {}
+    evidence_pages = source.get("evidence_history_observation_budgets_by_page")
+    evidence_pages = evidence_pages if isinstance(evidence_pages, list) else []
+    for page_index, page in enumerate(evidence_pages):
+        if not isinstance(page, dict):
+            continue
+        offset = page.get("offset")
+        offset = offset if type(offset) is int and offset >= 0 else page_index
+        identities = page.get("selected_observation_reference_identities")
+        if not isinstance(identities, list):
+            continue
+        for position, identity in enumerate(identities):
+            if isinstance(identity, str):
+                observation_order_by_identity[identity] = (
+                    offset, position, page_index,
+                )
+
+    def ordered_records(items, identity_for_item):
+        return [
+            item for _position, item in sorted(
+                enumerate(items),
+                key=lambda positioned: (
+                    observation_order_by_identity.get(
+                        identity_for_item(positioned[1]),
+                        (0, positioned[0], 0),
+                    ),
+                    positioned[0],
+                ),
+            )
+        ]
+
+    observations = ordered_records(observations, lambda item: item.get("identity"))
     for hypothesis in projection["pressure_hypotheses"][:8]:
         summary = {
             key: _short_text(hypothesis.get(key), 256 if key in ("title", "recommendation") else 160)
@@ -790,11 +822,11 @@ def _compact_projection(
             item["identity"] for item in observations
             if isinstance(item.get("pressure_hypothesis"), dict)
             and item["pressure_hypothesis"].get("identity") == hypothesis.get("identity")
-        ][:8]
+        ][-8:]
         compact_hypotheses.append(summary)
 
     compact_observations = []
-    for item in observations[:8]:
+    for item in observations[-8:]:
         observation = item.get("observation") or {}
         observation_bytes = json.dumps(
             observation, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
@@ -1046,7 +1078,11 @@ def _compact_projection(
         compact_observations.append(compact_observation)
 
     compact_improvements = []
-    for relation in projection["improvement_relations"][:8]:
+    improvement_relations = ordered_records(
+        projection["improvement_relations"],
+        lambda item: item.get("recorded_by_observation_identity"),
+    )
+    for relation in improvement_relations[-8:]:
         summary = {
             key: _short_text(relation.get(key), 256 if key == "basis" else 160)
             for key in (
@@ -1480,7 +1516,7 @@ def _compact_projection(
     # accounts for unusual but valid identifiers and reference paths.
     while len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")) > max_result_bytes:
         if result["observations"]:
-            result["observations"].pop()
+            result["observations"].pop(0)
         elif any(
             isinstance(hypothesis.get("evidence_references"), list)
             and len(hypothesis["evidence_references"]) > 1
@@ -1499,7 +1535,7 @@ def _compact_projection(
         elif result["pressure_hypotheses"]:
             result["pressure_hypotheses"].pop()
         elif result["improvement_relations"]:
-            result["improvement_relations"].pop()
+            result["improvement_relations"].pop(0)
         elif result["session_activity"]["interactions"]:
             result["session_activity"]["interactions"].pop()
             result["session_activity"]["interactions_truncated"] = True
@@ -1520,6 +1556,18 @@ def _compact_projection(
             result["session_activity"]["resource_samples"]["observations_truncated"] = True
         else:
             break
+    projection_source = projection.get("source")
+    projection_source = (
+        projection_source if isinstance(projection_source, dict) else {}
+    )
+    verified_observation_count = projection_source.get(
+        "observation_records_verified",
+    )
+    if (type(verified_observation_count) is int
+            and verified_observation_count > len(result["observations"])):
+        result["source"]["observation_records_compacted_out_count"] = (
+            verified_observation_count - len(result["observations"])
+        )
     return result
 
 

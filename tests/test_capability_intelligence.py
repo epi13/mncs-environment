@@ -729,6 +729,65 @@ def test_append_only_correction_requires_exact_verified_observation_pointer(
     ]
 
 
+def test_compact_projection_retains_newest_observation_tail(tmp_path: Path) -> None:
+    identities = [f"ev_environment_compact_tail_{index:02d}" for index in range(10)]
+    record = _observation(
+        identities[0], "ses_compact_tail", "cmp_compact_tail",
+    )
+    session, _state = _session(tmp_path, [record])
+
+    full = capability_intelligence.project(
+        session, max_result_bytes=capability_intelligence.MAX_RESULT_BYTES,
+    )
+    base_observation = full["observations"][0]
+    full["observations"] = [
+        {
+            **base_observation,
+            "identity": identity,
+            "evidence_reference": {
+                **base_observation["evidence_reference"],
+                "identity": identity,
+                "path": f"evidence/environmental-capability/compact-tail-{index}.json",
+            },
+        }
+        for index, identity in enumerate(identities)
+    ]
+    full["observation_count"] = len(identities)
+    full["source"]["observation_records_considered"] = len(identities)
+    full["source"]["observation_records_verified"] = len(identities)
+    # Multi-page reads visit the newest page before older pages. Compacting
+    # must still rank records by their absolute ledger offsets.
+    full["observations"] = full["observations"][5:] + full["observations"][:5]
+    full["source"]["evidence_history_observation_budgets_by_page"] = [
+        {
+            "offset": 5,
+            "selected_observation_reference_identities": identities[5:],
+        },
+        {
+            "offset": 0,
+            "selected_observation_reference_identities": identities[:5],
+        },
+    ]
+    compact = capability_intelligence._compact_projection(
+        full, 100_000, 100_000,
+    )
+    compact_identities = [item["identity"] for item in compact["observations"]]
+
+    assert compact_identities == identities[-8:]
+    assert compact["source"]["observation_records_compacted_out_count"] == 2
+
+    compact_bytes = len(json.dumps(compact, ensure_ascii=False, sort_keys=True).encode())
+    tight = capability_intelligence._compact_projection(
+        full, 100_000, compact_bytes - 1,
+    )
+    tight_identities = [item["identity"] for item in tight["observations"]]
+
+    assert tight_identities[-1] == identities[-1]
+    assert tight["source"]["observation_records_compacted_out_count"] == (
+        len(identities) - len(tight_identities)
+    )
+
+
 def test_project_exposes_verified_campaign_objective_separately_from_work_intent(
     tmp_path: Path,
 ) -> None:
