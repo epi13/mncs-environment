@@ -485,6 +485,46 @@ def test_live_compiler_scope_records_link_evidence_and_preserve_uncertainty(
     assert relation["subsequent_record_status"] == "not-recorded"
 
 
+def test_resource_sample_followup_links_distinct_session_without_claiming_effectiveness(
+    tmp_path: Path,
+) -> None:
+    evidence_dir = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability"
+    )
+    names = (
+        "resource-sample-live-readback-20261024",
+        "resource-sample-session-linked-followup-20261024",
+        "resource-sample-followup-relation-20261024",
+    )
+    records = [
+        json.loads((evidence_dir / f"{name}.json").read_text(encoding="utf-8"))
+        for name in names
+    ]
+    session, _state = _session(tmp_path, records)
+
+    result = capability_intelligence.project(session)
+
+    assert result["source"]["observation_records_verified"] == 3
+    followup = next(
+        item for item in result["observations"]
+        if item["identity"] == "ev_environment_resource_sample_session_linked_followup_20261024"
+    )
+    assert followup["observation"]["outcome"]["event_correlation_status"] == (
+        "matched-by-provider-request-id"
+    )
+    relation = next(
+        item for item in result["improvement_relations"]
+        if item["identity"] == "im_environment_monitor_resource_samples_followup_20261024"
+    )
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["subsequent_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["effectiveness_assessment"] == "not-assessed"
+
+
 def test_project_exposes_verified_campaign_objective_separately_from_work_intent(
     tmp_path: Path,
 ) -> None:
