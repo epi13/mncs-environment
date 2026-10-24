@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_page_cursor_chain_readback_20261024",
+  "captured_at": "2026-10-24T09:15:31+00:00",
+  "measurement_basis": "direct-Environment-campaign-state-page-read",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_2ca2cda79d4a427b",
+      "sequence": 15
+    },
+    "campaign_evidence_count": 29,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-improvement-chain-page-readback",
+    "source_interface": "mncs_environment MCP campaign_state",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_2ca2cda79d4a427b",
+      "evidence_offset": 16,
+      "evidence_limit": 16
+    },
+    "outcome": {
+      "campaign_evidence_count": 29,
+      "evidence_page_count": 13,
+      "projection_status": "ready",
+      "observation_records_considered": 13,
+      "observation_records_verified": 7,
+      "observation_records_unavailable": 0,
+      "projection_source_page_offset": 16,
+      "projection_source_page_limit": 16,
+      "projection_source_next_evidence_offset": null,
+      "pressure_hypotheses": [
+        {
+          "identity": "ph_environment_capability_evidence_page_cursor",
+          "recurrence_status": "not-established",
+          "evidence_observation_identities": [
+            "ev_environment_capability_evidence_page_cursor_gap_20261024"
+          ]
+        },
+        {
+          "identity": "ph_environment_read_operation_activity_correlation",
+          "recurrence_status": "not-established",
+          "evidence_observation_identities": [
+            "ev_environment_read_operation_activity_correlation_gap_20261024"
+          ]
+        }
+      ],
+      "improvement_relation": {
+        "identity": "im_environment_capability_evidence_page_cursor_20261024",
+        "pressure_hypothesis_status": "present-in-projection",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "record-integrity-verified-in-projection",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "narrow_page_behavior": {
+        "request_offset": 24,
+        "request_limit": 8,
+        "projection_status": "ready",
+        "pressure_hypothesis_status": "not-present-in-projection",
+        "analysis_limit": "The page-local status reflected the gap record being on the preceding page; it did not indicate absence from campaign history."
+      },
+      "analysis_limit": "The wider bounded page reconstructs the recorded gap, implementation, verification, and follow-up links. It does not establish that agents use the cursor or that the improvement changed agent behavior."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    }
+  ],
+  "not_measured": [
+    "whether future agents use the projection's nested page cursor",
+    "long-term resolution or recurrence of either pressure hypothesis",
+    "campaign evidence outside the bounded page's coverage",
+    "causal or resource impact of the projection change"
+  ]
+}
