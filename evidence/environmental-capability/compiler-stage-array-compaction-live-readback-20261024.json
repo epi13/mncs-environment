@@ -1,0 +1,109 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_stage_array_compaction_live_readback_20261024",
+  "captured_at": "2026-10-24T16:34:24+00:00",
+  "measurement_basis": "direct-bounded-environment-capability-projection-result",
+  "observation": {
+    "kind": "compiler-stage-array-compact-projection-readback",
+    "source_interface": "mncs-env environmental-capability projection",
+    "request": {
+      "session_id": "ses_c98eb637e20a5c14",
+      "projection_identity": "eci_d839f7137c35e78a",
+      "campaign_state_checkpoint_id": "chk_1cc3faace7ea27dd",
+      "evidence_offset": 58,
+      "evidence_limit": 1,
+      "history_pages": 1
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_truncated": true,
+      "response_byte_count": 49547,
+      "observation_count": 1,
+      "pressure_hypothesis_count": 0,
+      "observation_identity": "ev_environment_compiler_cache_regression_20261024",
+      "source_observation_status": "verified",
+      "compiler_source_status": "not-registered-in-campaign-ledger",
+      "compiler_source_content_integrity_status": "workspace-read-only-content-integrity-verified",
+      "representative_stage_summary": {
+        "stage_row_count": 4,
+        "stage_rows_truncated": true,
+        "first_stage_name": "fresh_process",
+        "first_stage_cache_status": "hit",
+        "first_stage_output_equal_to_stage0": true
+      },
+      "measurement_summary": {
+        "direct_measurements": {
+          "first_stage_cpu_seconds": 0.61,
+          "first_stage_wall_seconds": 0.623001,
+          "first_stage_peak_rss_bytes": 61636608,
+          "first_stage_peak_open_file_descriptors": 4
+        },
+        "observed_counts": {
+          "representative_stage_rows_returned": 4
+        },
+        "measurement_availability": {
+          "peak_cgroup_memory_bytes": "unavailable"
+        },
+        "qualifications": [
+          "These resource values come from the committed Compiler stage record; the Environment projection did not measure them again."
+        ]
+      },
+      "analysis_limit": "The read used one evidence reference from a bounded page. Four of the five recorded representative stages are present in the compact output; the exact Compiler source artifact remains the authority for all rows."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "campaign_objective": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "environment_id": "renv_80ef889b89dad0e9",
+    "definition_id": "env_c7d14ed20b708d09",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "current-campaign-observation",
+      "identity": "ev_environment_compiler_cache_regression_20261024",
+      "repository": "mncs-environment",
+      "commit": "25e04249ed93961f06ea5bf35a609f0b78a8a40b",
+      "path": "evidence/environmental-capability/compiler-cache-regression-20261024.json",
+      "sha256": "f9b7fd6059d811bdcdd8313426f10221ff88cb9a80fbf878e203398a1a0d26ff"
+    },
+    {
+      "kind": "committed-compiler-campaign-evidence",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637"
+    },
+    {
+      "kind": "compact-projection-implementation",
+      "identity": "ev_environment_compact_stage_array_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "5883f87d9447623b53e7324297f76cc2833a2719",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d229683e264f05ee803b0db11208bf3a2a0fcb8d9c13af1c70071e6a0090f484"
+    }
+  ],
+  "not_measured": [
+    "whether the summary changes an agent's investigation or implementation decisions",
+    "whether null cgroup memory reflects an unavailable runtime source or an unpopulated field",
+    "recurrence of this pressure across additional source artifacts"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

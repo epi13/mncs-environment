@@ -1,0 +1,96 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_stage_array_compaction_improvement_20261024",
+  "captured_at": "2026-10-24T16:34:24+00:00",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment compact environmental-capability projection",
+    "request": {},
+    "outcome": {
+      "implementation_change": "Compact outcome context now retains up to four bounded rows from representative compiler stage arrays, including recorded cache status, Stage-0 output comparison, CPU and wall time, RSS, cgroup memory, and open-file-descriptor values. Null measurements remain null, and omitted rows are flagged.",
+      "verification_recorded": true,
+      "authentic_compiler_evidence_used": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The regression and live projection confirm the selected evidence remains inspectable, but no later independent agent activity yet establishes changed compiler or environmental development outcomes."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_1cc3faace7ea27dd",
+    "campaign_evidence_count_before_recording": 59,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_compact_stage_array_context_20261024",
+    "addresses_hypothesis_identity": "ph_environment_compact_observation_outcome_context",
+    "implementation_reference": {
+      "identity": "ev_environment_compact_stage_array_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "5883f87d9447623b53e7324297f76cc2833a2719",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d229683e264f05ee803b0db11208bf3a2a0fcb8d9c13af1c70071e6a0090f484"
+    },
+    "verification_observation_identity": "ev_environment_compiler_stage_array_compaction_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_compiler_stage_array_compaction_live_readback_20261024",
+    "basis": "The focused regression uses the committed Compiler cache regression source, forces response compaction, and checks that four stage rows retain cache behavior, output comparison, CPU and wall time, RSS, open file descriptors, and the source's null cgroup-memory value. A bounded live Environment projection then verifies the same stage summary and exact Compiler source digest.",
+    "not_measured": [
+      "whether agents use the additional stage context in later investigations",
+      "recurrence of stage-array outcome shapes across other campaigns",
+      "long-term effect on compiler development decisions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_compact_stage_array_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "5883f87d9447623b53e7324297f76cc2833a2719",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d229683e264f05ee803b0db11208bf3a2a0fcb8d9c13af1c70071e6a0090f484"
+    },
+    {
+      "kind": "verified-source-test-results",
+      "identity": "ev_environment_compact_stage_array_test_20261024",
+      "repository": "mncs-environment",
+      "commit": "5883f87d9447623b53e7324297f76cc2833a2719",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "5015146ccca26d4e15ea7f994054dfc0842795e8c75c2d831929702023ab7e8c"
+    },
+    {
+      "kind": "committed-projection-contract",
+      "identity": "ev_environment_compact_stage_array_contract_20261024",
+      "repository": "mncs-environment",
+      "commit": "5883f87d9447623b53e7324297f76cc2833a2719",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "7cad808991264c2fe623928fce5cfb5129d0dcb1cf7f7445bbd87b039222e33c"
+    },
+    {
+      "kind": "direct-projection-readback",
+      "identity": "ev_environment_compiler_stage_array_compaction_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "5883f87d9447623b53e7324297f76cc2833a2719",
+      "path": "evidence/environmental-capability/compiler-stage-array-compaction-live-readback-20261024.json"
+    }
+  ],
+  "not_measured": [
+    "future agent use of the compact stage summary",
+    "whether other list-shaped outcome fields need structured compaction",
+    "causal change in compiler development outcomes"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

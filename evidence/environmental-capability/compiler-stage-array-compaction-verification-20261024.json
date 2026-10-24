@@ -1,0 +1,110 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_stage_array_compaction_verification_20261024",
+  "captured_at": "2026-10-24T16:34:24+00:00",
+  "measurement_basis": "direct-test-command-results",
+  "observation": {
+    "kind": "compiler-stage-array-compaction-regression-verification",
+    "source_interface": "pytest, ruff, py_compile, and Git",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-observation-live-context-20261024",
+      "commit": "5883f87d9447623b53e7324297f76cc2833a2719",
+      "commands": [
+        "python3 -m pytest -q tests/test_capability_intelligence.py",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "python3 -m py_compile mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "focused_capability_tests": {
+        "status": "passed",
+        "passed": 55,
+        "failed": 0
+      },
+      "ruff": "passed",
+      "py_compile": "passed",
+      "git_diff_check": "passed",
+      "authentic_compiler_stage_array_case": {
+        "status": "passed",
+        "source_record_identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+        "projection_compaction_forced": true,
+        "stage_rows_returned": 4,
+        "stage_rows_truncated": true,
+        "preserved_fields": [
+          "stage name",
+          "cache status",
+          "output equality to Stage-0",
+          "CPU and wall seconds",
+          "RSS bytes",
+          "cgroup memory bytes",
+          "open file descriptors"
+        ],
+        "peak_cgroup_memory_bytes": null
+      },
+      "analysis_limit": "The regression verifies one authentic Compiler evidence shape; it does not establish that all outcome arrays need the same summary or that future agents will use the summary."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_1cc3faace7ea27dd",
+    "campaign_evidence_count_before_recording": 59,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_compact_stage_array_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "5883f87d9447623b53e7324297f76cc2833a2719",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d229683e264f05ee803b0db11208bf3a2a0fcb8d9c13af1c70071e6a0090f484"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "identity": "ev_environment_compact_stage_array_test_20261024",
+      "repository": "mncs-environment",
+      "commit": "5883f87d9447623b53e7324297f76cc2833a2719",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "5015146ccca26d4e15ea7f994054dfc0842795e8c75c2d831929702023ab7e8c"
+    },
+    {
+      "kind": "committed-projection-contract",
+      "identity": "ev_environment_compact_stage_array_contract_20261024",
+      "repository": "mncs-environment",
+      "commit": "5883f87d9447623b53e7324297f76cc2833a2719",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "7cad808991264c2fe623928fce5cfb5129d0dcb1cf7f7445bbd87b039222e33c"
+    },
+    {
+      "kind": "committed-compiler-campaign-evidence",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    }
+  ],
+  "not_measured": [
+    "effectiveness across other compiler evidence shapes",
+    "future agent use of the compact stage summary",
+    "cgroup memory peaks, which remain null in the source Compiler evidence"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
