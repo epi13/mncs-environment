@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_previous_page_cursor_verification_20261024",
+  "captured_at": "2026-10-24T09:30:32+00:00",
+  "measurement_basis": "direct-projection-test-lint-and-compile-results",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_58d8962232fb36b4",
+      "sequence": 20
+    },
+    "campaign_evidence_count": 46,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-previous-page-cursor-verification",
+    "source_interface": "pytest, ruff, py_compile, and Git",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-capability-intelligence-20261024",
+      "commit": "e285c98f8940a976a980f97784862fc865238703",
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "python3 -m pytest tests/test_environment.py -k 'projection_capability_invocations_are_declared_and_session_bound or campaign_state_cli_accepts_bounded_evidence_pages' -q",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "python3 -m py_compile mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "focused_capability_tests": {
+        "status": "passed",
+        "passed": 25,
+        "failed": 0,
+        "duration_seconds": 0.89
+      },
+      "campaign_state_and_descriptor_tests": {
+        "status": "passed",
+        "passed": 2,
+        "failed": 0,
+        "deselected": 230,
+        "duration_seconds": 0.18
+      },
+      "cursor_contract": {
+        "previous_offset_preserved_in_compact_output": true,
+        "next_offset_preserved_in_compact_output": true,
+        "null_values_preserved_at_first_and_last_page": true
+      },
+      "lint_compile_and_diff_check": "passed",
+      "full_test_suite": {
+        "status": "not-run",
+        "reason": "The focused projection suite and campaign-state/descriptor integration tests covered the changed fields."
+      }
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-source-change",
+      "repository": "mncs-environment",
+      "commit": "e285c98f8940a976a980f97784862fc865238703",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "1e9da4099e7293f041bb009f1ffb01aea9c508e1585b5bbf9a68fea28723cb7a"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "e285c98f8940a976a980f97784862fc865238703",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "490046bde4207a1f79537834a0cee728763f66881e993934a208a1f39792a005"
+    }
+  ],
+  "not_measured": [
+    "full suite result after the cursor field change",
+    "future agent use of the previous cursor",
+    "long-term recurrence or effectiveness of the pressure"
+  ]
+}

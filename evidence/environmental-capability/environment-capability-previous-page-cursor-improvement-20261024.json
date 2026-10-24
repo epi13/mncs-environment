@@ -1,0 +1,91 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_previous_page_cursor_improvement_20261024",
+  "captured_at": "2026-10-24T09:30:32+00:00",
+  "measurement_basis": "committed-bidirectional-page-cursor-change-and-live-followup",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_58d8962232fb36b4",
+      "sequence": 20
+    },
+    "campaign_evidence_count": 46,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment capability intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_capability_previous_page_cursor",
+      "implementation_commit": "e285c98f8940a976a980f97784862fc865238703",
+      "verification_observation_identity": "ev_environment_capability_previous_page_cursor_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_capability_previous_page_cursor_followup_20261024"
+    },
+    "outcome": {
+      "implementation_change": "The projection source and compact output now preserve previous_evidence_offset as well as next_evidence_offset, including explicit null values at page boundaries.",
+      "verification_recorded": true,
+      "followup_projection_exposed_previous_offset": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "Tests and one live page read establish cursor availability; they do not establish whether agents navigate more successfully or whether the gap recurs less often."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_capability_previous_page_cursor_20261024",
+    "addresses_hypothesis_identity": "ph_environment_capability_previous_page_cursor",
+    "implementation_reference": {
+      "identity": "ev_environment_capability_previous_page_cursor_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "e285c98f8940a976a980f97784862fc865238703",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "1e9da4099e7293f041bb009f1ffb01aea9c508e1585b5bbf9a68fea28723cb7a"
+    },
+    "verification_observation_identity": "ev_environment_capability_previous_page_cursor_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_capability_previous_page_cursor_followup_20261024",
+    "basis": "The projection test covers previous and next cursors in full and compact output, including nulls at the first page. A later live page read at offset 24 returned the previous offset zero in both the Environment envelope and capability projection.",
+    "not_measured": [
+      "future agent use of the previous offset",
+      "whether cursor navigation improves investigation completeness",
+      "time, token, or resource impact of the field"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_capability_previous_page_cursor_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "e285c98f8940a976a980f97784862fc865238703",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "1e9da4099e7293f041bb009f1ffb01aea9c508e1585b5bbf9a68fea28723cb7a"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "e285c98f8940a976a980f97784862fc865238703",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "490046bde4207a1f79537834a0cee728763f66881e993934a208a1f39792a005"
+    }
+  ],
+  "not_measured": [
+    "whether agents use this offset in future investigations",
+    "long-term recurrence or effectiveness of the page-cursor improvement",
+    "resource and token attribution to the projection"
+  ]
+}
