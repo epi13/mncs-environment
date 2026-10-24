@@ -425,17 +425,31 @@ def _working_checkout_matches_snapshot(
     current_identity = working_checkout.get("checkout_identity")
     selected_identity = selected.get("checkout_identity")
     if isinstance(current_identity, str) and isinstance(selected_identity, str):
+        branch_matches = (
+            (selected.get("branch") or "")
+            == (working_checkout.get("branch") or "")
+        )
         selected_common = selected.get("git_common_directory_identity")
         current_common = working_checkout.get("git_common_directory_identity")
-        return (
+        same_branch_identity = (
             current_identity == selected_identity
             and selected.get("repository", repository) == repository
-            and (selected.get("branch") or "") == (working_checkout.get("branch") or "")
+            and branch_matches
             and not (
                 isinstance(selected_common, str)
                 and isinstance(current_common, str)
                 and selected_common != current_common
             )
+        )
+        if same_branch_identity:
+            return True
+        # A branch rename does not change the checkout that owns a verified
+        # session. Recover it only when the separate identity check confirms
+        # the same canonical path, registered checkout, and Git common
+        # directory; legacy snapshots without those identities remain exact-
+        # branch only.
+        return _working_checkout_identity_matches_snapshot(
+            snapshot, working_checkout,
         )
 
     # Older snapshots predate checkout identities but retain their selected

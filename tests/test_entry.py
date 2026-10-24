@@ -969,6 +969,48 @@ class EntryContractTests(unittest.TestCase):
             nested_workspace_snapshot, nested_working_checkout,
         ))
 
+    def test_registered_checkout_identity_survives_branch_rename(self):
+        checkout = {
+            "repository": "fixture",
+            "path": str(self.project.resolve()),
+            "workspace_root": str(self.base.resolve()),
+            "branch": "campaign/current",
+            "head": "b" * 40,
+            "checkout_identity": "checkout-fixture-stable",
+            "git_common_directory_identity": "common-fixture-stable",
+            "manifest_identity": "manifest-fixture-stable",
+        }
+        snapshot = {
+            "workspace": {"root": str(self.base.resolve())},
+            "selected_checkouts": {"fixture": {
+                "repository": "fixture",
+                "path": str(self.project.resolve()),
+                "branch": "campaign/previous",
+                "head": "a" * 40,
+                "checkout_identity": "checkout-fixture-stable",
+                "git_common_directory_identity": "common-fixture-stable",
+                "manifest_identity": "manifest-fixture-stable",
+            }},
+        }
+        self.assertTrue(entry._working_checkout_identity_matches_snapshot(
+            snapshot, checkout,
+        ))
+        self.assertTrue(entry._working_checkout_matches_snapshot(snapshot, checkout))
+
+        wrong_path = json.loads(json.dumps(snapshot))
+        wrong_path["selected_checkouts"]["fixture"]["path"] = str(
+            self.project / ".worktrees" / "other"
+        )
+        self.assertFalse(entry._working_checkout_matches_snapshot(wrong_path, checkout))
+
+        wrong_common_directory = json.loads(json.dumps(snapshot))
+        wrong_common_directory["selected_checkouts"]["fixture"][
+            "git_common_directory_identity"
+        ] = "common-from-another-repository"
+        self.assertFalse(entry._working_checkout_matches_snapshot(
+            wrong_common_directory, checkout,
+        ))
+
     def test_pathless_legacy_reference_tracks_one_registered_branch_after_commits(self):
         (self.project / ".mncs" / "project.json").write_text(
             json.dumps({"repository": "fixture"}),
