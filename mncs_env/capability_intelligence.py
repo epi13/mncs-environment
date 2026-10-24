@@ -236,6 +236,7 @@ def _compact_projection(
                     "evidence_history_truncated",
                     "evidence_history_checkpoint_consistent",
                     "evidence_history_observation_budgets_by_page",
+                    "observation_reference_selection_policy",
                     "observation_records_skipped_by_page_budget",
                     "source_pointer_count",
                     "source_pointer_content_integrity_verified_count",
@@ -425,6 +426,7 @@ def _compact_projection(
         "measurement_limits": [
             "The response exceeded its byte limit; payload details are summarized by digest.",
             "Exact observation records remain addressable through their evidence references.",
+            "The bounded read selects the newest observation references in each page; older skipped references may contain additional evidence.",
         ],
     }
     # The selected fields are individually bounded. This final reduction also
@@ -761,6 +763,9 @@ def project(
             history_consistent = False
     page_entries = []
     page_observation_capacities = [0 for _ in history_states]
+    page_observation_references: list[list[dict[str, str]]] = [
+        [] for _ in history_states
+    ]
     capacity_seen: set[tuple[str, str, str, str]] = set()
     for page_index, page_state in enumerate(history_states):
         page_references = page_state.get("evidence", [])
@@ -781,16 +786,31 @@ def project(
                 continue
             capacity_seen.add(source_key)
             page_observation_capacities[page_index] += 1
+            page_observation_references[page_index].append(pointer)
     observation_read_budgets = _allocate_page_observation_budgets(
         page_observation_capacities, MAX_OBSERVATIONS,
     )
+    selected_observation_keys_by_page = []
+    selected_observation_identities_by_page = []
+    for page_index, page_references in enumerate(page_observation_references):
+        budget = observation_read_budgets[page_index]
+        selected = page_references[-budget:] if budget else []
+        selected_observation_keys_by_page.append({
+            (
+                pointer["repository"], pointer["commit"], pointer["path"],
+                pointer.get("sha256", ""),
+            )
+            for pointer in selected
+        })
+        selected_observation_identities_by_page.append([
+            pointer["identity"] for pointer in selected
+        ])
     root = _workspace_root(session)
     references: list[dict[str, Any]] = []
     verified_records: list[tuple[dict[str, Any], dict[str, Any]]] = []
     seen_observations: set[tuple[str, str, str, str]] = set()
     unavailable = 0
     skipped_by_page_budget = 0
-    loaded_by_page = [0 for _ in history_states]
     read_deadline = time.monotonic() + MAX_OBSERVATION_READ_SECONDS
     for raw, page_index in page_entries:
         pointer = _validate_reference(raw)
@@ -812,14 +832,13 @@ def project(
             references.append({**pointer, "verification": "duplicate-reference"})
             continue
         seen_observations.add(source_key)
-        if loaded_by_page[page_index] >= observation_read_budgets[page_index]:
+        if source_key not in selected_observation_keys_by_page[page_index]:
             references.append({
                 **pointer,
                 "verification": "not-read-page-observation-budget",
             })
             skipped_by_page_budget += 1
             continue
-        loaded_by_page[page_index] += 1
         record = None
         verification = "sha256-unavailable" if "sha256" not in pointer else "workspace-unavailable"
         if root is not None and "sha256" in pointer:
@@ -1050,6 +1069,26 @@ def project(
             "observation_records_considered": len(references),
             "observation_records_verified": len(observations),
             "observation_records_unavailable": unavailable,
+            "observation_reference_selection_policy": (
+                "newest-in-ledger-append-order-within-each-page"
+            ),
+            "evidence_history_observation_budgets_by_page": [
+                {
+                    "offset": history_states[index].get("evidence_offset"),
+                    "page_limit": history_states[index].get("evidence_limit"),
+                    "observation_reference_capacity": page_observation_capacities[index],
+                    "read_budget": observation_read_budgets[index],
+                    "selected_observation_reference_identities": (
+                        selected_observation_identities_by_page[index]
+                    ),
+                    "observation_records_skipped_by_page_budget": (
+                        page_observation_capacities[index]
+                        - observation_read_budgets[index]
+                    ),
+                }
+                for index in range(len(history_states))
+            ],
+            "observation_records_skipped_by_page_budget": skipped_by_page_budget,
             **({
                 "evidence_history_pages_requested": history_pages,
                 "evidence_history_pages_read": len(history_states),
@@ -1063,16 +1102,6 @@ def project(
                 ],
                 "evidence_history_truncated": history_truncated,
                 "evidence_history_checkpoint_consistent": history_consistent,
-                "evidence_history_observation_budgets_by_page": [
-                    {
-                        "offset": history_states[index].get("evidence_offset"),
-                        "page_limit": history_states[index].get("evidence_limit"),
-                        "observation_reference_capacity": page_observation_capacities[index],
-                        "read_budget": observation_read_budgets[index],
-                    }
-                    for index in range(len(history_states))
-                ],
-                "observation_records_skipped_by_page_budget": skipped_by_page_budget,
             } if history_pages > 1 else {}),
         },
         "correlation": {
@@ -1092,6 +1121,7 @@ def project(
             "Source pointer integrity counts cover unique committed pointers; sources outside selected checkouts are not read and remain not verified.",
             "An unavailable or unselected source is surfaced without reading it or treating it as verified.",
             "Repeated references to the same committed observation do not establish recurrence.",
+            "Within each selected page, bounded observation reads select the newest references in ledger append order; earlier references in that page may remain unread.",
             "Candidate continuation count is not treated as repeated pressure; recurrence requires distinct recorded observations.",
             "Effectiveness after a proposed change remains unknown until later independent observations support it.",
             "A linked verification record establishes that evidence is present and integrity checked; effectiveness still requires independent follow-up.",

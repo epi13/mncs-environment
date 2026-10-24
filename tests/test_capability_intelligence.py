@@ -816,14 +816,27 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
             "page_limit": 9,
             "observation_reference_capacity": 9,
             "read_budget": 8,
+            "selected_observation_reference_identities": [
+                f"ev_environment_pressure_history_{index:02d}"
+                for index in range(10, 18)
+            ],
+            "observation_records_skipped_by_page_budget": 1,
         },
         {
             "offset": 0,
             "page_limit": 9,
             "observation_reference_capacity": 9,
             "read_budget": 8,
+            "selected_observation_reference_identities": [
+                f"ev_environment_pressure_history_{index:02d}"
+                for index in range(1, 9)
+            ],
+            "observation_records_skipped_by_page_budget": 1,
         },
     ]
+    assert projection["source"]["observation_reference_selection_policy"] == (
+        "newest-in-ledger-append-order-within-each-page"
+    )
     assert projection["source"]["observation_records_skipped_by_page_budget"] == 2
     assert projection["source"]["observation_records_verified"] == 16
     assert projection["source"]["observation_records_unavailable"] == 0
@@ -841,7 +854,14 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     assert compact["source"]["evidence_history_observation_budgets_by_page"] == projection["source"][
         "evidence_history_observation_budgets_by_page"
     ]
+    assert compact["source"]["observation_reference_selection_policy"] == (
+        "newest-in-ledger-append-order-within-each-page"
+    )
     assert compact["source"]["observation_records_skipped_by_page_budget"] == 2
+    assert any(
+        "older skipped references may contain additional evidence" in item
+        for item in compact["measurement_limits"]
+    )
 
     changed_checkpoint = {**older_page, "checkpoint_id": "chk_intervening_update"}
     session.campaign_state = lambda *, evidence_offset=None, evidence_limit=32: (
@@ -913,14 +933,81 @@ def test_history_window_uses_cursor_distance_for_short_first_page(tmp_path: Path
     assert result["source"]["observation_records_verified"] == 16
     assert result["source"]["observation_records_skipped_by_page_budget"] == 1
     assert result["source"]["evidence_history_observation_budgets_by_page"] == [
-        {"offset": 9, "page_limit": 8, "observation_reference_capacity": 8, "read_budget": 8},
-        {"offset": 1, "page_limit": 8, "observation_reference_capacity": 8, "read_budget": 7},
-        {"offset": 0, "page_limit": 1, "observation_reference_capacity": 1, "read_budget": 1},
+        {
+            "offset": 9,
+            "page_limit": 8,
+            "observation_reference_capacity": 8,
+            "read_budget": 8,
+            "selected_observation_reference_identities": [
+                f"ev_environment_short_history_{index:02d}"
+                for index in range(9, 17)
+            ],
+            "observation_records_skipped_by_page_budget": 0,
+        },
+        {
+            "offset": 1,
+            "page_limit": 8,
+            "observation_reference_capacity": 8,
+            "read_budget": 7,
+            "selected_observation_reference_identities": [
+                f"ev_environment_short_history_{index:02d}"
+                for index in range(2, 9)
+            ],
+            "observation_records_skipped_by_page_budget": 1,
+        },
+        {
+            "offset": 0,
+            "page_limit": 1,
+            "observation_reference_capacity": 1,
+            "read_budget": 1,
+            "selected_observation_reference_identities": [
+                "ev_environment_short_history_00"
+            ],
+            "observation_records_skipped_by_page_budget": 0,
+        },
     ]
     assert result["source"]["evidence_history_truncated"] is False
     assert hypothesis["recurrence_status"] == "observed-across-sessions"
     assert hypothesis["observation_count"] == 16
     assert hypothesis["distinct_session_count"] == 2
+
+
+def test_single_page_budget_selects_newest_observations_and_reports_omissions(
+    tmp_path: Path,
+) -> None:
+    reports = [
+        _observation(
+            f"ev_environment_single_page_history_{index:02d}",
+            "ses_single_page_history",
+            "cmp_single_page_history",
+        )
+        for index in range(20)
+    ]
+    session, state = _session(tmp_path, reports)
+    state["evidence_offset"] = 0
+    state["evidence_limit"] = 20
+
+    result = capability_intelligence.project(session)
+
+    assert [item["identity"] for item in result["observations"]] == [
+        f"ev_environment_single_page_history_{index:02d}"
+        for index in range(4, 20)
+    ]
+    assert result["source"]["observation_records_skipped_by_page_budget"] == 4
+    assert result["source"]["observation_reference_selection_policy"] == (
+        "newest-in-ledger-append-order-within-each-page"
+    )
+    assert result["source"]["evidence_history_observation_budgets_by_page"] == [{
+        "offset": 0,
+        "page_limit": 20,
+        "observation_reference_capacity": 20,
+        "read_budget": 16,
+        "selected_observation_reference_identities": [
+            f"ev_environment_single_page_history_{index:02d}"
+            for index in range(4, 20)
+        ],
+        "observation_records_skipped_by_page_budget": 4,
+    }]
 
 
 def test_repeated_ledger_pointer_does_not_establish_recurrence(tmp_path: Path) -> None:

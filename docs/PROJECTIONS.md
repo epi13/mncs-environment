@@ -109,10 +109,14 @@ an explicit page window:
 
 The default remains one page. Historical reads follow authenticated
 previous-page cursors, stop if the checkpoint changes, and cap the scan at four
-pages. The 16 observation-read allowance is shared across those pages; the
-projection reports page offsets and limits, coverage, checkpoint consistency,
-per-page observation capacity and allocated read budgets, and records left
-unread by that budget. Recurrence describes the selected window;
+pages. The 16 observation-read allowance is shared across those pages. It is
+allocated according to each page's unique observation-reference capacity, then
+selects the newest observation references in that page's ledger append order.
+The projection reports each page's capacity, budget, selected record
+identities, and unread count, along with page offsets, coverage, and checkpoint
+consistency. This bounded recency sample can omit older records within a page;
+inspect the authenticated ledger pages when skipped evidence matters.
+Recurrence describes the selected window;
 `evidence_history_truncated` indicates when it does not cover all available
 history.
 
