@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_targeted_history_improvement_20261024",
+  "captured_at": "2026-10-24T10:05:38+00:00",
+  "measurement_basis": "committed-projection-interface-change-with-focused-verification",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_21d3ee1b296d5c83",
+      "sequence": 26
+    },
+    "campaign_evidence_count": 83,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment environmental-capability projection CLI",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_capability_targeted_history_page_access",
+      "implementation_commit": "5256fa3969e51473f5071dcf5c7b3c8b248c7926",
+      "verification_observation_identity": "ev_environment_capability_targeted_history_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_capability_targeted_history_followup_20261024"
+    },
+    "outcome": {
+      "implementation_change": "The direct environmental-capability projection accepts --evidence-offset and --evidence-limit, reads the selected current-checkpoint page through the existing campaign-state authority, and can continue toward older pages using the existing cursor guard. The 16-observation ceiling is unchanged.",
+      "verification_recorded": true,
+      "followup_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The new route focuses projection output and does not add storage, increase the read ceiling, or establish use by other agents."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_capability_targeted_history_page_access_20261024",
+    "addresses_hypothesis_identity": "ph_environment_capability_targeted_history_page_access",
+    "implementation_reference": {
+      "identity": "ev_environment_capability_targeted_history_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "5256fa3969e51473f5071dcf5c7b3c8b248c7926",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d56011cf85b3a68f730bb8956e036b667e7a5522e8ccdd58b864ef0ab2c8f69e"
+    },
+    "verification_observation_identity": "ev_environment_capability_targeted_history_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_capability_targeted_history_followup_20261024",
+    "basis": "Focused CLI and projection tests cover offset/limit routing and cursor continuation. Two live queries against the same 83-reference checkpoint split the prior 32-reference page into offsets 51 and 67 with limit 16, reading all 20 observation records with no overlap or budget skips.",
+    "not_measured": [
+      "whether agents use the focused projection route",
+      "whether other pages require additional segmentation",
+      "long-term effect on pressure interpretation or environmental capability"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "direct-source-change",
+      "repository": "mncs-environment",
+      "commit": "5256fa3969e51473f5071dcf5c7b3c8b248c7926",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d56011cf85b3a68f730bb8956e036b667e7a5522e8ccdd58b864ef0ab2c8f69e"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "5256fa3969e51473f5071dcf5c7b3c8b248c7926",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "c8f31d09266e6c88e541026adeed973ab3d9d58e132e59ddd10275fbeee9811b"
+    }
+  ],
+  "not_measured": [
+    "causal effect on other agent workflows",
+    "time, token, or resource savings",
+    "pressure recurrence outside the selected segments"
+  ]
+}

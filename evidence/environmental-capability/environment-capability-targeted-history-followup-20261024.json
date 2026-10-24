@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_targeted_history_followup_20261024",
+  "captured_at": "2026-10-24T10:05:38+00:00",
+  "measurement_basis": "same-checkpoint-authenticated-targeted-projection-queries",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_21d3ee1b296d5c83",
+      "sequence": 26
+    },
+    "campaign_evidence_count": 83,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-targeted-history-followup",
+    "source_interface": "mncs-env projections",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_21d3ee1b296d5c83",
+      "segments": [
+        {
+          "evidence_offset": 51,
+          "evidence_limit": 16
+        },
+        {
+          "evidence_offset": 67,
+          "evidence_limit": 16
+        }
+      ],
+      "branch_commit": "5256fa3969e51473f5071dcf5c7b3c8b248c7926"
+    },
+    "outcome": {
+      "evidence_count": 83,
+      "first_segment_observation_count": 8,
+      "second_segment_observation_count": 12,
+      "unique_observation_references_read": 20,
+      "overlap_count": 0,
+      "unavailable_count": 0,
+      "budget_skipped_count": 0,
+      "relation_identity": "im_environment_capability_targeted_history_page_access_20261024",
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "followup_record_status": "record-integrity-verified-in-projection",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The two focused reads inspect every observation reference in the former newest 32-reference page. They do not cover the two older campaign pages; those remain addressable by their page cursors."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_capability_targeted_history_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "5256fa3969e51473f5071dcf5c7b3c8b248c7926",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d56011cf85b3a68f730bb8956e036b667e7a5522e8ccdd58b864ef0ab2c8f69e"
+    }
+  ],
+  "not_measured": [
+    "whether agents find specific environmental pressures and improve them faster",
+    "whether the other two ledger pages contain recurring pressure evidence",
+    "long-term effectiveness or agent uptake"
+  ]
+}

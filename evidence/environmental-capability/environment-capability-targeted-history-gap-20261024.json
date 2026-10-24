@@ -1,0 +1,101 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_targeted_history_gap_20261024",
+  "captured_at": "2026-10-24T10:05:38+00:00",
+  "measurement_basis": "authentic-bounded-history-query-and-interface-review",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_21d3ee1b296d5c83",
+      "sequence": 26
+    },
+    "campaign_evidence_count": 83,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-targeted-history-gap",
+    "source_interface": "mncs-env projections with authenticated campaign-state paging",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_21d3ee1b296d5c83",
+      "default_projection_history_pages": 4,
+      "direct_projection_page_offset_supported_before_change": false
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "evidence_count": 83,
+      "history_pages_read": 3,
+      "page_offsets": [
+        51,
+        19,
+        0
+      ],
+      "page_limits": [
+        32,
+        32,
+        19
+      ],
+      "page_observation_reference_capacities": [
+        20,
+        19,
+        14
+      ],
+      "page_read_budgets": [
+        6,
+        5,
+        5
+      ],
+      "observations_verified": 16,
+      "observation_records_unavailable": 0,
+      "observation_records_skipped_by_budget": 37,
+      "analysis_limit": "The direct projections route always started at the default newest page with a 32-reference page size. The authoritative campaign-state command could target offsets and smaller pages, but returned the ledger together with the derived projection. The pressure was an interface and response-focus limitation, not inability to access the records."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_capability_targeted_history_page_access",
+    "title": "The direct capability projection cannot focus its bounded analysis on a selected ledger segment",
+    "category": "evidence-discoverability",
+    "subsystem": "mncs-environment capability projection CLI",
+    "owner": "mncs-environment",
+    "basis": "At checkpoint chk_21d3ee1b296d5c83 the bounded history projection left 37 observation records unread. Campaign-state paging could focus the derived view, while the dedicated projection command could not select the same offset and smaller page limit.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Allow the dedicated environmental-capability projection to start from an authenticated evidence offset and bounded page size, then reuse existing cursor and checkpoint-consistency checks without increasing the observation-read ceiling.",
+    "not_measured": [
+      "whether switching between the campaign-state and projection commands affected an agent investigation",
+      "time or resource impact of focused page analysis",
+      "whether evidence outside the examined page contains additional pressure records"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "committed-prechange-interface",
+      "repository": "mncs-environment",
+      "commit": "611ffcfc433e904fdf808d52b82065305a301987",
+      "path": "mncs_env/cli.py",
+      "sha256": "ce4ff09b29a40c805c99aefb562d31a823f8cb27a0092daf94d2658dbc720f73"
+    }
+  ],
+  "not_measured": [
+    "whether direct page selection changes agent decisions or development outcomes",
+    "whether all 37 unread records contain observation evidence",
+    "agent time, token, memory, CPU, or storage impact"
+  ]
+}

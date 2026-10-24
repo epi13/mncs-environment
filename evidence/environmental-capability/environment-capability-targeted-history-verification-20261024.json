@@ -1,0 +1,128 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_targeted_history_verification_20261024",
+  "captured_at": "2026-10-24T10:05:38+00:00",
+  "measurement_basis": "focused-tests-static-checks-and-two-live-page-segment-queries",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_21d3ee1b296d5c83",
+      "sequence": 26
+    },
+    "campaign_evidence_count": 83,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-targeted-history-verification",
+    "source_interface": "pytest, ruff, py_compile, Git, and mncs-env projections",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-capability-intelligence-20261024",
+      "commit": "5256fa3969e51473f5071dcf5c7b3c8b248c7926",
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "python3 -m pytest tests/test_environment.py -k 'projection_capability_invocations_are_declared_and_session_bound or campaign_state_cli_accepts_bounded_evidence_pages' -q",
+        "ruff check mncs_env/capability_intelligence.py mncs_env/cli.py tests/test_capability_intelligence.py",
+        "ruff check --select E4,E7,E9 mncs_env/projections.py",
+        "python3 -m py_compile mncs_env/capability_intelligence.py mncs_env/projections.py mncs_env/cli.py tests/test_capability_intelligence.py",
+        "git diff --check",
+        "./scripts/mncs-env projections ses_c38b0ab35b9418ba --interpret environmental-capability --evidence-offset 51 --evidence-limit 16",
+        "./scripts/mncs-env projections ses_c38b0ab35b9418ba --interpret environmental-capability --evidence-offset 67 --evidence-limit 16"
+      ]
+    },
+    "outcome": {
+      "focused_capability_tests": {
+        "status": "passed",
+        "passed": 29,
+        "failed": 0,
+        "duration_seconds": 1.64
+      },
+      "campaign_state_and_projection_interface_tests": {
+        "status": "passed",
+        "passed": 2,
+        "failed": 0,
+        "deselected": 230,
+        "duration_seconds": 0.18
+      },
+      "static_checks": "Ruff on changed capability/CLI/test files and selected E4/E7/E9 rules on projections.py passed; py_compile and diff checks passed.",
+      "whole_projection_module_ruff": {
+        "status": "reported-findings",
+        "finding_count": 10,
+        "analysis_limit": "The whole-file check reported F401, BLE001, RUF059, F841, and SIM102 findings in untouched portions of projections.py. The targeted rules on the modified projection module passed."
+      },
+      "live_page_segment_queries": {
+        "status": "passed",
+        "checkpoint_id": "chk_21d3ee1b296d5c83",
+        "evidence_count": 83,
+        "segments": [
+          {
+            "evidence_offset": 51,
+            "evidence_limit": 16,
+            "observation_reference_capacity": 8,
+            "observations_verified": 8,
+            "unavailable": 0,
+            "skipped_by_budget": 0,
+            "projection_status": "ready"
+          },
+          {
+            "evidence_offset": 67,
+            "evidence_limit": 16,
+            "observation_reference_capacity": 12,
+            "observations_verified": 12,
+            "unavailable": 0,
+            "skipped_by_budget": 0,
+            "projection_status": "partial",
+            "response_compacted": true
+          }
+        ],
+        "unique_observation_references_across_segments": 20,
+        "duplicate_references_across_segments": 0
+      },
+      "full_test_suite": {
+        "status": "not-run",
+        "reason": "The bounded projection paging change received focused implementation and Environment interface coverage."
+      }
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-source-change",
+      "repository": "mncs-environment",
+      "commit": "5256fa3969e51473f5071dcf5c7b3c8b248c7926",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d56011cf85b3a68f730bb8956e036b667e7a5522e8ccdd58b864ef0ab2c8f69e"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "5256fa3969e51473f5071dcf5c7b3c8b248c7926",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "c8f31d09266e6c88e541026adeed973ab3d9d58e132e59ddd10275fbeee9811b"
+    },
+    {
+      "kind": "direct-documentation-change",
+      "repository": "mncs-environment",
+      "commit": "5256fa3969e51473f5071dcf5c7b3c8b248c7926",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "b9526d273baaa984ee7f569b74a16029557d5567f55f67f3974e662a79caa26b"
+    }
+  ],
+  "not_measured": [
+    "full repository-wide test result",
+    "agent use or benefit from the focused projection route",
+    "pressure recurrence outside the 20 observations in these segments"
+  ]
+}
