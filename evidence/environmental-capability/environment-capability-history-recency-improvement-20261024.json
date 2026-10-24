@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_history_recency_improvement_20261024",
+  "captured_at": "2026-10-24T09:59:34+00:00",
+  "measurement_basis": "committed-projection-change-with-focused-verification",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_91877de908a51762",
+      "sequence": 25
+    },
+    "campaign_evidence_count": 79,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment environmental-capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_capability_history_recency_selection",
+      "implementation_commit": "65cb29e1ad10f028d17c0b9c9f7b5778c5d79144",
+      "verification_observation_identity": "ev_environment_capability_history_recency_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_capability_history_recency_followup_20261024"
+    },
+    "outcome": {
+      "implementation_change": "Each page's capacity-aware budget now selects the newest unique valid observation references in ledger append order. The projection exposes the selection policy, selected identities, and per-page unread counts in normal and compact responses.",
+      "verification_recorded": true,
+      "followup_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "This improves which evidence a bounded query makes visible; it does not establish that the selected page window contains every relevant pressure or that an external development limitation is resolved."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_capability_history_recency_selection_20261024",
+    "addresses_hypothesis_identity": "ph_environment_capability_history_recency_selection",
+    "implementation_reference": {
+      "identity": "ev_environment_capability_history_recency_selection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "65cb29e1ad10f028d17c0b9c9f7b5778c5d79144",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "fdd550a8cb92f3d23b0587e92fd59b996f318732a96852ea43225d94bf0fdb67"
+    },
+    "verification_observation_identity": "ev_environment_capability_history_recency_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_capability_history_recency_followup_20261024",
+    "basis": "The regression checks cover newest-in-page selection for single-page, multi-page, and short-oldest-page histories. A live query at the same checkpoint and page capacities now reads all four newest records, including this change's verification and follow-up, while retaining the total 16-record ceiling.",
+    "not_measured": [
+      "whether agents use the additional recency metadata",
+      "whether older omitted references contain further evidence",
+      "long-term effectiveness of pressure analysis"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "direct-source-change",
+      "repository": "mncs-environment",
+      "commit": "65cb29e1ad10f028d17c0b9c9f7b5778c5d79144",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "fdd550a8cb92f3d23b0587e92fd59b996f318732a96852ea43225d94bf0fdb67"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "65cb29e1ad10f028d17c0b9c9f7b5778c5d79144",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "ba5f728683991d6c3017d3296131e4d147b0cede7aa11cda2428a9ae77950456"
+    }
+  ],
+  "not_measured": [
+    "causal effect on agent behavior or investigation quality",
+    "time or resource savings",
+    "future recurrence or durable resolution"
+  ]
+}

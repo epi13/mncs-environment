@@ -1,0 +1,107 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_history_recency_followup_20261024",
+  "captured_at": "2026-10-24T09:59:34+00:00",
+  "measurement_basis": "same-checkpoint-authenticated-history-projection-after-change",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_91877de908a51762",
+      "sequence": 25
+    },
+    "campaign_evidence_count": 79,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-history-recency-followup",
+    "source_interface": "mncs-env projections",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_91877de908a51762",
+      "history_pages": 4,
+      "branch_commit": "65cb29e1ad10f028d17c0b9c9f7b5778c5d79144"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "evidence_count": 79,
+      "history_pages_read": 3,
+      "page_offsets": [
+        47,
+        15,
+        0
+      ],
+      "page_limits": [
+        32,
+        32,
+        15
+      ],
+      "page_observation_reference_capacities": [
+        19,
+        19,
+        11
+      ],
+      "page_read_budgets": [
+        6,
+        5,
+        5
+      ],
+      "observations_verified": 16,
+      "observation_records_unavailable": 0,
+      "observation_records_skipped_by_budget": 33,
+      "newest_page_selected_observation_identities": [
+        "ev_environment_capability_history_page_overlap_verification_20261024",
+        "ev_environment_capability_history_page_overlap_followup_20261024",
+        "ev_environment_capability_history_read_budget_gap_20261024",
+        "ev_environment_capability_history_read_budget_improvement_20261024",
+        "ev_environment_capability_history_read_budget_verification_20261024",
+        "ev_environment_capability_history_read_budget_followup_20261024"
+      ],
+      "history_read_budget_improvement_relation": {
+        "identity": "im_environment_capability_history_read_budget_underuse_20261024",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "record-integrity-verified-in-projection",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "recency_gap_improvement_relation": {
+        "identity": "im_environment_capability_history_recency_selection_20261024",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "record-integrity-verified-in-projection",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "analysis_limit": "This query uses the same checkpoint, page set, capacities, and read budgets as the prechange query, isolating which references the projection selected. The response remains partial because 33 records are outside its global read budget; no conclusion is made about their contents or long-term pressure resolution."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_capability_history_recency_selection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "65cb29e1ad10f028d17c0b9c9f7b5778c5d79144",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "fdd550a8cb92f3d23b0587e92fd59b996f318732a96852ea43225d94bf0fdb67"
+    }
+  ],
+  "not_measured": [
+    "whether the records selected by recency are more useful to agents",
+    "whether unread records contain further recurrence evidence",
+    "long-term effect on agent capability or work outcomes"
+  ]
+}

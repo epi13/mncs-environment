@@ -1,0 +1,116 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_history_recency_gap_20261024",
+  "captured_at": "2026-10-24T09:59:34+00:00",
+  "measurement_basis": "authentic-bounded-history-query-and-page-order-review",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_91877de908a51762",
+      "sequence": 25
+    },
+    "campaign_evidence_count": 79,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-history-recency-gap",
+    "source_interface": "mncs-env projections and campaign-state page",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_91877de908a51762",
+      "history_pages": 4,
+      "prechange_implementation_commit": "1373370c2c087d8c4e076b37427c72e1cafc2fc6"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "evidence_count": 79,
+      "history_pages_read": 3,
+      "page_offsets": [
+        47,
+        15,
+        0
+      ],
+      "page_limits": [
+        32,
+        32,
+        15
+      ],
+      "page_observation_reference_capacities": [
+        19,
+        19,
+        11
+      ],
+      "page_read_budgets": [
+        6,
+        5,
+        5
+      ],
+      "observations_verified": 16,
+      "observation_records_unavailable": 0,
+      "observation_records_skipped_by_budget": 33,
+      "newest_page_first_six_observation_identities": [
+        "ev_environment_capability_previous_page_cursor_improvement_20261024",
+        "ev_environment_capability_previous_page_cursor_followup_20261024",
+        "ev_environment_capability_previous_page_cursor_verification_20261024",
+        "ev_environment_capability_pressure_reference_gap_20261024",
+        "ev_environment_capability_pressure_reference_improvement_20261024",
+        "ev_environment_capability_pressure_reference_verification_20261024"
+      ],
+      "newest_four_observation_identities_skipped": [
+        "ev_environment_capability_history_read_budget_gap_20261024",
+        "ev_environment_capability_history_read_budget_improvement_20261024",
+        "ev_environment_capability_history_read_budget_verification_20261024",
+        "ev_environment_capability_history_read_budget_followup_20261024"
+      ],
+      "analysis_limit": "Page identities are in authenticated ledger append order. The committed prechange reader consumed the first six valid observation references from the newest page, leaving its newest four records unread. This establishes selection bias in the bounded query, not an agent-time or resource cost."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_capability_history_recency_selection",
+    "title": "Bounded history reads can omit the newest environmental developments in each page",
+    "category": "evidence-discoverability",
+    "subsystem": "mncs-environment capability intelligence history projection",
+    "owner": "mncs-environment",
+    "basis": "At checkpoint chk_91877de908a51762 the newest page had 19 valid observation references and a six-record read budget. The prior append-order scan selected its first six references and skipped the latest four newly recorded observations.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Use each page's bounded allowance for its newest valid observation references in ledger append order, and report the selected identities and per-page omissions.",
+    "not_measured": [
+      "whether omitted older observations contain additional pressure evidence",
+      "agent time or resource impact of the selection bias",
+      "how often agents use historical projections"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "committed-prechange-implementation",
+      "identity": "ev_environment_capability_history_read_budget_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "1373370c2c087d8c4e076b37427c72e1cafc2fc6",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "2fe3adee030c8b792fc9c3b0fd592d8b793eb81b3f632bf3964e03ebf0141265"
+    }
+  ],
+  "not_measured": [
+    "whether older skipped references contain further occurrences of the observed pressure",
+    "agent time, token, memory, CPU, or storage impact",
+    "whether a more recent sample changes decisions in another agent's work"
+  ]
+}

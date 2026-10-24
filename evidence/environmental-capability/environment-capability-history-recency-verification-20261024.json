@@ -1,0 +1,114 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_history_recency_verification_20261024",
+  "captured_at": "2026-10-24T09:59:34+00:00",
+  "measurement_basis": "focused-tests-static-checks-and-same-checkpoint-live-query",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_91877de908a51762",
+      "sequence": 25
+    },
+    "campaign_evidence_count": 79,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-history-recency-verification",
+    "source_interface": "pytest, ruff, py_compile, and Git",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-capability-intelligence-20261024",
+      "commit": "65cb29e1ad10f028d17c0b9c9f7b5778c5d79144",
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "python3 -m pytest tests/test_environment.py -k 'projection_capability_invocations_are_declared_and_session_bound or campaign_state_cli_accepts_bounded_evidence_pages' -q",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "ruff check --select E4,E7,E9 mncs_env/projections.py",
+        "python3 -m py_compile mncs_env/capability_intelligence.py mncs_env/projections.py mncs_env/cli.py tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "focused_capability_tests": {
+        "status": "passed",
+        "passed": 28,
+        "failed": 0,
+        "duration_seconds": 1.74
+      },
+      "campaign_state_and_projection_interface_tests": {
+        "status": "passed",
+        "passed": 2,
+        "failed": 0,
+        "deselected": 230,
+        "duration_seconds": 0.17
+      },
+      "static_checks": "changed-file Ruff, selected projection lint rules, py_compile, and diff check passed",
+      "same_checkpoint_live_query": {
+        "status": "passed",
+        "checkpoint_id": "chk_91877de908a51762",
+        "evidence_count": 79,
+        "history_page_offsets": [
+          47,
+          15,
+          0
+        ],
+        "page_read_budgets": [
+          6,
+          5,
+          5
+        ],
+        "verified": 16,
+        "unavailable": 0,
+        "skipped_by_budget": 33,
+        "newest_four_observations_read": true,
+        "verification_and_followup_records_integrity_verified": true,
+        "projection_status": "partial"
+      },
+      "full_test_suite": {
+        "status": "not-run",
+        "reason": "The bounded projection selection change received focused regression and Environment interface coverage."
+      }
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-source-change",
+      "repository": "mncs-environment",
+      "commit": "65cb29e1ad10f028d17c0b9c9f7b5778c5d79144",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "fdd550a8cb92f3d23b0587e92fd59b996f318732a96852ea43225d94bf0fdb67"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "65cb29e1ad10f028d17c0b9c9f7b5778c5d79144",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "ba5f728683991d6c3017d3296131e4d147b0cede7aa11cda2428a9ae77950456"
+    },
+    {
+      "kind": "direct-documentation-change",
+      "repository": "mncs-environment",
+      "commit": "65cb29e1ad10f028d17c0b9c9f7b5778c5d79144",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "5b09c2e64f3941d94febb1fb5b34f96203799b4ed10ede9fad0af8690da52bd2"
+    }
+  ],
+  "not_measured": [
+    "full repository-wide test result",
+    "whether agents use or benefit from the newest-page selection policy",
+    "whether pressures outside the bounded selected window recur"
+  ]
+}
