@@ -111,7 +111,8 @@ The default remains one page. Historical reads follow authenticated
 previous-page cursors, stop if the checkpoint changes, and cap the scan at four
 pages. The 16 observation-read allowance is shared across those pages; the
 projection reports page offsets and limits, coverage, checkpoint consistency,
-and records left unread by that per-page budget. Recurrence describes the selected window;
+per-page observation capacity and allocated read budgets, and records left
+unread by that budget. Recurrence describes the selected window;
 `evidence_history_truncated` indicates when it does not cover all available
 history.
 

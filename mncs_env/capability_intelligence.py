@@ -109,6 +109,25 @@ def _evidence_history_pages(
     return pages, truncated, consistent
 
 
+def _allocate_page_observation_budgets(
+    capacities: list[int], total_budget: int,
+) -> list[int]:
+    """Share the observation ceiling without wasting slots on sparse pages."""
+    budgets = [0 for _ in capacities]
+    target = min(total_budget, sum(capacities))
+    while sum(budgets) < target:
+        candidates = [index for index, capacity in enumerate(capacities)
+                      if budgets[index] < capacity]
+        if not candidates:
+            break
+        selected = min(
+            candidates,
+            key=lambda index: (budgets[index], -capacities[index], index),
+        )
+        budgets[selected] += 1
+    return budgets
+
+
 def _checkout(session: Any, repository: str, root: Path) -> Path | None:
     selected = session.snapshot.get("selected_checkouts") or {}
     entry = selected.get(repository) if isinstance(selected, dict) else None
@@ -216,7 +235,7 @@ def _compact_projection(
                     "evidence_history_page_limits",
                     "evidence_history_truncated",
                     "evidence_history_checkpoint_consistent",
-                    "evidence_history_observation_budget_per_page",
+                    "evidence_history_observation_budgets_by_page",
                     "observation_records_skipped_by_page_budget",
                     "source_pointer_count",
                     "source_pointer_content_integrity_verified_count",
@@ -740,13 +759,31 @@ def project(
         else:
             history_truncated = True
             history_consistent = False
-    page_entries = [
-        (raw, page_index)
-        for page_index, page_state in enumerate(history_states)
-        for raw in (page_state.get("evidence", [])[-MAX_EVIDENCE_REFS:]
-                    if isinstance(page_state.get("evidence"), list) else [])
-    ]
-    observations_per_page = max(1, MAX_OBSERVATIONS // max(1, len(history_states)))
+    page_entries = []
+    page_observation_capacities = [0 for _ in history_states]
+    capacity_seen: set[tuple[str, str, str, str]] = set()
+    for page_index, page_state in enumerate(history_states):
+        page_references = page_state.get("evidence", [])
+        page_references = (
+            page_references[-MAX_EVIDENCE_REFS:]
+            if isinstance(page_references, list) else []
+        )
+        for raw in page_references:
+            page_entries.append((raw, page_index))
+            pointer = _validate_reference(raw)
+            if pointer is None or not _is_observation_reference(pointer):
+                continue
+            source_key = (
+                pointer["repository"], pointer["commit"],
+                pointer["path"], pointer.get("sha256", ""),
+            )
+            if source_key in capacity_seen:
+                continue
+            capacity_seen.add(source_key)
+            page_observation_capacities[page_index] += 1
+    observation_read_budgets = _allocate_page_observation_budgets(
+        page_observation_capacities, MAX_OBSERVATIONS,
+    )
     root = _workspace_root(session)
     references: list[dict[str, Any]] = []
     verified_records: list[tuple[dict[str, Any], dict[str, Any]]] = []
@@ -775,7 +812,7 @@ def project(
             references.append({**pointer, "verification": "duplicate-reference"})
             continue
         seen_observations.add(source_key)
-        if loaded_by_page[page_index] >= observations_per_page:
+        if loaded_by_page[page_index] >= observation_read_budgets[page_index]:
             references.append({
                 **pointer,
                 "verification": "not-read-page-observation-budget",
@@ -1026,7 +1063,15 @@ def project(
                 ],
                 "evidence_history_truncated": history_truncated,
                 "evidence_history_checkpoint_consistent": history_consistent,
-                "evidence_history_observation_budget_per_page": observations_per_page,
+                "evidence_history_observation_budgets_by_page": [
+                    {
+                        "offset": history_states[index].get("evidence_offset"),
+                        "page_limit": history_states[index].get("evidence_limit"),
+                        "observation_reference_capacity": page_observation_capacities[index],
+                        "read_budget": observation_read_budgets[index],
+                    }
+                    for index in range(len(history_states))
+                ],
                 "observation_records_skipped_by_page_budget": skipped_by_page_budget,
             } if history_pages > 1 else {}),
         },

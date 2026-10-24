@@ -810,7 +810,20 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     assert projection["source"]["evidence_history_page_offsets"] == [9, 0]
     assert projection["source"]["evidence_history_truncated"] is False
     assert projection["source"]["evidence_history_checkpoint_consistent"] is True
-    assert projection["source"]["evidence_history_observation_budget_per_page"] == 8
+    assert projection["source"]["evidence_history_observation_budgets_by_page"] == [
+        {
+            "offset": 9,
+            "page_limit": 9,
+            "observation_reference_capacity": 9,
+            "read_budget": 8,
+        },
+        {
+            "offset": 0,
+            "page_limit": 9,
+            "observation_reference_capacity": 9,
+            "read_budget": 8,
+        },
+    ]
     assert projection["source"]["observation_records_skipped_by_page_budget"] == 2
     assert projection["source"]["observation_records_verified"] == 16
     assert projection["source"]["observation_records_unavailable"] == 0
@@ -825,6 +838,9 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     assert compact["source"]["evidence_history_page_limits"] == [9, 9]
     assert compact["source"]["evidence_history_truncated"] is False
     assert compact["source"]["evidence_history_checkpoint_consistent"] is True
+    assert compact["source"]["evidence_history_observation_budgets_by_page"] == projection["source"][
+        "evidence_history_observation_budgets_by_page"
+    ]
     assert compact["source"]["observation_records_skipped_by_page_budget"] == 2
 
     changed_checkpoint = {**older_page, "checkpoint_id": "chk_intervening_update"}
@@ -894,11 +910,16 @@ def test_history_window_uses_cursor_distance_for_short_first_page(tmp_path: Path
     assert result["source"]["evidence_history_page_offsets"] == [9, 1, 0]
     assert result["source"]["evidence_history_page_limits"] == [8, 8, 1]
     assert result["source"]["observation_records_considered"] == 17
-    assert result["source"]["observation_records_verified"] == 11
-    assert result["source"]["observation_records_skipped_by_page_budget"] == 6
+    assert result["source"]["observation_records_verified"] == 16
+    assert result["source"]["observation_records_skipped_by_page_budget"] == 1
+    assert result["source"]["evidence_history_observation_budgets_by_page"] == [
+        {"offset": 9, "page_limit": 8, "observation_reference_capacity": 8, "read_budget": 8},
+        {"offset": 1, "page_limit": 8, "observation_reference_capacity": 8, "read_budget": 7},
+        {"offset": 0, "page_limit": 1, "observation_reference_capacity": 1, "read_budget": 1},
+    ]
     assert result["source"]["evidence_history_truncated"] is False
     assert hypothesis["recurrence_status"] == "observed-across-sessions"
-    assert hypothesis["observation_count"] == 11
+    assert hypothesis["observation_count"] == 16
     assert hypothesis["distinct_session_count"] == 2
 
 
