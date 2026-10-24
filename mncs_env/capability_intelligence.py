@@ -671,6 +671,16 @@ def _compact_projection(
                             "session_id", "status", "content_integrity_status")
                 if isinstance(source.get(key), str)
             }
+            event_identities = source.get("event_identities")
+            if isinstance(event_identities, list):
+                compact_supporting_source["event_identities"] = [
+                    _short_text(identity, 160)
+                    for identity in event_identities[:8]
+                    if isinstance(identity, str)
+                ]
+                compact_supporting_source["event_identities_truncated"] = (
+                    len(event_identities) > 8
+                )
             pointer = _validate_source_pointer(source)
             if pointer is not None:
                 compact_supporting_source.update(pointer)

@@ -170,6 +170,7 @@ def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_
 def test_captured_session_activity_reference_is_bounded_and_inspectable(
     tmp_path: Path,
 ) -> None:
+    event_ids = [f"evt_{index:016x}" for index in range(10)]
     record = _observation(
         "ev_environment_activity_source", "ses_compiler_activity", "cmp_compiler",
     )
@@ -178,8 +179,9 @@ def test_captured_session_activity_reference_is_bounded_and_inspectable(
         "repository": "mncs-compiler",
         "campaign_id": "cmp_compiler",
         "session_id": "ses_compiler_activity",
-        "event_identities": ["evt_0123456789abcdef", "evt_abcdef0123456789"],
+        "event_identities": event_ids,
     })
+    record["observation"]["outcome"]["large_diagnostic"] = "x" * 10_000
     session, _ = _session(tmp_path, [record])
 
     result = capability_intelligence.project(session)
@@ -187,9 +189,16 @@ def test_captured_session_activity_reference_is_bounded_and_inspectable(
     source = result["observations"][0]["supporting_sources"][1]
     assert source["status"] == "captured-in-observation-record"
     assert source["content_integrity_status"] == "captured-in-observation-record"
-    assert source["event_identities"] == [
-        "evt_0123456789abcdef", "evt_abcdef0123456789",
-    ]
+    assert source["event_identities"] == event_ids
+
+    compact = capability_intelligence.project(session, max_result_bytes=12_000)
+    compact_source = next(
+        source for observation in compact["observations"]
+        for source in observation["supporting_sources"]
+        if source.get("kind") == "authenticated-session-activity-projection"
+    )
+    assert compact_source["event_identities"] == event_ids[:8]
+    assert compact_source["event_identities_truncated"] is True
 
     malformed = json.loads(json.dumps(record))
     malformed["identity"] = "ev_environment_activity_source_malformed"
