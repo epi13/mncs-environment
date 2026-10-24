@@ -751,6 +751,94 @@ def test_recurrence_requires_distinct_recorded_observations_and_sessions(tmp_pat
     assert hypothesis["recurrence_status"] == "observed-across-sessions"
 
 
+def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    reports = [
+        _observation(
+            f"ev_environment_pressure_history_{index:02d}",
+            "ses_pressure_history_old" if index < 9 else "ses_pressure_history_new",
+            "cmp_pressure_history",
+        )
+        for index in range(18)
+    ]
+    session, full_state = _session(tmp_path, reports)
+    references = full_state["evidence"]
+    latest_page = {
+        **full_state,
+        "evidence": references[9:],
+        "evidence_offset": 9,
+        "evidence_limit": 9,
+        "previous_evidence_offset": 0,
+        "next_evidence_offset": None,
+        "evidence_truncated": True,
+    }
+    older_page = {
+        **full_state,
+        "evidence": references[:9],
+        "evidence_offset": 0,
+        "evidence_limit": 9,
+        "previous_evidence_offset": None,
+        "next_evidence_offset": 9,
+        "evidence_truncated": True,
+    }
+
+    def campaign_state(*, evidence_offset=None, evidence_limit=32):
+        del evidence_limit
+        return older_page if evidence_offset == 0 else latest_page
+
+    session.campaign_state = campaign_state
+    session.close = lambda: None
+    monkeypatch.setattr(cli, "_open", lambda _args: session)
+    output = io.StringIO()
+    with redirect_stdout(output):
+        status = cli.main([
+            "--state-dir", str(tmp_path), "--persistence", "file",
+            "projections", session.session_id, "--interpret", "environmental-capability",
+            "--history-pages", "2",
+        ])
+
+    projection = json.loads(output.getvalue())
+    hypothesis = projection["pressure_hypotheses"][0]
+    assert status == 0
+    assert hypothesis["recurrence_status"] == "observed-across-sessions"
+    assert hypothesis["observation_count"] == 16
+    assert hypothesis["distinct_session_count"] == 2
+    assert len(hypothesis["evidence"]) == 16
+    assert projection["source"]["evidence_history_pages_requested"] == 2
+    assert projection["source"]["evidence_history_pages_read"] == 2
+    assert projection["source"]["evidence_history_page_offsets"] == [9, 0]
+    assert projection["source"]["evidence_history_truncated"] is False
+    assert projection["source"]["evidence_history_checkpoint_consistent"] is True
+    assert projection["source"]["evidence_history_observation_budget_per_page"] == 8
+    assert projection["source"]["observation_records_skipped_by_page_budget"] == 2
+    assert projection["source"]["observation_records_verified"] == 16
+    assert projection["source"]["observation_records_unavailable"] == 0
+    assert projection["status"] == "partial"
+
+    compact = capability_intelligence.project(
+        session, campaign_state=latest_page, max_result_bytes=5_000,
+        history_pages=2,
+    )
+    assert compact["source"]["response_truncated"] is True
+    assert compact["source"]["evidence_history_page_offsets"] == [9, 0]
+    assert compact["source"]["evidence_history_truncated"] is False
+    assert compact["source"]["evidence_history_checkpoint_consistent"] is True
+    assert compact["source"]["observation_records_skipped_by_page_budget"] == 2
+
+    changed_checkpoint = {**older_page, "checkpoint_id": "chk_intervening_update"}
+    session.campaign_state = lambda *, evidence_offset=None, evidence_limit=32: (
+        changed_checkpoint if evidence_offset == 0 else latest_page
+    )
+    inconsistent = capability_intelligence.project(
+        session, campaign_state=latest_page, history_pages=2,
+    )
+    assert inconsistent["source"]["evidence_history_pages_read"] == 1
+    assert inconsistent["source"]["evidence_history_checkpoint_consistent"] is False
+    assert inconsistent["source"]["evidence_history_truncated"] is True
+    assert inconsistent["status"] == "partial"
+
+
 def test_repeated_ledger_pointer_does_not_establish_recurrence(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_one", "ses_compiler", "cmp_compiler")
     session, state = _session(tmp_path, [record])

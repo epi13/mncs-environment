@@ -99,6 +99,22 @@ pressures from the newest page of authenticated campaign evidence:
   --interpret environmental-capability
 ```
 
+For bounded recurrence analysis across earlier campaign evidence pages, request
+an explicit page window:
+
+```bash
+./scripts/mncs-env projections <session> \
+  --interpret environmental-capability --history-pages 4
+```
+
+The default remains one page. Historical reads follow authenticated
+previous-page cursors, stop if the checkpoint changes, and cap the scan at four
+pages. The 16 observation-read allowance is shared across those pages; the
+projection reports offsets, coverage, checkpoint consistency, and records left
+unread by that per-page budget. Recurrence describes the selected window;
+`evidence_history_truncated` indicates when it does not cover all available
+history.
+
 `campaign-state <session>` includes this derived view when the existing
 128 KiB campaign-state response budget permits, so a caller reading the durable
 ledger can inspect related environmental context in the same response. When

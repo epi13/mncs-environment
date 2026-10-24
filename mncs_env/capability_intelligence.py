@@ -27,6 +27,7 @@ SCHEMA = "mncs.environment.capability-intelligence/1"
 OBSERVATION_SCHEMA = "mncs.environment.environmental-observation/1"
 OBSERVATION_PATH_PREFIX = "evidence/environmental-capability/"
 MAX_EVIDENCE_REFS = 32
+MAX_EVIDENCE_HISTORY_PAGES = 4
 MAX_OBSERVATIONS = 16
 MAX_OBSERVATION_BYTES = 64 * 1024
 MAX_SOURCE_BYTES = 512 * 1024
@@ -49,6 +50,55 @@ def _workspace_root(session: Any) -> Path | None:
         return Path(raw).resolve(strict=True)
     except OSError:
         return None
+
+
+def _evidence_history_pages(
+    session: Any, initial_state: dict[str, Any], requested_pages: int,
+) -> tuple[list[dict[str, Any]], bool, bool]:
+    """Read a bounded backward page window from one immutable campaign state."""
+    pages = [initial_state]
+    if requested_pages == 1:
+        return pages, False, True
+    page_limit = initial_state.get("evidence_limit", MAX_EVIDENCE_REFS)
+    if type(page_limit) is not int or page_limit < 1:
+        page_limit = MAX_EVIDENCE_REFS
+    if page_limit > MAX_EVIDENCE_REFS:
+        return pages, True, True
+
+    checkpoint_id = initial_state.get("checkpoint_id")
+    evidence_count = initial_state.get("evidence_count")
+    consistent = True
+    current = initial_state
+    while len(pages) < requested_pages:
+        previous_offset = current.get("previous_evidence_offset")
+        if previous_offset is None:
+            break
+        if type(previous_offset) is not int or previous_offset < 0:
+            consistent = False
+            break
+        try:
+            older = session.campaign_state(
+                evidence_offset=previous_offset,
+                evidence_limit=page_limit,
+            )
+        except (LifecycleError, StoreIntegrityFailure, StoreUnavailable):
+            consistent = False
+            break
+        if (not isinstance(older, dict)
+                or older.get("checkpoint_id") != checkpoint_id
+                or older.get("evidence_count") != evidence_count
+                or older.get("evidence_offset") != previous_offset):
+            consistent = False
+            break
+        pages.append(older)
+        current = older
+
+    truncated = (
+        not consistent
+        or initial_state.get("next_evidence_offset") is not None
+        or pages[-1].get("previous_evidence_offset") is not None
+    )
+    return pages, truncated, consistent
 
 
 def _checkout(session: Any, repository: str, root: Path) -> Path | None:
@@ -153,6 +203,12 @@ def _compact_projection(
         for key in ("evidence_count", "evidence_page_truncated",
                     "evidence_page_offset", "evidence_page_limit",
                     "previous_evidence_offset", "next_evidence_offset",
+                    "evidence_history_pages_requested",
+                    "evidence_history_pages_read", "evidence_history_page_offsets",
+                    "evidence_history_truncated",
+                    "evidence_history_checkpoint_consistent",
+                    "evidence_history_observation_budget_per_page",
+                    "observation_records_skipped_by_page_budget",
                     "source_pointer_count",
                     "source_pointer_content_integrity_verified_count",
                     "source_pointer_content_integrity_not_verified_count",
@@ -637,7 +693,7 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def project(
     session: Any, *, campaign_state: dict[str, Any] | None = None,
-    max_result_bytes: int = MAX_RESULT_BYTES,
+    max_result_bytes: int = MAX_RESULT_BYTES, history_pages: int = 1,
 ) -> dict[str, Any]:
     """Build a bounded read-only relationship view from campaign evidence.
 
@@ -648,6 +704,12 @@ def project(
     if (type(max_result_bytes) is not int
             or max_result_bytes < 1 or max_result_bytes > MAX_RESULT_BYTES):
         raise ValueError("capability projection result limit must be within its configured bound")
+    if (type(history_pages) is not int
+            or not 1 <= history_pages <= MAX_EVIDENCE_HISTORY_PAGES):
+        raise ValueError(
+            "capability projection history pages must be between 1 and "
+            f"{MAX_EVIDENCE_HISTORY_PAGES}"
+        )
     snapshot = session.snapshot
     campaign = snapshot.get("campaign") or {}
     intent = snapshot.get("intent") or {}
@@ -657,16 +719,34 @@ def project(
         except (LifecycleError, StoreIntegrityFailure, StoreUnavailable):
             campaign_state = None
     state = campaign_state if isinstance(campaign_state, dict) else {}
-    raw_references = state.get("evidence", [])
-    raw_references = raw_references if isinstance(raw_references, list) else []
     page_truncated = bool(state.get("evidence_truncated", False))
+    history_states = [state]
+    history_truncated = False
+    history_consistent = True
+    if history_pages > 1:
+        if campaign_state is not None:
+            history_states, history_truncated, history_consistent = _evidence_history_pages(
+                session, state, history_pages,
+            )
+        else:
+            history_truncated = True
+            history_consistent = False
+    page_entries = [
+        (raw, page_index)
+        for page_index, page_state in enumerate(history_states)
+        for raw in (page_state.get("evidence", [])[-MAX_EVIDENCE_REFS:]
+                    if isinstance(page_state.get("evidence"), list) else [])
+    ]
+    observations_per_page = max(1, MAX_OBSERVATIONS // max(1, len(history_states)))
     root = _workspace_root(session)
     references: list[dict[str, Any]] = []
     verified_records: list[tuple[dict[str, Any], dict[str, Any]]] = []
     seen_observations: set[tuple[str, str, str, str]] = set()
     unavailable = 0
+    skipped_by_page_budget = 0
+    loaded_by_page = [0 for _ in history_states]
     read_deadline = time.monotonic() + MAX_OBSERVATION_READ_SECONDS
-    for raw in raw_references[-MAX_EVIDENCE_REFS:]:
+    for raw, page_index in page_entries:
         pointer = _validate_reference(raw)
         if pointer is None:
             continue
@@ -686,6 +766,14 @@ def project(
             references.append({**pointer, "verification": "duplicate-reference"})
             continue
         seen_observations.add(source_key)
+        if loaded_by_page[page_index] >= observations_per_page:
+            references.append({
+                **pointer,
+                "verification": "not-read-page-observation-budget",
+            })
+            skipped_by_page_budget += 1
+            continue
+        loaded_by_page[page_index] += 1
         record = None
         verification = "sha256-unavailable" if "sha256" not in pointer else "workspace-unavailable"
         if root is not None and "sha256" in pointer:
@@ -849,11 +937,13 @@ def project(
             break
     if campaign_state is None:
         status = "unavailable"
-    elif observations and unavailable:
+    elif observations and (
+        unavailable or skipped_by_page_budget or history_truncated or not history_consistent
+    ):
         status = "partial"
     elif observations:
         status = "ready"
-    elif raw_references:
+    elif page_entries:
         status = "partial"
     else:
         status = "no-observations"
@@ -914,6 +1004,18 @@ def project(
             "observation_records_considered": len(references),
             "observation_records_verified": len(observations),
             "observation_records_unavailable": unavailable,
+            **({
+                "evidence_history_pages_requested": history_pages,
+                "evidence_history_pages_read": len(history_states),
+                "evidence_history_page_offsets": [
+                    page["evidence_offset"] for page in history_states
+                    if type(page.get("evidence_offset")) is int
+                ],
+                "evidence_history_truncated": history_truncated,
+                "evidence_history_checkpoint_consistent": history_consistent,
+                "evidence_history_observation_budget_per_page": observations_per_page,
+                "observation_records_skipped_by_page_budget": skipped_by_page_budget,
+            } if history_pages > 1 else {}),
         },
         "correlation": {
             "kind": "campaign-evidence-to-objective-and-subsystem",
@@ -927,7 +1029,7 @@ def project(
         "improvement_relations": improvement_relations,
         "observations": observations,
         "measurement_limits": [
-            "Only committed observation records linked from this campaign-state page are considered.",
+            "Only committed observation records linked from the selected bounded campaign-state page or pages are considered.",
             "The source evidence page offset and previous/next offsets identify adjacent pages when continuing this projection.",
             "Source pointer integrity counts cover unique committed pointers; sources outside selected checkouts are not read and remain not verified.",
             "An unavailable or unselected source is surfaced without reading it or treating it as verified.",
@@ -935,6 +1037,9 @@ def project(
             "Candidate continuation count is not treated as repeated pressure; recurrence requires distinct recorded observations.",
             "Effectiveness after a proposed change remains unknown until later independent observations support it.",
             "A linked verification record establishes that evidence is present and integrity checked; effectiveness still requires independent follow-up.",
+            *([
+                "Multi-page recurrence covers only the selected bounded page window; source metadata reports page offsets, checkpoint consistency, and budget omissions.",
+            ] if history_pages > 1 else []),
         ],
     }
     encoded = json.dumps(projection, ensure_ascii=False, sort_keys=True).encode("utf-8")

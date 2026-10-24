@@ -363,12 +363,17 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 
 def cmd_projections(args: argparse.Namespace) -> int:
+    if args.history_pages != 1 and args.interpret != "environmental-capability":
+        return fail('--history-pages requires --interpret environmental-capability')
     if args.interpret:
         if args.interpret != "environmental-capability" and not args.repository:
             return fail('--interpret requires --repository')
         with closing(_open(args)) as session:
             try:
-                out(projections_module.interpretation(session, args.repository, args.interpret))
+                out(projections_module.interpretation(
+                    session, args.repository, args.interpret,
+                    history_pages=args.history_pages,
+                ))
             except ValueError as error:
                 return fail(str(error))
         return 0
@@ -2218,6 +2223,10 @@ def build_parser() -> argparse.ArgumentParser:
         'capabilities', 'dependencies', 'blockers', 'architecture',
         'structure', 'why', 'environmental-capability'))
     projections.add_argument('--repository')
+    projections.add_argument(
+        '--history-pages', type=int, default=1,
+        help="include this many bounded campaign evidence pages in environmental capability analysis (1-4)",
+    )
     projections.add_argument("--evidence", action="store_true",
                              help="print the full projection evidence trail instead of running a pass")
     projections.add_argument("--apply", default=None,
