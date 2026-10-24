@@ -1,5 +1,6 @@
 {
   "name": "mncs-environment-development",
+  "working_checkout": "current",
   "workspace_root": "../..",
   "workspace_scope": {
     "kind": "workspace",
@@ -18,7 +19,8 @@
       "mncs-doc",
       "mncs-debug",
       "mncs-doctor",
-      "mncs-rights-provenance"
+      "mncs-rights-provenance",
+      "mncs-system-monitor"
     ]
   },
   "required_capabilities": [

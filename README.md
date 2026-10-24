@@ -227,11 +227,23 @@ state, not prose. The hardening campaign added:
 ## Entering an environment
 
 The checked-in development definition selects Environment, Language,
-Compiler, Test, Store, Forge, Automation, Doc, and Debug from the sibling
-workspace without inspecting unselected repositories. Only Environment is
-in its writable intent;
+Compiler, Test, Store, Forge, Automation, Doc, Debug, and the read-only
+System Monitor resource-sample capability from the sibling workspace without
+inspecting unselected repositories. Only Environment is in its writable intent;
 provider mutations still pass through claims and authority. Availability and
 readiness are observations, not permission to modify a checkout.
+
+For the focused environmental capability campaign, use
+`.mncs/environment-observation.json`. It selects Environment, Store,
+Rights/Provenance, and the read-only System Monitor sample capability, binds the
+Environment checkout containing the definition, and starts no background
+services. Readiness can be checked separately when needed:
+
+```bash
+./scripts/mncs-env enter \
+  --definition .mncs/environment-observation.json \
+  --consumer my-agent --new-session
+```
 
 ```bash
 ./scripts/mncs-env enter --consumer my-agent

@@ -9,6 +9,7 @@ import time
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from mncs_env import capability_intelligence, cli, projections
 from mncs_env.sessions import LifecycleError
@@ -676,6 +677,199 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
     }]
     assert "private-source-path" not in json.dumps(activity)
     assert any("token usage" in item for item in activity["measurement_limits"])
+
+
+def test_session_resource_sample_is_correlated_sanitized_and_compactable(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_resource_sample_activity",
+        "ses_resource_sample_activity",
+        "cmp_resource_sample_activity",
+    )
+    record["observation"]["outcome"]["large_diagnostic"] = "private " * 9_000
+    session, _ = _session(tmp_path, [record])
+    capability = "mncs-system-monitor:system-resource-sample"
+    binding_id = "cap_monitor_resource_sample"
+    request_id = "req_monitor_resource_sample"
+    store_reference = "mncs-store:invocation-result:resource-sample"
+    session.snapshot["bindings"] = [{
+        "binding_id": binding_id,
+        "capability": capability,
+        "provider": "mncs-system-monitor",
+        "contract_revision": "1",
+    }]
+    session.snapshot["artifacts"] = [{
+        "kind": "invocation-result",
+        "capability": capability,
+        "binding_id": binding_id,
+        "provider_request_id": request_id,
+        "status": "ok",
+        "artifact_store_ref": store_reference,
+        "at": "2026-10-24T01:00:01Z",
+    }]
+    events = [
+        {
+            "identity": "evt_monitor_resource_sample_invoked",
+            "sequence": 51,
+            "type": "capability.invoked",
+            "observed_at": "2026-10-24T01:00:00Z",
+            "payload": {
+                "capability": capability,
+                "provider_request_id": request_id,
+                "argv": ["private-argument-is-not-projected"],
+            },
+        },
+        {
+            "identity": "evt_monitor_resource_sample_completed",
+            "sequence": 52,
+            "type": "invocation.completed",
+            "observed_at": "2026-10-24T01:00:01Z",
+            "payload": {
+                "capability": capability,
+                "provider_request_id": request_id,
+                "status": "ok",
+                "artifact_store_ref": store_reference,
+            },
+        },
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events), "events": events[-limit:],
+        "truncated": False, "next_before_sequence": None,
+    }
+    content = json.dumps({
+        "schema": capability_intelligence.SYSTEM_RESOURCE_SAMPLE_SCHEMA,
+        "observed_at": 1792825200000,
+        "sample_time": {
+            "wall_time_unix_ms": 1792825200000,
+            "monotonic_ns": 123456789,
+        },
+        "host": {
+            "cpu_count": 8,
+            "cpu_utilization": 0.25,
+            "cpu_status": "observed",
+            "load_average": [0.5, 0.75, 1.0],
+            "memory_total_bytes": 32_000_000_000,
+            "memory_available_bytes": 12_000_000_000,
+            "memory_available_status": "observed",
+            "memory_free_bytes": 4_000_000_000,
+        },
+        "hostname": "private-host-name",
+        "processes": [{"command": "private-process-command"}],
+    }, sort_keys=True).encode()
+    metadata = {
+        "store_reference": store_reference,
+        "path": "system-resource-sample.json",
+        "byte_count": len(content),
+        "sha256": hashlib.sha256(content).hexdigest(),
+    }
+
+    with patch.object(
+        capability_intelligence.invocation_artifacts_module,
+        "read_latest_invocation_file",
+        return_value=(metadata, content),
+    ) as read_artifact:
+        result = capability_intelligence.project(session)
+        compact = capability_intelligence.project(
+            session, max_result_bytes=10_000,
+        )
+        with patch.object(
+            session, "campaign_state",
+            side_effect=LifecycleError("campaign evidence unavailable"),
+        ):
+            activity_only = capability_intelligence.project(session)
+
+    samples = result["session_activity"]["resource_samples"]
+    assert samples["status"] == "available"
+    assert samples["observation_count"] == 1
+    observation = samples["observations"][0]
+    assert observation["status"] == "available"
+    assert observation["context"] == {
+        "session_id": "ses_projection_reader",
+        "campaign_id": "cmp_projection_reader",
+        "work_intent_id": "int_projection_reader",
+        "environment_id": "renv_projection_reader",
+        "definition_id": "env_projection_reader",
+    }
+    assert observation["source"]["event_correlation_status"] == (
+        "matched-by-provider-request-id"
+    )
+    assert observation["source"]["invocation_event"]["identity"] == (
+        "evt_monitor_resource_sample_invoked"
+    )
+    assert observation["source"]["completion_event"]["identity"] == (
+        "evt_monitor_resource_sample_completed"
+    )
+    assert observation["source"]["artifact_reference"] == {
+        **metadata, "path": "system-resource-sample.json",
+    }
+    assert observation["sample"]["host"] == {
+        "cpu_count": 8,
+        "cpu_utilization": 0.25,
+        "cpu_status": "observed",
+        "load_average": [0.5, 0.75, 1.0],
+        "memory_total_bytes": 32_000_000_000,
+        "memory_available_bytes": 12_000_000_000,
+        "memory_available_status": "observed",
+    }
+    assert observation["sample"]["measurement_basis"] == (
+        "system-monitor-reported-resource-sample"
+    )
+    assert observation["sample"]["measurement_availability"] == {
+        "host.cpu_count": "measured",
+        "host.cpu_utilization": "derived",
+        "host.load_average": "measured",
+        "host.memory_total_bytes": "measured",
+        "host.memory_available_bytes": "measured",
+    }
+    assert read_artifact.call_count == 3
+    assert activity_only["status"] == "partial"
+    assert activity_only["session_activity"]["resource_samples"][
+        "observation_count"
+    ] == 1
+    assert "private-host-name" not in json.dumps(result)
+    assert "private-process-command" not in json.dumps(result)
+    assert "private-argument-is-not-projected" not in json.dumps(result)
+    assert "large_diagnostic" not in json.dumps(compact)
+    compact_samples = compact["session_activity"]["resource_samples"]
+    assert compact["source"]["response_truncated"] is True
+    assert compact_samples["observations"][0]["sample"]["host"][
+        "memory_available_bytes"
+    ] == 12_000_000_000
+    assert compact_samples["observations"][0]["source"][
+        "artifact_reference"]["sha256"] == metadata["sha256"]
+
+
+def test_session_resource_sample_distinguishes_missing_and_failed_invocations(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_resource_sample_absence",
+        "ses_resource_sample_absence",
+        "cmp_resource_sample_absence",
+    )
+    session, _ = _session(tmp_path, [record])
+
+    absent = capability_intelligence.project(session)["session_activity"][
+        "resource_samples"
+    ]
+    assert absent["status"] == "not-captured-in-session"
+    assert absent["observation_count"] == 0
+    assert absent["observations"] == []
+
+    session.snapshot["artifacts"] = [{
+        "kind": "invocation-result",
+        "capability": capability_intelligence.SYSTEM_RESOURCE_SAMPLE_CAPABILITY,
+        "binding_id": "cap_monitor_failed_sample",
+        "provider_request_id": "req_monitor_failed_sample",
+        "status": "failed",
+    }]
+    failed = capability_intelligence.project(session)["session_activity"][
+        "resource_samples"
+    ]
+    assert failed["status"] == "latest-invocation-unsuccessful"
+    assert failed["observation_count"] == 0
+    assert "sample" not in failed["observations"][0]
 
 
 def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Path) -> None:
