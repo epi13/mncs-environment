@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_authentic_improvement_chain_verification_20261024",
+  "captured_at": "2026-10-24T08:35:27+00:00",
+  "measurement_basis": "direct-test-and-lint-command-results",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_8ee520b9b8439e79",
+      "sequence": 10
+    },
+    "campaign_evidence_count": 10,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "authentic-improvement-chain-regression-verification",
+    "source_interface": "pytest, ruff, py_compile, Git diff check, JSON parser",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-capability-intelligence-20261024",
+      "commit": "1cfab741bdba3b8916d706623019ba86a10376c8",
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "python3 -m py_compile mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "git diff --check",
+        "parse all evidence/environmental-capability/*.json"
+      ]
+    },
+    "outcome": {
+      "focused_capability_tests": {
+        "status": "passed",
+        "passed": 22,
+        "failed": 0
+      },
+      "authentic_chain_assertions": {
+        "pressure_hypothesis_present": true,
+        "implementation_relation_present": true,
+        "verification_and_followup_records_integrity_checked": true,
+        "target_work_and_recording_context_distinguished": true,
+        "effectiveness_left_unassessed": true
+      },
+      "lint_and_compile": {
+        "ruff": "passed",
+        "py_compile": "passed",
+        "git_diff_check": "passed",
+        "environmental_evidence_json": "all parsed successfully"
+      },
+      "full_test_suite_after_this_test_and_evidence_change": {
+        "status": "not-run",
+        "reason": "Production projection code is unchanged since the separately recorded full-suite run; this commit adds an authentic-evidence regression test and evidence records."
+      },
+      "prior_full_test_suite": {
+        "verification_observation_identity": "ev_environment_improvement_relations_verification_20261024",
+        "tested_commit": "0bcdf64578e965b71567d4eb0f3c00a3a77b0543",
+        "status": "passed",
+        "passed": 818,
+        "skipped": 81,
+        "failed": 0
+      }
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "1cfab741bdba3b8916d706623019ba86a10376c8",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "b419525062757d7ecc7667efeff230243a4f289df3057a5fae09ef746a80f172",
+      "measured_fields": [
+        "focused_capability_tests",
+        "authentic_chain_assertions"
+      ]
+    }
+  ],
+  "not_measured": [
+    "full suite status after this test-only change",
+    "whether agents use the new improvement relation projection",
+    "long-term recurrence or resolution of the pressure hypothesis",
+    "resource or token use attributable to the focused test command"
+  ]
+}
