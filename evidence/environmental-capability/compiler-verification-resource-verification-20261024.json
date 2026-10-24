@@ -1,0 +1,121 @@
+{
+  "captured_at": "2026-10-24T23:46:23Z",
+  "identity": "ev_environment_compiler_verification_resource_measurements_verification_20261024",
+  "measurement_basis": "focused ECI test module and Environment vertical proof after implementation commit",
+  "not_measured": [
+    "full repository test suite after implementation",
+    "independent agent use of the projection",
+    "whether the resource summary changes subsequent compilation choices",
+    "post-change resource behavior under a later compiler workload"
+  ],
+  "observation": {
+    "kind": "compiler-verification-resource-measurement-projection-verification",
+    "outcome": {
+      "baseline_full_repository_suite": {
+        "elapsed_seconds": 140.28,
+        "interpretation": "incomplete baseline; no full-suite pass claim",
+        "passed_before_interrupt": 82,
+        "progress_percent_at_interrupt": 7,
+        "status": "interrupted-before-implementation"
+      },
+      "eci_test_suite": {
+        "elapsed_seconds": 3.54,
+        "failed": 0,
+        "passed": 81,
+        "status": "passed"
+      },
+      "measurement_extraction_test": {
+        "status": "passed",
+        "test_identity": "test_compiler_regression_projects_source_verification_resource_measurements"
+      },
+      "resource_measurements_exposed": {
+        "direct_measurements": {
+          "harness_process_peak_rss_kib": 98644,
+          "harness_process_system_seconds": 3.0,
+          "harness_process_user_seconds": 8.23,
+          "harness_process_wall_seconds": 11.11,
+          "stage0_bootstrap_cpu_percent": 185,
+          "stage0_bootstrap_peak_rss_kib": 1369204,
+          "stage0_bootstrap_system_seconds": 6.1,
+          "stage0_bootstrap_user_seconds": 420.77,
+          "stage0_bootstrap_wall_seconds": 230.6
+        },
+        "measurement_availability": {
+          "harness_process_peak_cgroup_memory_bytes": "null-in-source-record"
+        },
+        "observed_counts": {
+          "stage0_bootstrap_cargo_build_jobs": 2
+        },
+        "qualifications": [
+          "stage0_bootstrap: one-time isolated target compilation; excluded from this warm harness run",
+          "These verification-process measurements are not measurements of resource use attributable to the Compiler agent session."
+        ]
+      },
+      "verification_boundary": "Tests and proof verify projection behavior; no subsequent independent Compiler session is represented.",
+      "vertical_proof": {
+        "completed_steps": 8,
+        "status": "passed"
+      }
+    },
+    "request": {
+      "implementation_commit": "71379b1211f9a96b38580614a106111bedc3c257",
+      "source_record_identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "test_command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+      "vertical_proof_command": "python3 scripts/vertical_proof.py"
+    },
+    "source_interface": "mncs-environment tests and vertical proof"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_92932f7be5cedb75",
+    "session_id": "ses_c01ca32d0af155c1"
+  },
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_92932f7be5cedb75",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "71379b1211f9a96b38580614a106111bedc3c257",
+      "identity": "ev_environment_compiler_verification_resource_measurements_implementation_20261024",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "e1e7c51d6b4cbcf4d321f054b63e23fbe28726586a05fe9378e777b68864ce8c"
+    },
+    {
+      "commit": "71379b1211f9a96b38580614a106111bedc3c257",
+      "identity": "ev_environment_compiler_verification_resource_measurements_test_20261024",
+      "kind": "verification-source",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "edfe96a911a1440af82a84fe96318a0e716a0128dfe73b269198e6d3a26ca5c1"
+    },
+    {
+      "commit": "71379b1211f9a96b38580614a106111bedc3c257",
+      "identity": "ev_environment_compiler_verification_resource_measurements_docs_20261024",
+      "kind": "projection-contract-documentation",
+      "path": "docs/PROJECTIONS.md",
+      "repository": "mncs-environment",
+      "sha256": "2df7734806a8fb5968cfec72aca48f317cc4290100fcbff6969f59a582d7d04c"
+    },
+    {
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "commit": "e874669dbd110c5a5f808249c20a086013d7e2be",
+      "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "kind": "committed-campaign-evidence",
+      "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+      "repository": "mncs-compiler",
+      "session_id": "ses_164edc158d9b1637",
+      "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e"
+    }
+  ]
+}
