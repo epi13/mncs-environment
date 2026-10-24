@@ -164,8 +164,13 @@ attestation. Pressure summaries also retain bounded `affected_work_contexts`
 and `recording_contexts`, with separate counts for work intents, affected-work
 environment versions, recording Environment IDs and definitions, and recorder
 sessions or campaigns. The two context lists preserve their different roles;
-long context text and lists are truncated with explicit flags, and the source
-record remains authoritative. A pressure hypothesis remains
+work contexts with the same campaign, session, and intent are deduplicated,
+and missing details are merged only when there is one compatible context.
+Conflicting or ambiguous context remains separate. Long context text and lists
+are truncated with explicit flags, and the source record remains authoritative.
+A bounded authenticated session-activity pointer is labeled
+`captured-in-observation-record`; it is not described as byte-verified
+independently of the containing observation record. A pressure hypothesis remains
 an interpretation: one observation does not establish recurrence, and a
 change remains unproven until later observations and independent verification
 provide evidence. An implementation record that restates its target pressure

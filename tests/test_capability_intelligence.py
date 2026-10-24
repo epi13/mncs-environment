@@ -167,6 +167,130 @@ def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_
     assert result["observations"][0]["supporting_sources"][0]["status"] == "captured-in-observation-record"
 
 
+def test_captured_session_activity_reference_is_bounded_and_inspectable(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_activity_source", "ses_compiler_activity", "cmp_compiler",
+    )
+    record["supporting_sources"].append({
+        "kind": "authenticated-session-activity-projection",
+        "repository": "mncs-compiler",
+        "campaign_id": "cmp_compiler",
+        "session_id": "ses_compiler_activity",
+        "event_identities": ["evt_0123456789abcdef", "evt_abcdef0123456789"],
+    })
+    session, _ = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    source = result["observations"][0]["supporting_sources"][1]
+    assert source["status"] == "captured-in-observation-record"
+    assert source["content_integrity_status"] == "captured-in-observation-record"
+    assert source["event_identities"] == [
+        "evt_0123456789abcdef", "evt_abcdef0123456789",
+    ]
+
+    malformed = json.loads(json.dumps(record))
+    malformed["identity"] = "ev_environment_activity_source_malformed"
+    malformed["supporting_sources"][1]["event_identities"] = ["evt_bad event id"]
+    session, _ = _session(tmp_path / "malformed", [malformed])
+
+    result = capability_intelligence.project(session)
+
+    source = result["observations"][0]["supporting_sources"][1]
+    assert source["status"] == "invalid-source-reference"
+    assert source["content_integrity_status"] == "source-reference-invalid"
+
+
+def test_pressure_contexts_merge_sparse_identity_and_keep_recorders_distinct(
+    tmp_path: Path,
+) -> None:
+    first = _observation(
+        "ev_environment_context_sparse", "ses_compiler_work", "cmp_compiler_work",
+    )
+    first["related_work"].update({
+        "work_intent_id": "int_compiler_work",
+        "work_intent_goal": "advance verified self-consumption",
+    })
+    first["recorder"].update({
+        "campaign_id": "cmp_environment_observer",
+        "session_id": "ses_environment_observer_one",
+    })
+
+    second = _observation(
+        "ev_environment_context_enriched", "ses_compiler_work", "cmp_compiler_work",
+    )
+    second["related_work"].update({
+        "work_intent_id": "int_compiler_work",
+        "work_intent_goal": "advance verified self-consumption",
+        "environment_id": "renv_compiler_work",
+        "definition_id": "env_compiler_work",
+        "environment_version": "compiler-env-v3",
+    })
+    second["recorder"].update({
+        "campaign_id": "cmp_environment_observer",
+        "session_id": "ses_environment_observer_two",
+    })
+    session, _ = _session(tmp_path, [first, second])
+
+    result = capability_intelligence.project(session)
+
+    pressure = result["pressure_hypotheses"][0]
+    assert pressure["affected_work_context_count"] == 1
+    assert pressure["affected_work_contexts"] == [{
+        "campaign_id": "cmp_compiler_work",
+        "session_id": "ses_compiler_work",
+        "work_intent_id": "int_compiler_work",
+        "work_intent_goal": "advance verified self-consumption",
+        "environment_id": "renv_compiler_work",
+        "definition_id": "env_compiler_work",
+        "environment_version": "compiler-env-v3",
+    }]
+    assert pressure["recording_context_count"] == 2
+    assert pressure["distinct_recording_session_count"] == 2
+
+
+def test_sparse_pressure_context_stays_separate_when_identity_is_ambiguous(
+    tmp_path: Path,
+) -> None:
+    sparse = _observation(
+        "ev_environment_context_ambiguous_sparse",
+        "ses_compiler_ambiguous",
+        "cmp_compiler_ambiguous",
+    )
+    sparse["related_work"].pop("work_intent_id")
+    sparse["related_work"].pop("work_intent_goal")
+    first_intent = _observation(
+        "ev_environment_context_ambiguous_first",
+        "ses_compiler_ambiguous",
+        "cmp_compiler_ambiguous",
+    )
+    first_intent["related_work"].update({
+        "work_intent_id": "int_compiler_first",
+        "work_intent_goal": "advance the first compiler capability",
+    })
+    second_intent = _observation(
+        "ev_environment_context_ambiguous_second",
+        "ses_compiler_ambiguous",
+        "cmp_compiler_ambiguous",
+    )
+    second_intent["related_work"].update({
+        "work_intent_id": "int_compiler_second",
+        "work_intent_goal": "advance the second compiler capability",
+    })
+    session, _ = _session(tmp_path, [sparse, first_intent, second_intent])
+
+    result = capability_intelligence.project(session)
+
+    contexts = result["pressure_hypotheses"][0]["affected_work_contexts"]
+    assert len(contexts) == 3
+    assert sum("work_intent_id" not in context for context in contexts) == 1
+    assert {context.get("work_intent_id") for context in contexts} == {
+        None, "int_compiler_first", "int_compiler_second",
+    }
+
+
 def test_project_correlates_recent_capability_events_without_exposing_arguments(
     tmp_path: Path,
 ) -> None:

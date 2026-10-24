@@ -1070,6 +1070,13 @@ def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, A
     if source.get("kind") == "direct-operation-result":
         summary["status"] = "captured-in-observation-record"
         return summary
+    if source.get("kind") == "authenticated-session-activity-projection":
+        if _validate_captured_session_activity_reference(source):
+            summary["status"] = "captured-in-observation-record"
+            summary["event_identities"] = list(source["event_identities"])
+        else:
+            summary["status"] = "invalid-source-reference"
+        return summary
     wanted = tuple(source.get(key) for key in ("repository", "commit", "path", "sha256"))
     match = next((reference for reference in references
                   if tuple(reference.get(key) for key in
@@ -1149,10 +1156,40 @@ def _verify_source_pointer(
 def _source_integrity_status(source: Any, cache: dict[tuple[str, str, str, str], str]) -> str:
     if isinstance(source, dict) and source.get("kind") == "direct-operation-result":
         return "captured-in-observation-record"
+    if isinstance(source, dict) and source.get(
+        "kind"
+    ) == "authenticated-session-activity-projection":
+        return (
+            "captured-in-observation-record"
+            if _validate_captured_session_activity_reference(source)
+            else "source-reference-invalid"
+        )
     pointer = _validate_source_pointer(source)
     if pointer is None:
         return "source-reference-invalid"
     return cache.get(_source_pointer_key(pointer), "not-checked")
+
+
+def _validate_captured_session_activity_reference(source: Any) -> bool:
+    """Validate a bounded session-event pointer stored in an observation."""
+    if not isinstance(source, dict):
+        return False
+    repository = source.get("repository")
+    campaign_id = source.get("campaign_id")
+    session_id = source.get("session_id")
+    event_ids = source.get("event_identities")
+    return (
+        isinstance(repository, str) and bool(repository) and len(repository) <= 160
+        and isinstance(campaign_id, str) and bool(campaign_id) and len(campaign_id) <= 160
+        and isinstance(session_id, str) and bool(session_id) and len(session_id) <= 160
+        and isinstance(event_ids, list) and 0 < len(event_ids) <= 32
+        and all(
+            isinstance(identity, str)
+            and re.fullmatch(r"evt_[A-Za-z0-9][A-Za-z0-9_-]{0,155}", identity)
+            for identity in event_ids
+        )
+        and len(set(event_ids)) == len(event_ids)
+    )
 
 
 def _validate_improvement_relation(value: Any) -> dict[str, Any] | None:
@@ -1291,22 +1328,70 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _distinct_contexts(
     observations: list[dict[str, Any]], field: str, keys: tuple[str, ...],
 ) -> list[dict[str, Any]]:
-    """Retain bounded, distinct target or recorder contexts for one pressure."""
+    """Deduplicate contexts by stable identity and merge non-conflicting detail."""
     contexts: list[dict[str, Any]] = []
-    seen: set[tuple[tuple[str, str], ...]] = set()
+    stable_keys = (
+        ("campaign_id", "session_id", "work_intent_id")
+        if field == "related_work"
+        else ("campaign_id", "session_id", "consumer_id")
+    )
+    raw_contexts = []
     for observation in observations:
         raw = observation.get(field)
         if not isinstance(raw, dict):
             continue
-        identity = tuple(
-            (key, raw[key]) for key in keys
+        incoming = {
+            key: raw[key] for key in keys
             if isinstance(raw.get(key), str) and raw[key]
-        )
-        if not identity or identity in seen:
+        }
+        if not incoming:
             continue
-        seen.add(identity)
+        raw_contexts.append(incoming)
+
+    # Process the strongest identities first so a sparse record cannot be
+    # attached to the first of several compatible contexts merely because of
+    # ledger order.
+    raw_contexts.sort(key=lambda context: (
+        -sum(key in context for key in stable_keys),
+        -len(context),
+        tuple(sorted(context.items())),
+    ))
+    for incoming in raw_contexts:
+        if incoming in contexts:
+            continue
+
+        candidates = []
+        for index, existing in enumerate(contexts):
+            shared_stable_identity = [
+                key for key in stable_keys
+                if key in incoming and key in existing
+            ]
+            if len(shared_stable_identity) < 2:
+                continue
+            if any(
+                incoming[key] != existing[key]
+                for key in stable_keys
+                if key in incoming and key in existing
+            ):
+                continue
+            if any(
+                incoming[key] != existing[key]
+                for key in keys if key in incoming and key in existing
+            ):
+                continue
+            candidates.append(index)
+
+        if len(candidates) == 1:
+            contexts[candidates[0]].update(incoming)
+            continue
+        # A missing intent/consumer can match multiple stable identities. Keep
+        # that sparse context separate rather than assigning it arbitrarily.
+        contexts.append(incoming)
+
+    result: list[dict[str, Any]] = []
+    for identity in contexts:
         context: dict[str, Any] = {}
-        for key, value in identity:
+        for key, value in identity.items():
             limit = 256 if key in ("work_intent_goal", "campaign_objective") else 160
             context[key] = _short_text(value, limit) or ""
             if len(value) > limit:
@@ -1319,8 +1404,8 @@ def _distinct_contexts(
                 "captured-in-record" if context.get("environment_version")
                 else "not-captured-in-record"
             )
-        contexts.append(context)
-    return contexts
+        result.append(context)
+    return result
 
 
 def _environment_identity_capture_status(context: dict[str, Any]) -> str:
@@ -1400,7 +1485,8 @@ def _authenticated_rpc_read_event(
         "resource_consumption": "unavailable",
         "cache_accounting": "unavailable",
     }
-    if (event.get("type") != "environment.rpc.read_observed"
+    return not (
+            event.get("type") != "environment.rpc.read_observed"
             or event.get("producer") != "mncs-control-mcp"
             or not isinstance(payload, dict)
             or payload.get("schema_version") != "mncs.environment.rpc-read-activity/1"
@@ -1457,9 +1543,8 @@ def _authenticated_rpc_read_event(
             or not isinstance(values, dict)
             or set(values) != {"control_dispatch_elapsed_ms"}
             or type(elapsed) not in {int, float}
-            or not 0 <= elapsed <= 600_000):
-        return False
-    return True
+            or not 0 <= elapsed <= 600_000
+    )
 
 
 def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
