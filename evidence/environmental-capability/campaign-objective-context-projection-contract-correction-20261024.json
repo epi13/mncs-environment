@@ -1,0 +1,105 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_campaign_objective_context_projection_contract_correction_20261024",
+  "captured_at": "2026-10-24T18:25:28Z",
+  "measurement_basis": "authenticated-projection-contract-diagnostic-and-corrected-followup-record",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_82c4e2278ec6d6bb",
+      "sequence": 45
+    },
+    "campaign_evidence_count": 96
+  },
+  "observation": {
+    "kind": "campaign-objective-context-projection-readback-contract-correction",
+    "source_interface": "MNCS Environment campaign-state environmental-capability projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_82c4e2278ec6d6bb",
+      "evidence_page_offset": 92,
+      "evidence_page_limit": 4,
+      "selected_observation_reference_identities": [
+        "ev_environment_campaign_objective_context_improvement_20261024",
+        "ev_environment_campaign_objective_context_pressure_20261024",
+        "ev_environment_campaign_objective_context_verification_20261024",
+        "ev_environment_campaign_objective_context_projection_readback_20261024"
+      ]
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_records_considered": 4,
+      "observation_records_verified": 3,
+      "observation_records_unavailable": 1,
+      "unavailable_record_identity": "ev_environment_campaign_objective_context_projection_readback_20261024",
+      "unavailable_record_diagnostic": "observation-contract-invalid",
+      "contract_correction": "The first readback omitted the required observation.request object. This follow-up supplies the request and outcome fields required by the environmental-observation/1 contract.",
+      "pressure_hypothesis_status": "present-in-projection",
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "campaign_charter_status": "verified",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The authenticated page exposed the earlier contract error and verified the pressure, implementation reference, verification record, and campaign charter. This is one session; it does not establish recurrence or outcome effects."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_campaign_objective_context_followup_20261024",
+    "addresses_hypothesis_identity": "ph_environment_campaign_objective_context_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_campaign_charter_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "1e12179afc8577208e3113f736724bb26cd8762e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "efc1941ddc8e8d58d099e935349243089c48d12effef78f77d6b93cb73ac60eb"
+    },
+    "verification_observation_identity": "ev_environment_campaign_objective_context_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_campaign_objective_context_projection_contract_readback_followup_20261024",
+    "basis": "The authenticated bounded projection verified the campaign charter and verification evidence, exposed the first follow-up record's missing required request object, and this corrected follow-up supplies the contract fields for a later projection readback to verify it.",
+    "not_measured": [
+      "cross-session pressure recurrence",
+      "whether agents reconstruct campaign objectives less often",
+      "agent outcomes after the projection change",
+      "long-term effectiveness"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-campaign-state-projection",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "checkpoint_id": "chk_82c4e2278ec6d6bb"
+    },
+    {
+      "kind": "earlier-readback-contract-diagnostic",
+      "identity": "ev_environment_campaign_objective_context_projection_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "3ff441168bd5dacac84767fdbf70f009ab1755f8",
+      "path": "evidence/environmental-capability/campaign-objective-context-projection-readback-20261024.json",
+      "sha256": "09a2232aa2ec780ca06e6f3e369aba92e6da93f0f500e45fb07b2cd4b4d76105"
+    },
+    {
+      "kind": "campaign-objective-context-verification-record",
+      "identity": "ev_environment_campaign_objective_context_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "554e0cb4f26ebecb8990c23273273b6ff3ed94bd",
+      "path": "evidence/environmental-capability/campaign-objective-context-verification-20261024.json",
+      "sha256": "072508703bd20f43ce239990739cfcc5b79567faf27653ac1b819d90fee99dd3"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence",
+    "change in agent outcomes",
+    "long-term effectiveness"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
