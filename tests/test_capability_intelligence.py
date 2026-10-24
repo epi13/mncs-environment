@@ -471,6 +471,49 @@ def test_improvement_relations_verification_record_preserves_skip_and_resource_l
     ] == "point-in-time reading after tests and proofs, not resource attribution to them"
 
 
+def test_authentic_capture_context_evidence_projects_as_one_improvement_chain(
+    tmp_path: Path,
+) -> None:
+    evidence_dir = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability"
+    )
+    records = [
+        json.loads((evidence_dir / filename).read_text(encoding="utf-8"))
+        for filename in (
+            "environment-observation-capture-context-gap-20261024.json",
+            "environment-observation-capture-context-improvement-20261024.json",
+            "improvement-relations-verification-20261024.json",
+            "compiler-cache-regression-20261024.json",
+        )
+    ]
+    implementation = records[1]["improvement_relation"]["implementation_reference"]
+    session, _ = _session(tmp_path, records, extra_refs=[implementation])
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["pressure_hypothesis_count"] == 1
+    assert result["pressure_hypotheses"][0]["identity"] == (
+        "ph_environment_observation_capture_context"
+    )
+    assert result["improvement_relation_count"] == 1
+    relation = result["improvement_relations"][0]
+    assert relation["pressure_hypothesis_status"] == "present-in-projection"
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["subsequent_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["effectiveness_assessment"] == "not-assessed"
+    observations = {item["identity"]: item for item in result["observations"]}
+    gap = observations["ev_environment_observation_capture_context_gap_20261024"]
+    followup = observations["ev_environment_compiler_cache_regression_20261024"]
+    assert gap["recording_context"]["session_id"] == "ses_c38b0ab35b9418ba"
+    assert followup["related_work"]["session_id"] == "ses_164edc158d9b1637"
+    assert followup["recording_context"]["session_id"] == "ses_c38b0ab35b9418ba"
+
+
 def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_large", "ses_compiler", "cmp_compiler")
     record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000
