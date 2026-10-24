@@ -1,0 +1,106 @@
+{
+  "captured_at": "2026-10-24T18:59:42Z",
+  "identity": "ev_environment_compiler_schema_family_projection_readback_20261024",
+  "measurement_basis": "authenticated-canonical-campaign-state-and-capability-projection-readback",
+  "not_measured": [
+    "why the bounded canonical projection reported partial status",
+    "production exposure of the feature-branch code",
+    "whether the implementation changes subsequent Compiler agent activity",
+    "cross-session recurrence and long-term effectiveness"
+  ],
+  "observation": {
+    "kind": "compiler-schema-family-projection-canonical-readback",
+    "outcome": {
+      "analysis_limit": "The bounded canonical page returned four observations and validated the improvement relation and verification record. Its partial status is retained as observed; this readback does not establish production exposure, pressure resolution, or later agent outcomes.",
+      "campaign_evidence_count": 105,
+      "canonical_projection_observation_count": 4,
+      "canonical_projection_status": "partial",
+      "effectiveness_assessment": "not-assessed",
+      "implementation_reference_status": "not-present-in-selected-campaign-evidence-window",
+      "improvement_relation_identity": "im_environment_compiler_schema_family_projection_20261024",
+      "improvement_relation_status": "validated",
+      "pressure_hypothesis_identity": "ph_environment_compiler_domain_evidence_projection_20261024",
+      "subsequent_record_status": "not-present-in-projection-at-this-readback",
+      "verification_record_status": "record-integrity-verified-in-projection"
+    },
+    "request": {
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "checkpoint_id": "chk_8456980b45a0bdfe",
+      "evidence_identities": [
+        "ev_environment_compiler_regression_projection_readback_20261024",
+        "ev_environment_compiler_schema_family_projection_implementation_20261024",
+        "ev_environment_compiler_schema_family_projection_verification_20261024",
+        "ev_environment_compiler_schema_family_projection_improvement_20261024"
+      ],
+      "evidence_page_limit": 4,
+      "evidence_page_offset": 101,
+      "operation": "campaign_state",
+      "session_id": "ses_c98eb637e20a5c14"
+    },
+    "source_interface": "MNCS Environment campaign_state and environmental_capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_1991cffb20bdf206",
+    "session_id": "ses_c98eb637e20a5c14"
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "campaign_objective": "Improve MNCS's ability to observe, understand, and enhance its effectiveness in supporting autonomous agents using evidence from real development.",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_1991cffb20bdf206",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "3559e123f5e49e41b35b5b577aedc89a897e8b41",
+      "identity": "ev_environment_compiler_schema_family_projection_implementation_20261024",
+      "path": "evidence/environmental-capability/compiler-schema-family-projection-implementation-20261024.json",
+      "repository": "mncs-environment",
+      "sha256": "0b4570ea5ae74c2a568b5a4e12e838a8532966835d10b46e9b8380e98c4dad68"
+    },
+    {
+      "commit": "3559e123f5e49e41b35b5b577aedc89a897e8b41",
+      "identity": "ev_environment_compiler_schema_family_projection_verification_20261024",
+      "path": "evidence/environmental-capability/compiler-schema-family-projection-verification-20261024.json",
+      "repository": "mncs-environment",
+      "sha256": "224a814b2630f59800fd812f87b451869500352883ff397e4a9a8ee6b616fe57"
+    },
+    {
+      "commit": "3559e123f5e49e41b35b5b577aedc89a897e8b41",
+      "identity": "ev_environment_compiler_schema_family_projection_improvement_20261024",
+      "path": "evidence/environmental-capability/compiler-schema-family-projection-improvement-20261024.json",
+      "repository": "mncs-environment",
+      "sha256": "7bb4231b99ba15f6d5a9ff37a1b0193a1fc2e86efbb246412c4193a1bb910576"
+    },
+    {
+      "commit": "c9d54cdfcf8c03fce0a1a904d32e147d7f287a9d",
+      "identity": "ev_compiler_digest_application_interface_invalidation_20261023",
+      "kind": "compiler-regression-source-record",
+      "path": "evidence/language-module-interface-application-invalidation-compiler-20261023.json",
+      "repository": "mncs-compiler",
+      "sha256": "ce67f0ff837bba0ff73301cb398198da5ff9125e8fe8cb75c45c5f26a1715177"
+    },
+    {
+      "commit": "e874669dbd110c5a5f808249c20a086013d7e2be",
+      "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "kind": "compiler-regression-source-record",
+      "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+      "repository": "mncs-compiler",
+      "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e"
+    },
+    {
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "kind": "compiler-regression-source-record",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "repository": "mncs-compiler",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    }
+  ]
+}
