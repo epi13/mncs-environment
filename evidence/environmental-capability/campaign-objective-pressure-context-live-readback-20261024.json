@@ -1,0 +1,103 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_campaign_objective_pressure_context_live_readback_20261024",
+  "captured_at": "2026-10-24T15:00:38+00:00",
+  "measurement_basis": "authenticated-campaign-state-pressure-and-improvement-readback",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_6a7b4b006e94b261",
+    "campaign_evidence_count": 23,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "campaign-objective-pressure-improvement-live-readback",
+    "source_interface": "MNCS Environment campaign-state environmental_capability projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_6a7b4b006e94b261",
+      "evidence_offset": 19,
+      "evidence_limit": 4,
+      "pressure_hypothesis_identity": "ph_environment_pressure_context_campaign_objective",
+      "improvement_relation_identity": "im_environment_pressure_context_campaign_objective_20261024"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_records_considered": 4,
+      "observation_records_verified": 3,
+      "source_pointer_count": 5,
+      "source_pointer_content_integrity_verified_count": 5,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "pressure_hypothesis_status": "present-in-projection",
+      "pressure_observation_count": 1,
+      "recurrence_status": "not-established",
+      "affected_work_context_count": 1,
+      "campaign_objective_present": true,
+      "work_intent_goal_present": true,
+      "improvement_relation_status": "present-in-projection",
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "subsequent_record_status": "not-recorded",
+      "implementation_content_integrity_status": "content-integrity-verified",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The projection verifies the implementation relation and test record, and exposes both recorded objective levels. It has only one observation of this newly recorded pressure, so recurrence and agent impact remain unestablished. No subsequent operational observation is linked yet."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    },
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_campaign_objective_pressure_context_gap_20261024",
+      "repository": "mncs-environment",
+      "commit": "7b5f60ee3bc4dd97cafbc1042d640e4c73378465",
+      "path": "evidence/environmental-capability/campaign-objective-pressure-context-gap-20261024.json",
+      "sha256": "54d43132994b81b108c35acdc606f73e0e885df38f6738943a6bab64f71eea76"
+    },
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_campaign_objective_pressure_context_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "7b5f60ee3bc4dd97cafbc1042d640e4c73378465",
+      "path": "evidence/environmental-capability/campaign-objective-pressure-context-verification-20261024.json",
+      "sha256": "0586e900b644f82c725397ba96d2f4a9883eca66fa6be9b6aee7c3a69a9bbcad"
+    },
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_campaign_objective_pressure_context_improvement_20261024",
+      "repository": "mncs-environment",
+      "commit": "7b5f60ee3bc4dd97cafbc1042d640e4c73378465",
+      "path": "evidence/environmental-capability/campaign-objective-pressure-context-improvement-20261024.json",
+      "sha256": "a21185c123a9e1e22319276088e4518134506d41ed7e4017d8168232d0ad738e"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_campaign_objective_pressure_context_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "32ba51b51cf145bcb0d636bc5751d45ef62649ff",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "98190ba644619e181f901cc6276dbc64bbe4434d0006a87823fc931d532667c3"
+    }
+  ],
+  "not_measured": [
+    "whether a subsequent Compiler observation preserves the campaign objective in another work context",
+    "whether exposing both objective levels changes agent decisions or discovery behavior",
+    "recurrence across distinct work sessions",
+    "long-term effectiveness of the refinement"
+  ]
+}

@@ -1360,6 +1360,7 @@ def test_campaign_objective_context_gap_projects_verified_improvement(
             "campaign-objective-pressure-context-gap-20261024.json",
             "campaign-objective-pressure-context-verification-20261024.json",
             "campaign-objective-pressure-context-improvement-20261024.json",
+            "campaign-objective-pressure-context-live-readback-20261024.json",
         )
     ]
     implementation = records[2]["improvement_relation"]["implementation_reference"]
@@ -1384,6 +1385,9 @@ def test_campaign_objective_context_gap_projects_verified_improvement(
     )
     assert relation["subsequent_record_status"] == "not-recorded"
     assert relation["effectiveness_assessment"] == "not-assessed"
+    assert "ev_environment_campaign_objective_pressure_context_live_readback_20261024" in {
+        item["identity"] for item in result["observations"]
+    }
 
 
 def test_authentic_recorder_environment_identity_is_projected_separately(
