@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_observation_digest_guard_live_readback_20261024",
+  "captured_at": "2026-10-24T17:17:19+00:00",
+  "measurement_basis": "authenticated-checkpoint-rejection-followed-by-campaign-state-readback",
+  "observation": {
+    "kind": "environmental-observation-digest-guard-live-readback",
+    "source_interface": "MNCS Environment checkpoint and campaign-state operations",
+    "request": {
+      "session_id": "ses_c98eb637e20a5c14",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "campaign_state_checkpoint_id_before_probe": "chk_ed915fa3778a85b2",
+      "attempted_reference": {
+        "identity": "ev_environment_digest_guard_rejection_probe_20261024",
+        "repository": "mncs-environment",
+        "path": "evidence/environmental-capability/rejection-probe.json",
+        "sha256_supplied": false
+      }
+    },
+    "outcome": {
+      "checkpoint_operation": {
+        "status": "rejected-before-campaign-publication",
+        "exit_code": 2,
+        "error": "environmental-capability observation references require sha256"
+      },
+      "subsequent_campaign_state_read": {
+        "status": "succeeded",
+        "checkpoint_id": "chk_ed915fa3778a85b2",
+        "evidence_count": 80,
+        "latest_evidence_identity": "ev_environment_source_registration_scope_compact_chain_live_readback_20261024",
+        "rejected_probe_identity_present": false
+      },
+      "historical_integrity_status": "earlier unavailable references remain visible in the bounded capability projection",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "This is one direct API rejection and readback. It proves the contract is active on this Environment worktree and preserves this campaign's prior state; it does not establish future authoring compliance or agent impact."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_ed915fa3778a85b2",
+    "campaign_evidence_count_before_recording": 80,
+    "claim_ids": ["claim:mncs-environment:worktree:567a0ed75512"]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "digest-guard-verification-observation",
+      "identity": "ev_environment_observation_digest_guard_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "71cf37d08ce250482f49f4a8386db021b1c16ec0",
+      "path": "evidence/environmental-capability/observation-digest-guard-verification-20261024.json",
+      "sha256": "9ce3d006835295654f59bdce0ccfdfdff56c80b52ecaa1d1ceb4c768ec020abe"
+    },
+    {
+      "kind": "committed-digest-guard-implementation",
+      "identity": "ev_environment_observation_digest_guard_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "71cf37d08ce250482f49f4a8386db021b1c16ec0",
+      "path": "mncs_env/sessions.py",
+      "sha256": "4765017d771f4fb36cf1d541f016ba35b42b00e8a6fb018be5ba3f40ad6c1025"
+    }
+  ],
+  "not_measured": [
+    "future compliance with the digest rule",
+    "whether other repositories need an equivalent requirement",
+    "effectiveness across future agent sessions"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

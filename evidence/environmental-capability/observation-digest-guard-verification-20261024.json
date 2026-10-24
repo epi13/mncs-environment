@@ -1,0 +1,134 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_observation_digest_guard_verification_20261024",
+  "captured_at": "2026-10-24T17:17:19+00:00",
+  "measurement_basis": "authenticated-checkpoint-rejection-readback-and-targeted-verification",
+  "observation": {
+    "kind": "environmental-observation-digest-guard-verification",
+    "source_interface": "MNCS Environment checkpoint, campaign-state, pytest, and vertical proof",
+    "request": {
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "campaign_state_checkpoint_id_before_probe": "chk_ed915fa3778a85b2",
+      "implementation_commit": "71cf37d08ce250482f49f4a8386db021b1c16ec0",
+      "probe_reference_identity": "ev_environment_digest_guard_rejection_probe_20261024",
+      "probe_path": "evidence/environmental-capability/rejection-probe.json",
+      "targeted_test_command": "python3 -m pytest -q tests/test_campaign_metadata_bounds.py tests/test_environment.py -k 'campaign_evidence or campaign_checkpoint'",
+      "vertical_proof_command": "python3 scripts/vertical_proof.py"
+    },
+    "outcome": {
+      "prior_projection": {
+        "identity": "eci_9670e58dab28a7ae",
+        "checkpoint_id": "chk_ed915fa3778a85b2",
+        "evidence_offset": 64,
+        "evidence_limit": 16,
+        "observation_records_verified": 9,
+        "observation_records_unavailable": 4
+      },
+      "checkpoint_guard": {
+        "status": "rejected-before-campaign-publication",
+        "tool_exit_code": 2,
+        "error": "environmental-capability observation references require sha256"
+      },
+      "campaign_state_after_probe": {
+        "status": "readable",
+        "checkpoint_id": "chk_ed915fa3778a85b2",
+        "evidence_count": 80,
+        "latest_evidence_identity": "ev_environment_source_registration_scope_compact_chain_live_readback_20261024",
+        "probe_identity_published": false
+      },
+      "targeted_checkpoint_tests": {
+        "status": "passed",
+        "passed": 12,
+        "deselected": 223,
+        "failed": 0
+      },
+      "vertical_proof": {
+        "status": "passed",
+        "session_id": "ses_7b683d86434da353",
+        "provider_bindings": 30,
+        "events": 15,
+        "checkpoints": 3,
+        "handoffs": 1
+      },
+      "full_suite_baseline_before_contract_change": {
+        "status": "passed",
+        "passed": 862,
+        "skipped": 81,
+        "failed": 0
+      },
+      "analysis_limit": "The full suite result predates this contract change; targeted checkpoint/evidence tests and the vertical proof ran after the final change. One live rejection probe verifies the first-party path; future campaigns must still confirm the rule in routine use."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_ed915fa3778a85b2",
+    "campaign_evidence_count_before_recording": 80,
+    "claim_ids": ["claim:mncs-environment:worktree:567a0ed75512"]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_observation_digest_required_20261024",
+    "title": "New environmental observation records can enter the ledger without a verifiable content digest",
+    "category": "evidence-provenance",
+    "subsystem": "Environment campaign checkpoint publication and capability projection",
+    "owner": "mncs-environment",
+    "basis": "A bounded projection found four earlier observation references unavailable, including digestless first-party records. After the new guard was committed, an authenticated digestless checkpoint attempt was rejected and the prior 80-reference campaign state remained readable.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Require SHA-256 for newly appended first-party environmental-capability observation JSON while preserving legacy history and generic campaign references.",
+    "not_measured": [
+      "whether digestless first-party observations were a recurring authoring problem",
+      "whether the rule will prevent all future unverifiable observation references",
+      "whether agents use the resulting projections differently"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "digest-guard-implementation",
+      "identity": "ev_environment_observation_digest_guard_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "71cf37d08ce250482f49f4a8386db021b1c16ec0",
+      "path": "mncs_env/sessions.py",
+      "sha256": "4765017d771f4fb36cf1d541f016ba35b42b00e8a6fb018be5ba3f40ad6c1025"
+    },
+    {
+      "kind": "digest-guard-regression-test",
+      "identity": "ev_environment_observation_digest_guard_test_20261024",
+      "repository": "mncs-environment",
+      "commit": "71cf37d08ce250482f49f4a8386db021b1c16ec0",
+      "path": "tests/test_campaign_metadata_bounds.py",
+      "sha256": "1cdfb31e3abd345223309eb364a206e9837037f1c9f62f419a3de59957db8f74"
+    },
+    {
+      "kind": "digest-guard-contract-documentation",
+      "identity": "ev_environment_observation_digest_guard_contract_20261024",
+      "repository": "mncs-environment",
+      "commit": "71cf37d08ce250482f49f4a8386db021b1c16ec0",
+      "path": "docs/ENTRY.md",
+      "sha256": "482959791d61e1a5b8fa19036a3e73c290235b6d87f0227d84792eebfdbcbdd6"
+    },
+    {
+      "kind": "pre-guard-projection-readback",
+      "identity": "ev_environment_source_registration_scope_compact_chain_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "9799440a6000b4d49a7667efc9db839bb5f4476d",
+      "path": "evidence/environmental-capability/source-registration-scope-compact-chain-live-readback-20261024.json",
+      "sha256": "80acc405e0b6c4f2a7bdac6a592280c186b25c1b24cc4c102579e86a30069ac8"
+    }
+  ],
+  "not_measured": [
+    "long-term prevention of digestless observation references",
+    "future recurrence in other campaigns or repositories",
+    "agent effectiveness or outcome impact"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
