@@ -1997,13 +1997,60 @@ def test_later_corrected_identity_for_same_observation_source_is_read(tmp_path: 
     assert result["source"]["observation_reference_diagnostic_count"] == 1
     assert result["source"]["observation_reference_diagnostics"] == [{
         "identity": "ev_environment_stale_pointer",
+        "record_identity": valid_identity,
         "repository": "mncs-environment",
         "commit": result["observations"][0]["evidence_reference"]["commit"],
         "sha256": result["observations"][0]["evidence_reference"]["sha256"],
-        "verification": "observation-contract-invalid",
+        "verification": "observation-identity-mismatch",
         "path": result["observations"][0]["evidence_reference"]["path"],
         "path_truncated": False,
     }]
+
+
+def test_authentic_campaign_alias_mismatches_are_diagnosed_without_projection(
+    tmp_path: Path,
+) -> None:
+    evidence_root = Path(__file__).resolve().parents[1] / "evidence" / "environmental-capability"
+    names_and_aliases = (
+        (
+            "read-operation-live-projection-context-20261024.json",
+            "ev_environment_rpc_context_basis_prechange_20261024",
+        ),
+        (
+            "read-operation-live-projection-context-followup-20261024.json",
+            "ev_environment_rpc_context_basis_followup_20261024",
+        ),
+    )
+    records = [
+        json.loads((evidence_root / name).read_text(encoding="utf-8"))
+        for name, _alias in names_and_aliases
+    ]
+    session, state = _session(tmp_path, records)
+    for reference, (_name, alias) in zip(
+        state["evidence"], names_and_aliases, strict=True,
+    ):
+        reference["identity"] = alias
+
+    result = capability_intelligence.project(session)
+
+    assert result["observation_count"] == 0
+    assert result["pressure_hypothesis_count"] == 0
+    assert result["source"]["observation_records_unavailable"] == 2
+    assert result["source"]["observation_reference_diagnostics"] == [
+        {
+            "identity": alias,
+            "record_identity": record["identity"],
+            "repository": "mncs-environment",
+            "commit": state["evidence"][index]["commit"],
+            "sha256": state["evidence"][index]["sha256"],
+            "verification": "observation-identity-mismatch",
+            "path": state["evidence"][index]["path"],
+            "path_truncated": False,
+        }
+        for index, (record, (_name, alias)) in enumerate(
+            zip(records, names_and_aliases, strict=True),
+        )
+    ]
 
 
 def test_recorded_source_session_context_stays_distinct_from_related_work(tmp_path: Path) -> None:

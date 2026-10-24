@@ -432,7 +432,10 @@ def _compact_projection(
             continue
         compact_diagnostics.append({
             key: _short_text(diagnostic.get(key), 192 if key == "path" else 160)
-            for key in ("identity", "repository", "commit", "sha256", "verification", "path")
+            for key in (
+                "identity", "record_identity", "repository", "commit",
+                "sha256", "verification", "path",
+            )
             if isinstance(diagnostic.get(key), str)
         })
         if type(diagnostic.get("path_truncated")) is bool:
@@ -1027,6 +1030,8 @@ def _load_observation(
         return None, "invalid-json"
     if not isinstance(record, dict):
         return None, "observation-contract-invalid"
+    if record.get("identity") != reference["identity"]:
+        return record, "observation-identity-mismatch"
     observation = record.get("observation")
     related_work = record.get("related_work")
     source_session_context = (
@@ -1036,7 +1041,6 @@ def _load_observation(
     hypothesis = record.get("pressure_hypothesis")
     recorder = record.get("recorder")
     if (record.get("schema_version") != OBSERVATION_SCHEMA
-            or record.get("identity") != reference["identity"]
             or not isinstance(record.get("captured_at"), str)
             or not isinstance(observation, dict)
             or not isinstance(observation.get("kind"), str)
@@ -2165,8 +2169,13 @@ def project(
                 session, pointer, root, deadline=read_deadline,
             )
         reference = {**pointer, "verification": verification}
+        if (verification == "observation-identity-mismatch"
+                and isinstance(record, dict)
+                and isinstance(record.get("identity"), str)
+                and record["identity"]):
+            reference["record_identity"] = record["identity"][:160]
         references.append(reference)
-        if record is None:
+        if record is None or verification != "verified":
             unavailable += 1
             continue
         verified_records.append((record, reference))
@@ -2189,7 +2198,10 @@ def project(
         path = reference["path"]
         observation_reference_diagnostics.append({
             key: reference[key]
-            for key in ("identity", "repository", "commit", "sha256", "verification")
+            for key in (
+                "identity", "record_identity", "repository", "commit",
+                "sha256", "verification",
+            )
             if reference.get(key) is not None
         } | {
             "path": path[:512],

@@ -145,6 +145,12 @@ SHA-256 against the selected checkout, and retains exact commit/path pointers.
 Evidence in an unselected repository is named but not opened. Results are
 computed when requested; no transcript copy, separate telemetry store, or
 permanent dashboard is created.
+If a committed record's internal identity differs from its campaign evidence
+pointer, the record remains unavailable to pressure analysis and diagnostics
+report `observation-identity-mismatch` with both identities after content hash
+verification. This distinguishes a pointer-provenance mismatch from other
+observation contract failures without treating either identity as authoritative
+over the other.
 
 An observation relates the recorded operation to its originating campaign,
 session, work intent, and affected subsystem. Its separate `recording_context`
