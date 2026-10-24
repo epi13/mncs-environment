@@ -1,0 +1,176 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_resource_sample_live_readback_20261024",
+  "captured_at": "2026-10-24T22:13:33Z",
+  "measurement_basis": "live-environmental-capability-projection-from-store-backed-monitor-artifact",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:2c053337561b"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "read-only-system-resource-sample-projection-live-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "source_session_id": "ses_ac2a1c952b857f40",
+      "source_consumer_id": "eci-resource-sample-verifier",
+      "capability": "mncs-system-monitor:system-resource-sample",
+      "projection_command": "scripts/mncs-env projections ses_ac2a1c952b857f40 --consumer eci-resource-sample-verifier --interpret environmental-capability"
+    },
+    "source_session_context": {
+      "campaign_id": "cmp_4ac58f33ee579df0",
+      "session_id": "ses_ac2a1c952b857f40",
+      "work_intent_id": "int_d368f1b86099a0ed",
+      "work_intent_goal": "capture a read-only Monitor sample to verify environmental capability evidence",
+      "environment_id": "renv_7563111a7968468a",
+      "definition_id": "env_864c137fda415a76"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "projection_observation_count": 1,
+      "session_resource_samples_status": "available",
+      "session_resource_sample_count": 1,
+      "event_correlation_status": "matched-by-provider-request-id",
+      "provider_request_id": "req_45c562afc330eca12db01b07800e8d93754bb73207dde453",
+      "provider": "mncs-system-monitor",
+      "binding_id": "cap_9a39cbc2cdf18f11",
+      "contract_revision": "1",
+      "sample_schema": "mncs.system-monitor.resource-sample.v1",
+      "sample_time": "2026-10-24T21:46:31Z",
+      "host_facts": {
+        "cpu_count": 8,
+        "cpu_utilization": null,
+        "load_average": [
+          1.27,
+          1.3,
+          1.26
+        ],
+        "memory_available_bytes": 23808196608,
+        "memory_total_bytes": 33411571712
+      },
+      "measurement_availability": {
+        "host.cpu_count": "measured",
+        "host.cpu_utilization": "unavailable",
+        "host.load_average": "measured",
+        "host.memory_available_bytes": "measured",
+        "host.memory_total_bytes": "measured"
+      },
+      "artifact_reference": {
+        "store_reference": "mncs-store:ses_ac2a1c952b857f40:capability-invocation-artifacts:04186eebb3316401e10eefa11c3b81e9e0a868635cb2da8533263111f0cd0cd5",
+        "path": "system-resource-sample.json",
+        "byte_count": 460,
+        "sha256": "928714a560fb274f7c158abbcf4ad1b23d438d25bba9896c30a2375b38c39d3f"
+      },
+      "event_references": {
+        "invocation_event": "evt_28020b0496fd023c",
+        "completion_event": "evt_6447f2fe537d0b26"
+      },
+      "pressure_hypothesis_count": 0,
+      "session_activity_pressure_candidate_count": 0,
+      "interpretation": "The selected read-only Monitor capability produced a privacy-minimized sample that the Environment projection correlated to the source session objective and exact invocation events. Aggregate memory and load facts were measured; CPU utilization remained explicitly unavailable. The top-level projection was partial because the source verifier campaign had no persisted campaign ledger; its authenticated session sample remained available. One host snapshot supports a capability and measurement-availability observation, not a resource-pressure or agent-consumption claim."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_monitor_resource_samples_not_exposed_20261024",
+    "title": "Store-backed Monitor samples are absent from session capability intelligence",
+    "category": "resource-observability",
+    "subsystem": "mncs-environment capability-intelligence projection and System Monitor artifact integration",
+    "owner": "mncs-environment",
+    "basis": "The baseline capability-intelligence source at f345d619b442ec16cb549c68fb791caef911af9f contains no System Monitor resource-sample artifact reader or projection adapter. A real read-only Monitor artifact and its exact session invocation/completion events are now available, but the baseline projection had no path to expose that evidence or relate it to the session objective. This is a structural integration finding from source comparison, not a historical claim that prior agents were blocked.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Expose the newest bounded Store-backed Monitor sample per session binding through the existing capability-intelligence projection, correlate it to invocation and completion events by provider request identity and exact artifact reference, retain objective and environment context, and distinguish measured, derived, and unavailable fields.",
+    "not_measured": [
+      "whether prior agents encountered resource-observation pressure",
+      "recurrence across sessions or work objectives",
+      "agent-attributed resource consumption",
+      "whether this projection changes subsequent development outcomes"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_monitor_resource_samples_projection_20261024",
+    "addresses_hypothesis_identity": "ph_environment_monitor_resource_samples_not_exposed_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_resource_sample_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "ba3dfe9c30b54c4a8755ee4c7af8bb3df4bfb33b",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8ae124d6c90636cff66485ead6a304241786b288c37c07e72190df93b05b771d"
+    },
+    "verification_observation_identity": "ev_environment_resource_sample_live_readback_20261024",
+    "subsequent_observation_identity": null,
+    "basis": "The focused capability-intelligence and entry regressions pass 138 tests, the real-provider Environment vertical proof passes, and a live projection query over the Store-backed Monitor invocation exposes one privacy-minimized sample with exact source events and artifact digest. This verifies the integration contract and one real readback; it does not establish recurrence or later environmental effectiveness.",
+    "not_measured": [
+      "subsequent independent use of the projection",
+      "empirical elimination of recurring resource pressure",
+      "CPU utilization for this sample"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "source-review",
+      "identity": "ev_environment_resource_sample_projection_baseline_20261024",
+      "repository": "mncs-environment",
+      "commit": "f345d619b442ec16cb549c68fb791caef911af9f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "2e2084fddc311eef013c6dee9e9f6a10ed37ed1e7eaf65f966a0fce2de9f824a",
+      "verified_behavior": "The baseline file contains no System Monitor resource-sample artifact projection path."
+    },
+    {
+      "kind": "source-review",
+      "identity": "ev_environment_resource_sample_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "ba3dfe9c30b54c4a8755ee4c7af8bb3df4bfb33b",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8ae124d6c90636cff66485ead6a304241786b288c37c07e72190df93b05b771d",
+      "verified_behavior": "Bounded Store-backed resource sample projection, request/event/artifact correlation, privacy minimization, and measured/derived/unavailable field reporting."
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "projections",
+      "session_id": "ses_ac2a1c952b857f40",
+      "campaign_id": "cmp_4ac58f33ee579df0",
+      "projection_status": "partial",
+      "resource_sample_status": "available",
+      "event_identities": [
+        "evt_28020b0496fd023c",
+        "evt_6447f2fe537d0b26"
+      ]
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "focused-tests",
+      "command": "env -u MNCS_BIN -u MNCS_BINARY -u MNCS_LANGUAGE_ROOT -u MNCS_TEST_NATIVE PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q tests/test_capability_intelligence.py tests/test_entry.py",
+      "passed": 138,
+      "failed": 0
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "vertical-proof",
+      "command": "python3 scripts/vertical_proof.py",
+      "result": "VERTICAL PROOF: PASS"
+    }
+  ],
+  "not_measured": [
+    "whether CPU utilization was unavailable because of host support, provider collection conditions, or a transient capture issue",
+    "agent-attributed resource consumption; the sample describes host conditions at capture time",
+    "recurrence of resource pressure across sessions or work objectives",
+    "whether the new projection changes subsequent development outcomes"
+  ]
+}
