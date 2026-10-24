@@ -231,9 +231,11 @@ needed:
 
 Use the same session identity and the returned offset for the next page. The
 projection is computed for that page, so related records may need to be read
-from a later page. A compact `partial` projection keeps bounded summaries and
-exact references; query the page containing a relationship to inspect its
-linked observations together.
+from a later page. Its `source.evidence_page_offset`, `source.evidence_page_limit`,
+and `source.next_evidence_offset` repeat the cursor for the page analyzed, so an
+agent reading only the projection can continue the query. A compact `partial`
+projection keeps bounded summaries and exact references; query the page
+containing a relationship to inspect its linked observations together.
 
 Campaign metadata updates use optimistic concurrency. Copy the
 `campaign_state_checkpoint_id` from the current capsule into

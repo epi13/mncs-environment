@@ -155,6 +155,27 @@ def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_
     assert result["observations"][0]["supporting_sources"][0]["status"] == "captured-in-observation-record"
 
 
+def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path) -> None:
+    record = _observation("ev_environment_observation_page", "ses_compiler", "cmp_compiler")
+    record["observation"]["outcome"]["bounded_context"] = "x" * 8_000
+    session, state = _session(tmp_path, [record])
+    state.update({
+        "evidence_offset": 8,
+        "evidence_limit": 8,
+        "evidence_truncated": True,
+        "next_evidence_offset": 16,
+    })
+
+    projection = capability_intelligence.project(session)
+    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+
+    for result in (projection, compact):
+        assert result["source"]["evidence_page_offset"] == 8
+        assert result["source"]["evidence_page_limit"] == 8
+        assert result["source"]["next_evidence_offset"] == 16
+        assert result["source"]["evidence_page_truncated"] is True
+
+
 def test_project_does_not_read_a_supporting_repo_outside_selected_session(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_one", "ses_compiler_one", "cmp_compiler")
     control_source = {

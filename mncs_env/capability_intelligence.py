@@ -132,6 +132,8 @@ def _compact_projection(
     compact_source = {
         key: source.get(key)
         for key in ("evidence_count", "evidence_page_truncated",
+                    "evidence_page_offset", "evidence_page_limit",
+                    "next_evidence_offset",
                     "observation_records_considered",
                     "observation_records_verified",
                     "observation_records_unavailable")
@@ -692,6 +694,21 @@ def project(
             "recorded_by": state.get("recorded_by"),
             "evidence_count": state.get("evidence_count", 0),
             "evidence_page_truncated": page_truncated,
+            "evidence_page_offset": (
+                state.get("evidence_offset")
+                if type(state.get("evidence_offset")) is int
+                and state["evidence_offset"] >= 0 else None
+            ),
+            "evidence_page_limit": (
+                state.get("evidence_limit")
+                if type(state.get("evidence_limit")) is int
+                and state["evidence_limit"] > 0 else None
+            ),
+            "next_evidence_offset": (
+                state.get("next_evidence_offset")
+                if type(state.get("next_evidence_offset")) is int
+                and state["next_evidence_offset"] >= 0 else None
+            ),
             "observation_records_considered": len(references),
             "observation_records_verified": len(observations),
             "observation_records_unavailable": unavailable,
@@ -709,6 +726,7 @@ def project(
         "observations": observations,
         "measurement_limits": [
             "Only committed observation records linked from this campaign-state page are considered.",
+            "The source evidence page offset and next offset identify the page to inspect when continuing this projection.",
             "An unavailable or unselected source is surfaced without reading it or treating it as verified.",
             "Repeated references to the same committed observation do not establish recurrence.",
             "Candidate continuation count is not treated as repeated pressure; recurrence requires distinct recorded observations.",
