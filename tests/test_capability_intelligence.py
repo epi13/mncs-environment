@@ -1049,6 +1049,29 @@ def test_compiler_cache_observation_keeps_resource_limits_and_source_unselected(
     assert first_stage["peak_cgroup_memory_bytes"] is None
 
 
+def test_compact_projection_preserves_source_registration_scope_result(
+    tmp_path: Path,
+) -> None:
+    path = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability/source-registration-scope-live-readback-20261024.json"
+    )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    session, _ = _session(tmp_path, [record])
+
+    compact = capability_intelligence.project(session, max_result_bytes=8000)
+
+    assert compact["source"]["response_truncated"] is True
+    context = compact["observations"][0]["observation"]["outcome_context"]
+    assert context["projection_status"] == "partial"
+    assert context["source_registration_status"] == (
+        "not-present-in-selected-campaign-evidence-window"
+    )
+    assert context["registration_scope"] == "selected-campaign-evidence-window"
+    assert context["source_content_integrity_status"] == (
+        "workspace-read-only-content-integrity-verified"
+    )
+
+
 def test_improvement_relation_links_pressure_change_verification_and_followup(
     tmp_path: Path,
 ) -> None:

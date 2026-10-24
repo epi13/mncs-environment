@@ -385,6 +385,10 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
         "interpretation_limit", "implementation_change",
         "effectiveness_assessment", "recurrence_status",
         "verification_record_status", "subsequent_record_status",
+        "projection_status", "observation_identity", "source_campaign_id",
+        "source_session_id", "compiler_source_status",
+        "source_registration_status", "registration_scope",
+        "content_integrity_status", "source_content_integrity_status",
     )
     for key in text_fields:
         value = outcome.get(key)
