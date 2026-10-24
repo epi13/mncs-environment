@@ -325,6 +325,12 @@ def normalize_campaign_evidence(value: Any) -> list[dict[str, str]]:
         if ("\\" in path or pure_path.is_absolute() or path.startswith("~")
                 or any(part in ("", ".", "..") for part in parts)):
             raise ValueError("campaign evidence path must be a normalized repository-relative path")
+        if (repository == "mncs-environment"
+                and path.startswith("evidence/environmental-capability/")
+                and path.endswith(".json") and "sha256" not in item):
+            raise ValueError(
+                "environmental-capability observation references require sha256"
+            )
         record = {
             "identity": identity,
             "repository": repository,

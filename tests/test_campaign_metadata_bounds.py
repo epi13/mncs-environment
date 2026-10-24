@@ -47,3 +47,26 @@ def test_campaign_evidence_remains_bounded_by_normalized_utf8_size() -> None:
 
     with pytest.raises(ValueError, match="bounded publication size"):
         normalize_campaign_evidence(references)
+
+
+def test_environment_capability_observation_reference_requires_digest() -> None:
+    observation = _reference(1, path=(
+        "evidence/environmental-capability/observation.json"
+    ))
+    observation.pop("sha256")
+
+    with pytest.raises(ValueError, match="environmental-capability.*require sha256"):
+        normalize_campaign_evidence([observation])
+
+    signed_observation = _reference(3, path=(
+        "evidence/environmental-capability/observation.json"
+    ))
+    assert normalize_campaign_evidence([signed_observation])[0]["sha256"] == (
+        signed_observation["sha256"]
+    )
+
+    generic = _reference(2, path="evidence/compiler/source.json")
+    generic.pop("sha256")
+    normalized = normalize_campaign_evidence([generic])
+    assert normalized[0]["path"] == "evidence/compiler/source.json"
+    assert "sha256" not in normalized[0]
