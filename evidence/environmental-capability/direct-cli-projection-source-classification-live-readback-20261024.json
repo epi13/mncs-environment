@@ -1,0 +1,76 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_direct_cli_projection_source_classification_live_readback_20261024",
+  "captured_at": "2026-10-24T16:06:51+00:00",
+  "observation": {
+    "kind": "environmental-capability-source-classification-live-readback",
+    "source_interface": "mncs-env environmental-capability projection",
+    "request": {
+      "campaign_checkpoint_id": "chk_9ac2caff979bcbec",
+      "campaign_evidence_count": 49,
+      "projection_parameters": {
+        "history_pages": 4,
+        "evidence_offset": 38,
+        "evidence_limit": 11
+      },
+      "source_observation_identity": "ev_environment_capability_projection_mcp_gap_20261024"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_records_returned": 16,
+      "direct_cli_projection_source_status": "captured-in-observation-record",
+      "direct_cli_projection_source_content_integrity_status": "captured-in-observation-record",
+      "related_cli_source_classification_pressure_observation_count": 1,
+      "related_cli_source_classification_recurrence_status": "not-established",
+      "improvement_relation_identity": "im_environment_direct_cli_projection_source_classification_20261024",
+      "improvement_relation_status": "validated",
+      "separate_mcp_exposure_pressure_recurrence_status": "not-established",
+      "analysis_limit": "The bounded projection now represents both statuses consistently for this recorded result. The readback does not establish agent uptake, repeated occurrence, or improvement in investigation outcomes."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_9ac2caff979bcbec",
+    "campaign_evidence_count_before_recording": 49,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    },
+    {
+      "kind": "campaign-observation-record",
+      "identity": "ev_environment_direct_cli_projection_source_classification_gap_20261024",
+      "repository": "mncs-environment",
+      "commit": "8d95645b6482073fc8a3464121adaba500e8a0f8",
+      "path": "evidence/environmental-capability/direct-cli-projection-source-classification-gap-20261024.json",
+      "sha256": "a2a5f6244123f4a0ec2e6a497692fe9eee0f2d8044acc3cb033ed030d2271b2c"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_direct_cli_projection_source_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "81dd9176e15e21b3de7cf465b9b02c6a4b6322ac",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e8cfb65f997a10c53fd5981522f6dd6c34e3a0001b376f238086e1be0231b88a"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
