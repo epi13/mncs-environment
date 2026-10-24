@@ -30,7 +30,12 @@ MAX_EVIDENCE_REFS = 32
 MAX_OBSERVATIONS = 16
 MAX_OBSERVATION_BYTES = 64 * 1024
 MAX_OBSERVATION_READ_SECONDS = 8.0
+MAX_SOURCE_POINTER_VERIFICATIONS = 32
 MAX_RESULT_BYTES = 48 * 1024
+SOURCE_INTEGRITY_VERIFIED = frozenset({
+    "content-integrity-verified",
+    "record-integrity-verified-in-projection",
+})
 _COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -99,6 +104,19 @@ def _validate_reference(reference: Any) -> dict[str, str] | None:
     return result
 
 
+def _validate_source_pointer(source: Any) -> dict[str, str] | None:
+    """Validate a source pointer; observation sources need not define ledger identity."""
+    if not isinstance(source, dict):
+        return None
+    candidate = source
+    if "identity" not in source:
+        candidate = {**source, "identity": "source-pointer"}
+    pointer = _validate_reference(candidate)
+    if pointer is not None and "identity" not in source:
+        pointer.pop("identity", None)
+    return pointer
+
+
 def _short_text(value: Any, limit: int = 192) -> str | None:
     if not isinstance(value, str):
         return None
@@ -134,6 +152,9 @@ def _compact_projection(
         for key in ("evidence_count", "evidence_page_truncated",
                     "evidence_page_offset", "evidence_page_limit",
                     "next_evidence_offset",
+                    "source_pointer_count",
+                    "source_pointer_content_integrity_verified_count",
+                    "source_pointer_content_integrity_not_verified_count",
                     "observation_records_considered",
                     "observation_records_verified",
                     "observation_records_unavailable")
@@ -228,6 +249,28 @@ def _compact_projection(
             ] if isinstance(measurement_limits, list) else [],
             "evidence_reference": item["evidence_reference"],
         }
+        compact_sources = []
+        raw_sources = item.get("supporting_sources")
+        raw_sources = raw_sources if isinstance(raw_sources, list) else []
+        for source in raw_sources[:4]:
+            if not isinstance(source, dict):
+                continue
+            compact_supporting_source = {
+                key: _short_text(source.get(key), 128)
+                for key in ("kind", "campaign_evidence_identity", "campaign_id",
+                            "session_id", "status", "content_integrity_status")
+                if isinstance(source.get(key), str)
+            }
+            pointer = _validate_source_pointer(source)
+            if pointer is not None:
+                compact_supporting_source.update(pointer)
+            compact_sources.append(compact_supporting_source)
+        if compact_sources:
+            compact_observation["supporting_sources"] = compact_sources
+        if len(raw_sources) > len(compact_sources):
+            compact_observation["supporting_sources_truncated"] = (
+                len(raw_sources) - len(compact_sources)
+            )
         if isinstance(improvement_identity, str):
             compact_observation["improvement_relation_identity"] = _short_text(
                 improvement_identity, 160,
@@ -250,9 +293,13 @@ def _compact_projection(
         implementation = relation.get("implementation_reference")
         if isinstance(implementation, dict):
             summary["implementation_reference"] = {
-                key: _short_text(implementation.get(key), 160)
-                for key in ("identity", "repository", "commit", "path", "sha256", "status")
-                if implementation.get(key) is not None
+                key: _short_text(value, 160)
+                for key, value in implementation.items()
+                if key in {
+                    "identity", "repository", "commit", "path", "sha256",
+                    "status", "content_integrity_status",
+                }
+                and value is not None
             }
         summary["evidence_reference"] = relation["evidence_reference"]
         compact_improvements.append(summary)
@@ -393,7 +440,7 @@ def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, A
         return {"kind": "unknown", "status": "invalid-source-reference"}
     summary = {
         key: source.get(key)
-        for key in ("kind", "repository", "commit", "path", "sha256",
+        for key in ("identity", "kind", "repository", "commit", "path", "sha256",
                     "campaign_id", "session_id")
         if source.get(key) is not None
     }
@@ -410,6 +457,68 @@ def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, A
         summary["status"] = match.get("verification", "unverified")
         summary["campaign_evidence_identity"] = match.get("identity")
     return summary
+
+
+def _source_pointer_key(pointer: dict[str, str]) -> tuple[str, str, str, str]:
+    return (
+        pointer["repository"], pointer["commit"], pointer["path"],
+        pointer.get("sha256", ""),
+    )
+
+
+def _verify_source_pointer(
+    session: Any, source: Any, references: list[dict[str, Any]], root: Path | None,
+    *, deadline: float, cache: dict[tuple[str, str, str, str], str],
+    attempted: set[tuple[str, str, str, str]],
+) -> None:
+    """Verify selected source blobs within the projection's shared read budget."""
+    pointer = _validate_source_pointer(source)
+    if pointer is None:
+        return
+    key = _source_pointer_key(pointer)
+    if key in cache or key in attempted:
+        return
+    if root is None or _checkout(session, pointer["repository"], root) is None:
+        cache[key] = "outside-selected-session"
+        return
+    if "sha256" not in pointer:
+        cache[key] = "sha256-unavailable"
+        return
+    matching_reference = next((reference for reference in references
+                               if _source_pointer_key(reference) == key), None)
+    if matching_reference is not None and matching_reference.get("verification") == "verified":
+        cache[key] = "record-integrity-verified-in-projection"
+        return
+    if len(attempted) >= MAX_SOURCE_POINTER_VERIFICATIONS:
+        cache[key] = "source-verification-limit-exhausted"
+        return
+    attempted.add(key)
+    checkout = _checkout(session, pointer["repository"], root)
+    if checkout is None:
+        cache[key] = "outside-selected-session"
+        return
+    raw, status = _git_blob(
+        checkout, pointer["commit"], pointer["path"], deadline=deadline,
+    )
+    if raw is None:
+        cache[key] = {
+            "observation-too-large": "source-object-too-large",
+            "read-budget-exhausted": "source-read-budget-exhausted",
+            "commit-path-unavailable": "source-object-unavailable",
+        }.get(status, f"source-{status}")
+    elif hashlib.sha256(raw).hexdigest() != pointer["sha256"]:
+        cache[key] = "sha256-mismatch"
+    else:
+        cache[key] = "content-integrity-verified"
+
+
+def _source_integrity_status(source: Any, cache: dict[tuple[str, str, str, str], str]) -> str:
+    if isinstance(source, dict) and source.get("kind") == "direct-operation-result":
+        return "captured-in-observation-record"
+    pointer = _validate_source_pointer(source)
+    if pointer is None:
+        return "source-reference-invalid"
+    return cache.get(_source_pointer_key(pointer), "not-checked")
 
 
 def _validate_improvement_relation(value: Any) -> dict[str, Any] | None:
@@ -555,6 +664,23 @@ def project(
     observations: list[dict[str, Any]] = []
     improvement_relations: list[dict[str, Any]] = []
     projected_records = verified_records[:MAX_OBSERVATIONS]
+    source_integrity: dict[tuple[str, str, str, str], str] = {}
+    attempted_sources: set[tuple[str, str, str, str]] = set()
+    for record, _ in projected_records:
+        raw_sources = record.get("supporting_sources")
+        raw_sources = raw_sources if isinstance(raw_sources, list) else []
+        for source in raw_sources[:16]:
+            _verify_source_pointer(
+                session, source, references, root, deadline=read_deadline,
+                cache=source_integrity, attempted=attempted_sources,
+            )
+        improvement = _validate_improvement_relation(record.get("improvement_relation"))
+        if improvement is not None:
+            _verify_source_pointer(
+                session, improvement["implementation_reference"], references, root,
+                deadline=read_deadline, cache=source_integrity,
+                attempted=attempted_sources,
+            )
     projected_record_ids = {record["identity"] for record, _ in projected_records}
     projected_hypothesis_ids: set[str] = set()
     for record, _ in projected_records:
@@ -606,7 +732,12 @@ def project(
                 if hypothesis.get(key) is not None
             } if hypothesis is not None else None),
             "supporting_sources": [
-                _source_status(source, references)
+                {
+                    **_source_status(source, references),
+                    "content_integrity_status": _source_integrity_status(
+                        source, source_integrity,
+                    ),
+                }
                 for source in sources[:16]
             ],
             "measurement_limits": [
@@ -623,6 +754,9 @@ def project(
                 improvement["implementation_reference"], references,
             )
             implementation_status["identity"] = improvement["implementation_reference"]["identity"]
+            implementation_status["content_integrity_status"] = _source_integrity_status(
+                improvement["implementation_reference"], source_integrity,
+            )
             improvement_relations.append({
                 "identity": improvement["identity"],
                 "recorded_by_observation_identity": record["identity"],
@@ -709,6 +843,15 @@ def project(
                 if type(state.get("next_evidence_offset")) is int
                 and state["next_evidence_offset"] >= 0 else None
             ),
+            "source_pointer_count": len(source_integrity),
+            "source_pointer_content_integrity_verified_count": sum(
+                status in SOURCE_INTEGRITY_VERIFIED
+                for status in source_integrity.values()
+            ),
+            "source_pointer_content_integrity_not_verified_count": sum(
+                status not in SOURCE_INTEGRITY_VERIFIED
+                for status in source_integrity.values()
+            ),
             "observation_records_considered": len(references),
             "observation_records_verified": len(observations),
             "observation_records_unavailable": unavailable,
@@ -727,6 +870,7 @@ def project(
         "measurement_limits": [
             "Only committed observation records linked from this campaign-state page are considered.",
             "The source evidence page offset and next offset identify the page to inspect when continuing this projection.",
+            "Source pointer integrity counts cover unique committed pointers; sources outside selected checkouts are not read and remain not verified.",
             "An unavailable or unselected source is surfaced without reading it or treating it as verified.",
             "Repeated references to the same committed observation do not establish recurrence.",
             "Candidate continuation count is not treated as repeated pressure; recurrence requires distinct recorded observations.",

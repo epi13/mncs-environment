@@ -198,8 +198,95 @@ def test_project_does_not_read_a_supporting_repo_outside_selected_session(tmp_pa
 
     source = result["observations"][0]["supporting_sources"][1]
     assert source["status"] == "outside-selected-session"
+    assert source["content_integrity_status"] == "outside-selected-session"
     assert source["campaign_evidence_identity"] == "ev_control_selector_source"
+    assert result["source"]["source_pointer_count"] == 1
+    assert result["source"]["source_pointer_content_integrity_verified_count"] == 0
+    assert result["source"]["source_pointer_content_integrity_not_verified_count"] == 1
     assert result["status"] == "ready"
+
+
+def test_selected_source_digest_is_verified_and_compact_pointer_is_preserved(
+    tmp_path: Path,
+) -> None:
+    identity = "ev_environment_source_integrity"
+    record = _observation(identity, "ses_compiler", "cmp_compiler")
+    record["observation"]["outcome"]["large_diagnostic"] = "x" * 50_000
+    session, state = _session(tmp_path, [record])
+    checkout = Path(
+        session.snapshot["selected_checkouts"]["mncs-environment"]["path"]
+    )
+    source_path = checkout / "src" / "selected-source.mn"
+    source_path.parent.mkdir(parents=True)
+    source_bytes = b"module selected_source\n"
+    source_path.write_bytes(source_bytes)
+    relative_source = "src/selected-source.mn"
+    _git(checkout, "add", relative_source)
+    _git(checkout, "commit", "--quiet", "-m", "test selected source")
+    source_commit = _git(checkout, "rev-parse", "HEAD")
+    source_digest = hashlib.sha256(source_bytes).hexdigest()
+    record["supporting_sources"].append({
+        "kind": "committed-source",
+        "identity": "ev_environment_selected_source",
+        "repository": "mncs-environment",
+        "commit": source_commit,
+        "path": relative_source,
+        "sha256": source_digest,
+    })
+    bad_source_digest = "0" * 64
+    record["supporting_sources"].append({
+        "kind": "committed-source",
+        "identity": "ev_environment_selected_source_bad_digest",
+        "repository": "mncs-environment",
+        "commit": source_commit,
+        "path": relative_source,
+        "sha256": bad_source_digest,
+    })
+    observation_path = checkout / state["evidence"][0]["path"]
+    raw = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
+    observation_path.write_bytes(raw)
+    _git(checkout, "add", state["evidence"][0]["path"])
+    _git(checkout, "commit", "--quiet", "-m", "link selected source")
+    observation_commit = _git(checkout, "rev-parse", "HEAD")
+    state["evidence"][0].update({
+        "commit": observation_commit,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    })
+    state["evidence"].append({
+        "identity": "ev_environment_selected_source",
+        "repository": "mncs-environment",
+        "commit": source_commit,
+        "path": relative_source,
+        "sha256": source_digest,
+    })
+    state["evidence"].append({
+        "identity": "ev_environment_selected_source_bad_digest",
+        "repository": "mncs-environment",
+        "commit": source_commit,
+        "path": relative_source,
+        "sha256": bad_source_digest,
+    })
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    source = next(
+        item for item in result["observations"][0]["supporting_sources"]
+        if item.get("identity") == "ev_environment_selected_source"
+    )
+    assert source["status"] == "not-an-environmental-observation"
+    assert source["content_integrity_status"] == "content-integrity-verified"
+    assert source["commit"] == source_commit
+    assert source["path"] == relative_source
+    assert source["sha256"] == source_digest
+    bad_source = next(
+        item for item in result["observations"][0]["supporting_sources"]
+        if item.get("identity") == "ev_environment_selected_source_bad_digest"
+    )
+    assert bad_source["content_integrity_status"] == "sha256-mismatch"
+    assert result["source"]["source_pointer_count"] == 2
+    assert result["source"]["source_pointer_content_integrity_verified_count"] == 1
+    assert result["source"]["source_pointer_content_integrity_not_verified_count"] == 1
 
 
 def test_project_requires_digest_before_exposing_a_pressure(tmp_path: Path) -> None:
