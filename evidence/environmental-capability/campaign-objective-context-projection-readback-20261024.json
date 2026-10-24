@@ -1,0 +1,100 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_campaign_objective_context_projection_readback_20261024",
+  "captured_at": "2026-10-24T18:25:28Z",
+  "measurement_basis": "direct-authenticated-campaign-state-projection",
+  "observation": {
+    "kind": "campaign-objective-context-improvement-projection-readback",
+    "source_interface": "MNCS Environment campaign-state environmental-capability projection",
+    "query": {
+      "campaign_state_checkpoint_id": "chk_c9ad451e2151d4e7",
+      "evidence_count": 95,
+      "evidence_page_offset": 92,
+      "evidence_page_limit": 3,
+      "evidence_page_truncated": true,
+      "response_truncated": true,
+      "observation_records_considered": 3,
+      "observation_records_verified": 3,
+      "source_pointers_verified": 3
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "campaign_charter_status": "verified",
+      "campaign_charter_count": 1,
+      "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "pressure_hypothesis_identity": "ph_environment_campaign_objective_context_20261024",
+      "pressure_recurrence_status": "not-established",
+      "pressure_observation_count": 1,
+      "improvement_relation_identity": "im_environment_campaign_objective_context_20261024",
+      "relation_pressure_status": "present-in-projection",
+      "implementation_content_integrity_status": "content-integrity-verified",
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "subsequent_readback_status": "not-present-in-projection",
+      "effectiveness_assessment": "not-assessed"
+    },
+    "analysis_limit": "The projection verified the unique campaign charter separately from this session's Work Intent and correlated one objective-context pressure with the implementation and verification records. The evidence page and response remain bounded; this single session does not establish cross-session recurrence, effects on agent outcomes, or long-term effectiveness."
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_c9ad451e2151d4e7"
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-campaign-state-projection",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "checkpoint_id": "chk_c9ad451e2151d4e7"
+    },
+    {
+      "kind": "campaign-objective-context-improvement-record",
+      "identity": "ev_environment_campaign_objective_context_improvement_20261024",
+      "repository": "mncs-environment",
+      "commit": "1a0780fd6eb599a86475327897e324845161a1bd",
+      "path": "evidence/environmental-capability/campaign-objective-context-improvement-20261024.json",
+      "sha256": "8d9eb8a499a292fce79fbf0e182b6479eeca453036df444fa5d59d040a10701a"
+    },
+    {
+      "kind": "campaign-objective-context-pressure-record",
+      "identity": "ev_environment_campaign_objective_context_pressure_20261024",
+      "repository": "mncs-environment",
+      "commit": "554e0cb4f26ebecb8990c23273273b6ff3ed94bd",
+      "path": "evidence/environmental-capability/campaign-objective-context-pressure-20261024.json",
+      "sha256": "7de0592781d94946c7736495fcafbbd6f2b77da910983935a0d694d4c2692e41"
+    },
+    {
+      "kind": "campaign-objective-context-verification-record",
+      "identity": "ev_environment_campaign_objective_context_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "554e0cb4f26ebecb8990c23273273b6ff3ed94bd",
+      "path": "evidence/environmental-capability/campaign-objective-context-verification-20261024.json",
+      "sha256": "072508703bd20f43ce239990739cfcc5b79567faf27653ac1b819d90fee99dd3"
+    },
+    {
+      "kind": "campaign-charter-record",
+      "identity": "ev_environment_campaign_charter_capability_intelligence_20261024",
+      "repository": "mncs-environment",
+      "commit": "d720cb4f57ada1343eb9eaec44ab0a338ed97289",
+      "path": "evidence/campaign-charter-environmental-capability-intelligence-20261024.json",
+      "sha256": "e9a93b2a8e272cfab6073924966e79663217b51bd0399d69c95e5aa62a9c3869"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence of missing campaign objective context",
+    "whether agents reconstruct campaign objectives less often",
+    "agent outcomes after the context projection change",
+    "long-term effectiveness of the improvement"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
