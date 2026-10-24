@@ -176,9 +176,10 @@ Affected-work summaries retain the campaign objective separately from the
 work-intent goal when both are recorded. Conflicting or ambiguous context
 remains separate. Long context text and lists
 are truncated with explicit flags, and the source record remains authoritative.
-A bounded authenticated session-activity pointer is labeled
-`captured-in-observation-record`; it is not described as byte-verified
-independently of the containing observation record. A pressure hypothesis remains
+Direct operation-result and CLI projection-result sources are labeled
+`captured-in-observation-record`; they are not described as independently
+verified beyond the containing observation record. A bounded authenticated
+session-activity pointer has the same status. A pressure hypothesis remains
 an interpretation: one observation does not establish recurrence, and a
 change remains unproven until later observations and independent verification
 provide evidence. An implementation record that restates its target pressure

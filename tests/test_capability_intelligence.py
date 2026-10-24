@@ -128,6 +128,11 @@ def _observation(identity: str, session_id: str, campaign_id: str) -> dict:
 
 def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_one", "ses_compiler_one", "cmp_compiler")
+    record["supporting_sources"].append({
+        "kind": "direct-cli-projection-result",
+        "campaign_id": "cmp_compiler",
+        "session_id": "ses_compiler_one",
+    })
     record["recorder"].update({
         "environment_id": "renv_observation_capture",
         "definition_id": "env_observation_capture",
@@ -165,6 +170,9 @@ def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_
     assert hypothesis["recurrence_status"] == "not-established"
     assert result["observations"][0]["observation"]["outcome"]["continuations_count"] == 3
     assert result["observations"][0]["supporting_sources"][0]["status"] == "captured-in-observation-record"
+    assert result["observations"][0]["supporting_sources"][1]["status"] == (
+        "captured-in-observation-record"
+    )
 
 
 def test_captured_session_activity_reference_is_bounded_and_inspectable(

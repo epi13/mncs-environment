@@ -1167,7 +1167,9 @@ def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, A
                     "campaign_id", "session_id")
         if source.get(key) is not None
     }
-    if source.get("kind") == "direct-operation-result":
+    if source.get("kind") in {
+        "direct-operation-result", "direct-cli-projection-result",
+    }:
         summary["status"] = "captured-in-observation-record"
         return summary
     if source.get("kind") == "authenticated-session-activity-projection":
