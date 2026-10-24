@@ -1,0 +1,76 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_direct_cli_projection_source_classification_gap_20261024",
+  "captured_at": "2026-10-24T16:05:06+00:00",
+  "observation": {
+    "kind": "environmental-evidence-source-classification-gap",
+    "source_interface": "mncs-env environmental-capability projection",
+    "request": {
+      "campaign_checkpoint_id": "chk_04923c6eb3a32799",
+      "campaign_evidence_count": 44,
+      "projection_parameters": {
+        "history_pages": 4,
+        "evidence_offset": 34,
+        "evidence_limit": 10
+      },
+      "source_observation_identity": "ev_environment_capability_projection_mcp_gap_20261024"
+    },
+    "outcome": {
+      "source_kind": "direct-cli-projection-result",
+      "source_status": "captured-in-observation-record",
+      "source_content_integrity_status": "source-reference-invalid",
+      "analysis_limit": "This is a source-kind classification inconsistency in one bounded projection readback. It does not establish recurrence or an agent impact."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_04923c6eb3a32799",
+    "campaign_evidence_count_before_recording": 44,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_direct_cli_projection_source_classification",
+    "title": "Recorded CLI projection results receive conflicting source integrity statuses",
+    "category": "evidence-provenance",
+    "subsystem": "mncs-environment capability intelligence source classification",
+    "owner": "mncs-environment",
+    "basis": "After the source status recognized direct-cli-projection-result as captured in its containing record, the separate content-integrity projection still classified that same source kind as invalid because it used a different allowlist.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Use one explicit set of captured operation-result kinds for both source status and content-integrity status; retain captured-in-record semantics without claiming independent byte verification.",
+    "not_measured": [
+      "whether agents acted on the inconsistent source status",
+      "recurrence across other result source kinds or campaigns",
+      "impact on development investigation or continuity"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-observation-record",
+      "identity": "ev_environment_capability_projection_mcp_gap_20261024",
+      "repository": "mncs-environment",
+      "commit": "02f42f96e51a65231b2901f9fa0114f9bf6f7f0c",
+      "path": "evidence/environmental-capability/environment-capability-projection-mcp-gap-20261024.json",
+      "sha256": "be5ebb02b69fc799c6e64708b545652fd146db67e32a148e12851b3b93d19bdb"
+    },
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

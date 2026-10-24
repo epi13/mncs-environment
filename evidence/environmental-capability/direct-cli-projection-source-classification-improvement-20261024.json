@@ -1,0 +1,75 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_direct_cli_projection_source_classification_improvement_20261024",
+  "captured_at": "2026-10-24T16:05:06+00:00",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment capability intelligence projection",
+    "request": {},
+    "outcome": {
+      "implementation_change": "The projection now uses one explicit captured-operation-result kind set for both source status and content-integrity status, so direct CLI projection results are accurately reported as captured within their containing record.",
+      "verification_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "A live follow-up readback confirms consistent captured-in-record statuses for this result. This does not establish whether agents used the status or whether investigation outcomes improved."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_04923c6eb3a32799",
+    "campaign_evidence_count_before_recording": 44,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_direct_cli_projection_source_classification_20261024",
+    "addresses_hypothesis_identity": "ph_environment_direct_cli_projection_source_classification",
+    "implementation_reference": {
+      "identity": "ev_environment_direct_cli_projection_source_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "81dd9176e15e21b3de7cf465b9b02c6a4b6322ac",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e8cfb65f997a10c53fd5981522f6dd6c34e3a0001b376f238086e1be0231b88a"
+    },
+    "verification_observation_identity": "ev_environment_direct_cli_projection_source_classification_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_direct_cli_projection_source_classification_live_readback_20261024",
+    "basis": "One focused regression checks the shared source-kind classification, and a subsequent live projection readback shows the direct CLI result and content integrity statuses both labeled captured-in-observation-record.",
+    "not_measured": [
+      "agent interpretation or use of the source status",
+      "investigation continuity or completion outcomes",
+      "recurrence or long-term effectiveness across sessions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_direct_cli_projection_source_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "81dd9176e15e21b3de7cf465b9b02c6a4b6322ac",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e8cfb65f997a10c53fd5981522f6dd6c34e3a0001b376f238086e1be0231b88a"
+    },
+    {
+      "kind": "verified-source-test-results",
+      "identity": "ev_environment_direct_cli_projection_source_classification_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "81dd9176e15e21b3de7cf465b9b02c6a4b6322ac",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "59528f4aa426fa39c8386706458d52e946d2078c2e22e7156330f19bc25d1d6c"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
