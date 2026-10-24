@@ -1,0 +1,103 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_context_and_session_source_chain_readback_20261024",
+  "captured_at": "2026-10-24T14:53:24+00:00",
+  "measurement_basis": "authenticated-campaign-projection-readback-after-followup-registration",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_a1b8ae591fef1965",
+    "campaign_evidence_count": 18,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "environmental-improvement-chain-projection-readback",
+    "source_interface": "MNCS Environment campaign-state environmental_capability projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_a1b8ae591fef1965",
+      "evidence_offset": 14,
+      "evidence_limit": 4,
+      "improvement_relation_identity": "im_environment_pressure_context_and_session_source_20261024",
+      "selected_observation_identities": [
+        "ev_environment_pressure_context_and_session_source_verification_20261024",
+        "ev_environment_pressure_context_and_session_source_improvement_20261024",
+        "ev_environment_pressure_context_and_session_source_live_readback_20261024"
+      ]
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_records_considered": 4,
+      "observation_records_verified": 3,
+      "source_pointer_count": 7,
+      "source_pointer_content_integrity_verified_count": 7,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "improvement_relation_status": "present-in-projection",
+      "pressure_hypothesis_status": "not-present-in-selected-page",
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "subsequent_record_status": "record-integrity-verified-in-projection",
+      "implementation_content_integrity_status": "content-integrity-verified",
+      "implementation_ledger_status": "not-an-environmental-observation",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The selected page contains the implementation relation and its verification and subsequent records, but not the older pressure-hypothesis record. Page-local absence is not evidence that the pressure is absent from campaign history. The response was compacted at its byte limit."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    },
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_pressure_context_and_session_source_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "3f737dd2d5e5c77c52251e004c5111679809c201",
+      "path": "evidence/environmental-capability/pressure-context-and-session-source-verification-20261024.json",
+      "sha256": "c67a052a855196d3183865ffaa9acfaae7a593b150c7e2356be7e635608dbe32"
+    },
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_pressure_context_and_session_source_improvement_20261024",
+      "repository": "mncs-environment",
+      "commit": "3f737dd2d5e5c77c52251e004c5111679809c201",
+      "path": "evidence/environmental-capability/pressure-context-and-session-source-improvement-20261024.json",
+      "sha256": "dd6254cf79ccbe3aed487908115b3d5537bc257a1d81eca89d074eaa8b220583"
+    },
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_pressure_context_and_session_source_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "1fafdb449c2dea56f5696f480f837fc732cbaff7",
+      "path": "evidence/environmental-capability/pressure-context-and-session-source-live-readback-20261024.json",
+      "sha256": "a2aae63ebb9d30d4bd25e17ba03ac1baa15a6afd8f3be3e937f837acb8caebfb"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_pressure_context_projection_refinement_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "cb115c208eb4e1d72d870639f7e03449e1955f71",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "43f3d85b34e44840642125124a6e7646ee4db2c169aa6e34a1bb262e3a53ec37"
+    }
+  ],
+  "not_measured": [
+    "whether later Compiler development activity encounters the same context pressure",
+    "whether context deduplication changes agent implementation decisions or investigation effort",
+    "long-term effectiveness after further sessions and environment versions",
+    "resource and token impact of the projection"
+  ]
+}

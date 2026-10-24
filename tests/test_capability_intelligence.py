@@ -1276,6 +1276,7 @@ def test_pressure_context_refinement_projects_its_verified_followup_chain(
             "pressure-context-and-session-source-verification-20261024.json",
             "pressure-context-and-session-source-improvement-20261024.json",
             "pressure-context-and-session-source-live-readback-20261024.json",
+            "pressure-context-and-session-source-chain-readback-20261024.json",
         )
     ]
     implementation = records[2]["improvement_relation"]["implementation_reference"]
@@ -1304,6 +1305,9 @@ def test_pressure_context_refinement_projects_its_verified_followup_chain(
     assert relation["subsequent_evidence_reference"]["identity"] == (
         "ev_environment_pressure_context_and_session_source_live_readback_20261024"
     )
+    assert "ev_environment_pressure_context_and_session_source_chain_readback_20261024" in {
+        item["identity"] for item in result["observations"]
+    }
 
 
 def test_authentic_recorder_environment_identity_is_projected_separately(
