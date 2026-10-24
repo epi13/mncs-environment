@@ -245,9 +245,9 @@ recorded digest; an observation already verified by the projection is marked
 remain `outside-selected-session` and are not read. Compact projections retain
 up to four source pointers per observation and their integrity status; the exact
 observation evidence reference can be used to inspect the complete source list.
-The projection source reports unique pointer and verified/not-verified counts;
-verification reads share the eight-second projection budget and are capped at
-32 source pointers per page.
+The projection source reports unique valid pointer and verified/not-verified
+counts; source blob reads are limited to 512 KiB each, share the eight-second
+projection budget, and are capped at 32 source pointers per page.
 
 Campaign metadata updates use optimistic concurrency. Copy the
 `campaign_state_checkpoint_id` from the current capsule into

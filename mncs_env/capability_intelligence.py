@@ -29,6 +29,7 @@ OBSERVATION_PATH_PREFIX = "evidence/environmental-capability/"
 MAX_EVIDENCE_REFS = 32
 MAX_OBSERVATIONS = 16
 MAX_OBSERVATION_BYTES = 64 * 1024
+MAX_SOURCE_BYTES = 512 * 1024
 MAX_OBSERVATION_READ_SECONDS = 8.0
 MAX_SOURCE_POINTER_VERIFICATIONS = 32
 MAX_RESULT_BYTES = 48 * 1024
@@ -344,6 +345,8 @@ def _is_observation_reference(reference: dict[str, str]) -> bool:
 
 def _git_blob(
     checkout: Path, commit: str, path: str, *, deadline: float,
+    max_bytes: int = MAX_OBSERVATION_BYTES,
+    oversized_status: str = "observation-too-large",
 ) -> tuple[bytes | None, str]:
     object_name = f"{commit}:{path}"
     environment = {**os.environ, "GIT_OPTIONAL_LOCKS": "0"}
@@ -360,8 +363,8 @@ def _git_blob(
         raw_size = size.stdout.strip()
         if not raw_size.isdigit():
             return None, "object-size-unavailable"
-        if int(raw_size) > MAX_OBSERVATION_BYTES:
-            return None, "observation-too-large"
+        if int(raw_size) > max_bytes:
+            return None, oversized_status
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             return None, "read-budget-exhausted"
@@ -375,8 +378,8 @@ def _git_blob(
         return None, "git-read-unavailable"
     if blob.returncode != 0:
         return None, "commit-path-unavailable"
-    if len(blob.stdout) > MAX_OBSERVATION_BYTES:
-        return None, "observation-too-large"
+    if len(blob.stdout) > max_bytes:
+        return None, oversized_status
     return blob.stdout, "read"
 
 
@@ -499,13 +502,13 @@ def _verify_source_pointer(
         return
     raw, status = _git_blob(
         checkout, pointer["commit"], pointer["path"], deadline=deadline,
+        max_bytes=MAX_SOURCE_BYTES, oversized_status="source-object-too-large",
     )
     if raw is None:
         cache[key] = {
-            "observation-too-large": "source-object-too-large",
             "read-budget-exhausted": "source-read-budget-exhausted",
             "commit-path-unavailable": "source-object-unavailable",
-        }.get(status, f"source-{status}")
+        }.get(status, status if status.startswith("source-") else f"source-{status}")
     elif hashlib.sha256(raw).hexdigest() != pointer["sha256"]:
         cache[key] = "sha256-mismatch"
     else:
