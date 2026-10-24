@@ -1,0 +1,68 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_history_page_overlap_followup_20261024",
+  "captured_at": "2026-10-24T09:49:46+00:00",
+  "measurement_basis": "live-post-change-Environment-projection-and-campaign-page-readback",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {"identity": "chk_c7310a7ece51f4c4", "sequence": 23},
+    "campaign_evidence_count": 68,
+    "claim_ids": ["claim:mncs-environment:worktree:faa4f0c3f49e"]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-history-page-overlap-followup",
+    "source_interface": "mncs-env projections and campaign-state",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_c7310a7ece51f4c4",
+      "history_pages": 4,
+      "branch_commit": "7680c394f0d7c04501e1437fccc24e70493c2e0a"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "campaign_evidence_count": 68,
+      "evidence_history_pages_requested": 4,
+      "evidence_history_pages_read": 3,
+      "evidence_history_page_offsets": [36, 4, 0],
+      "evidence_history_page_limits": [32, 32, 4],
+      "evidence_history_truncated": false,
+      "evidence_history_checkpoint_consistent": true,
+      "observation_records_considered": 68,
+      "observation_records_verified": 13,
+      "observation_records_unavailable": 0,
+      "observation_records_skipped_by_page_budget": 28,
+      "observation_read_budget_per_page": 5,
+      "canonical_page_range_union_reference_count": 68,
+      "canonical_page_range_overlap_reference_count": 0,
+      "pressure_hypotheses_observed_recurrently": [],
+      "analysis_limit": "The gap-free query removes repeated ledger positions and covers all 68 evidence references, while 28 observation records remain unread under the shared page budget. Recurrence and improvement effectiveness therefore remain limited to the 13 verified observations."
+    }
+  },
+  "supporting_sources": [
+    {"kind": "direct-operation-result", "campaign_id": "cmp_environmental_capability_intelligence_20261023", "session_id": "ses_c38b0ab35b9418ba"},
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_capability_history_page_overlap_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "7680c394f0d7c04501e1437fccc24e70493c2e0a",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "33bf61072c0e29bf4aaef5a5176f696af9bb26fc0b40e4a3fc3d3f541ad6c4dd"
+    }
+  ],
+  "not_measured": [
+    "whether any of the 28 budget-skipped observations contain a repeated pressure",
+    "agent benefit or resource savings from the gap-free ranges",
+    "long-term recurrence or effectiveness after future agent activity"
+  ]
+}

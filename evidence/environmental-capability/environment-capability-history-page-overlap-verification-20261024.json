@@ -1,0 +1,69 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_history_page_overlap_verification_20261024",
+  "captured_at": "2026-10-24T09:49:46+00:00",
+  "measurement_basis": "focused-projection-tests-and-static-checks",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {"identity": "chk_c7310a7ece51f4c4", "sequence": 23},
+    "campaign_evidence_count": 68,
+    "claim_ids": ["claim:mncs-environment:worktree:faa4f0c3f49e"]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-history-page-overlap-verification",
+    "source_interface": "pytest, ruff, py_compile, and Git",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-capability-intelligence-20261024",
+      "commit": "7680c394f0d7c04501e1437fccc24e70493c2e0a",
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "python3 -m pytest tests/test_environment.py -k 'projection_capability_invocations_are_declared_and_session_bound or campaign_state_cli_accepts_bounded_evidence_pages' -q",
+        "ruff check mncs_env/capability_intelligence.py mncs_env/cli.py tests/test_capability_intelligence.py",
+        "ruff check --select E4,E7,E9 mncs_env/projections.py",
+        "python3 -m py_compile mncs_env/capability_intelligence.py mncs_env/projections.py mncs_env/cli.py tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "focused_capability_tests": {"status": "passed", "passed": 27, "failed": 0, "duration_seconds": 0.97},
+      "campaign_state_and_descriptor_tests": {"status": "passed", "passed": 2, "failed": 0, "deselected": 230, "duration_seconds": 0.18},
+      "short-first-page-cursor-regression": "passed",
+      "live-history-query": "passed; same-checkpoint pages were contiguous and unique",
+      "lint_compile_and_diff_check": "passed",
+      "full_test_suite": {"status": "not-run", "reason": "The changed projection and Environment descriptor paths were covered by focused verification."}
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-source-change",
+      "repository": "mncs-environment",
+      "commit": "7680c394f0d7c04501e1437fccc24e70493c2e0a",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "33bf61072c0e29bf4aaef5a5176f696af9bb26fc0b40e4a3fc3d3f541ad6c4dd"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "7680c394f0d7c04501e1437fccc24e70493c2e0a",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "c2f9468ff74ea29b43abbc01e86c6df2c2672aa3821d6dccd9ee8aac34375da8"
+    }
+  ],
+  "not_measured": [
+    "full repository-wide test result",
+    "runtime cost for four-page windows in other campaigns",
+    "future recurrence or effectiveness of the page-overlap pressure"
+  ]
+}

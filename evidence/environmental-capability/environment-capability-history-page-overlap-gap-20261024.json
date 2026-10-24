@@ -1,0 +1,74 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_history_page_overlap_gap_20261024",
+  "captured_at": "2026-10-24T09:49:46+00:00",
+  "measurement_basis": "authentic-Environment-history-query-and-canonical-page-range-comparison",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {"identity": "chk_c7310a7ece51f4c4", "sequence": 23},
+    "campaign_evidence_count": 68,
+    "claim_ids": ["claim:mncs-environment:worktree:faa4f0c3f49e"]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-history-page-overlap-gap",
+    "source_interface": "mncs-env projections and campaign-state",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_c7310a7ece51f4c4",
+      "history_pages": 4,
+      "prechange_projection_commit": "f92637a183a2da743c409cd42d991791ea862b55"
+    },
+    "outcome": {
+      "campaign_evidence_count": 68,
+      "prechange_projection_page_offsets": [36, 4, 0],
+      "prechange_projection_page_limit": 32,
+      "prechange_projection_references_considered": 96,
+      "canonical_page_union_reference_count": 68,
+      "canonical_page_overlap_reference_count": 28,
+      "overlap_location": "The offset-4 page covered evidence indexes 4 through 35 and the offset-0, limit-32 page covered indexes 0 through 31.",
+      "prechange_observation_records_skipped_by_page_budget": 28,
+      "analysis_limit": "The projection deduplicated observation source identities, but its historical page window re-read 28 ledger positions. The overlap count is derived from the authenticated page offsets and limits."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_capability_history_page_overlap",
+    "title": "Bounded capability history pages can overlap at a short first page",
+    "category": "resource-operational-pressure",
+    "subsystem": "mncs-environment capability intelligence campaign pagination",
+    "owner": "mncs-environment",
+    "basis": "The real 68-reference campaign query followed offsets 36, 4, and 0 using a fixed limit of 32. Canonical range reads confirmed 28 repeated ledger positions between the last two pages.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Set each older page limit to the distance between adjacent cursors and validate that its next offset reaches the newer page start.",
+    "not_measured": [
+      "agent time or token cost caused by the overlapping page",
+      "whether the read-budget omissions changed a development decision",
+      "recurrence of this pagination edge across other campaign sizes"
+    ]
+  },
+  "supporting_sources": [
+    {"kind": "direct-operation-result", "campaign_id": "cmp_environmental_capability_intelligence_20261023", "session_id": "ses_c38b0ab35b9418ba"},
+    {
+      "kind": "committed-pre-change-source",
+      "repository": "mncs-environment",
+      "commit": "f92637a183a2da743c409cd42d991791ea862b55",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "ebeb445e3843c84ca27157326ddd8570beebd2a2819327bf5c312c5124c74707"
+    }
+  ],
+  "not_measured": [
+    "agent impact from repeated reference scans",
+    "effect of the overlap on the distinct pressure hypotheses returned",
+    "long-term recurrence or resolution of this pressure"
+  ]
+}
