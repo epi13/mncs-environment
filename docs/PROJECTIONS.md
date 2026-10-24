@@ -203,6 +203,16 @@ in an unselected repository is named but not opened. Results are computed when
 requested; no transcript copy, separate telemetry store, or permanent dashboard
 is created.
 
+The projection compares repository identities in the session Work Intent with
+the selected workspace checkouts and reports declared repositories that are
+not selected. It also summarizes campaign evidence pointers whose source
+repository falls outside the selected session. `outside-selected-session`
+means Environment did not open that source; it does not mean the source is
+missing or corrupt, and it does not prove the agent was blocked. The bounded
+source diagnostics retain exact identities and revisions so an agent can
+decide whether to add read-only context or leave the source outside the current
+environment.
+
 Campaign evidence and current session activity have independent availability.
 If the campaign ledger cannot be read but the session contains authenticated
 tool interactions, Control read observations, authority denials, or verified

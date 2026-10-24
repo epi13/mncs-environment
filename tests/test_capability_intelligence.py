@@ -345,6 +345,71 @@ def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_
     ] == "captured-in-observation-record"
 
 
+def test_project_links_unselected_work_intent_repository_to_evidence_visibility(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_work_scope_alignment",
+        "ses_compiler_scope_alignment",
+        "cmp_compiler_scope_alignment",
+    )
+    outside_reference = {
+        "identity": "ev_environment_compiler_source_outside_selection",
+        "repository": "mncs-compiler",
+        "commit": "a" * 40,
+        "path": "evidence/environmental-capability/compiler-observation.json",
+        "sha256": "b" * 64,
+    }
+    session, _state = _session(
+        tmp_path, [record], extra_refs=[outside_reference],
+    )
+    session.snapshot["intent"]["repositories"] = ["mncs-compiler"]
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["subject"]["workspace_alignment"] == {
+        "status": "declared-repositories-not-selected",
+        "declared_repositories": ["mncs-compiler"],
+        "selected_repositories": ["mncs-environment"],
+        "unselected_declared_repositories": ["mncs-compiler"],
+        "basis": "session-work-intent-and-selected-checkout-identities",
+    }
+    assert result["source"]["evidence_visibility"] == {
+        "status": "outside-selected-session-references-observed",
+        "verification_diagnostic_count": 1,
+        "outside_selected_reference_diagnostic_count": 1,
+        "outside_selected_repositories": [
+            {"repository": "mncs-compiler", "diagnostic_count": 1},
+        ],
+        "diagnostics_truncated": False,
+        "basis": "bounded-campaign-evidence-source-verification-diagnostics",
+    }
+    assert result["source"]["observation_reference_diagnostics"][0][
+        "verification"
+    ] == "outside-selected-session"
+
+    compact = capability_intelligence.project(session, max_result_bytes=1_500)
+    assert compact["subject"]["workspace_alignment"][
+        "unselected_declared_repositories"
+    ] == ["mncs-compiler"]
+    assert compact["source"]["evidence_visibility"][
+        "outside_selected_repositories"
+    ] == [{"repository": "mncs-compiler", "diagnostic_count": 1}]
+
+
+def test_project_omits_diagnostics_when_work_intent_repositories_are_aligned(
+    tmp_path: Path,
+) -> None:
+    session, _state = _session(tmp_path, [])
+    session.snapshot["intent"]["repositories"] = ["mncs-environment"]
+
+    result = capability_intelligence.project(session)
+
+    assert "workspace_alignment" not in result["subject"]
+    assert "evidence_visibility" not in result["source"]
+
+
 def test_project_exposes_verified_campaign_objective_separately_from_work_intent(
     tmp_path: Path,
 ) -> None:

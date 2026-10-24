@@ -576,6 +576,35 @@ def _compact_projection(
         for key in ("identity", "goal")
         if intent.get(key) is not None
     }
+    intent_repositories = intent.get("repositories")
+    if isinstance(intent_repositories, list):
+        compact_subject["work_intent"]["repositories"] = [
+            _short_text(value, 128)
+            for value in intent_repositories[:16]
+            if isinstance(value, str) and value
+        ]
+        if len(intent_repositories) > 16:
+            compact_subject["work_intent"]["repositories_truncated"] = True
+    workspace_alignment = subject.get("workspace_alignment")
+    if isinstance(workspace_alignment, dict):
+        compact_alignment = {
+            "status": _short_text(workspace_alignment.get("status"), 96),
+            "basis": _short_text(workspace_alignment.get("basis"), 160),
+        }
+        for key in (
+            "declared_repositories", "selected_repositories",
+            "unselected_declared_repositories",
+        ):
+            value = workspace_alignment.get(key)
+            if isinstance(value, list):
+                compact_alignment[key] = [
+                    _short_text(item, 128)
+                    for item in value[:16]
+                    if isinstance(item, str) and item
+                ]
+                if len(value) > 16:
+                    compact_alignment[f"{key}_truncated"] = True
+        compact_subject["workspace_alignment"] = compact_alignment
     charter = subject.get("campaign_charter")
     if isinstance(charter, dict):
         compact_charter = {
@@ -623,6 +652,33 @@ def _compact_projection(
             or source.get(key) is not None
         )
     }
+    evidence_visibility = source.get("evidence_visibility")
+    if isinstance(evidence_visibility, dict):
+        compact_visibility = {
+            "status": _short_text(evidence_visibility.get("status"), 128),
+            "verification_diagnostic_count": evidence_visibility.get(
+                "verification_diagnostic_count"
+            ),
+            "outside_selected_reference_diagnostic_count": evidence_visibility.get(
+                "outside_selected_reference_diagnostic_count", 0
+            ),
+            "diagnostics_truncated": evidence_visibility.get(
+                "diagnostics_truncated"
+            ),
+            "basis": _short_text(evidence_visibility.get("basis"), 160),
+            "outside_selected_repositories": [
+                {
+                    "repository": _short_text(item.get("repository"), 128),
+                    "diagnostic_count": item.get("diagnostic_count", 0),
+                }
+                for item in evidence_visibility.get(
+                    "outside_selected_repositories", []
+                )[:16]
+                if isinstance(item, dict)
+                and isinstance(item.get("repository"), str)
+            ],
+        }
+        compact_source["evidence_visibility"] = compact_visibility
     raw_diagnostics = source.get("observation_reference_diagnostics")
     raw_diagnostics = raw_diagnostics if isinstance(raw_diagnostics, list) else []
     for key in (
@@ -2122,6 +2178,115 @@ def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, A
         summary["status"] = match.get("verification", "unverified")
         summary["campaign_evidence_identity"] = match.get("identity")
     return summary
+
+
+def _work_intent_workspace_alignment(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Compare declared WorkIntent repositories with selected checkout identities."""
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+    raw_declared = intent.get("repositories")
+    raw_selected = snapshot.get("selected_checkouts")
+    if raw_declared is None:
+        return {
+            "status": "not-declared",
+            "declared_repositories": [],
+            "selected_repositories": sorted(
+                key for key in raw_selected
+                if isinstance(key, str) and _is_repository_identity(key)
+            ) if isinstance(raw_selected, dict) else [],
+            "unselected_declared_repositories": [],
+            "basis": "session-work-intent-and-selected-checkout-identities",
+        }
+    if (not isinstance(raw_declared, list)
+            or any(not _is_repository_identity(item) for item in raw_declared)):
+        return {
+            "status": "unavailable",
+            "declared_repositories": [],
+            "selected_repositories": [],
+            "unselected_declared_repositories": [],
+            "basis": "session-work-intent-and-selected-checkout-identities",
+        }
+    if not isinstance(raw_selected, dict):
+        return {
+            "status": "workspace-selection-unavailable",
+            "declared_repositories": sorted(set(raw_declared)),
+            "selected_repositories": [],
+            "unselected_declared_repositories": [],
+            "basis": "session-work-intent-and-selected-checkout-identities",
+        }
+    declared = sorted(set(raw_declared))
+    selected = sorted(
+        key for key in raw_selected if isinstance(key, str)
+        and _is_repository_identity(key)
+    )
+    unselected = sorted(set(declared) - set(selected))
+    if not declared:
+        status = "no-repositories-declared"
+    elif unselected:
+        status = "declared-repositories-not-selected"
+    else:
+        status = "all-declared-repositories-selected"
+    return {
+        "status": status,
+        "declared_repositories": declared,
+        "selected_repositories": selected,
+        "unselected_declared_repositories": unselected,
+        "basis": "session-work-intent-and-selected-checkout-identities",
+    }
+
+
+def _is_repository_identity(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", value) is not None
+    )
+
+
+def _evidence_visibility_summary(
+    diagnostics: Any, diagnostic_count: Any, diagnostics_truncated: Any,
+) -> dict[str, Any]:
+    """Summarize bounded source-scope gaps without treating them as bad content."""
+    if not isinstance(diagnostics, list) or type(diagnostic_count) is not int:
+        return {
+            "status": "unavailable",
+            "verification_diagnostic_count": None,
+            "outside_selected_reference_diagnostic_count": 0,
+            "outside_selected_repositories": [],
+            "diagnostics_truncated": None,
+            "basis": "bounded-campaign-evidence-source-verification-diagnostics",
+        }
+    outside = [
+        item for item in diagnostics
+        if isinstance(item, dict)
+        and item.get("verification") == "outside-selected-session"
+    ]
+    counts: dict[str, int] = {}
+    for item in outside:
+        repository = item.get("repository")
+        if _is_repository_identity(repository):
+            counts[repository] = counts.get(repository, 0) + 1
+    truncated = diagnostics_truncated if type(diagnostics_truncated) is bool else None
+    if outside:
+        status = "outside-selected-session-references-observed"
+    elif diagnostic_count:
+        status = "other-source-verification-gaps-observed"
+    elif truncated:
+        status = "diagnostics-truncated"
+    else:
+        status = "no-source-verification-gaps-observed"
+    if truncated and outside:
+        status = "outside-selected-session-references-observed-with-truncated-diagnostics"
+    return {
+        "status": status,
+        "verification_diagnostic_count": diagnostic_count,
+        "outside_selected_reference_diagnostic_count": len(outside),
+        "outside_selected_repositories": [
+            {"repository": repository, "diagnostic_count": counts[repository]}
+            for repository in sorted(counts)[:16]
+        ],
+        "diagnostics_truncated": truncated,
+        "basis": "bounded-campaign-evidence-source-verification-diagnostics",
+    }
 
 
 def _source_pointer_key(pointer: dict[str, str]) -> tuple[str, str, str, str]:
@@ -4070,6 +4235,18 @@ def project(
             "goal": intent.get("goal"),
         },
     }
+    workspace_alignment = _work_intent_workspace_alignment(snapshot)
+    evidence_visibility = _evidence_visibility_summary(
+        observation_reference_diagnostics,
+        len(observation_reference_diagnostics),
+        len(observation_reference_diagnostics) > MAX_OBSERVATIONS,
+    )
+    if workspace_alignment["status"] in {
+        "declared-repositories-not-selected",
+        "workspace-selection-unavailable",
+        "unavailable",
+    }:
+        subject["workspace_alignment"] = workspace_alignment
     if isinstance(campaign_charter, dict):
         subject["campaign_charter"] = campaign_charter
     projection: dict[str, Any] = {
@@ -4077,6 +4254,8 @@ def project(
         "identity": "eci_" + digest_hex({
             "session_id": session.session_id,
             "campaign_id": campaign.get("identity"),
+            "work_intent_identity": intent.get("identity"),
+            "workspace_alignment": workspace_alignment,
             "evidence": [item["identity"] for item in references],
             "campaign_charter_reference": (
                 campaign_charter.get("evidence_reference")
@@ -4150,6 +4329,11 @@ def project(
             "observation_reference_diagnostics_truncated": (
                 len(observation_reference_diagnostics) > MAX_OBSERVATIONS
             ),
+            **({"evidence_visibility": evidence_visibility} if (
+                evidence_visibility.get(
+                    "outside_selected_reference_diagnostic_count", 0
+                ) > 0
+            ) else {}),
             "improvement_relations_unverified_count": (
                 unverified_improvement_relation_count
             ),
