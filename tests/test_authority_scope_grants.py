@@ -995,6 +995,71 @@ def test_scope_grant_binds_an_owner_selected_checkout_for_an_already_writable_re
         session.close()
 
 
+def test_owner_checkout_replaces_initial_repository_selection_on_first_grant(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(
+        tmp_path / "state", workspace, acquire_environment_claim=False,
+    )
+    try:
+        repository = "mncs-environment"
+        repository_root = workspace / repository
+        selected_facts = workspace_module.verify_registered_checkout(
+            repository_root,
+            repository=repository,
+            workspace_root=workspace,
+            expected_repository_root=repository_root,
+        )
+        session.snapshot["selected_checkouts"][repository] = {
+            **selected_facts,
+            "repository": repository,
+            "path": str(repository_root.resolve()),
+            "branch": selected_facts["branch"],
+            "head": selected_facts["head"],
+            "clean": True,
+        }
+
+        checkout, owner_facts = _nested_target_checkout(
+            session,
+            workspace,
+            "first-grant-owner-selection",
+            "campaign/first-grant-owner-selection",
+            repository=repository,
+        )
+        # Session entry selected the repository root. The Control owner grant
+        # selects a different registered linked checkout for this exact repo.
+        session.snapshot["selected_checkouts"][repository] = {
+            **selected_facts,
+            "repository": repository,
+            "path": str(repository_root.resolve()),
+            "branch": selected_facts["branch"],
+            "head": selected_facts["head"],
+            "clean": True,
+        }
+
+        grant = session.grant_repository_scope(
+            repository=repository,
+            campaign_id=CAMPAIGN,
+            expected_authority_revision=session.effective_authority()["revision"],
+            approval_reference=APPROVAL,
+            owner_authorized_checkout=owner_facts,
+            authenticated_principal_id=PRINCIPAL,
+            request_id="req_owner_replaces_initial_repository_selection",
+        )
+
+        assert grant["repository_identity"]["path"] == str(checkout)
+        claim = session.acquire_claim(
+            repository,
+            reason="claim the exact owner-selected linked checkout",
+            request_id="req_owner_selected_checkout_claim",
+        )
+        assert claim["scope"]["checkout"] == str(checkout)
+    finally:
+        session.close()
+
+
 def test_scope_grant_refresh_tracks_same_live_worktree_after_head_advances(
     tmp_path: Path,
 ) -> None:

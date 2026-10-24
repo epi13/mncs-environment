@@ -2940,6 +2940,21 @@ class Session:
             selected = dict(prior_identity)
         selected_for_verification = selected
         if (
+            prior_grant is None
+            and owner_authorized_checkout is not None
+            and isinstance(selected, dict)
+            and isinstance(selected.get("path"), str)
+            and isinstance(owner_authorized_checkout.get("path"), str)
+            and Path(os.path.abspath(selected["path"]))
+            != Path(os.path.abspath(owner_authorized_checkout["path"]))
+        ):
+            # The campaign's initial checkout selection describes the
+            # repository view used to enter Environment. An exact Control
+            # owner grant may select a different registered worktree on the
+            # first repository-scope admission, so that default selection
+            # must not veto the independently verified owner selection.
+            selected_for_verification = None
+        if (
             prior_grant is not None
             and owner_authorized_checkout is not None
             and isinstance(selected, dict)
@@ -5095,6 +5110,28 @@ class Session:
             selected_checkouts.get(repository)
             if isinstance(selected_checkouts, dict) else None
         )
+        if (isinstance(selected, dict)
+                and selected.get("source_ref") != "authenticated-scope-grant"):
+            current_grants = [
+                grant for grant in self.authority_scope_grants()
+                if grant.get("repository") == repository
+            ]
+            owner_identity = (
+                current_grants[0].get("repository_identity")
+                if len(current_grants) == 1 else None
+            )
+            owner_path = (
+                owner_identity.get("path") if isinstance(owner_identity, dict) else None
+            )
+            selected_path = selected.get("path")
+            if (isinstance(owner_path, str) and isinstance(selected_path, str)
+                    and Path(os.path.abspath(owner_path))
+                    != Path(os.path.abspath(selected_path))):
+                # An authenticated repository grant is the durable checkout
+                # selection for this repository. The session's entry-time
+                # checkout is only a default and must not route the first
+                # post-grant claim back to a different worktree.
+                selected = None
         owner_authorized_selection = False
         if isinstance(selected, dict) and selected.get("source_ref") == "authenticated-scope-grant":
             current_grants = [
