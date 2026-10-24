@@ -1,0 +1,109 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_owner_checkout_authorization_projection_readback_20261024",
+  "captured_at": "2026-10-24T21:01:14Z",
+  "measurement_basis": "authenticated-campaign-state-readback-with-embedded-capability-projection",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-readback",
+    "source_interface": "MNCS Environment campaign_state with its embedded Environmental Capability projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_5e5c90fef0ca5db5",
+      "campaign_evidence_offset": 115,
+      "campaign_evidence_limit": 7,
+      "campaign_evidence_count": 122,
+      "projection_scope": "pressure, verification, live readback, and improvement records for owner-approved Environment checkout routing"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "pressure_hypothesis_count": 1,
+      "pressure_hypothesis": {
+        "identity": "ph_environment_owner_checkout_authorization_routing_20261024",
+        "recurrence_status": "not-established",
+        "observation_count": 1,
+        "evidence_identity": "ev_environment_owner_checkout_authorization_pressure_followup_20261024",
+        "evidence_verification": "record-integrity-verified-in-projection"
+      },
+      "improvement_relation_count": 2,
+      "corrected_improvement_relation": {
+        "identity": "im_environment_owner_checkout_authorization_routing_followup_20261024",
+        "pressure_hypothesis_status": "present-in-projection",
+        "verification_observation_identity": "ev_environment_owner_checkout_authorization_verification_followup_20261024",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_observation_identity": "ev_environment_owner_checkout_authorization_live_readback_20261024",
+        "subsequent_record_status": "record-integrity-verified-in-projection"
+      },
+      "original_improvement_relation": {
+        "identity": "im_environment_owner_checkout_authorization_routing_20261024",
+        "verification_observation_identity": "ev_environment_owner_checkout_authorization_verification_20261024",
+        "verification_record_status": "not-present-in-projection"
+      },
+      "retained_invalid_source_references": [
+        {
+          "identity": "ev_environment_owner_checkout_authorization_pressure_20261024",
+          "verification": "observation-contract-invalid"
+        },
+        {
+          "identity": "ev_environment_owner_checkout_authorization_verification_20261024",
+          "verification": "observation-contract-invalid"
+        }
+      ],
+      "analysis_limit": "The projection exposes one authentic pressure hypothesis, a corrected independently verified improvement relation, and the live follow-up record. It retains the first two immutable malformed records and labels them invalid. Recurrence across sessions and long-term effectiveness remain unassessed."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-campaign-state-projection",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "checkpoint_id": "chk_5e5c90fef0ca5db5"
+    },
+    {
+      "kind": "verified-pressure-observation",
+      "identity": "ev_environment_owner_checkout_authorization_pressure_followup_20261024",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/checkout-authorization-routing-pressure-followup-20261024.json"
+    },
+    {
+      "kind": "verified-implementation-verification",
+      "identity": "ev_environment_owner_checkout_authorization_verification_followup_20261024",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/checkout-authorization-routing-verification-followup-20261024.json"
+    },
+    {
+      "kind": "live-operation-readback",
+      "identity": "ev_environment_owner_checkout_authorization_live_readback_20261024",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/checkout-authorization-routing-live-readback-20261024.json"
+    },
+    {
+      "kind": "validated-improvement-relation",
+      "identity": "ev_environment_owner_checkout_authorization_improvement_followup_20261024",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/checkout-authorization-routing-improvement-followup-20261024.json"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence",
+    "subsequent improvement durability",
+    "change in user effort across future owner-granted checkouts"
+  ]
+}
