@@ -1,0 +1,97 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_source_integrity_chain_readback_20261024",
+  "captured_at": "2026-10-24T09:24:17+00:00",
+  "measurement_basis": "direct-Environment-campaign-state-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_b16195d8d64dfd4c",
+      "sequence": 17
+    },
+    "campaign_evidence_count": 38,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-source-integrity-chain-readback",
+    "source_interface": "mncs_environment MCP campaign_state",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_b16195d8d64dfd4c",
+      "evidence_offset": 16,
+      "evidence_limit": 32
+    },
+    "outcome": {
+      "campaign_evidence_count": 38,
+      "page_reference_count": 22,
+      "projection_status": "partial",
+      "projection_response_compacted": true,
+      "original_projection_bytes": 60620,
+      "observation_records_considered": 22,
+      "observation_records_verified": 12,
+      "observation_records_unavailable": 0,
+      "source_pointer_count": 11,
+      "source_pointer_content_integrity_verified_count": 9,
+      "source_pointer_content_integrity_not_verified_count": 2,
+      "pressure_hypotheses": [
+        {
+          "identity": "ph_environment_capability_evidence_page_cursor",
+          "recurrence_status": "not-established"
+        },
+        {
+          "identity": "ph_environment_capability_source_integrity_size_bound",
+          "recurrence_status": "not-established"
+        },
+        {
+          "identity": "ph_environment_read_operation_activity_correlation",
+          "recurrence_status": "not-established"
+        }
+      ],
+      "improvement_relations": [
+        {
+          "identity": "im_environment_capability_evidence_page_cursor_20261024",
+          "pressure_hypothesis_status": "present-in-projection",
+          "verification_record_status": "record-integrity-verified-in-projection",
+          "subsequent_record_status": "record-integrity-verified-in-projection",
+          "implementation_content_integrity_status": "content-integrity-verified",
+          "effectiveness_assessment": "not-assessed"
+        },
+        {
+          "identity": "im_environment_capability_source_integrity_size_bound_20261024",
+          "pressure_hypothesis_status": "present-in-projection",
+          "verification_record_status": "record-integrity-verified-in-projection",
+          "subsequent_record_status": "record-integrity-verified-in-projection",
+          "implementation_content_integrity_status": "content-integrity-verified",
+          "effectiveness_assessment": "not-assessed"
+        }
+      ],
+      "analysis_limit": "The bounded page reconstructs both improvement chains and integrity-checks their implementation and observation records. The compact response omits some observation details, which remain addressable from exact evidence references."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    }
+  ],
+  "not_measured": [
+    "whether agents use these projections to change implementation plans",
+    "long-term recurrence or effectiveness of the three pressure hypotheses",
+    "resource attribution to source blob reads and response compaction",
+    "observations outside the selected campaign evidence page"
+  ]
+}
