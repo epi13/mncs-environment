@@ -1,0 +1,116 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_event_page_cursor_verification_20261024",
+  "captured_at": "2026-10-24T17:38:10Z",
+  "measurement_basis": "bounded-Store-page-regressions-and-independent-vertical-proof",
+  "observation": {
+    "kind": "session-event-page-cursor-verification",
+    "source_interface": "MNCS Environment targeted pytest and vertical proof",
+    "request": {
+      "implementation_commit": "886bb6641b03ed00d19c828d71c9f283a1a88395",
+      "verification_commands": [
+        "python3 -m pytest -q tests/test_entry.py",
+        "python3 -m pytest -q tests/test_session_completion.py",
+        "python3 -m pytest -q tests/test_capability_intelligence.py",
+        "python3 scripts/vertical_proof.py"
+      ]
+    },
+    "outcome": {
+      "store_page_contract": {
+        "status": "passed",
+        "selected_payloads_only": true,
+        "older_cursor_exclusive": true,
+        "next_cursor_returns_older_records_only": true,
+        "canonical_store_full_history_fallback": "refused"
+      },
+      "targeted_regressions": {
+        "tests_test_entry": {"passed": 62, "failed": 0, "status": "passed"},
+        "tests_test_session_completion": {"passed": 18, "failed": 0, "status": "passed"},
+        "tests_test_capability_intelligence": {"passed": 57, "failed": 0, "status": "passed"}
+      },
+      "vertical_proof": {
+        "status": "passed",
+        "events": 15,
+        "checkpoints": 3,
+        "handoffs": 1,
+        "provider_bindings": 30,
+        "proof_session_id": "ses_d706a27d655347db"
+      },
+      "analysis_limit": "These checks establish cursor ordering, bounded Store payload reads, projection and CLI behavior, response compaction, and the existing vertical contract. They do not establish recurrence across sessions or long-term agent impact."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_1677786cdaba68bd",
+    "campaign_evidence_count_before_recording": 83,
+    "claim_ids": ["claim:mncs-environment:worktree:567a0ed75512"]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_session_activity_older_pages_20261024",
+    "title": "The session activity projection exposes only a bounded newest operation window",
+    "category": "session-observability",
+    "subsystem": "Environment session event Store and environmental capability projection",
+    "owner": "mncs-environment",
+    "recurrence": "not-established",
+    "basis": "The authenticated session contains 128 captured Control read-operation events while one projection returns at most 32. A bounded sequence cursor now allows an agent to inspect earlier event pages without loading the full canonical event payload history.",
+    "actionable_recommendation": "Use the exclusive event cursor and exact event references to inspect older authenticated activity when the projection reports omitted records; continue collecting cross-session evidence before treating this as a recurring pressure.",
+    "not_measured": [
+      "recurrence across independent sessions or campaigns",
+      "whether any omitted operations caused avoidable development difficulty",
+      "agent outcome or effectiveness changes after introducing paging",
+      "model identity, token use, cache accounting, and resource consumption"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "bounded-Store-event-page-implementation",
+      "identity": "ev_environment_session_event_page_store_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "886bb6641b03ed00d19c828d71c9f283a1a88395",
+      "path": "mncs_env/store_backend.py",
+      "sha256": "3efa3b55a6da3c699406bd9dd1969682ef4fc3f527abd0d24f2959a154ec7a00"
+    },
+    {
+      "kind": "bounded-session-event-page-projection-and-cli",
+      "identity": "ev_environment_session_event_page_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "886bb6641b03ed00d19c828d71c9f283a1a88395",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "475424c5d0c97a4822d6c028d18733238d598ab91b5e069735502c4d628667ac"
+    },
+    {
+      "kind": "Store-binding-page-regression-tests",
+      "identity": "ev_environment_session_event_page_store_tests_20261024",
+      "repository": "mncs-environment",
+      "commit": "886bb6641b03ed00d19c828d71c9f283a1a88395",
+      "path": "tests/test_entry.py",
+      "sha256": "827885cf9e1b9e3542cee263a23ca77061ff9792eb87ce5d9dc1c8c8576d82d2"
+    },
+    {
+      "kind": "session-projection-and-cursor-regression-tests",
+      "identity": "ev_environment_session_event_page_projection_tests_20261024",
+      "repository": "mncs-environment",
+      "commit": "886bb6641b03ed00d19c828d71c9f283a1a88395",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "2f0b1a65906edf9e7dab12a04a199c86f8f9a4f09e90888cf1c014e58a3b8675"
+    }
+  ],
+  "not_measured": [
+    "whether the same result cap affects other agent sessions",
+    "whether agents will use older-page cursors during normal development",
+    "long-term recurrence or agent outcome changes"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

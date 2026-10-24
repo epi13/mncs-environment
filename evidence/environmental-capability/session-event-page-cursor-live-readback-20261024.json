@@ -1,0 +1,147 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_event_page_cursor_live_readback_20261024",
+  "captured_at": "2026-10-24T17:38:10Z",
+  "measurement_basis": "authenticated-canonical-Store-projection-with-exclusive-event-cursor",
+  "observation": {
+    "kind": "session-event-page-cursor-live-readback",
+    "source_interface": "MNCS Environment environmental-capability projection over canonical Store session events",
+    "source_session_context": {
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "work_intent_id": "int_8475157f281c835f",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "environment_id": "renv_1991cffb20bdf206",
+      "repository": "mncs-environment",
+      "repository_branch": "campaign/scoped-merge-publish-authority-20261020",
+      "repository_head": "c8f35ee128b689907b3a413e6b723e82d9b9b7b9",
+      "repository_context_basis": "authenticated-control-grant-and-session-snapshot"
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_1677786cdaba68bd",
+      "campaign_evidence_count": 83,
+      "projection_route": "environmental-capability",
+      "session_event_limit": 24,
+      "historical_exclusive_cursor": 100,
+      "campaign_evidence_limit": 1
+    },
+    "outcome": {
+      "historical_page": {
+        "status": "partial-no-invocations-in-selected-window",
+        "event_count": 218,
+        "event_page_before_sequence": 100,
+        "event_window_limit": 24,
+        "event_window_sequence_start": 76,
+        "event_window_sequence_end": 99,
+        "event_page_has_older_records": true,
+        "next_event_before_sequence": 76,
+        "rpc_operation_events_considered": 11,
+        "rpc_operation_records_returned": 11,
+        "rpc_operation_records_omitted": 0,
+        "rpc_operation_capture_count": 128,
+        "rpc_operation_capture_limit": 128,
+        "rpc_operation_capture_limit_reached": true,
+        "operation_outcomes": {
+          "campaign.continuation": "succeeded",
+          "campaign.state": "succeeded",
+          "environmental-capability.projection": "succeeded",
+          "session.context": "succeeded",
+          "session.inspect": "succeeded"
+        },
+        "event_type_counts": {
+          "authority.denied": 2,
+          "environment.rpc.read_observed": 11,
+          "session.checkpointed": 5,
+          "session.resumed": 6
+        },
+        "authority_denied_cause": "not-inspected-from-this-projection; no causal claim"
+      },
+      "latest_page": {
+        "event_count": 218,
+        "event_page_before_sequence": null,
+        "event_window_limit": 24,
+        "event_window_sequence_start": 195,
+        "event_window_sequence_end": 218,
+        "event_page_has_older_records": true,
+        "next_event_before_sequence": 195,
+        "rpc_operation_events_considered": 0,
+        "rpc_operation_records_returned": 0
+      },
+      "whole_session_projection": {
+        "event_count": 218,
+        "event_window_limit": 256,
+        "event_window_sequence_start": 1,
+        "event_window_sequence_end": 218,
+        "rpc_operation_capture_count": 128,
+        "rpc_operation_capture_limit": 128,
+        "rpc_operation_capture_limit_reached": true,
+        "rpc_operation_records_returned": 32,
+        "rpc_operation_records_omitted": 96
+      },
+      "analysis_limit": "The session Work Intent records a generic Control-socket persistence exercise while the authenticated campaign and worktree claim identify this environmental capability campaign. These identities are preserved separately. The two authority.denied events are counted but their payloads and causes are not established by this projection. One session is not evidence of cross-session recurrence."
+    },
+    "source_interface_context": {
+      "environmental_capability_projection": "Direct Store-backed read in the owned Environment worktree; records only selected event payloads and keeps explicit campaign evidence paging independent.",
+      "model_identity": "unavailable",
+      "token_usage": "unavailable",
+      "execution_duration": "unavailable",
+      "resource_consumption": "unavailable",
+      "cache_accounting": "unavailable"
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_1677786cdaba68bd",
+    "campaign_evidence_count_before_recording": 83,
+    "claim_ids": ["claim:mncs-environment:worktree:567a0ed75512"]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "event_identities": [
+        "evt_e851cadc54399293",
+        "evt_af7dec6e913c06ac",
+        "evt_e9da52612651a511",
+        "evt_0eb16b3c89e70497",
+        "evt_711396f0f5f64988",
+        "evt_690b201bfd6d8245",
+        "evt_9ddf522ea6af5ac8",
+        "evt_d3cb0be6ce32a4b4",
+        "evt_05218152653f07f6",
+        "evt_888e94a1e90b4aef",
+        "evt_a1f8441bb1b94878"
+      ]
+    },
+    {
+      "kind": "bounded-session-event-page-projection",
+      "identity": "ev_environment_session_event_page_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "886bb6641b03ed00d19c828d71c9f283a1a88395",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "475424c5d0c97a4822d6c028d18733238d598ab91b5e069735502c4d628667ac"
+    }
+  ],
+  "not_measured": [
+    "whether the omitted operation cap causes recurring pressure in other sessions",
+    "the cause and appropriateness of the two authority.denied events",
+    "agent effectiveness or outcome changes after introducing cursors",
+    "model identity, token use, cache accounting, execution duration, and resource consumption"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
