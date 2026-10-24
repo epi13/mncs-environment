@@ -58,6 +58,10 @@ CHECKPOINT_SCHEMA = "mncs.environment.checkpoint/1"
 HANDOFF_SCHEMA = "mncs.environment.handoff/1"
 
 MAX_EMIT_RETRIES = 16
+MAX_RPC_READ_ACTIVITY_OBSERVATIONS = 128
+MAX_RPC_ACTIVITY_RECONCILIATION_EVENTS = 256
+RPC_READ_ACTIVITY_EVENT = "environment.rpc.read_observed"
+RPC_READ_ACTIVITY_REQUEST_INDEX = "rpc_read_activity_request_index"
 
 
 def _request_operation_digest(
@@ -2537,8 +2541,13 @@ class Session:
         request_id: str | None = None,
         operation_digest: str | None = None,
         expected_generation: int | None = None,
+        preloaded_events: list[dict[str, Any]] | None = None,
+        next_sequence_hint: int | None = None,
     ) -> dict[str, Any]:
         event_payload = dict(payload or {})
+        if (next_sequence_hint is not None
+                and (type(next_sequence_hint) is not int or next_sequence_hint < 1)):
+            raise ValueError("event sequence hint must be a positive integer")
         if request_id is not None:
             if (not isinstance(request_id, str) or not request_id
                     or len(request_id) > 160 or "\x00" in request_id):
@@ -2552,7 +2561,10 @@ class Session:
                 "payload": event_payload,
                 "causes": causes,
             })
-            for existing in self._log():
+            existing_events = (
+                preloaded_events if preloaded_events is not None else self._log()
+            )
+            for existing in existing_events:
                 prior = existing.get("payload", {})
                 if (existing.get("type") == event_type
                         and isinstance(prior, dict)
@@ -2571,11 +2583,16 @@ class Session:
         last_error: Exception | None = None
         attempts = 1 if expected_generation is not None else MAX_EMIT_RETRIES
         for _ in range(attempts):
-            if expected_generation is not None or self._next_seq_hint is None:
+            if expected_generation is not None:
                 sequences = self.store.existing_sequences(self.session_id)
                 sequence_hint = (max(sequences) + 1) if sequences else 1
-                if expected_generation is None:
-                    self._next_seq_hint = sequence_hint
+            elif self._next_seq_hint is None:
+                if next_sequence_hint is None:
+                    sequences = self.store.existing_sequences(self.session_id)
+                    sequence_hint = (max(sequences) + 1) if sequences else 1
+                else:
+                    sequence_hint = next_sequence_hint
+                self._next_seq_hint = sequence_hint
             else:
                 sequence_hint = self._next_seq_hint
             sequence = sequence_hint
@@ -5741,6 +5758,306 @@ class Session:
             operation_digest=operation_digest,
         )
 
+    def record_rpc_read_activity(
+        self,
+        payload: dict[str, Any],
+        *,
+        request_id: str,
+        operation_digest: str,
+    ) -> dict[str, Any]:
+        """Record one bounded, authenticated Control read-operation outcome.
+
+        The event log keeps at most 128 such records for a session. A count in
+        the session snapshot makes that bound durable without rescanning all
+        prior events to decide whether another observation can be accepted.
+        """
+        caller = payload.get("caller") if isinstance(payload, dict) else None
+        context = payload.get("context") if isinstance(payload, dict) else None
+        measurements = (
+            payload.get("measurement_availability")
+            if isinstance(payload, dict) else None
+        )
+        measured_values = (
+            payload.get("measurements") if isinstance(payload, dict) else None
+        )
+        if (not isinstance(payload, dict)
+                or set(payload) != {
+                    "schema_version", "operation", "outcome_status", "exit_code",
+                    "failure_code", "request_digest", "caller", "context",
+                    "measurement_availability", "measurements",
+                }
+                or payload.get("schema_version")
+                != "mncs.environment.rpc-read-activity/1"
+                or not isinstance(payload.get("operation"), str)
+                or not re.fullmatch(
+                    r"[a-z][a-z0-9.-]{0,95}", payload["operation"],
+                )
+                or payload.get("outcome_status") not in {"succeeded", "failed"}
+                or (payload.get("exit_code") is not None
+                    and type(payload.get("exit_code")) is not int)
+                or (payload.get("failure_code") is not None
+                    and (not isinstance(payload.get("failure_code"), str)
+                         or not re.fullmatch(
+                             r"[A-Za-z0-9._-]{1,96}", payload["failure_code"],
+                         )))
+                or payload.get("request_digest") != operation_digest
+                or not isinstance(caller, dict)
+                or set(caller) != {
+                    "authenticated_principal_id", "control_grant_id",
+                    "process_identity",
+                }
+                or not isinstance(caller.get("authenticated_principal_id"), str)
+                or not re.fullmatch(
+                    r"ctrl_[0-9a-f]{32}", caller["authenticated_principal_id"],
+                )
+                or not isinstance(caller.get("control_grant_id"), str)
+                or not re.fullmatch(r"[0-9a-f]{32}", caller["control_grant_id"])
+                or (caller.get("process_identity") is not None
+                    and (not isinstance(caller.get("process_identity"), str)
+                         or not re.fullmatch(
+                             r"proc_[0-9a-f]{32}", caller["process_identity"],
+                         )))
+                or not isinstance(context, dict)
+                or set(context) != {
+                    "repository", "repository_branch", "repository_head",
+                    "environment_id", "campaign_id", "work_intent_id",
+                }
+                or not isinstance(context.get("repository"), str)
+                or not re.fullmatch(
+                    r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", context["repository"],
+                )
+                or any(value is not None and (
+                    not isinstance(value, str) or not value or len(value) > 256
+                    or "\x00" in value
+                ) for key, value in context.items() if key != "repository")
+                or (context.get("repository_head") is not None
+                    and not re.fullmatch(
+                        r"(?:[0-9a-f]{40}|[0-9a-f]{64})",
+                        context["repository_head"],
+                    ))
+                or not isinstance(measurements, dict)
+                or measurements != {
+                    "model_identity": "unavailable",
+                    "token_usage": "unavailable",
+                    "control_dispatch_elapsed_ms": "measured",
+                    "resource_consumption": "unavailable",
+                    "cache_accounting": "unavailable",
+                }
+                or not isinstance(measured_values, dict)
+                or set(measured_values) != {"control_dispatch_elapsed_ms"}
+                or type(measured_values.get("control_dispatch_elapsed_ms"))
+                not in {int, float}
+                or not 0 <= measured_values["control_dispatch_elapsed_ms"] <= 600_000
+                or ((payload.get("outcome_status") == "succeeded")
+                    != (payload.get("failure_code") is None))
+                or (payload.get("outcome_status") == "succeeded"
+                    and payload.get("exit_code") != 0)
+                or (payload.get("outcome_status") == "failed"
+                    and payload.get("exit_code") == 0)
+                or not isinstance(request_id, str)
+                or not re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", request_id)
+                or not isinstance(operation_digest, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", operation_digest)):
+            raise ValueError("Control read-operation observation is malformed")
+        snapshot_intent = self.snapshot.get("intent")
+        snapshot_intent = snapshot_intent if isinstance(snapshot_intent, dict) else {}
+        snapshot_campaign = self.snapshot.get("campaign")
+        snapshot_campaign = snapshot_campaign if isinstance(snapshot_campaign, dict) else {}
+        if (
+            caller.get("authenticated_principal_id")
+            != self.snapshot.get("authenticated_principal_id")
+            or context.get("environment_id") != self.snapshot.get("environment_id")
+            or context.get("campaign_id") != snapshot_campaign.get("identity")
+            or context.get("work_intent_id") != snapshot_intent.get("identity")
+        ):
+            raise LifecycleError(
+                "Control read-operation evidence does not match its authenticated session"
+            )
+
+        count = self.snapshot.get("rpc_read_activity_count", 0)
+        if type(count) is not int or not 0 <= count <= MAX_RPC_READ_ACTIVITY_OBSERVATIONS:
+            raise LifecycleError("Control read-operation observation count is invalid")
+
+        raw_request_index = self.snapshot.get(RPC_READ_ACTIVITY_REQUEST_INDEX, [])
+        if (not isinstance(raw_request_index, list)
+                or len(raw_request_index) > MAX_RPC_READ_ACTIVITY_OBSERVATIONS):
+            raise LifecycleError("Control read-operation request index is invalid")
+        request_index: dict[str, dict[str, Any]] = {}
+        indexed_ordinals: set[int] = set()
+        for item in raw_request_index:
+            if (not isinstance(item, dict)
+                    or set(item) != {
+                        "request_id", "operation_digest", "event_identity",
+                        "event_sequence", "observation_ordinal",
+                    }
+                    or not isinstance(item.get("request_id"), str)
+                    or not re.fullmatch(
+                        r"req_[A-Za-z0-9_-]{1,76}", item["request_id"],
+                    )
+                    or not isinstance(item.get("operation_digest"), str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", item["operation_digest"])
+                    or not isinstance(item.get("event_identity"), str)
+                    or not item["event_identity"]
+                    or len(item["event_identity"]) > 160
+                    or type(item.get("event_sequence")) is not int
+                    or item["event_sequence"] < 1
+                    or type(item.get("observation_ordinal")) is not int
+                    or not 1 <= item["observation_ordinal"]
+                    <= MAX_RPC_READ_ACTIVITY_OBSERVATIONS
+                    or item["request_id"] in request_index
+                    or item["observation_ordinal"] in indexed_ordinals):
+                raise LifecycleError("Control read-operation request index is malformed")
+            request_index[item["request_id"]] = dict(item)
+            indexed_ordinals.add(item["observation_ordinal"])
+
+        indexed_prior = request_index.get(request_id)
+        if indexed_prior is not None:
+            if indexed_prior["operation_digest"] != operation_digest:
+                raise LifecycleError(
+                    "request identity was already used for a different Environment operation"
+                )
+            return {
+                "status": "already-recorded",
+                "event": {
+                    "identity": indexed_prior["event_identity"],
+                    "sequence": indexed_prior["event_sequence"],
+                    "type": RPC_READ_ACTIVITY_EVENT,
+                    "payload": {
+                        "request_id": request_id,
+                        "request_operation_digest": operation_digest,
+                        "observation_ordinal": indexed_prior["observation_ordinal"],
+                    },
+                },
+            }
+
+        if count >= MAX_RPC_READ_ACTIVITY_OBSERVATIONS:
+            if self.snapshot.get("rpc_read_activity_limit_reached") is not True:
+                self.snapshot["rpc_read_activity_limit_reached"] = True
+                self._save()
+            return {"status": "capture-limit-reached", "event": None}
+
+        # The bounded tail repairs an event publication interrupted before
+        # its snapshot update. The request index handles older retries without
+        # rescanning long session histories on the RPC response path.
+        tail_reader = getattr(self.store, "read_event_tail", None)
+        if callable(tail_reader):
+            existing_events, event_binding_count = tail_reader(
+                self.session_id, limit=MAX_RPC_ACTIVITY_RECONCILIATION_EVENTS,
+            )
+        else:
+            existing_events = self._log()
+            event_binding_count = len(existing_events)
+        if (not isinstance(existing_events, list)
+                or type(event_binding_count) is not int
+                or event_binding_count < len(existing_events)
+                or len(existing_events) < min(
+                    event_binding_count, MAX_RPC_ACTIVITY_RECONCILIATION_EVENTS,
+                )):
+            raise LifecycleError(
+                "Control read-operation evidence cannot reconcile an incomplete event tail"
+            )
+
+        previous_count = count
+        previous_index_size = len(request_index)
+        for event in existing_events:
+            if event.get("type") != RPC_READ_ACTIVITY_EVENT:
+                continue
+            event_payload = event.get("payload")
+            event_payload = event_payload if isinstance(event_payload, dict) else {}
+            recovered_id = event_payload.get("request_id")
+            recovered_digest = event_payload.get("request_operation_digest")
+            recovered_ordinal = event_payload.get("observation_ordinal")
+            event_identity = event.get("identity")
+            event_sequence = event.get("sequence")
+            if (not isinstance(recovered_id, str)
+                    or not re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", recovered_id)
+                    or not isinstance(recovered_digest, str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", recovered_digest)
+                    or type(recovered_ordinal) is not int
+                    or not 1 <= recovered_ordinal <= MAX_RPC_READ_ACTIVITY_OBSERVATIONS
+                    or not isinstance(event_identity, str) or not event_identity
+                    or len(event_identity) > 160
+                    or type(event_sequence) is not int or event_sequence < 1):
+                continue
+            recovered = {
+                "request_id": recovered_id,
+                "operation_digest": recovered_digest,
+                "event_identity": event_identity,
+                "event_sequence": event_sequence,
+                "observation_ordinal": recovered_ordinal,
+            }
+            existing = request_index.get(recovered_id)
+            if existing is not None and existing != recovered:
+                raise LifecycleError(
+                    "request identity has conflicting Environment read-operation events"
+                )
+            if existing is None:
+                request_index[recovered_id] = recovered
+            count = max(count, recovered_ordinal)
+
+        prior = self._request_event_from_events(
+            existing_events, RPC_READ_ACTIVITY_EVENT, request_id, operation_digest,
+        )
+        index_values = sorted(
+            request_index.values(), key=lambda item: item["observation_ordinal"],
+        )
+        state_needs_repair = (
+            count != previous_count
+            or len(request_index) != previous_index_size
+            or self.snapshot.get(RPC_READ_ACTIVITY_REQUEST_INDEX) != index_values
+        )
+        if prior is not None:
+            if state_needs_repair:
+                self.snapshot["rpc_read_activity_count"] = count
+                self.snapshot[RPC_READ_ACTIVITY_REQUEST_INDEX] = index_values
+                self.snapshot["rpc_read_activity_limit_reached"] = (
+                    count >= MAX_RPC_READ_ACTIVITY_OBSERVATIONS
+                )
+                self._save()
+            return {"status": "already-recorded", "event": prior}
+
+        if count >= MAX_RPC_READ_ACTIVITY_OBSERVATIONS:
+            if (state_needs_repair
+                    or self.snapshot.get("rpc_read_activity_limit_reached") is not True):
+                self.snapshot["rpc_read_activity_count"] = count
+                self.snapshot[RPC_READ_ACTIVITY_REQUEST_INDEX] = index_values
+                self.snapshot["rpc_read_activity_limit_reached"] = True
+                self._save()
+            return {"status": "capture-limit-reached", "event": None}
+
+        ordinal = count + 1
+        last_sequence = max(
+            (
+                event["sequence"] for event in existing_events
+                if type(event.get("sequence")) is int and event["sequence"] >= 1
+            ),
+            default=0,
+        )
+        event = self._emit(
+            RPC_READ_ACTIVITY_EVENT,
+            "mncs-control-mcp",
+            {**payload, "observation_ordinal": ordinal},
+            request_id=request_id,
+            operation_digest=operation_digest,
+            preloaded_events=existing_events,
+            next_sequence_hint=last_sequence + 1,
+        )
+        self.snapshot["rpc_read_activity_count"] = ordinal
+        self.snapshot[RPC_READ_ACTIVITY_REQUEST_INDEX] = [
+            *index_values,
+            {
+                "request_id": request_id,
+                "operation_digest": operation_digest,
+                "event_identity": event["identity"],
+                "event_sequence": event["sequence"],
+                "observation_ordinal": ordinal,
+            },
+        ]
+        if ordinal >= MAX_RPC_READ_ACTIVITY_OBSERVATIONS:
+            self.snapshot["rpc_read_activity_limit_reached"] = True
+        self._save()
+        return {"status": "recorded", "event": event}
+
     def request_event(
         self,
         event_type: str,
@@ -5754,8 +6071,20 @@ class Session:
                 or not isinstance(operation_digest, str) or not operation_digest
                 or len(operation_digest) > 160 or "\x00" in operation_digest):
             raise ValueError("request event lookup identity is invalid")
+        return self._request_event_from_events(
+            self._log(), event_type, request_id, operation_digest,
+        )
+
+    @staticmethod
+    def _request_event_from_events(
+        events: list[dict[str, Any]],
+        event_type: str,
+        request_id: str,
+        operation_digest: str,
+    ) -> dict[str, Any] | None:
+        """Find one durable request event in an already loaded event log."""
         matches: list[dict[str, Any]] = []
-        for event in self._log():
+        for event in events:
             payload = event.get("payload", {})
             if (event.get("type") == event_type
                     and isinstance(payload, dict)
@@ -6482,7 +6811,6 @@ class Session:
                     "checkpoint request identity has no durable campaign state"
                 )
         campaign_identity = None
-        campaign_evidence_value: list[dict[str, str]] | None = None
         campaign_evidence_delta_value: list[dict[str, str]] | None = None
         campaign_evidence_history_value: list[dict[str, str]] | None = None
         campaign_delivery_value: dict[str, Any] | None = None
@@ -6527,9 +6855,6 @@ class Session:
                     == "mncs.environment.campaign-state/2"
                     else digest_hex(campaign_evidence_history_value)
                 )
-                campaign_evidence_value = campaign_evidence_history_value[
-                    -CAMPAIGN_EVIDENCE_MAX:
-                ]
                 if normalized_evidence_delta is not None:
                     prior_window = campaign_evidence_history_value[
                         -CAMPAIGN_EVIDENCE_MAX:
@@ -6586,9 +6911,6 @@ class Session:
                 campaign_evidence_history_value = list(projected_evidence)
             else:
                 campaign_evidence_delta_value = []
-            campaign_evidence_value = campaign_evidence_history_value[
-                -CAMPAIGN_EVIDENCE_MAX:
-            ]
             if normalized_delivery is not None:
                 campaign_delivery_value = normalized_delivery
             evidence_ids = {item["identity"] for item in campaign_evidence_history_value}
@@ -7696,11 +8018,16 @@ class Session:
         """Read a bounded tail of the durable session event stream."""
         if type(limit) is not int or not 1 <= limit <= 256:
             raise ValueError("recent event limit must be between 1 and 256")
-        log = self._log()
+        reader = getattr(self.store, "read_event_tail", None)
+        if callable(reader):
+            events, event_count = reader(self.session_id, limit=limit)
+        else:
+            log = self._log()
+            events, event_count = log[-limit:], len(log)
         return {
-            "event_count": len(log),
-            "events": list(log[-limit:]),
-            "truncated": len(log) > limit,
+            "event_count": event_count,
+            "events": list(events),
+            "truncated": event_count > len(events),
         }
 
     def inspect(self) -> dict[str, Any]:

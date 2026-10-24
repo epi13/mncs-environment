@@ -1981,6 +1981,50 @@ def test_read_snapshot_propagates_payload_integrity_failure():
         backend.read_snapshot("ses_z")
 
 
+def test_read_event_tail_materializes_only_selected_payloads():
+    import json as json_module
+    from types import SimpleNamespace
+
+    from mncs_env.store_backend import SCHEMA_EVENT, StoreBackend
+
+    session_id = "ses_tail"
+    prefix = f"{session_id}:evt:".encode()
+    identities = [prefix + f"{sequence:010d}".encode() for sequence in range(1, 6)]
+    unrelated = (SCHEMA_EVENT, b"ses_other:evt:0000000001")
+    payload_reads = []
+
+    class StubStore:
+        current_generation = 7
+
+        def domain_bindings_at(self, generation):
+            assert generation == 7
+            return tuple(
+                (SCHEMA_EVENT, identity) for identity in identities
+            ) + (unrelated,)
+
+        def get_bound_object(self, schema, identity):
+            assert schema == SCHEMA_EVENT
+            payload_reads.append(identity)
+            sequence = int(identity[len(prefix):])
+            return SimpleNamespace(payload=json_module.dumps({
+                "session_id": session_id,
+                "sequence": sequence,
+                "identity": f"evt_{sequence}",
+            }).encode())
+
+        def find_bound_objects(self, *_args, **_kwargs):
+            raise AssertionError("tail reads must not materialize all session events")
+
+    backend = StoreBackend.__new__(StoreBackend)
+    backend._store = StubStore()
+
+    events, event_count = backend.read_event_tail(session_id, limit=2)
+
+    assert event_count == 5
+    assert [event["sequence"] for event in events] == [4, 5]
+    assert payload_reads == identities[-2:]
+
+
 def test_list_sessions_reads_binding_metadata_only():
     from mncs_env.store_backend import SCHEMA_EVENT, SCHEMA_SNAPSHOT, StoreBackend
 

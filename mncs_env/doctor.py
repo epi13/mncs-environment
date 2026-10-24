@@ -155,6 +155,7 @@ _READINESS_NEUTRAL_EVENTS = frozenset({
     # from invalidating Doctor on the next otherwise-quiet entry.
     "capability.invoked",
     "invocation.completed",
+    "environment.rpc.read_observed",
     "doctor.remediated",
     "session.resumed",
     "verification.completed",

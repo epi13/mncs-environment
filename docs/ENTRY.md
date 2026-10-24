@@ -241,6 +241,29 @@ Improvement relations include exact evidence references for verified and
 follow-up observations when those records are in the projected page; otherwise
 their `not-present-in-projection` status remains page-local.
 
+Session activity correlates Environment capability invocations with
+authenticated Control read-only operations such as session inspection,
+campaign-state reads, Store checks, and claim listings. Each direct operation
+record carries its operation and outcome, a hashed request identity, the
+authenticated Control principal and grant, an opaque local process identity
+when available, and repository/environment context. Raw arguments and
+responses are not copied. Control records its dispatch elapsed time, including
+time waiting for that session's request lock; this is not total agent execution
+time. Model identity, token use, resource consumption, and cache accounting
+remain unavailable. Capture is bounded to 128 read-operation records per
+session; the projection identifies the selected event window and reports when
+that cap is reached. A bounded request index supports retries even after the
+event leaves the recent tail, and the recent tail can repair a snapshot update
+interrupted after event publication. Repeated read-operation failures appear
+as investigation candidates with exact event references. They describe
+repetition only in that session's selected event window; cross-session
+recurrence is not yet derived, and these candidates do not establish cause or
+a confirmed environmental defect. Projection attribution requires the
+recorded principal and environment/campaign/intent context to match the
+selected authenticated session. Canonical Store-backed recent-event
+projections read at most 256 verified event payloads; the current Store
+generation's binding metadata is still scanned to select that tail.
+
 Observation source summaries keep registration status separate from
 `content_integrity_status`. A selected source blob is marked
 `content-integrity-verified` only after its committed Git content matches the

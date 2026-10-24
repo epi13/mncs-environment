@@ -140,6 +140,26 @@ class CompletionReleasesClaimsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "between 1 and 256"):
             session.recent_events(limit=257)
 
+    def test_recent_events_uses_bounded_store_tail_without_loading_full_log(self):
+        store = StubStore(_snapshot(), [])
+        store.read_event_tail = lambda session_id, *, limit: (
+            [
+                {"identity": "evt_3", "sequence": 3},
+                {"identity": "evt_4", "sequence": 4},
+            ][-limit:],
+            4,
+        )
+
+        def full_log_must_not_be_read(_session_id):
+            raise AssertionError("recent-event projection loaded the full event log")
+
+        store.read_events = full_log_must_not_be_read
+        page = _session(store).recent_events(limit=2)
+
+        self.assertEqual(page["event_count"], 4)
+        self.assertEqual([event["sequence"] for event in page["events"]], [3, 4])
+        self.assertTrue(page["truncated"])
+
     def test_request_event_replays_and_rejects_request_identity_reuse(self):
         store = StubStore(_snapshot(), [])
         first = _session(store)

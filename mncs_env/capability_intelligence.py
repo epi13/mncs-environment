@@ -37,6 +37,9 @@ MAX_RESULT_BYTES = 48 * 1024
 MAX_SESSION_EVENT_WINDOW = 256
 MAX_SESSION_ACTIVITY_INTERACTIONS = 32
 MAX_SESSION_ACTIVITY_CAPABILITIES = 16
+MAX_SESSION_ACTIVITY_RPC_OPERATIONS = 32
+MAX_SESSION_ACTIVITY_RPC_PRESSURE_CANDIDATES = 8
+MAX_RPC_READ_ACTIVITY_OBSERVATIONS = 128
 SOURCE_INTEGRITY_VERIFIED = frozenset({
     "content-integrity-verified",
     "record-integrity-verified-in-projection",
@@ -460,6 +463,20 @@ def _compact_projection(
         )
         if key in activity_source
     }
+    if activity_source.get("rpc_operation_capture_count") is not None:
+        compact_activity_source.update({
+            key: activity_source[key]
+            for key in (
+                "rpc_operation_capture_count",
+                "rpc_operation_capture_limit",
+                "rpc_operation_capture_limit_reached",
+            )
+            if key in activity_source
+        })
+    if activity_source.get("rpc_operation_records_omitted", 0):
+        compact_activity_source["rpc_operation_records_omitted"] = (
+            activity_source["rpc_operation_records_omitted"]
+        )
     compact_activity_interactions = []
     raw_interactions = activity.get("interactions")
     raw_interactions = raw_interactions if isinstance(raw_interactions, list) else []
@@ -485,6 +502,78 @@ def _compact_projection(
                     if item_key in reference
                 }
         compact_activity_interactions.append(compact_item)
+    compact_rpc_operations = []
+    raw_rpc_operations = activity.get("rpc_operations")
+    raw_rpc_operations = raw_rpc_operations if isinstance(raw_rpc_operations, list) else []
+    for item in raw_rpc_operations[:8]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in (
+                "identity", "operation", "outcome_status", "failure_code",
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in ("exit_code", "observation_ordinal"):
+            if type(item.get(key)) is int:
+                compact_item[key] = item[key]
+        for key in ("event_reference",):
+            reference = item.get(key)
+            if isinstance(reference, dict):
+                compact_item[key] = {
+                    item_key: reference[item_key]
+                    for item_key in ("identity", "sequence", "type")
+                    if item_key in reference
+                }
+        for key in ("caller", "context"):
+            values = item.get(key)
+            if isinstance(values, dict):
+                compact_item[key] = {
+                    subkey: _short_text(value, 160)
+                    for subkey, value in values.items()
+                    if isinstance(subkey, str) and isinstance(value, str)
+                }
+        measurements = item.get("measurement_availability")
+        if isinstance(measurements, dict):
+            compact_item["measurement_availability"] = dict(measurements)
+        measured_values = item.get("measurements")
+        if isinstance(measured_values, dict):
+            compact_item["measurements"] = dict(measured_values)
+        compact_rpc_operations.append(compact_item)
+    compact_rpc_pressure = []
+    raw_rpc_pressure = activity.get("rpc_failure_candidates")
+    raw_rpc_pressure = raw_rpc_pressure if isinstance(raw_rpc_pressure, list) else []
+    for item in raw_rpc_pressure[:4]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in (
+                "identity", "status", "subsystem", "operation",
+                "failure_code", "causal_claim", "recurrence_scope",
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in ("occurrence_count", "distinct_session_count"):
+            if type(item.get(key)) is int:
+                compact_item[key] = item[key]
+        if isinstance(item.get("interpretation"), str):
+            compact_item["interpretation"] = _short_text(
+                item["interpretation"], 256,
+            )
+        references = item.get("supporting_events")
+        if isinstance(references, list):
+            compact_item["supporting_events"] = [
+                {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                }
+                for reference in references[:4]
+                if isinstance(reference, dict)
+            ]
+        compact_rpc_pressure.append(compact_item)
     compact_activity = {
         "status": _short_text(activity.get("status"), 96),
         "source": compact_activity_source,
@@ -500,6 +589,18 @@ def _compact_projection(
             len(raw_interactions) > len(compact_activity_interactions)
         ),
     }
+    if (activity_source.get("rpc_operation_capture_count") is not None
+            or raw_rpc_operations):
+        compact_activity["rpc_operation_count"] = activity.get(
+            "rpc_operation_count", 0,
+        )
+        compact_activity["rpc_operations"] = compact_rpc_operations
+        if len(raw_rpc_operations) > len(compact_rpc_operations):
+            compact_activity["rpc_operations_truncated"] = True
+    if raw_rpc_pressure:
+        compact_activity["rpc_failure_candidates"] = compact_rpc_pressure
+        if len(raw_rpc_pressure) > len(compact_rpc_pressure):
+            compact_activity["rpc_failure_candidates_truncated"] = True
 
     result = {
         "schema_version": SCHEMA,
@@ -510,6 +611,9 @@ def _compact_projection(
         "correlation": projection["correlation"],
         "observation_count": projection["observation_count"],
         "pressure_hypothesis_count": projection["pressure_hypothesis_count"],
+        "session_activity_pressure_candidate_count": projection.get(
+            "session_activity_pressure_candidate_count", 0,
+        ),
         "improvement_relation_count": projection["improvement_relation_count"],
         "pressure_hypotheses": compact_hypotheses,
         "improvement_relations": compact_improvements,
@@ -548,6 +652,12 @@ def _compact_projection(
         elif result["session_activity"]["interactions"]:
             result["session_activity"]["interactions"].pop()
             result["session_activity"]["interactions_truncated"] = True
+        elif result["session_activity"].get("rpc_operations"):
+            result["session_activity"]["rpc_operations"].pop()
+            result["session_activity"]["rpc_operations_truncated"] = True
+        elif result["session_activity"].get("rpc_failure_candidates"):
+            result["session_activity"]["rpc_failure_candidates"].pop()
+            result["session_activity"]["rpc_failure_candidates_truncated"] = True
         else:
             break
     return result
@@ -958,13 +1068,103 @@ def _event_reference(event: dict[str, Any]) -> dict[str, Any] | None:
     return reference
 
 
+def _authenticated_rpc_read_event(
+    event: dict[str, Any], snapshot: dict[str, Any],
+) -> bool:
+    """Accept only bounded Control read records bound to this session owner."""
+    payload = event.get("payload")
+    caller = payload.get("caller") if isinstance(payload, dict) else None
+    context = payload.get("context") if isinstance(payload, dict) else None
+    campaign = snapshot.get("campaign")
+    campaign = campaign if isinstance(campaign, dict) else {}
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+    measurements = payload.get("measurement_availability") if isinstance(
+        payload, dict,
+    ) else None
+    values = payload.get("measurements") if isinstance(payload, dict) else None
+    elapsed = values.get("control_dispatch_elapsed_ms") if isinstance(values, dict) else None
+    request_digest = payload.get("request_digest") if isinstance(payload, dict) else None
+    outcome = payload.get("outcome_status") if isinstance(payload, dict) else None
+    exit_code = payload.get("exit_code") if isinstance(payload, dict) else None
+    failure_code = payload.get("failure_code") if isinstance(payload, dict) else None
+    expected_measurements = {
+        "model_identity": "unavailable",
+        "token_usage": "unavailable",
+        "control_dispatch_elapsed_ms": "measured",
+        "resource_consumption": "unavailable",
+        "cache_accounting": "unavailable",
+    }
+    if (event.get("type") != "environment.rpc.read_observed"
+            or event.get("producer") != "mncs-control-mcp"
+            or not isinstance(payload, dict)
+            or payload.get("schema_version") != "mncs.environment.rpc-read-activity/1"
+            or _event_reference(event) is None
+            or not isinstance(payload.get("operation"), str)
+            or not re.fullmatch(r"[a-z][a-z0-9.-]{0,95}", payload["operation"])
+            or outcome not in {"succeeded", "failed"}
+            or (outcome == "succeeded" and (exit_code != 0 or failure_code is not None))
+            or (outcome == "failed" and (
+                (exit_code is not None and (type(exit_code) is not int or exit_code == 0))
+                or not isinstance(failure_code, str)
+                or not re.fullmatch(r"[A-Za-z0-9._-]{1,96}", failure_code)
+            ))
+            or (outcome == "succeeded" and type(exit_code) is not int)
+            or not isinstance(request_digest, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", request_digest)
+            or payload.get("request_operation_digest") != request_digest
+            or not isinstance(payload.get("request_event_digest"), str)
+            or not re.fullmatch(r"[0-9a-f]{16}", payload["request_event_digest"])
+            or not isinstance(payload.get("request_id"), str)
+            or not re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", payload["request_id"])
+            or not isinstance(caller, dict)
+            or caller.get("authenticated_principal_id")
+            != snapshot.get("authenticated_principal_id")
+            or not isinstance(caller.get("authenticated_principal_id"), str)
+            or not re.fullmatch(
+                r"ctrl_[0-9a-f]{32}", caller["authenticated_principal_id"],
+            )
+            or not isinstance(caller.get("control_grant_id"), str)
+            or not re.fullmatch(r"[0-9a-f]{32}", caller["control_grant_id"])
+            or (caller.get("process_identity") is not None
+                and (not isinstance(caller.get("process_identity"), str)
+                     or not re.fullmatch(
+                         r"proc_[0-9a-f]{32}", caller["process_identity"],
+                     )))
+            or not isinstance(context, dict)
+            or context.get("environment_id") != snapshot.get("environment_id")
+            or context.get("campaign_id") != campaign.get("identity")
+            or context.get("work_intent_id") != intent.get("identity")
+            or not isinstance(context.get("repository"), str)
+            or not re.fullmatch(
+                r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", context["repository"],
+            )
+            or any(value is not None and (
+                not isinstance(value, str) or not value or len(value) > 256
+                or "\x00" in value
+            ) for key, value in context.items() if key != "repository")
+            or (context.get("repository_head") is not None
+                and not re.fullmatch(
+                    r"(?:[0-9a-f]{40}|[0-9a-f]{64})",
+                    context["repository_head"],
+                ))
+            or measurements != expected_measurements
+            or not isinstance(values, dict)
+            or set(values) != {"control_dispatch_elapsed_ms"}
+            or type(elapsed) not in {int, float}
+            or not 0 <= elapsed <= 600_000):
+        return False
+    return True
+
+
 def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
-    """Project recent Environment capability events without copying arguments."""
+    """Project bounded capability and authenticated Control read activity."""
     reader = getattr(session, "recent_events", None)
     limits = [
-        "This view covers Environment-bound capability events; direct external tool operations may not appear in the session event stream.",
-        "Invocation arguments, raw results, token usage, execution duration, and resource consumption are not inferred from these events.",
-        "The canonical Store reader currently materializes the session event log before selecting this bounded tail.",
+        "Capability interactions cover Environment-bound invocations; direct external tools are outside this session event view.",
+        "Control read-operation events contain bounded operation and outcome fields, never raw arguments or responses.",
+        "Model identity, token usage, execution duration, and resource consumption are not inferred when the runtime does not expose them.",
+        "The Store tail reader verifies only selected event payloads; finding their bindings still scans the generation's metadata index.",
     ]
     if not callable(reader):
         return {
@@ -973,6 +1173,9 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
             "source": {"event_window_limit": MAX_SESSION_EVENT_WINDOW},
             "interaction_count": 0,
             "interactions": [],
+            "rpc_operation_count": 0,
+            "rpc_operations": [],
+            "rpc_failure_candidates": [],
             "capabilities": [],
             "measurement_limits": [
                 *limits,
@@ -1015,6 +1218,10 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
     ]
     completion_events = [
         event for event in events if event.get("type") == "invocation.completed"
+    ]
+    rpc_events = [
+        event for event in events
+        if event.get("type") == "environment.rpc.read_observed"
     ]
     starts_by_request: dict[str, list[dict[str, Any]]] = {}
     completions_by_request: dict[str, list[dict[str, Any]]] = {}
@@ -1124,6 +1331,127 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
     )
     capabilities = capabilities[:MAX_SESSION_ACTIVITY_CAPABILITIES]
 
+    rpc_operations: list[dict[str, Any]] = []
+    invalid_rpc_event_count = 0
+    for event in reversed(rpc_events):
+        payload = event.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        reference = _event_reference(event)
+        operation = payload.get("operation")
+        outcome = payload.get("outcome_status")
+        caller = payload.get("caller")
+        context_value = payload.get("context")
+        if (reference is None or not _authenticated_rpc_read_event(event, snapshot)
+                or not isinstance(operation, str)
+                or not isinstance(caller, dict)
+                or not isinstance(context_value, dict)):
+            invalid_rpc_event_count += 1
+            continue
+        caller_projection = {
+            key: _short_text(caller.get(key), 128)
+            for key in (
+                "authenticated_principal_id", "control_grant_id",
+                "process_identity",
+            )
+            if isinstance(caller.get(key), str) and caller.get(key)
+        }
+        caller_projection["process_identity_capture_status"] = (
+            "captured" if caller_projection.get("process_identity")
+            else "unavailable"
+        )
+        context_projection = {
+            key: _short_text(context_value.get(key), 160)
+            for key in (
+                "repository", "repository_branch", "repository_head",
+                "environment_id", "campaign_id", "work_intent_id",
+            )
+            if isinstance(context_value.get(key), str) and context_value.get(key)
+        }
+        item: dict[str, Any] = {
+            "identity": "rpc_" + digest_hex({
+                "session_id": session.session_id,
+                "event": reference["identity"],
+            }, length=16),
+            "operation": operation,
+            "outcome_status": outcome,
+            "event_reference": reference,
+            "caller": caller_projection,
+            "context": context_projection,
+        }
+        if type(payload.get("exit_code")) is int:
+            item["exit_code"] = payload["exit_code"]
+        failure_code = payload.get("failure_code")
+        if (outcome == "failed" and isinstance(failure_code, str)
+                and re.fullmatch(r"[A-Za-z0-9._-]{1,96}", failure_code)):
+            item["failure_code"] = failure_code
+        if (type(payload.get("observation_ordinal")) is int
+                and 1 <= payload["observation_ordinal"]
+                <= MAX_RPC_READ_ACTIVITY_OBSERVATIONS):
+            item["observation_ordinal"] = payload["observation_ordinal"]
+        measurement_availability = payload.get("measurement_availability")
+        if isinstance(measurement_availability, dict):
+            item["measurement_availability"] = {
+                key: value
+                for key, value in measurement_availability.items()
+                if key in {
+                    "model_identity", "token_usage",
+                    "control_dispatch_elapsed_ms", "resource_consumption",
+                    "cache_accounting",
+                }
+                and value in {"measured", "derived", "unavailable"}
+            }
+        measured_values = payload.get("measurements")
+        if isinstance(measured_values, dict):
+            elapsed = measured_values.get("control_dispatch_elapsed_ms")
+            if (type(elapsed) in {int, float} and 0 <= elapsed <= 600_000):
+                item["measurements"] = {"control_dispatch_elapsed_ms": elapsed}
+        rpc_operations.append(item)
+        if len(rpc_operations) >= MAX_SESSION_ACTIVITY_RPC_OPERATIONS:
+            break
+
+    rpc_operations_omitted = max(0, len(rpc_events) - len(rpc_operations))
+    failures_by_identity: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for item in rpc_operations:
+        if item.get("outcome_status") != "failed":
+            continue
+        key = (
+            str(item.get("operation", "unknown")),
+            str(item.get("failure_code", "failure-code-unavailable")),
+        )
+        failures_by_identity.setdefault(key, []).append(item)
+    rpc_failure_candidates = []
+    for (operation, failure_code), group in sorted(failures_by_identity.items()):
+        if len(group) < 2:
+            continue
+        rpc_failure_candidates.append({
+            "identity": "ph_rpc_" + digest_hex({
+                "session_id": session.session_id,
+                "operation": operation,
+                "failure_code": failure_code,
+            }, length=16),
+            "status": "candidate-needs-investigation",
+            "subsystem": "environment-rpc",
+            "operation": operation,
+            "failure_code": failure_code,
+            "occurrence_count": len(group),
+            "distinct_session_count": 1,
+            "recurrence_scope": "same-session-selected-event-window",
+            "interpretation": (
+                "The same operation and failure code appeared repeatedly in this "
+                "session's selected event window. Cross-session recurrence and "
+                "cause are not established."
+            ),
+            "causal_claim": "not-established",
+            "supporting_events": [
+                item["event_reference"] for item in sorted(
+                    group,
+                    key=lambda item: item["event_reference"]["sequence"],
+                )[:8]
+            ],
+        })
+        if len(rpc_failure_candidates) >= MAX_SESSION_ACTIVITY_RPC_PRESSURE_CANDIDATES:
+            break
+
     event_count = page["event_count"]
     event_window_truncated = (
         page["truncated"] or event_count > len(page["events"])
@@ -1200,6 +1528,21 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
             "invocation_records_omitted": invocations_omitted,
             "capability_summaries_omitted": capabilities_omitted,
             "selection_policy": "newest-invocation-events-by-session-sequence",
+            "rpc_operation_events_considered": len(rpc_events),
+            "rpc_operation_records_returned": len(rpc_operations),
+            "rpc_operation_records_omitted": rpc_operations_omitted,
+            "rpc_operation_records_invalid": invalid_rpc_event_count,
+            "rpc_operation_capture_count": (
+                snapshot.get("rpc_read_activity_count")
+                if type(snapshot.get("rpc_read_activity_count")) is int
+                and 0 <= snapshot["rpc_read_activity_count"]
+                <= MAX_RPC_READ_ACTIVITY_OBSERVATIONS else None
+            ),
+            "rpc_operation_capture_limit": MAX_RPC_READ_ACTIVITY_OBSERVATIONS,
+            "rpc_operation_capture_limit_reached": (
+                snapshot.get("rpc_read_activity_limit_reached") is True
+            ),
+            "rpc_operation_selection_policy": "newest-authenticated-read-operations-in-selected-event-window",
         },
         "interaction_count": len(interactions),
         "completion_count": sum(
@@ -1214,6 +1557,9 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
         ),
         "completion_without_invocation_count": unpaired_completion_count,
         "interactions": interactions,
+        "rpc_operation_count": len(rpc_operations),
+        "rpc_operations": rpc_operations,
+        "rpc_failure_candidates": rpc_failure_candidates,
         "capabilities": capabilities,
         "measurement_limits": limits,
     }
@@ -1630,10 +1976,13 @@ def project(
         "correlation": {
             "kind": "campaign-evidence-and-session-events-to-objective-and-subsystem",
             "derived": True,
-            "relationship": "Campaign observations retain affected work and recorder context; capability events link to the current objective and Environment; improvement relations link pressures, implementation, verification, and follow-up.",
+            "relationship": "Campaign observations retain affected work and recorder context; capability and authenticated Control read-operation events link to the current objective, Environment, and repository; improvement relations link pressures, implementation, verification, and follow-up.",
         },
         "observation_count": len(observations),
         "pressure_hypothesis_count": len(hypotheses),
+        "session_activity_pressure_candidate_count": len(
+            activity.get("rpc_failure_candidates", [])
+        ),
         "improvement_relation_count": len(improvement_relations),
         "pressure_hypotheses": hypotheses,
         "improvement_relations": improvement_relations,
@@ -1650,7 +1999,11 @@ def project(
             "Effectiveness after a proposed change remains unknown until later independent observations support it.",
             "A linked verification record establishes that evidence is present and integrity checked; effectiveness still requires independent follow-up.",
             "Session activity summarizes only the bounded recent event tail and exposes no raw invocation arguments or results.",
-            "Session capability events do not establish duration, token usage, resource consumption, or activity performed outside Environment-bound capability invocation.",
+            "Authenticated Control read-operation events include a measured Control-dispatch elapsed time, which includes session-queue wait and is not total agent execution duration; model identity, token usage, resource consumption, and cache accounting remain unavailable.",
+            "Direct read-operation capture stops after 128 observations per session; selected-window and capture-limit fields disclose partial coverage.",
+            "Read-operation recurrence candidates cover only the selected tail of this session; cross-session recurrence is unavailable in this projection.",
+            "Repeated read-operation failures are investigation candidates, not causal findings or proof of an environmental defect.",
+            "Session capability events do not establish duration, token usage, resource consumption, or activity performed outside observed Environment or Control operations.",
             *([
                 "Multi-page recurrence covers only the selected bounded page window; source metadata reports page offsets, checkpoint consistency, and budget omissions.",
             ] if history_pages > 1 else []),

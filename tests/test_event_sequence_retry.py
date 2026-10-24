@@ -2,15 +2,26 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 from mncs_env.session_store import SequenceTaken
-from mncs_env.sessions import Session
+from mncs_env.sessions import LifecycleError, Session
 
 
 class EventStore:
     def __init__(self, session_id: str) -> None:
         self.events = [{"sequence": 1, "type": "session.created"}]
         self.attempted: list[int] = []
-        self.snapshot = {"session_id": session_id, "lifecycle": "active"}
+        self.event_log_reads = 0
+        self.event_tail_reads = 0
+        self.snapshot = {
+            "session_id": session_id,
+            "lifecycle": "active",
+            "authenticated_principal_id": "ctrl_" + "b" * 32,
+            "environment_id": "renv_test",
+            "campaign": {"identity": "cmp_test"},
+            "intent": {"identity": "int_test"},
+        }
 
     def load_snapshot(self, session_id: str) -> dict[str, Any]:
         assert session_id == self.snapshot["session_id"]
@@ -19,6 +30,23 @@ class EventStore:
     def existing_sequences(self, session_id: str) -> list[int]:
         assert session_id == self.snapshot["session_id"]
         return [int(event["sequence"]) for event in self.events]
+
+    def read_events(self, session_id: str) -> list[dict[str, Any]]:
+        assert session_id == self.snapshot["session_id"]
+        self.event_log_reads += 1
+        return list(self.events)
+
+    def read_event_tail(
+        self, session_id: str, *, limit: int,
+    ) -> tuple[list[dict[str, Any]], int]:
+        assert session_id == self.snapshot["session_id"]
+        self.event_tail_reads += 1
+        events = sorted(self.events, key=lambda event: event["sequence"])
+        return events[-limit:], len(events)
+
+    def save_snapshot(self, session_id: str, snapshot: dict[str, Any]) -> None:
+        assert session_id == self.snapshot["session_id"]
+        self.snapshot = dict(snapshot)
 
     def put_event(self, session_id: str, sequence: int, event: dict[str, Any]) -> None:
         assert session_id == self.snapshot["session_id"]
@@ -40,3 +68,181 @@ def test_emit_advances_after_a_reserved_unpublished_event_sequence() -> None:
     assert store.attempted == [2, 3]
     assert emitted["sequence"] == 3
     assert [event["sequence"] for event in store.events] == [1, 3]
+
+
+def _rpc_activity_payload(
+    operation: str = "session.inspect", digest: str = "a" * 64,
+) -> dict[str, Any]:
+    return {
+        "schema_version": "mncs.environment.rpc-read-activity/1",
+        "operation": operation,
+        "outcome_status": "succeeded",
+        "exit_code": 0,
+        "failure_code": None,
+        "request_digest": digest,
+        "caller": {
+            "authenticated_principal_id": "ctrl_" + "b" * 32,
+            "control_grant_id": "c" * 32,
+            "process_identity": "proc_" + "d" * 32,
+        },
+        "context": {
+            "repository": "mncs-control-mcp",
+            "repository_branch": "campaign/test",
+            "repository_head": "e" * 40,
+            "environment_id": "renv_test",
+            "campaign_id": "cmp_test",
+            "work_intent_id": "int_test",
+        },
+        "measurement_availability": {
+            "model_identity": "unavailable",
+            "token_usage": "unavailable",
+            "control_dispatch_elapsed_ms": "measured",
+            "resource_consumption": "unavailable",
+            "cache_accounting": "unavailable",
+        },
+        "measurements": {
+            "control_dispatch_elapsed_ms": 12.5,
+        },
+    }
+
+
+def test_rpc_read_activity_is_idempotent_and_capped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("mncs_env.sessions.MAX_RPC_READ_ACTIVITY_OBSERVATIONS", 2)
+    session_id = "ses_rpc_activity_cap"
+    store = EventStore(session_id)
+    session = Session(store, session_id)
+
+    first = session.record_rpc_read_activity(
+        _rpc_activity_payload(), request_id="req_rpc_first",
+        operation_digest="a" * 64,
+    )
+    replay = session.record_rpc_read_activity(
+        _rpc_activity_payload(), request_id="req_rpc_first",
+        operation_digest="a" * 64,
+    )
+    second = session.record_rpc_read_activity(
+        _rpc_activity_payload("campaign.state", "f" * 64), request_id="req_rpc_second",
+        operation_digest="f" * 64,
+    )
+    capped = session.record_rpc_read_activity(
+        _rpc_activity_payload("store.generation", "0" * 64), request_id="req_rpc_third",
+        operation_digest="0" * 64,
+    )
+
+    assert first["status"] == "recorded"
+    assert replay["status"] == "already-recorded"
+    assert replay["event"]["identity"] == first["event"]["identity"]
+    assert second["event"]["payload"]["observation_ordinal"] == 2
+    assert capped == {"status": "capture-limit-reached", "event": None}
+    activity_events = [
+        event for event in store.events
+        if event.get("type") == "environment.rpc.read_observed"
+    ]
+    assert len(activity_events) == 2
+    assert store.snapshot["rpc_read_activity_count"] == 2
+    assert store.snapshot["rpc_read_activity_limit_reached"] is True
+    assert store.event_log_reads == 0
+    assert store.event_tail_reads == 2
+
+
+def test_rpc_read_activity_rejects_request_identity_reuse() -> None:
+    session_id = "ses_rpc_activity_conflict"
+    store = EventStore(session_id)
+    session = Session(store, session_id)
+    session.record_rpc_read_activity(
+        _rpc_activity_payload(), request_id="req_rpc_shared",
+        operation_digest="a" * 64,
+    )
+
+    with pytest.raises(LifecycleError, match="different Environment operation"):
+        session.record_rpc_read_activity(
+            _rpc_activity_payload("campaign.state", "f" * 64),
+            request_id="req_rpc_shared", operation_digest="f" * 64,
+        )
+
+
+def test_rpc_read_activity_repairs_a_lost_snapshot_after_event_publication() -> None:
+    session_id = "ses_rpc_activity_snapshot_repair"
+    store = EventStore(session_id)
+    session = Session(store, session_id)
+    payload = _rpc_activity_payload()
+
+    first = session.record_rpc_read_activity(
+        payload, request_id="req_rpc_snapshot_repair",
+        operation_digest="a" * 64,
+    )
+    store.snapshot.pop("rpc_read_activity_count", None)
+    store.snapshot.pop("rpc_read_activity_request_index", None)
+    restarted = Session(store, session_id)
+    replay = restarted.record_rpc_read_activity(
+        payload, request_id="req_rpc_snapshot_repair",
+        operation_digest="a" * 64,
+    )
+
+    assert replay["status"] == "already-recorded"
+    assert replay["event"]["identity"] == first["event"]["identity"]
+    assert store.snapshot["rpc_read_activity_count"] == 1
+    assert len(store.snapshot["rpc_read_activity_request_index"]) == 1
+    assert store.event_log_reads == 0
+    assert store.event_tail_reads == 2
+
+
+def test_rpc_read_activity_index_supports_replay_after_event_leaves_tail() -> None:
+    session_id = "ses_rpc_activity_old_replay"
+    store = EventStore(session_id)
+    session = Session(store, session_id)
+    payload = _rpc_activity_payload()
+
+    first = session.record_rpc_read_activity(
+        payload, request_id="req_rpc_old_replay", operation_digest="a" * 64,
+    )
+    store.events.extend(
+        {"identity": f"evt_other_{sequence}", "sequence": sequence,
+         "type": "session.checkpointed", "payload": {}}
+        for sequence in range(10, 310)
+    )
+    store.event_tail_reads = 0
+    restarted = Session(store, session_id)
+    replay = restarted.record_rpc_read_activity(
+        payload, request_id="req_rpc_old_replay", operation_digest="a" * 64,
+    )
+
+    assert replay["status"] == "already-recorded"
+    assert replay["event"]["identity"] == first["event"]["identity"]
+    assert store.event_log_reads == 0
+    assert store.event_tail_reads == 0
+
+
+def test_persisted_rpc_read_activity_flows_into_session_pressure_projection() -> None:
+    from mncs_env.capability_intelligence import _session_activity
+
+    session_id = "ses_rpc_activity_projection"
+    store = EventStore(session_id)
+    session = Session(store, session_id)
+    for request_id, digest in (
+        ("req_rpc_projection_one", "a" * 64),
+        ("req_rpc_projection_two", "b" * 64),
+    ):
+        payload = _rpc_activity_payload(digest=digest)
+        payload.update({
+            "outcome_status": "failed",
+            "exit_code": 2,
+            "failure_code": "ENVIRONMENT_SESSION_MISSING",
+        })
+        session.record_rpc_read_activity(
+            payload, request_id=request_id, operation_digest=digest,
+        )
+
+    activity = _session_activity(session, session.snapshot)
+
+    assert activity["rpc_operation_count"] == 2
+    assert len(activity["rpc_failure_candidates"]) == 1
+    candidate = activity["rpc_failure_candidates"][0]
+    assert candidate["distinct_session_count"] == 1
+    assert candidate["recurrence_scope"] == "same-session-selected-event-window"
+    assert [
+        item["identity"] for item in candidate["supporting_events"]
+    ] == [event["identity"] for event in store.events[1:]]
+    assert store.event_log_reads == 0

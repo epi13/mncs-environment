@@ -69,6 +69,7 @@ def _session(tmp_path: Path, reports: list[dict], *, extra_refs: list[dict] | No
         session_id="ses_projection_reader",
         snapshot={
             "environment_id": "renv_projection_reader",
+            "authenticated_principal_id": "ctrl_" + "a" * 32,
             "provenance": {"definition_id": "env_projection_reader"},
             "intent": {"identity": "int_projection_reader", "goal": "inspect current pressures"},
             "campaign": {"identity": "cmp_projection_reader"},
@@ -313,6 +314,135 @@ def test_session_activity_does_not_infer_absence_from_a_truncated_event_tail(
     assert activity["source"]["event_window_sequence_end"] == 256
     assert activity["source"]["event_window_identity_digest"]
     assert activity["source"]["event_type_counts"] == {"session.checkpointed": 256}
+
+
+def test_session_activity_correlates_authenticated_control_read_operations(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_rpc_activity_observation",
+        "ses_compiler_rpc_activity",
+        "cmp_compiler_rpc_activity",
+    )
+    record["observation"]["outcome"]["bounded_context"] = "x" * 8_000
+    session, _ = _session(tmp_path, [record])
+    session.snapshot["rpc_read_activity_count"] = 3
+    events = []
+    for sequence, outcome in ((21, "failed"), (22, "failed"), (23, "succeeded")):
+        payload = {
+            "schema_version": "mncs.environment.rpc-read-activity/1",
+            "operation": "session.inspect" if sequence < 23 else "campaign.state",
+            "outcome_status": outcome,
+            "exit_code": 2 if outcome == "failed" else 0,
+            "failure_code": "ENVIRONMENT_SESSION_MISSING" if outcome == "failed" else None,
+            "observation_ordinal": sequence - 20,
+            "request_id": f"req_rpc_read_{sequence}",
+            "request_digest": hashlib.sha256(
+                f"request-{sequence}".encode(),
+            ).hexdigest(),
+            "caller": {
+                "authenticated_principal_id": "ctrl_" + "a" * 32,
+                "control_grant_id": "b" * 32,
+                "process_identity": "proc_" + "c" * 32,
+            },
+            "context": {
+                "repository": "mncs-control-mcp",
+                "repository_branch": "campaign/environment-rpc-operation-activity-20261024",
+                "repository_head": "d" * 40,
+                "environment_id": "renv_projection_reader",
+                "campaign_id": "cmp_projection_reader",
+                "work_intent_id": "int_projection_reader",
+            },
+            "measurement_availability": {
+                "model_identity": "unavailable",
+                "token_usage": "unavailable",
+                "control_dispatch_elapsed_ms": "measured",
+                "resource_consumption": "unavailable",
+                "cache_accounting": "unavailable",
+            },
+            "measurements": {
+                "control_dispatch_elapsed_ms": 12.5,
+            },
+            "request_operation_digest": hashlib.sha256(
+                f"request-{sequence}".encode(),
+            ).hexdigest(),
+            "request_event_digest": hashlib.sha256(
+                f"event-{sequence}".encode(),
+            ).hexdigest()[:16],
+            # Projection output must not echo untrusted or legacy extra fields.
+            "argv": ["inspect", "private-argument"],
+            "raw_response": "private-response",
+        }
+        events.append({
+            "identity": f"evt_rpc_read_{sequence}",
+            "sequence": sequence,
+            "type": "environment.rpc.read_observed",
+            "producer": "mncs-control-mcp",
+            "payload": payload,
+        })
+    untrusted_payload = dict(events[-1]["payload"])
+    untrusted_payload["request_id"] = "req_rpc_read_spoofed"
+    untrusted_payload["caller"] = {
+        **untrusted_payload["caller"],
+        "authenticated_principal_id": "ctrl_" + "f" * 32,
+    }
+    events.append({
+        "identity": "evt_rpc_read_spoofed", "sequence": 24,
+        "type": "environment.rpc.read_observed",
+        "producer": "mncs-control-mcp", "payload": untrusted_payload,
+    })
+    session.recent_events = lambda *, limit: {
+        "event_count": len(events), "events": events[-limit:], "truncated": False,
+    }
+
+    result = capability_intelligence.project(session)
+    activity = result["session_activity"]
+
+    assert activity["context"]["work_intent_goal"] == "inspect current pressures"
+    assert activity["source"]["rpc_operation_capture_count"] == 3
+    assert activity["source"]["rpc_operation_capture_limit"] == 128
+    assert activity["source"]["rpc_operation_records_invalid"] == 1
+    assert activity["rpc_operation_count"] == 3
+    assert activity["rpc_operations"][0]["event_reference"]["identity"] == (
+        "evt_rpc_read_23"
+    )
+    assert activity["rpc_operations"][0]["context"]["repository"] == (
+        "mncs-control-mcp"
+    )
+    assert activity["rpc_operations"][0]["context"]["environment_id"] == (
+        "renv_projection_reader"
+    )
+    assert activity["rpc_operations"][0]["caller"][
+        "process_identity_capture_status"
+    ] == "captured"
+    assert activity["rpc_operations"][0]["measurement_availability"][
+        "control_dispatch_elapsed_ms"
+    ] == "measured"
+    assert activity["rpc_operations"][0]["measurements"][
+        "control_dispatch_elapsed_ms"
+    ] == 12.5
+    assert len(activity["rpc_failure_candidates"]) == 1
+    assert result["session_activity_pressure_candidate_count"] == 1
+    candidate = activity["rpc_failure_candidates"][0]
+    assert candidate["status"] == "candidate-needs-investigation"
+    assert candidate["causal_claim"] == "not-established"
+    assert candidate["distinct_session_count"] == 1
+    assert candidate["recurrence_scope"] == "same-session-selected-event-window"
+    assert [item["identity"] for item in candidate["supporting_events"]] == [
+        "evt_rpc_read_21", "evt_rpc_read_22",
+    ]
+    assert "private-argument" not in json.dumps(result)
+    assert "private-response" not in json.dumps(result)
+
+    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+    compact_activity = compact["session_activity"]
+    assert compact_activity["rpc_operations"][0]["event_reference"]["identity"] == (
+        "evt_rpc_read_23"
+    )
+    assert compact_activity["rpc_failure_candidates"][0]["supporting_events"][0][
+        "identity"
+    ] == "evt_rpc_read_21"
+    assert compact_activity["rpc_failure_candidates"][0]["distinct_session_count"] == 1
 
 
 def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path) -> None:

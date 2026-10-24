@@ -14,6 +14,7 @@ retries, and an identical re-put is an idempotent DUPLICATE.
 from __future__ import annotations
 
 import errno
+import heapq
 import json
 import os
 import sys
@@ -335,6 +336,49 @@ class StoreBackend:
                 continue
         found.sort(key=lambda pair: pair[0])
         return [event for _, event in found]
+
+    def read_event_tail(
+        self, session_id: str, *, limit: int,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Read only the newest event payloads while counting all event bindings."""
+        if type(limit) is not int or not 1 <= limit <= 256:
+            raise ValueError("recent event limit must be between 1 and 256")
+        prefix = f"{session_id}:evt:".encode()
+        generation = self._store.current_generation
+        selected: list[tuple[int, bytes]] = []
+        event_count = 0
+        for schema, identity in self._store.domain_bindings_at(generation):
+            if schema != SCHEMA_EVENT or not identity.startswith(prefix):
+                continue
+            suffix = identity[len(prefix):]
+            if len(suffix) < 10 or not suffix.isdigit():
+                continue
+            try:
+                sequence = int(suffix)
+            except ValueError:
+                continue
+            if sequence < 1 or suffix != f"{sequence:010d}".encode():
+                continue
+            event_count += 1
+            item = (sequence, identity)
+            if len(selected) < limit:
+                heapq.heappush(selected, item)
+            elif sequence > selected[0][0]:
+                heapq.heapreplace(selected, item)
+
+        events = []
+        for sequence, identity in sorted(selected):
+            item = self._store.get_bound_object(SCHEMA_EVENT, identity)
+            try:
+                event = json.loads(item.payload.decode("utf-8"))
+            except (AttributeError, UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            if (isinstance(event, dict)
+                    and event.get("session_id") == session_id
+                    and type(event.get("sequence")) is int
+                    and event["sequence"] == sequence):
+                events.append(event)
+        return events, event_count
 
     # -- snapshots -----------------------------------------------------------
 

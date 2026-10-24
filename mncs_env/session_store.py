@@ -310,6 +310,19 @@ class SessionStore:
     def read_events(self, session_id: str) -> list[dict[str, Any]]:
         raise NotImplementedError
 
+    def read_event_tail(
+        self, session_id: str, *, limit: int,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Read a bounded event tail and return the total event count.
+
+        Backends with indexed event access should override this method to avoid
+        materializing every historical event payload.
+        """
+        if type(limit) is not int or not 1 <= limit <= 256:
+            raise ValueError("recent event limit must be between 1 and 256")
+        events = self.read_events(session_id)
+        return events[-limit:], len(events)
+
     def put_event(self, session_id: str, sequence: int, event: dict[str, Any]) -> None:
         """Persist one sequenced event; raise SequenceTaken on foreign conflict."""
         raise NotImplementedError
@@ -658,6 +671,14 @@ class StoreSessionStore(SessionStore):
 
     def read_events(self, session_id: str) -> list[dict[str, Any]]:
         return self.backend.read_events(session_id)
+
+    def read_event_tail(
+        self, session_id: str, *, limit: int,
+    ) -> tuple[list[dict[str, Any]], int]:
+        reader = getattr(self.backend, "read_event_tail", None)
+        if callable(reader):
+            return reader(session_id, limit=limit)
+        return super().read_event_tail(session_id, limit=limit)
 
     def put_event(self, session_id: str, sequence: int, event: dict[str, Any]) -> None:
         from .store_backend import _SequenceTaken

@@ -47,6 +47,7 @@ TYPES = (
     "capability.unknown",
     "capability.invoked",
     "invocation.completed",
+    "environment.rpc.read_observed",
     "authority.denied",
     "authority.escalated",
     "authority.scope-granted",
