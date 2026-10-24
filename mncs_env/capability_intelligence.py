@@ -398,7 +398,7 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
     section_hints = (
         "build", "diagnostic", "fact", "implementation", "measurement",
         "origin", "outcome", "resource", "reuse", "runtime", "source",
-        "test", "verification",
+        "stage", "test", "verification",
     )
     field_hints = (
         "available", "byte", "cache", "case", "checkpoint", "code",
@@ -406,34 +406,71 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
         "exit", "fact", "failed", "failure", "fresh", "implementation",
         "integrity", "limit", "mask", "memory", "mismatch", "observation",
         "origin", "passed", "peak", "publish", "record", "resource",
-        "result", "return", "reuse", "rss", "skip", "source", "state",
-        "status", "success", "test", "token", "usage", "verified", "wall",
+        "equal", "name", "output", "result", "return", "reuse", "rss",
+        "skip", "source", "stage", "state", "status", "success", "test",
+        "token", "usage", "verified", "wall",
     )
     for name, value in sorted(outcome.items()):
         if (not isinstance(name, str) or not name or len(name) > 80
-                or name in text_fields or not isinstance(value, dict)
+                or name in text_fields
                 or not any(hint in name.lower() for hint in section_hints)):
             continue
-        scalar_fields = {}
-        valid_fields = []
-        for key, field_value in value.items():
-            if (not isinstance(key, str) or not key or len(key) > 80
-                    or not any(hint in key.lower() for hint in field_hints)):
-                continue
-            if isinstance(field_value, str) and field_value:
-                valid_fields.append((key, _short_text(field_value, 128)))
-            elif (type(field_value) is bool
-                  or (type(field_value) is int and abs(field_value) <= 10**18)
-                  or (type(field_value) is float and math.isfinite(field_value)
-                      and abs(field_value) <= 10**18)):
-                valid_fields.append((key, field_value))
-        for key, field_value in sorted(valid_fields)[:6]:
-            scalar_fields[key] = field_value
-        if scalar_fields:
+        if isinstance(value, dict):
+            records = [value]
+            record_array = False
+        elif "stage" in name.lower() and isinstance(value, list):
+            records = [item for item in value[:4] if isinstance(item, dict)]
+            record_array = True
+        else:
+            continue
+        compact_records = []
+        for record in records:
+            valid_fields = []
+            for key, field_value in record.items():
+                if (not isinstance(key, str) or not key or len(key) > 80
+                        or not any(hint in key.lower() for hint in field_hints)):
+                    continue
+                if isinstance(field_value, str) and field_value:
+                    valid_fields.append((key, _short_text(field_value, 128)))
+                elif (type(field_value) is bool
+                      or (type(field_value) is int and abs(field_value) <= 10**18)
+                      or (type(field_value) is float and math.isfinite(field_value)
+                          and abs(field_value) <= 10**18)
+                      or field_value is None):
+                    valid_fields.append((key, field_value))
+            if record_array:
+                stage_field_order = {
+                    "name": 0,
+                    "cache_status": 1,
+                    "output_equal_to_stage0": 2,
+                    "wall_seconds": 3,
+                    "cpu_seconds": 4,
+                    "peak_rss_bytes": 5,
+                    "peak_cgroup_memory_bytes": 6,
+                    "peak_open_file_descriptors": 7,
+                }
+                valid_fields.sort(key=lambda item: (
+                    stage_field_order.get(item[0], len(stage_field_order)), item[0],
+                ))
+                scalar_limit = 8
+            else:
+                valid_fields.sort()
+                scalar_limit = 6
+            scalar_fields = dict(valid_fields[:scalar_limit])
+            if scalar_fields:
+                compact_records.append({
+                    "values": scalar_fields,
+                    "fields_truncated": len(valid_fields) > len(scalar_fields),
+                })
+        if not compact_records:
+            continue
+        if record_array:
             compact_objects[name] = {
-                "values": scalar_fields,
-                "fields_truncated": len(valid_fields) > len(scalar_fields),
+                "records": compact_records,
+                "records_truncated": len(value) > len(compact_records),
             }
+        else:
+            compact_objects[name] = compact_records[0]
     if compact_objects:
         result["sections"] = dict(sorted(compact_objects.items())[:4])
         if len(compact_objects) > len(result["sections"]):

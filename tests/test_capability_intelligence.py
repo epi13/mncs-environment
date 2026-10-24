@@ -1016,6 +1016,7 @@ def test_compiler_cache_observation_keeps_resource_limits_and_source_unselected(
     }])
 
     result = capability_intelligence.project(session)
+    compact = capability_intelligence.project(session, max_result_bytes=7000)
 
     observation = result["observations"][0]
     assert result["pressure_hypothesis_count"] == 0
@@ -1030,6 +1031,18 @@ def test_compiler_cache_observation_keeps_resource_limits_and_source_unselected(
         "peak_cgroup_memory_bytes"
     ] is None
     assert observation["supporting_sources"][0]["status"] == "outside-selected-session"
+    compact_observation = compact["observations"][0]["observation"]
+    assert compact["source"]["response_truncated"] is True
+    stage_summary = compact_observation["outcome_context"]["sections"][
+        "representative_stages"
+    ]
+    assert len(stage_summary["records"]) == 4
+    assert stage_summary["records_truncated"] is True
+    first_stage = stage_summary["records"][0]["values"]
+    assert first_stage["name"] == "fresh_process"
+    assert first_stage["cache_status"] == "hit"
+    assert first_stage["output_equal_to_stage0"] is True
+    assert first_stage["peak_cgroup_memory_bytes"] is None
 
 
 def test_improvement_relation_links_pressure_change_verification_and_followup(

@@ -237,6 +237,12 @@ copying its full diagnostic payload. `measurement_summary` separately retains
 classified measurements, unavailable attribution, interpretations, and
 qualifications. Both are summaries of recorded evidence, not independent
 attestations; the evidence pointer remains the route to the source record.
+For compiler outcomes with a `representative_stages` array, the compact context
+keeps at most four rows with stage name, cache status, reference-output result,
+CPU and wall time, RSS, cgroup memory, and open-file-descriptor values when
+present. A recorded `null` remains `null`, and omitted stage rows are disclosed
+with `records_truncated`; these values are not filled or reinterpreted by the
+projection.
 
 An observation may also carry an `improvement_relation` linking one pressure
 hypothesis to an implementation source, a verification observation, and a
