@@ -1,0 +1,88 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_owner_checkout_authorization_improvement_followup_20261024",
+  "captured_at": "2026-10-24T20:56:31Z",
+  "measurement_basis": "corrected-authenticated-pressure-record-linked-to-verified-implementation-and-live-readback",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "repository": "mncs-environment",
+    "session_snapshot_branch": "campaign/scoped-merge-publish-authority-20261020",
+    "session_snapshot_head": "c8f35ee128b689907b3a413e6b723e82d9b9b7b9",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "consumer_id": "local-agent"
+  },
+  "pressure_hypothesis": null,
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environmental Capability evidence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_owner_checkout_authorization_routing_20261024",
+      "implementation_commits": {
+        "mncs-environment": "ca8f52d4e319d6b9a067a0b209a7ac381e08bb1e",
+        "mncs-control-mcp": "a1df23546b1c90ebb08b6b70c3b2fa9fc38db409"
+      },
+      "verification_observation_identity": "ev_environment_owner_checkout_authorization_verification_followup_20261024",
+      "subsequent_observation_identity": "ev_environment_owner_checkout_authorization_live_readback_20261024"
+    },
+    "outcome": {
+      "implementation_change": "Environment allows exact Control owner checkout selection to replace the entry-time repository checkout during scope admission and uses the durable owner grant for the post-grant claim. Control resolves a clean registered Environment source against the current main revision for each operation.",
+      "verification_recorded": true,
+      "effectiveness_assessment": "single-session path verified; longitudinal effectiveness not assessed",
+      "evidence_correction": "This follow-up uses corrected pressure and verification records after the projection flagged the first versions for omitting observation.request. The earlier immutable records are retained and remain visibly invalid."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_owner_checkout_authorization_routing_followup_20261024",
+    "addresses_hypothesis_identity": "ph_environment_owner_checkout_authorization_routing_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_owner_checkout_binding_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "ca8f52d4e319d6b9a067a0b209a7ac381e08bb1e",
+      "path": "mncs_env/sessions.py",
+      "sha256": "f8b53b7359f715c38bccfe46deff0644b40943d92e6ee13cca0be0a8500e6b89"
+    },
+    "verification_observation_identity": "ev_environment_owner_checkout_authorization_verification_followup_20261024",
+    "subsequent_observation_identity": "ev_environment_owner_checkout_authorization_live_readback_20261024",
+    "basis": "One live owner scope grant and exact worktree claim succeeded after the Environment main code and configured source checkout were synchronized. Regression tests cover initial default-selection override and grant-to-claim routing; Control source-refresh tests cover main advancing during a long-lived service. This establishes the path for one session while recurrence and long-term improvement remain unassessed.",
+    "not_measured": [
+      "recurrence in other sessions",
+      "whether source re-resolution alone removes manual root synchronization in every live bridge",
+      "resource overhead of repeated source validation",
+      "long-term reduction in user intervention"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "corrected-pressure-observation",
+      "identity": "ev_environment_owner_checkout_authorization_pressure_followup_20261024",
+      "path": "evidence/environmental-capability/checkout-authorization-routing-pressure-followup-20261024.json"
+    },
+    {
+      "kind": "corrected-verification-observation",
+      "identity": "ev_environment_owner_checkout_authorization_verification_followup_20261024",
+      "path": "evidence/environmental-capability/checkout-authorization-routing-verification-followup-20261024.json"
+    },
+    {
+      "kind": "subsequent-live-readback",
+      "identity": "ev_environment_owner_checkout_authorization_live_readback_20261024",
+      "path": "evidence/environmental-capability/checkout-authorization-routing-live-readback-20261024.json"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence and durable long-term resolution"
+  ]
+}

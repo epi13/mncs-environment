@@ -1,0 +1,128 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_owner_checkout_authorization_pressure_followup_20261024",
+  "captured_at": "2026-10-24T20:56:31Z",
+  "measurement_basis": "authenticated-Control-scope-grant-response-and-canonical-Store-grant-readback",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "repository": "mncs-environment",
+    "session_snapshot_branch": "campaign/scoped-merge-publish-authority-20261020",
+    "session_snapshot_head": "c8f35ee128b689907b3a413e6b723e82d9b9b7b9",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "owner-approved-checkout-routing-pressure",
+    "source_interface": "MNCS Environment scope_grant through the authenticated Control bridge",
+    "request": {
+      "operation": "scope_grant",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "repository": "mncs-environment",
+      "selected_registered_checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/merge-main-authority-20261020",
+      "selected_branch": "main"
+    },
+    "outcome": {
+      "status": "failed-before-publication",
+      "failure_code": "authority-scope-already-granted",
+      "exit_code": 3,
+      "publication_completed": false,
+      "context": "The session already had intent-level writable authority for mncs-environment while Control held an exact owner-approved campaign/repository entry. The live Environment implementation rejected the owner-selected linked checkout before recording a scope grant."
+    },
+    "source_checkout_context": {
+      "configured_root_path": "/home/epi13/Documents/Projects/mncs-environment",
+      "configured_root_branch_before": "campaign/scoped-merge-publish-authority-20261020",
+      "configured_root_head_before": "c8f35ee128b689907b3a413e6b723e82d9b9b7b9",
+      "published_main_head": "ca8f52d4e319d6b9a067a0b209a7ac381e08bb1e",
+      "relationship_before_sync": "configured root was a clean ancestor of published main",
+      "local_action": "fast-forwarded the clean, unclaimed configured root to pushed main so the live bridge could execute current Environment code"
+    },
+    "successful_readback": {
+      "scope_grant_identity": "scope_1326025e8423d58b",
+      "scope_grant_admitted_at": "2026-10-24T20:44:18+00:00",
+      "checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/merge-main-authority-20261020",
+      "branch": "main",
+      "head": "ca8f52d4e319d6b9a067a0b209a7ac381e08bb1e",
+      "checkout_identity": "checkout:da14b7d7976c8b72",
+      "claim_acquired_event": "evt_ec62a9d531794eaf",
+      "claim_release_event": "evt_a1be097832de0281"
+    },
+    "interpretation_limit": "The grant succeeded after the configured root was fast-forwarded to pushed main. Regression tests isolate the Environment checkout-selection defects. The component that retained the stale source pointer is not separately instrumented, so this record does not isolate whether it was the MCP adapter or its Environment source cache."
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_owner_checkout_authorization_routing_20261024",
+    "title": "Owner-approved linked checkout authority can be blocked or lost between scope admission, source selection, and claim pickup",
+    "category": "authorization-and-checkout-continuity",
+    "subsystem": "MNCS Environment scope grants, linked-checkout selection, and Control source resolution",
+    "owner": "mncs-environment",
+    "basis": "One authenticated session showed an exact owner-approved scope request rejected because the repository was already in intent-level writable authority. Regression isolation found that owner-authorized linked checkout selection also had to supersede the entry-time repository checkout in both admission validation and subsequent claim acquisition. The configured Environment source checkout was clean but behind the pushed main revision; after advancing it to main, the live scope grant and exact worktree claim succeeded.",
+    "recurrence": "not-established-across-sessions",
+    "actionable_recommendation": "Keep owner approval exact to campaign, repository, and registered checkout; treat the owner-selected checkout as the durable selection through claim acquisition; refresh the Environment source when main advances; preserve publication status and checkout identity in the diagnostic projection.",
+    "not_measured": [
+      "number of affected operations across sessions or campaigns",
+      "whether the same stale-source path affected other Control clients",
+      "end-to-end dispatch time for scope-grant and claim mutations",
+      "agent effort or duplicated work attributable to previous stalls",
+      "long-term recurrence after source refresh and checkout-binding fixes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "live-canonical-Store-claim-event",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "event_identity": "evt_ec62a9d531794eaf"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_owner_checkout_binding_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "ca8f52d4e319d6b9a067a0b209a7ac381e08bb1e",
+      "path": "mncs_env/sessions.py",
+      "sha256": "f8b53b7359f715c38bccfe46deff0644b40943d92e6ee13cca0be0a8500e6b89"
+    },
+    {
+      "kind": "committed-verification",
+      "identity": "ev_environment_owner_checkout_binding_tests_20261024",
+      "repository": "mncs-environment",
+      "commit": "ca8f52d4e319d6b9a067a0b209a7ac381e08bb1e",
+      "path": "tests/test_authority_scope_grants.py",
+      "sha256": "7a81e50913b8c76f5884cce5b67309a7e38750fb9bfd5ff4b2c5640d0ffb386a"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_control_environment_source_refresh_implementation_20261024",
+      "repository": "mncs-control-mcp",
+      "commit": "a1df23546b1c90ebb08b6b70c3b2fa9fc38db409",
+      "path": "src/mncs_control_mcp/environment_sessions.py",
+      "sha256": "e649a6a27e901d8527e96cf1d635b2080ac120417a2b014751f793a5e6b3779c"
+    },
+    {
+      "kind": "committed-verification",
+      "identity": "ev_control_environment_source_refresh_tests_20261024",
+      "repository": "mncs-control-mcp",
+      "commit": "a1df23546b1c90ebb08b6b70c3b2fa9fc38db409",
+      "path": "tests/test_environment_sessions.py",
+      "sha256": "9e01b559a72d2227c97a53de3d18820ad5b3f36162c90cf6c3f97dd5bcecd39c"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence",
+    "agent effort across prior incidents",
+    "long-term effectiveness after the live path succeeds"
+  ]
+}
