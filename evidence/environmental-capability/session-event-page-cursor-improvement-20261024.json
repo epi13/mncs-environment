@@ -1,0 +1,94 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_event_page_cursor_improvement_20261024",
+  "captured_at": "2026-10-24T17:38:10Z",
+  "measurement_basis": "verified-bounded-cursor-change-linked-to-regressions-and-authenticated-live-page-readback",
+  "observation": {
+    "kind": "session-event-page-cursor-improvement-link",
+    "source_interface": "MNCS Environment environmental-capability projection and canonical Store event page",
+    "request": {
+      "campaign_state_checkpoint_id_before_implementation": "chk_1677786cdaba68bd",
+      "implementation_commit": "886bb6641b03ed00d19c828d71c9f283a1a88395",
+      "verification_observation_identity": "ev_environment_session_event_page_cursor_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_session_event_page_cursor_live_readback_20261024"
+    },
+    "outcome": {
+      "implementation_change": "Added an exclusive event-sequence cursor to the canonical Store event page, Session API, and environmental-capability CLI. Historical projections report the selected page, older-page availability, and a next cursor. Canonical Store reads still scan generation binding metadata but materialize only the selected event payloads.",
+      "observed_pressure": "One authenticated session recorded 128 Control read operations while the whole-session projection returned 32 and reported 96 omitted. A live 24-event historical page returned 11 authenticated operations that were absent from a separately queried newest 24-event page.",
+      "verification_status": "targeted-regressions-and-vertical-proof-passed",
+      "live_readback_status": "historical-sequence-page-and-next-cursor-observed-through-canonical-Store",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The cursor capability is verified and exercised against one existing session. Reduced agent effort, cross-session recurrence, and the long-term effect on development are not measured."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_1677786cdaba68bd",
+    "campaign_evidence_count_before_recording": 83,
+    "claim_ids": ["claim:mncs-environment:worktree:567a0ed75512"]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_session_event_page_cursor_20261024",
+    "addresses_hypothesis_identity": "ph_environment_session_activity_older_pages_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_session_event_page_store_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "886bb6641b03ed00d19c828d71c9f283a1a88395",
+      "path": "mncs_env/store_backend.py",
+      "sha256": "3efa3b55a6da3c699406bd9dd1969682ef4fc3f527abd0d24f2959a154ec7a00"
+    },
+    "verification_observation_identity": "ev_environment_session_event_page_cursor_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_session_event_page_cursor_live_readback_20261024",
+    "basis": "The bounded Store API, Session projection, CLI cursor, and compact response are covered by targeted regressions and the existing vertical proof. A direct canonical Store read selected sequences 76-99 before sequence 100, returned 11 authenticated read-operation records, and supplied sequence 76 as the next cursor. The default whole-session projection exposed the 32-record output cap and 96 omitted records.",
+    "not_measured": [
+      "whether older-page access reduces repeated investigation across sessions",
+      "whether the source session's omitted operations constrained its campaign",
+      "long-term recurrence or agent outcome changes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "bounded-Store-event-page-implementation",
+      "identity": "ev_environment_session_event_page_store_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "886bb6641b03ed00d19c828d71c9f283a1a88395",
+      "path": "mncs_env/store_backend.py",
+      "sha256": "3efa3b55a6da3c699406bd9dd1969682ef4fc3f527abd0d24f2959a154ec7a00"
+    },
+    {
+      "kind": "session-event-page-verification-observation",
+      "identity": "ev_environment_session_event_page_cursor_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "185b88c94cfe1cb989732bac49356b28072c94c5",
+      "path": "evidence/environmental-capability/session-event-page-cursor-verification-20261024.json",
+      "sha256": "780783d6fdff8cf4374db53f1b82cb5b5bdb62be2897bde547da8a28f878f9f7"
+    },
+    {
+      "kind": "session-event-page-live-readback-observation",
+      "identity": "ev_environment_session_event_page_cursor_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "185b88c94cfe1cb989732bac49356b28072c94c5",
+      "path": "evidence/environmental-capability/session-event-page-cursor-live-readback-20261024.json",
+      "sha256": "63f82c0d7c6fb8f0552d7aa48e8478d8f46ec5530379c587e4513824053e9a17"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence",
+    "agent effectiveness or outcome changes",
+    "whether the pressure is reduced under future long-running work"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
