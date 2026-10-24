@@ -1,0 +1,91 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_workspace_scope_visibility_live_readback_20261024",
+  "captured_at": "2026-10-24T22:31:46Z",
+  "measurement_basis": "direct-live-projection-readback-and-targeted-verification",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-workspace-scope-projection-verification",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "source_session_id": "ses_164edc158d9b1637",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "evidence_limit": 16,
+      "history_pages": 1,
+      "read_mode": "read-only"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "workspace_alignment_status": "declared-repositories-not-selected",
+      "declared_repositories": ["mncs-compiler"],
+      "selected_repositories": ["mncs-environment", "mncs-language", "mncs-vm"],
+      "evidence_visibility_status": "outside-selected-session-references-observed",
+      "outside_selected_reference_diagnostic_count": 4,
+      "outside_selected_repositories": [
+        {"repository": "mncs-compiler", "diagnostic_count": 4}
+      ],
+      "exact_source_diagnostics_retained": true,
+      "outside_selected_semantics_disclosed": true,
+      "resource_sample_status": "not-captured-in-session",
+      "verification": {
+        "focused_test_command": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py",
+        "focused_tests_passed": 77,
+        "focused_tests_failed": 0,
+        "vertical_proof_command": "python3 scripts/vertical_proof.py",
+        "vertical_proof_result": "VERTICAL PROOF: PASS",
+        "live_projection_command": "scripts/mncs-env projections ses_164edc158d9b1637 --interpret environmental-capability --evidence-limit 16 --history-pages 1",
+        "live_projection_readback": "passed"
+      },
+      "interpretation": "The focused contract checks, vertical proof, and actual read-only Compiler session query verify that the projection exposes declared-versus-selected repository scope and groups four exact outside-selected source diagnostics. This verifies visibility of the relationship. It does not establish that the session was blocked, that the selected workspace was wrong, or that future development outcomes improve."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "focused-tests",
+      "command": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py",
+      "passed": 77,
+      "failed": 0
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "vertical-proof",
+      "command": "python3 scripts/vertical_proof.py",
+      "result": "VERTICAL PROOF: PASS"
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "projections",
+      "session_id": "ses_164edc158d9b1637",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "workspace_alignment_status": "declared-repositories-not-selected",
+      "outside_selected_reference_diagnostic_count": 4,
+      "outside_selected_repositories": ["mncs-compiler"],
+      "resource_sample_status": "not-captured-in-session"
+    }
+  ],
+  "not_measured": [
+    "subsequent independent use of the scope projection",
+    "whether the selected workspace was intentional for the Compiler session",
+    "whether the newly visible relationship reduces repeated investigation",
+    "empirical elimination of any recurring development pressure"
+  ]
+}

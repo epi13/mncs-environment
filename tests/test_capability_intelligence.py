@@ -410,6 +410,80 @@ def test_project_omits_diagnostics_when_work_intent_repositories_are_aligned(
     assert "evidence_visibility" not in result["source"]
 
 
+def test_live_compiler_scope_records_link_evidence_and_preserve_uncertainty(
+    tmp_path: Path,
+) -> None:
+    evidence_dir = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability"
+    )
+    identities = (
+        "workspace-scope-visibility-pressure-20261024",
+        "workspace-scope-visibility-live-readback-20261024",
+        "workspace-scope-visibility-improvement-20261024",
+    )
+    records = [
+        json.loads((evidence_dir / f"{identity}.json").read_text(encoding="utf-8"))
+        for identity in identities
+    ]
+    outside_refs = [
+        {
+            "identity": "ev_compiler_language_fact_reuse_workload_20261023",
+            "repository": "mncs-compiler",
+            "commit": "e2924f6d602a122de1121aa273eb24f9795784bc",
+            "path": "evidence/language-verification-dependency-summary-cache-20261023T064052.991817Z.json",
+            "sha256": "128d4115ddb614cbe249523f162ae711bba5ca990e98dc21ac3b96cd78f1185d",
+        },
+        {
+            "identity": "ev_compiler_digest_application_interface_invalidation_20261023",
+            "repository": "mncs-compiler",
+            "commit": "c9d54cdfcf8c03fce0a1a904d32e147d7f287a9d",
+            "path": "evidence/language-module-interface-application-invalidation-compiler-20261023.json",
+            "sha256": "ce67f0ff837bba0ff73301cb398198da5ff9125e8fe8cb75c45c5f26a1715177",
+        },
+        {
+            "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+            "repository": "mncs-compiler",
+            "commit": "e874669dbd110c5a5f808249c20a086013d7e2be",
+            "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+            "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e",
+        },
+        {
+            "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+            "repository": "mncs-compiler",
+            "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+            "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+            "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12",
+        },
+    ]
+    session, _state = _session(tmp_path, records, extra_refs=outside_refs)
+    session.snapshot["intent"]["repositories"] = ["mncs-compiler"]
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["source"]["observation_records_verified"] == 3
+    assert result["subject"]["workspace_alignment"][
+        "unselected_declared_repositories"
+    ] == ["mncs-compiler"]
+    assert result["source"]["evidence_visibility"][
+        "outside_selected_reference_diagnostic_count"
+    ] == 4
+    hypothesis = next(
+        item for item in result["pressure_hypotheses"]
+        if item["identity"] == "ph_environment_workspace_scope_visibility_20261024"
+    )
+    assert hypothesis["observation_count"] == 1
+    relation = next(
+        item for item in result["improvement_relations"]
+        if item["identity"] == "im_environment_workspace_scope_visibility_20261024"
+    )
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["effectiveness_assessment"] == "not-assessed"
+    assert relation["subsequent_record_status"] == "not-recorded"
+
+
 def test_project_exposes_verified_campaign_objective_separately_from_work_intent(
     tmp_path: Path,
 ) -> None:
