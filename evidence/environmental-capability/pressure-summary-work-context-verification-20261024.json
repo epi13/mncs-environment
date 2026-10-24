@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_summary_work_context_verification_20261024",
+  "captured_at": "2026-10-24T10:17:52+00:00",
+  "measurement_basis": "focused-regression-tests-and-interface-query",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_3a87b91002804573",
+      "sequence": 28
+    },
+    "campaign_evidence_count": 88,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "observation": {
+    "kind": "pressure-summary-work-context-regression-verification",
+    "source_interface": "pytest, ruff, py_compile, mncs-env projection CLI",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-capability-intelligence-20261024",
+      "commit": "97c53bc096d60c8c6b8c28779cfa8abda9590450",
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "python3 -m pytest tests/test_environment.py -q -k 'projection_capability_invocations_are_declared_and_session_bound or campaign_state_cli_accepts_bounded_evidence_pages'",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "python3 -m py_compile mncs_env/capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "focused_capability_tests": {
+        "status": "passed",
+        "passed": 30,
+        "failed": 0
+      },
+      "Environment_interface_tests": {
+        "status": "passed",
+        "passed": 2,
+        "deselected": 230
+      },
+      "lint_and_compile": {
+        "ruff": "passed",
+        "py_compile": "passed",
+        "git_diff_check": "passed"
+      },
+      "full_test_suite_after_change": {
+        "status": "not-run",
+        "reason": "Focused projection and Environment interface regressions cover the changed path; the full suite was not needed for this targeted slice."
+      }
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "97c53bc096d60c8c6b8c28779cfa8abda9590450",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "7654fdce49a9c9f8037fde57d281164934511bb9b142bdfd9b5c2e6875fbabab",
+      "measured_fields": [
+        "focused_capability_tests",
+        "Environment_interface_tests"
+      ]
+    }
+  ],
+  "not_measured": [
+    "full Environment suite status after this change",
+    "resource and token use attributable to the focused verification commands",
+    "whether agents use or benefit from the bounded pressure contexts in later development"
+  ]
+}

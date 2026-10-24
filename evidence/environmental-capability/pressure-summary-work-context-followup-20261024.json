@@ -1,0 +1,88 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_summary_work_context_followup_20261024",
+  "captured_at": "2026-10-24T10:17:52+00:00",
+  "measurement_basis": "direct-authenticated-environmental-capability-projection-read",
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "observation": {
+    "kind": "pressure-summary-work-context-projection-followup",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "campaign_state_checkpoint_id": "chk_3a87b91002804573",
+      "campaign_evidence_count": 88,
+      "evidence_offset": 8,
+      "evidence_limit": 8,
+      "repository": "mncs-environment",
+      "commit": "97c53bc096d60c8c6b8c28779cfa8abda9590450",
+      "command": "./scripts/mncs-env projections ses_c38b0ab35b9418ba --interpret environmental-capability --evidence-offset 8 --evidence-limit 8"
+    },
+    "outcome": {
+      "projection_status": "ready",
+      "verified_observation_records": 5,
+      "pressure_identity": "ph_environment_observation_capture_context",
+      "recurrence_status": "not-established",
+      "affected_work_context_count": 1,
+      "affected_work_context": {
+        "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+        "session_id": "ses_164edc158d9b1637",
+        "work_intent_id": "int_8fb697d8987722d5",
+        "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption"
+      },
+      "recording_context_count": 1,
+      "recording_context": {
+        "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+        "session_id": "ses_c38b0ab35b9418ba",
+        "consumer_id": "local-agent"
+      },
+      "supporting_observation_identity": "ev_environment_observation_capture_context_gap_20261024",
+      "supporting_observation_sha256": "e74a5b6973e608cdf81bcc3115a24ed3bd2000763740a7be9e602d90ae3dc138",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "This live read demonstrates that the projection exposes both contexts for the authentic Compiler pressure observation. It does not establish cross-session recurrence, agent uptake, or long-term effectiveness."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_observation_capture_context_gap_20261024",
+      "repository": "mncs-environment",
+      "commit": "38b81f83e72ca688422022d71d8629a0019da37c",
+      "path": "evidence/environmental-capability/environment-observation-capture-context-gap-20261024.json",
+      "sha256": "e74a5b6973e608cdf81bcc3115a24ed3bd2000763740a7be9e602d90ae3dc138",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "committed-compiler-observation",
+      "identity": "ev_environment_compiler_cache_regression_20261024",
+      "repository": "mncs-environment",
+      "commit": "25e04249ed93961f06ea5bf35a609f0b78a8a40b",
+      "path": "evidence/environmental-capability/compiler-cache-regression-20261024.json",
+      "sha256": "f9b7fd6059d811bdcdd8313426f10221ff88cb9a80fbf878e203398a1a0d26ff",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637"
+    }
+  ],
+  "not_measured": [
+    "whether agents consult the summary instead of navigating to each evidence record",
+    "recurrence of the pressure across Compiler sessions or Environment versions",
+    "time or resource impact of context-summary inspection"
+  ]
+}

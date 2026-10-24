@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_summary_work_context_improvement_20261024",
+  "captured_at": "2026-10-24T10:17:52+00:00",
+  "measurement_basis": "implementation-verification-and-followup-relation",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_3a87b91002804573",
+      "sequence": 28
+    },
+    "campaign_evidence_count": 88,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_pressure_summary_work_context_20261024",
+    "addresses_hypothesis_identity": "ph_environment_pressure_summary_work_context",
+    "implementation_reference": {
+      "identity": "ev_environment_pressure_context_projection_implementation",
+      "repository": "mncs-environment",
+      "commit": "97c53bc096d60c8c6b8c28779cfa8abda9590450",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "304ec8dbef26704b702a5d69f5b98fe768b82add92f16526f48ebf6402ad9723"
+    },
+    "verification_observation_identity": "ev_environment_pressure_summary_work_context_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_pressure_summary_work_context_followup_20261024",
+    "basis": "The projection now includes distinct bounded affected-work and recorder contexts in pressure summaries, with work-intent and recorder counts. Focused tests exercise the authentic Compiler observation and compact response. A subsequent authenticated projection query returned both contexts with the exact source observation pointer.",
+    "not_measured": [
+      "whether agents consult the contexts directly or reduce source-record navigation",
+      "whether contextual pressure summaries change compiler or environment implementation decisions",
+      "long-term recurrence or resolution across other sessions or Environment versions",
+      "time, token, cache, or resource impact of the change"
+    ]
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment capability-intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_pressure_summary_work_context",
+      "implementation_commit": "97c53bc096d60c8c6b8c28779cfa8abda9590450",
+      "verification_observation_identity": "ev_environment_pressure_summary_work_context_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_pressure_summary_work_context_followup_20261024"
+    },
+    "outcome": {
+      "implementation_change": "Pressure summaries expose bounded distinct affected-work and recording contexts separately, preserve their provenance roles, and report context counts and truncation.",
+      "verification_recorded": true,
+      "followup_record_contains_target_compiler_and_recorder_environment_context": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The projection query demonstrates the new relationship is available for an authentic Compiler observation; agent uptake and longer-term effect remain unmeasured."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_pressure_context_projection_implementation",
+      "repository": "mncs-environment",
+      "commit": "97c53bc096d60c8c6b8c28779cfa8abda9590450",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "304ec8dbef26704b702a5d69f5b98fe768b82add92f16526f48ebf6402ad9723"
+    }
+  ],
+  "not_measured": [
+    "observed reduction in contextual misattribution or repeated investigation",
+    "cross-session recurrence of the new pressure hypothesis",
+    "empirical effectiveness beyond focused tests and the recorded live projection query"
+  ]
+}

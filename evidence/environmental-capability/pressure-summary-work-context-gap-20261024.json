@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_summary_work_context_gap_20261024",
+  "captured_at": "2026-10-24T10:17:52+00:00",
+  "measurement_basis": "committed-source-review-and-authenticated-projection-read",
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_pressure_summary_work_context",
+    "title": "Pressure summaries omit the affected work and recorder contexts needed to interpret observations",
+    "category": "evidence-provenance",
+    "subsystem": "mncs-environment capability-intelligence pressure projection",
+    "owner": "mncs-environment",
+    "basis": "At campaign checkpoint chk_3a87b91002804573, the bounded projection exposed the Compiler work context and the Environment recorder on the observation, but the pressure summary provided counts and evidence pointers without either context. The prior projection source likewise omitted contextual summaries, requiring an agent to open a source record to identify the affected objective and collector.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Include bounded distinct affected-work and recording contexts in each pressure summary, preserve their separate roles, and disclose truncation.",
+    "not_measured": [
+      "whether agents had to open source records or misattributed this pressure before the summary change",
+      "recurrence of this summary-context omission across other pressure hypotheses",
+      "whether context summaries change development decisions or reduce repeated investigation",
+      "time, token, or resource cost attributable to the omission"
+    ]
+  },
+  "improvement_relation": null,
+  "observation": {
+    "kind": "pressure-summary-work-context-gap-review",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_3a87b91002804573",
+      "campaign_evidence_count": 88,
+      "evidence_offset": 8,
+      "evidence_limit": 8,
+      "pressure_hypothesis_identity": "ph_environment_observation_capture_context",
+      "source_record_identity": "ev_environment_observation_capture_context_gap_20261024",
+      "pre_change_projection_commit": "1c7c222a1aaf21cab43a743de96eb31ea653426f",
+      "pre_change_projection_path": "mncs_env/capability_intelligence.py",
+      "pre_change_projection_sha256": "d56011cf85b3a68f730bb8956e036b667e7a5522e8ccdd58b864ef0ab2c8f69e"
+    },
+    "outcome": {
+      "pre_change_pressure_summary_exposed_affected_work_contexts": false,
+      "pre_change_pressure_summary_exposed_recording_contexts": false,
+      "source_observation_retained_distinct_contexts": true,
+      "affected_work_campaign": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "affected_work_session": "ses_164edc158d9b1637",
+      "recording_campaign": "cmp_environmental_capability_intelligence_20261023",
+      "recording_session": "ses_c38b0ab35b9418ba",
+      "analysis_limit": "This establishes a projection-context omission from source and recorded fields; it does not establish that an agent misattributed the objective or that the omission recurred."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_observation_capture_context_gap_20261024",
+      "repository": "mncs-environment",
+      "commit": "38b81f83e72ca688422022d71d8629a0019da37c",
+      "path": "evidence/environmental-capability/environment-observation-capture-context-gap-20261024.json",
+      "sha256": "e74a5b6973e608cdf81bcc3115a24ed3bd2000763740a7be9e602d90ae3dc138",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "pre-change-projection-source",
+      "identity": "ev_environment_pressure_context_projection_prechange",
+      "repository": "mncs-environment",
+      "commit": "1c7c222a1aaf21cab43a743de96eb31ea653426f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d56011cf85b3a68f730bb8956e036b667e7a5522e8ccdd58b864ef0ab2c8f69e"
+    }
+  ],
+  "not_measured": [
+    "whether agents used the source pointer to reconstruct context before this improvement",
+    "whether the context omission affected implementation choices",
+    "historical recurrence across earlier campaign pages"
+  ]
+}
