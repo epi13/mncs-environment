@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_source_registration_scope_compact_chain_live_readback_20261024",
+  "captured_at": "2026-10-24T16:56:54+00:00",
+  "measurement_basis": "authenticated-bounded-capability-projection-readback",
+  "observation": {
+    "kind": "pressure-verification-improvement-chain-live-readback",
+    "source_interface": "MNCS Environment campaign-state with environmental-capability projection",
+    "request": {
+      "session_id": "ses_c98eb637e20a5c14",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "campaign_state_checkpoint_id": "chk_e5b8d28068cb1c75",
+      "evidence_offset": 64,
+      "evidence_limit": 15,
+      "projection_identity": "eci_fedbec355b0230ed"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "pressure_hypothesis_identity": "ph_environment_source_registration_scope",
+      "pressure_hypothesis_status": "present-in-projection",
+      "recurrence_status": "not-established",
+      "improvement_relation_identity": "im_environment_source_registration_scope_compact_verified_20261024",
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "subsequent_record_status": "record-integrity-verified-in-projection",
+      "effectiveness_assessment": "not-assessed",
+      "observation_records_verified": 8,
+      "observation_records_unavailable": 4,
+      "source_registration_status": "not-present-in-selected-campaign-evidence-window",
+      "registration_scope": "selected-campaign-evidence-window",
+      "source_content_integrity_status": "workspace-read-only-content-integrity-verified",
+      "analysis_limit": "The bounded page connects the recorded pressure to a committed implementation, passing verification, and live follow-up. Four page references remain unavailable because earlier appended records lacked digests or a valid observation contract. The result does not establish agent impact or effectiveness."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "campaign_objective": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "environment_id": "renv_80ef889b89dad0e9",
+    "definition_id": "env_c7d14ed20b708d09",
+    "latest_checkpoint": {"identity": "chk_691079cfe830f05d", "sequence": 649},
+    "campaign_evidence_count": 693
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "verified-improvement-relation-record",
+      "identity": "ev_environment_source_registration_scope_compact_contract_repair_20261024",
+      "repository": "mncs-environment",
+      "commit": "593c2fdd3d4cc2edbad8f205f874fd56b5dea418",
+      "path": "evidence/environmental-capability/source-registration-scope-compact-contract-repair-20261024.json",
+      "sha256": "638ead87fbea8a3c92bb59efe33615c92cd3613b01829d51df7e4901ede9e2af"
+    },
+    {
+      "kind": "verification-observation",
+      "identity": "ev_environment_source_registration_scope_compact_verified_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "0456609d21d92d434fede10894195b2f896594ea",
+      "path": "evidence/environmental-capability/source-registration-scope-compact-verified-verification-20261024.json",
+      "sha256": "156614fd0ef2f0d0c4dc58c8826bbd6edc1e87a704c0051a42dca4023f346c9e"
+    },
+    {
+      "kind": "live-source-readback",
+      "identity": "ev_environment_source_registration_scope_compact_verified_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "0456609d21d92d434fede10894195b2f896594ea",
+      "path": "evidence/environmental-capability/source-registration-scope-compact-verified-live-readback-20261024.json",
+      "sha256": "5d8f00539132cdfba68c77baf0c1ab4f106bcaa84f1e64586976b697747b51d4"
+    },
+    {
+      "kind": "compiler-campaign-source-evidence",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637"
+    }
+  ],
+  "not_measured": [
+    "whether an agent uses the compact source status to choose its next action",
+    "whether the clarified scope reduces repeated evidence reconstruction",
+    "whether future independent development demonstrates effectiveness"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
