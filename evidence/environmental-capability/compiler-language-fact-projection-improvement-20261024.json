@@ -1,0 +1,95 @@
+{
+  "captured_at": "2026-10-24T19:06:48Z",
+  "identity": "ev_environment_compiler_language_fact_projection_improvement_20261024",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_compiler_domain_evidence_projection_20261024",
+    "basis": "A real authenticated Compiler campaign workload exposed 13 reused structural dependency summaries, 12 Language verification facts, and fresh-process reuse counts separately. Focused tests verify exact source-pointer identity handling, schema rejection, bounded stage summaries, and unavailable measurements.",
+    "identity": "im_environment_compiler_language_fact_projection_20261024",
+    "implementation_reference": {
+      "commit": "2a5e8f5675b3cbf196f8935579ceee00e6866afa",
+      "identity": "ev_environment_compiler_language_fact_projection_code_20261024",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "06305524d7ec88cfde826141112f4920d52069f3c9b5f2d92ad896c8e46aba87"
+    },
+    "not_measured": [
+      "production exposure before main integration",
+      "cross-session recurrence of the projection gap",
+      "agent outcomes and long-term effectiveness"
+    ],
+    "subsequent_observation_identity": "ev_environment_compiler_language_fact_projection_readback_20261024",
+    "verification_observation_identity": "ev_environment_compiler_language_fact_projection_verification_20261024"
+  },
+  "measurement_basis": "authenticated-source-measurement-adapter-linked-to-existing-pressure",
+  "not_measured": [
+    "production exposure before main integration",
+    "cross-session recurrence",
+    "agent outcomes and long-term effectiveness"
+  ],
+  "observation": {
+    "kind": "compiler-language-fact-observation-improvement-relation",
+    "outcome": {
+      "analysis_limit": "The implementation was verified locally against the authenticated Compiler campaign page. The live Control projection still uses the integrated Environment version; production exposure and subsequent agent outcomes are not established.",
+      "effectiveness_assessment": "not-assessed",
+      "implementation_change": "The projection now exposes an authentic Compiler language dependency-summary-cache workload. It preserves exact source provenance, separates structural summaries from Language verification facts, and includes bounded stage reuse, invalid-source, output agreement, and per-request resource evidence."
+    },
+    "request": {
+      "implementation_commit": "2a5e8f5675b3cbf196f8935579ceee00e6866afa",
+      "pressure_observation_identity": "ev_environment_compiler_domain_evidence_projection_pressure_20261024",
+      "subsequent_observation_identity": "ev_environment_compiler_language_fact_projection_readback_20261024",
+      "verification_observation_identity": "ev_environment_compiler_language_fact_projection_verification_20261024"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_1991cffb20bdf206",
+    "session_id": "ses_c98eb637e20a5c14"
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "campaign_objective": "Improve MNCS's ability to observe, understand, and enhance its effectiveness in supporting autonomous agents using evidence from real development.",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_1991cffb20bdf206",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "2a5e8f5675b3cbf196f8935579ceee00e6866afa",
+      "identity": "ev_environment_compiler_language_fact_projection_code_20261024",
+      "kind": "committed-environment-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "06305524d7ec88cfde826141112f4920d52069f3c9b5f2d92ad896c8e46aba87"
+    },
+    {
+      "commit": "2a5e8f5675b3cbf196f8935579ceee00e6866afa",
+      "identity": "ev_environment_compiler_language_fact_projection_tests_20261024",
+      "kind": "committed-environment-verification",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "310fda3876d8ca4d0fdbb33514bea317c111c8f73b0a35b38e5544bb304ae46b"
+    },
+    {
+      "commit": "2a5e8f5675b3cbf196f8935579ceee00e6866afa",
+      "identity": "ev_environment_compiler_language_fact_projection_docs_20261024",
+      "kind": "committed-environment-documentation",
+      "path": "docs/PROJECTIONS.md",
+      "repository": "mncs-environment",
+      "sha256": "bf2ba1b2bc8485c95c5108b72c2187433e9829131f8a8536478dc09caceb05ec"
+    },
+    {
+      "commit": "e2924f6d602a122de1121aa273eb24f9795784bc",
+      "identity": "ev_compiler_language_fact_reuse_workload_20261023",
+      "kind": "compiler-language-fact-reuse-source-record",
+      "path": "evidence/language-verification-dependency-summary-cache-20261023T064052.991817Z.json",
+      "repository": "mncs-compiler",
+      "sha256": "128d4115ddb614cbe249523f162ae711bba5ca990e98dc21ac3b96cd78f1185d"
+    }
+  ]
+}

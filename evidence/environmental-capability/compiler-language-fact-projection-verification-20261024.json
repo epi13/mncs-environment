@@ -1,0 +1,107 @@
+{
+  "captured_at": "2026-10-24T19:06:48Z",
+  "identity": "ev_environment_compiler_language_fact_projection_verification_20261024",
+  "measurement_basis": "focused-tests-and-authenticated-compiler-campaign-page-projection",
+  "not_measured": [
+    "source capture timestamp and model identity",
+    "token use and cache accounting for the Compiler agent session",
+    "production exposure before authorized main integration",
+    "cross-session recurrence or subsequent agent outcomes",
+    "long-term effectiveness"
+  ],
+  "observation": {
+    "kind": "compiler-language-verification-fact-projection-verification",
+    "outcome": {
+      "active_control_integration": "not-deployed-from-feature-branch",
+      "authentic_source_measurements": {
+        "execution_matches_stage0": true,
+        "fresh_process_fact_seeded_dependency_summaries": 3,
+        "fresh_process_verified_facts_reused": 3,
+        "invalid_source_reused_previous_success": false,
+        "language_dependency_summaries_actually_reused": 13,
+        "language_verified_facts_reused": 12
+      },
+      "diff_check": "passed",
+      "effectiveness_assessment": "not-assessed",
+      "local_projection": {
+        "compiler_work_context_preserved": true,
+        "evidence_records_considered": 8,
+        "observation_records_verified": 1,
+        "source_record_internal_identity": "absent; exact campaign pointer identity used",
+        "source_sha256_verified": true,
+        "stage_summaries": 8,
+        "status": "ready"
+      },
+      "ruff": "passed",
+      "source_scope": "bounded process-local structural summaries; not verification evidence",
+      "test_result": {
+        "failed": 0,
+        "passed": 72,
+        "scope": "capability-intelligence test module"
+      }
+    },
+    "request": {
+      "compiler_campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "compiler_checkpoint_id": "chk_691079cfe830f05d",
+      "compiler_evidence_page_limit": 8,
+      "compiler_evidence_page_offset": 677,
+      "compiler_session_id": "ses_164edc158d9b1637",
+      "compiler_source_identity": "ev_compiler_language_fact_reuse_workload_20261023",
+      "lint_command": "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+      "static_check": "git diff --check",
+      "test_command": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py"
+    },
+    "source_interface": "MNCS Environment focused projection suite and authenticated Compiler campaign page"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_1991cffb20bdf206",
+    "session_id": "ses_c98eb637e20a5c14"
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "campaign_objective": "Improve MNCS's ability to observe, understand, and enhance its effectiveness in supporting autonomous agents using evidence from real development.",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_1991cffb20bdf206",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "2a5e8f5675b3cbf196f8935579ceee00e6866afa",
+      "identity": "ev_environment_compiler_language_fact_projection_code_20261024",
+      "kind": "committed-environment-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "06305524d7ec88cfde826141112f4920d52069f3c9b5f2d92ad896c8e46aba87"
+    },
+    {
+      "commit": "2a5e8f5675b3cbf196f8935579ceee00e6866afa",
+      "identity": "ev_environment_compiler_language_fact_projection_tests_20261024",
+      "kind": "committed-environment-verification",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "310fda3876d8ca4d0fdbb33514bea317c111c8f73b0a35b38e5544bb304ae46b"
+    },
+    {
+      "commit": "2a5e8f5675b3cbf196f8935579ceee00e6866afa",
+      "identity": "ev_environment_compiler_language_fact_projection_docs_20261024",
+      "kind": "committed-environment-documentation",
+      "path": "docs/PROJECTIONS.md",
+      "repository": "mncs-environment",
+      "sha256": "bf2ba1b2bc8485c95c5108b72c2187433e9829131f8a8536478dc09caceb05ec"
+    },
+    {
+      "commit": "e2924f6d602a122de1121aa273eb24f9795784bc",
+      "identity": "ev_compiler_language_fact_reuse_workload_20261023",
+      "kind": "compiler-language-fact-reuse-source-record",
+      "path": "evidence/language-verification-dependency-summary-cache-20261023T064052.991817Z.json",
+      "repository": "mncs-compiler",
+      "sha256": "128d4115ddb614cbe249523f162ae711bba5ca990e98dc21ac3b96cd78f1185d"
+    }
+  ]
+}
