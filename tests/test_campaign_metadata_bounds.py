@@ -49,24 +49,32 @@ def test_campaign_evidence_remains_bounded_by_normalized_utf8_size() -> None:
         normalize_campaign_evidence(references)
 
 
-def test_environment_capability_observation_reference_requires_digest() -> None:
+def test_environment_capability_observation_digest_rule_preserves_history() -> None:
     observation = _reference(1, path=(
         "evidence/environmental-capability/observation.json"
     ))
     observation.pop("sha256")
 
+    # Legacy checkpoint history remains reconstructible and explicitly
+    # unverified; only newly published environmental observations require a
+    # digest.
+    assert normalize_campaign_evidence([observation]) == [observation]
     with pytest.raises(ValueError, match="environmental-capability.*require sha256"):
-        normalize_campaign_evidence([observation])
+        normalize_campaign_evidence(
+            [observation], require_environmental_observation_sha256=True,
+        )
 
     signed_observation = _reference(3, path=(
         "evidence/environmental-capability/observation.json"
     ))
-    assert normalize_campaign_evidence([signed_observation])[0]["sha256"] == (
-        signed_observation["sha256"]
-    )
+    assert normalize_campaign_evidence(
+        [signed_observation], require_environmental_observation_sha256=True,
+    )[0]["sha256"] == signed_observation["sha256"]
 
     generic = _reference(2, path="evidence/compiler/source.json")
     generic.pop("sha256")
-    normalized = normalize_campaign_evidence([generic])
+    normalized = normalize_campaign_evidence(
+        [generic], require_environmental_observation_sha256=True,
+    )
     assert normalized[0]["path"] == "evidence/compiler/source.json"
     assert "sha256" not in normalized[0]

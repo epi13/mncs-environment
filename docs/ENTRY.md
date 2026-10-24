@@ -291,11 +291,11 @@ in append order. When new evidence overflows that window, only the oldest
 prefix may roll off; immutable prior campaign-state checkpoints retain each
 evicted reference in the digest-linked history. Existing identities cannot be
 rebound or reordered; references roll off only as new ones are appended.
-First-party JSON observation references under
+New first-party JSON observation references under
 `evidence/environmental-capability/` must include `sha256`, so the capability
 projection can verify the committed record bytes before interpreting them.
-Generic campaign references may omit a digest, but their content cannot be
-integrity-verified without one. For example:
+Older digestless references remain readable as history but cannot be
+integrity-verified. Generic campaign references may omit a digest. For example:
 
 ```sh
 mncs-env checkpoint "$SESSION" --progress "delivery verified" \

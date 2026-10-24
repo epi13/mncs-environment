@@ -287,7 +287,9 @@ def _campaign_commit(value: Any, field: str, *, required: bool = True) -> str | 
     return value.lower()
 
 
-def normalize_campaign_evidence(value: Any) -> list[dict[str, str]]:
+def normalize_campaign_evidence(
+    value: Any, *, require_environmental_observation_sha256: bool = False,
+) -> list[dict[str, str]]:
     """Validate durable evidence pointers without treating them as verified.
 
     Each pointer names immutable source bytes by repository, full commit, and
@@ -325,7 +327,8 @@ def normalize_campaign_evidence(value: Any) -> list[dict[str, str]]:
         if ("\\" in path or pure_path.is_absolute() or path.startswith("~")
                 or any(part in ("", ".", "..") for part in parts)):
             raise ValueError("campaign evidence path must be a normalized repository-relative path")
-        if (repository == "mncs-environment"
+        if (require_environmental_observation_sha256
+                and repository == "mncs-environment"
                 and path.startswith("evidence/environmental-capability/")
                 and path.endswith(".json") and "sha256" not in item):
             raise ValueError(
@@ -6722,7 +6725,10 @@ class Session:
             if campaign_evidence is not None else None
         )
         normalized_evidence_delta = (
-            normalize_campaign_evidence(campaign_evidence_delta)
+            normalize_campaign_evidence(
+                campaign_evidence_delta,
+                require_environmental_observation_sha256=True,
+            )
             if campaign_evidence_delta is not None else None
         )
         if normalized_evidence_delta is not None and not normalized_evidence_delta:
@@ -6917,6 +6923,13 @@ class Session:
                 campaign_evidence_history_value = list(projected_evidence)
             else:
                 campaign_evidence_delta_value = []
+            if (normalized_evidence is not None
+                    and normalized_evidence_delta is None
+                    and campaign_evidence_delta_value is not None):
+                normalize_campaign_evidence(
+                    campaign_evidence_delta_value,
+                    require_environmental_observation_sha256=True,
+                )
             if normalized_delivery is not None:
                 campaign_delivery_value = normalized_delivery
             evidence_ids = {item["identity"] for item in campaign_evidence_history_value}
