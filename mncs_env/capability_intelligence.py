@@ -797,7 +797,8 @@ def _compact_projection(
             compact_supporting_source = {
                 key: _short_text(source.get(key), 128)
                 for key in ("kind", "campaign_evidence_identity", "campaign_id",
-                            "session_id", "status", "content_integrity_status")
+                            "session_id", "status", "registration_scope",
+                            "content_integrity_status")
                 if isinstance(source.get(key), str)
             }
             event_identities = source.get("event_identities")
@@ -1221,8 +1222,9 @@ def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, A
     match = next((reference for reference in references
                   if tuple(reference.get(key) for key in
                            ("repository", "commit", "path", "sha256")) == wanted), None)
+    summary["registration_scope"] = "selected-campaign-evidence-window"
     if match is None:
-        summary["status"] = "not-registered-in-campaign-ledger"
+        summary["status"] = "not-present-in-selected-campaign-evidence-window"
     else:
         summary["status"] = match.get("verification", "unverified")
         summary["campaign_evidence_identity"] = match.get("identity")

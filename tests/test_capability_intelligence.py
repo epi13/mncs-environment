@@ -1033,6 +1033,9 @@ def test_compiler_cache_observation_keeps_resource_limits_and_source_unselected(
     assert observation["supporting_sources"][0]["status"] == "outside-selected-session"
     compact_observation = compact["observations"][0]["observation"]
     assert compact["source"]["response_truncated"] is True
+    assert compact["observations"][0]["supporting_sources"][0][
+        "registration_scope"
+    ] == "selected-campaign-evidence-window"
     stage_summary = compact_observation["outcome_context"]["sections"][
         "representative_stages"
     ]
@@ -2483,7 +2486,8 @@ def test_project_verifies_workspace_read_only_source_without_compiler_write_scop
 
     source = result["observations"][0]["supporting_sources"][1]
     bad_source = result["observations"][0]["supporting_sources"][2]
-    assert source["status"] == "not-registered-in-campaign-ledger"
+    assert source["status"] == "not-present-in-selected-campaign-evidence-window"
+    assert source["registration_scope"] == "selected-campaign-evidence-window"
     assert source["content_integrity_status"] == (
         "workspace-read-only-content-integrity-verified"
     )
@@ -2528,5 +2532,6 @@ def test_project_requires_workspace_read_authority_and_complete_root_scan(
         result = capability_intelligence.project(session)
 
         source = result["observations"][0]["supporting_sources"][1]
-        assert source["status"] == "not-registered-in-campaign-ledger"
+        assert source["status"] == "not-present-in-selected-campaign-evidence-window"
+        assert source["registration_scope"] == "selected-campaign-evidence-window"
         assert source["content_integrity_status"] == "outside-selected-session"

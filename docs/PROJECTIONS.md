@@ -148,6 +148,13 @@ SHA-256 against the selected checkout, and retains exact commit/path pointers.
 Evidence in an unselected repository is named but not opened. Results are
 computed when requested; no transcript copy, separate telemetry store, or
 permanent dashboard is created.
+For a supporting source with no exact pointer match in the selected campaign
+evidence pages, `status` is
+`not-present-in-selected-campaign-evidence-window` and
+`registration_scope` is `selected-campaign-evidence-window`. This describes
+only the bounded pages queried; it does not claim the pointer is absent from
+the rest of that campaign's history or from a separately declared source
+campaign. Content-integrity status is reported independently.
 If a committed record's internal identity differs from its campaign evidence
 pointer, the record remains unavailable to pressure analysis and diagnostics
 report `observation-identity-mismatch` with both identities after content hash
