@@ -365,6 +365,12 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 def cmd_projections(args: argparse.Namespace) -> int:
     if args.history_pages != 1 and args.interpret != "environmental-capability":
         return fail('--history-pages requires --interpret environmental-capability')
+    if (args.evidence_offset is not None
+            and args.interpret != "environmental-capability"):
+        return fail('--evidence-offset requires --interpret environmental-capability')
+    if (args.evidence_limit != sessions_module.CAMPAIGN_EVIDENCE_MAX
+            and args.interpret != "environmental-capability"):
+        return fail('--evidence-limit requires --interpret environmental-capability')
     if args.interpret:
         if args.interpret != "environmental-capability" and not args.repository:
             return fail('--interpret requires --repository')
@@ -373,6 +379,8 @@ def cmd_projections(args: argparse.Namespace) -> int:
                 out(projections_module.interpretation(
                     session, args.repository, args.interpret,
                     history_pages=args.history_pages,
+                    evidence_offset=args.evidence_offset,
+                    evidence_limit=args.evidence_limit,
                 ))
             except ValueError as error:
                 return fail(str(error))
@@ -2226,6 +2234,14 @@ def build_parser() -> argparse.ArgumentParser:
     projections.add_argument(
         '--history-pages', type=int, default=1,
         help="include this many bounded campaign evidence pages in environmental capability analysis (1-4)",
+    )
+    projections.add_argument(
+        '--evidence-offset', type=int, default=None,
+        help="start environmental capability analysis at this campaign evidence offset",
+    )
+    projections.add_argument(
+        '--evidence-limit', type=int, default=sessions_module.CAMPAIGN_EVIDENCE_MAX,
+        help="campaign evidence references per page for environmental capability analysis (1-32)",
     )
     projections.add_argument("--evidence", action="store_true",
                              help="print the full projection evidence trail instead of running a pass")

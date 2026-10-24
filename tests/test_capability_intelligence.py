@@ -783,8 +783,10 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
         "evidence_truncated": True,
     }
 
+    requests = []
+
     def campaign_state(*, evidence_offset=None, evidence_limit=32):
-        del evidence_limit
+        requests.append((evidence_offset, evidence_limit))
         return older_page if evidence_offset == 0 else latest_page
 
     session.campaign_state = campaign_state
@@ -795,12 +797,16 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
         status = cli.main([
             "--state-dir", str(tmp_path), "--persistence", "file",
             "projections", session.session_id, "--interpret", "environmental-capability",
+            "--evidence-offset", "9", "--evidence-limit", "9",
             "--history-pages", "2",
         ])
 
     projection = json.loads(output.getvalue())
     hypothesis = projection["pressure_hypotheses"][0]
     assert status == 0
+    assert requests[:2] == [(9, 9), (0, 9)]
+    assert projection["source"]["evidence_page_offset"] == 9
+    assert projection["source"]["evidence_page_limit"] == 9
     assert hypothesis["recurrence_status"] == "observed-across-sessions"
     assert hypothesis["observation_count"] == 16
     assert hypothesis["distinct_session_count"] == 2
@@ -1008,6 +1014,49 @@ def test_single_page_budget_selects_newest_observations_and_reports_omissions(
         ],
         "observation_records_skipped_by_page_budget": 4,
     }]
+
+
+def test_targeted_small_evidence_segment_reads_its_complete_observation_set(
+    tmp_path: Path,
+) -> None:
+    reports = [
+        _observation(
+            f"ev_environment_targeted_segment_{index:02d}",
+            "ses_targeted_segment",
+            "cmp_targeted_segment",
+        )
+        for index in range(20)
+    ]
+    session, state = _session(tmp_path, reports)
+    page = {
+        **state,
+        "evidence": state["evidence"][:8],
+        "evidence_offset": 0,
+        "evidence_limit": 8,
+        "previous_evidence_offset": None,
+        "next_evidence_offset": 8,
+        "evidence_truncated": True,
+    }
+    requests = []
+
+    def campaign_state(*, evidence_offset=None, evidence_limit=32):
+        requests.append((evidence_offset, evidence_limit))
+        return page
+
+    session.campaign_state = campaign_state
+    result = capability_intelligence.project(
+        session, evidence_offset=0, evidence_limit=8,
+    )
+
+    assert requests == [(0, 8)]
+    assert result["source"]["evidence_page_offset"] == 0
+    assert result["source"]["evidence_page_limit"] == 8
+    assert result["source"]["observation_records_verified"] == 8
+    assert result["source"]["observation_records_skipped_by_page_budget"] == 0
+    assert [item["identity"] for item in result["observations"]] == [
+        f"ev_environment_targeted_segment_{index:02d}"
+        for index in range(8)
+    ]
 
 
 def test_repeated_ledger_pointer_does_not_establish_recurrence(tmp_path: Path) -> None:

@@ -1176,11 +1176,15 @@ def ambient_pass(session, *, mode: str = "ambient",
                    invalid, mode, None, post_epoch)
 
 
-def interpretation(session, repository, route, *, history_pages=1):
+def interpretation(
+    session, repository, route, *, history_pages=1,
+    evidence_offset=None, evidence_limit=capability_intelligence.MAX_EVIDENCE_REFS,
+):
     """Ephemeral query over the same canonical subjects as outward views."""
     if route == "environmental-capability":
         return capability_intelligence.project(
             session, history_pages=history_pages,
+            evidence_offset=evidence_offset, evidence_limit=evidence_limit,
         )
     root = _workspace_root(session)
     if root is None:

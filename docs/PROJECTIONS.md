@@ -107,6 +107,21 @@ an explicit page window:
   --interpret environmental-capability --history-pages 4
 ```
 
+To focus analysis on a particular authenticated ledger segment, copy its offset
+from a campaign-state page or projection source and choose a smaller page limit:
+
+```bash
+./scripts/mncs-env projections <session> \
+  --interpret environmental-capability \
+  --evidence-offset 51 --evidence-limit 16
+```
+
+The selected page is read from the current campaign checkpoint. Combining an
+offset with `--history-pages` continues toward older pages from that point.
+Smaller segments let agents inspect records omitted by the global 16-record
+analysis budget without increasing that budget; page cursors and checkpoint
+consistency remain visible in the result.
+
 The default remains one page. Historical reads follow authenticated
 previous-page cursors, stop if the checkpoint changes, and cap the scan at four
 pages. The 16 observation-read allowance is shared across those pages. It is

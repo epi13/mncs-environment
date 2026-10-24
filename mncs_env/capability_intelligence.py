@@ -724,6 +724,8 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def project(
     session: Any, *, campaign_state: dict[str, Any] | None = None,
     max_result_bytes: int = MAX_RESULT_BYTES, history_pages: int = 1,
+    evidence_offset: int | None = None,
+    evidence_limit: int = MAX_EVIDENCE_REFS,
 ) -> dict[str, Any]:
     """Build a bounded read-only relationship view from campaign evidence.
 
@@ -740,13 +742,35 @@ def project(
             "capability projection history pages must be between 1 and "
             f"{MAX_EVIDENCE_HISTORY_PAGES}"
         )
+    if (type(evidence_offset) not in (int, type(None))
+            or (evidence_offset is not None and evidence_offset < 0)):
+        raise ValueError("capability projection evidence offset must be nonnegative")
+    if (type(evidence_limit) is not int
+            or not 1 <= evidence_limit <= MAX_EVIDENCE_REFS):
+        raise ValueError(
+            "capability projection evidence limit must be between 1 and "
+            f"{MAX_EVIDENCE_REFS}"
+        )
+    if campaign_state is not None and (
+        evidence_offset is not None or evidence_limit != MAX_EVIDENCE_REFS
+    ):
+        raise ValueError(
+            "explicit campaign state cannot be combined with evidence page arguments"
+        )
     snapshot = session.snapshot
     campaign = snapshot.get("campaign") or {}
     intent = snapshot.get("intent") or {}
     if campaign_state is None:
         try:
-            campaign_state = session.campaign_state(evidence_limit=MAX_EVIDENCE_REFS)
-        except (LifecycleError, StoreIntegrityFailure, StoreUnavailable):
+            campaign_state = session.campaign_state(
+                evidence_offset=evidence_offset,
+                evidence_limit=evidence_limit,
+            )
+        except LifecycleError as error:
+            if evidence_offset is not None:
+                raise ValueError(str(error)) from error
+            campaign_state = None
+        except (StoreIntegrityFailure, StoreUnavailable):
             campaign_state = None
     state = campaign_state if isinstance(campaign_state, dict) else {}
     page_truncated = bool(state.get("evidence_truncated", False))
