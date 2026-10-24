@@ -1348,6 +1348,44 @@ def test_pressure_context_refinement_projects_its_verified_followup_chain(
     }
 
 
+def test_campaign_objective_context_gap_projects_verified_improvement(
+    tmp_path: Path,
+) -> None:
+    evidence_dir = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability"
+    )
+    records = [
+        json.loads((evidence_dir / filename).read_text(encoding="utf-8"))
+        for filename in (
+            "campaign-objective-pressure-context-gap-20261024.json",
+            "campaign-objective-pressure-context-verification-20261024.json",
+            "campaign-objective-pressure-context-improvement-20261024.json",
+        )
+    ]
+    implementation = records[2]["improvement_relation"]["implementation_reference"]
+    session, _ = _session(tmp_path, records, extra_refs=[implementation])
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["pressure_hypothesis_count"] == 1
+    pressure = result["pressure_hypotheses"][0]
+    assert pressure["identity"] == "ph_environment_pressure_context_campaign_objective"
+    assert pressure["affected_work_context_count"] == 1
+    assert pressure["affected_work_contexts"][0]["campaign_objective"] == (
+        "Mature mncs-compiler for reliable native multi-module application "
+        "development while advancing verified self-consumption"
+    )
+    assert result["improvement_relation_count"] == 1
+    relation = result["improvement_relations"][0]
+    assert relation["pressure_hypothesis_status"] == "present-in-projection"
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["subsequent_record_status"] == "not-recorded"
+    assert relation["effectiveness_assessment"] == "not-assessed"
+
+
 def test_authentic_recorder_environment_identity_is_projected_separately(
     tmp_path: Path,
 ) -> None:

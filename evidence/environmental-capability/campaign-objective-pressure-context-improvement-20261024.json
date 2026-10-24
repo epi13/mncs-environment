@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_campaign_objective_pressure_context_improvement_20261024",
+  "captured_at": "2026-10-24T14:57:29+00:00",
+  "measurement_basis": "campaign-objective-context-projection-refinement",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": null,
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability-intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_pressure_context_campaign_objective",
+      "implementation_commit": "32ba51b51cf145bcb0d636bc5751d45ef62649ff",
+      "verification_observation_identity": "ev_environment_campaign_objective_pressure_context_verification_20261024"
+    },
+    "outcome": {
+      "implementation_change": "Affected-work pressure contexts now include the recorded campaign_objective independently from the work_intent_goal. Missing objectives can enrich a uniquely compatible stable work context; conflicting recorded objective values stay separate.",
+      "verification_recorded": true,
+      "subsequent_observation_identity": null,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The actual Compiler source record and live projection demonstrate that both objective fields are available. Tests cover distinct objective values, but agent uptake and changes to subsequent development behavior have not been observed."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_pressure_context_campaign_objective_20261024",
+    "addresses_hypothesis_identity": "ph_environment_pressure_context_campaign_objective",
+    "implementation_reference": {
+      "identity": "ev_environment_campaign_objective_pressure_context_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "32ba51b51cf145bcb0d636bc5751d45ef62649ff",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "98190ba644619e181f901cc6276dbc64bbe4434d0006a87823fc931d532667c3"
+    },
+    "verification_observation_identity": "ev_environment_campaign_objective_pressure_context_verification_20261024",
+    "subsequent_observation_identity": null,
+    "basis": "The pre-change projection of an authentic Compiler campaign record exposed work_intent_goal but omitted its separately recorded campaign_objective. After the implementation, the same bounded campaign page reports both. Focused regression tests verify missing-objective enrichment for a unique stable context, separation for conflicting objectives, and compatibility with the existing pressure-context and compact-projection behavior.",
+    "not_measured": [
+      "whether a later agent reads or uses the campaign objective in this context",
+      "whether campaign objectives commonly differ from work-intent goals in other evidence",
+      "whether this refinement changes development decisions or reduces investigation work",
+      "long-term recurrence or effectiveness across later Environment versions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_campaign_objective_pressure_context_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "32ba51b51cf145bcb0d636bc5751d45ef62649ff",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "98190ba644619e181f901cc6276dbc64bbe4434d0006a87823fc931d532667c3"
+    },
+    {
+      "kind": "committed-source-observation",
+      "identity": "ev_environment_compiler_project_context_selection_recurrence_20261024",
+      "repository": "mncs-environment",
+      "commit": "21759c3ad998cda91711f50f008f4ff84cd24526",
+      "path": "evidence/environmental-capability/compiler-project-context-selection-recurrence-20261024.json",
+      "sha256": "3709ff0953f009db450220ea537eef295c939568a61ee7891d06eb9d75cf019c"
+    }
+  ],
+  "not_measured": [
+    "observed improvement in agent experience or discovery",
+    "whether agents make different implementation decisions with campaign objective context",
+    "long-term effectiveness after later Compiler activity"
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_campaign_objective_pressure_context_gap_20261024",
+  "captured_at": "2026-10-24T14:57:29+00:00",
+  "measurement_basis": "authentic-compiler-observation-and-before-change-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "campaign_objective": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "environment_id": "renv_80ef889b89dad0e9",
+    "definition_id": "env_c7d14ed20b708d09",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693,
+    "claim_ids": [
+      "claim:mncs-compiler:worktree:238af39c1c65",
+      "claim:mncs-compiler:worktree:5fa38ecf09fb"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_pressure_context_campaign_objective",
+    "title": "Affected-work pressure summaries omit the campaign objective alongside the work-intent goal",
+    "category": "evidence-provenance",
+    "subsystem": "mncs-environment capability-intelligence pressure projection",
+    "owner": "mncs-environment",
+    "basis": "An authentic Compiler campaign observation records both campaign_objective and work_intent_goal. The bounded pressure summary returned for that record retained the work-intent goal but omitted campaign_objective; a later live projection after the refinement exposed both fields independently.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Preserve campaign_objective separately from work_intent_goal in affected-work pressure contexts, merge missing objective context only when the stable work identity has one compatible value, and retain conflicting objectives as separate contexts.",
+    "not_measured": [
+      "whether omitting the campaign objective caused an agent to misattribute this pressure",
+      "how often campaign objectives differ from work-intent goals across campaign history",
+      "whether exposing both objective levels changes agent development decisions",
+      "time, token, cache, or resource impact of the omission"
+    ]
+  },
+  "observation": {
+    "kind": "campaign-objective-pressure-context-gap-review",
+    "source_interface": "MNCS Environment campaign-state environmental_capability projection",
+    "request": {
+      "pre_change_projection_checkpoint_id": "chk_b257c3251e983957",
+      "pre_change_projection_commit": "cb115c208eb4e1d72d870639f7e03449e1955f71",
+      "evidence_offset": 12,
+      "evidence_limit": 2,
+      "source_observation_identity": "ev_environment_compiler_project_context_selection_recurrence_20261024",
+      "pre_change_verification_identity": "ev_environment_pressure_context_and_session_source_verification_20261024"
+    },
+    "outcome": {
+      "source_record_campaign_objective_present": true,
+      "source_record_work_intent_goal_present": true,
+      "pre_change_pressure_context_campaign_objective_present": false,
+      "pre_change_pressure_context_work_intent_goal_present": true,
+      "pre_change_affected_work_context_count": 1,
+      "analysis_limit": "The pre-change response establishes a field-omission gap for this authentic Compiler evidence. The recorded campaign objective and work-intent goal happen to have the same text for this observation; distinct values are covered by regression tests and are not inferred from this historical record."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_compiler_project_context_selection_recurrence_20261024",
+      "repository": "mncs-environment",
+      "commit": "21759c3ad998cda91711f50f008f4ff84cd24526",
+      "path": "evidence/environmental-capability/compiler-project-context-selection-recurrence-20261024.json",
+      "sha256": "3709ff0953f009db450220ea537eef295c939568a61ee7891d06eb9d75cf019c"
+    },
+    {
+      "kind": "committed-before-change-projection-verification",
+      "identity": "ev_environment_pressure_context_and_session_source_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "3f737dd2d5e5c77c52251e004c5111679809c201",
+      "path": "evidence/environmental-capability/pressure-context-and-session-source-verification-20261024.json",
+      "sha256": "c67a052a855196d3183865ffaa9acfaae7a593b150c7e2356be7e635608dbe32"
+    }
+  ],
+  "not_measured": [
+    "whether the missing campaign objective was used or needed by another agent",
+    "recurrence across distinct Compiler sessions or projects",
+    "whether adding the objective reduces source-record navigation"
+  ]
+}
