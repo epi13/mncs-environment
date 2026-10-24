@@ -1,0 +1,72 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compact_outcome_context_live_readback_20261024",
+  "captured_at": "2026-10-24T16:00:57+00:00",
+  "observation": {
+    "kind": "environmental-capability-live-projection-readback",
+    "source_interface": "mncs-env campaign-state and environmental-capability projections",
+    "request": {
+      "campaign_checkpoint_id": "chk_9224ddc01fba02f3",
+      "campaign_evidence_count": 42,
+      "projection_command": "mncs-env projections <session> --interpret environmental-capability --history-pages 4 --evidence-offset 32 --evidence-limit 10"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_records_returned": 16,
+      "pressure_hypotheses_returned": 4,
+      "compact_outcome_context_pressure_identity": "ph_environment_compact_observation_outcome_context",
+      "compact_outcome_context_observation_count": 1,
+      "compact_outcome_context_recurrence_status": "not-established",
+      "implementation_relation_identity": "im_environment_compact_observation_outcome_context_20261024",
+      "implementation_relation_status": "validated",
+      "compiler_source_record_status": "record-integrity-verified-in-projection",
+      "implementation_test_and_contract_pointer_content_integrity": "content-integrity-verified",
+      "analysis_limit": "The selected four-page window and sixteen-record observation budget are bounded. This confirms the new pressure, exact support pointer, compiler source record, and verified implementation relation are queryable; it does not establish agent uptake or later effectiveness."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_9224ddc01fba02f3",
+    "campaign_evidence_count_before_recording": 42,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    },
+    {
+      "kind": "campaign-observation-record",
+      "identity": "ev_environment_compact_outcome_context_gap_20261024",
+      "repository": "mncs-environment",
+      "commit": "f424a24c5f6592925ccaa8dbeff7fb9d53df7688",
+      "path": "evidence/environmental-capability/compact-outcome-context-gap-20261024.json",
+      "sha256": "2129439d0cb87f6b5835fc9b4b122cc8b492a2d0c09297221e599a01d5bf1b74"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_compact_outcome_context_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "7f8bc86d55848e74131cf0a3b832530c7ef3b5a9",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "23bc8dd6fb4af5b069132ef1311fc71c0381b775a9089ca2ed20a390a3b0ef07"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

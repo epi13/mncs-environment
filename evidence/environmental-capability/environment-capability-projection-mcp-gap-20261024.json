@@ -1,0 +1,72 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_projection_mcp_gap_20261024",
+  "captured_at": "2026-10-24T16:00:57+00:00",
+  "observation": {
+    "kind": "environmental-capability-projection-tool-interface-gap",
+    "source_interface": "mncs_environment MCP and mncs-env projections CLI",
+    "request": {
+      "mcp_operation": "environmental_capability",
+      "mcp_arguments": {
+        "session_id": "ses_c98eb637e20a5c14",
+        "evidence_offset": 32,
+        "evidence_limit": 8
+      },
+      "mcp_error_code": "ENVIRONMENT_OPERATION_UNAVAILABLE"
+    },
+    "outcome": {
+      "mcp_operation_status": "unavailable: unknown stable Environment operation",
+      "supported_operations_excluded_environmental_capability": true,
+      "existing_cli_projection_status": "available",
+      "analysis_limit": "This establishes the connected stable MCP endpoint does not expose the standalone projection operation. It does not establish why or whether a different runtime version supports it; the existing bounded mncs-env projections interface remains usable."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_9224ddc01fba02f3",
+    "campaign_evidence_count_before_recording": 42,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_capability_projection_mcp_exposure",
+    "title": "The connected Environment MCP endpoint does not expose the capability projection",
+    "category": "tooling-interoperability",
+    "subsystem": "MNCS Environment stable MCP operation registry",
+    "owner": "mncs-control-mcp",
+    "basis": "A direct authenticated request for the environmental_capability operation returned ENVIRONMENT_OPERATION_UNAVAILABLE, while the existing mncs-env projections environmental-capability command successfully returned the bounded analysis for the same session.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Expose the bounded environmental-capability projection through the stable authenticated MCP operation registry, preserving the existing CLI interface and page limits.",
+    "not_measured": [
+      "how often agents attempt to query the projection through MCP",
+      "whether the missing operation delays or prevents development investigations",
+      "the deployment or registration cause of this endpoint difference"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    },
+    {
+      "kind": "direct-cli-projection-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
