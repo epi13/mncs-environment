@@ -1,0 +1,91 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_improvement_link_source_improvement_20261024",
+  "captured_at": "2026-10-24T09:26:45+00:00",
+  "measurement_basis": "committed-projection-change-and-live-followup-link",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_c0a0d1a1c1a05fc8",
+      "sequence": 18
+    },
+    "campaign_evidence_count": 39,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment capability intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_improvement_relation_source_discoverability",
+      "implementation_commit": "62ece81a07ce9cdd10f8585f219bfb4d9e02ade1",
+      "verification_observation_identity": "ev_environment_improvement_link_source_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_improvement_link_source_followup_20261024"
+    },
+    "outcome": {
+      "implementation_change": "Improvement relations now include exact references for integrity-verified verification and subsequent observations present in the page. Compact summaries preserve these references, and response reduction drops observation summaries and hypotheses before dropping improvement relations.",
+      "verification_recorded": true,
+      "followup_projection_exposed_exact_verification_and_subsequent_references": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The focused tests and one compact live page establish reference availability and relation preservation; they do not establish future agent use or improved outcomes."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_improvement_relation_source_discoverability_20261024",
+    "addresses_hypothesis_identity": "ph_environment_improvement_relation_source_discoverability",
+    "implementation_reference": {
+      "identity": "ev_environment_improvement_link_source_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "62ece81a07ce9cdd10f8585f219bfb4d9e02ade1",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "ef1b9eef4c589034ecbc09cc0dda6a532926e88f09db3f0c6d0ad569b04aafe0"
+    },
+    "verification_observation_identity": "ev_environment_improvement_link_source_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_improvement_link_source_followup_20261024",
+    "basis": "Focused tests exercise exact verification and follow-up pointers in full and compact results. A live compact campaign-state projection subsequently exposed exact verified evidence references for both established improvement chains.",
+    "not_measured": [
+      "agent uptake of linked evidence references",
+      "whether the relationship becomes easier to inspect in future sessions",
+      "long-term recurrence or resolution of the hypothesis"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_improvement_link_source_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "62ece81a07ce9cdd10f8585f219bfb4d9e02ade1",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "ef1b9eef4c589034ecbc09cc0dda6a532926e88f09db3f0c6d0ad569b04aafe0"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "62ece81a07ce9cdd10f8585f219bfb4d9e02ade1",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "1911b8503217a0a178ea68d3a18ecfd82d61824fe9b78323c358840668d8d610"
+    }
+  ],
+  "not_measured": [
+    "whether agents use the exact references during implementation decisions",
+    "time, token, and resource impact of the change",
+    "long-term effectiveness or recurrence of the pressure"
+  ]
+}

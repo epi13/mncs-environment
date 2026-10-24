@@ -1,0 +1,66 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_improvement_link_source_followup_20261024",
+  "captured_at": "2026-10-24T09:26:26+00:00",
+  "measurement_basis": "direct-post-change-Environment-campaign-state-result",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_c0a0d1a1c1a05fc8",
+      "sequence": 18
+    },
+    "campaign_evidence_count": 39,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-evidence-pointer-followup",
+    "source_interface": "mncs_environment MCP campaign_state",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_c0a0d1a1c1a05fc8",
+      "evidence_offset": 16,
+      "evidence_limit": 32,
+      "branch_commit": "62ece81a07ce9cdd10f8585f219bfb4d9e02ade1"
+    },
+    "outcome": {
+      "campaign_evidence_count": 39,
+      "projection_status": "partial",
+      "projection_response_compacted": true,
+      "original_projection_bytes": 66327,
+      "observation_records_verified": 13,
+      "observation_records_unavailable": 0,
+      "improvement_relation_count": 2,
+      "relations_with_verification_and_followup_evidence_references": 2,
+      "verification_references_integrity_checked": true,
+      "subsequent_references_integrity_checked": true,
+      "implementation_content_integrity_status": "content-integrity-verified",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The compact projection retains two complete improvement relations with exact references while summarizing observation payloads; it does not measure future use or effectiveness."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    }
+  ],
+  "not_measured": [
+    "agent use of exact verification and follow-up pointers",
+    "long-term recurrence or effectiveness of either prior pressure improvement",
+    "resource attribution to the compact projection"
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_improvement_link_source_gap_20261024",
+  "captured_at": "2026-10-24T09:26:45+00:00",
+  "measurement_basis": "live-compact-projection-and-committed-source-review",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_c0a0d1a1c1a05fc8",
+      "sequence": 18
+    },
+    "campaign_evidence_count": 39,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-evidence-pointer-gap",
+    "source_interface": "mncs-environment capability intelligence source review",
+    "request": {
+      "prechange_projection_commit": "b3ab51c12fe51a1201b3197036286967160f7d69",
+      "prechange_projection_path": "mncs_env/capability_intelligence.py",
+      "live_campaign_state_checkpoint": "chk_c0a0d1a1c1a05fc8",
+      "live_evidence_offset": 16,
+      "live_evidence_limit": 32
+    },
+    "outcome": {
+      "live_projection_was_compacted": true,
+      "live_pressure_and_relation_statuses_present": true,
+      "prechange_relation_exposed_verification_identity": true,
+      "prechange_relation_exposed_verification_evidence_reference": false,
+      "prechange_relation_exposed_subsequent_identity": true,
+      "prechange_relation_exposed_subsequent_evidence_reference": false,
+      "analysis_limit": "A consumer could see that verification and follow-up records were present and integrity checked but had no direct pointers in the relation to inspect those records. No agent decision or missing investigation was observed."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_improvement_relation_source_discoverability",
+    "title": "Improvement relations omit exact evidence references for verified and follow-up observations",
+    "category": "evidence-provenance",
+    "subsystem": "mncs-environment capability intelligence improvement projection",
+    "owner": "mncs-environment",
+    "basis": "The live bounded compact projection reported verification and subsequent record statuses, and source review showed that relations projected their identities without those records' campaign evidence references.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Include exact evidence references for verified and subsequent records present in the selected page, and preserve improvement links during response compaction.",
+    "not_measured": [
+      "whether agents had difficulty finding verification or follow-up records",
+      "recurrence across Environment sessions or versions",
+      "time, token, or resource impact of the missing references"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "committed-source-review",
+      "identity": "ev_environment_capability_source_integrity_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "b3ab51c12fe51a1201b3197036286967160f7d69",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "42a2a72a17a79b4f7de326a71a769f7d4f812fadc45a9c57303972c85d065aae"
+    },
+    {
+      "kind": "committed-live-readback",
+      "identity": "ev_environment_capability_source_integrity_chain_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "28a0eeaf16d04ec52aa6d9a156b8e0becf0b3742",
+      "path": "evidence/environmental-capability/environment-capability-source-integrity-chain-readback-20261024.json",
+      "sha256": "cb971d7e0de5e79c66420d4ea07fa526879a8f36fe447e86ca6efff546def9f1"
+    }
+  ],
+  "not_measured": [
+    "whether additional references fit without further compaction under every valid record mix",
+    "whether agents use the new pointers to inspect supporting observations",
+    "long-term recurrence or effectiveness of this hypothesis"
+  ]
+}
