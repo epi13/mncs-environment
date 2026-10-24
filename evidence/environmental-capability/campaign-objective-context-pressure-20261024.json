@@ -1,0 +1,86 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_campaign_objective_context_pressure_20261024",
+  "captured_at": "2026-10-24T18:20:19Z",
+  "measurement_basis": "canonical-campaign-state-and-capability-projection-readback",
+  "observation": {
+    "kind": "campaign-objective-context-pressure",
+    "source_interface": "MNCS Environment campaign_state and environmental-capability projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_d34a96e7505f64da",
+      "campaign_charter_reference_count": 0,
+      "capability_projection_identity": "eci_b1d97d4236ebeedf"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "subject_context": {
+        "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+        "work_intent_id": "int_8475157f281c835f",
+        "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+        "campaign_objective_available_in_projection": false
+      },
+      "interpretation": "The campaign had no indexed charter, and its capability projection exposed the generic session Work Intent without an explicit campaign objective. This is one observed context gap; it does not establish repeated agent confusion or adverse work outcomes.",
+      "analysis_limit": "The finding comes from one campaign context. It does not establish that agents were unable to recover the user-directed objective from other sources or that the gap recurs across sessions."
+    },
+    "source_session_context": {
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "work_intent_id": "int_8475157f281c835f",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "environment_id": "renv_1991cffb20bdf206"
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_8f08a296f43197d1",
+    "campaign_evidence_count_before_recording": 92,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_campaign_objective_context_20261024",
+    "title": "Capability projection has no verified campaign objective when charter context is absent",
+    "category": "orientation-and-context",
+    "subsystem": "Environment campaign continuity and environmental-capability projection",
+    "owner": "mncs-environment",
+    "recurrence": "not-established",
+    "basis": "One canonical campaign state returned no campaign charter reference, and one projection subject showed only the separate generic session Work Intent.",
+    "actionable_recommendation": "Expose a campaign objective only from a unique content-addressed charter verified for the current campaign, and keep it distinct from the current session Work Intent.",
+    "not_measured": [
+      "recurrence across independent sessions or campaigns",
+      "whether an agent was confused or delayed by the missing campaign objective",
+      "whether the campaign objective was available through another authoritative entry surface"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-cli-projection-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    },
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence",
+    "agent outcome or effectiveness impact",
+    "availability of equivalent context through other entry mechanisms"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

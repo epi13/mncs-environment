@@ -1,0 +1,94 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_campaign_objective_context_verification_20261024",
+  "captured_at": "2026-10-24T18:20:19Z",
+  "measurement_basis": "targeted-charter-projection-regressions-and-integrity-checked-live-readback",
+  "observation": {
+    "kind": "campaign-objective-context-verification",
+    "source_interface": "MNCS Environment capability projection tests, selected Ruff checks, Python compilation, and canonical projection readback",
+    "request": {
+      "implementation_commit": "1e12179afc8577208e3113f736724bb26cd8762e",
+      "verification_cases": [
+        "unique charter exposes objective and exact digest reference",
+        "generic session Work Intent remains separate",
+        "multiple valid charters remain ambiguous",
+        "unverified charter content does not expose an objective",
+        "compact response keeps charter status and evidence reference"
+      ]
+    },
+    "outcome": {
+      "tests": {
+        "tests_test_capability_intelligence": {
+          "passed": 62,
+          "failed": 0,
+          "status": "passed"
+        }
+      },
+      "static_checks": {
+        "ruff_select": [
+          "E4",
+          "E7",
+          "E9",
+          "F"
+        ],
+        "ruff_status": "passed",
+        "py_compile_status": "passed",
+        "git_diff_check_status": "passed"
+      },
+      "live_projection_readback": {
+        "identity": "eci_3d36eb1a93bd040d",
+        "campaign_state_checkpoint_id": "chk_8f08a296f43197d1",
+        "campaign_evidence_count": 92,
+        "campaign_charter_status": "verified",
+        "campaign_charter_reference_count": 1,
+        "work_intent_preserved_separately": true,
+        "projection_status": "partial",
+        "partial_status_explanation": "The selected campaign evidence page contained only the campaign charter reference and no environmental observations; the charter itself was verified."
+      },
+      "analysis_limit": "The tests verify projection and ambiguity behavior. The live readback verifies one campaign charter; it does not establish that other campaigns have complete charter coverage or that this context change alters agent outcomes."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "campaign-charter-aware-capability-projection",
+      "identity": "ev_environment_campaign_charter_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "1e12179afc8577208e3113f736724bb26cd8762e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "efc1941ddc8e8d58d099e935349243089c48d12effef78f77d6b93cb73ac60eb"
+    },
+    {
+      "kind": "campaign-charter-separation-regression-tests",
+      "identity": "ev_environment_campaign_charter_projection_tests_20261024",
+      "repository": "mncs-environment",
+      "commit": "1e12179afc8577208e3113f736724bb26cd8762e",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "53525dd0eeba12e461be8ca4ce0207073cea2ebfacff89ec0a0d2ff174af1d45"
+    }
+  ],
+  "not_measured": [
+    "cross-campaign charter completeness",
+    "agent outcomes after exposing a separate campaign objective",
+    "long-term reduction in repeated objective reconstruction"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
