@@ -1,0 +1,145 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_authority_denial_campaign_projection_readback_20261024",
+  "captured_at": "2026-10-24T18:12:37Z",
+  "measurement_basis": "canonical-campaign-checkpoint-projection-with-bounded-historical-session-event-page",
+  "observation": {
+    "kind": "authority-denial-campaign-projection-readback",
+    "source_interface": "MNCS Environment environmental-capability CLI projection over canonical campaign evidence and Store session events",
+    "request": {
+      "session_id": "ses_c98eb637e20a5c14",
+      "campaign_state_checkpoint_id": "chk_c390e0a100444920",
+      "evidence_offset": 87,
+      "evidence_limit": 3,
+      "session_event_before_sequence": 100,
+      "session_event_limit": 24
+    },
+    "outcome": {
+      "projection_identity": "eci_a53a54d2395144aa",
+      "projection_status": "ready",
+      "campaign_evidence_count": 90,
+      "campaign_observation_records_considered": 3,
+      "campaign_observation_records_verified": 3,
+      "source_pointer_content_integrity_verified_count": 6,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "pressure_hypothesis": {
+        "identity": "ph_authority_0ab070c8e6dee6b2",
+        "distinct_session_count": 1,
+        "recurrence_status": "not-established",
+        "affected_work_context": {
+          "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+          "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+          "session_id": "ses_c98eb637e20a5c14",
+          "work_intent_id": "int_8475157f281c835f",
+          "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+        }
+      },
+      "authority_denial_candidate": {
+        "status": "candidate-needs-investigation",
+        "action": "merge",
+        "repository": "mncs-environment",
+        "reason_class": "outside-writable-authority",
+        "occurrence_count": 2,
+        "distinct_session_count": 1,
+        "causal_claim": "not-established",
+        "supporting_events": [
+          {
+            "identity": "evt_ff4ba1f567b8e58c",
+            "sequence": 89,
+            "type": "authority.denied"
+          },
+          {
+            "identity": "evt_5f766aaaacee13c0",
+            "sequence": 98,
+            "type": "authority.denied"
+          }
+        ]
+      },
+      "improvement_relation": {
+        "identity": "im_environment_authority_denial_correlation_20261024",
+        "pressure_hypothesis_status": "present-in-projection",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status_at_capture": "not-present-in-projection",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "analysis_limits": [
+        "The source event page covers sequences 76 through 99 and does not represent the complete 227-event session history.",
+        "The projection retains the generic session Work Intent separately from the explicit campaign objective.",
+        "The relationship does not establish whether either historical denial was appropriate or whether the code change improves future agent outcomes."
+      ]
+    },
+    "source_session_context": {
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "work_intent_id": "int_8475157f281c835f",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "environment_id": "renv_1991cffb20bdf206",
+      "repository": "mncs-environment",
+      "repository_context_basis": "authenticated-session-campaign-context"
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_c390e0a100444920",
+    "campaign_evidence_count_before_recording": 90,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "event_identities": [
+        "evt_ff4ba1f567b8e58c",
+        "evt_5f766aaaacee13c0"
+      ]
+    },
+    {
+      "kind": "authority-denial-pressure-observation",
+      "identity": "ev_environment_authority_denial_pressure_20261024",
+      "repository": "mncs-environment",
+      "commit": "3282c6504cce3015fa0ccbf17d0e880d31d83a48",
+      "path": "evidence/environmental-capability/authority-denial-pressure-observation-20261024.json",
+      "sha256": "45eff0bdc1a4c2786135a01c040a765d1e4d2980448649cfeab410ec7bd58be3"
+    },
+    {
+      "kind": "authority-denial-correlation-verification",
+      "identity": "ev_environment_authority_denial_correlation_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "3282c6504cce3015fa0ccbf17d0e880d31d83a48",
+      "path": "evidence/environmental-capability/authority-denial-correlation-verification-20261024.json",
+      "sha256": "ca08e956679c25c7aa5377d7923ae1e80fecfafbd70c526ef01a37d61605a69d"
+    },
+    {
+      "kind": "authority-denial-improvement-relation",
+      "identity": "ev_environment_authority_denial_improvement_relation_20261024",
+      "repository": "mncs-environment",
+      "commit": "4d8836fb118d065923e3ad25ab1e031e39593d84",
+      "path": "evidence/environmental-capability/authority-denial-improvement-relation-20261024.json",
+      "sha256": "b0495651858029b8dd15b0e6b3e68ba727b7a7e50153635973ca772fd8453776"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence",
+    "cause or appropriateness of the two historical denials",
+    "whether independent agents use the projection to investigate the event references",
+    "post-change agent outcomes or long-term effectiveness"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
