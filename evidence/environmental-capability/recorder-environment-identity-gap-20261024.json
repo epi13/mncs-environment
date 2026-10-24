@@ -1,0 +1,102 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_recorder_environment_identity_gap_20261024",
+  "captured_at": "2026-10-24T10:27:26+00:00",
+  "measurement_basis": "authenticated-environment-context-and-inspect-source-review",
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_recorder_resolved_identity",
+    "title": "Cross-session observations do not retain the recorder's resolved Environment identity",
+    "category": "evidence-provenance",
+    "subsystem": "mncs-environment observation recording and capability projection",
+    "owner": "mncs-environment",
+    "basis": "The authenticated Environment context returned environment_id renv_4844ecc725485390 and inspect returned definition_id env_d479727df8e9d3ef. A committed Compiler observation records a separate Environment recorder, but its projection exposes only recorder campaign, session, and consumer; the record and projection omit the recorder's resolved environment and definition identities.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Preserve explicitly captured recorder environment_id and definition_id through validation, full and compact projections, and pressure context summaries. Treat older records that lack these fields as not captured in the record, and count recorder environment identities separately from target work identities.",
+    "not_measured": [
+      "frequency of cross-session observations without recorder environment identity",
+      "whether the omission caused agents to compare observations from different resolved environments",
+      "whether Environment identity alone supplies every version detail needed for later comparisons",
+      "time, token, or resource cost caused by the omission"
+    ]
+  },
+  "improvement_relation": null,
+  "observation": {
+    "kind": "recorder-resolved-environment-identity-gap-review",
+    "source_interface": "mncs_environment context and inspect; mncs-env capability projection",
+    "request": {
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "context_operation": "context",
+      "inspect_operation": "inspect",
+      "compiler_observation_identity": "ev_environment_compiler_cache_regression_20261024",
+      "pre_change_projection_commit": "97c53bc096d60c8c6b8c28779cfa8abda9590450",
+      "pre_change_projection_path": "mncs_env/capability_intelligence.py",
+      "pre_change_projection_sha256": "304ec8dbef26704b702a5d69f5b98fe768b82add92f16526f48ebf6402ad9723"
+    },
+    "outcome": {
+      "environment_context_returned_resolved_environment_id": "renv_4844ecc725485390",
+      "inspect_returned_definition_id": "env_d479727df8e9d3ef",
+      "compiler_observation_target_campaign": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "compiler_observation_recorder_campaign": "cmp_environmental_capability_intelligence_20261023",
+      "pre_change_projected_recording_fields": [
+        "campaign_id",
+        "session_id",
+        "consumer_id"
+      ],
+      "compiler_record_recorder_environment_id_present": false,
+      "compiler_record_recorder_definition_id_present": false,
+      "analysis_limit": "The current authenticated context provides a resolved Environment identity for the recorder session; the historical Compiler observation itself did not capture it. This does not establish what environment metadata was available to that earlier recorder."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-compiler-observation",
+      "identity": "ev_environment_compiler_cache_regression_20261024",
+      "repository": "mncs-environment",
+      "commit": "25e04249ed93961f06ea5bf35a609f0b78a8a40b",
+      "path": "evidence/environmental-capability/compiler-cache-regression-20261024.json",
+      "sha256": "f9b7fd6059d811bdcdd8313426f10221ff88cb9a80fbf878e203398a1a0d26ff",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637"
+    },
+    {
+      "kind": "pre-change-projection-source",
+      "identity": "ev_environment_pressure_context_projection_implementation",
+      "repository": "mncs-environment",
+      "commit": "97c53bc096d60c8c6b8c28779cfa8abda9590450",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "304ec8dbef26704b702a5d69f5b98fe768b82add92f16526f48ebf6402ad9723"
+    },
+    {
+      "kind": "resolved-environment-identity-source",
+      "identity": "ev_environment_resolved_identity_definition_source",
+      "repository": "mncs-environment",
+      "commit": "97c53bc096d60c8c6b8c28779cfa8abda9590450",
+      "path": "mncs_env/identity.py",
+      "sha256": "7b423857eb1c1206d05dda2fe744a64a56fba69b54bbee2315afa318b8bec4f2"
+    }
+  ],
+  "not_measured": [
+    "whether older observations can be safely enriched from a recorder session reference alone",
+    "frequency of cross-session captures that omit resolved environment identity",
+    "agent uptake or benefit from environment-aware pressure contexts"
+  ]
+}
