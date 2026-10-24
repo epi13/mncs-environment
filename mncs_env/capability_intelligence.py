@@ -776,7 +776,10 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for observation in observations:
         hypothesis = observation["pressure_hypothesis"]
-        if not isinstance(hypothesis, dict):
+        if (not isinstance(hypothesis, dict)
+                or observation.get("improvement_relation_identity") is not None):
+            # An implementation record may restate the pressure it addresses.
+            # That link is context for the change, not a second occurrence.
             continue
         identity = hypothesis.get("identity")
         if isinstance(identity, str) and identity:

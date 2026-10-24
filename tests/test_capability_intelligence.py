@@ -772,6 +772,52 @@ def test_improvement_relation_links_pressure_change_verification_and_followup(
     )
 
 
+def test_improvement_record_does_not_count_as_another_pressure_occurrence(
+    tmp_path: Path,
+) -> None:
+    pressure = _observation(
+        "ev_environment_pressure_occurrence",
+        "ses_compiler_pressure_occurrence",
+        "cmp_compiler_pressure_occurrence",
+    )
+    pressure["pressure_hypothesis"]["identity"] = "ph_one_pressure_occurrence"
+    improvement = _observation(
+        "ev_environment_pressure_implementation",
+        "ses_environment_pressure_implementation",
+        "cmp_environment_pressure_implementation",
+    )
+    improvement["pressure_hypothesis"] = dict(pressure["pressure_hypothesis"])
+    implementation_reference = {
+        "identity": "ev_environment_pressure_implementation_source",
+        "repository": "mncs-environment",
+        "commit": "a" * 40,
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "b" * 64,
+    }
+    improvement["improvement_relation"] = {
+        "identity": "im_pressure_occurrence_projection",
+        "addresses_hypothesis_identity": "ph_one_pressure_occurrence",
+        "implementation_reference": implementation_reference,
+        "verification_observation_identity": "ev_pressure_implementation_verification",
+        "subsequent_observation_identity": "ev_pressure_implementation_followup",
+        "basis": "The implementation record restates the pressure to identify its target.",
+        "not_measured": ["whether the pressure recurs after the implementation"],
+    }
+    session, _ = _session(
+        tmp_path, [pressure, improvement], extra_refs=[implementation_reference],
+    )
+
+    result = capability_intelligence.project(session)
+
+    hypothesis = result["pressure_hypotheses"][0]
+    assert result["observation_count"] == 2
+    assert hypothesis["observation_count"] == 1
+    assert hypothesis["recurrence_status"] == "not-established"
+    assert [item["identity"] for item in hypothesis["evidence"]] == [
+        "ev_environment_pressure_occurrence",
+    ]
+
+
 def test_malformed_improvement_relation_is_not_projected(tmp_path: Path) -> None:
     record = _observation("ev_environment_bad_improvement", "ses_environment", "cmp_environment")
     record["improvement_relation"] = {

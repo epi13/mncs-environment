@@ -168,8 +168,11 @@ long context text and lists are truncated with explicit flags, and the source
 record remains authoritative. A pressure hypothesis remains
 an interpretation: one observation does not establish recurrence, and a
 change remains unproven until later observations and independent verification
-provide evidence. Repeated candidate IDs or resource use alone do not create
-an efficiency score or a causal claim. Missing measurements remain explicit.
+provide evidence. An implementation record that restates its target pressure
+is not counted as another pressure occurrence; a later observation can count
+when it independently records that pressure again. Repeated candidate IDs or
+resource use alone do not create an efficiency score or a causal claim.
+Missing measurements remain explicit.
 Observations can also report measurements without a pressure hypothesis, so a
 resource sample is not forced into a healthy/unhealthy judgment. Its sampling
 scope and unavailable attribution remain attached to that observation.
