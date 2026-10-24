@@ -1,0 +1,104 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_evidence_pointer_identity_alias_recovery_followup_20261024",
+  "captured_at": "2026-10-24T15:45:06Z",
+  "observation": {
+    "kind": "campaign-evidence-identity-alias-recovery-followup",
+    "source_interface": "authenticated MNCS Environment campaign_state and environmental_capability projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_c46038277f540217",
+      "evidence_offset": 0,
+      "evidence_limit": 13,
+      "alias_pointer_identities": [
+        "ev_environment_rpc_context_basis_prechange_20261024",
+        "ev_environment_rpc_context_basis_followup_20261024"
+      ],
+      "matching_record_identities": [
+        "ev_environment_read_operation_live_projection_context_20261024",
+        "ev_environment_read_operation_live_projection_context_followup_20261024"
+      ]
+    },
+    "projection_summary": {
+      "status": "partial",
+      "observation_records_considered": 13,
+      "observation_records_verified": 6,
+      "observation_records_unavailable": 2,
+      "alias_pointer_diagnostics": [
+        "observation-identity-mismatch",
+        "observation-identity-mismatch"
+      ],
+      "matching_record_pressure_identity": "ph_environment_rpc_repository_context_basis_20261024",
+      "matching_record_observation_count": 1,
+      "matching_record_recurrence_status": "not-established"
+    },
+    "outcome": {
+      "same_commit_path_and_digest": true,
+      "matching_identity_pointers_already_registered": true,
+      "original_observation_remains_projectable_through_matching_identity_pointer": true,
+      "analysis_limit": "The two alias references remain invalid and visible as diagnostics. Separate references with the exact identities inside the same SHA-256-verified records make the authentic source observation and its one non-recurrent pressure available. Duplicate pointers are not counted as distinct pressure occurrences."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_c46038277f540217",
+    "campaign_evidence_count_before_recording": 37,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-pointer-alias",
+      "identity": "ev_environment_rpc_context_basis_prechange_20261024",
+      "repository": "mncs-environment",
+      "commit": "99001b1ab2c7cff1c0ca416a9a0cbd9b62763358",
+      "path": "evidence/environmental-capability/read-operation-live-projection-context-20261024.json",
+      "sha256": "6c333b514f4f6a23e3cb48ece9d93363dfc59c91f151edfc2815031a9ba77db7"
+    },
+    {
+      "kind": "campaign-evidence-pointer-alias",
+      "identity": "ev_environment_rpc_context_basis_followup_20261024",
+      "repository": "mncs-environment",
+      "commit": "99001b1ab2c7cff1c0ca416a9a0cbd9b62763358",
+      "path": "evidence/environmental-capability/read-operation-live-projection-context-followup-20261024.json",
+      "sha256": "b17fe728034bfe6767575b46c3d7c83c3790b6a3da3ad43aeed339e89985c1b6"
+    },
+    {
+      "kind": "campaign-evidence-pointer-matching-record-identity",
+      "identity": "ev_environment_read_operation_live_projection_context_20261024",
+      "repository": "mncs-environment",
+      "commit": "99001b1ab2c7cff1c0ca416a9a0cbd9b62763358",
+      "path": "evidence/environmental-capability/read-operation-live-projection-context-20261024.json",
+      "sha256": "6c333b514f4f6a23e3cb48ece9d93363dfc59c91f151edfc2815031a9ba77db7"
+    },
+    {
+      "kind": "campaign-evidence-pointer-matching-record-identity",
+      "identity": "ev_environment_read_operation_live_projection_context_followup_20261024",
+      "repository": "mncs-environment",
+      "commit": "99001b1ab2c7cff1c0ca416a9a0cbd9b62763358",
+      "path": "evidence/environmental-capability/read-operation-live-projection-context-followup-20261024.json",
+      "sha256": "b17fe728034bfe6767575b46c3d7c83c3790b6a3da3ad43aeed339e89985c1b6"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "measurement_basis": "authenticated-ledger-pointer-comparison-and-bounded-old-page-projection",
+  "not_measured": [
+    "why the alias identities were written into the earlier campaign state",
+    "whether agents inspected the matching identities through the later page",
+    "long-term recurrence of identity mismatches in historical evidence"
+  ]
+}
