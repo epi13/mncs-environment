@@ -1,0 +1,145 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_entry_discoverability_verification_20261024",
+  "captured_at": "2026-10-24T08:57:26+00:00",
+  "measurement_basis": "direct-test-proof-and-Environment-operation-results",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_a88f93b356a9ca0c",
+      "sequence": 12
+    },
+    "campaign_evidence_count": 17,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-entry-discoverability-verification",
+    "source_interface": "pytest, MNCS Environment proofs and projections",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-capability-intelligence-20261024",
+      "commit": "4af2bc4ba13aac6071565fb234e5aa2e965d417f",
+      "files": [
+        ".mncs/project.json",
+        "docs/ENTRY.md",
+        "tests/test_environment.py"
+      ],
+      "commands": [
+        "python3 -m pytest tests/test_environment.py -k projection_capability_invocations_are_declared_and_session_bound -q",
+        "python3 scripts/vertical_proof.py",
+        "python3 scripts/campaign_proofs.py",
+        "python3 -m pytest tests/ -q"
+      ]
+    },
+    "outcome": {
+      "entry_context_capability_names": {
+        "campaign_state_inspection_listed": true,
+        "capability_count": 9,
+        "first_use_summary_includes_projection_description": false
+      },
+      "capability_declaration": {
+        "status": "updated",
+        "kind": "read-only-campaign-state-and-environmental-capability-intelligence",
+        "output_scope_names": [
+          "environmental_capability projection",
+          "verified observations",
+          "pressure hypotheses",
+          "implementation-verification-follow-up links",
+          "evidence-offset paging"
+        ]
+      },
+      "targeted_manifest_test": {
+        "status": "passed",
+        "passed": 1,
+        "failed": 0,
+        "deselected": 231
+      },
+      "full_test_suite": {
+        "tested_commit": "b577a0ac3dddc9926dc8a8b7b45a6187ec7dbd68",
+        "status": "passed",
+        "passed": 820,
+        "skipped": 81,
+        "failed": 0,
+        "duration_seconds": 659.79
+      },
+      "vertical_proof": {
+        "tested_commit": "4af2bc4ba13aac6071565fb234e5aa2e965d417f",
+        "status": "passed",
+        "session_checkpoints": 3,
+        "handoffs": 1,
+        "completed_events": 15
+      },
+      "campaign_proofs": {
+        "tested_commit": "4af2bc4ba13aac6071565fb234e5aa2e965d417f",
+        "status": "passed",
+        "passed": 14,
+        "skipped": 2,
+        "failed": 0,
+        "skip_reasons": [
+          "language.live-delta: host binary absent at /home/epi13/Documents/Projects/mncs-environment/.worktrees/mncs-language-service/target/debug/mnls-language-service-host",
+          "memory.untouched: mncs-memory checkout absent"
+        ]
+      },
+      "ruff_baseline_comparison": {
+        "baseline_diagnostics": 28,
+        "current_diagnostics": 28,
+        "new_diagnostic_multiset": [],
+        "changed_section_diagnostics": 0
+      },
+      "ambient_projection_refresh": {
+        "session_evidence_identity": "mncs-store:ses_c38b0ab35b9418ba:projections:8f7013c87baa23e254f682da0bd133a440d60830346ce7d05e672ca4061aecb0",
+        "status": "safe-deferral",
+        "pending": 3,
+        "reconciled": 0,
+        "blockers": 0,
+        "gate_reason": "structure-verdict-provider-unbound",
+        "unbound_provider_capability": "mncs-doctor:projection-health",
+        "structure_state": "unknown",
+        "foreign_claim_detail": "foreign-claim:ses_164edc158d9b1637",
+        "outputs_changed": false
+      }
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "4af2bc4ba13aac6071565fb234e5aa2e965d417f",
+      "path": "tests/test_environment.py",
+      "sha256": "487364f88d4b5f8fbd90f82f4822321436641836e394eb0a48c1f76b27fb57f1",
+      "measured_fields": [
+        "targeted_manifest_test",
+        "ruff_baseline_comparison"
+      ]
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "measured_fields": [
+        "entry_context_capability_names",
+        "ambient_projection_refresh"
+      ]
+    }
+  ],
+  "not_measured": [
+    "whether agents discover the capability description through first-use context alone",
+    "live visibility of the updated descriptor before the feature branch reaches the authoritative provider checkout",
+    "regeneration of README.md and .mncs/project-view.json, which safely deferred under a foreign campaign claim and unavailable Doctor projection-health binding",
+    "whether the entry guidance changes agent use of environmental capability evidence"
+  ]
+}
