@@ -1,0 +1,75 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_owner_checkout_authorization_live_readback_20261024",
+  "captured_at": "2026-10-24T20:51:33Z",
+  "measurement_basis": "authenticated-scope-grant-and-canonical-Store-claim-event-readback",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "repository": "mncs-environment",
+    "session_snapshot_branch": "campaign/scoped-merge-publish-authority-20261020",
+    "session_snapshot_head": "c8f35ee128b689907b3a413e6b723e82d9b9b7b9",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "subsequent-environmental-operation-readback",
+    "source_interface": "MNCS Environment authority scope grant and worktree claim event projection",
+    "request": {
+      "scope_grant_identity": "scope_1326025e8423d58b",
+      "repository": "mncs-environment",
+      "selected_checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/merge-main-authority-20261020",
+      "selected_branch": "main",
+      "selected_head": "ca8f52d4e319d6b9a067a0b209a7ac381e08bb1e"
+    },
+    "outcome": {
+      "claim_acquired_event_identity": "evt_ec62a9d531794eaf",
+      "claim_acquired_event_sequence": 296,
+      "claim_released_event_identity": "evt_a1be097832de0281",
+      "claim_released_event_sequence": 300,
+      "claim_was_released": true,
+      "scope_grant_persists": true,
+      "assessment": "One owner-selected main checkout was admitted and claimed through the authenticated Environment path. This confirms that path works once; recurrence and long-term friction reduction remain unassessed."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "canonical-Store-claim-event",
+      "identity": "evt_ec62a9d531794eaf",
+      "session_id": "ses_c98eb637e20a5c14",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024"
+    },
+    {
+      "kind": "canonical-Store-claim-release-event",
+      "identity": "evt_a1be097832de0281",
+      "session_id": "ses_c98eb637e20a5c14",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024"
+    },
+    {
+      "kind": "durable-owner-scope-grant",
+      "identity": "scope_1326025e8423d58b",
+      "repository": "mncs-environment",
+      "checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/merge-main-authority-20261020",
+      "branch": "main",
+      "head": "ca8f52d4e319d6b9a067a0b209a7ac381e08bb1e"
+    }
+  ],
+  "not_measured": [
+    "repeat admissions for other linked worktrees",
+    "cross-session recurrence",
+    "subsequent agent development outcomes"
+  ]
+}

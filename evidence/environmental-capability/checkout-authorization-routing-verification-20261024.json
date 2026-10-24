@@ -1,0 +1,141 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_owner_checkout_authorization_verification_20261024",
+  "captured_at": "2026-10-24T20:51:33Z",
+  "measurement_basis": "full-authority-scope-regression-tests-and-authenticated-live-grant-claim-readback",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "repository": "mncs-environment",
+    "session_snapshot_branch": "campaign/scoped-merge-publish-authority-20261020",
+    "session_snapshot_head": "c8f35ee128b689907b3a413e6b723e82d9b9b7b9",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "environmental-improvement-verification",
+    "source_interface": "MNCS Environment authority tests, Control source-selection tests, and authenticated Environment scope_grant/claims operations",
+    "implementation_commits": [
+      "ca8f52d4e319d6b9a067a0b209a7ac381e08bb1e",
+      "a1df23546b1c90ebb08b6b70c3b2fa9fc38db409"
+    ],
+    "verification_runs": [
+      {
+        "repository": "mncs-environment",
+        "command": "python3 -m pytest tests/test_authority_scope_grants.py -q",
+        "passed": 54,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "repository": "mncs-environment",
+        "command": "python3 -m pytest tests/test_authority_scope_grants.py -k 'owner_checkout_replaces_initial_repository_selection_on_first_grant or scope_grant_binds_an_owner_selected_checkout_for_an_already_writable_repository' -q",
+        "passed": 2,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "repository": "mncs-environment",
+        "command": "ruff check --select I mncs_env/sessions.py tests/test_authority_scope_grants.py",
+        "status": "passed"
+      },
+      {
+        "repository": "mncs-control-mcp",
+        "command": "python3 -m pytest tests/test_environment_sessions.py -k 'environment_source_uses_registered_nested_checkout_at_main or environment_source_reselects_main_after_main_advances or environment_source_rejects_unregistered_main_lookalike' -q",
+        "passed": 3,
+        "failed": 0,
+        "status": "passed"
+      },
+      {
+        "repository": "mncs-control-mcp",
+        "command": "python3 -m pytest tests/test_environment_sessions.py -q",
+        "status": "passed",
+        "exit_code": 0
+      },
+      {
+        "repository": "mncs-control-mcp",
+        "command": "ruff check --select I src/mncs_control_mcp/environment_sessions.py tests/test_environment_sessions.py",
+        "status": "passed"
+      },
+      {
+        "repository": "mncs-environment",
+        "command": "authenticated Control scope_grant followed by claims mode acquire",
+        "status": "passed",
+        "scope_grant_identity": "scope_1326025e8423d58b",
+        "claim_event_identity": "evt_ec62a9d531794eaf",
+        "checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/merge-main-authority-20261020",
+        "branch": "main",
+        "head": "ca8f52d4e319d6b9a067a0b209a7ac381e08bb1e"
+      }
+    ],
+    "outcome": {
+      "owner_grant_binds_exact_registered_checkout": true,
+      "post_grant_claim_uses_same_checkout": true,
+      "main_claim_released_after_verification": true,
+      "authority_scope_remains_durable": true,
+      "long_term_effectiveness": "not-assessed"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_owner_checkout_binding_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "ca8f52d4e319d6b9a067a0b209a7ac381e08bb1e",
+      "path": "mncs_env/sessions.py",
+      "sha256": "f8b53b7359f715c38bccfe46deff0644b40943d92e6ee13cca0be0a8500e6b89"
+    },
+    {
+      "kind": "committed-verification",
+      "identity": "ev_environment_owner_checkout_binding_tests_20261024",
+      "repository": "mncs-environment",
+      "commit": "ca8f52d4e319d6b9a067a0b209a7ac381e08bb1e",
+      "path": "tests/test_authority_scope_grants.py",
+      "sha256": "7a81e50913b8c76f5884cce5b67309a7e38750fb9bfd5ff4b2c5640d0ffb386a"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_control_environment_source_refresh_implementation_20261024",
+      "repository": "mncs-control-mcp",
+      "commit": "a1df23546b1c90ebb08b6b70c3b2fa9fc38db409",
+      "path": "src/mncs_control_mcp/environment_sessions.py",
+      "sha256": "e649a6a27e901d8527e96cf1d635b2080ac120417a2b014751f793a5e6b3779c"
+    },
+    {
+      "kind": "committed-verification",
+      "identity": "ev_control_environment_source_refresh_tests_20261024",
+      "repository": "mncs-control-mcp",
+      "commit": "a1df23546b1c90ebb08b6b70c3b2fa9fc38db409",
+      "path": "tests/test_environment_sessions.py",
+      "sha256": "9e01b559a72d2227c97a53de3d18820ad5b3f36162c90cf6c3f97dd5bcecd39c"
+    },
+    {
+      "kind": "live-canonical-Store-claim-event",
+      "repository": "mncs-environment",
+      "event_identity": "evt_ec62a9d531794eaf"
+    },
+    {
+      "kind": "live-canonical-Store-claim-release-event",
+      "repository": "mncs-environment",
+      "event_identity": "evt_a1be097832de0281"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence",
+    "reduced user effort across future checkouts",
+    "long-term behavior after later main revisions"
+  ]
+}
