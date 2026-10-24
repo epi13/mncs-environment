@@ -114,6 +114,11 @@ def _observation(identity: str, session_id: str, campaign_id: str) -> dict:
             {"kind": "direct-operation-result", "campaign_id": campaign_id,
              "session_id": session_id},
         ],
+        "recorder": {
+            "campaign_id": "cmp_observation_capture",
+            "session_id": "ses_observation_capture",
+            "consumer_id": "local-agent",
+        },
     }
 
 
@@ -136,6 +141,12 @@ def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_
     assert result["source"]["campaign_state_checkpoint_id"] == "chk_campaign_state"
     assert result["observation_count"] == 1
     assert result["observations"][0]["related_work"]["work_intent_goal"] == "advance native compiler self-consumption"
+    assert result["observations"][0]["related_work"]["campaign_id"] == "cmp_compiler"
+    assert result["observations"][0]["recording_context"] == {
+        "campaign_id": "cmp_observation_capture",
+        "session_id": "ses_observation_capture",
+        "consumer_id": "local-agent",
+    }
     hypothesis = result["pressure_hypotheses"][0]
     assert hypothesis["observation_count"] == 1
     assert hypothesis["distinct_session_count"] == 1
@@ -196,6 +207,18 @@ def test_malformed_observation_without_work_correlation_is_not_actionable(tmp_pa
     assert result["source"]["observation_records_unavailable"] == 1
 
 
+def test_invalid_recording_context_is_not_projected_as_provenance(tmp_path: Path) -> None:
+    record = _observation("ev_environment_observation_unrelated", "ses_compiler", "cmp_compiler")
+    record["recorder"]["session_id"] = []
+    session, _ = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["source"]["observation_records_unavailable"] == 1
+
+
 def test_resource_observation_can_be_projected_without_inventing_a_pressure(tmp_path: Path) -> None:
     record = _observation("ev_environment_resource_sample", "ses_environment", "cmp_environment")
     record.pop("pressure_hypothesis")
@@ -231,6 +254,47 @@ def test_resource_observation_can_be_projected_without_inventing_a_pressure(tmp_
     ]
 
 
+def test_compiler_campaign_state_observation_preserves_target_and_recorder(tmp_path: Path) -> None:
+    path = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability/compiler-campaign-state-20261024.json"
+    )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    session, _ = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    observation = result["observations"][0]
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 1
+    assert result["pressure_hypothesis_count"] == 0
+    assert observation["related_work"]["campaign_id"] == (
+        "cmp_mncs_native_application_readiness_compiler_20261013"
+    )
+    assert observation["recording_context"]["campaign_id"] == (
+        "cmp_environmental_capability_intelligence_20261023"
+    )
+    assert observation["observation"]["outcome"]["evidence_page"]["truncated"] is True
+
+
+def test_task_selector_recovery_remains_a_single_unresolved_hypothesis(tmp_path: Path) -> None:
+    path = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability/environment-task-selector-recovery-20261024.json"
+    )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    session, _ = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    assert result["observation_count"] == 1
+    assert result["pressure_hypothesis_count"] == 1
+    hypothesis = result["pressure_hypotheses"][0]
+    assert hypothesis["recurrence_status"] == "not-established"
+    assert hypothesis["observation_count"] == 1
+    assert result["observations"][0]["recording_context"]["campaign_id"] == (
+        "cmp_environmental_capability_intelligence_20261023"
+    )
+
+
 def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_large", "ses_compiler", "cmp_compiler")
     record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000
@@ -243,6 +307,7 @@ def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None
     assert len(encoded) <= capability_intelligence.MAX_RESULT_BYTES
     assert result["observations"][0]["observation"]["details_omitted"] is True
     assert result["observations"][0]["evidence_reference"]["identity"] == record["identity"]
+    assert result["observations"][0]["recording_context"]["campaign_id"] == "cmp_observation_capture"
 
 
 def test_observation_reader_stops_after_its_total_deadline(monkeypatch) -> None:
@@ -305,7 +370,7 @@ def test_campaign_state_and_projection_interfaces_expose_the_derived_view(
     tmp_path: Path, monkeypatch,
 ) -> None:
     record = _observation("ev_environment_observation_one", "ses_compiler_one", "cmp_compiler")
-    session, state = _session(tmp_path, [record])
+    session, _state = _session(tmp_path, [record])
     session.close = lambda: None
     monkeypatch.setattr(cli, "_open", lambda _args: session)
 

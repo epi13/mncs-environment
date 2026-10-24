@@ -1,0 +1,105 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_campaign_state_20261024",
+  "captured_at": "2026-10-24T07:50:17+00:00",
+  "measurement_basis": "direct-mcp-operation-result",
+  "observation": {
+    "kind": "project-campaign-state-read",
+    "source_interface": "mncs_environment MCP",
+    "request": {
+      "project": "mncs-compiler",
+      "cwd": ".worktrees/native-app-readiness-20261013/mncs-compiler",
+      "operation": "campaign_state",
+      "arguments": {
+        "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+        "task_identity": "int_8fb697d8987722d5",
+        "evidence_limit": 20,
+        "evidence_offset": 0
+      }
+    },
+    "outcome": {
+      "schema_version": "mncs.environment.campaign-state-read/1",
+      "operation_status": "succeeded",
+      "campaign_identity": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637",
+      "checkpoint_id": "chk_691079cfe830f05d",
+      "checkpoint_recorded_at": "2026-10-24T02:11:58+00:00",
+      "evidence_page": {
+        "total_count": 693,
+        "offset": 0,
+        "limit": 20,
+        "returned_count": 20,
+        "truncated": true,
+        "next_offset": 20
+      },
+      "delivery": {
+        "status": "partial",
+        "reason": "Compiler effect and capability dependency invalidation is merged and pushed; the Language-owned regression passed. Effectful Forge/Store digest execution, retained Test workflow, and compiler self-consumption remain active work.",
+        "repositories": [
+          {
+            "repository": "mncs-compiler",
+            "head": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+            "remote_head": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+            "status": "pushed"
+          },
+          {
+            "repository": "mncs-environment",
+            "head": "0f246be8839ef638db070eff49d878da6f3a0340",
+            "remote_head": "0f246be8839ef638db070eff49d878da6f3a0340",
+            "status": "pushed"
+          },
+          {
+            "repository": "mncs-language",
+            "head": "9505d3f557701f072b5803a5bad046389b84cb3b",
+            "remote_head": "9505d3f557701f072b5803a5bad046389b84cb3b",
+            "status": "pushed"
+          },
+          {
+            "repository": "mncs-store",
+            "head": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+            "remote_head": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+            "status": "pushed"
+          }
+        ]
+      }
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637",
+      "checkpoint_id": "chk_691079cfe830f05d",
+      "measured_fields": [
+        "campaign_identity",
+        "session_id",
+        "checkpoint_id",
+        "evidence_page",
+        "delivery"
+      ]
+    }
+  ],
+  "not_measured": [
+    "content, outcomes, and verification status of the other 673 indexed evidence records",
+    "token and cache usage, elapsed development time, or resource attribution",
+    "whether active Compiler work has a live agent process",
+    "independent verification of the delivery reason beyond the returned campaign-state record"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  }
+}

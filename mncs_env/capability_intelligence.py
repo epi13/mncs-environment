@@ -191,6 +191,12 @@ def _compact_projection(
                 _short_text(value, 160) for value in work["claim_ids"][:4]
                 if isinstance(value, str)
             ]
+        recorder = item.get("recording_context")
+        compact_recorder = {
+            key: _short_text(recorder.get(key), 160)
+            for key in ("campaign_id", "session_id", "consumer_id")
+            if isinstance(recorder, dict) and recorder.get(key) is not None
+        }
         hypothesis = item.get("pressure_hypothesis")
         compact_hypothesis = None
         if isinstance(hypothesis, dict):
@@ -211,6 +217,7 @@ def _compact_projection(
                 "details_sha256": hashlib.sha256(observation_bytes).hexdigest(),
             },
             "related_work": compact_work,
+            "recording_context": compact_recorder or None,
             "pressure_hypothesis": compact_hypothesis,
             "measurement_limits": [
                 _short_text(value, 192) for value in measurement_limits[:8]
@@ -313,6 +320,7 @@ def _load_observation(
     observation = record.get("observation")
     related_work = record.get("related_work")
     hypothesis = record.get("pressure_hypothesis")
+    recorder = record.get("recorder")
     if (record.get("schema_version") != OBSERVATION_SCHEMA
             or record.get("identity") != reference["identity"]
             or not isinstance(record.get("captured_at"), str)
@@ -324,6 +332,13 @@ def _load_observation(
             or not isinstance(related_work, dict)
             or any(not isinstance(related_work.get(key), str) or not related_work[key]
                    for key in ("campaign_id", "session_id", "work_intent_id", "work_intent_goal"))
+            or (recorder is not None and (
+                not isinstance(recorder, dict)
+                or any(not isinstance(recorder.get(key), str)
+                       or not recorder[key] or len(recorder[key]) > 160
+                       for key in ("campaign_id", "session_id", "consumer_id")
+                       if key in recorder)
+            ))
             or (hypothesis is not None and not isinstance(hypothesis, dict))):
         return None, "observation-contract-invalid"
     if isinstance(hypothesis, dict) and any(
@@ -474,6 +489,8 @@ def project(
         observation = record["observation"]
         work = record.get("related_work")
         work = work if isinstance(work, dict) else {}
+        recorder = record.get("recorder")
+        recorder = recorder if isinstance(recorder, dict) else {}
         hypothesis = record.get("pressure_hypothesis")
         hypothesis = hypothesis if isinstance(hypothesis, dict) else None
         sources = record.get("supporting_sources")
@@ -496,6 +513,11 @@ def project(
                             "campaign_evidence_count", "claim_ids")
                 if work.get(key) is not None
             },
+            "recording_context": {
+                key: recorder[key]
+                for key in ("campaign_id", "session_id", "consumer_id")
+                if isinstance(recorder.get(key), str) and recorder[key]
+            } or None,
             "pressure_hypothesis": ({
                 key: hypothesis.get(key)
                 for key in ("identity", "title", "category", "subsystem", "owner",

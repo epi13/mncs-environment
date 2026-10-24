@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_task_selector_recovery_20261024",
+  "captured_at": "2026-10-24T07:52:57+00:00",
+  "measurement_basis": "direct-mcp-operation-results",
+  "observation": {
+    "kind": "campaign-state-selection-and-recovery",
+    "source_interface": "mncs_environment MCP",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/environment-capability-intelligence-20261024",
+      "operation": "campaign_state",
+      "initial_selector": {
+        "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+        "task_identity": "int_8475157f281c835f"
+      },
+      "recovery_selector": {
+        "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+        "session_id": "ses_c38b0ab35b9418ba"
+      }
+    },
+    "outcome": {
+      "initial_attempt": {
+        "status": "blocked",
+        "code": "ENVIRONMENT_TASK_SELECTOR_TARGET_UNAVAILABLE",
+        "message": "task-selector target no longer matches its recorded Environment owner and context"
+      },
+      "exact_session_recovery": {
+        "status": "succeeded",
+        "campaign_state_checkpoint_id": "chk_6351672cb495d1dd",
+        "campaign_evidence_count": 3,
+        "campaign_evidence_truncated": false
+      }
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_6351672cb495d1dd",
+      "sequence": 6
+    },
+    "campaign_evidence_count": 3,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_task_selector_owner_context",
+    "title": "Task-selector target did not match the recorded Environment owner and context",
+    "category": "coordination-continuity",
+    "subsystem": "mncs-environment task selector",
+    "owner": "mncs-environment",
+    "basis": "one blocked task-selector read followed by a successful exact-session campaign-state read",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Inspect why the task-selector binding did not match this campaign context and keep the exact-session recovery path discoverable while preserving owner checks.",
+    "not_measured": [
+      "why the recorded Environment owner/context did not match the task selector",
+      "whether other sessions or campaigns encounter this condition",
+      "time, token, or resource cost of the blocked read",
+      "whether the recorded session has a live agent process"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "measured_fields": [
+        "error_code",
+        "error_message",
+        "exact_session_recovery_status",
+        "campaign_state_checkpoint_id",
+        "campaign_evidence_count"
+      ]
+    }
+  ],
+  "not_measured": [
+    "root cause of the task-selector mismatch",
+    "whether this condition is a code defect, stale owner state, or caller-context mismatch",
+    "frequency of this condition across Environment sessions"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  }
+}

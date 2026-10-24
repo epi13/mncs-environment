@@ -111,7 +111,12 @@ computed when requested; no transcript copy, separate telemetry store, or
 permanent dashboard is created.
 
 An observation relates the recorded operation to its originating campaign,
-session, work intent, and affected subsystem. A pressure hypothesis remains
+session, work intent, and affected subsystem. Its separate `recording_context`
+preserves the campaign, session, and consumer that captured the observation;
+this prevents a collector session from being mistaken for the work under
+observation. Both relationships remain inspectable through the immutable
+evidence pointer, while the recorded consumer field is metadata rather than an
+independent identity attestation. A pressure hypothesis remains
 an interpretation: one observation does not establish recurrence, and a
 change remains unproven until later observations and independent verification
 provide evidence. Repeated candidate IDs or resource use alone do not create
