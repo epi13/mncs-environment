@@ -398,6 +398,20 @@ independent later evidence supports an assessment. A passing test record proves
 that its evidence blob was preserved intact, while its command results remain
 reported evidence rather than an Environment-generated attestation.
 
+Published observation records are content-addressed and are not rewritten when
+a transcription or relation needs correction. A later record can use the
+`mncs.environment.observation-correction/1` contract to point to the exact
+target evidence reference, name corrected fields, and provide their replacement
+values. The first supported fields are `supporting_sources` (which must point
+to selected, integrity-verified evidence) and `not_measured`. The projection
+applies a correction only when the exact target pointer and target record are
+verified, the replacement values differ from the target, and every replacement
+source is verified. It keeps the original record inspectable through its
+evidence reference and exposes the effective values with a link to the
+correction record. A target outside the selected pages remains explicitly
+unresolved; an invalid or conflicting correction is not applied. Corrections
+do not change an improvement relation or effectiveness assessment.
+
 The query considers at most 32 campaign evidence references, reads at most 16
 observation records of 64 KiB each within one 8 second Git-read budget, and
 caps its response at 48 KiB. If a response reaches that bound, operation

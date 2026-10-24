@@ -525,6 +525,186 @@ def test_resource_sample_followup_links_distinct_session_without_claiming_effect
     assert relation["effectiveness_assessment"] == "not-assessed"
 
 
+def test_append_only_correction_requires_exact_verified_observation_pointer(
+    tmp_path: Path,
+) -> None:
+    def project_correction(root: Path, *, corrupt_target_digest: bool):
+        target = _observation(
+            "ev_environment_correctable_followup_relation",
+            "ses_environment_followup",
+            "cmp_environment_followup",
+        )
+        target["pressure_hypothesis"]["identity"] = "ph_environment_correctable_record"
+        implementation = {
+            "identity": "ev_environment_correctable_implementation",
+            "repository": "mncs-environment",
+            "commit": "c" * 40,
+            "path": "mncs_env/capability_intelligence.py",
+            "sha256": "d" * 64,
+        }
+        target["improvement_relation"] = {
+            "identity": "im_environment_relation_original",
+            "addresses_hypothesis_identity": "ph_environment_correctable_record",
+            "implementation_reference": implementation,
+            "verification_observation_identity": "ev_environment_correction_verification",
+            "subsequent_observation_identity": "ev_environment_correction_followup",
+            "basis": "Original relation with incomplete source metadata.",
+            "not_measured": ["original measurement limitation"],
+        }
+        target["supporting_sources"] = [{
+            "kind": "campaign-evidence-reference",
+            "identity": "ev_environment_identity_only_source",
+            "repository": "mncs-environment",
+        }]
+        target["not_measured"] = [
+            "empirical elimination of an unrelated evidence visibility pressure",
+        ]
+        verification = _observation(
+            "ev_environment_correction_verification",
+            "ses_environment_followup",
+            "cmp_environment_followup",
+        )
+        verification.pop("pressure_hypothesis")
+        followup = _observation(
+            "ev_environment_correction_followup",
+            "ses_environment_followup",
+            "cmp_environment_followup",
+        )
+        followup.pop("pressure_hypothesis")
+        session, state = _session(root, [target, verification, followup])
+        target_reference = dict(state["evidence"][0])
+        if corrupt_target_digest:
+            target_reference["sha256"] = "e" * 64
+
+        correction = _observation(
+            "ev_environment_corrected_followup_relation",
+            "ses_environment_correction",
+            "cmp_environment_followup",
+        )
+        correction.pop("pressure_hypothesis")
+        correction["record_correction"] = {
+            "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+            "target_reference": target_reference,
+            "corrected_field_paths": [
+                "supporting_sources",
+                "not_measured",
+            ],
+            "replacement_values": {
+                "supporting_sources": [
+                    {"kind": "campaign-evidence-reference", **state["evidence"][1]},
+                    {"kind": "campaign-evidence-reference", **state["evidence"][2]},
+                ],
+                "not_measured": [
+                    "resource consumption attributable to this agent or child processes",
+                    "CPU utilization for this sample",
+                    "whether samples differ across this session or campaign",
+                    "whether host conditions constrained a development operation",
+                ],
+            },
+            "reason": "Replace incomplete source identities and a copied measurement limit.",
+        }
+        relative = "evidence/environmental-capability/correction.json"
+        raw = json.dumps(
+            correction, sort_keys=True, separators=(",", ":"),
+        ).encode()
+        correction_path = Path(session.snapshot["selected_checkouts"][
+            "mncs-environment"
+        ]["path"]) / relative
+        correction_path.write_bytes(raw)
+        _git(correction_path.parents[2], "add", relative)
+        _git(correction_path.parents[2], "commit", "--quiet", "-m", "correction record")
+        correction_reference = {
+            "identity": correction["identity"],
+            "repository": "mncs-environment",
+            "commit": _git(correction_path.parents[2], "rev-parse", "HEAD"),
+            "path": relative,
+            "sha256": hashlib.sha256(raw).hexdigest(),
+        }
+        state["evidence"].append(correction_reference)
+        state["evidence_count"] = len(state["evidence"])
+        return capability_intelligence.project(session)
+
+    verified = project_correction(tmp_path / "verified", corrupt_target_digest=False)
+
+    assert verified["status"] == "ready"
+    assert verified["source"]["record_corrections_applied_count"] == 1
+    assert verified["source"]["record_corrections_unverified_count"] == 0
+    corrected = next(
+        item for item in verified["observations"]
+        if item["identity"] == "ev_environment_corrected_followup_relation"
+    )
+    assert corrected["record_correction"]["status"] == (
+        "applied-to-verified-target"
+    )
+    original = next(
+        item for item in verified["observations"]
+        if item["identity"] == "ev_environment_correctable_followup_relation"
+    )
+    assert original["record_correction"]["status"] == (
+        "corrected-by-verified-record"
+    )
+    assert original["improvement_relation_status"] == "validated"
+    assert original["measurement_limits"] == [
+        "resource consumption attributable to this agent or child processes",
+        "CPU utilization for this sample",
+        "whether samples differ across this session or campaign",
+        "whether host conditions constrained a development operation",
+    ]
+    assert [
+        item["status"] for item in original["supporting_sources"]
+    ] == ["verified", "verified"]
+    assert [item["identity"] for item in verified["improvement_relations"]] == [
+        "im_environment_relation_original",
+    ]
+    relation = verified["improvement_relations"][0]
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["subsequent_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["effectiveness_assessment"] == "not-assessed"
+    compact = capability_intelligence._compact_projection(
+        verified, 100_000, 24_000,
+    )
+    compact_original = next(
+        item for item in compact["observations"]
+        if item["identity"] == "ev_environment_correctable_followup_relation"
+    )
+    assert compact_original["record_correction"]["replacement_values"][
+        "not_measured"
+    ] == original["measurement_limits"]
+    assert compact_original["record_correction"][
+        "correction_evidence_reference"
+    ]["identity"] == "ev_environment_corrected_followup_relation"
+
+    mismatched = project_correction(
+        tmp_path / "mismatched", corrupt_target_digest=True,
+    )
+
+    assert mismatched["status"] == "partial"
+    assert mismatched["source"]["record_corrections_applied_count"] == 0
+    assert mismatched["source"]["record_corrections_unverified_count"] == 1
+    rejected = next(
+        item for item in mismatched["observations"]
+        if item["identity"] == "ev_environment_corrected_followup_relation"
+    )
+    assert rejected["record_correction"]["status"] == "target-reference-mismatch"
+    mismatched_original = next(
+        item for item in mismatched["observations"]
+        if item["identity"] == "ev_environment_correctable_followup_relation"
+    )
+    assert mismatched_original["measurement_limits"] == [
+        "empirical elimination of an unrelated evidence visibility pressure",
+    ]
+    assert mismatched_original["supporting_sources"][0][
+        "content_integrity_status"
+    ] == "source-reference-invalid"
+    assert [item["identity"] for item in mismatched["improvement_relations"]] == [
+        "im_environment_relation_original",
+    ]
+
+
 def test_project_exposes_verified_campaign_objective_separately_from_work_intent(
     tmp_path: Path,
 ) -> None:

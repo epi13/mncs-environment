@@ -28,6 +28,7 @@ from .store_backend import StoreIntegrityFailure, StoreUnavailable
 
 SCHEMA = "mncs.environment.capability-intelligence/1"
 OBSERVATION_SCHEMA = "mncs.environment.environmental-observation/1"
+OBSERVATION_CORRECTION_SCHEMA = "mncs.environment.observation-correction/1"
 CAMPAIGN_CHARTER_SCHEMA = "mncs.environment.campaign-charter/1"
 OBSERVATION_PATH_PREFIX = "evidence/environmental-capability/"
 COMPILER_CACHE_REGRESSION_SCHEMA_V1 = (
@@ -646,7 +647,10 @@ def _compact_projection(
                     "source_pointer_content_integrity_not_verified_count",
                     "observation_records_considered",
                     "observation_records_verified",
-                    "observation_records_unavailable")
+                    "observation_records_unavailable",
+                    "record_correction_count",
+                    "record_corrections_applied_count",
+                    "record_corrections_unverified_count")
         if key in source and (
             key in {"previous_evidence_offset", "next_evidence_offset"}
             or source.get(key) is not None
@@ -684,6 +688,8 @@ def _compact_projection(
     for key in (
         "observation_reference_diagnostic_count",
         "improvement_relations_unverified_count",
+        "record_correction_count", "record_corrections_applied_count",
+        "record_corrections_unverified_count",
     ):
         if type(source.get(key)) is int and source[key] > 0:
             compact_source[key] = source[key]
@@ -955,6 +961,51 @@ def _compact_projection(
             compact_observation["improvement_relation_status"] = _short_text(
                 item["improvement_relation_status"], 96,
             )
+        record_correction = item.get("record_correction")
+        if isinstance(record_correction, dict):
+            compact_correction = {
+                key: _short_text(record_correction.get(key), 160)
+                for key in (
+                    "status", "correction_observation_identity", "target_identity",
+                    "reason",
+                )
+                if isinstance(record_correction.get(key), str)
+            }
+            fields = record_correction.get("corrected_field_paths")
+            if isinstance(fields, list):
+                compact_correction["corrected_field_paths"] = [
+                    _short_text(field, 160)
+                    for field in fields[:8]
+                    if isinstance(field, str)
+                ]
+                compact_correction["corrected_field_paths_truncated"] = (
+                    len(fields) > 8
+                )
+            for source_key, output_key in (
+                ("target_reference", "target_reference"),
+                ("correction_evidence_reference", "correction_evidence_reference"),
+            ):
+                pointer = _validate_source_pointer(record_correction.get(source_key))
+                if pointer is not None:
+                    compact_correction[output_key] = pointer
+            replacement_values = record_correction.get("replacement_values")
+            if isinstance(replacement_values, dict):
+                compact_replacements = {}
+                replacement_sources = replacement_values.get("supporting_sources")
+                if isinstance(replacement_sources, list):
+                    compact_replacements["supporting_sources"] = [
+                        pointer for source in replacement_sources[:16]
+                        if (pointer := _validate_source_pointer(source)) is not None
+                    ]
+                replacement_limits = replacement_values.get("not_measured")
+                if isinstance(replacement_limits, list):
+                    compact_replacements["not_measured"] = [
+                        _short_text(value, 512)
+                        for value in replacement_limits[:16]
+                        if isinstance(value, str)
+                    ]
+                compact_correction["replacement_values"] = compact_replacements
+            compact_observation["record_correction"] = compact_correction
         compact_sources = []
         raw_sources = item.get("supporting_sources")
         raw_sources = raw_sources if isinstance(raw_sources, list) else []
@@ -2425,6 +2476,52 @@ def _validate_improvement_relation(value: Any) -> dict[str, Any] | None:
     }
 
 
+def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
+    """Validate an append-only correction that targets an exact observation."""
+    if not isinstance(value, dict):
+        return None
+    target = _validate_reference(value.get("target_reference"))
+    fields = value.get("corrected_field_paths")
+    replacements = value.get("replacement_values")
+    reason = value.get("reason")
+    if (value.get("schema_version") != OBSERVATION_CORRECTION_SCHEMA
+            or target is None or "sha256" not in target
+            or not _is_observation_reference(target)
+            or not isinstance(fields, list) or not 1 <= len(fields) <= 2
+            or any(
+                not isinstance(field, str)
+                or field not in {"supporting_sources", "not_measured"}
+                for field in fields
+            )
+            or len(set(fields)) != len(fields)
+            or not isinstance(replacements, dict)
+            or set(replacements) != set(fields)
+            or not isinstance(reason, str) or not reason or len(reason) > 512):
+        return None
+    if "supporting_sources" in fields:
+        sources = replacements["supporting_sources"]
+        if (not isinstance(sources, list) or not 1 <= len(sources) <= 16
+                or any(
+                    (pointer := _validate_source_pointer(source)) is None
+                    or "sha256" not in pointer
+                    for source in sources
+                )):
+            return None
+    if "not_measured" in fields:
+        limits = replacements["not_measured"]
+        if (not isinstance(limits, list) or not 1 <= len(limits) <= 16
+                or any(not isinstance(item, str) or not item or len(item) > 512
+                       for item in limits)):
+            return None
+    return {
+        "schema_version": OBSERVATION_CORRECTION_SCHEMA,
+        "target_reference": target,
+        "corrected_field_paths": list(fields),
+        "replacement_values": replacements,
+        "reason": reason,
+    }
+
+
 def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for observation in observations:
@@ -3840,11 +3937,6 @@ def project(
     observations: list[dict[str, Any]] = []
     improvement_relations: list[dict[str, Any]] = []
     projected_records = verified_records[:MAX_OBSERVATIONS]
-    unverified_improvement_relation_count = sum(
-        record.get("improvement_relation") is not None
-        and _validate_improvement_relation(record.get("improvement_relation")) is None
-        for record, _ in projected_records
-    )
     observation_reference_diagnostics = []
     for reference in references:
         if not _is_observation_reference(reference):
@@ -3885,6 +3977,190 @@ def project(
                 attempted=attempted_sources,
                 workspace_checkouts=workspace_checkouts,
             )
+        correction = _validate_observation_correction(
+            record.get("record_correction"),
+        )
+        if correction is not None:
+            _verify_source_pointer(
+                session, correction["target_reference"], references, root,
+                deadline=read_deadline, cache=source_integrity,
+                attempted=attempted_sources,
+                workspace_checkouts=workspace_checkouts,
+            )
+            for source in correction["replacement_values"].get(
+                "supporting_sources", [],
+            ):
+                _verify_source_pointer(
+                    session, source, references, root,
+                    deadline=read_deadline, cache=source_integrity,
+                    attempted=attempted_sources,
+                    workspace_checkouts=workspace_checkouts,
+                )
+    projected_records_by_identity = {
+        record["identity"]: record for record, _ in projected_records
+    }
+    page_references_by_identity = {
+        reference["identity"]: reference
+        for reference in references
+        if isinstance(reference.get("identity"), str)
+    }
+    page_reference_positions = {
+        reference["identity"]: index
+        for index, reference in enumerate(references)
+        if isinstance(reference.get("identity"), str)
+    }
+    correction_candidates: dict[
+        str, list[tuple[dict[str, Any], dict[str, Any], dict[str, str]]],
+    ] = {}
+    correction_status_by_record: dict[str, dict[str, Any]] = {}
+    unverified_record_correction_count = 0
+    for correction_record, correction_reference in projected_records:
+        raw_correction = correction_record.get("record_correction")
+        if raw_correction is None:
+            continue
+        correction = _validate_observation_correction(raw_correction)
+        if correction is None:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "recorded-but-contract-unverified",
+            }
+            unverified_record_correction_count += 1
+            continue
+        target_reference = correction["target_reference"]
+        target_identity = target_reference["identity"]
+        selected_reference = page_references_by_identity.get(target_identity)
+        if selected_reference is None:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-present-in-selected-pages",
+                "target_identity": target_identity,
+            }
+            unverified_record_correction_count += 1
+            continue
+        pointer_fields = ("identity", "repository", "commit", "path", "sha256")
+        if any(
+            selected_reference.get(key) != target_reference.get(key)
+            for key in pointer_fields
+        ):
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-reference-mismatch",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+            }
+            unverified_record_correction_count += 1
+            continue
+        verification = selected_reference.get("verification")
+        if verification == "not-read-page-observation-budget":
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-read-page-budget",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+            }
+            unverified_record_correction_count += 1
+            continue
+        if verification != "verified":
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-verified-in-projection",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+                "target_verification": verification,
+            }
+            unverified_record_correction_count += 1
+            continue
+        correction_position = page_reference_positions.get(
+            correction_record["identity"],
+        )
+        target_position = page_reference_positions.get(target_identity)
+        if (correction_position is not None and target_position is not None
+                and target_position >= correction_position):
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-prior-to-correction",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+            }
+            unverified_record_correction_count += 1
+            continue
+        target_record = projected_records_by_identity.get(target_identity)
+        if target_record is None:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-projected",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+            }
+            unverified_record_correction_count += 1
+            continue
+        target_integrity = source_integrity.get(
+            _source_pointer_key(target_reference), "not-checked",
+        )
+        if target_integrity not in SOURCE_INTEGRITY_VERIFIED:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-content-integrity-unverified",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+                "target_content_integrity_status": target_integrity,
+            }
+            unverified_record_correction_count += 1
+            continue
+        replacements_verified = True
+        replacement_values = correction["replacement_values"]
+        for field in correction["corrected_field_paths"]:
+            replacement = replacement_values[field]
+            if target_record.get(field) == replacement:
+                replacements_verified = False
+                break
+            if field != "supporting_sources":
+                continue
+            replacement_sources = replacement
+            replacement_sources_valid = (
+                isinstance(replacement_sources, list)
+                and 0 < len(replacement_sources) <= 16
+                and all(
+                    (pointer := _validate_source_pointer(source)) is not None
+                    and "sha256" in pointer
+                    and _source_status(source, references).get("status") == "verified"
+                    and _source_integrity_status(source, source_integrity)
+                    in SOURCE_INTEGRITY_VERIFIED
+                    for source in replacement_sources
+                )
+            )
+            if not replacement_sources_valid:
+                replacements_verified = False
+                break
+        if not replacements_verified:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "replacement-values-unverified-or-unchanged",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+            }
+            unverified_record_correction_count += 1
+            continue
+        correction_status_by_record[correction_record["identity"]] = {
+            "status": "applied-to-verified-target",
+            "target_identity": target_identity,
+            "target_reference": target_reference,
+            "corrected_field_paths": correction["corrected_field_paths"],
+            "replacement_values": replacement_values,
+            "reason": correction["reason"],
+        }
+        correction_candidates.setdefault(target_identity, []).append((
+            correction_record, correction, correction_reference,
+        ))
+
+    correction_by_target: dict[str, tuple[dict[str, Any], dict[str, Any], dict[str, str]]] = {}
+    for target_identity, candidates in correction_candidates.items():
+        if len(candidates) == 1:
+            correction_by_target[target_identity] = candidates[0]
+            continue
+        unverified_record_correction_count += len(candidates)
+        for correction_record, _correction, _reference in candidates:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "conflicting-corrections-for-target",
+                "target_identity": target_identity,
+            }
+
+    unverified_improvement_relation_count = sum(
+        record.get("improvement_relation") is not None
+        and _validate_improvement_relation(record.get("improvement_relation")) is None
+        for record, _ in projected_records
+    )
     source_context_candidates: dict[
         tuple[str, str, str, str, str], set[tuple[tuple[str, str], ...]],
     ] = {}
@@ -3972,7 +4248,37 @@ def project(
         ) if source_session_context is not None else False
         sources = record.get("supporting_sources")
         sources = sources if isinstance(sources, list) else []
-        improvement = _validate_improvement_relation(record.get("improvement_relation"))
+        raw_improvement = _validate_improvement_relation(
+            record.get("improvement_relation"),
+        )
+        correction_for_target = correction_by_target.get(record["identity"])
+        record_correction_summary = correction_status_by_record.get(
+            record["identity"],
+        )
+        effective_sources = sources
+        effective_measurement_limits = record.get("not_measured", [])
+        if correction_for_target is not None:
+            correction_record, correction, correction_reference = correction_for_target
+            corrected_fields = correction["corrected_field_paths"]
+            replacement_values = correction["replacement_values"]
+            if "supporting_sources" in corrected_fields:
+                effective_sources = replacement_values["supporting_sources"]
+            if "not_measured" in corrected_fields:
+                effective_measurement_limits = replacement_values["not_measured"]
+            if record_correction_summary is None:
+                record_correction_summary = {
+                    "status": "corrected-by-verified-record",
+                    "correction_observation_identity": correction_record["identity"],
+                    "corrected_field_paths": corrected_fields,
+                    "replacement_values": replacement_values,
+                    "reason": correction["reason"],
+                    "correction_evidence_reference": {
+                        key: correction_reference[key]
+                        for key in ("identity", "repository", "commit", "path", "sha256")
+                        if correction_reference.get(key) is not None
+                    },
+                }
+        improvement = raw_improvement
         projected_observation = {
             "kind": observation.get("kind"),
             "source_interface": observation.get("source_interface"),
@@ -4095,7 +4401,7 @@ def project(
             },
             "recording_context": _recording_context(recorder),
             "improvement_relation_identity": (
-                improvement["identity"] if improvement is not None else None
+                raw_improvement["identity"] if raw_improvement is not None else None
             ),
             "improvement_relation_status": (
                 "not-recorded"
@@ -4105,6 +4411,8 @@ def project(
                     else "recorded-but-contract-unverified"
                 )
             ),
+            **({"record_correction": record_correction_summary}
+               if record_correction_summary is not None else {}),
             "pressure_hypothesis": ({
                 key: hypothesis.get(key)
                 for key in ("identity", "title", "category", "subsystem", "owner",
@@ -4119,12 +4427,12 @@ def project(
                         source, source_integrity,
                     ),
                 }
-                for source in sources[:16]
+                for source in effective_sources[:16]
             ],
             "measurement_limits": [
-                value[:512] for value in record.get("not_measured", [])[:16]
+                value[:512] for value in effective_measurement_limits[:16]
                 if isinstance(value, str)
-            ] if isinstance(record.get("not_measured"), list) else [],
+            ] if isinstance(effective_measurement_limits, list) else [],
             "evidence_reference": {
                 key: reference[key]
                 for key in ("identity", "repository", "commit", "path", "sha256")
@@ -4198,6 +4506,7 @@ def project(
     elif observations and (
         unavailable or skipped_by_page_budget or history_truncated or not history_consistent
         or unverified_improvement_relation_count
+        or unverified_record_correction_count
     ):
         status = "partial"
     elif observations:
@@ -4320,6 +4629,19 @@ def project(
             "observation_records_considered": len(references),
             "observation_records_verified": len(observations),
             "observation_records_unavailable": unavailable,
+            **({
+                "record_correction_count": sum(
+                    record.get("record_correction") is not None
+                    for record, _ in projected_records
+                ),
+                "record_corrections_applied_count": len(correction_by_target),
+                "record_corrections_unverified_count": (
+                    unverified_record_correction_count
+                ),
+            } if any(
+                record.get("record_correction") is not None
+                for record, _ in projected_records
+            ) else {}),
             "observation_reference_diagnostics": (
                 observation_reference_diagnostics[:MAX_OBSERVATIONS]
             ),
@@ -4407,6 +4729,10 @@ def project(
             "Read-operation recurrence candidates cover only the selected tail of this session; cross-session recurrence is unavailable in this projection.",
             "Repeated read-operation failures are investigation candidates, not causal findings or proof of an environmental defect.",
             "Session capability events do not establish duration, token usage, resource consumption, or activity performed outside observed Environment or Control operations.",
+            *(["Append-only observation corrections apply only when their exact target pointer and replacement source evidence are verified in the selected evidence pages; older record bytes remain inspectable."] if any(
+                record.get("record_correction") is not None
+                for record, _ in projected_records
+            ) else []),
             *([
                 "Multi-page recurrence covers only the selected bounded page window; source metadata reports page offsets, checkpoint consistency, and budget omissions.",
             ] if history_pages > 1 else []),
