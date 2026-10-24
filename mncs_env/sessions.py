@@ -3335,6 +3335,20 @@ class Session:
         additions: dict[str, dict[str, Any]] = {}
         eligible_repositories: set[str] = set()
 
+        def claim_record_matches_scope(
+            item: dict[str, Any], repository: str, scope: dict[str, Any],
+        ) -> bool:
+            """Check both stable claim identifiers before using a live row."""
+            try:
+                expected = claims_module._with_identity(item)
+                return (
+                    item.get("claim_id")
+                    == claims_module.claim_identity(repository, scope)
+                    and item.get("identity") == expected.get("identity")
+                )
+            except (TypeError, ValueError):
+                return False
+
         # A campaign's base repository is already in its authenticated intent.
         # Preserve it when one exact, live claim from this session anchors a
         # registered worktree inside the campaign workspace. This keeps the
@@ -3572,27 +3586,39 @@ class Session:
                             and normalized_scope.get("checkout") == owner_path):
                         owner_path_claims.append((item, normalized_scope))
 
-            same_owner_path_claim = False
-            if (not malformed_owner_claim_scope and len(owner_path_claims) == 1):
-                owner_path_claim, owner_path_scope = owner_path_claims[0]
-                expected_claim = claims_module._with_identity(owner_path_claim)
-                same_owner_path_claim = (
-                    owner_path_claim.get("session_id") == self.session_id
-                    and owner_path_claim.get("consumer_id")
-                    == self.snapshot.get("consumer_id")
-                    and all(
-                        owner_path_scope.get(field) is None
-                        or owner_path_scope.get(field) == expected_identity.get(field)
-                        for field in (
-                            "checkout_identity", "git_common_directory_identity",
-                            "manifest_identity",
-                        )
+            same_owner_path_claims = [
+                (item, owner_scope)
+                for item, owner_scope in owner_path_claims
+                if item.get("session_id") == self.session_id
+                and item.get("consumer_id") == self.snapshot.get("consumer_id")
+                and claim_record_matches_scope(item, repository, owner_scope)
+                and all(
+                    owner_scope.get(field) is None
+                    or owner_scope.get(field) == expected_identity.get(field)
+                    for field in (
+                        "checkout_identity", "git_common_directory_identity",
+                        "manifest_identity",
                     )
-                    and owner_path_claim.get("claim_id")
-                    == claims_module.claim_identity(repository, owner_path_scope)
-                    and owner_path_claim.get("identity")
-                    == expected_claim.get("identity")
                 )
+            ]
+            foreign_owner_path_claims = [
+                (item, owner_scope)
+                for item, owner_scope in owner_path_claims
+                if (item.get("session_id") != self.session_id
+                    or item.get("consumer_id") != self.snapshot.get("consumer_id"))
+            ]
+            # Several still-live records can describe one checkout after an
+            # agent reclaims it under a refreshed branch observation. They
+            # remain immutable Store claims and continue fencing other
+            # sessions; they are one logical owner here only when every
+            # usable witness belongs to this consumer and the exact granted
+            # path. Independent sessions at that path remain a conflict.
+            same_owner_path_claim = (
+                not malformed_owner_claim_scope
+                and bool(same_owner_path_claims)
+                and not foreign_owner_path_claims
+            )
+            owner_checkout_branch_drift = False
             try:
                 try:
                     resolved_checkout, checkout_facts = _verified_scope_checkout(
@@ -3610,6 +3636,7 @@ class Session:
                             "reason": "claim-not-owned-matching-checkout-scope",
                         })
                         continue
+                    owner_checkout_branch_drift = True
                     if owner_authorized_identity is None:
                         raise
                     # Branch and HEAD are observations from when the owner
@@ -3660,6 +3687,7 @@ class Session:
                 "branch": observed.branch,
             }, repository)
             conflicting_claims = []
+            same_checkout_claims: list[tuple[dict[str, Any], dict[str, Any]]] = []
             malformed_scope = False
             for item in observed_claims:
                 if item.get("repository") != repository:
@@ -3674,19 +3702,92 @@ class Session:
                     malformed_scope = True
                     continue
                 if claims_module.scopes_conflict(target_scope, current_scope):
-                    conflicting_claims.append(item)
-            if malformed_scope or len(conflicting_claims) != 1:
+                    same_consumer_checkout = (
+                        item.get("session_id") == self.session_id
+                        and item.get("consumer_id")
+                        == self.snapshot.get("consumer_id")
+                        and current_scope.get("kind") == "worktree"
+                        and current_scope.get("checkout") == str(resolved_checkout)
+                    )
+                    same_consumer_repository_claim = (
+                        item.get("session_id") == self.session_id
+                        and item.get("consumer_id")
+                        == self.snapshot.get("consumer_id")
+                        and current_scope.get("kind") == "repository"
+                        and current_scope.get("exclusive") is True
+                    )
+                    if same_consumer_checkout or same_consumer_repository_claim:
+                        if not claim_record_matches_scope(item, repository, current_scope):
+                            malformed_scope = True
+                            continue
+                        if any(
+                            current_scope.get(field) is not None
+                            and current_scope.get(field) != current_identity.get(field)
+                            for field in (
+                                "checkout_identity", "git_common_directory_identity",
+                                "manifest_identity",
+                            )
+                        ):
+                            # A valid claim for an older repository identity
+                            # at the same path is not a witness for this
+                            # checkout. A matching current claim may still
+                            # re-establish the exact owner scope.
+                            continue
+                        same_checkout_claims.append((item, current_scope))
+                    else:
+                        conflicting_claims.append(item)
+            if (malformed_scope or conflicting_claims
+                    or not same_checkout_claims):
                 report["skipped"].append({
                     "repository": repository,
                     "reason": (
                         "malformed-live-claim-scope" if malformed_scope else
-                        "no-live-checkout-claim" if not conflicting_claims else
                         "multiple-live-checkout-claims"
+                        if len(conflicting_claims) > 1 else
+                        "claim-not-owned-matching-checkout-scope"
+                        if conflicting_claims else
+                        "no-live-checkout-claim"
                     ),
                 })
                 continue
-            claim = conflicting_claims[0]
-            claim_scope = claim.get("scope")
+            current_branch_claims = [
+                pair for pair in same_checkout_claims
+                if (pair[1].get("branch") or None) == (observed.branch or None)
+            ]
+            claim_candidates = current_branch_claims or (
+                same_checkout_claims if same_owner_path_claim else []
+            )
+            if not claim_candidates and not owner_checkout_branch_drift:
+                # Legacy repository-wide claims remain a valid witness for the
+                # exact owner-granted checkout when its recorded Git identity
+                # still matches. They cannot authorize a branch-drift fallback
+                # because they do not identify one registered worktree.
+                claim_candidates = [
+                    pair for pair in same_checkout_claims
+                    if pair[1].get("kind") == "repository"
+                    and pair[1].get("exclusive") is True
+                ]
+            if not claim_candidates:
+                report["skipped"].append({
+                    "repository": repository,
+                    "reason": "claim-not-owned-matching-checkout-scope",
+                })
+                continue
+            claim, claim_scope = max(
+                claim_candidates,
+                key=lambda pair: (
+                    sum(
+                        pair[1].get(field) == current_identity.get(field)
+                        for field in (
+                            "checkout_identity", "git_common_directory_identity",
+                            "manifest_identity",
+                        )
+                    ),
+                    (pair[0].get("version", 0)
+                     if type(pair[0].get("version", 0)) is int else 0),
+                    str(pair[0].get("claim_id", "")),
+                ),
+            )
             same_worktree_claim = (
                 isinstance(claim_scope, dict)
                 and claim_scope.get("kind") == "worktree"
@@ -3695,11 +3796,7 @@ class Session:
                 and (
                     (claim_scope.get("branch") or None)
                     == (observed.branch or None)
-                    or (
-                        same_owner_path_claim
-                        and claim.get("claim_id")
-                        == owner_path_claims[0][0].get("claim_id")
-                    )
+                    or same_owner_path_claim
                 )
             )
             legacy_repository_claim = (

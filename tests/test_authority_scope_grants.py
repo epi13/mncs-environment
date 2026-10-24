@@ -998,6 +998,181 @@ def test_scope_grant_refresh_tracks_same_live_worktree_after_head_advances(
         session.close()
 
 
+def test_revalidation_composes_granted_checkout_with_same_session_claim_history(
+    tmp_path: Path,
+) -> None:
+    campaign_workspace = tmp_path / "campaign-workspace"
+    campaign_workspace.mkdir()
+    configured_workspace = tmp_path / "configured-projects"
+    configured_workspace.mkdir()
+    session = _session(tmp_path / "state", campaign_workspace)
+    session_id = session.session_id
+    try:
+        _checkout(configured_workspace, "mncs-control-mcp")
+        checkout, initial_facts = _nested_target_checkout(
+            session, configured_workspace, "same-owner-claim-history",
+            "campaign/scope-reconcile-initial",
+        )
+        grant = _grant(
+            session,
+            owner_authorized_checkout=initial_facts,
+            request_id="req_same_owner_history_grant",
+        )
+        old_scope = {
+            "kind": "worktree",
+            "checkout": str(checkout),
+            "branch": initial_facts["branch"],
+        }
+        old_claim = claims.acquire(
+            session.store,
+            repository="mncs-control-mcp",
+            session_id=session_id,
+            consumer_id="scope-grant-consumer",
+            basis=claims.BASIS_EXPLICIT,
+            reason="retain the original owner claim for this checkout",
+            scope=old_scope,
+            checkout_facts={
+                "head": initial_facts["head"],
+                "branch": initial_facts["branch"],
+                "dirty": False,
+            },
+            workspace_root=str(configured_workspace),
+            request_id="req_same_owner_history_old_claim",
+        )
+
+        current_branch = "campaign/scope-reconcile-current"
+        _git(checkout, "checkout", "-b", current_branch)
+        current_facts = workspace_module.verify_registered_checkout(
+            checkout,
+            repository="mncs-control-mcp",
+            workspace_root=configured_workspace,
+            expected_repository_root=configured_workspace / "mncs-control-mcp",
+            expected_branch=current_branch,
+        )
+        current_scope = {
+            "kind": "worktree",
+            "checkout": str(checkout),
+            "branch": current_branch,
+            "checkout_identity": current_facts["checkout_identity"],
+            "git_common_directory_identity": current_facts[
+                "git_common_directory_identity"
+            ],
+            "manifest_identity": current_facts["manifest_identity"],
+        }
+        current_claim = claims.acquire(
+            session.store,
+            repository="mncs-control-mcp",
+            session_id=session_id,
+            consumer_id="scope-grant-consumer",
+            basis=claims.BASIS_EXPLICIT,
+            reason="refresh the same checkout claim after its branch selection changed",
+            scope=current_scope,
+            checkout_facts={
+                "head": current_facts["head"],
+                "branch": current_branch,
+                "dirty": False,
+                "checkout_identity": current_facts["checkout_identity"],
+                "git_common_directory_identity": current_facts[
+                    "git_common_directory_identity"
+                ],
+                "manifest_identity": current_facts["manifest_identity"],
+            },
+            workspace_root=str(configured_workspace),
+            request_id="req_same_owner_history_current_claim",
+        )
+
+        # Model a fresh process after a revalidation removed the stale
+        # projection. Both immutable claim rows remain live in canonical Store.
+        session.snapshot["selected_checkouts"].pop("mncs-control-mcp", None)
+        session.snapshot["workspace"]["selection"] = ["mncs-environment"]
+        session._refresh_holders()
+        session._save()
+        session.close()
+        session = None
+
+        resumed = sessions.Session.open(
+            state_dir=tmp_path / "state",
+            session_id=session_id,
+            backend="store",
+            verify_on_open=False,
+            store=open_store(tmp_path / "state", "store", verify_on_open=False),
+        )
+        try:
+            report = resumed.revalidate()
+            composition = report["scope_composition"]
+            assert composition["status"] == "ready"
+            assert "mncs-control-mcp" in (
+                composition["composed"] + composition["retained"]
+            )
+            selected = resumed.snapshot["selected_checkouts"]["mncs-control-mcp"]
+            assert selected["path"] == str(checkout)
+            assert selected["branch"] == current_branch
+            assert selected["scope_grant_identity"] == grant["identity"]
+            active = claims.active_claims(resumed.store.read_claims())
+            assert old_claim["claim_id"] in active
+            assert current_claim["claim_id"] in active
+            assert "mncs-control-mcp" in resumed.snapshot["workspace"]["selection"]
+        finally:
+            resumed.close()
+    finally:
+        if session is not None:
+            session.close()
+
+
+def test_granted_checkout_composition_keeps_other_session_claim_conflict(
+    tmp_path: Path,
+) -> None:
+    campaign_workspace = tmp_path / "campaign-workspace"
+    campaign_workspace.mkdir()
+    configured_workspace = tmp_path / "configured-projects"
+    configured_workspace.mkdir()
+    session = _session(tmp_path / "state", campaign_workspace)
+    try:
+        _checkout(configured_workspace, "mncs-control-mcp")
+        checkout, owner_facts = _nested_target_checkout(
+            session, configured_workspace, "foreign-owner-conflict",
+            "campaign/scope-foreign-conflict",
+        )
+        _grant(
+            session,
+            owner_authorized_checkout=owner_facts,
+            request_id="req_foreign_owner_conflict_grant",
+        )
+        session.snapshot["selected_checkouts"].pop("mncs-control-mcp", None)
+        session.snapshot["workspace"]["selection"] = ["mncs-environment"]
+        foreign_claim = claims.acquire(
+            session.store,
+            repository="mncs-control-mcp",
+            session_id="ses_independent_worktree_writer",
+            consumer_id="independent-worktree-writer",
+            basis=claims.BASIS_EXPLICIT,
+            reason="independent session owns the exact granted worktree",
+            scope={
+                "kind": "worktree",
+                "checkout": str(checkout),
+                "branch": owner_facts["branch"],
+            },
+            checkout_facts={
+                "head": owner_facts["head"],
+                "branch": owner_facts["branch"],
+                "dirty": False,
+            },
+            workspace_root=str(configured_workspace),
+            request_id="req_foreign_owner_conflict_claim",
+        )
+
+        report = session._compose_authorized_scope_checkouts()
+        assert report["status"] == "unknown"
+        assert report["skipped"] == [{
+            "repository": "mncs-control-mcp",
+            "reason": "claim-not-owned-matching-checkout-scope",
+        }]
+        assert "mncs-control-mcp" not in session.snapshot["selected_checkouts"]
+        assert foreign_claim["session_id"] != session.session_id
+    finally:
+        session.close()
+
+
 def test_scope_grant_refresh_accepts_dirty_changes_under_exact_live_claim(
     tmp_path: Path,
 ) -> None:
