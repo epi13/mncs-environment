@@ -1,0 +1,102 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_improvement_followup_projection_live_readback_20261024",
+  "captured_at": "2026-10-24T11:46:19Z",
+  "measurement_basis": "direct-canonical-store-campaign-state-and-bounded-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_1303cead2e1a3734",
+      "sequence": 36
+    },
+    "campaign_evidence_count": 127,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "improvement-chain-projection-live-readback",
+    "source_interface": "MNCS Environment capability-intelligence projection over canonical Store campaign evidence",
+    "request": {
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "evidence_offset": 114,
+      "evidence_limit": 13
+    },
+    "outcome": {
+      "checkpoint_id": "chk_1303cead2e1a3734",
+      "campaign_evidence_count": 127,
+      "projection_status": "ready",
+      "page_coverage": {
+        "offset": 114,
+        "limit": 13,
+        "selected_campaign_evidence_references": 13,
+        "total_references": 127,
+        "historical_coverage": "bounded-to-selected-page"
+      },
+      "observation_records_verified": 3,
+      "observation_records_unavailable": 0,
+      "record_identities": [
+        "ev_environment_improvement_followup_absence_gap_20261024",
+        "ev_environment_improvement_followup_absence_implementation_20261024",
+        "ev_environment_improvement_followup_absence_verification_20261024"
+      ],
+      "pressure_hypothesis": {
+        "identity": "ph_environment_improvement_followup_absence",
+        "occurrence_count": 1,
+        "recurrence_status": "not-established"
+      },
+      "improvement_relation": {
+        "identity": "im_environment_improvement_followup_absence_20261024",
+        "pressure_hypothesis_status": "present-in-projection",
+        "implementation_source_content_integrity": "content-integrity-verified",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "not-recorded",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "interpretation": "The existing projection exposes the complete recorded gap, implementation and verification chain while making the absent independent follow-up explicit. Its one supporting pressure observation does not establish recurrence or effectiveness."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-campaign-observation",
+      "identity": "ev_environment_improvement_followup_absence_gap_20261024",
+      "repository": "mncs-environment",
+      "commit": "2049630202dbed63c547f607fea4a9b991ea67e5",
+      "path": "evidence/environmental-capability/improvement-followup-absence-gap-20261024.json",
+      "sha256": "468602dae44abcc014a3207842207e196f21aa06a39212dc461f41c7cb3e4ab0"
+    },
+    {
+      "kind": "committed-campaign-observation",
+      "identity": "ev_environment_improvement_followup_absence_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "2049630202dbed63c547f607fea4a9b991ea67e5",
+      "path": "evidence/environmental-capability/improvement-followup-absence-implementation-20261024.json",
+      "sha256": "fd99be70295a74fbe2890fd70f2c29f867a5983c2cb97d83e5cd3a7bb0155440"
+    },
+    {
+      "kind": "committed-campaign-observation",
+      "identity": "ev_environment_improvement_followup_absence_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "2049630202dbed63c547f607fea4a9b991ea67e5",
+      "path": "evidence/environmental-capability/improvement-followup-absence-verification-20261024.json",
+      "sha256": "3ed600c9aebc77237320c6e4f5c3869899dd27d6edbabba277e7214472e880c6"
+    }
+  ],
+  "not_measured": [
+    "recurrence across other sessions or campaigns",
+    "production deployment of the Control read-operation capture branch",
+    "agent behavior or effectiveness after a later independent observation"
+  ]
+}
