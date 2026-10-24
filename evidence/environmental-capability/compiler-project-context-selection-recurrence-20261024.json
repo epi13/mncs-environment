@@ -1,0 +1,174 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_project_context_selection_recurrence_20261024",
+  "captured_at": "2026-10-24T14:34:00+00:00",
+  "measurement_basis": "authenticated-control-read-result-and-selected-session-activity-projection",
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "campaign_objective": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "environment_id": "renv_80ef889b89dad0e9",
+    "definition_id": "env_c7d14ed20b708d09",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693,
+    "claim_ids": [
+      "claim:mncs-compiler:worktree:238af39c1c65",
+      "claim:mncs-compiler:worktree:5fa38ecf09fb"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "compiler-campaign-project-context-selection-and-read-activity",
+    "source_interface": "authenticated MNCS Environment Control operation and capability-intelligence projection",
+    "request": {
+      "initial_read": {
+        "project": "mncs-compiler",
+        "cwd": ".",
+        "operation": "campaign_state",
+        "session_id": "ses_164edc158d9b1637",
+        "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+        "outcome_code": "ENVIRONMENT_SESSION_SELECTION_REQUIRED"
+      },
+      "context_bound_read": {
+        "project": "mncs-compiler",
+        "cwd": ".worktrees/native-app-readiness-20261013/mncs-compiler/.worktrees/effect-capability-fact-reuse-20261024/mncs-compiler",
+        "session_id": "ses_164edc158d9b1637",
+        "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+        "campaign_state_evidence_offset": 692,
+        "campaign_state_evidence_limit": 1
+      }
+    },
+    "source_session_context": {
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637",
+      "work_intent_id": "int_8fb697d8987722d5",
+      "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+      "repository": "mncs-compiler",
+      "repository_branch_capture_status": "not-in-read-operation-event",
+      "repository_head_capture_status": "not-live-probed"
+    },
+    "outcome": {
+      "initial_selection": {
+        "status": "blocked",
+        "code": "ENVIRONMENT_SESSION_SELECTION_REQUIRED",
+        "message": "the campaign has multiple registered worktrees for this repository; checkout context is required",
+        "next": "enter from the intended registered worktree or use its durable task identity",
+        "continuations_returned": 0
+      },
+      "context_bound_read": {
+        "status": "succeeded",
+        "campaign_evidence_count": 693,
+        "campaign_state_checkpoint_id": "chk_691079cfe830f05d",
+        "evidence_reference_identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024"
+      },
+      "authenticated_read_activity": [
+        {
+          "event_identity": "evt_d8e6087624167b5a",
+          "operation_identity": "rpc_e15792ae5024c6a0",
+          "event_sequence": 5747,
+          "observed_at": "2026-10-24T14:30:55+00:00",
+          "operation": "campaign.state",
+          "outcome_status": "succeeded",
+          "exit_code": 0,
+          "control_dispatch_elapsed_ms": 12785.61957400234,
+          "measurement_status": "measured"
+        },
+        {
+          "event_identity": "evt_fb91255bfddb5464",
+          "operation_identity": "rpc_50945b176e877663",
+          "event_sequence": 5748,
+          "observed_at": "2026-10-24T14:31:28+00:00",
+          "operation": "campaign.continuation",
+          "outcome_status": "succeeded",
+          "exit_code": 0,
+          "control_dispatch_elapsed_ms": 21152.208526000322,
+          "measurement_status": "measured"
+        }
+      ],
+      "interpretation_limits": [
+        "The read-operation elapsed measurement includes session-queue wait and is not total agent execution time.",
+        "The initial project-root selection error did not return a continuation identity; supplying the exact registered worktree context enabled the read.",
+        "The two successful reads were made by the current observer while inspecting Compiler context; they are not Compiler implementation or verification runs.",
+        "No branch or current Compiler HEAD was live-probed for these operations."
+      ],
+      "measurement_availability": {
+        "control_dispatch_elapsed_ms": "measured-for-two-successful-reads",
+        "agent_total_execution_time": "unavailable",
+        "model_identity": "unavailable",
+        "token_usage": "unavailable",
+        "cache_accounting": "unavailable",
+        "resource_consumption": "unavailable",
+        "queue_wait_separate_from_dispatch": "unavailable"
+      }
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_project_session_selection",
+    "title": "A known campaign session cannot be selected when project continuations conflict",
+    "category": "coordination-continuity",
+    "subsystem": "mncs-control-mcp project continuation selection",
+    "owner": "mncs-control-mcp",
+    "basis": "A second authenticated reproduction, captured by a different Environment recorder session, required the exact registered Compiler worktree context after project-root selection reported multiple registered worktrees. The context-bound read succeeded. Two subsequent successful reads recorded measured Control dispatch elapsed times; those values include session-queue wait and do not establish cause.",
+    "recurrence": "not-assessed-by-this-record",
+    "actionable_recommendation": "When a caller already knows a session identity, let Control resolve that exact authenticated session or return the exact required registered worktree context. Continue validating principal, campaign, Environment definition, workspace, checkout identity, lifecycle, and claim authority before selection.",
+    "not_measured": [
+      "whether the read-operation dispatch time was dominated by session-queue wait or request processing",
+      "whether other Compiler agents or campaigns encounter the same selection limitation",
+      "whether the selection issue or read latency reduces the Compiler agent's available work time",
+      "the current branch and HEAD of the selected Compiler worktree during these reads"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "project": "mncs-compiler",
+      "operation": "campaign_state",
+      "outcome_code": "ENVIRONMENT_SESSION_SELECTION_REQUIRED",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637"
+    },
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-compiler",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637",
+      "event_identities": [
+        "evt_d8e6087624167b5a",
+        "evt_fb91255bfddb5464"
+      ]
+    },
+    {
+      "kind": "committed-prior-pressure-observation",
+      "identity": "ev_environment_project_continuation_conflict_20261024",
+      "repository": "mncs-environment",
+      "commit": "6d59dac14428b8e3bbd1d9437d15dfc066824096",
+      "path": "evidence/environmental-capability/project-continuation-conflict-20261024.json",
+      "sha256": "ecbc4c1145fb553b9e3a01134ebabfc4e08b29736118017d6037e1850c143a77"
+    },
+    {
+      "kind": "committed-compiler-campaign-evidence",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    }
+  ],
+  "not_measured": [
+    "the actual cause of the multi-worktree selection error",
+    "the separate contribution of queue wait and operation processing to Control dispatch elapsed time",
+    "recurrence across distinct Compiler work sessions or independent campaigns",
+    "whether the successful exact-worktree path gives Compiler agents an efficient continuation experience"
+  ]
+}
