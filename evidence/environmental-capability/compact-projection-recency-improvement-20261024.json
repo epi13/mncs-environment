@@ -1,0 +1,87 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compact_projection_recency_improvement_20261024",
+  "captured_at": "2026-10-24T23:11:36Z",
+  "measurement_basis": "derived-improvement-link-from-verified-change-and-live-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-improvement-link-record",
+    "source_interface": "mncs-environment capability-intelligence projection",
+    "request": {
+      "operation": "relate-compact-projection-recency-pressure-to-implementation-and-readback",
+      "pressure_identity": "ph_environment_compact_projection_recency_20261024"
+    },
+    "outcome": {
+      "relationship_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "subsequent_observation_status": "not-recorded",
+      "basis": "The published compaction change orders evidence by absolute ledger page offsets, retains the newest observations, removes older rows first under the byte cap, and reports the number compacted out. The focused capability-intelligence suite passed 80 tests. A live query after publication retained the latest correction readback, showed one older summary compacted out, and returned a 47391-byte compact view under the 49152-byte cap. This verifies the observed omission case and bounded recency behavior; independent later use and broader effectiveness remain unmeasured."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_compact_projection_recency_20261024",
+    "addresses_hypothesis_identity": "ph_environment_compact_projection_recency_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_compact_projection_recency_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "0caf69cd317be76bcc87c31ea185b358a6eaacc2",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "48083755f6b90dff1746ab8d3c9e309dc15b9afca7af9b95cf7cb1cfaade8085"
+    },
+    "verification_observation_identity": "ev_environment_compact_projection_recency_verification_20261024",
+    "subsequent_observation_identity": null,
+    "basis": "The source pressure record preserves the single observed omission and marks recurrence as not established. The implementation commit adds ledger-offset recency ordering, newest-tail retention, oldest-first byte-limit reduction, and an explicit compacted-out count. Its focused tests and post-publication query verify the implementation behavior and the original case. Future independent use is needed before assessing broader effectiveness.",
+    "not_measured": [
+      "whether another agent independently uses the compact projection",
+      "whether the retained latest observation changes a development decision",
+      "recurrence across other campaigns or longer evidence histories",
+      "whether future projections must compact more than one older summary"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_compact_projection_recency_pressure_20261024",
+      "repository": "mncs-environment",
+      "commit": "e44606bd247a04ba59c04bc8d05932a130daedf8",
+      "path": "evidence/environmental-capability/compact-projection-recency-pressure-20261024.json",
+      "sha256": "659358fa584a9f628c0e36d004a9e1071a4f5159c2ca41403124f7f5ca4846c9"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_compact_projection_recency_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "e44606bd247a04ba59c04bc8d05932a130daedf8",
+      "path": "evidence/environmental-capability/compact-projection-recency-verification-20261024.json",
+      "sha256": "28f5b481d8d8c3b98bc462400702bdee347e32f3f3c419c6d709905dd0c880f1"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_compact_projection_recency_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "0caf69cd317be76bcc87c31ea185b358a6eaacc2",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "48083755f6b90dff1746ab8d3c9e309dc15b9afca7af9b95cf7cb1cfaade8085"
+    }
+  ],
+  "not_measured": [
+    "independent later use of the recency-preserving compact projection",
+    "empirical elimination of the broader environmental-discovery pressure",
+    "effects on agent objectives or subsequent development outcomes"
+  ]
+}
