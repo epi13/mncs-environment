@@ -1,0 +1,82 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_pressure_reference_improvement_20261024",
+  "captured_at": "2026-10-24T09:36:34+00:00",
+  "measurement_basis": "committed-bounded-pressure-evidence-pointer-change",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {"identity": "chk_1ebb06f778bd3145", "sequence": 21},
+    "campaign_evidence_count": 52,
+    "claim_ids": ["claim:mncs-environment:worktree:faa4f0c3f49e"]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment capability intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_capability_pressure_evidence_references",
+      "implementation_commit": "180d4f7b2d7d05855db794d2d4d451f1a3f0d57e",
+      "verification_observation_identity": "ev_environment_capability_pressure_reference_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_capability_pressure_reference_followup_20261024"
+    },
+    "outcome": {
+      "implementation_change": "Compact pressure hypotheses now preserve up to 16 exact source references and include evidence_reference_count and evidence_references_truncated; output-budget reduction trims reference lists before dropping a hypothesis.",
+      "verification_recorded": true,
+      "followup_projection_exposed_exact_support_pointer": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The live read establishes source-pointer availability and integrity, not agent uptake or long-term pressure resolution."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_capability_pressure_evidence_references_20261024",
+    "addresses_hypothesis_identity": "ph_environment_capability_pressure_evidence_references",
+    "implementation_reference": {
+      "identity": "ev_environment_capability_pressure_reference_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "180d4f7b2d7d05855db794d2d4d451f1a3f0d57e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "2c42418516b221db3bdc4c0d0ca5336991eb23c6ce58b9950a03592f8f15bdff"
+    },
+    "verification_observation_identity": "ev_environment_capability_pressure_reference_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_capability_pressure_reference_followup_20261024",
+    "basis": "The focused projection test checks exact pressure evidence pointers in compact output; a live bounded campaign-state read returned the pressure record's exact repository, commit, path, and digest.",
+    "not_measured": [
+      "future agent use of compact pressure evidence pointers",
+      "whether this improves investigation completion or continuity",
+      "recurrence or long-term effectiveness across sessions"
+    ]
+  },
+  "supporting_sources": [
+    {"kind": "direct-operation-result", "campaign_id": "cmp_environmental_capability_intelligence_20261023", "session_id": "ses_c38b0ab35b9418ba"},
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_capability_pressure_reference_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "180d4f7b2d7d05855db794d2d4d451f1a3f0d57e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "2c42418516b221db3bdc4c0d0ca5336991eb23c6ce58b9950a03592f8f15bdff"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "180d4f7b2d7d05855db794d2d4d451f1a3f0d57e",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "63ef692de780d8397c5da863667f8f8a7513eb4340b4620388852896ad3f6969"
+    }
+  ],
+  "not_measured": [
+    "whether agents use these pointers rather than locating records independently",
+    "long-term recurrence or resolution of the pressure",
+    "resource and token attribution to the query"
+  ]
+}
