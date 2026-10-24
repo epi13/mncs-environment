@@ -269,6 +269,16 @@ can be passed to `projections <session> --interpret environmental-capability
 page. Each historical page is explicitly partial and reports whether an older
 page remains.
 
+The same page exposes bounded `authority_denials` with the denied action,
+repository when it can be matched to observed checkout facts, a normalized
+reason class, and the source event reference. Raw target paths and free-form
+reason text are omitted. Repeated denial patterns in one session window appear
+as `authority_denial_candidates`; they identify an interaction to inspect but
+do not establish that a denial was inappropriate or that the environment
+caused it. Absolute checkout targets are attributed only through observed
+checkout paths, and merge or publish still requires a live claim covering the
+resolved checkout scope.
+
 Observation source summaries keep registration status separate from
 `content_integrity_status`. A selected source blob is marked
 `content-integrity-verified` only after its committed Git content matches the

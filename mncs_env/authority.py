@@ -8,6 +8,7 @@ processes or mutates state. Absence of a grant never becomes permission.
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from . import claims as claims_module
@@ -108,13 +109,158 @@ def _holder_list(holders: dict[str, Any], repo: str) -> list[dict[str, Any]]:
     return normalized
 
 
+def repository_facts_for_snapshot(
+    snapshot: dict[str, Any],
+    repo_facts: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Enrich checkout facts with stable repository identity from workspace records."""
+    raw = repo_facts if isinstance(repo_facts, dict) else snapshot.get("repo_facts", {})
+    facts = ({
+        key: dict(value)
+        for key, value in raw.items()
+        if isinstance(key, str) and isinstance(value, dict)
+    } if isinstance(raw, dict) else {})
+    workspace = snapshot.get("workspace")
+    rows = workspace.get("repositories", []) if isinstance(workspace, dict) else []
+    if isinstance(rows, list):
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            alias = row.get("name")
+            if not isinstance(alias, str) or not alias:
+                continue
+            current = dict(facts.get(alias, {}))
+            repository = (
+                row.get("manifest_repository")
+                or row.get("repository")
+                or row.get("worktree_of")
+                or alias
+            )
+            current["repository"] = str(repository)
+            for key in (
+                "path", "branch", "head", "manifest_identity",
+                "checkout_identity", "git_common_directory_identity",
+            ):
+                if isinstance(row.get(key), str):
+                    current[key] = row[key]
+            facts[alias] = current
+    selected = snapshot.get("selected_checkouts")
+    if isinstance(selected, dict):
+        for alias, checkout in selected.items():
+            if not isinstance(alias, str) or not isinstance(checkout, dict):
+                continue
+            current = dict(facts.get(alias, {}))
+            current.update({
+                key: value for key, value in checkout.items()
+                if isinstance(key, str) and value is not None
+            })
+            current["repository"] = str(checkout.get("repository") or alias)
+            facts[alias] = current
+    return facts
+
+
+def checkout_facts_for_target(
+    target: str, repo_facts: dict[str, dict[str, Any]] | None = None,
+) -> tuple[str, dict[str, Any]] | None:
+    """Return the most specific observed checkout containing an absolute target."""
+    if not isinstance(target, str) or not os.path.isabs(target):
+        return None
+    normalized_target = os.path.normpath(target)
+    candidates: list[tuple[int, str, str, dict[str, Any]]] = []
+    for alias, facts in (repo_facts or {}).items():
+        if not isinstance(alias, str) or not alias or not isinstance(facts, dict):
+            continue
+        checkout = facts.get("path")
+        if not isinstance(checkout, str) or not os.path.isabs(checkout):
+            continue
+        normalized_checkout = os.path.normpath(checkout)
+        try:
+            common = os.path.commonpath((normalized_target, normalized_checkout))
+        except ValueError:
+            continue
+        if common != normalized_checkout:
+            continue
+        repository = facts.get("repository") or facts.get("manifest_repository") or alias
+        if not isinstance(repository, str) or not repository:
+            continue
+        candidates.append((len(normalized_checkout), repository,
+                           normalized_checkout, facts))
+    if not candidates:
+        return None
+    longest = max(length for length, _, _, _ in candidates)
+    matches = [item for item in candidates if item[0] == longest]
+    identities = {
+        (repository, checkout, facts.get("branch"))
+        for _, repository, checkout, facts in matches
+    }
+    if len(identities) != 1:
+        return None
+    for key in (
+        "checkout_identity", "git_common_directory_identity", "manifest_identity",
+    ):
+        identity_values = {
+            facts[key] for _, _, _, facts in matches
+            if isinstance(facts.get(key), str)
+        }
+        if len(identity_values) > 1:
+            return None
+    _, repository, _, facts = max(
+        matches,
+        key=lambda item: sum(
+            isinstance(item[3].get(key), str)
+            for key in (
+                "checkout_identity", "git_common_directory_identity",
+                "manifest_identity",
+            )
+        ),
+    )
+    return repository, facts
+
+
+def repository_for_target(
+    target: str, repo_facts: dict[str, dict[str, Any]] | None = None,
+) -> str | None:
+    """Resolve a symbolic or observed absolute target to stable repo identity.
+
+    Absolute paths are attributed only through observed checkout paths. This
+    mapping supplies context, never authority, and does not follow symlinks.
+    """
+    if not isinstance(target, str) or not target:
+        return None
+    if not os.path.isabs(target):
+        return target.split("/", 1)[0]
+    match = checkout_facts_for_target(target, repo_facts)
+    return match[0] if match is not None else None
+
+
 def _requested_scope(repo: str, target: str,
-                     scope: dict[str, Any] | None) -> dict[str, Any]:
+                     scope: dict[str, Any] | None,
+                     repo_facts: dict[str, dict[str, Any]] | None = None,
+                     ) -> dict[str, Any]:
     if scope:
         merged = {"kind": "paths" if scope.get("paths") else "repository",
                   "repository": repo}
         merged.update(scope)
         return claims_module.normalize_scope(merged, repo)
+    if os.path.isabs(target):
+        match = checkout_facts_for_target(target, repo_facts)
+        facts = match[1] if match is not None and match[0] == repo else {}
+        checkout = facts.get("path")
+        if isinstance(checkout, str) and os.path.isabs(checkout):
+            return claims_module.normalize_scope({
+                "kind": "worktree",
+                "checkout": os.path.normpath(checkout),
+                "branch": facts.get("branch"),
+                **{
+                    key: facts[key]
+                    for key in (
+                        "git_common_directory_identity", "checkout_identity",
+                        "manifest_identity",
+                    )
+                    if isinstance(facts.get(key), str) and facts[key]
+                },
+            }, repo)
+        return claims_module.normalize_scope(None, repo)
     rest = target[len(repo):].lstrip("/") if target.startswith(repo) else ""
     if rest:
         return claims_module.normalize_scope(
@@ -150,7 +296,42 @@ def evaluate(
         return {"verdict": "deny", "reason": f"unknown action {action!r}"}
     if action in context.get("denied", []):
         return {"verdict": "deny", "reason": f"action {action} is forbidden by intent"}
-    repo = target.split("/")[0] if "/" in target else target
+    repo = repository_for_target(target, repo_facts)
+    if repo is None:
+        if os.path.isabs(target) and (
+            action in MUTATING_ACTIONS
+            or action in ("publish", "merge", "delete", "verify")
+        ):
+            return {
+                "verdict": "deny",
+                "reason": (
+                    "absolute target is outside every observed repository checkout"
+                ),
+            }
+        repo = "" if os.path.isabs(target) else target
+    target_checkout = checkout_facts_for_target(target, repo_facts)
+    if (action in ("merge", "publish") and os.path.isabs(target)
+            and target_checkout is not None
+            and os.path.normpath(target)
+            != os.path.normpath(str(target_checkout[1].get("path", "")))):
+        return {
+            "verdict": "deny",
+            "reason": "absolute integration target must identify an observed checkout root",
+        }
+    if action in MUTATING_ACTIONS and os.path.isabs(target) and scope is not None:
+        scope_kind = scope.get("kind", "repository")
+        if scope_kind not in {"repository", "worktree"}:
+            return {
+                "verdict": "deny",
+                "reason": "absolute mutation target requires repository or worktree scope",
+            }
+        if (scope_kind == "worktree" and target_checkout is not None
+                and os.path.normpath(str(scope.get("checkout", "")))
+                != os.path.normpath(str(target_checkout[1].get("path", "")))):
+            return {
+                "verdict": "deny",
+                "reason": "worktree scope does not match the observed absolute target",
+            }
     if action in MUTATING_ACTIONS or action in ("publish", "merge", "verify"):
         fence = next((item for item in context.get("claim_fences", [])
                       if isinstance(item, dict)
@@ -174,7 +355,10 @@ def evaluate(
     # ownership conflicts deny exactly like mutation; unlike mutation,
     # dirt and branch are the *subject* under verification, not a bar.
     conflict_checked = mutating or action == "verify"
-    requested = _requested_scope(repo, target, scope) if conflict_checked else None
+    requested = (
+        _requested_scope(repo, target, scope, repo_facts)
+        if conflict_checked else None
+    )
     for other in others:
         if not conflict_checked:
             continue

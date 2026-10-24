@@ -196,6 +196,47 @@ class AuthorityTests(unittest.TestCase):
         self.assertEqual(verdict["verdict"], "deny")
         self.assertIn("outside this session's writable authority", verdict["reason"])
 
+    def test_absolute_checkout_merge_uses_observed_repo_and_exact_claim(self) -> None:
+        checkout = "/workspace/mncs-atlas/.worktrees/destination"
+        facts = {"mncs-atlas@destination": {
+            "path": checkout, "branch": "campaign/destination",
+            "repository": "mncs-atlas",
+        }}
+        scope = {
+            "kind": "worktree", "repository": "mncs-atlas",
+            "checkout": checkout, "branch": "campaign/destination",
+            "exclusive": False,
+        }
+        owned = {"mncs-atlas": [{"session_id": "ses_mine", "scope": scope}]}
+
+        allowed = authority.evaluate(
+            context_for(), action="merge", target=checkout,
+            session_id="ses_mine", claims=owned, repo_facts=facts,
+        )
+        self.assertEqual(allowed["verdict"], "allow", allowed)
+
+        unclaimed = authority.evaluate(
+            context_for(), action="merge", target=checkout,
+            session_id="ses_mine", claims={}, repo_facts=facts,
+        )
+        self.assertEqual(unclaimed["verdict"], "escalate", unclaimed)
+        self.assertIn("current session claim", unclaimed["reason"])
+
+        unknown = authority.evaluate(
+            context_for(), action="merge", target="/outside/unregistered/checkout",
+            session_id="ses_mine", claims=owned, repo_facts=facts,
+        )
+        self.assertEqual(unknown["verdict"], "deny")
+        self.assertIn("outside every observed repository checkout", unknown["reason"])
+
+        mismatched_scope = authority.evaluate(
+            context_for(), action="write",
+            target=f"{checkout}/src/module.mn",
+            session_id="ses_mine", claims=owned, repo_facts=facts,
+            scope={"kind": "worktree", "checkout": "/workspace/other"},
+        )
+        self.assertEqual(mismatched_scope["verdict"], "deny")
+
     def test_scoped_claim_authorizes_merge_and_publish_without_escalation(self) -> None:
         context = context_for()
         self.assertNotIn("merge", context["escalation_required"])
@@ -3435,9 +3476,15 @@ class SessionTests(unittest.TestCase):
             session.snapshot["selected_checkouts"] = {"mncs-atlas": {
                 "path": checkout, "branch": "campaign/destination",
             }}
+            session.snapshot["repo_facts"] = {"mncs-atlas": {
+                "path": checkout, "branch": "campaign/destination",
+            }}
             scope = {
                 "kind": "worktree", "repository": "mncs-atlas",
                 "checkout": checkout, "branch": "campaign/destination",
+                "checkout_identity": "checkout-fixture",
+                "git_common_directory_identity": "git-common-fixture",
+                "manifest_identity": "manifest-fixture",
                 "paths": None, "exclusive": False,
             }
             session.snapshot["claim_holders"]["mncs-atlas"] = [{
@@ -3448,14 +3495,99 @@ class SessionTests(unittest.TestCase):
                 manifest_repository="mncs-atlas", manifest_revision=1,
                 branch="campaign/destination", head="fixture", dirty=True,
             )
+            checkout_identity = {
+                "path": checkout, "branch": "campaign/destination",
+                "checkout_identity": "checkout-fixture",
+                "git_common_directory_identity": "git-common-fixture",
+                "manifest_identity": "manifest-fixture",
+            }
             with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
                 sessions.workspace_module, "inspect_repo", return_value=inspected,
-            ) as inspect_repo:
+            ) as inspect_repo, mock.patch.object(
+                sessions.workspace_module, "verify_registered_checkout",
+                return_value=checkout_identity,
+            ) as verify_checkout:
                 for action in ("merge", "publish"):
-                    with self.subTest(action=action):
-                        verdict = session.check(action=action, target="mncs-atlas")
-                        self.assertEqual(verdict["verdict"], "allow", verdict)
-            self.assertEqual(inspect_repo.call_count, 2)
+                    for target in ("mncs-atlas", checkout):
+                        with self.subTest(action=action, target=target):
+                            verdict = session.check(action=action, target=target)
+                            self.assertEqual(verdict["verdict"], "allow", verdict)
+                mismatch = session.check(
+                    action="merge", target=checkout,
+                    scope={"kind": "worktree", "checkout": "/selected/other"},
+                )
+                self.assertEqual(mismatch["verdict"], "deny")
+                self.assertIn("does not match", mismatch["reason"])
+            self.assertEqual(inspect_repo.call_count, 5)
+            self.assertEqual(verify_checkout.call_count, 3)
+
+    def test_absolute_linked_worktree_uses_manifest_repo_but_keeps_exact_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(
+                Path(directory),
+                intent={"goal": "merge only into a claimed checkout",
+                        "repositories": ["mncs-atlas"]},
+            )
+            root = "/workspace/mncs-atlas"
+            destination = f"{root}/.worktrees/main-destination"
+            current = f"{root}/.worktrees/current-campaign"
+            session.snapshot["workspace"] = {
+                "root": "/workspace",
+                "repositories": [
+                    {"name": "mncs-atlas", "path": root,
+                     "manifest_repository": "mncs-atlas", "branch": "main"},
+                    {"name": "mncs-atlas@main-destination",
+                     "path": destination, "manifest_repository": "mncs-atlas",
+                     "worktree_of": "mncs-atlas", "branch": "main"},
+                ],
+            }
+            session.snapshot["repo_facts"] = {
+                "mncs-atlas@main-destination": {
+                    "path": destination, "branch": "main",
+                },
+            }
+            session.snapshot["selected_checkouts"] = {"mncs-atlas": {
+                "path": current, "branch": "campaign/current",
+            }}
+            current_scope = {
+                "kind": "worktree", "repository": "mncs-atlas",
+                "checkout": current, "branch": "campaign/current",
+                "paths": None, "exclusive": False,
+            }
+            session.snapshot["claim_holders"]["mncs-atlas"] = [{
+                "session_id": session.session_id, "scope": current_scope,
+            }]
+            checkout_identity = {
+                "path": destination, "branch": "main",
+                "checkout_identity": "destination-checkout",
+                "git_common_directory_identity": "atlas-common-directory",
+                "manifest_identity": "atlas-manifest",
+            }
+            inspected = sessions.workspace_module.RepoState(
+                name="mncs-atlas", path=destination,
+                manifest_repository="mncs-atlas", manifest_revision=1,
+                branch="main", head="fixture", dirty=False,
+            )
+            with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
+                sessions.workspace_module, "verify_registered_checkout",
+                return_value=checkout_identity,
+            ) as verify_checkout, mock.patch.object(
+                sessions.workspace_module, "inspect_repo", return_value=inspected,
+            ):
+                verdict = session.check(action="merge", target=destination)
+
+            self.assertEqual(verdict["verdict"], "escalate", verdict)
+            self.assertIn("current session claim", verdict["reason"])
+            verify_checkout.assert_called_once_with(
+                destination,
+                repository="mncs-atlas",
+                workspace_root="/workspace",
+                expected_repository_root=root,
+                expected_branch="main",
+            )
+            self.assertEqual(
+                session._log()[-1]["type"], "authority.escalated",
+            )
 
     def test_resume_request_retry_deduplicates_published_participation_event(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

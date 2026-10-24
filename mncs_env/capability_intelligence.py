@@ -19,6 +19,7 @@ import time
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from . import authority as authority_module
 from . import workspace as workspace_module
 from .identity import digest_hex
 from .sessions import LifecycleError
@@ -43,6 +44,8 @@ MAX_SESSION_ACTIVITY_INTERACTIONS = 32
 MAX_SESSION_ACTIVITY_CAPABILITIES = 16
 MAX_SESSION_ACTIVITY_RPC_OPERATIONS = 32
 MAX_SESSION_ACTIVITY_RPC_PRESSURE_CANDIDATES = 8
+MAX_SESSION_ACTIVITY_AUTHORITY_DENIALS = 16
+MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES = 8
 MAX_RPC_READ_ACTIVITY_OBSERVATIONS = 128
 SOURCE_INTEGRITY_VERIFIED = frozenset({
     "content-integrity-verified",
@@ -899,6 +902,17 @@ def _compact_projection(
         compact_activity_source["rpc_operation_records_omitted"] = (
             activity_source["rpc_operation_records_omitted"]
         )
+    if activity_source.get("authority_denial_events_considered", 0):
+        compact_activity_source.update({
+            key: activity_source[key]
+            for key in (
+                "authority_denial_events_considered",
+                "authority_denial_records_returned",
+                "authority_denial_records_omitted",
+                "authority_denial_records_invalid",
+            )
+            if key in activity_source
+        })
     compact_activity_interactions = []
     raw_interactions = activity.get("interactions")
     raw_interactions = raw_interactions if isinstance(raw_interactions, list) else []
@@ -996,6 +1010,64 @@ def _compact_projection(
                 if isinstance(reference, dict)
             ]
         compact_rpc_pressure.append(compact_item)
+    compact_authority_denials = []
+    raw_authority_denials = activity.get("authority_denials")
+    raw_authority_denials = (
+        raw_authority_denials if isinstance(raw_authority_denials, list) else []
+    )
+    for item in raw_authority_denials[:8]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in (
+                "identity", "action", "outcome_status", "reason_class", "repository",
+            )
+            if isinstance(item.get(key), str)
+        }
+        reference = item.get("event_reference")
+        if isinstance(reference, dict):
+            compact_item["event_reference"] = {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in reference
+            }
+        compact_authority_denials.append(compact_item)
+    compact_authority_candidates = []
+    raw_authority_candidates = activity.get("authority_denial_candidates")
+    raw_authority_candidates = (
+        raw_authority_candidates if isinstance(raw_authority_candidates, list) else []
+    )
+    for item in raw_authority_candidates[:4]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in (
+                "identity", "status", "subsystem", "action", "reason_class",
+                "repository", "recurrence_scope", "causal_claim",
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in ("occurrence_count", "distinct_session_count"):
+            if type(item.get(key)) is int:
+                compact_item[key] = item[key]
+        if isinstance(item.get("interpretation"), str):
+            compact_item["interpretation"] = _short_text(
+                item["interpretation"], 256,
+            )
+        references = item.get("supporting_events")
+        if isinstance(references, list):
+            compact_item["supporting_events"] = [
+                {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                }
+                for reference in references[:4]
+                if isinstance(reference, dict)
+            ]
+        compact_authority_candidates.append(compact_item)
     compact_activity = {
         "status": _short_text(activity.get("status"), 96),
         "source": compact_activity_source,
@@ -1023,6 +1095,17 @@ def _compact_projection(
         compact_activity["rpc_failure_candidates"] = compact_rpc_pressure
         if len(raw_rpc_pressure) > len(compact_rpc_pressure):
             compact_activity["rpc_failure_candidates_truncated"] = True
+    if raw_authority_denials:
+        compact_activity["authority_denial_count"] = activity.get(
+            "authority_denial_count", len(raw_authority_denials),
+        )
+        compact_activity["authority_denials"] = compact_authority_denials
+        if len(raw_authority_denials) > len(compact_authority_denials):
+            compact_activity["authority_denials_truncated"] = True
+    if raw_authority_candidates:
+        compact_activity["authority_denial_candidates"] = compact_authority_candidates
+        if len(raw_authority_candidates) > len(compact_authority_candidates):
+            compact_activity["authority_denial_candidates_truncated"] = True
 
     result = {
         "schema_version": SCHEMA,
@@ -1080,6 +1163,12 @@ def _compact_projection(
         elif result["session_activity"].get("rpc_failure_candidates"):
             result["session_activity"]["rpc_failure_candidates"].pop()
             result["session_activity"]["rpc_failure_candidates_truncated"] = True
+        elif result["session_activity"].get("authority_denial_candidates"):
+            result["session_activity"]["authority_denial_candidates"].pop()
+            result["session_activity"]["authority_denial_candidates_truncated"] = True
+        elif result["session_activity"].get("authority_denials"):
+            result["session_activity"]["authority_denials"].pop()
+            result["session_activity"]["authority_denials_truncated"] = True
         else:
             break
     return result
@@ -1723,6 +1812,31 @@ def _authenticated_rpc_read_event(
     )
 
 
+def _authority_denial_reason_class(reason: Any) -> str:
+    """Classify a denial without copying free-form target or session details."""
+    if not isinstance(reason, str) or not reason:
+        return "reason-unavailable"
+    normalized = " ".join(reason.lower().split())
+    classifications = (
+        ("action-forbidden-by-intent", "forbidden by intent"),
+        ("unknown-action", "unknown action"),
+        ("overlapping-claim", "overlaps scope claimed by another session"),
+        ("claim-fenced", "authority was fenced after claim generation"),
+        ("protected-scope", "is protected scope for this session"),
+        ("outside-writable-authority", "is outside this session's writable authority"),
+        ("workspace-facts-unavailable", "has no observed workspace facts"),
+        ("scope-not-owned", "is not owned scope"),
+        ("current-claim-required", "requires a current session claim"),
+        ("escalation-required", "requires escalation"),
+        (
+            "unobserved-absolute-target",
+            "absolute target is outside every observed repository checkout",
+        ),
+    )
+    return next((category for category, fragment in classifications
+                 if fragment in normalized), "other-denial")
+
+
 def _session_activity(
     session: Any, snapshot: dict[str, Any], *,
     event_before_sequence: int | None = None,
@@ -2076,6 +2190,87 @@ def _session_activity(
         event_type = event.get("type")
         if isinstance(event_type, str) and event_type and len(event_type) <= 96:
             event_type_counts[event_type] = event_type_counts.get(event_type, 0) + 1
+    denial_events = [
+        event for event in events if event.get("type") == "authority.denied"
+    ]
+    denial_records: list[dict[str, Any]] = []
+    snapshot_facts = authority_module.repository_facts_for_snapshot(snapshot)
+    invalid_denial_event_count = 0
+    for event in reversed(denial_events):
+        reference = _event_reference(event)
+        payload = event.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        action = payload.get("action")
+        reason = payload.get("reason")
+        if reference is None:
+            invalid_denial_event_count += 1
+            continue
+        if not isinstance(action, str) or action not in authority_module.ACTIONS:
+            action = "action-unavailable"
+        target = payload.get("target")
+        repository = (
+            authority_module.repository_for_target(target, snapshot_facts)
+            if isinstance(target, str) and target else None
+        )
+        denial_records.append({
+            "identity": "authdeny_" + digest_hex({
+                "session_id": session.session_id,
+                "event": reference["identity"],
+            }, length=16),
+            "action": action,
+            "outcome_status": "denied",
+            "reason_class": _authority_denial_reason_class(reason),
+            **({"repository": repository} if repository else {}),
+            "event_reference": reference,
+        })
+    authority_denials = denial_records[:MAX_SESSION_ACTIVITY_AUTHORITY_DENIALS]
+    authority_denials_omitted = max(0, len(denial_records) - len(authority_denials))
+    denial_groups: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    for item in denial_records:
+        key = (
+            str(item.get("repository") or "repository-unavailable"),
+            str(item.get("action") or "action-unavailable"),
+            str(item.get("reason_class") or "reason-unavailable"),
+        )
+        denial_groups.setdefault(key, []).append(item)
+    authority_denial_candidates = []
+    for (repository, action, reason_class), group in sorted(denial_groups.items()):
+        if len(group) < 2:
+            continue
+        candidate = {
+            "identity": "ph_authority_" + digest_hex({
+                "session_id": session.session_id,
+                "repository": repository,
+                "action": action,
+                "reason_class": reason_class,
+            }, length=16),
+            "status": "candidate-needs-investigation",
+            "subsystem": "authority-and-work-scope",
+            "action": action,
+            "reason_class": reason_class,
+            "occurrence_count": len(group),
+            "distinct_session_count": 1,
+            "recurrence_scope": "same-session-selected-event-window",
+            "causal_claim": "not-established",
+            "interpretation": (
+                "This denial pattern recurred in one selected session window. "
+                "The intended scope, appropriateness of each denial, and cause "
+                "remain unestablished."
+            ),
+            "supporting_events": [
+                item["event_reference"] for item in sorted(
+                    group,
+                    key=lambda item: item["event_reference"]["sequence"],
+                )[:8]
+            ],
+        }
+        if repository != "repository-unavailable":
+            candidate["repository"] = repository
+        authority_denial_candidates.append(candidate)
+        if len(authority_denial_candidates) >= (
+            MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES
+        ):
+            break
     unpaired_completion_count = 0
     for event in completion_events:
         payload = event.get("payload")
@@ -2127,6 +2322,13 @@ def _session_activity(
                 window_references[-1]["sequence"] if window_references else None
             ),
             "event_type_counts": event_type_counts,
+            "authority_denial_events_considered": len(denial_events),
+            "authority_denial_records_returned": len(authority_denials),
+            "authority_denial_records_omitted": authority_denials_omitted,
+            "authority_denial_records_invalid": invalid_denial_event_count,
+            "authority_denial_selection_policy": (
+                "newest-sanitized-denials-in-selected-event-window"
+            ),
             "invocation_events_considered": len(invocation_events),
             "completion_events_considered": len(completion_events),
             "invocation_records_omitted": invocations_omitted,
@@ -2170,6 +2372,9 @@ def _session_activity(
         "rpc_operation_count": len(rpc_operations),
         "rpc_operations": rpc_operations,
         "rpc_failure_candidates": rpc_failure_candidates,
+        "authority_denial_count": len(authority_denials),
+        "authority_denials": authority_denials,
+        "authority_denial_candidates": authority_denial_candidates,
         "capabilities": capabilities,
         "measurement_limits": limits,
     }
@@ -2754,7 +2959,7 @@ def project(
         "pressure_hypothesis_count": len(hypotheses),
         "session_activity_pressure_candidate_count": len(
             activity.get("rpc_failure_candidates", [])
-        ),
+        ) + len(activity.get("authority_denial_candidates", [])),
         "improvement_relation_count": len(improvement_relations),
         "pressure_hypotheses": hypotheses,
         "improvement_relations": improvement_relations,
@@ -2773,6 +2978,7 @@ def project(
             "A linked verification record establishes that evidence is present and integrity checked; effectiveness still requires independent follow-up.",
             "Optional improvement relations that do not meet the current contract are surfaced as unverified and excluded from improvement claims.",
             "Session activity summarizes only the bounded recent event tail and exposes no raw invocation arguments or results.",
+            "Authority denial activity exposes normalized action and reason classes with event references; raw targets and free-form reasons are omitted.",
             "Authenticated Control read-operation events include a measured Control-dispatch elapsed time, which includes session-queue wait and is not total agent execution duration; model identity, token usage, resource consumption, and cache accounting remain unavailable.",
             "Direct read-operation capture stops after 128 observations per session; selected-window and capture-limit fields disclose partial coverage.",
             "Read-operation recurrence candidates cover only the selected tail of this session; cross-session recurrence is unavailable in this projection.",

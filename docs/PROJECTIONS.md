@@ -157,6 +157,16 @@ the current generation's binding metadata but materialize only the selected
 verified event payloads. Event page reads are on demand and do not copy the
 session transcript.
 
+The selected page can also expose bounded `authority_denials`: action,
+observed repository when resolvable, normalized reason class, and the exact
+source event reference. The projection omits raw target paths and free-form
+reason text. A repeated pattern is an investigation candidate scoped to this
+session window; it does not establish that the denied action was appropriate,
+that the environment caused it, or that the pattern recurs across sessions.
+For absolute targets, repository attribution uses observed checkout paths.
+Merge and publish authorization still requires a live claim covering the
+resolved scope.
+
 `campaign-state <session>` includes this derived view when the existing
 128 KiB campaign-state response budget permits, so a caller reading the durable
 ledger can inspect related environmental context in the same response. When

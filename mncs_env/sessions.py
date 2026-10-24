@@ -238,6 +238,11 @@ def _repo_facts(workspace_view: dict[str, Any]) -> dict[str, dict[str, Any]]:
     for repo in workspace_view.get("repositories", []):
         signals = workspace_module.foreign_work_signals(repo)
         facts[repo["name"]] = {
+            "repository": (
+                repo.get("manifest_repository")
+                or repo.get("worktree_of")
+                or repo["name"]
+            ),
             "clean": not repo.get("dirty", False),
             "main_branch": repo.get("branch") in ("main", "master", None),
             "dirty": bool(repo.get("dirty", False)),
@@ -252,6 +257,7 @@ def _repo_facts(workspace_view: dict[str, Any]) -> dict[str, dict[str, Any]]:
             continue
         clean = bool(selected.get("clean", False))
         facts[repository] = {
+            "repository": repository,
             "clean": clean,
             "main_branch": selected.get("branch") in ("main", "master", None),
             "dirty": not clean,
@@ -4218,7 +4224,15 @@ class Session:
         repo_facts: dict[str, dict[str, Any]] | None = None,
         scope: dict[str, Any] | None = None,
     ) -> dict[str, str]:
-        repository = target.split("/")[0] if "/" in target else target
+        observed_facts = authority_module.repository_facts_for_snapshot(
+            self.snapshot, repo_facts,
+        )
+        repository = authority_module.repository_for_target(target, observed_facts)
+        if repository is None:
+            repository = "" if os.path.isabs(target) else target
+        target_checkout = authority_module.checkout_facts_for_target(
+            target, observed_facts,
+        )
         normalized_scope = self._canonical_scope(repository, scope)
         if action in ("write", "mutate", "execute", "publish", "merge", "delete", "retire"):
             # Current entry observations are not a mutation lease. Re-read
@@ -4226,12 +4240,128 @@ class Session:
             # broad discovery is unnecessary on a quiet observational entry.
             self._refresh_holders()
             selected = self.snapshot.get("selected_checkouts", {}).get(repository)
+            selected_target = False
+            if isinstance(selected, dict) and selected.get("path"):
+                workspace_snapshot = self.snapshot.get("workspace", {})
+                workspace_snapshot = (
+                    workspace_snapshot if isinstance(workspace_snapshot, dict) else {}
+                )
+                workspace_root = Path(workspace_snapshot.get("root", "."))
+                selected_path = Path(str(selected["path"]))
+                if not selected_path.is_absolute():
+                    selected_path = workspace_root / selected_path
+                selected_target = (
+                    os.path.isabs(target)
+                    and Path(os.path.abspath(target))
+                    == Path(os.path.abspath(selected_path))
+                )
             needs_selected_scope = (
                 action in ("publish", "merge")
                 and normalized_scope is None
-                and target == repository
+                and (target == repository or selected_target)
             )
-            if (
+            needs_absolute_target_validation = (
+                target_checkout is not None
+                and (
+                    action in authority_module.MUTATING_ACTIONS
+                    or action in ("publish", "merge")
+                )
+            )
+            if needs_absolute_target_validation:
+                workspace = self.snapshot.get("workspace", {})
+                workspace = workspace if isinstance(workspace, dict) else {}
+                workspace_root = workspace.get("root", ".")
+                if not isinstance(workspace_root, str):
+                    raise LifecycleError("absolute checkout target workspace is unavailable")
+                expected_repository_root = None
+                rows = workspace.get("repositories", [])
+                if isinstance(rows, list):
+                    roots = [
+                        row.get("path") for row in rows
+                        if isinstance(row, dict)
+                        and row.get("name") == repository
+                        and row.get("manifest_repository") == repository
+                        and isinstance(row.get("path"), str)
+                    ]
+                    if len(roots) == 1:
+                        expected_repository_root = roots[0]
+                observed_checkout = target_checkout[1]
+                checkout_path = observed_checkout.get("path")
+                if not isinstance(checkout_path, str) or not checkout_path:
+                    raise LifecycleError("absolute target checkout path is unavailable")
+                try:
+                    checkout_identity = workspace_module.verify_registered_checkout(
+                        checkout_path,
+                        repository=repository,
+                        workspace_root=workspace_root,
+                        expected_repository_root=expected_repository_root,
+                        expected_branch=(
+                            observed_checkout.get("branch")
+                            if isinstance(observed_checkout.get("branch"), str)
+                            else None
+                        ),
+                    )
+                except workspace_module.WorkspaceResolutionError as error:
+                    raise LifecycleError(
+                        "absolute target checkout is not currently registered"
+                    ) from error
+                inspected = workspace_module.inspect_repo(
+                    Path(checkout_identity["path"]), _refresh=True,
+                )
+                if inspected is None or inspected.git_error:
+                    raise LifecycleError(
+                        "absolute integration target observation unavailable at mutation boundary"
+                    )
+                record = inspected.record()
+                record["name"] = repository
+                fresh_facts = _repo_facts({"repositories": [record]})
+                fresh_facts[repository]["repository"] = repository
+                for key in (
+                    "checkout_identity", "git_common_directory_identity",
+                    "manifest_identity",
+                ):
+                    if isinstance(checkout_identity.get(key), str):
+                        fresh_facts[repository][key] = checkout_identity[key]
+                observed_facts = {**observed_facts, **fresh_facts}
+                if normalized_scope is None and action in ("publish", "merge"):
+                    normalized_scope = self._canonical_scope(repository, {
+                        "kind": "worktree",
+                        "checkout": checkout_identity["path"],
+                        "branch": checkout_identity.get("branch"),
+                        **{
+                            key: checkout_identity[key]
+                            for key in (
+                                "git_common_directory_identity",
+                                "checkout_identity", "manifest_identity",
+                            )
+                            if isinstance(checkout_identity.get(key), str)
+                        },
+                    })
+                elif (
+                    normalized_scope is not None
+                    and (
+                        (
+                            normalized_scope.get("kind") == "worktree"
+                            and os.path.normpath(
+                                str(normalized_scope.get("checkout", ""))
+                            ) != os.path.normpath(checkout_identity["path"])
+                        )
+                        or normalized_scope.get("kind") not in {"repository", "worktree"}
+                    )
+                ):
+                    verdict = {
+                        "verdict": "deny",
+                        "reason": (
+                            "explicit authority scope does not match the "
+                            "observed absolute target"
+                        ),
+                    }
+                    self._emit(
+                        "authority.denied", "environment",
+                        {"action": action, "target": target, "reason": verdict["reason"]},
+                    )
+                    return verdict
+            elif (
                 (repo_facts is None or needs_selected_scope)
                 and isinstance(selected, dict)
                 and selected.get("path")
@@ -4252,16 +4382,16 @@ class Session:
                         "checkout": record["path"],
                         "branch": record.get("branch"),
                     })
-                if repo_facts is None:
-                    repo_facts = {**self.snapshot.get("repo_facts", {}),
-                                  **_repo_facts({"repositories": [record]})}
+                fresh_facts = _repo_facts({"repositories": [record]})
+                fresh_facts[repository]["repository"] = repository
+                observed_facts = {**observed_facts, **fresh_facts}
         verdict = authority_module.evaluate(
             self.effective_authority(),
             action=action,
             target=target,
             session_id=self.session_id,
             claims=self.snapshot.get("claim_holders", {}),
-            repo_facts=repo_facts if repo_facts is not None else self.snapshot.get("repo_facts", {}),
+            repo_facts=observed_facts,
             scope=normalized_scope,
         )
         if verdict["verdict"] == "deny":

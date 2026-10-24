@@ -418,6 +418,77 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
     assert any("token usage" in item for item in activity["measurement_limits"])
 
 
+def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Path) -> None:
+    record = _observation(
+        "ev_environment_authority_denial_activity",
+        "ses_environment_authority_denial_activity",
+        "cmp_environment_authority_denial_activity",
+    )
+    session, _ = _session(tmp_path, [record])
+    checkout = session.snapshot["selected_checkouts"]["mncs-environment"]["path"]
+    alias_checkout = str(Path(checkout) / ".worktrees" / "main-target")
+    session.snapshot["repo_facts"] = {"mncs-environment@main-target": {
+        "path": alias_checkout, "branch": "main",
+    }}
+    session.snapshot["workspace"]["repositories"] = [{
+        "name": "mncs-environment@main-target",
+        "path": alias_checkout,
+        "branch": "main",
+        "manifest_repository": "mncs-environment",
+        "worktree_of": "mncs-environment",
+    }]
+    events = [
+        {
+            "identity": f"evt_authority_denied_{sequence}",
+            "sequence": sequence,
+            "type": "authority.denied",
+            "payload": {
+                "action": "merge",
+                "target": alias_checkout,
+                "reason": (
+                    "private-reason-echo is outside this session's writable authority"
+                ),
+            },
+        }
+        for sequence in (41, 42)
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events), "events": events[-limit:],
+        "truncated": False, "next_before_sequence": None,
+    }
+
+    result = capability_intelligence.project(session)
+    activity = result["session_activity"]
+    assert activity["source"]["authority_denial_events_considered"] == 2
+    assert activity["authority_denial_count"] == 2
+    assert activity["authority_denials"][0]["repository"] == "mncs-environment"
+    assert activity["authority_denials"][0]["action"] == "merge"
+    assert activity["authority_denials"][0]["reason_class"] == (
+        "outside-writable-authority"
+    )
+    assert activity["authority_denials"][0]["event_reference"]["sequence"] == 42
+    assert result["session_activity_pressure_candidate_count"] == 1
+    candidate = activity["authority_denial_candidates"][0]
+    assert candidate["status"] == "candidate-needs-investigation"
+    assert candidate["occurrence_count"] == 2
+    assert candidate["distinct_session_count"] == 1
+    assert candidate["causal_claim"] == "not-established"
+    assert candidate["repository"] == "mncs-environment"
+    assert alias_checkout not in json.dumps(result)
+    assert "private-reason-echo" not in json.dumps(result)
+
+    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+    compact_activity = compact["session_activity"]
+    assert compact_activity["authority_denials"][0]["event_reference"][
+        "identity"
+    ] == "evt_authority_denied_42"
+    assert compact_activity["authority_denial_candidates"][0][
+        "supporting_events"
+    ][0]["identity"] == "evt_authority_denied_41"
+    assert alias_checkout not in json.dumps(compact)
+    assert "private-reason-echo" not in json.dumps(compact)
+
+
 def test_session_activity_discloses_bounded_event_and_interaction_windows(
     tmp_path: Path,
 ) -> None:
