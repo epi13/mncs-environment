@@ -1,0 +1,62 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_evidence_pointer_alias_recovery_count_correction_20261024",
+  "captured_at": "2026-10-24T15:46:29Z",
+  "observation": {
+    "kind": "append-only-campaign-evidence-count-correction",
+    "source_interface": "authenticated MNCS Environment checkpoint and campaign-state readback",
+    "request": {
+      "corrects_observation_identity": "ev_environment_evidence_pointer_identity_alias_recovery_followup_20261024",
+      "base_checkpoint_identity": "chk_c46038277f540217",
+      "checkpoint_identity_after_followup": "chk_a564fb3f6fd63f5d"
+    },
+    "outcome": {
+      "previously_recorded_campaign_evidence_count": 37,
+      "authoritative_base_checkpoint_evidence_count": 33,
+      "corrected_campaign_evidence_count_before_followup": 33,
+      "campaign_evidence_count_after_followup": 34,
+      "evidence_pointers_changed": false,
+      "explanation": "The alias recovery observation recorded an incorrect count. Its referenced base checkpoint reports 33 evidence references; the accepted follow-up checkpoint appends one reference and reports 34."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_a564fb3f6fd63f5d",
+    "campaign_evidence_count_before_recording": 34,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "supporting_sources": [
+    {
+      "kind": "committed-campaign-observation-being-corrected",
+      "identity": "ev_environment_evidence_pointer_identity_alias_recovery_followup_20261024",
+      "repository": "mncs-environment",
+      "commit": "f31564c90ba9ad7b6a6d280d7788aca8252a3341",
+      "path": "evidence/environmental-capability/evidence-pointer-identity-alias-recovery-followup-20261024.json",
+      "sha256": "61eb615c664d843d2465fa58ad1edc0760cc5e289dce33f5a9ecf0f32601c157"
+    },
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "measurement_basis": "authenticated-checkpoint-evidence-counts",
+  "not_measured": []
+}
