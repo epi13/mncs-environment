@@ -1,0 +1,87 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_capability_activity_projection_gap_20261024",
+  "captured_at": "2026-10-24T10:43:00Z",
+  "measurement_basis": "committed-projection-source-review-and-authentic-session-event-read",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_b4e80b36680e9ad7",
+      "sequence": 32
+    },
+    "campaign_evidence_count": 103,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "session-capability-event-projection-gap",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "pre_change_projection_identity": "eci_4702e51a5807d2b2",
+      "event_source_review_commit": "b75539bf30034cb3130c7616746fab109bb77b89"
+    },
+    "outcome": {
+      "pre_change_projection_correlated_campaign_observations": true,
+      "pre_change_projection_correlated_session_capability_events": false,
+      "existing_session_event_vocabulary_includes_capability_invocation_pairs": true,
+      "current_campaign_session_event_count": 73,
+      "interpretation_limit": "This identifies a missing relationship in the projection. It does not establish that any capability invocation was lost or that this gap caused repeated work."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_session_capability_activity_projection",
+    "title": "Durable Environment capability events are not correlated to agent objectives in the capability projection",
+    "category": "agent-activity-observability",
+    "subsystem": "mncs-environment session event and capability-intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "The session event vocabulary already records capability.invoked and invocation.completed with a provider request identity, while the prior capability projection read campaign evidence without joining those events to the current session objective or Environment identity.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Expose a read-only bounded event tail through the existing capability projection, pair invocation and completion by provider request identity, retain exact event references and current work context, omit raw arguments and results, and disclose tail truncation and unavailable measurements.",
+    "not_measured": [
+      "whether this missing projection relationship affected earlier development decisions",
+      "cross-session recurrence of uncorrelated capability events",
+      "token usage, model identity, execution duration, or resource consumption"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "projections",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "projection_identity": "eci_4702e51a5807d2b2",
+      "campaign_state_checkpoint_id": "chk_b4e80b36680e9ad7",
+      "campaign_evidence_count": 103,
+      "session_event_count": 73,
+      "pre_change_projection_session_activity_field_present": false
+    },
+    {
+      "kind": "source-review",
+      "repository": "mncs-environment",
+      "commit": "b75539bf30034cb3130c7616746fab109bb77b89",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8aba5dbf4c32911e6184f42230f79fa3ed33f161db80bae6655869fd2a03d391",
+      "observed_contract": "The projection processes committed campaign observation records and has no session event-tail correlation section."
+    }
+  ],
+  "not_measured": [
+    "whether invocation events in other sessions were difficult for agents to discover",
+    "whether adding the projection changes development outcomes",
+    "whether read-only Environment RPC operations are recorded as session events"
+  ]
+}

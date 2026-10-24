@@ -1,0 +1,94 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_capability_activity_projection_followup_20261024",
+  "captured_at": "2026-10-24T10:43:00Z",
+  "measurement_basis": "read-only-live-projection-of-active-compiler-session-event-tail",
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "environment_id": "renv_80ef889b89dad0e9",
+    "definition_id": "env_c7d14ed20b708d09",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d"
+    },
+    "campaign_evidence_count": 693
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "compiler-session-event-tail-observed-through-capability-projection",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_164edc158d9b1637",
+      "projection_identity": "eci_b5188ea0cf7fcaac",
+      "campaign_state_checkpoint_id": "chk_691079cfe830f05d"
+    },
+    "outcome": {
+      "campaign_evidence_count": 693,
+      "session_event_count": 5746,
+      "selected_event_window_count": 256,
+      "selected_event_sequence_range": [
+        5491,
+        5746
+      ],
+      "selected_event_window_identity_digest": "970f8fec5c0c00ab",
+      "selected_window_invocation_event_count": 0,
+      "selected_window_completion_event_count": 0,
+      "selected_window_event_types": [
+        "adapter.observed",
+        "authority.scope-granted",
+        "campaign.reconciled",
+        "capability.available",
+        "capability.bound",
+        "capability.changed",
+        "capability.unavailable",
+        "capability.unbound",
+        "capability.unknown",
+        "doctor.remediated",
+        "lease.acquired",
+        "lease.released",
+        "session.checkpointed",
+        "session.resumed",
+        "session.revalidated",
+        "workspace.changed",
+        "workspace.checkout-composed"
+      ],
+      "activity_status": "partial-no-invocations-in-selected-window",
+      "interpretation_limit": "Only sequences 5491 through 5746 were interpreted for capability invocations. This does not establish that earlier session history lacks capability calls or that direct Control RPC calls are represented in this event stream."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "projections",
+      "session_id": "ses_164edc158d9b1637",
+      "projection_identity": "eci_b5188ea0cf7fcaac",
+      "event_window_sequence_range": [
+        5491,
+        5746
+      ],
+      "event_window_identity_digest": "970f8fec5c0c00ab"
+    },
+    {
+      "kind": "source-review",
+      "repository": "mncs-environment",
+      "commit": "4203e004cb3a8ad201410e61ad0503653bcf26de",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "db66724291dcef763d70bf588ca4e647e9497ca5ffa128cb920705c8e8c262e6",
+      "observed_contract": "The projection reports only the selected event tail, event type counts, and exact invocation event references."
+    }
+  ],
+  "not_measured": [
+    "capability invocation activity in the earlier 5490 event sequences",
+    "individual agent activity outside Environment session events",
+    "whether the read-only RPC activity gap recurs across sessions"
+  ]
+}

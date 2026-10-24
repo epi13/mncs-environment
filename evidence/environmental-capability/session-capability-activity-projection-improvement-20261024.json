@@ -1,0 +1,96 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_capability_activity_projection_improvement_20261024",
+  "captured_at": "2026-10-24T10:43:00Z",
+  "measurement_basis": "verified-session-event-projection-implementation",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_b4e80b36680e9ad7",
+      "sequence": 32
+    },
+    "campaign_evidence_count": 103,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "session-capability-event-projection-implementation",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "implementation_commit": "4203e004cb3a8ad201410e61ad0503653bcf26de"
+    },
+    "outcome": {
+      "session_event_tail_limit": 256,
+      "projected_invocation_limit": 32,
+      "invocation_completion_correlation": "provider-request-identity",
+      "exact_event_identity_and_sequence_preserved": true,
+      "current_objective_and_environment_identity_preserved": true,
+      "raw_invocation_arguments_and_results_copied": false,
+      "empty_truncated_window_distinguished_from_complete_no_invocation_history": true
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_session_capability_activity_projection",
+    "title": "Durable Environment capability events are not correlated to agent objectives in the capability projection",
+    "category": "agent-activity-observability",
+    "subsystem": "mncs-environment session event and capability-intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "The session event vocabulary already records capability.invoked and invocation.completed with a provider request identity, while the prior capability projection read campaign evidence without joining those events to the current session objective or Environment identity.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Expose a read-only bounded event tail through the existing capability projection, pair invocation and completion by provider request identity, retain exact event references and current work context, omit raw arguments and results, and disclose tail truncation and unavailable measurements.",
+    "not_measured": [
+      "whether this missing projection relationship affected earlier development decisions",
+      "cross-session recurrence of uncorrelated capability events",
+      "token usage, model identity, execution duration, or resource consumption"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_session_capability_activity_projection_20261024",
+    "addresses_hypothesis_identity": "ph_environment_session_capability_activity_projection",
+    "implementation_reference": {
+      "identity": "ev_environment_session_capability_activity_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "4203e004cb3a8ad201410e61ad0503653bcf26de",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "db66724291dcef763d70bf588ca4e647e9497ca5ffa128cb920705c8e8c262e6"
+    },
+    "verification_observation_identity": "ev_environment_session_capability_activity_projection_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_session_capability_activity_projection_followup_20261024",
+    "basis": "Focused tests verify request-id pairing, outcome preservation, argument omission, bounded selection, and truncation-aware absence; a live Compiler session query demonstrates objective and environment correlation on its authenticated current event tail.",
+    "not_measured": [
+      "whether previously missing projection relationships changed development outcomes",
+      "whether this view makes future development measurably easier",
+      "read-only Environment RPC operations that are not present in the session event stream"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "git-commit",
+      "commit": "4203e004cb3a8ad201410e61ad0503653bcf26de",
+      "files_changed": 5,
+      "test_result": "50 focused projection and session-event tests passed"
+    }
+  ],
+  "not_measured": [
+    "token or cache cost",
+    "activity performed through external tools without Environment capability events",
+    "event-store read cost growth beyond the selected output window"
+  ]
+}
