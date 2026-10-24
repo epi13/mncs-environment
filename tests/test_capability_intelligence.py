@@ -420,6 +420,7 @@ def test_live_compiler_scope_records_link_evidence_and_preserve_uncertainty(
         "workspace-scope-visibility-pressure-20261024",
         "workspace-scope-visibility-live-readback-20261024",
         "workspace-scope-visibility-improvement-20261024",
+        "workspace-scope-campaign-projection-readback-20261024",
     )
     records = [
         json.loads((evidence_dir / f"{identity}.json").read_text(encoding="utf-8"))
@@ -461,7 +462,7 @@ def test_live_compiler_scope_records_link_evidence_and_preserve_uncertainty(
     result = capability_intelligence.project(session)
 
     assert result["status"] == "partial"
-    assert result["source"]["observation_records_verified"] == 3
+    assert result["source"]["observation_records_verified"] == 4
     assert result["subject"]["workspace_alignment"][
         "unselected_declared_repositories"
     ] == ["mncs-compiler"]

@@ -1,0 +1,78 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_workspace_scope_campaign_projection_readback_20261024",
+  "captured_at": "2026-10-24T22:33:38Z",
+  "measurement_basis": "direct-campaign-evidence-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-campaign-projection-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_c01ca32d0af155c1",
+      "evidence_limit": 16,
+      "history_pages": 1,
+      "read_mode": "read-only"
+    },
+    "outcome": {
+      "projection_status": "ready",
+      "campaign_state_checkpoint_id": "chk_36d65aeb91b9d1c9",
+      "observation_count": 4,
+      "verified_observation_count": 4,
+      "pressure_hypothesis_count": 1,
+      "workspace_scope_pressure": {
+        "identity": "ph_environment_workspace_scope_visibility_20261024",
+        "observation_count": 1,
+        "distinct_session_count": 1,
+        "recurrence_status": "not-established"
+      },
+      "workspace_scope_improvement": {
+        "identity": "im_environment_workspace_scope_visibility_20261024",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "implementation_content_integrity_status": "content-integrity-verified",
+        "effectiveness_assessment": "not-assessed",
+        "subsequent_record_status": "not-recorded"
+      },
+      "source_pointer_count": 4,
+      "source_pointer_content_integrity_verified_count": 4,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "observation_reference_diagnostic_count": 0,
+      "interpretation": "The durable campaign projection reads and verifies the pressure observation, live Compiler scope readback, improvement relation, and implementation pointer. It exposes the verified change and its evidence while retaining not-assessed effectiveness and not-recorded follow-up. This is evidence that the observation path is queryable and provenance-linked; it does not establish that the scope mismatch blocked work or that subsequent outcomes improved."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-cli-projection-result",
+      "repository": "mncs-environment",
+      "operation": "projections",
+      "session_id": "ses_c01ca32d0af155c1",
+      "campaign_id": "cmp_0455376a5481eacd",
+      "campaign_state_checkpoint_id": "chk_36d65aeb91b9d1c9",
+      "verified_observation_count": 4,
+      "workspace_scope_pressure_identity": "ph_environment_workspace_scope_visibility_20261024",
+      "workspace_scope_improvement_identity": "im_environment_workspace_scope_visibility_20261024",
+      "effectiveness_assessment": "not-assessed",
+      "subsequent_record_status": "not-recorded"
+    }
+  ],
+  "not_measured": [
+    "subsequent independent agent use of the projection",
+    "whether the scope mismatch obstructed compiler work",
+    "whether the workspace scope projection reduces repeated investigation",
+    "empirical effectiveness of the change after later development activity"
+  ]
+}
