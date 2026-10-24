@@ -1,0 +1,84 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_source_registration_scope_compact_live_readback_20261024",
+  "captured_at": "2026-10-24T16:49:30+00:00",
+  "measurement_basis": "authenticated-bounded-environment-capability-projection-result-after-implementation-commit",
+  "observation": {
+    "kind": "cross-campaign-source-registration-compact-readback",
+    "source_interface": "MNCS Environment campaign-state with environmental-capability projection",
+    "request": {
+      "session_id": "ses_c98eb637e20a5c14",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "campaign_state_checkpoint_id": "chk_bd41112f4259fb13",
+      "evidence_offset": 71,
+      "evidence_limit": 1,
+      "projection_identity": "eci_376ecd4ce5534e97"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_truncated": true,
+      "observation_identity": "ev_environment_compiler_cache_regression_20261024",
+      "source_campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "source_session_id": "ses_164edc158d9b1637",
+      "source_registration_status": "not-present-in-selected-campaign-evidence-window",
+      "registration_scope": "selected-campaign-evidence-window",
+      "source_content_integrity_status": "workspace-read-only-content-integrity-verified",
+      "analysis_limit": "The readback covers one bounded Environment evidence page. The exact Compiler pointer was previously found in its authenticated campaign page 685; this query does not establish coverage of all campaign pages or agent interpretation of the compact fields."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "campaign_objective": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "environment_id": "renv_80ef889b89dad0e9",
+    "definition_id": "env_c7d14ed20b708d09",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "source-registration-scope-live-readback",
+      "identity": "ev_environment_source_registration_scope_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "24291301635a805495bc590bf8c08c3aaca69821",
+      "path": "evidence/environmental-capability/source-registration-scope-live-readback-20261024.json",
+      "sha256": "f55a55f853101454c89d06e813b38518e36b5993374bfef725475145508ebb32"
+    },
+    {
+      "kind": "committed-compact-provenance-implementation",
+      "identity": "ev_environment_source_registration_scope_compact_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "35210c64185cb3eff02a4a4c38284fb942019dea",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "106f947215d307939a9b01feef3f8ec2e3d52f8179cf17a4d7a7f2285ff43b79"
+    },
+    {
+      "kind": "committed-compiler-campaign-source-evidence",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637"
+    }
+  ],
+  "not_measured": [
+    "whether the compact fields change an agent's interpretation or next action",
+    "absence or presence of this source from all other campaign pages",
+    "recurrence of the compact-context omission across future observations"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
