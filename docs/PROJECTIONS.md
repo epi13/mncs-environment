@@ -179,18 +179,39 @@ in an unselected repository is named but not opened. Results are computed when
 requested; no transcript copy, separate telemetry store, or permanent dashboard
 is created.
 
-The same projection has one bounded adapter for the Compiler's
-`mncs.compiler.language-module-elaboration-cache-regression/2` evidence under
+The same projection has bounded adapters for three exact Compiler
+language-module regression report families. The effect and capability
+invalidation family uses
+`mncs.compiler.language-module-elaboration-cache-regression/2` under
 `evidence/native-app-readiness-effect-capability-fact-invalidation-*.json`.
-It requires the selected Compiler checkout, the campaign's exact commit and
-SHA-256, the expected evidence identity prefix, and the recognized schema. It
-projects only the cold, effect-edit, capability-edit, and fresh-process stage
-summaries, with their recorded fact-reuse counts and per-build resource
-measurements. The original Compiler artifact remains authoritative and is
+The interface invalidation and generic specialization families use
+`mncs.compiler.language-module-elaboration-cache-regression/1` under their
+`evidence/language-module-interface-application-invalidation-compiler-*.json`
+and
+`evidence/language-module-generic-specialization-application-invalidation-compiler-*.json`
+paths. Each family requires the selected Compiler checkout, the campaign's
+exact commit and SHA-256, its matching identity and path prefixes, and its
+family's schema version. The projection selects stages that describe each
+family's behavior and includes only recorded fact-reuse counts, execution
+results, and per-build resource measurements. The v1 reports do not record the
+effect and capability invalidation result; the projection leaves it explicitly
+unavailable. The original Compiler artifact remains authoritative and is
 returned as the observation's evidence reference. The adapter does not infer
-campaign duration, model identity, token use, or resource use outside those
-build requests. Other Compiler evidence remains available through the normal
-campaign evidence page until a bounded adapter is justified for its schema.
+campaign duration, model identity, token use, or resource use outside the
+recorded build requests.
+
+When another verified environmental observation links one of these Compiler
+records through the exact identity, repository, commit, path, and SHA-256, the
+projection can expose that record's source campaign and work intent separately
+from the current Environment campaign that is reading it. Context is included
+only when the source pointer is registered and content-verified in the selected
+campaign evidence window. Conflicting source contexts are reported as
+ambiguous; the projection does not choose one. Without a matching verified
+supporting observation, source session context remains unavailable. This
+preserves source-work attribution without treating the reading agent's session
+as the origin of historical Compiler measurements. Other Compiler evidence
+remains available through the normal campaign evidence page until a bounded
+adapter is justified for its schema.
 For a supporting source with no exact pointer match in the selected campaign
 evidence pages, `status` is
 `not-present-in-selected-campaign-evidence-window` and

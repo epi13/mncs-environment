@@ -29,14 +29,46 @@ SCHEMA = "mncs.environment.capability-intelligence/1"
 OBSERVATION_SCHEMA = "mncs.environment.environmental-observation/1"
 CAMPAIGN_CHARTER_SCHEMA = "mncs.environment.campaign-charter/1"
 OBSERVATION_PATH_PREFIX = "evidence/environmental-capability/"
-COMPILER_CACHE_REGRESSION_SCHEMA = (
+COMPILER_CACHE_REGRESSION_SCHEMA_V1 = (
+    "mncs.compiler.language-module-elaboration-cache-regression/1"
+)
+COMPILER_CACHE_REGRESSION_SCHEMA_V2 = (
     "mncs.compiler.language-module-elaboration-cache-regression/2"
 )
-COMPILER_CACHE_REGRESSION_IDENTITY_PREFIX = (
-    "ev_compiler_digest_application_effect_capability_invalidation_"
-)
-COMPILER_CACHE_REGRESSION_PATH_PREFIX = (
-    "evidence/native-app-readiness-effect-capability-fact-invalidation-"
+COMPILER_CACHE_REGRESSION_REFERENCE_FAMILIES = (
+    (
+        "effect-capability",
+        "ev_compiler_digest_application_effect_capability_invalidation_",
+        "evidence/native-app-readiness-effect-capability-fact-invalidation-",
+        COMPILER_CACHE_REGRESSION_SCHEMA_V2,
+        (
+            "cold", "effect_assumption_edit", "capability_assumption_edit",
+            "fresh_process",
+        ),
+    ),
+    (
+        "interface-invalidation",
+        "ev_compiler_digest_application_interface_invalidation_",
+        "evidence/language-module-interface-application-invalidation-compiler-",
+        COMPILER_CACHE_REGRESSION_SCHEMA_V1,
+        (
+            "cold", "imported_body_edit", "imported_function_result_name_edit",
+            "imported_nominal_cold", "imported_nominal_field_addition",
+            "imported_signature_cold", "invalid_source", "root_comment_edit",
+            "tampered_cache_digest", "fresh_process",
+        ),
+    ),
+    (
+        "generic-specialization-invalidation",
+        "ev_compiler_digest_application_generic_specialization_invalidation_",
+        "evidence/language-module-generic-specialization-application-invalidation-compiler-",
+        COMPILER_CACHE_REGRESSION_SCHEMA_V1,
+        (
+            "cold", "generic_specialization_cold", "generic_summarize_body_edit",
+            "imported_body_edit", "imported_function_result_name_edit",
+            "fresh_process", "tampered_cache_digest",
+        ),
+    ),
 )
 MAX_EVIDENCE_REFS = 32
 MAX_EVIDENCE_HISTORY_PAGES = 4
@@ -768,11 +800,23 @@ def _compact_projection(
                 if isinstance(source_context.get(key), str)
             }
             compact_observation["observation"]["source_session_context_basis"] = (
-                "recorded-observation"
+                _short_text(
+                    observation.get(
+                        "source_session_context_basis", "recorded-observation",
+                    ),
+                    64,
+                )
             )
             compact_observation["observation"]["source_session_context_truncated"] = (
                 observation.get("source_session_context_truncated", False)
             )
+        source_context_resolution = observation.get(
+            "source_session_context_resolution",
+        )
+        if isinstance(source_context_resolution, str):
+            compact_observation["observation"][
+                "source_session_context_resolution"
+            ] = _short_text(source_context_resolution, 96)
         projection_summary = observation.get("projection_summary")
         if isinstance(projection_summary, dict):
             summary_fields = (
@@ -1209,16 +1253,30 @@ def _compact_projection(
     return result
 
 
+def _compiler_regression_reference_family(
+    reference: dict[str, str],
+) -> tuple[str, str, tuple[str, ...]] | None:
+    if reference["repository"] != "mncs-compiler":
+        return None
+    for family, identity_prefix, path_prefix, schema, stage_names in (
+        COMPILER_CACHE_REGRESSION_REFERENCE_FAMILIES
+    ):
+        if (reference["identity"].startswith(identity_prefix)
+                and reference["path"].startswith(path_prefix)
+                and reference["path"].endswith(".json")):
+            return family, schema, stage_names
+    return None
+
+
+def _is_compiler_regression_reference(reference: dict[str, str]) -> bool:
+    return _compiler_regression_reference_family(reference) is not None
+
+
 def _is_observation_reference(reference: dict[str, str]) -> bool:
     if (reference["identity"].startswith("ev_environment_")
             and reference["path"].startswith(OBSERVATION_PATH_PREFIX)):
         return True
-    return (
-        reference["repository"] == "mncs-compiler"
-        and reference["identity"].startswith(COMPILER_CACHE_REGRESSION_IDENTITY_PREFIX)
-        and reference["path"].startswith(COMPILER_CACHE_REGRESSION_PATH_PREFIX)
-        and reference["path"].endswith(".json")
-    )
+    return _is_compiler_regression_reference(reference)
 
 
 def _git_blob(
@@ -1265,20 +1323,25 @@ def _compiler_regression_observation(
     session: Any, reference: dict[str, str], source: dict[str, Any],
 ) -> dict[str, Any] | None:
     """Adapt one established Compiler regression report into bounded ECI context."""
-    if source.get("schema_version") != COMPILER_CACHE_REGRESSION_SCHEMA:
+    schema_version = source.get("schema_version")
+    family = _compiler_regression_reference_family(reference)
+    if family is None:
+        return None
+    family_name, family_schema, stage_names = family
+    if schema_version != family_schema:
         return None
     invalidation = source.get("language_effect_and_capability_dependencies_invalidated")
     source_module_count = source.get("source_module_count")
     stages = source.get("stages")
-    if (type(invalidation) is not bool or type(source_module_count) is not int
+    if ((invalidation is not None and type(invalidation) is not bool)
+            or (family_name == "effect-capability"
+                and type(invalidation) is not bool)
+            or type(source_module_count) is not int
             or source_module_count < 1 or not isinstance(stages, dict)):
         return None
 
     stage_summaries: list[dict[str, Any]] = []
-    for name in (
-        "cold", "effect_assumption_edit", "capability_assumption_edit",
-        "fresh_process",
-    ):
+    for name in stage_names:
         stage = stages.get(name)
         if not isinstance(stage, dict):
             continue
@@ -1348,6 +1411,24 @@ def _compiler_regression_observation(
         if isinstance(value, str) and value:
             related_work[key] = value
 
+    outcome: dict[str, Any] = {
+        "stage_summaries": stage_summaries,
+        "resource_measurement_scope": "per-build metrics from the source report",
+        "duration_measurement_scope": (
+            "individual build requests, not campaign or agent duration"
+        ),
+        "source_capture_time": "unavailable",
+    }
+    if type(invalidation) is bool:
+        outcome["language_effect_and_capability_dependencies_invalidated"] = invalidation
+    else:
+        outcome["effect_capability_invalidation_measurement"] = (
+            "not-recorded-in-source-schema/1"
+        )
+    modules_reused = source.get("actual_language_modules_reused")
+    if type(modules_reused) is bool:
+        outcome["actual_language_modules_reused"] = modules_reused
+
     return {
         "schema_version": OBSERVATION_SCHEMA,
         "identity": reference["identity"],
@@ -1356,24 +1437,17 @@ def _compiler_regression_observation(
             "bounded-derived-view-of-verified-compiler-regression/2"
         ),
         "observation": {
-            "kind": "compiler-effect-capability-cache-regression",
+            "kind": f"compiler-{family_name}-cache-regression",
             "source_interface": "MNCS Compiler campaign evidence projection",
             "request": {
-                "source_schema_version": COMPILER_CACHE_REGRESSION_SCHEMA,
+                "source_schema_version": schema_version,
                 "compiler_head": source.get("compiler_head"),
                 "language_head": source.get("language_head"),
                 "source_module_count": source_module_count,
                 "stage_names": [item["name"] for item in stage_summaries],
             },
-            "outcome": {
-                "language_effect_and_capability_dependencies_invalidated": invalidation,
-                "stage_summaries": stage_summaries,
-                "resource_measurement_scope": "per-build metrics from the source report",
-                "duration_measurement_scope": (
-                    "individual build requests, not campaign or agent duration"
-                ),
-                "source_capture_time": "unavailable",
-            },
+            "outcome": outcome,
+            "source_session_context_resolution": "awaiting-verified-supporting-observation",
             "measurement_availability": {
                 "model_identity": "not-recorded-in-source",
                 "token_usage": "not-recorded-in-source",
@@ -1414,9 +1488,7 @@ def _load_observation(
         return None, "observation-contract-invalid"
     if record.get("identity") != reference["identity"]:
         return record, "observation-identity-mismatch"
-    if (reference["repository"] == "mncs-compiler"
-            and reference["identity"].startswith(COMPILER_CACHE_REGRESSION_IDENTITY_PREFIX)
-            and reference["path"].startswith(COMPILER_CACHE_REGRESSION_PATH_PREFIX)):
+    if _is_compiler_regression_reference(reference):
         adapted = _compiler_regression_observation(session, reference, record)
         if adapted is None:
             return None, "observation-contract-invalid"
@@ -2889,6 +2961,56 @@ def project(
                 attempted=attempted_sources,
                 workspace_checkouts=workspace_checkouts,
             )
+    source_context_candidates: dict[
+        tuple[str, str, str, str, str], set[tuple[tuple[str, str], ...]],
+    ] = {}
+    for source_record, _ in projected_records:
+        work = source_record.get("related_work")
+        work = work if isinstance(work, dict) else {}
+        supporting_sources = source_record.get("supporting_sources")
+        if not isinstance(supporting_sources, list):
+            continue
+        campaign_id = work.get("campaign_id")
+        session_id = work.get("session_id")
+        if (not isinstance(campaign_id, str) or not campaign_id
+                or not isinstance(session_id, str) or not session_id):
+            continue
+        for source in supporting_sources[:16]:
+            pointer = _validate_source_pointer(source)
+            if (pointer is None or pointer.get("repository") != "mncs-compiler"
+                    or not pointer.get("identity")
+                    or "sha256" not in pointer
+                    or _source_integrity_status(source, source_integrity)
+                    not in SOURCE_INTEGRITY_VERIFIED
+                    or _source_status(source, references).get("status") != "verified"):
+                continue
+            source_key = tuple(
+                pointer.get(key, "")
+                for key in ("identity", "repository", "commit", "path", "sha256")
+            )
+            if not any(
+                tuple(reference.get(key, "") for key in (
+                    "identity", "repository", "commit", "path", "sha256",
+                )) == source_key and reference.get("verification") == "verified"
+                for reference in references
+            ):
+                continue
+            context = {
+                "campaign_id": campaign_id,
+                "session_id": session_id,
+                "repository": "mncs-compiler",
+                "repository_context_basis": "verified-supporting-source-pointer",
+            }
+            for key in (
+                "work_intent_id", "work_intent_goal", "environment_id",
+                "definition_id",
+            ):
+                value = work.get(key)
+                if isinstance(value, str) and value:
+                    context[key] = value
+            source_context_candidates.setdefault(source_key, set()).add(
+                tuple(sorted(context.items()))
+            )
     projected_record_ids = {record["identity"] for record, _ in projected_records}
     projected_hypothesis_ids: set[str] = set()
     for record, _ in projected_records:
@@ -2932,6 +3054,37 @@ def project(
             "source_interface": observation.get("source_interface"),
             "request": observation.get("request"),
         }
+        source_context_resolution = observation.get(
+            "source_session_context_resolution",
+        )
+        if isinstance(source_context_resolution, str) and source_context_resolution:
+            projected_observation["source_session_context_resolution"] = (
+                source_context_resolution[:96]
+            )
+        if _is_compiler_regression_reference(reference):
+            pointer_key = tuple(
+                reference.get(key, "")
+                for key in ("identity", "repository", "commit", "path", "sha256")
+            )
+            contexts = source_context_candidates.get(pointer_key, set())
+            if len(contexts) == 1:
+                projected_observation["source_session_context"] = dict(
+                    next(iter(contexts))
+                )
+                projected_observation["source_session_context_basis"] = (
+                    "verified-supporting-observation"
+                )
+                projected_observation["source_session_context_resolution"] = (
+                    "verified-exact-source-pointer"
+                )
+            elif len(contexts) > 1:
+                projected_observation["source_session_context_resolution"] = (
+                    "ambiguous-supporting-observations"
+                )
+            else:
+                projected_observation["source_session_context_resolution"] = (
+                    "no-matching-verified-supporting-observation"
+                )
         if isinstance(observation.get("outcome"), dict):
             projected_observation["outcome"] = observation["outcome"]
         projection_summary = observation.get("projection_summary")
@@ -3002,7 +3155,9 @@ def project(
                         for key in source_session_context_fields
                         if source_session_context.get(key) is not None
                     },
-                    "source_session_context_basis": "recorded-observation",
+                    "source_session_context_basis": observation.get(
+                        "source_session_context_basis", "recorded-observation",
+                    ),
                     "source_session_context_truncated": source_session_context_truncated,
                 } if source_session_context is not None else {}),
             },

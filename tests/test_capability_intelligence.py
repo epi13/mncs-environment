@@ -93,13 +93,20 @@ def _add_compiler_regression_evidence(
 ) -> dict[str, str]:
     root = Path(session.snapshot["workspace"]["root"])
     checkout = root / "mncs-compiler"
-    checkout.mkdir()
-    _git(checkout, "init", "--quiet")
-    _git(checkout, "config", "user.name", "test")
-    _git(checkout, "config", "user.email", "test@example.invalid")
-    relative = (
-        "evidence/native-app-readiness-effect-capability-fact-invalidation-"
-        "20261024.json"
+    if not checkout.exists():
+        checkout.mkdir()
+        _git(checkout, "init", "--quiet")
+        _git(checkout, "config", "user.name", "test")
+        _git(checkout, "config", "user.email", "test@example.invalid")
+    reference_paths = {
+        identity_prefix: f"{path_prefix}20261024.json"
+        for _family, identity_prefix, path_prefix, _schema, _stage_names
+        in capability_intelligence.COMPILER_CACHE_REGRESSION_REFERENCE_FAMILIES
+    }
+    relative = next(
+        (path for prefix, path in reference_paths.items()
+         if report["identity"].startswith(prefix)),
+        "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
     )
     path = checkout / relative
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -116,6 +123,54 @@ def _add_compiler_regression_evidence(
     }
     session.snapshot["selected_checkouts"]["mncs-compiler"] = {
         "path": str(checkout),
+    }
+    state["evidence"].append(reference)
+    state["evidence_count"] = len(state["evidence"])
+    return reference
+
+
+def _add_compiler_source_context(
+    session, state: dict, source_reference: dict[str, str], *,
+    identity: str = "ev_environment_compiler_source_context",
+    work_intent_goal: str = "Advance reliable native application development",
+) -> dict[str, str]:
+    checkout = Path(session.snapshot["selected_checkouts"]["mncs-environment"]["path"])
+    relative = f"evidence/environmental-capability/{identity}.json"
+    record = {
+        "schema_version": capability_intelligence.OBSERVATION_SCHEMA,
+        "identity": identity,
+        "captured_at": "2026-10-24T00:00:00Z",
+        "measurement_basis": "verified-compiler-campaign-supporting-record",
+        "related_work": {
+            "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+            "session_id": "ses_164edc158d9b1637",
+            "work_intent_id": "int_compiler_native_readiness",
+            "work_intent_goal": work_intent_goal,
+            "environment_id": "renv_compiler_campaign",
+        },
+        "observation": {
+            "kind": "compiler-source-campaign-context",
+            "source_interface": "MNCS Environment supporting-source relation",
+            "request": {},
+            "outcome": {"source_pointer_content_integrity": "verified"},
+        },
+        "supporting_sources": [{
+            "kind": "compiler-regression-source-record",
+            **source_reference,
+        }],
+    }
+    raw = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
+    path = checkout / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(raw)
+    _git(checkout, "add", relative)
+    _git(checkout, "commit", "--quiet", "-m", "test compiler source context")
+    reference = {
+        "identity": record["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
     }
     state["evidence"].append(reference)
     state["evidence_count"] = len(state["evidence"])
@@ -1233,7 +1288,7 @@ def test_compiler_regression_evidence_is_projected_with_verified_work_context(
     tmp_path: Path,
 ) -> None:
     report = {
-        "schema_version": capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA,
+        "schema_version": capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA_V2,
         "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
         "compiler_head": "a" * 40,
         "language_head": "b" * 40,
@@ -1301,7 +1356,7 @@ def test_compiler_regression_evidence_is_projected_with_verified_work_context(
     assert observation["related_work"]["campaign_id"] == "cmp_projection_reader"
     assert observation["related_work"]["session_id"] == "ses_projection_reader"
     assert observation["observation"]["request"]["source_schema_version"] == (
-        capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA
+        capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA_V2
     )
     assert observation["observation"]["outcome"][
         "language_effect_and_capability_dependencies_invalidated"
@@ -1321,6 +1376,299 @@ def test_compiler_regression_evidence_is_projected_with_verified_work_context(
         "not-recorded-in-source"
     )
     assert observation["evidence_reference"] == reference
+
+
+def test_compiler_regression_schema_one_projects_without_inventing_effect_data(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema_version": capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA_V1,
+        "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+        "compiler_head": "c" * 40,
+        "language_head": "d" * 40,
+        "source_module_count": 4,
+        "actual_language_modules_reused": True,
+        "stages": {
+            "cold": {
+                "cache_status": "miss",
+                "execution": {"output_equal_to_stage0": True},
+                "semantic_work": {
+                    "recomputed_fact_count": 30,
+                    "reused_fact_count": 0,
+                },
+                "build_metrics": {"wall_seconds": 0.76978},
+            },
+            "generic_specialization_cold": {
+                "cache_status": "miss",
+                "semantic_work": {
+                    "recomputed_fact_count": 31,
+                    "reused_fact_count": 0,
+                },
+                "build_metrics": {"wall_seconds": 0.786621},
+            },
+            "imported_body_edit": {
+                "cache_status": "hit",
+                "execution": {"output_equal_to_stage0": True},
+                "semantic_work": {
+                    "recomputed_fact_count": 1,
+                    "reused_fact_count": 29,
+                },
+                "build_metrics": {"wall_seconds": 0.508041},
+            },
+            "generic_summarize_body_edit": {
+                "cache_status": "miss",
+                "execution": {"output_equal_to_stage0": True},
+                "semantic_work": {
+                    "recomputed_fact_count": 2,
+                    "reused_fact_count": 29,
+                },
+                "build_metrics": {"wall_seconds": 0.763094},
+            },
+            "fresh_process": {
+                "cache_status": "hit",
+                "execution": {"output_equal_to_stage0": True},
+                "semantic_work": {
+                    "recomputed_fact_count": 0,
+                    "reused_fact_count": 30,
+                },
+                "build_metrics": {"wall_seconds": 0.628035},
+            },
+        },
+    }
+    session, state = _session(tmp_path, [])
+    reference = _add_compiler_regression_evidence(session, state, report)
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 1
+    observation = result["observations"][0]
+    assert observation["identity"] == report["identity"]
+    assert observation["observation"]["kind"] == (
+        "compiler-generic-specialization-invalidation-cache-regression"
+    )
+    assert observation["observation"]["request"]["source_schema_version"] == (
+        capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA_V1
+    )
+    outcome = observation["observation"]["outcome"]
+    assert outcome["actual_language_modules_reused"] is True
+    assert outcome["effect_capability_invalidation_measurement"] == (
+        "not-recorded-in-source-schema/1"
+    )
+    assert [item["name"] for item in outcome["stage_summaries"]] == [
+        "cold", "generic_specialization_cold", "generic_summarize_body_edit",
+        "imported_body_edit", "fresh_process",
+    ]
+    assert observation["observation"]["source_session_context_resolution"] == (
+        "no-matching-verified-supporting-observation"
+    )
+    assert observation["evidence_reference"] == reference
+
+
+def test_compiler_interface_regression_projects_interface_application_stages(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema_version": capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA_V1,
+        "identity": "ev_compiler_digest_application_interface_invalidation_20261023",
+        "compiler_head": "e" * 40,
+        "language_head": "f" * 40,
+        "source_module_count": 4,
+        "actual_language_modules_reused": True,
+        "stages": {
+            "cold": {"cache_status": "miss", "build_metrics": {"wall_seconds": 0.7731}},
+            "imported_body_edit": {
+                "cache_status": "hit",
+                "semantic_work": {"recomputed_fact_count": 1, "reused_fact_count": 29},
+                "build_metrics": {"wall_seconds": 0.505353},
+            },
+            "imported_function_result_name_edit": {
+                "cache_status": "miss",
+                "semantic_work": {"recomputed_fact_count": 4, "reused_fact_count": 26},
+                "build_metrics": {"wall_seconds": 0.730628},
+            },
+            "imported_nominal_field_addition": {
+                "cache_status": "miss",
+                "semantic_work": {"recomputed_fact_count": 11, "reused_fact_count": 19},
+                "build_metrics": {"wall_seconds": 0.794319},
+            },
+            "imported_signature_cold": {
+                "cache_status": "miss",
+                "semantic_work": {"recomputed_fact_count": 30, "reused_fact_count": 0},
+                "build_metrics": {"wall_seconds": 0.771534},
+            },
+            "invalid_source": {
+                "cache_status": "miss",
+                "build_metrics": {"wall_seconds": 0.044392},
+            },
+            "root_comment_edit": {
+                "cache_status": "hit",
+                "semantic_work": {"recomputed_fact_count": 0, "reused_fact_count": 30},
+                "build_metrics": {"wall_seconds": 0.468303},
+            },
+            "tampered_cache_digest": {
+                "cache_status": "miss",
+                "semantic_work": {"recomputed_fact_count": 30, "reused_fact_count": 0},
+                "build_metrics": {"wall_seconds": 0.791804},
+            },
+            "fresh_process": {
+                "cache_status": "hit",
+                "semantic_work": {"recomputed_fact_count": 0, "reused_fact_count": 30},
+                "build_metrics": {"wall_seconds": 0.63363},
+            },
+        },
+    }
+    session, state = _session(tmp_path, [])
+    _add_compiler_regression_evidence(session, state, report)
+
+    result = capability_intelligence.project(session)
+
+    observation = result["observations"][0]
+    assert observation["observation"]["kind"] == (
+        "compiler-interface-invalidation-cache-regression"
+    )
+    assert [item["name"] for item in observation["observation"]["outcome"][
+        "stage_summaries"
+    ]] == [
+        "cold", "imported_body_edit", "imported_function_result_name_edit",
+        "imported_nominal_field_addition", "imported_signature_cold",
+        "invalid_source", "root_comment_edit", "tampered_cache_digest", "fresh_process",
+    ]
+    assert observation["observation"]["outcome"][
+        "effect_capability_invalidation_measurement"
+    ] == "not-recorded-in-source-schema/1"
+
+
+def test_compiler_source_context_is_correlated_only_through_verified_pointer(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema_version": capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA_V1,
+        "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+        "compiler_head": "c" * 40,
+        "language_head": "d" * 40,
+        "source_module_count": 4,
+        "actual_language_modules_reused": True,
+        "stages": {
+            "cold": {
+                "cache_status": "miss",
+                "execution": {"output_equal_to_stage0": True},
+                "semantic_work": {"recomputed_fact_count": 30, "reused_fact_count": 0},
+                "build_metrics": {"wall_seconds": 0.76978},
+            },
+            "generic_specialization_cold": {
+                "cache_status": "miss",
+                "semantic_work": {"recomputed_fact_count": 31, "reused_fact_count": 0},
+                "build_metrics": {"wall_seconds": 0.786621},
+            },
+            "generic_summarize_body_edit": {
+                "cache_status": "miss",
+                "semantic_work": {"recomputed_fact_count": 2, "reused_fact_count": 29},
+                "build_metrics": {"wall_seconds": 0.763094},
+            },
+            "imported_body_edit": {
+                "cache_status": "hit",
+                "semantic_work": {"recomputed_fact_count": 1, "reused_fact_count": 29},
+                "build_metrics": {"wall_seconds": 0.508041},
+            },
+            "fresh_process": {
+                "cache_status": "hit",
+                "semantic_work": {"recomputed_fact_count": 0, "reused_fact_count": 30},
+                "build_metrics": {"wall_seconds": 0.628035},
+            },
+        },
+    }
+    session, state = _session(tmp_path, [])
+    compiler_reference = _add_compiler_regression_evidence(session, state, report)
+    _add_compiler_source_context(session, state, compiler_reference)
+
+    result = capability_intelligence.project(session)
+
+    compiler_observation = next(
+        item for item in result["observations"]
+        if item["identity"] == report["identity"]
+    )
+    assert compiler_observation["related_work"]["campaign_id"] == (
+        "cmp_projection_reader"
+    )
+    assert compiler_observation["observation"]["source_session_context"] == {
+        "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+        "session_id": "ses_164edc158d9b1637",
+        "repository": "mncs-compiler",
+        "repository_context_basis": "verified-supporting-source-pointer",
+        "work_intent_id": "int_compiler_native_readiness",
+        "work_intent_goal": "Advance reliable native application development",
+        "environment_id": "renv_compiler_campaign",
+    }
+    assert compiler_observation["observation"]["source_session_context_basis"] == (
+        "verified-supporting-observation"
+    )
+    assert compiler_observation["observation"]["source_session_context_resolution"] == (
+        "verified-exact-source-pointer"
+    )
+
+
+def test_compiler_source_context_conflict_is_left_ambiguous(tmp_path: Path) -> None:
+    report = {
+        "schema_version": capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA_V1,
+        "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+        "source_module_count": 4,
+        "actual_language_modules_reused": True,
+        "stages": {
+            "cold": {"cache_status": "miss", "build_metrics": {"wall_seconds": 0.7}},
+            "generic_specialization_cold": {
+                "cache_status": "miss",
+                "build_metrics": {"wall_seconds": 0.8},
+            },
+        },
+    }
+    session, state = _session(tmp_path, [])
+    compiler_reference = _add_compiler_regression_evidence(session, state, report)
+    _add_compiler_source_context(
+        session, state, compiler_reference,
+        identity="ev_environment_compiler_source_context_one",
+    )
+    _add_compiler_source_context(
+        session, state, compiler_reference,
+        identity="ev_environment_compiler_source_context_two",
+        work_intent_goal="A conflicting source objective",
+    )
+
+    result = capability_intelligence.project(session)
+
+    compiler_observation = next(
+        item for item in result["observations"]
+        if item["identity"] == report["identity"]
+    )
+    assert "source_session_context" not in compiler_observation["observation"]
+    assert compiler_observation["observation"]["source_session_context_resolution"] == (
+        "ambiguous-supporting-observations"
+    )
+
+
+def test_compiler_regression_family_requires_matching_source_schema(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema_version": capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA_V2,
+        "identity": "ev_compiler_digest_application_interface_invalidation_20261023",
+        "source_module_count": 4,
+        "language_effect_and_capability_dependencies_invalidated": True,
+        "stages": {
+            "cold": {"cache_status": "miss", "build_metrics": {"wall_seconds": 0.7}},
+        },
+    }
+    session, state = _session(tmp_path, [])
+    _add_compiler_regression_evidence(session, state, report)
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["source"]["observation_records_unavailable"] == 1
+    assert result["source"]["observation_reference_diagnostics"][0]["verification"] == (
+        "observation-contract-invalid"
+    )
 
 
 def test_compiler_regression_adapter_rejects_unrecognized_source_schema(
