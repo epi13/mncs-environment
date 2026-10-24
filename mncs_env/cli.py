@@ -2653,8 +2653,36 @@ def main(argv: list[str] | None = None) -> int:
                                            "transport": "direct-filesystem",
                                            "next": next_step})
     except (OSError, ValueError, sessions_module.LifecycleError) as error:
-        return fail(str(error), diagnostics={"code": "environment-command-failed", "command": args.command,
-                                           "state_dir": str(args.state_dir), "next": "check configuration and session state; retry entry"})
+        message = str(error)
+        code = "environment-command-failed"
+        next_step = "check configuration and session state; retry entry"
+        if (
+            message.startswith("declared provider checkout ")
+            and message.endswith(" changed")
+        ):
+            code = "declared-provider-checkout-changed"
+            session_id = getattr(args, "session", None)
+            if isinstance(session_id, str) and session_id:
+                next_step = (
+                    "inspect the current and declared provider checkout; if the "
+                    "change is intended, run `mncs-env reconcile "
+                    f"{session_id}` to refresh the session's declared provider "
+                    "binding, then retry; if unexpected, restore or review the "
+                    "provider checkout before reconciling"
+                )
+            else:
+                next_step = (
+                    "inspect the current and declared provider checkout; if the "
+                    "change is intended, reconcile the affected session to "
+                    "refresh its declared provider binding before retrying; if "
+                    "unexpected, restore or review the provider checkout first"
+                )
+        return fail(message, diagnostics={
+            "code": code,
+            "command": args.command,
+            "state_dir": str(args.state_dir),
+            "next": next_step,
+        })
 
 
 if __name__ == "__main__":

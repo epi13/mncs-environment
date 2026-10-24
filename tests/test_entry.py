@@ -2105,3 +2105,28 @@ def test_cli_snapshot_conflict_reports_possible_completed_effects(monkeypatch, c
     assert result["diagnostics"]["code"] == "session-snapshot-conflict"
     assert result["diagnostics"]["capability_may_have_run"] is True
     assert result["diagnostics"]["snapshot_saved"] is False
+
+
+def test_cli_stale_provider_checkout_guides_reconciliation(monkeypatch, capsys):
+    from types import SimpleNamespace
+
+    from mncs_env import cli
+
+    def stale_provider_checkout(args):
+        raise ValueError("declared provider checkout head changed")
+
+    args = SimpleNamespace(
+        state_dir=Path("/tmp/state"),
+        command="claims",
+        session="ses_stale_provider",
+        func=stale_provider_checkout,
+    )
+    monkeypatch.setattr(
+        cli, "build_parser", lambda: SimpleNamespace(parse_args=lambda argv: args)
+    )
+
+    assert cli.main([]) == 2
+    result = json.loads(capsys.readouterr().err)
+    assert result["diagnostics"]["code"] == "declared-provider-checkout-changed"
+    assert "mncs-env reconcile ses_stale_provider" in result["diagnostics"]["next"]
+    assert "if unexpected" in result["diagnostics"]["next"]

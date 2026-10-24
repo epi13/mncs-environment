@@ -1,0 +1,84 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_provider_binding_reconcile_pressure_20261024",
+  "captured_at": "2026-10-24T23:19:34Z",
+  "measurement_basis": "retrospective-recording-of-session-claim-error-and-reconcile-readback",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "stale-provider-binding-claim-guidance-pressure",
+    "source_interface": "scripts/mncs-env claims and reconcile",
+    "request": {
+      "operation": "acquire-explicit-claim-for-current-campaign-worktree",
+      "existing_claim_id": "claim:mncs-environment:worktree:2c053337561b",
+      "existing_claim_status": "held",
+      "existing_claim_basis": "explicit-adoption"
+    },
+    "outcome": {
+      "attempt_status": "failed-before-new-claim-was-created",
+      "error": "declared provider checkout head changed",
+      "generic_next_step": "check configuration and session state; retry entry",
+      "declared_provider_head_before_reconcile": "f345d619b442ec16cb549c68fb791caef911af9f",
+      "observed_worktree_head_before_reconcile": "0caf69cd317be76bcc87c31ea185b358a6eaacc2",
+      "reconcile_at": "2026-10-24T23:10:44+00:00",
+      "selected_checkout_head_after_reconcile": "0caf69cd317be76bcc87c31ea185b358a6eaacc2",
+      "readiness_after_reconcile": "degraded",
+      "readiness_blockers_after_reconcile": 0,
+      "subsequent_main_claim_status": "held",
+      "subsequent_main_claim_id": "claim:mncs-environment:worktree:5053f3907a1c",
+      "interpretation": "One redundant claim-acquisition attempt encountered a stale declared provider head. The existing adopted claim remained held, so this did not revoke work ownership or block implementation. Reconcile refreshed the provider binding and workspace snapshot; the later main-worktree claim succeeded. The message did not explain that recovery path. This was a provider-version consistency error, not an observed external authorization prompt. The original command output was not separately persisted; this is a retrospective record of the active session observations and does not assign an unrecorded historical timestamp to the failed attempt."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_stale_provider_binding_claim_guidance_20261024",
+    "title": "Stale provider bindings leave claim failures with generic recovery guidance",
+    "category": "coordination-and-continuity",
+    "subsystem": "mncs-environment session provider binding and claim CLI diagnostics",
+    "owner": "mncs-environment",
+    "basis": "In one active session, the declared Environment provider checkout head was f345d619b442ec16cb549c68fb791caef911af9f while the claimed campaign worktree had advanced to 0caf69cd317be76bcc87c31ea185b358a6eaacc2. The claim command returned 'declared provider checkout head changed' and generic entry-retry guidance. Reconcile refreshed the selected checkout and provider binding; a later claim then succeeded. The existing campaign-worktree claim remained held throughout.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "When a declared provider checkout change causes a command failure, preserve the consistency check and report an inspection-first reconcile path for the affected session before retrying.",
+    "not_measured": [
+      "whether stale provider binding failures recur across sessions or repositories",
+      "whether this condition caused any external authorization prompt or delayed another agent",
+      "whether the stale declaration resulted from a commit, entry timing, or another provider refresh condition"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_provider_checkout_head_validation_20261024",
+      "repository": "mncs-environment",
+      "commit": "8c7c303fd3877ad4c4e489f4a8f1f7c4881fb156",
+      "path": "mncs_env/sessions.py",
+      "sha256": "f8b53b7359f715c38bccfe46deff0644b40943d92e6ee13cca0be0a8500e6b89"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_generic_cli_failure_guidance_20261024",
+      "repository": "mncs-environment",
+      "commit": "8c7c303fd3877ad4c4e489f4a8f1f7c4881fb156",
+      "path": "mncs_env/cli.py",
+      "sha256": "64b7101caaee4e351cbafe2f45950dee805d8b6e364eee1234a9651249da45aa"
+    }
+  ],
+  "not_measured": [
+    "recurrence of this provider-binding problem",
+    "impact on work outside this session",
+    "whether any external approval layer was involved in other reported authorization incidents"
+  ]
+}
