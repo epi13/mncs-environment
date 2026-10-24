@@ -209,6 +209,32 @@ the referenced artifact or remote state. A subsequent entry reconstructs the
 campaign projection from that checkpoint if the session snapshot was not
 updated before a process interruption.
 
+## Environmental capability intelligence
+
+The read-only `campaign-state-inspection/2` capability also includes an
+on-demand `environmental_capability` projection when its response budget
+permits. It correlates committed observation records with their target work
+and recording context, summarizes pressure hypotheses and recurrence evidence,
+and links recorded changes to verification and later observations. Check the
+projection's `status`, source counts, and exact evidence references before
+interpreting a result. `not-present-in-projection` means a record is outside
+the current evidence page, not that it is absent from campaign history.
+
+Read the authorized session's evidence pages with `campaign-state`; follow
+`next_evidence_offset` until it is `null` when a complete campaign review is
+needed:
+
+```sh
+./scripts/mncs-env campaign-state "$SESSION" \
+  --evidence-offset 0 --evidence-limit 8
+```
+
+Use the same session identity and the returned offset for the next page. The
+projection is computed for that page, so related records may need to be read
+from a later page. A compact `partial` projection keeps bounded summaries and
+exact references; query the page containing a relationship to inspect its
+linked observations together.
+
 Campaign metadata updates use optimistic concurrency. Copy the
 `campaign_state_checkpoint_id` from the current capsule into
 `--campaign-base-checkpoint`, or use `none` before the first campaign metadata

@@ -96,7 +96,7 @@
       {
         "contract": "campaign-state-inspection",
         "version": "2",
-        "kind": "read-only-campaign-state-inspection",
+        "kind": "read-only-campaign-state-and-environmental-capability-intelligence",
         "effects": [
           "read"
         ],
@@ -118,7 +118,7 @@
           ]
         },
         "stability": "experimental",
-        "output_scope": "bounded page from immutable campaign evidence history and delivery state for the authorized Environment session; evidence offsets expose older pages"
+        "output_scope": "bounded page from immutable campaign evidence history and delivery state for the authorized Environment session; includes the on-demand environmental_capability projection with verified observations, pressure hypotheses, and implementation-verification-follow-up links when response budget permits; evidence offsets expose other pages"
       }
     ],
     "consumes": [

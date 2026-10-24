@@ -2387,6 +2387,9 @@ class CapabilityTests(unittest.TestCase):
         self.assertEqual(campaign_state["effects"], ["read"])
         self.assertEqual(campaign_state["version"], "2")
         self.assertEqual(campaign_state["output_limit_bytes"], 131072)
+        self.assertIn("environmental_capability", campaign_state["output_scope"])
+        self.assertIn("pressure hypotheses", campaign_state["output_scope"])
+        self.assertIn("evidence offsets expose other pages", campaign_state["output_scope"])
         self.assertEqual(campaign_state["invocation"], {
             "kind": "executable",
             "path": "scripts/mncs-env",
@@ -2402,6 +2405,10 @@ class CapabilityTests(unittest.TestCase):
             "mncs-environment:campaign-state-inspection"
         )
         self.assertEqual(discovered_campaign_state["output_limit_bytes"], 131072)
+        self.assertEqual(
+            discovered_campaign_state["provenance"]["kind"],
+            "read-only-campaign-state-and-environmental-capability-intelligence",
+        )
 
         bound = capabilities.bind_session_context(
             {"fixed_argv": ["projections", "--evidence", "{session_id}"]},
