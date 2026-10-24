@@ -59,7 +59,10 @@ def _checkout(workspace: Path, name: str, *, dirty: bool = False) -> dict:
     }
 
 
-def _session(state_dir: Path, workspace: Path, *, dirty_target: bool = False):
+def _session(
+    state_dir: Path, workspace: Path, *, dirty_target: bool = False,
+    acquire_environment_claim: bool = True,
+):
     env_repo = _checkout(workspace, "mncs-environment")
     target_repo = _checkout(
         workspace, "mncs-control-mcp", dirty=dirty_target
@@ -108,11 +111,12 @@ def _session(state_dir: Path, workspace: Path, *, dirty_target: bool = False):
     session.transition("resolving", "fixture")
     session.transition("ready", "fixture")
     session.transition("active", "fixture")
-    session.acquire_claim(
-        "mncs-environment",
-        reason="the test session owns the Environment domain checkout",
-        request_id="req_fixture_environment_claim",
-    )
+    if acquire_environment_claim:
+        session.acquire_claim(
+            "mncs-environment",
+            reason="the test session owns the Environment domain checkout",
+            request_id="req_fixture_environment_claim",
+        )
     return session
 
 
@@ -152,14 +156,16 @@ def _nested_target_checkout(
     workspace: Path,
     slug: str,
     branch: str | None,
+    *,
+    repository: str = "mncs-control-mcp",
 ) -> tuple[Path, dict[str, str | None]]:
     """Create a registered linked checkout inside the repository's worktrees."""
-    repository_root = workspace / "mncs-control-mcp"
+    repository_root = workspace / repository
     manifest = repository_root / ".mncs" / "project.json"
     if not manifest.exists():
         manifest.parent.mkdir(parents=True)
         manifest.write_text(
-            json.dumps({"repository": "mncs-control-mcp"}) + "\n",
+            json.dumps({"repository": repository}) + "\n",
             encoding="utf-8",
         )
         _git(repository_root, "add", ".mncs/project.json")
@@ -171,7 +177,7 @@ def _nested_target_checkout(
     current_excludes = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
     if ".worktrees/" not in current_excludes:
         exclude.write_text(current_excludes + "\n.worktrees/\n", encoding="utf-8")
-    checkout = repository_root / ".worktrees" / slug / "mncs-control-mcp"
+    checkout = repository_root / ".worktrees" / slug / repository
     checkout.parent.mkdir(parents=True, exist_ok=True)
     if branch is None:
         _git(repository_root, "worktree", "add", "--detach", str(checkout), "HEAD")
@@ -179,15 +185,15 @@ def _nested_target_checkout(
         _git(repository_root, "worktree", "add", "-b", branch, str(checkout), "HEAD")
     observed = workspace_module.verify_registered_checkout(
         checkout,
-        repository="mncs-control-mcp",
+        repository=repository,
         workspace_root=workspace,
         expected_repository_root=repository_root,
     )
     session.snapshot.setdefault("selected_checkouts", {})[
-        "mncs-control-mcp"
+        repository
     ] = {
         **observed,
-        "repository": "mncs-control-mcp",
+        "repository": repository,
         "path": str(checkout.resolve()),
         "branch": branch,
         "head": observed["head"],
@@ -934,6 +940,57 @@ def test_scope_grant_accepts_exact_recovered_claim_held_by_current_session(
         assert recovered["session_id"] == session.session_id
         assert "mncs-control-mcp" in session.effective_authority()["writable"]
         assert session.authority_scope_grants() == [grant]
+    finally:
+        session.close()
+
+
+def test_scope_grant_binds_an_owner_selected_checkout_for_an_already_writable_repository(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(
+        tmp_path / "state", workspace, acquire_environment_claim=False,
+    )
+    try:
+        assert "mncs-environment" in session.effective_authority()["writable"]
+        assert session.authority_scope_grants() == []
+        with pytest.raises(sessions.AuthorityScopeConflict, match="already appears"):
+            session.grant_repository_scope(
+                repository="mncs-environment",
+                campaign_id=CAMPAIGN,
+                expected_authority_revision=session.effective_authority()["revision"],
+                approval_reference=APPROVAL,
+                authenticated_principal_id=PRINCIPAL,
+                request_id="req_existing_writable_without_checkout",
+            )
+        assert session.authority_scope_grants() == []
+
+        checkout, checkout_facts = _nested_target_checkout(
+            session,
+            workspace,
+            "existing-writable-checkout",
+            "campaign/existing-writable-checkout",
+            repository="mncs-environment",
+        )
+        grant = session.grant_repository_scope(
+            repository="mncs-environment",
+            campaign_id=CAMPAIGN,
+            expected_authority_revision=session.effective_authority()["revision"],
+            approval_reference=APPROVAL,
+            owner_authorized_checkout=checkout_facts,
+            authenticated_principal_id=PRINCIPAL,
+            request_id="req_existing_writable_owner_checkout",
+        )
+
+        assert grant["repository_identity"]["path"] == str(checkout)
+        assert session.authority_scope_grants() == [grant]
+        claim = session.acquire_claim(
+            "mncs-environment",
+            reason="claim the exact owner-approved linked checkout",
+            request_id="req_existing_writable_checkout_claim",
+        )
+        assert claim["scope"]["checkout"] == str(checkout)
     finally:
         session.close()
 

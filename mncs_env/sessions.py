@@ -2895,11 +2895,19 @@ class Session:
                 f"repository has multiple current scope grants: {repository}",
                 next_step="reconcile the immutable authority grant history before refreshing scope",
             )
-        if repository in current.get("writable", []) and prior_grant is None:
+        # Intent-level write authority can already include this repository
+        # while the session still needs one owner-approved linked checkout.
+        # Permit that selection only with Control's exact checkout identity;
+        # checkout, claim, Git-state, and Store-CAS checks continue below.
+        if (repository in current.get("writable", []) and prior_grant is None
+                and owner_authorized_checkout is None):
             raise AuthorityScopeConflict(
                 "authority-scope-already-granted",
                 f"repository already appears in effective writable scope: {repository}",
-                next_step="inspect the existing authority grant and claim before continuing",
+                next_step=(
+                    "supply an exact Control-verified checkout to bind the already-writable "
+                    "repository to one registered worktree"
+                ),
             )
         if prior_grant is not None and (
             prior_grant.get("authorized_by_principal_id") != authenticated_principal_id
