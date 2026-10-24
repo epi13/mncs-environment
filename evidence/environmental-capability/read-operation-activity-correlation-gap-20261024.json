@@ -1,0 +1,129 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_read_operation_activity_correlation_gap_20261024",
+  "captured_at": "2026-10-24T09:01:59+00:00",
+  "measurement_basis": "direct-session-event-read-and-committed-source-review",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_265ad9d56fb3d70f",
+      "sequence": 13
+    },
+    "campaign_evidence_count": 18,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "read-operation-event-correlation-source-analysis",
+    "source_interface": "mncs-env events and committed Environment/Control source",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "operations_under_review": [
+        "context",
+        "campaign_state",
+        "capabilities"
+      ],
+      "event_query": "python3 scripts/mncs-env events ses_c38b0ab35b9418ba"
+    },
+    "outcome": {
+      "returned_event_window_count": 5,
+      "returned_event_sequence_range": [28, 32],
+      "returned_event_types": [
+        "session.resumed",
+        "session.checkpointed",
+        "session.resumed",
+        "session.resumed",
+        "session.checkpointed"
+      ],
+      "operation_identity_present_in_returned_events": false,
+      "read_operation_outcome_present_in_returned_events": false,
+      "source_facts": {
+        "canonical_environment_event_vocabulary_has_named_provider_invocation_events": true,
+        "canonical_environment_event_vocabulary_has_named_read_rpc_completion_event": false,
+        "campaign_state_cli_path_emits_operation_specific_session_event": false,
+        "control_rpc_deduplication_cache_capacity": 2048,
+        "control_rpc_deduplication_cache_is_process_memory": true
+      },
+      "interpretation_limit": "This is one observed Environment session and source review. It does not establish recurrence, user impact, or the cause of any duplicated work."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_read_operation_activity_correlation",
+    "title": "Read-only Environment RPC activity lacks durable operation-level session evidence",
+    "category": "agent-activity-observability",
+    "subsystem": "Control Environment RPC and Environment session event projection",
+    "owner": "mncs-control-mcp",
+    "basis": "A live Environment event read returned only generic resume/checkpoint event identities for recent read activity. Committed Control source maps campaign-state requests to the CLI and keeps idempotency responses in a bounded in-memory request map; committed Environment event and CLI source has named provider invocation events but no operation-specific event for campaign-state reads.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Expose a bounded authenticated operation-observation source for read-only Environment RPCs, correlated to session, campaign, caller principal, environment/repository revision, operation identity, and outcome. Preserve only status and bounded summaries or digests, and make the existing Environment projection able to reference that source without copying transcripts or creating an unbounded telemetry store.",
+    "not_measured": [
+      "which event sequences correspond to each individual RPC call",
+      "frequency of uncorrelated read operations across other sessions",
+      "operation duration, token usage, model identity, or cache usage",
+      "whether this gap caused duplicated work or changed development decisions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "events",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "returned_event_sequence_range": [28, 32],
+      "measured_fields": [
+        "event type and sequence",
+        "whether operation identity is present",
+        "whether an operation result is present"
+      ]
+    },
+    {
+      "kind": "source-review",
+      "repository": "mncs-environment",
+      "commit": "3aa3f7dbf255ac0e51895537e26c0b26f6dbb08f",
+      "path": "mncs_env/events.py",
+      "sha256": "9290163cd25894f6f30848aecc74863f1327dd89f64dfb3f135603b553133c5d",
+      "observed_contract": "typed events include capability.invoked and invocation.completed but no named read-operation completion event"
+    },
+    {
+      "kind": "source-review",
+      "repository": "mncs-environment",
+      "commit": "3aa3f7dbf255ac0e51895537e26c0b26f6dbb08f",
+      "path": "mncs_env/cli.py",
+      "sha256": "2a19ee449a4279e1440cb43ebc4e06157c589e8d79cbb97c5185e559c63862e1",
+      "observed_contract": "campaign_state and context return read results without recording an operation-specific session event"
+    },
+    {
+      "kind": "source-review",
+      "repository": "mncs-control-mcp",
+      "commit": "6eb9ae78f96a714fe50610fcc38d8358cb3329f2",
+      "path": "src/mncs_control_mcp/local_environment_mcp.py",
+      "sha256": "8026b4ae10c0cde3ca9a53c34609b236ed87bd6b2d8cce43be5d4fa9ba05d764",
+      "observed_contract": "campaign_state RPC maps a bounded evidence page request to the Environment campaign-state command"
+    },
+    {
+      "kind": "source-review",
+      "repository": "mncs-control-mcp",
+      "commit": "6eb9ae78f96a714fe50610fcc38d8358cb3329f2",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "fde50b52c24b5503606dc50e745fba0999b84259200a41d86dc4d9141f7e090d",
+      "observed_contract": "RPC request/response idempotency records are retained in an in-process OrderedDict capped at 2048 entries"
+    }
+  ],
+  "not_measured": [
+    "whether direct context and campaign-state calls were duplicated by other consumers",
+    "whether a durable operation event source exists outside the inspected Environment session and Control RPC code",
+    "any causal impact on compiler, language, or agent objectives"
+  ]
+}

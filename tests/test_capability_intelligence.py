@@ -514,6 +514,34 @@ def test_authentic_capture_context_evidence_projects_as_one_improvement_chain(
     assert followup["recording_context"]["session_id"] == "ses_c38b0ab35b9418ba"
 
 
+def test_read_operation_observability_hypothesis_keeps_nonrecurrence_explicit(
+    tmp_path: Path,
+) -> None:
+    path = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability/read-operation-activity-correlation-gap-20261024.json"
+    )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    session, _ = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["pressure_hypothesis_count"] == 1
+    hypothesis = result["pressure_hypotheses"][0]
+    assert hypothesis["identity"] == (
+        "ph_environment_read_operation_activity_correlation"
+    )
+    assert hypothesis["owner"] == "mncs-control-mcp"
+    assert hypothesis["recurrence_status"] == "not-established"
+    observation = result["observations"][0]
+    assert observation["observation"]["outcome"][
+        "operation_identity_present_in_returned_events"
+    ] is False
+    assert observation["supporting_sources"][0]["status"] == (
+        "captured-in-observation-record"
+    )
+
+
 def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_large", "ses_compiler", "cmp_compiler")
     record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000
