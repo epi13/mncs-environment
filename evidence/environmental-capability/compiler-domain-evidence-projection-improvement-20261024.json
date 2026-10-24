@@ -1,0 +1,78 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_domain_evidence_projection_improvement_20261024",
+  "captured_at": "2026-10-24T18:40:48Z",
+  "measurement_basis": "verified-bounded-adapter-linked-to-authentic-compiler-report",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_8a89e1c10dda51f9",
+      "sequence": 47
+    },
+    "campaign_evidence_count": 98
+  },
+  "observation": {
+    "kind": "compiler-domain-evidence-projection-improvement-relation",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "pressure_observation_identity": "ev_environment_compiler_domain_evidence_projection_pressure_20261024",
+      "verification_observation_identity": "ev_environment_compiler_regression_projection_verification_20261024",
+      "implementation_commit": "e0d07e8fb6ee4bf8b186ad11348b73c4b299e897",
+      "subsequent_observation_identity": "ev_environment_compiler_regression_projection_readback_20261024"
+    },
+    "outcome": {
+      "implementation_change": "The bounded capability projection now recognizes one allowlisted Compiler language-module regression schema, verifies its exact committed source pointer in the selected Compiler checkout, and exposes four named build stages with fact-reuse and per-build resource measurements correlated to the active Compiler campaign and Work Intent.",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "Focused tests and local projection verified the adapter against an authentic Compiler artifact. The active Control projection remains on the integrated Environment version pending governance-authorized delivery; no production effect or agent outcome is claimed."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_compiler_domain_evidence_projection_20261024",
+    "addresses_hypothesis_identity": "ph_environment_compiler_domain_evidence_projection_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_compiler_domain_evidence_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "e0d07e8fb6ee4bf8b186ad11348b73c4b299e897",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "33a2e5f50ef1302840d0de8bd947a38694b0d35c7fae8e6c4c499c104f5b022a"
+    },
+    "verification_observation_identity": "ev_environment_compiler_regression_projection_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_compiler_regression_projection_readback_20261024",
+    "basis": "The focused projection suite verifies content-addressed loading, Compiler work-context correlation, bounded stage summaries, unavailable measurements, and rejection of unsupported schemas. A local projection over the authenticated Compiler page selected the real regression pointer, verified its source SHA-256, and exposed one contextual observation.",
+    "not_measured": [
+      "production exposure until the feature branch is integrated",
+      "runtime overhead under future compiler evidence pages",
+      "cross-session recurrence of this projection gap",
+      "agent outcomes and long-term effectiveness"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    }
+  ],
+  "not_measured": [
+    "production exposure before main integration",
+    "cross-session recurrence",
+    "whether compiler agents use or benefit from the adapter",
+    "long-term effectiveness after integration"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

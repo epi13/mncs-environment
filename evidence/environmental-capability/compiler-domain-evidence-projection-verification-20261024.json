@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_regression_projection_verification_20261024",
+  "captured_at": "2026-10-24T18:40:48Z",
+  "measurement_basis": "focused-projection-tests-static-checks-and-exact-source-adaptation",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_8a89e1c10dda51f9",
+      "sequence": 47
+    },
+    "campaign_evidence_count": 98
+  },
+  "observation": {
+    "kind": "compiler-domain-evidence-projection-verification",
+    "source_interface": "MNCS Environment focused tests and capability-intelligence projection",
+    "request": {
+      "test_command": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py",
+      "lint_command": "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+      "static_check": "git diff --check",
+      "implementation_commit": "e0d07e8fb6ee4bf8b186ad11348b73c4b299e897",
+      "compiler_source_identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024"
+    },
+    "outcome": {
+      "test_result": {
+        "passed": 64,
+        "failed": 0,
+        "scope": "capability-intelligence test module"
+      },
+      "ruff": "passed",
+      "diff_check": "passed",
+      "source_commit_and_sha256_verification": "passed",
+      "exact_compiler_record_adaptation": "verified",
+      "local_capability_projection": {
+        "status": "ready",
+        "observation_records_considered": 8,
+        "observation_records_verified": 1,
+        "projected_identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+        "compiler_work_context_preserved": true,
+        "named_stage_summaries": 4,
+        "measurement_availability_preserved": true
+      },
+      "active_control_projection": {
+        "observation_count": 0,
+        "integration_status": "not-deployed-from-feature-branch"
+      },
+      "analysis_limit": "The adapter is verified against the exact committed Compiler source and a local projection harness. The live Control projection still uses the integrated Environment version, so production exposure and subsequent agent outcomes are not verified."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-environment-implementation",
+      "identity": "ev_environment_compiler_domain_evidence_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "e0d07e8fb6ee4bf8b186ad11348b73c4b299e897",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "33a2e5f50ef1302840d0de8bd947a38694b0d35c7fae8e6c4c499c104f5b022a"
+    },
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    },
+    {
+      "kind": "authenticated-live-control-projection-result",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637",
+      "checkpoint_id": "chk_691079cfe830f05d"
+    }
+  ],
+  "not_measured": [
+    "production exposure before main integration",
+    "runtime overhead under future Compiler pages",
+    "token usage or total agent execution duration",
+    "whether agents use or benefit from the new projection"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

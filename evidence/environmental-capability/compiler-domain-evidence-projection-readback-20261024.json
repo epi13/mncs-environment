@@ -1,0 +1,87 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_regression_projection_readback_20261024",
+  "captured_at": "2026-10-24T18:40:48Z",
+  "measurement_basis": "local-environmental-capability-projection-over-authenticated-compiler-page",
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "environment_id": "renv_80ef889b89dad0e9",
+    "definition_id": "env_c7d14ed20b708d09",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693
+  },
+  "observation": {
+    "kind": "compiler-domain-evidence-projection-readback",
+    "source_interface": "MNCS Environment capability-intelligence local projection over the authenticated Compiler campaign evidence page",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_691079cfe830f05d",
+      "evidence_page_offset": 685,
+      "evidence_page_limit": 8,
+      "implementation_commit": "e0d07e8fb6ee4bf8b186ad11348b73c4b299e897",
+      "source_identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024"
+    },
+    "outcome": {
+      "projection_status": "ready",
+      "observation_records_considered": 8,
+      "observation_records_verified": 1,
+      "projected_observation_identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "source_pointer_status": "verified-by-commit-and-sha256-in-selected-compiler-checkout",
+      "compiler_work_intent_preserved": true,
+      "named_stage_summaries": [
+        "cold",
+        "effect_assumption_edit",
+        "capability_assumption_edit",
+        "fresh_process"
+      ],
+      "measured_effect_and_capability_edits": {
+        "recomputed_fact_count": 2,
+        "reused_fact_count": 28,
+        "output_equal_to_stage0": true
+      },
+      "measured_fresh_process_cache_hit": {
+        "cache_status": "hit",
+        "recomputed_fact_count": 0,
+        "reused_fact_count": 30,
+        "output_equal_to_stage0": true
+      },
+      "resource_measurements_are_per_build_request": true,
+      "capture_time_basis": "unavailable-in-source-record",
+      "token_usage": "not-recorded-in-source",
+      "active_control_projection": {
+        "observation_count": 0,
+        "status": "pre-integration-version"
+      },
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The local projection verifies the new adapter against the exact live Compiler ledger references and source blob. The active Control projection is still running the integrated Environment version; operational deployment and agent outcomes await authorized branch integration."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    }
+  ],
+  "not_measured": [
+    "production exposure after branch integration",
+    "runtime overhead under subsequent Compiler workloads",
+    "cross-session recurrence of the projection gap",
+    "agent outcomes or long-term effectiveness"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

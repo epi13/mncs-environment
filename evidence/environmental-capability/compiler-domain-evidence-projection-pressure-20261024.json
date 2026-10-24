@@ -1,0 +1,99 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_domain_evidence_projection_pressure_20261024",
+  "captured_at": "2026-10-24T18:40:48Z",
+  "measurement_basis": "authenticated-compiler-campaign-page-and-capability-projection",
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "environment_id": "renv_80ef889b89dad0e9",
+    "definition_id": "env_c7d14ed20b708d09",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693
+  },
+  "observation": {
+    "kind": "compiler-domain-evidence-projection-gap",
+    "source_interface": "MNCS Environment campaign-state environmental-capability projection",
+    "request": {
+      "operation": "campaign_state",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637",
+      "checkpoint_id": "chk_691079cfe830f05d",
+      "evidence_page_offset": 685,
+      "evidence_page_limit": 8,
+      "source_evidence_identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "evidence_count": 693,
+      "observation_records_considered": 8,
+      "observation_reference_capacity": 0,
+      "observation_records_verified": 0,
+      "source_record_schema": "mncs.compiler.language-module-elaboration-cache-regression/2",
+      "source_record_present_in_campaign_page": true,
+      "source_record_contains_measured_build_resource_and_fact_reuse_data": true,
+      "active_control_projection_after_local_adapter_change": {
+        "observation_count": 0,
+        "observation_reference_capacity": 0,
+        "interpretation": "The authenticated Control path still runs the integrated Environment version; this feature branch is not yet deployed there."
+      },
+      "analysis_limit": "One bounded Compiler page shows a source-format integration gap. It does not establish that compiler measurements were never recorded elsewhere, nor that this gap recurs across campaigns."
+    },
+    "measurement_availability": {
+      "model_identity": "not-recorded-in-source",
+      "token_usage": "not-recorded-in-source",
+      "resource_consumption": "available-per-build-in-source-record",
+      "cache_accounting": "available-per-stage-in-source-record"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_compiler_domain_evidence_projection_20261024",
+    "title": "Compiler regression evidence is absent from environmental capability observations",
+    "category": "cross-system-evidence-integration",
+    "subsystem": "MNCS Environment capability-intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "The authenticated Compiler campaign page contains a content-addressed language-module regression record, while the environmental-capability projection reports zero observation references for that page. The record has direct per-build resource and fact-reuse measurements that are not available in the capability observation view.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Add a bounded, schema-aware adapter for the established Compiler regression record, retaining the original commit and SHA-256 and preserving unavailable measurements.",
+    "not_measured": [
+      "whether other compiler evidence schemas have the same projection gap",
+      "cross-session recurrence",
+      "agent outcomes or effectiveness after an adapter is integrated"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-campaign-state-projection-result",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637",
+      "checkpoint_id": "chk_691079cfe830f05d",
+      "evidence_page_offset": 685,
+      "evidence_page_limit": 8
+    },
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    }
+  ],
+  "not_measured": [
+    "source capture timestamp for the Compiler build measurements",
+    "model identity, token use, or full campaign duration",
+    "whether this integration gap recurs across sessions"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
