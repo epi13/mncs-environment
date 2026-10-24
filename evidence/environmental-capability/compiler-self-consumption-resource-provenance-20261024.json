@@ -1,0 +1,124 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_self_consumption_resource_provenance_20261024",
+  "captured_at": "2026-10-24T13:46:59Z",
+  "measurement_basis": "read-only-reference-to-committed-compiler-campaign-evidence",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206"
+  },
+  "observation": {
+    "kind": "compiler-self-consumption-resource-and-provenance-observation",
+    "source_interface": "MNCS Control read-only inspection of committed Compiler evidence",
+    "request": {
+      "source_repository": "mncs-compiler",
+      "source_commit": "9c0ebaaf0c70c88cd9d9879fb6746356a73c3a22",
+      "source_path": "evidence/project-language-fact-reuse-20261023T103403Z.json",
+      "source_sha256": "2bf5e80c9be3d7c5ea2cfd68ee471b213f1df9e721b1baf4305f1fcb184966df",
+      "source_campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "compiler_revision": "3491377d44609b45a6a8d14286eeaa6e1693396a",
+      "language_revision": "6295d0b94b34b271d78d512c3ddd2eb6d5c1ef46",
+      "workload": "tests.compiler_project_fact_frontier::run"
+    },
+    "source_session_context": {
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "repository": "mncs-compiler",
+      "repository_branch": "campaign/compiler-language-identity-index-20261023",
+      "repository_head": "3491377d44609b45a6a8d14286eeaa6e1693396a",
+      "repository_context_basis": "compiler build revision recorded in source artifact; not a current checkout probe"
+    },
+    "outcome": {
+      "status": "passed_language_fact_v3_project_self_consumption",
+      "vm_runtime_build_origin": {
+        "status": "stale-inputs",
+        "mismatch_count": 10
+      },
+      "verified_fact_reuse": {
+        "cold_body_fact_count": 2031,
+        "comment_reused_body_fact_count": 2031,
+        "uncalled_body_edit_reused_body_fact_count": 2030,
+        "body_edit_reused_body_fact_count": 2016,
+        "fresh_process_per_snapshot": true
+      },
+      "invalid_source": {
+        "status": "rejected",
+        "diagnostic_codes": ["MNE135", "MNE103"],
+        "artifact_publication": "not_published",
+        "prior_success_did_not_mask_diagnostic": true
+      },
+      "measurement_summary": {
+        "direct_measurements": {
+          "compiler_total_wall_seconds": 342.003768,
+          "cold_build_wall_seconds": 77.814298,
+          "cold_build_peak_rss_bytes": 1803956224,
+          "comment_edit_wall_seconds": 72.048104,
+          "comment_edit_peak_rss_bytes": 2087919616,
+          "uncalled_body_edit_wall_seconds": 71.807732,
+          "uncalled_body_edit_peak_rss_bytes": 2088222720,
+          "body_edit_wall_seconds": 79.655982,
+          "body_edit_peak_rss_bytes": 2088214528,
+          "invalid_source_wall_seconds": 39.438486,
+          "invalid_source_peak_rss_bytes": 1945997312,
+          "canonical_vm_wall_seconds": 0.009151,
+          "canonical_vm_peak_rss_kib": 8092
+        },
+        "observed_counts": {
+          "cold_body_fact_count": 2031,
+          "comment_reused_body_fact_count": 2031,
+          "uncalled_body_edit_reused_body_fact_count": 2030,
+          "body_edit_reused_body_fact_count": 2016,
+          "vm_source_mismatch_count": 10,
+          "invalid_source_diagnostic_count": 2
+        },
+        "measurement_availability": {
+          "phase_cgroup_memory_peak_bytes": "unavailable",
+          "isolated_cgroup_peak_bytes": "unavailable",
+          "compiler_resource_attribution_to_environment_session": "unavailable"
+        },
+        "interpretations": [
+          "The source artifact marks VM runtime build origin stale-inputs with 10 mismatches.",
+          "The compiler artifact reports fresh-process fact reuse and a rejected invalid-source case.",
+          "This is one recorded compiler result; recurrence is not established."
+        ],
+        "qualifications": [
+          "Wall time and peak RSS belong to the compiler workload recorded in the source artifact.",
+          "The recorded compiler and language revisions are not current checkout probes.",
+          "The source artifact does not provide cgroup-level memory peaks."
+        ]
+      },
+      "claim_boundary": "selected Project function application only; whole-compiler succession remains unproven"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-compiler-operational-evidence",
+      "repository": "mncs-compiler",
+      "commit": "9c0ebaaf0c70c88cd9d9879fb6746356a73c3a22",
+      "path": "evidence/project-language-fact-reuse-20261023T103403Z.json",
+      "sha256": "2bf5e80c9be3d7c5ea2cfd68ee471b213f1df9e721b1baf4305f1fcb184966df"
+    }
+  ],
+  "pressure_hypothesis": {
+    "identity": "ph_environment_compiler_resource_and_cross_repository_provenance_20261024",
+    "title": "Compiler self-consumption evidence lacks cgroup attribution and current VM input provenance",
+    "category": "cross-repository-observability",
+    "subsystem": "Environment capability projection, Compiler build resources, and VM provenance",
+    "actionable_recommendation": "Provide a content-verified read-only path for committed compiler evidence, expose missing cgroup measurements with the source revision mismatches, and avoid attributing these recorded values to the current Environment session."
+  },
+  "not_measured": [
+    "cgroup-level memory use for each compiler phase",
+    "resource pressure attributable to concurrent agents",
+    "whether stale VM inputs affected correctness of the recorded compiler result",
+    "cross-session recurrence of this compiler evidence or subsequent agent benefit"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206"
+  }
+}

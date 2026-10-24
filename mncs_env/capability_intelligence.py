@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import subprocess
@@ -207,6 +208,63 @@ def _short_text(value: Any, limit: int = 192) -> str | None:
     if len(value) <= limit:
         return value
     return value[:limit - 1] + "…"
+
+
+def _compact_measurement_summary(outcome: Any) -> dict[str, Any] | None:
+    """Keep explicitly classified, bounded measures when raw outcome details are omitted."""
+    if not isinstance(outcome, dict):
+        return None
+    raw = outcome.get("measurement_summary")
+    if not isinstance(raw, dict):
+        return None
+    result: dict[str, Any] = {}
+    for category in (
+        "direct_measurements", "derived_measurements", "observed_counts",
+    ):
+        values = raw.get(category)
+        if not isinstance(values, dict):
+            continue
+        selected = {}
+        valid = []
+        for key, value in values.items():
+            if (isinstance(key, str) and key and len(key) <= 80
+                    and ((type(value) is int and value >= 0)
+                         or (category != "observed_counts"
+                             and type(value) is float and math.isfinite(value)
+                             and value >= 0))):
+                valid.append((key, value))
+        for key, value in sorted(valid)[:16]:
+            selected[key] = value
+        if selected:
+            result[category] = selected
+        if len(valid) != len(values) or len(valid) > len(selected):
+            result[f"{category}_truncated"] = True
+    availability = raw.get("measurement_availability")
+    if isinstance(availability, dict):
+        selected_availability = {
+            key: _short_text(value, 64)
+            for key, value in sorted(availability.items())[:16]
+            if isinstance(key, str) and key and len(key) <= 80
+            and isinstance(value, str) and value
+        }
+        if selected_availability:
+            result["measurement_availability"] = selected_availability
+        if len(availability) > len(selected_availability):
+            result["measurement_availability_truncated"] = True
+    for field in ("interpretations", "qualifications"):
+        values = raw.get(field)
+        if not isinstance(values, list):
+            continue
+        selected_values = [
+            _short_text(value, 256)
+            for value in values[:8]
+            if isinstance(value, str) and value
+        ]
+        if selected_values:
+            result[field] = selected_values
+        if len(values) > len(selected_values):
+            result[f"{field}_truncated"] = True
+    return result or None
 
 
 def _compact_projection(
@@ -414,6 +472,11 @@ def _compact_projection(
             ] if isinstance(measurement_limits, list) else [],
             "evidence_reference": item["evidence_reference"],
         }
+        measurement_summary = _compact_measurement_summary(observation.get("outcome"))
+        if measurement_summary is not None:
+            compact_observation["observation"]["measurement_summary"] = (
+                measurement_summary
+            )
         if isinstance(observation.get("source_session_context"), dict):
             source_context = observation["source_session_context"]
             compact_observation["observation"]["source_session_context"] = {

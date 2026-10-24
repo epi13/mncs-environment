@@ -1810,6 +1810,77 @@ def test_unverified_optional_improvement_link_does_not_discard_observation(
     assert result["improvement_relation_count"] == 0
 
 
+def test_compact_projection_preserves_classified_measurement_summary(tmp_path: Path) -> None:
+    record = _observation(
+        "ev_environment_compiler_measurement_summary",
+        "ses_compiler_measurement_summary",
+        "cmp_compiler_measurement_summary",
+    )
+    record["observation"]["outcome"]["measurement_summary"] = {
+        "direct_measurements": {
+            "compiler_total_wall_seconds": 342.003768,
+            "compiler_cold_build_peak_rss_bytes": 1_803_956_224,
+        },
+        "derived_measurements": {"cold_build_seconds_per_case": 15.5628596},
+        "observed_counts": {"cold_body_fact_count": 2_031},
+        "measurement_availability": {
+            "cgroup_peak_memory_bytes": "unavailable",
+        },
+        "interpretations": ["compiler artifact records stale VM inputs"],
+        "qualifications": ["measurements belong to the source artifact"],
+    }
+    record["observation"]["outcome"]["large_diagnostic"] = "private " * 6_000
+    session, _state = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    assert result["source"]["response_truncated"] is True
+    observation = result["observations"][0]["observation"]
+    assert observation["details_omitted"] is True
+    assert observation["measurement_summary"] == {
+        "direct_measurements": {
+            "compiler_cold_build_peak_rss_bytes": 1_803_956_224,
+            "compiler_total_wall_seconds": 342.003768,
+        },
+        "derived_measurements": {"cold_build_seconds_per_case": 15.5628596},
+        "observed_counts": {"cold_body_fact_count": 2_031},
+        "measurement_availability": {
+            "cgroup_peak_memory_bytes": "unavailable",
+        },
+        "interpretations": ["compiler artifact records stale VM inputs"],
+        "qualifications": ["measurements belong to the source artifact"],
+    }
+    assert "private " not in json.dumps(result)
+
+
+def test_compiler_artifact_observation_preserves_scope_and_measurement_uncertainty(
+    tmp_path: Path,
+) -> None:
+    path = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability/"
+        "compiler-self-consumption-resource-provenance-20261024.json"
+    )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    session, _state = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    observation = result["observations"][0]
+    assert observation["related_work"]["campaign_id"] == (
+        "cmp_environmental_capability_intelligence_followup_20261024"
+    )
+    assert observation["observation"]["source_session_context"]["campaign_id"] == (
+        "cmp_mncs_native_application_readiness_compiler_20261013"
+    )
+    assert observation["observation"]["outcome"]["measurement_summary"][
+        "measurement_availability"]["phase_cgroup_memory_peak_bytes"] == "unavailable"
+    assert result["pressure_hypotheses"][0]["recurrence_status"] == "not-established"
+    assert result["source"]["source_pointer_content_integrity_not_verified_count"] == 1
+    assert observation["supporting_sources"][0]["content_integrity_status"] == (
+        "outside-selected-session"
+    )
+
+
 def test_missing_campaign_state_is_reported_without_inference() -> None:
     session = SimpleNamespace(
         session_id="ses_without_campaign_state",
