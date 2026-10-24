@@ -1,0 +1,68 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_source_integrity_followup_20261024",
+  "captured_at": "2026-10-24T09:21:18+00:00",
+  "measurement_basis": "direct-post-change-Environment-campaign-state-result",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_d1bbebc61af7ed5d",
+      "sequence": 16
+    },
+    "campaign_evidence_count": 30,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-source-integrity-followup",
+    "source_interface": "mncs_environment MCP campaign_state",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_d1bbebc61af7ed5d",
+      "evidence_offset": 16,
+      "evidence_limit": 16,
+      "branch_commit": "b3ab51c12fe51a1201b3197036286967160f7d69"
+    },
+    "outcome": {
+      "projection_status": "ready",
+      "observation_records_considered": 14,
+      "observation_records_verified": 8,
+      "observation_records_unavailable": 0,
+      "source_pointer_count": 9,
+      "source_pointer_content_integrity_verified_count": 7,
+      "source_pointer_content_integrity_not_verified_count": 2,
+      "selected_source_integrity_verified": [
+        "mncs_env/cli.py at 3aa3f7dbf255ac0e51895537e26c0b26f6dbb08f",
+        "tests/test_environment.py at 4af2bc4ba13aac6071565fb234e5aa2e965d417f",
+        "mncs_env/capability_intelligence.py at dfe28b04f6bb1bca0bee5fd931d2c945084d37cb"
+      ],
+      "outside_selected_session_count": 2,
+      "outside_selected_session_sources_read": 0,
+      "analysis_limit": "The projection now verifies selected Environment source digests under the larger source-specific bound; two Control pointers remain unverified because their repository is outside the selected Environment session."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    }
+  ],
+  "not_measured": [
+    "future agent use of source verification results",
+    "whether the larger source bound changes the amount of useful evidence agents can inspect over time",
+    "resource attribution to individual Git source reads"
+  ]
+}

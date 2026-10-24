@@ -1,0 +1,105 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_source_integrity_size_gap_20261024",
+  "captured_at": "2026-10-24T09:20:00+00:00",
+  "measurement_basis": "live-capability-projection-and-Git-object-size-read",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_d1bbebc61af7ed5d",
+      "sequence": 16
+    },
+    "campaign_evidence_count": 30,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-source-integrity-size-bound-gap",
+    "source_interface": "mncs_environment MCP campaign_state and Git cat-file -s",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_d1bbebc61af7ed5d",
+      "evidence_offset": 16,
+      "evidence_limit": 16
+    },
+    "outcome": {
+      "projection_status": "ready",
+      "observation_records_verified": 8,
+      "observation_records_unavailable": 0,
+      "source_pointer_count": 9,
+      "source_pointer_content_integrity_verified_count": 5,
+      "source_pointer_content_integrity_not_verified_count": 4,
+      "selected_environment_sources_reported_too_large": [
+        {
+          "path": "mncs_env/cli.py",
+          "commit": "3aa3f7dbf255ac0e51895537e26c0b26f6dbb08f",
+          "size_bytes": 122470,
+          "projection_content_integrity_status": "source-object-too-large"
+        },
+        {
+          "path": "tests/test_environment.py",
+          "commit": "3aa3f7dbf255ac0e51895537e26c0b26f6dbb08f",
+          "size_bytes": 410646,
+          "projection_content_integrity_status": "source-object-too-large"
+        }
+      ],
+      "existing_source_read_limit_bytes": 65536,
+      "analysis_limit": "The projection already restricted reads to the selected Environment checkout and preserved the source pointers; the shared observation-record byte limit prevented digest checks for these larger source files."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_capability_source_integrity_size_bound",
+    "title": "The observation-record size ceiling prevents verification of ordinary source files",
+    "category": "evidence-provenance",
+    "subsystem": "mncs-environment capability intelligence source verification",
+    "owner": "mncs-environment",
+    "basis": "One live projection marked selected Environment source blobs of 122470 and 410646 bytes too large under the 65536-byte limit used for observation records.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Use a separate modest source-blob bound while retaining the shared projection time budget and a page-level pointer-count cap.",
+    "not_measured": [
+      "whether any agent treated these registered source pointers as digest verified",
+      "frequency of source files exceeding the old limit across campaign pages",
+      "resource cost or user impact of the unverified source pointers"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "source-object-size",
+      "identity": "ev_environment_cli_read_operation_path_20261024",
+      "repository": "mncs-environment",
+      "commit": "3aa3f7dbf255ac0e51895537e26c0b26f6dbb08f",
+      "path": "mncs_env/cli.py",
+      "sha256": "2a19ee449a4279e1440cb43ebc4e06157c589e8d79cbb97c5185e559c63862e1"
+    },
+    {
+      "kind": "source-object-size",
+      "identity": "ev_environment_capability_entry_test_source_20261024",
+      "repository": "mncs-environment",
+      "commit": "4af2bc4ba13aac6071565fb234e5aa2e965d417f",
+      "path": "tests/test_environment.py",
+      "sha256": "487364f88d4b5f8fbd90f82f4822321436641836e394eb0a48c1f76b27fb57f1"
+    }
+  ],
+  "not_measured": [
+    "recurrence across Environment versions and agent sessions",
+    "whether any downstream agent decision was affected",
+    "time, memory, or token cost of the prior bound"
+  ]
+}

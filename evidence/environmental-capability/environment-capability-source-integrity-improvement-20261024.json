@@ -1,0 +1,92 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_source_integrity_improvement_20261024",
+  "captured_at": "2026-10-24T09:21:50+00:00",
+  "measurement_basis": "committed-bounded-source-verification-implementation-link",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_d1bbebc61af7ed5d",
+      "sequence": 16
+    },
+    "campaign_evidence_count": 30,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment capability intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_capability_source_integrity_size_bound",
+      "implementation_commit": "b3ab51c12fe51a1201b3197036286967160f7d69",
+      "verification_observation_identity": "ev_environment_capability_source_integrity_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_capability_source_integrity_followup_20261024"
+    },
+    "outcome": {
+      "implementation_change": "Source integrity reads now have a separate 512 KiB bound, still share the eight-second projection budget, and stop after 32 source pointers per page. Supporting-source pointers and content-integrity states remain visible in bounded compact projections.",
+      "verification_recorded": true,
+      "followup_projection_verified_selected_code_and_test_sources": true,
+      "followup_projection_left_unselected_control_sources_unread": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The follow-up confirms source digests and bounded size behavior for the selected page; it does not establish future agent uptake or a reduction in attribution mistakes."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_capability_source_integrity_size_bound_20261024",
+    "addresses_hypothesis_identity": "ph_environment_capability_source_integrity_size_bound",
+    "implementation_reference": {
+      "identity": "ev_environment_capability_source_integrity_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "b3ab51c12fe51a1201b3197036286967160f7d69",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "42a2a72a17a79b4f7de326a71a769f7d4f812fadc45a9c57303972c85d065aae"
+    },
+    "verification_observation_identity": "ev_environment_capability_source_integrity_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_capability_source_integrity_followup_20261024",
+    "basis": "The focused projection test verifies a selected 144000-byte source blob, a digest mismatch, a blob larger than 512 KiB, and compact pointer preservation. The live follow-up verified selected Environment code and test source digests and kept two Control source references outside the selected session.",
+    "not_measured": [
+      "future agent use of content_integrity_status in implementation decisions",
+      "long-term recurrence of size-bound source verification gaps",
+      "time and memory attribution to source verification"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_capability_source_integrity_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "b3ab51c12fe51a1201b3197036286967160f7d69",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "42a2a72a17a79b4f7de326a71a769f7d4f812fadc45a9c57303972c85d065aae"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "b3ab51c12fe51a1201b3197036286967160f7d69",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "19752e8be791a3d0c37c1f7f511d80b4c4fccdb03ff590d95df6c4a0473019e9"
+    }
+  ],
+  "not_measured": [
+    "whether agents use source integrity findings in subsequent development",
+    "long-term recurrence or resolution of this hypothesis",
+    "resource and token attribution for this bounded projection"
+  ]
+}
