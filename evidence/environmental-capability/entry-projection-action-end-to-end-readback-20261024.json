@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_entry_projection_action_end_to_end_readback_20261024",
+  "captured_at": "2026-10-24T16:15:25+00:00",
+  "observation": {
+    "kind": "environment-entry-to-capability-projection-end-to-end-readback",
+    "source_interface": "mncs-env session context action followed by environmental-capability projection",
+    "request": {
+      "campaign_checkpoint_id": "chk_f8b662b26aea64f5",
+      "campaign_evidence_count": 57,
+      "action_key": "environmental_capability_projection",
+      "command_tail": [
+        "projections",
+        "ses_c98eb637e20a5c14",
+        "--interpret",
+        "environmental-capability"
+      ]
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_records_returned": 16,
+      "pressure_hypotheses_returned": 4,
+      "improvement_relations_returned": 4,
+      "pressure_hypotheses": [
+        {
+          "identity": "ph_environment_capability_projection_mcp_exposure",
+          "recurrence_status": "not-established"
+        },
+        {
+          "identity": "ph_environment_compact_observation_outcome_context",
+          "recurrence_status": "not-established"
+        },
+        {
+          "identity": "ph_environment_direct_cli_projection_source_classification",
+          "recurrence_status": "not-established"
+        },
+        {
+          "identity": "ph_environment_entry_projection_discoverability",
+          "recurrence_status": "not-established"
+        }
+      ],
+      "analysis_limit": "The advertised action successfully opens the existing projection. This default read is one authenticated evidence page, capped at sixteen observation records, and does not establish recurrence beyond that selected window or future agent use."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_f8b662b26aea64f5",
+    "campaign_evidence_count_before_recording": 57,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    },
+    {
+      "kind": "campaign-observation-record",
+      "identity": "ev_environment_entry_projection_action_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "ce18ff0429d4d2cf2b51888e642b3d220b8d5f68",
+      "path": "evidence/environmental-capability/entry-projection-discoverability-live-readback-20261024.json",
+      "sha256": "f18546a09ca1c8bc7eb82e8e36ca34c69c028d2a8e120d3eff56f95c2c3daff1"
+    },
+    {
+      "kind": "committed-entry-context-action",
+      "identity": "ev_environment_entry_projection_action_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "d51f2f2c0719683eb861044404454876087f219b",
+      "path": "mncs_env/sessions.py",
+      "sha256": "0356b7803149cac777c931bf1753b1d88d0038d3353e35676e225662b62d052b"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
