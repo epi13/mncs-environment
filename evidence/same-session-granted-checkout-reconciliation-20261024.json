@@ -1,0 +1,78 @@
+{
+  "campaign": {
+    "checkpoint_before_change": "chk_0c704d2b3de1dea8",
+    "identity": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "sequence_before_change": 647,
+    "session_id": "ses_164edc158d9b1637"
+  },
+  "created_at": "2026-10-24T01:52:06+00:00",
+  "identity": "ev_environment_same_session_claim_reconciliation_20261024",
+  "implementation": {
+    "behavior": [
+      "A granted checkout can recompose after branch observation changes when the exact registered checkout remains verified and the current session retains valid claims for that same checkout.",
+      "Duplicate same-session claim records for one verified checkout are treated as one logical owner; the immutable claim records remain in Store.",
+      "Claims from another session, malformed claim records, mismatched checkout identity, and unrelated worktree scopes remain fail-closed.",
+      "Legacy repository-wide claims remain usable only when the exact owner-granted checkout identity still matches; they do not authorize branch-drift fallback."
+    ],
+    "main_merge_commit": "05c48136dccb4e23e509c542b347068d4d49a302",
+    "repository": "mncs-environment",
+    "source_commit": "8123c4a8e2558c2663a77ce71af89031c1c7d0c4",
+    "source_files": {
+      "mncs_env/sessions.py": "35c072f439d0bd0beb5e223993eb7d35373082602a993ceffb85afa1db789766",
+      "tests/test_authority_scope_grants.py": "ace06a9f928eee202feb1d8b31e9a737b11085676bf8e2fe0e45b148c207b330"
+    }
+  },
+  "limitations": [
+    "The full Environment suite was not rerun for this slice; all 52 scope-grant tests and five focused Environment continuation/toolchain tests passed."
+  ],
+  "result": "passed",
+  "schema_version": "mncs.environment.same-session-granted-checkout-reconciliation/1",
+  "verification": {
+    "authenticated_revalidation": {
+      "command": "python3 -m mncs_env.cli continuation --campaign-id cmp_mncs_native_application_readiness_compiler_20261013 >/dev/null && python3 -m mncs_env.cli resume ses_164edc158d9b1637 --revalidate",
+      "duration_seconds": 98.723,
+      "language_checkout": {
+        "branch": "campaign/luna-language-identity-index-20261023",
+        "head": "9505d3f557701f072b5803a5bad046389b84cb3b",
+        "path": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/native-app-readiness-20261013/.worktrees/luna-language-fact-invalidation-20261022/mncs-language",
+        "scope_grant_identity": "scope_e87d6acff3f9c709"
+      },
+      "language_claim_records_retained": 3,
+      "selection": [
+        "mncs-environment",
+        "mncs-language",
+        "mncs-vm"
+      ],
+      "status": "passed"
+    },
+    "fresh_process_readback": {
+      "campaign_checkpoint_before": "chk_0c704d2b3de1dea8",
+      "campaign_evidence_count_before": 691,
+      "language_selected": true,
+      "selected_repositories": [
+        "mncs-environment",
+        "mncs-language",
+        "mncs-vm"
+      ],
+      "status": "passed"
+    },
+    "test_groups": [
+      {
+        "command": "TMPDIR=/tmp PYTHONPATH=. python3 -m pytest -q tests/test_authority_scope_grants.py --basetemp=/tmp/mncs-env-same-session-claim-reconcile-suite-rerun-20261024",
+        "duration_seconds": 124.76,
+        "failed": 0,
+        "passed": 52
+      },
+      {
+        "command": "TMPDIR=/tmp PYTHONPATH=. python3 -m pytest -q tests/test_environment.py -k 'revalidate_preserves_scoped_claim_holders or language_toolchain_selection_tracks_newly_composed_checkout or claim_management_opens_selected_session_store or duplicate_exact_checkout_refreshes_branch_for_exact_claim_identity or duplicate_exact_checkout_respects_foreign_overlapping_claim' --basetemp=/tmp/mncs-env-session-selection-regression-20261024",
+        "duration_seconds": 2.48,
+        "failed": 0,
+        "passed": 5
+      }
+    ],
+    "static_checks": [
+      "python3 -m compileall -q mncs_env/sessions.py tests/test_authority_scope_grants.py",
+      "git diff --check"
+    ]
+  }
+}
