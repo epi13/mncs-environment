@@ -368,7 +368,7 @@ def cmd_projections(args: argparse.Namespace) -> int:
     if (args.evidence_offset is not None
             and args.interpret != "environmental-capability"):
         return fail('--evidence-offset requires --interpret environmental-capability')
-    if (args.evidence_limit != sessions_module.CAMPAIGN_EVIDENCE_MAX
+    if (args.evidence_limit != capability_intelligence_module.MAX_EVIDENCE_REFS
             and args.interpret != "environmental-capability"):
         return fail('--evidence-limit requires --interpret environmental-capability')
     if args.interpret:
@@ -2240,7 +2240,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="start environmental capability analysis at this campaign evidence offset",
     )
     projections.add_argument(
-        '--evidence-limit', type=int, default=sessions_module.CAMPAIGN_EVIDENCE_MAX,
+        '--evidence-limit', type=int,
+        default=capability_intelligence_module.MAX_EVIDENCE_REFS,
         help="campaign evidence references per page for environmental capability analysis (1-32)",
     )
     projections.add_argument("--evidence", action="store_true",

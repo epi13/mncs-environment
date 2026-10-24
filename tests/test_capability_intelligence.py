@@ -1059,6 +1059,45 @@ def test_targeted_small_evidence_segment_reads_its_complete_observation_set(
     ]
 
 
+def test_projection_cli_defaults_to_capability_page_limit(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    record = _observation(
+        "ev_environment_projection_default_page_limit",
+        "ses_projection_default_page_limit",
+        "cmp_projection_default_page_limit",
+    )
+    session, state = _session(tmp_path, [record])
+    state.update({
+        "evidence_offset": 0,
+        "evidence_limit": capability_intelligence.MAX_EVIDENCE_REFS,
+        "previous_evidence_offset": None,
+        "next_evidence_offset": None,
+    })
+    requests = []
+
+    def campaign_state(*, evidence_offset=None, evidence_limit=32):
+        requests.append((evidence_offset, evidence_limit))
+        return state
+
+    session.campaign_state = campaign_state
+    session.close = lambda: None
+    monkeypatch.setattr(cli, "_open", lambda _args: session)
+    output = io.StringIO()
+    with redirect_stdout(output):
+        status = cli.main([
+            "--state-dir", str(tmp_path), "--persistence", "file",
+            "projections", session.session_id, "--interpret", "environmental-capability",
+        ])
+
+    projection = json.loads(output.getvalue())
+    assert status == 0
+    assert requests == [(None, capability_intelligence.MAX_EVIDENCE_REFS)]
+    assert projection["source"]["evidence_page_limit"] == (
+        capability_intelligence.MAX_EVIDENCE_REFS
+    )
+
+
 def test_repeated_ledger_pointer_does_not_establish_recurrence(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_one", "ses_compiler", "cmp_compiler")
     session, state = _session(tmp_path, [record])
