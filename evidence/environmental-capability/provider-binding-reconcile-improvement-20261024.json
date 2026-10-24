@@ -1,0 +1,86 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_provider_binding_reconcile_improvement_20261024",
+  "captured_at": "2026-10-24T23:20:25Z",
+  "measurement_basis": "derived-improvement-link-from-recorded-pressure-and-targeted-regression-verification",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-improvement-link-record",
+    "source_interface": "mncs-environment CLI claim and provider diagnostics",
+    "request": {
+      "operation": "relate-stale-provider-pressure-to-inspection-first-reconcile-guidance",
+      "pressure_identity": "ph_environment_stale_provider_binding_claim_guidance_20261024"
+    },
+    "outcome": {
+      "relationship_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "subsequent_observation_status": "not-recorded",
+      "basis": "The verified change gives the specific stale-provider-head error an inspection-first recovery path: reconcile only if the provider change is intended, otherwise review or restore it first. A targeted test verified this diagnostic. The provider consistency check remains fail-closed, and the pre-existing worktree claim remained held during the recorded incident. This change improves guidance only; it does not change claim authorization, refresh provider bindings automatically, or demonstrate that the stale condition will recur less often."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_stale_provider_checkout_reconcile_guidance_20261024",
+    "addresses_hypothesis_identity": "ph_environment_stale_provider_binding_claim_guidance_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_stale_provider_checkout_guidance_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "4d14660bf809172cc66a0ba550d43b685c0b2e11",
+      "path": "mncs_env/cli.py",
+      "sha256": "76b2180d949f03c5d0ab8e6767db55c5c6f4486254d68d189b22ac83b81bb044"
+    },
+    "verification_observation_identity": "ev_environment_provider_binding_reconcile_verification_20261024",
+    "subsequent_observation_identity": null,
+    "basis": "The implementation classifies a changed declared provider checkout and points to the established Environment reconcile command with inspection-first guidance. The targeted regression test passes for this diagnostic and the existing snapshot-conflict path. No later independent use has been recorded, so effectiveness remains unassessed.",
+    "not_measured": [
+      "whether the guidance reduces claim-command retries across future sessions",
+      "whether stale provider checkout declarations recur",
+      "whether external authorization prompts or work outcomes change"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_provider_binding_reconcile_pressure_20261024",
+      "repository": "mncs-environment",
+      "commit": "4d14660bf809172cc66a0ba550d43b685c0b2e11",
+      "path": "evidence/environmental-capability/provider-binding-reconcile-pressure-20261024.json",
+      "sha256": "2f91065d78d843bfe52b39146517f19d289f4f029a575c29edd895429755f4c5"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_provider_binding_reconcile_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "99d8c35b296553afb596d1d375cdd7131659d0c2",
+      "path": "evidence/environmental-capability/provider-binding-reconcile-verification-20261024.json",
+      "sha256": "4bd88f35c0ee3a7134d56e7313119d150a5122e0534875cb2c5ba119ac472137"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_stale_provider_checkout_guidance_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "4d14660bf809172cc66a0ba550d43b685c0b2e11",
+      "path": "mncs_env/cli.py",
+      "sha256": "76b2180d949f03c5d0ab8e6767db55c5c6f4486254d68d189b22ac83b81bb044"
+    }
+  ],
+  "not_measured": [
+    "empirical elimination of stale provider binding failures",
+    "whether another agent benefits from the diagnostic",
+    "changes to the broader authorization or claim policy"
+  ]
+}
