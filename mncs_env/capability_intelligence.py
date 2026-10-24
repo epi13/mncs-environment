@@ -1262,7 +1262,7 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
         })
         work_contexts = _distinct_contexts(group, "related_work", (
             "campaign_id", "session_id", "work_intent_id", "work_intent_goal",
-            "environment_id", "definition_id",
+            "campaign_objective", "environment_id", "definition_id",
             "environment_version",
         ))
         recording_contexts = _distinct_contexts(group, "recording_context", (

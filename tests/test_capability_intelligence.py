@@ -233,6 +233,7 @@ def test_pressure_contexts_merge_sparse_identity_and_keep_recorders_distinct(
     second["related_work"].update({
         "work_intent_id": "int_compiler_work",
         "work_intent_goal": "advance verified self-consumption",
+        "campaign_objective": "Mature reliable multi-module native applications",
         "environment_id": "renv_compiler_work",
         "definition_id": "env_compiler_work",
         "environment_version": "compiler-env-v3",
@@ -252,12 +253,45 @@ def test_pressure_contexts_merge_sparse_identity_and_keep_recorders_distinct(
         "session_id": "ses_compiler_work",
         "work_intent_id": "int_compiler_work",
         "work_intent_goal": "advance verified self-consumption",
+        "campaign_objective": "Mature reliable multi-module native applications",
         "environment_id": "renv_compiler_work",
         "definition_id": "env_compiler_work",
         "environment_version": "compiler-env-v3",
     }]
     assert pressure["recording_context_count"] == 2
     assert pressure["distinct_recording_session_count"] == 2
+
+
+def test_pressure_contexts_keep_conflicting_campaign_objectives_distinct(
+    tmp_path: Path,
+) -> None:
+    first = _observation(
+        "ev_environment_context_objective_first",
+        "ses_compiler_objective",
+        "cmp_compiler_objective",
+    )
+    second = _observation(
+        "ev_environment_context_objective_second",
+        "ses_compiler_objective",
+        "cmp_compiler_objective",
+    )
+    for record in (first, second):
+        record["related_work"].update({
+            "work_intent_id": "int_compiler_objective",
+            "work_intent_goal": "advance verified self-consumption",
+        })
+    first["related_work"]["campaign_objective"] = "Mature native application support"
+    second["related_work"]["campaign_objective"] = "Advance compiler self-consumption"
+    session, _ = _session(tmp_path, [first, second])
+
+    result = capability_intelligence.project(session)
+
+    contexts = result["pressure_hypotheses"][0]["affected_work_contexts"]
+    assert len(contexts) == 2
+    assert {context["campaign_objective"] for context in contexts} == {
+        "Mature native application support",
+        "Advance compiler self-consumption",
+    }
 
 
 def test_sparse_pressure_context_stays_separate_when_identity_is_ambiguous(
@@ -1225,6 +1259,10 @@ def test_authentic_capture_context_evidence_projects_as_one_improvement_chain(
         "work_intent_goal": (
             "Mature mncs-compiler for reliable native multi-module application "
             "development while advancing verified self-consumption"
+        ),
+        "campaign_objective": (
+            "MNCS Environmental Capability Intelligence & Continuous Improvement "
+            "Campaign"
         ),
     }]
     assert pressure["recording_context_count"] == 1

@@ -166,7 +166,9 @@ environment versions, recording Environment IDs and definitions, and recorder
 sessions or campaigns. The two context lists preserve their different roles;
 work contexts with the same campaign, session, and intent are deduplicated,
 and missing details are merged only when there is one compatible context.
-Conflicting or ambiguous context remains separate. Long context text and lists
+Affected-work summaries retain the campaign objective separately from the
+work-intent goal when both are recorded. Conflicting or ambiguous context
+remains separate. Long context text and lists
 are truncated with explicit flags, and the source record remains authoritative.
 A bounded authenticated session-activity pointer is labeled
 `captured-in-observation-record`; it is not described as byte-verified
