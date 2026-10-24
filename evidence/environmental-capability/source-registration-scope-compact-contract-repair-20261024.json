@@ -1,0 +1,92 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_source_registration_scope_compact_contract_repair_20261024",
+  "captured_at": "2026-10-24T16:55:14+00:00",
+  "measurement_basis": "direct-bounded-capability-projection-record-validation-result",
+  "observation": {
+    "kind": "compact-provenance-improvement-link-contract-repair",
+    "source_interface": "MNCS Environment campaign-state with environmental-capability projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_3c077a12929fd0f2",
+      "evidence_offset": 75,
+      "evidence_limit": 3,
+      "projection_identity": "eci_1fc23656f0a541ca"
+    },
+    "outcome": {
+      "prior_improvement_record_status": "observation-contract-invalid",
+      "prior_record_validation_detail": "The immutable improvement record omitted the required observation.request object.",
+      "corrected_relation_identity": "im_environment_source_registration_scope_compact_verified_20261024",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "This repairs the evidence record contract using a new identity. It does not change or erase the earlier immutable record, nor does it establish agent impact."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_3c077a12929fd0f2",
+    "campaign_evidence_count_before_recording": 78,
+    "claim_ids": ["claim:mncs-environment:worktree:567a0ed75512"]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_source_registration_scope_compact_verified_20261024",
+    "addresses_hypothesis_identity": "ph_environment_source_registration_scope",
+    "implementation_reference": {
+      "identity": "ev_environment_source_registration_scope_compact_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "35210c64185cb3eff02a4a4c38284fb942019dea",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "106f947215d307939a9b01feef3f8ec2e3d52f8179cf17a4d7a7f2285ff43b79"
+    },
+    "verification_observation_identity": "ev_environment_source_registration_scope_compact_verified_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_source_registration_scope_compact_verified_live_readback_20261024",
+    "basis": "The focused projection test verifies source-registration fields survive compaction, and an authenticated bounded read confirms those fields in the live projection. The linked verification and live-readback records have digest-bearing campaign references.",
+    "not_measured": [
+      "future independent agent interpretation or use",
+      "recurrence across other cross-campaign evidence sources",
+      "long-term effectiveness"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "verified-implementation",
+      "identity": "ev_environment_source_registration_scope_compact_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "35210c64185cb3eff02a4a4c38284fb942019dea",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "106f947215d307939a9b01feef3f8ec2e3d52f8179cf17a4d7a7f2285ff43b79"
+    },
+    {
+      "kind": "digest-verified-test-observation",
+      "identity": "ev_environment_source_registration_scope_compact_verified_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "0456609d21d92d434fede10894195b2f896594ea",
+      "path": "evidence/environmental-capability/source-registration-scope-compact-verified-verification-20261024.json",
+      "sha256": "156614fd0ef2f0d0c4dc58c8826bbd6edc1e87a704c0051a42dca4023f346c9e"
+    },
+    {
+      "kind": "digest-verified-live-readback-observation",
+      "identity": "ev_environment_source_registration_scope_compact_verified_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "0456609d21d92d434fede10894195b2f896594ea",
+      "path": "evidence/environmental-capability/source-registration-scope-compact-verified-live-readback-20261024.json",
+      "sha256": "5d8f00539132cdfba68c77baf0c1ab4f106bcaa84f1e64586976b697747b51d4"
+    }
+  ],
+  "not_measured": [
+    "whether the compact fields change agent behavior",
+    "whether this evidence authoring error recurs",
+    "effectiveness across future sessions"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
