@@ -1,0 +1,126 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_read_operation_activity_implementation_20261024",
+  "captured_at": "2026-10-24T11:32:22Z",
+  "measurement_basis": "committed-implementation-and-targeted-verification",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_7cc878dabab04068",
+      "sequence": 34
+    },
+    "campaign_evidence_count": 111,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ],
+    "implementation_workstream": {
+      "campaign_id": "cmp_a6f41f6d982adde7",
+      "session_id": "ses_be758523092c1765",
+      "work_intent_id": "int_da68f2fecf43cbc4",
+      "repository": "mncs-control-mcp",
+      "branch": "campaign/environment-rpc-operation-activity-20261024",
+      "claim_id": "claim:mncs-control-mcp:worktree:79ea6109e68d",
+      "implementation_commit": "325e3df138ea890e73750e2dbef03c0be22c324e"
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "authenticated-read-operation-correlation-implementation",
+    "source_interface": "MNCS Control Environment RPC and Environment capability-intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_read_operation_activity_correlation",
+      "environment_commit": "0893e621956052cae62841a05c18a38ec1994577",
+      "control_commit": "325e3df138ea890e73750e2dbef03c0be22c324e",
+      "captured_operation_scope": "explicitly allowlisted read-only Environment RPC operations",
+      "excluded_operation_classes": [
+        "health",
+        "mutation",
+        "invoke"
+      ]
+    },
+    "outcome": {
+      "control_event": "environment.rpc.read_observed",
+      "captured_fields": [
+        "stable operation identity",
+        "success or failure status",
+        "bounded safe failure code",
+        "hashed request and request-event identities",
+        "authenticated principal",
+        "Control grant and optional process identity",
+        "Environment, campaign, work intent, repository, branch and head context",
+        "Control dispatch elapsed time including session-lock wait"
+      ],
+      "redaction": "Raw request arguments and response values are not copied into the observation.",
+      "environment_correlation": "The projection accepts only events whose authenticated principal, Environment, campaign and work-intent match the selected session; rejected event records are counted and omitted.",
+      "boundedness": {
+        "capture_limit_per_session": 128,
+        "projection_event_window": 256,
+        "store_tail_payloads_materialized": "only the selected newest event window; generation binding metadata is still scanned"
+      },
+      "implementation_status": "committed and targeted tests passed on isolated Environment and Control campaign branches",
+      "current_service_status": "the live service has not loaded these branch commits; no production capture is claimed",
+      "effectiveness_assessment": "implementation-and-targeted-verification-complete; production adoption and recurring effect not assessed"
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_read_operation_activity_correlation_20261024",
+    "addresses_hypothesis_identity": "ph_environment_read_operation_activity_correlation",
+    "implementation_reference": {
+      "identity": "ev_environment_read_activity_projection_source",
+      "repository": "mncs-environment",
+      "commit": "0893e621956052cae62841a05c18a38ec1994577",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "5543fb9a4fc9f98ca4325713b344aa9b3776bf513b62ed1cc5b9795e48adfd45"
+    },
+    "verification_observation_identity": "ev_environment_read_operation_activity_verification_20261024",
+    "basis": "Control emits bounded authenticated read-operation outcomes and Environment verifies session binding, projects source-event references and discloses unavailable measures. Targeted tests cover redaction, context binding, projection, retry and bounded Store-tail reads.",
+    "effectiveness_assessment": "production uptake and reduction in the observed limitation remain unassessed",
+    "not_measured": [
+      "whether the updated services are deployed to live sessions",
+      "cross-session recurrence of read-operation failures",
+      "agent behavior or decisions after the change",
+      "model identity, token usage, cache accounting, resource consumption or total agent execution duration"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_read_activity_capture_source",
+      "repository": "mncs-environment",
+      "commit": "0893e621956052cae62841a05c18a38ec1994577",
+      "path": "mncs_env/sessions.py",
+      "sha256": "2761e4cf2ecfca7b4340e4bf86279ea65c70c9c381dd0663e2ea662d71ea9076"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_control_environment_read_rpc_source",
+      "repository": "mncs-control-mcp",
+      "commit": "325e3df138ea890e73750e2dbef03c0be22c324e",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "d721633b6ee1f0945bc99716cb3e5b92c42984baecba9b6d6a9da9491858d5bd"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_control_environment_read_session_source",
+      "repository": "mncs-control-mcp",
+      "commit": "325e3df138ea890e73750e2dbef03c0be22c324e",
+      "path": "src/mncs_control_mcp/environment_sessions.py",
+      "sha256": "d9749cbb1e325a70d36bdc47a3988d686c844939dc40679ff912a2cf8d19c2ba"
+    }
+  ],
+  "not_measured": [
+    "whether a production Environment service now records these events",
+    "whether this change changes the rate of repeated investigations or agent interruptions",
+    "causal impact on Compiler development or self-consumption"
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_read_operation_activity_verification_20261024",
+  "captured_at": "2026-10-24T11:32:22Z",
+  "measurement_basis": "targeted-test-and-static-check-results",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_7cc878dabab04068",
+      "sequence": 34
+    },
+    "campaign_evidence_count": 111,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ],
+    "implementation_workstream": {
+      "campaign_id": "cmp_a6f41f6d982adde7",
+      "session_id": "ses_be758523092c1765",
+      "work_intent_id": "int_da68f2fecf43cbc4",
+      "repository": "mncs-control-mcp",
+      "branch": "campaign/environment-rpc-operation-activity-20261024",
+      "claim_id": "claim:mncs-control-mcp:worktree:79ea6109e68d",
+      "implementation_commit": "325e3df138ea890e73750e2dbef03c0be22c324e"
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "cross-repository-read-operation-capture-verification",
+    "source_interface": "pytest and Ruff in the selected Environment and Control campaign worktrees",
+    "request": {
+      "environment_tests": [
+        "tests/test_event_sequence_retry.py",
+        "tests/test_capability_intelligence.py",
+        "tests/test_session_completion.py",
+        "tests/test_entry.py::test_read_event_tail_materializes_only_selected_payloads"
+      ],
+      "control_tests": [
+        "tests/test_environment_rpc.py::test_dispatch_records_only_redacted_read_only_operation_outcomes",
+        "tests/test_environment_sessions.py::test_control_read_activity_binds_to_authenticated_session_context"
+      ]
+    },
+    "outcome": {
+      "environment_targeted_tests": {
+        "passed": 60,
+        "failed": 0
+      },
+      "control_targeted_tests": {
+        "passed": 2,
+        "failed": 0
+      },
+      "ruff_touched_files": "passed with E4,E7,E9,F rules",
+      "git_diff_check": "passed in both repositories",
+      "broader_control_test_files": "not completed; the resource-intensive run was stopped after approximately 41 seconds near 84% CPU; focused boundary tests passed",
+      "test_boundary": "Tests establish branch behavior and persistence/projection contracts. They do not establish production deployment or post-change operational effectiveness."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-test-source",
+      "repository": "mncs-environment",
+      "commit": "0893e621956052cae62841a05c18a38ec1994577",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "ead3926e81d6069d4a72cc0673b85a94416fc0f0656116b796a24a9c0ac08319"
+    },
+    {
+      "kind": "committed-test-source",
+      "repository": "mncs-environment",
+      "commit": "0893e621956052cae62841a05c18a38ec1994577",
+      "path": "tests/test_event_sequence_retry.py",
+      "sha256": "bb75cd3b78cc39290ef2000aa410ae4a4efae6d245ea267304586f76161d67dc"
+    },
+    {
+      "kind": "committed-test-source",
+      "repository": "mncs-control-mcp",
+      "commit": "325e3df138ea890e73750e2dbef03c0be22c324e",
+      "path": "tests/test_environment_rpc.py",
+      "sha256": "3537367313ee40a36ffcfb7da7c4882f8d943f7c25c1c1b07e2d27e37aec6a40"
+    },
+    {
+      "kind": "committed-test-source",
+      "repository": "mncs-control-mcp",
+      "commit": "325e3df138ea890e73750e2dbef03c0be22c324e",
+      "path": "tests/test_environment_sessions.py",
+      "sha256": "883bff18912481f33e9b14a13a8de1d8f9efb2836d3c8262f89723d90914907a"
+    }
+  ],
+  "not_measured": [
+    "full Control test-file completion",
+    "production service uptake",
+    "post-deployment capture volume or pressure recurrence"
+  ]
+}

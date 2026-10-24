@@ -1,0 +1,150 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_projection_live_readback_20261024",
+  "captured_at": "2026-10-24T11:32:22Z",
+  "measurement_basis": "direct-canonical-store-read-and-bounded-branch-projection",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_7cc878dabab04068",
+      "sequence": 34
+    },
+    "campaign_evidence_count": 111,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "development-linked-capability-projection-readback",
+    "source_interface": "MNCS Environment capability-intelligence projection over canonical Store campaign state and selected session-event tails",
+    "request": {
+      "environment_subject": {
+        "session_id": "ses_c38b0ab35b9418ba",
+        "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+        "evidence_offset": 0,
+        "evidence_limit": 8
+      },
+      "compiler_subject": {
+        "session_id": "ses_164edc158d9b1637",
+        "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+        "evidence_offset": 0,
+        "evidence_limit": 8
+      },
+      "projection_implementation_commit": "0893e621956052cae62841a05c18a38ec1994577"
+    },
+    "outcome": {
+      "environment_campaign": {
+        "checkpoint_id": "chk_7cc878dabab04068",
+        "evidence_count": 111,
+        "projection_status": "ready",
+        "observation_records_verified_on_page": 6,
+        "pressure_hypotheses": [
+          {
+            "identity": "ph_environment_project_session_selection",
+            "subsystem": "mncs-control-mcp project continuation selection",
+            "observation_count": 1,
+            "distinct_session_count": 1,
+            "distinct_campaign_count": 1,
+            "recurrence_status": "not-established",
+            "affected_work": {
+              "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+              "session_id": "ses_164edc158d9b1637",
+              "work_intent_id": "int_8fb697d8987722d5",
+              "goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption"
+            },
+            "supporting_observation_identity": "ev_environment_project_continuation_conflict_20261024",
+            "actionable_recommendation": "Provide an exact-session continuation selector while retaining authenticated principal, campaign, Environment definition, workspace, checkout identity, lifecycle and claim validation.",
+            "interpretation_limit": "One recorded conflict and one supporting observation do not establish recurrence or prove the selection guard is defective; it may reflect a legitimate coordination boundary."
+          }
+        ],
+        "session_activity": {
+          "event_count": 80,
+          "selected_sequence_range": [
+            1,
+            80
+          ],
+          "event_window_truncated": false,
+          "rpc_read_operation_events_considered": 0,
+          "rpc_read_operation_records_returned": 0,
+          "rpc_read_capture_count": null,
+          "capture_count_status": "unavailable-in-current-service-session"
+        }
+      },
+      "compiler_campaign": {
+        "checkpoint_id": "chk_691079cfe830f05d",
+        "evidence_count": 693,
+        "objective": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+        "projection_status": "partial",
+        "session_event_count": 5746,
+        "selected_event_window": {
+          "count": 256,
+          "sequence_range": [
+            5491,
+            5746
+          ],
+          "truncated": true
+        },
+        "selected_tail_invocation_events": 0,
+        "selected_tail_completion_events": 0,
+        "interpretation_limit": "No invocation in this selected tail does not describe earlier events or the campaign as a whole."
+      },
+      "analysis": "Existing campaign evidence already relates a concrete Environment selection conflict to the active Compiler objective. The projection preserves the source event record and limits the hypothesis to one observation. The separate Compiler tail shows the need to expose window coverage alongside activity summaries. The new RPC capture is verified on its branches but is not present in this live service session."
+    },
+    "supporting_sources": [
+      {
+        "kind": "committed-operational-observation",
+        "identity": "ev_environment_project_continuation_conflict_20261024",
+        "repository": "mncs-environment",
+        "commit": "6d59dac14428b8e3bbd1d9437d15dfc066824096",
+        "path": "evidence/environmental-capability/project-continuation-conflict-20261024.json",
+        "sha256": "ecbc4c1145fb553b9e3a01134ebabfc4e08b29736118017d6037e1850c143a77"
+      },
+      {
+        "kind": "direct-canonical-store-campaign-state-read",
+        "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+        "session_id": "ses_c38b0ab35b9418ba",
+        "checkpoint_id": "chk_7cc878dabab04068",
+        "evidence_count": 111,
+        "projection_commit": "0893e621956052cae62841a05c18a38ec1994577",
+        "measured_fields": [
+          "campaign checkpoint and evidence count",
+          "selected verified observation records",
+          "session event window and event types",
+          "authenticated read-operation event count"
+        ]
+      },
+      {
+        "kind": "direct-canonical-store-campaign-state-read",
+        "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+        "session_id": "ses_164edc158d9b1637",
+        "checkpoint_id": "chk_691079cfe830f05d",
+        "evidence_count": 693,
+        "projection_commit": "0893e621956052cae62841a05c18a38ec1994577",
+        "measured_fields": [
+          "selected 256-event tail",
+          "sequence range",
+          "truncation",
+          "invocation and completion event counts"
+        ]
+      }
+    ]
+  },
+  "not_measured": [
+    "whether an exact-session selector improvement was deployed",
+    "recurrence of the continuation conflict across distinct sessions",
+    "whether the conflict changed Compiler development outcomes",
+    "behavior represented before the selected Compiler event tail",
+    "production use or effectiveness of the newly committed read-operation capture"
+  ]
+}
