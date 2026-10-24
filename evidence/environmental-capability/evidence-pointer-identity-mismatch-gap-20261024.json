@@ -1,0 +1,101 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_evidence_pointer_identity_mismatch_gap_20261024",
+  "captured_at": "2026-10-24T15:37:53Z",
+  "observation": {
+    "kind": "authentic-campaign-evidence-identity-mismatch-review",
+    "source_interface": "MNCS Environment campaign-state environmental_capability projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_130a5f4fc09aae10",
+      "evidence_offset": 0,
+      "evidence_limit": 13,
+      "mismatched_campaign_pointer_identities": [
+        "ev_environment_rpc_context_basis_prechange_20261024",
+        "ev_environment_rpc_context_basis_followup_20261024"
+      ],
+      "committed_record_identities": [
+        "ev_environment_read_operation_live_projection_context_20261024",
+        "ev_environment_read_operation_live_projection_context_followup_20261024"
+      ]
+    },
+    "outcome": {
+      "prior_projection_status": "partial",
+      "prior_diagnostic_status": "observation-contract-invalid",
+      "observation_records_considered": 13,
+      "observation_records_verified": 6,
+      "observation_records_unavailable": 2,
+      "content_hashes_match_committed_records": true,
+      "identity_mismatch_confirmed": true,
+      "analysis_limit": "The two records remain unavailable to pressure analysis. This observation establishes a campaign pointer and committed-record identity mismatch, not a schema migration issue or a defect in the underlying read-operation measurements."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_130a5f4fc09aae10",
+    "campaign_evidence_count_before_recording": 29,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_campaign_evidence_identity_mismatch_diagnostic",
+    "title": "Campaign observation pointer mismatches are reported as generic contract failures",
+    "category": "evidence-provenance",
+    "subsystem": "mncs-environment capability-intelligence evidence reader",
+    "owner": "mncs-environment",
+    "basis": "An authenticated older campaign page contained two SHA-256-valid committed observation files whose internal identities differed from their ledger pointer identities. The projection excluded both records but reported only the generic observation-contract-invalid status, hiding the specific provenance mismatch.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "After verifying a source object's digest, report campaign pointer and record identity mismatches distinctly and expose both identities without admitting the record to pressure analysis.",
+    "not_measured": [
+      "how often historical campaign evidence contains mismatched identities",
+      "whether an agent attempted to repair either original campaign pointer",
+      "time or resource cost of investigating the generic diagnostic",
+      "whether the original evidence pointers were authored with aliases intentionally"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-campaign-evidence-pointer",
+      "identity": "ev_environment_rpc_context_basis_prechange_20261024",
+      "repository": "mncs-environment",
+      "commit": "99001b1ab2c7cff1c0ca416a9a0cbd9b62763358",
+      "path": "evidence/environmental-capability/read-operation-live-projection-context-20261024.json",
+      "sha256": "6c333b514f4f6a23e3cb48ece9d93363dfc59c91f151edfc2815031a9ba77db7"
+    },
+    {
+      "kind": "committed-campaign-evidence-pointer",
+      "identity": "ev_environment_rpc_context_basis_followup_20261024",
+      "repository": "mncs-environment",
+      "commit": "99001b1ab2c7cff1c0ca416a9a0cbd9b62763358",
+      "path": "evidence/environmental-capability/read-operation-live-projection-context-followup-20261024.json",
+      "sha256": "b17fe728034bfe6767575b46c3d7c83c3790b6a3da3ad43aeed339e89985c1b6"
+    },
+    {
+      "kind": "committed-pre-diagnostic-implementation",
+      "identity": "ev_environment_capability_intelligence_pre_identity_diagnostic_20261024",
+      "repository": "mncs-environment",
+      "commit": "694bef6d769f25a7e201d0d9bbf51c30fd00b1d1",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "9ad06f92de9dd2adc57c742c7c1f2833cb389dc4ca44af66ff2f8ff7a6f07a10"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "measurement_basis": "authenticated-bounded-campaign-projection-and-content-hash-verified-source-review",
+  "not_measured": [
+    "whether the source pointer identities were intentional aliases",
+    "frequency of this mismatch outside the selected evidence page",
+    "agent time saved by a specific diagnostic status"
+  ]
+}

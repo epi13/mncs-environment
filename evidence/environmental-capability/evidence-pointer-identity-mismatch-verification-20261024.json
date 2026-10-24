@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_evidence_pointer_identity_mismatch_verification_20261024",
+  "captured_at": "2026-10-24T15:37:53Z",
+  "observation": {
+    "kind": "observation-identity-mismatch-diagnostic-regression-verification",
+    "source_interface": "pytest, Ruff, and authenticated MNCS Environment campaign-state projection",
+    "request": {
+      "implementation_commit": "d3e2ea8f8421d21618192265ba66915e51d362ba",
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-observation-live-context-20261024"
+    },
+    "outcome": {
+      "focused_test_command": "python -m pytest tests/test_capability_intelligence.py -q",
+      "focused_test_result": "55 passed",
+      "authentic_identity_mismatch_regression": "passed; the two committed read-operation records remain excluded from pressure analysis and diagnostics expose each ledger identity beside its distinct internal record identity",
+      "lint_command": "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+      "lint_result": "all checks passed",
+      "git_diff_check": "passed"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_130a5f4fc09aae10",
+    "campaign_evidence_count_before_recording": 29,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_evidence_pointer_identity_mismatch_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "d3e2ea8f8421d21618192265ba66915e51d362ba",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "65fdf8930c2b48c16fc0a1df9d1b13e878962fa7d1800917e496aa020e67d76a"
+    },
+    {
+      "kind": "committed-regression-tests",
+      "identity": "ev_environment_evidence_pointer_identity_mismatch_tests_20261024",
+      "repository": "mncs-environment",
+      "commit": "d3e2ea8f8421d21618192265ba66915e51d362ba",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "0c6dae6bf9019a61c22ed56e30180ed2eb1e6bd1751de2ec75fff9140b32962a"
+    },
+    {
+      "kind": "committed-contract-documentation",
+      "identity": "ev_environment_evidence_pointer_identity_mismatch_contract_20261024",
+      "repository": "mncs-environment",
+      "commit": "d3e2ea8f8421d21618192265ba66915e51d362ba",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "abbb5c7f33afecd39a6b2b57d9b648c56d7bbb826b75c3baae263f3dc4530f54"
+    },
+    {
+      "kind": "committed-campaign-evidence-pointer",
+      "identity": "ev_environment_rpc_context_basis_prechange_20261024",
+      "repository": "mncs-environment",
+      "commit": "99001b1ab2c7cff1c0ca416a9a0cbd9b62763358",
+      "path": "evidence/environmental-capability/read-operation-live-projection-context-20261024.json",
+      "sha256": "6c333b514f4f6a23e3cb48ece9d93363dfc59c91f151edfc2815031a9ba77db7"
+    },
+    {
+      "kind": "committed-campaign-evidence-pointer",
+      "identity": "ev_environment_rpc_context_basis_followup_20261024",
+      "repository": "mncs-environment",
+      "commit": "99001b1ab2c7cff1c0ca416a9a0cbd9b62763358",
+      "path": "evidence/environmental-capability/read-operation-live-projection-context-followup-20261024.json",
+      "sha256": "b17fe728034bfe6767575b46c3d7c83c3790b6a3da3ad43aeed339e89985c1b6"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "measurement_basis": "focused-regression-tests-and-lint",
+  "not_measured": [
+    "whether agents use the more specific diagnostics",
+    "whether the original aliases were intentional",
+    "long-term effectiveness across future Environment versions"
+  ]
+}

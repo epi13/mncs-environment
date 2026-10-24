@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_evidence_pointer_identity_mismatch_improvement_20261024",
+  "captured_at": "2026-10-24T15:37:53Z",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability-intelligence evidence diagnostics",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_campaign_evidence_identity_mismatch_diagnostic",
+      "implementation_commit": "d3e2ea8f8421d21618192265ba66915e51d362ba",
+      "verification_observation_identity": "ev_environment_evidence_pointer_identity_mismatch_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_evidence_pointer_identity_mismatch_live_readback_20261024"
+    },
+    "outcome": {
+      "implementation_change": "The projection now reports observation-identity-mismatch after verifying the committed content hash and retains both the campaign pointer identity and internal record identity in full and compact diagnostics. The mismatched record remains excluded from pressure analysis.",
+      "verification_recorded": true,
+      "live_projection_readback_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The more specific diagnostic is verified; the original pointer remains unchanged and the record remains unavailable to the pressure projection."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_campaign_evidence_identity_mismatch_diagnostic_20261024",
+    "addresses_hypothesis_identity": "ph_environment_campaign_evidence_identity_mismatch_diagnostic",
+    "implementation_reference": {
+      "identity": "ev_environment_evidence_pointer_identity_mismatch_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "d3e2ea8f8421d21618192265ba66915e51d362ba",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "65fdf8930c2b48c16fc0a1df9d1b13e878962fa7d1800917e496aa020e67d76a"
+    },
+    "verification_observation_identity": "ev_environment_evidence_pointer_identity_mismatch_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_evidence_pointer_identity_mismatch_live_readback_20261024",
+    "basis": "The focused tests load the two authentic committed read-operation records with their campaign alias identities and confirm exact mismatch diagnostics while keeping both records outside pressure counts. The authenticated live readback over the older campaign page shows the same identity pairs and mismatch status.",
+    "not_measured": [
+      "whether agents use the record identity to correct or further investigate the original pointer",
+      "whether the more precise diagnostic reduces investigation work",
+      "recurrence or effectiveness across subsequent Environment versions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-source-observation",
+      "identity": "ev_environment_rpc_context_basis_prechange_20261024",
+      "repository": "mncs-environment",
+      "commit": "99001b1ab2c7cff1c0ca416a9a0cbd9b62763358",
+      "path": "evidence/environmental-capability/read-operation-live-projection-context-20261024.json",
+      "sha256": "6c333b514f4f6a23e3cb48ece9d93363dfc59c91f151edfc2815031a9ba77db7"
+    },
+    {
+      "kind": "committed-source-observation",
+      "identity": "ev_environment_rpc_context_basis_followup_20261024",
+      "repository": "mncs-environment",
+      "commit": "99001b1ab2c7cff1c0ca416a9a0cbd9b62763358",
+      "path": "evidence/environmental-capability/read-operation-live-projection-context-followup-20261024.json",
+      "sha256": "b17fe728034bfe6767575b46c3d7c83c3790b6a3da3ad43aeed339e89985c1b6"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_evidence_pointer_identity_mismatch_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "d3e2ea8f8421d21618192265ba66915e51d362ba",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "65fdf8930c2b48c16fc0a1df9d1b13e878962fa7d1800917e496aa020e67d76a"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "measurement_basis": "authenticated-old-page-projection-readback-and-focused-tests",
+  "not_measured": [
+    "whether agents use the new identity pair for follow-up",
+    "whether this diagnostic changes downstream decisions",
+    "long-term recurrence and effectiveness"
+  ]
+}

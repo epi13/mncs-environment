@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_evidence_pointer_identity_mismatch_live_readback_20261024",
+  "captured_at": "2026-10-24T15:37:53Z",
+  "observation": {
+    "kind": "observation-identity-mismatch-live-projection-readback",
+    "source_interface": "authenticated MNCS Environment campaign_state environmental_capability projection",
+    "request": {
+      "checkpoint_id": "chk_130a5f4fc09aae10",
+      "evidence_offset": 0,
+      "evidence_limit": 13
+    },
+    "projection_summary": {
+      "status": "partial",
+      "observation_records_considered": 13,
+      "observation_records_verified": 6,
+      "observation_records_unavailable": 2,
+      "observation_reference_diagnostics": [
+        {
+          "identity": "ev_environment_rpc_context_basis_prechange_20261024",
+          "record_identity": "ev_environment_read_operation_live_projection_context_20261024",
+          "verification": "observation-identity-mismatch"
+        },
+        {
+          "identity": "ev_environment_rpc_context_basis_followup_20261024",
+          "record_identity": "ev_environment_read_operation_live_projection_context_followup_20261024",
+          "verification": "observation-identity-mismatch"
+        }
+      ]
+    },
+    "outcome": {
+      "readback": "After the implementation commit, the authenticated old-page query reported both identity pairs and the specific mismatch status.",
+      "analysis_limit": "The two records remain excluded from the six verified observations, and the projection remains partial. This diagnosis does not repair or rewrite the immutable source records or campaign pointers."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_130a5f4fc09aae10",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_evidence_pointer_identity_mismatch_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "d3e2ea8f8421d21618192265ba66915e51d362ba",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "65fdf8930c2b48c16fc0a1df9d1b13e878962fa7d1800917e496aa020e67d76a"
+    },
+    {
+      "kind": "committed-campaign-evidence-pointer",
+      "identity": "ev_environment_rpc_context_basis_prechange_20261024",
+      "repository": "mncs-environment",
+      "commit": "99001b1ab2c7cff1c0ca416a9a0cbd9b62763358",
+      "path": "evidence/environmental-capability/read-operation-live-projection-context-20261024.json",
+      "sha256": "6c333b514f4f6a23e3cb48ece9d93363dfc59c91f151edfc2815031a9ba77db7"
+    },
+    {
+      "kind": "committed-campaign-evidence-pointer",
+      "identity": "ev_environment_rpc_context_basis_followup_20261024",
+      "repository": "mncs-environment",
+      "commit": "99001b1ab2c7cff1c0ca416a9a0cbd9b62763358",
+      "path": "evidence/environmental-capability/read-operation-live-projection-context-followup-20261024.json",
+      "sha256": "b17fe728034bfe6767575b46c3d7c83c3790b6a3da3ad43aeed339e89985c1b6"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "measurement_basis": "authenticated-campaign-state-old-page-live-readback",
+  "not_measured": [
+    "whether agents use the specific record identity to repair the campaign pointer",
+    "whether the original pointer identity alias was intentional",
+    "long-term recurrence of this evidence provenance mismatch"
+  ]
+}
