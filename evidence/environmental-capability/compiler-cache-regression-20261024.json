@@ -1,0 +1,133 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_cache_regression_20261024",
+  "captured_at": "2026-10-24T08:14:02+00:00",
+  "measurement_basis": "committed-compiler-campaign-evidence",
+  "observation": {
+    "kind": "compiler-incremental-cache-regression-read",
+    "source_interface": "mncs_control_git_show",
+    "request": {
+      "repository": "mncs-compiler",
+      "revision": "f4f65919f4389af4f60f37aa8d36cc1ae161962d:evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json"
+    },
+    "outcome": {
+      "schema_version": "mncs.compiler.language-module-elaboration-cache-regression/2",
+      "source_record_identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "compiler_head": "e874669dbd110c5a5f808249c20a086013d7e2be",
+      "language_head": "9505d3f557701f072b5803a5bad046389b84cb3b",
+      "actual_language_modules_reused": true,
+      "language_effect_and_capability_dependencies_invalidated": true,
+      "source_module_count": 4,
+      "recorded_stage_count": 14,
+      "representative_stages": [
+        {
+          "name": "fresh_process",
+          "cache_status": "hit",
+          "output_equal_to_stage0": true,
+          "wall_seconds": 0.623001,
+          "cpu_seconds": 0.61,
+          "peak_rss_bytes": 61636608,
+          "peak_cgroup_memory_bytes": null,
+          "peak_open_file_descriptors": 4,
+          "peak_threads": 1,
+          "peak_child_processes": 0
+        },
+        {
+          "name": "effect_assumption_edit",
+          "cache_status": "miss",
+          "output_equal_to_stage0": true,
+          "wall_seconds": 0.758744,
+          "cpu_seconds": 0.75,
+          "peak_rss_bytes": 61399040,
+          "peak_cgroup_memory_bytes": null,
+          "peak_open_file_descriptors": 4,
+          "peak_threads": 1,
+          "peak_child_processes": 0
+        },
+        {
+          "name": "capability_assumption_edit",
+          "cache_status": "miss",
+          "output_equal_to_stage0": true,
+          "wall_seconds": 0.766849,
+          "cpu_seconds": 0.76,
+          "peak_rss_bytes": 61177856,
+          "peak_cgroup_memory_bytes": null,
+          "peak_open_file_descriptors": 4,
+          "peak_threads": 1,
+          "peak_child_processes": 0
+        },
+        {
+          "name": "imported_body_edit",
+          "cache_status": "hit",
+          "output_equal_to_stage0": true,
+          "wall_seconds": 0.50785,
+          "cpu_seconds": 0.49,
+          "peak_rss_bytes": 61272064,
+          "peak_cgroup_memory_bytes": null,
+          "peak_open_file_descriptors": 4,
+          "peak_threads": 1,
+          "peak_child_processes": 0
+        },
+        {
+          "name": "root_comment_edit",
+          "cache_status": "hit",
+          "output_equal_to_stage0": true,
+          "wall_seconds": 0.470617,
+          "cpu_seconds": 0.46,
+          "peak_rss_bytes": 61272064,
+          "peak_cgroup_memory_bytes": null,
+          "peak_open_file_descriptors": 4,
+          "peak_threads": 1,
+          "peak_child_processes": 0
+        }
+      ]
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-campaign-evidence",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637",
+      "measured_fields": [
+        "actual_language_modules_reused",
+        "language_effect_and_capability_dependencies_invalidated",
+        "stage cache_status and execution output",
+        "wall_seconds",
+        "cpu_seconds",
+        "peak_rss_bytes",
+        "peak_cgroup_memory_bytes",
+        "peak_open_file_descriptors",
+        "peak_threads",
+        "peak_child_processes"
+      ]
+    }
+  ],
+  "not_measured": [
+    "cgroup memory peaks; the compiler evidence stores null for these fields",
+    "token and cache accounting for the Compiler agent session",
+    "resource use attributable to other work during these compiler stages",
+    "recurrence of these cache behaviors across later compiler sessions",
+    "causal performance comparison across different workloads or environments"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  }
+}

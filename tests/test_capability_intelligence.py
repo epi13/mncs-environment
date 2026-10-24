@@ -346,6 +346,39 @@ def test_selector_diagnostic_hypothesis_keeps_unselected_source_explicit(tmp_pat
     )
 
 
+def test_compiler_cache_observation_keeps_resource_limits_and_source_unselected(
+    tmp_path: Path,
+) -> None:
+    path = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability/compiler-cache-regression-20261024.json"
+    )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    source = record["supporting_sources"][0]
+    session, _ = _session(tmp_path, [record], extra_refs=[{
+        "identity": "ev_compiler_cache_regression_source",
+        "repository": source["repository"],
+        "commit": source["commit"],
+        "path": source["path"],
+        "sha256": source["sha256"],
+    }])
+
+    result = capability_intelligence.project(session)
+
+    observation = result["observations"][0]
+    assert result["pressure_hypothesis_count"] == 0
+    assert observation["related_work"]["campaign_id"] == (
+        "cmp_mncs_native_application_readiness_compiler_20261013"
+    )
+    assert observation["recording_context"]["campaign_id"] == (
+        "cmp_environmental_capability_intelligence_20261023"
+    )
+    assert observation["observation"]["outcome"]["actual_language_modules_reused"] is True
+    assert observation["observation"]["outcome"]["representative_stages"][0][
+        "peak_cgroup_memory_bytes"
+    ] is None
+    assert observation["supporting_sources"][0]["status"] == "outside-selected-session"
+
+
 def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_large", "ses_compiler", "cmp_compiler")
     record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000
