@@ -188,6 +188,12 @@ def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path
     assert first_page["source"]["previous_evidence_offset"] is None
     assert first_page["source"]["next_evidence_offset"] is None
 
+    compact_hypothesis = compact["pressure_hypotheses"][0]
+    expected_reference = projection["pressure_hypotheses"][0]["evidence"][0]
+    assert compact_hypothesis["evidence_references"] == [expected_reference]
+    assert compact_hypothesis["evidence_reference_count"] == 1
+    assert compact_hypothesis["evidence_references_truncated"] is False
+
 
 def test_project_does_not_read_a_supporting_repo_outside_selected_session(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_one", "ses_compiler_one", "cmp_compiler")

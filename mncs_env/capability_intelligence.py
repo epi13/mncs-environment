@@ -182,6 +182,17 @@ def _compact_projection(
         for key in ("observation_count", "distinct_session_count", "distinct_campaign_count"):
             if type(hypothesis.get(key)) is int:
                 summary[key] = hypothesis[key]
+        raw_evidence = hypothesis.get("evidence")
+        raw_evidence = raw_evidence if isinstance(raw_evidence, list) else []
+        evidence_references = [
+            pointer for item in raw_evidence
+            if (pointer := _validate_reference(item)) is not None
+        ]
+        summary["evidence_reference_count"] = len(evidence_references)
+        summary["evidence_references"] = evidence_references[:MAX_OBSERVATIONS]
+        summary["evidence_references_truncated"] = (
+            len(evidence_references) > len(summary["evidence_references"])
+        )
         summary["evidence_observation_identities"] = [
             item["identity"] for item in observations
             if isinstance(item.get("pressure_hypothesis"), dict)
@@ -337,6 +348,21 @@ def _compact_projection(
     while len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")) > max_result_bytes:
         if result["observations"]:
             result["observations"].pop()
+        elif any(
+            isinstance(hypothesis.get("evidence_references"), list)
+            and len(hypothesis["evidence_references"]) > 1
+            for hypothesis in result["pressure_hypotheses"]
+        ):
+            hypothesis = max(
+                (
+                    item for item in result["pressure_hypotheses"]
+                    if isinstance(item.get("evidence_references"), list)
+                    and len(item["evidence_references"]) > 1
+                ),
+                key=lambda item: len(item["evidence_references"]),
+            )
+            hypothesis["evidence_references"].pop()
+            hypothesis["evidence_references_truncated"] = True
         elif result["pressure_hypotheses"]:
             result["pressure_hypotheses"].pop()
         elif result["improvement_relations"]:

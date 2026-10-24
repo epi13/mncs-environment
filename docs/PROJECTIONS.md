@@ -125,6 +125,13 @@ Observations can also report measurements without a pressure hypothesis, so a
 resource sample is not forced into a healthy/unhealthy judgment. Its sampling
 scope and unavailable attribution remain attached to that observation.
 
+When response compaction is needed, each pressure summary retains bounded exact
+evidence references (identity, repository, commit, path, and digest), so an
+agent can inspect the records supporting the hypothesis even when their full
+observation summaries are omitted. `evidence_reference_count` and
+`evidence_references_truncated` disclose when the compact view contains only a
+subset; use the source page cursor and campaign ledger to continue inspection.
+
 An observation may also carry an `improvement_relation` linking one pressure
 hypothesis to an implementation source, a verification observation, and a
 later operational observation. The projection reports whether the verification
