@@ -138,6 +138,15 @@ Recurrence describes the selected window;
 `evidence_history_truncated` indicates when it does not cover all available
 history.
 
+When Work Intent declares a repository that is not selected, the projection may
+also emit `context_pressure_candidates`. These candidates join the declared
+repository gap with bounded source-visibility diagnostics for that repository.
+They are labeled hypotheses, remain separate from recorded
+`pressure_hypotheses`, and do not establish that work was blocked or that the
+condition recurs. A candidate points to outside-selected sources but does not
+read them or authorize adding the repository; use an authorized session that
+selects the exact checkout when that evidence is needed.
+
 Session activity uses a separate bounded event page. To inspect older events,
 pass the `next_event_before_sequence` cursor from the projection source and
 optionally lower the page size:

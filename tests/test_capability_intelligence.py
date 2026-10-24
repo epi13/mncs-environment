@@ -388,14 +388,32 @@ def test_project_links_unselected_work_intent_repository_to_evidence_visibility(
     assert result["source"]["observation_reference_diagnostics"][0][
         "verification"
     ] == "outside-selected-session"
+    assert result["context_pressure_candidate_count"] == 1
+    candidate = result["context_pressure_candidates"][0]
+    assert candidate["kind"] == "declared-repository-selection-gap"
+    assert candidate["interpretation"] == "hypothesis"
+    assert candidate["recurrence_status"] == "not-established"
+    assert candidate["affected_repository"] == "mncs-compiler"
+    assert candidate["basis"]["outside_selected_reference_count"] == 1
+    assert candidate["evidence_references"][0]["identity"] == (
+        "ev_environment_compiler_source_outside_selection"
+    )
+    assert candidate["evidence_references"][0]["verification"] == (
+        "outside-selected-session"
+    )
+    assert "authorized session" in candidate["recommendation"]
 
-    compact = capability_intelligence.project(session, max_result_bytes=1_500)
+    compact = capability_intelligence.project(session, max_result_bytes=6_000)
     assert compact["subject"]["workspace_alignment"][
         "unselected_declared_repositories"
     ] == ["mncs-compiler"]
     assert compact["source"]["evidence_visibility"][
         "outside_selected_repositories"
     ] == [{"repository": "mncs-compiler", "diagnostic_count": 1}]
+    assert compact["context_pressure_candidate_count"] == 1
+    assert compact["context_pressure_candidates"][0]["evidence_references"][0][
+        "identity"
+    ] == "ev_environment_compiler_source_outside_selection"
 
 
 def test_project_omits_diagnostics_when_work_intent_repositories_are_aligned(
@@ -408,6 +426,8 @@ def test_project_omits_diagnostics_when_work_intent_repositories_are_aligned(
 
     assert "workspace_alignment" not in result["subject"]
     assert "evidence_visibility" not in result["source"]
+    assert result.get("context_pressure_candidate_count", 0) == 0
+    assert result.get("context_pressure_candidates", []) == []
 
 
 def test_live_compiler_scope_records_link_evidence_and_preserve_uncertainty(

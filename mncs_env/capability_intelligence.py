@@ -719,6 +719,72 @@ def _compact_projection(
     compact_source["response_truncated"] = True
     compact_source["response_byte_count"] = original_size
 
+    compact_context_candidates = []
+    raw_context_candidates = projection.get("context_pressure_candidates")
+    raw_context_candidates = (
+        raw_context_candidates if isinstance(raw_context_candidates, list) else []
+    )
+    for candidate in raw_context_candidates[:8]:
+        if not isinstance(candidate, dict):
+            continue
+        compact_candidate = {
+            key: _short_text(
+                candidate.get(key),
+                256 if key in ("title", "recommendation") else 160,
+            )
+            for key in (
+                "identity", "kind", "interpretation", "status", "title",
+                "affected_repository", "recurrence_status", "recommendation",
+            )
+            if isinstance(candidate.get(key), str)
+        }
+        work_context = candidate.get("affected_work_context")
+        if isinstance(work_context, dict):
+            compact_candidate["affected_work_context"] = {
+                key: _short_text(value, 160)
+                for key, value in work_context.items()
+                if isinstance(value, str)
+            }
+        basis = candidate.get("basis")
+        if isinstance(basis, dict):
+            compact_candidate["basis"] = {
+                key: (
+                    [_short_text(value, 128) for value in values[:MAX_OBSERVATIONS]
+                     if isinstance(value, str)]
+                    if isinstance(values, list)
+                    else values
+                )
+                for key, values in basis.items()
+                if isinstance(values, (str, int, bool, list))
+            }
+        references = candidate.get("evidence_references")
+        references = references if isinstance(references, list) else []
+        compact_references = []
+        for reference in references[:MAX_OBSERVATIONS]:
+            if not isinstance(reference, dict):
+                continue
+            compact_references.append({
+                key: _short_text(reference[key], 192 if key == "path" else 160)
+                for key in (
+                    "identity", "repository", "commit", "path", "sha256",
+                    "verification",
+                )
+                if isinstance(reference.get(key), str)
+            })
+        compact_candidate["evidence_references"] = compact_references
+        compact_candidate["evidence_references_truncated"] = (
+            candidate.get("evidence_references_truncated") is True
+            or len(references) > len(compact_references)
+        )
+        not_measured = candidate.get("not_measured")
+        if isinstance(not_measured, list):
+            compact_candidate["not_measured"] = [
+                _short_text(value, 192)
+                for value in not_measured[:4]
+                if isinstance(value, str)
+            ]
+        compact_context_candidates.append(compact_candidate)
+
     compact_hypotheses = []
     observations = projection["observations"]
     observation_order_by_identity: dict[str, tuple[int, int, int]] = {}
@@ -1512,6 +1578,11 @@ def _compact_projection(
             "The bounded read selects the newest observation references in each page; older skipped references may contain additional evidence.",
         ],
     }
+    if compact_context_candidates:
+        result["context_pressure_candidate_count"] = projection.get(
+            "context_pressure_candidate_count", len(compact_context_candidates),
+        )
+        result["context_pressure_candidates"] = compact_context_candidates
     # The selected fields are individually bounded. This final reduction also
     # accounts for unusual but valid identifiers and reference paths.
     while len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")) > max_result_bytes:
@@ -1536,6 +1607,8 @@ def _compact_projection(
             result["pressure_hypotheses"].pop()
         elif result["improvement_relations"]:
             result["improvement_relations"].pop(0)
+        elif result.get("context_pressure_candidates"):
+            result["context_pressure_candidates"].pop(0)
         elif result["session_activity"]["interactions"]:
             result["session_activity"]["interactions"].pop()
             result["session_activity"]["interactions_truncated"] = True
@@ -2386,6 +2459,101 @@ def _evidence_visibility_summary(
         "diagnostics_truncated": truncated,
         "basis": "bounded-campaign-evidence-source-verification-diagnostics",
     }
+
+
+def _context_pressure_candidates(
+    *,
+    session_id: str,
+    campaign_id: Any,
+    work_intent_id: Any,
+    workspace_alignment: dict[str, Any],
+    evidence_visibility: dict[str, Any],
+    observation_reference_diagnostics: Any,
+    diagnostics_truncated: bool,
+) -> list[dict[str, Any]]:
+    """Derive bounded, explicitly hypothetical candidates from session scope."""
+    unselected = workspace_alignment.get("unselected_declared_repositories")
+    if not isinstance(unselected, list):
+        return []
+    diagnostics = (
+        observation_reference_diagnostics
+        if isinstance(observation_reference_diagnostics, list) else []
+    )
+    selected = workspace_alignment.get("selected_repositories")
+    selected = selected if isinstance(selected, list) else []
+    candidates: list[dict[str, Any]] = []
+    for repository in unselected[:MAX_OBSERVATIONS]:
+        if not _is_repository_identity(repository):
+            continue
+        references: list[dict[str, str]] = []
+        for diagnostic in diagnostics:
+            if (
+                not isinstance(diagnostic, dict)
+                or diagnostic.get("verification") != "outside-selected-session"
+                or diagnostic.get("repository") != repository
+            ):
+                continue
+            reference = {
+                key: diagnostic[key]
+                for key in ("identity", "repository", "commit", "path", "sha256")
+                if isinstance(diagnostic.get(key), str)
+            }
+            reference["verification"] = "outside-selected-session"
+            references.append(reference)
+        visible_references = references[:MAX_OBSERVATIONS]
+        candidate_identity = "cpc_" + digest_hex({
+            "session_id": session_id,
+            "campaign_id": campaign_id,
+            "work_intent_id": work_intent_id,
+            "repository": repository,
+            "evidence_reference_identities": [
+                reference.get("identity") for reference in visible_references
+            ],
+        }, length=16)
+        candidates.append({
+            "identity": candidate_identity,
+            "kind": "declared-repository-selection-gap",
+            "interpretation": "hypothesis",
+            "status": "candidate",
+            "title": "A Work Intent repository is not selected in this session",
+            "affected_repository": repository,
+            "affected_work_context": {
+                "campaign_id": _short_text(campaign_id, 160),
+                "session_id": _short_text(session_id, 160),
+                "work_intent_id": _short_text(work_intent_id, 160),
+            },
+            "recurrence_status": "not-established",
+            "basis": {
+                "measurement": "session-work-intent-and-selected-checkout-identities",
+                "workspace_alignment_status": _short_text(
+                    workspace_alignment.get("status"), 96,
+                ),
+                "evidence_visibility_status": _short_text(
+                    evidence_visibility.get("status"), 96,
+                ),
+                "selected_repositories": [
+                    _short_text(value, 128) for value in selected[:MAX_OBSERVATIONS]
+                    if _is_repository_identity(value)
+                ],
+                "selected_repositories_truncated": len(selected) > MAX_OBSERVATIONS,
+                "outside_selected_reference_count": len(references),
+            },
+            "evidence_references": visible_references,
+            "evidence_references_truncated": (
+                len(references) > len(visible_references) or diagnostics_truncated
+            ),
+            "recommendation": (
+                "Confirm whether this repository is needed for the declared objective; "
+                "if so, use an authorized session that selects its exact checkout. "
+                "Keep its sources outside-selected until then."
+            ),
+            "not_measured": [
+                "whether the selection gap blocks or delays the declared objective",
+                "why the repository is absent from the selected checkout set",
+                "whether the same gap recurs in another session",
+            ],
+        })
+    return candidates
 
 
 def _source_pointer_key(pointer: dict[str, str]) -> tuple[str, str, str, str]:
@@ -4600,6 +4768,17 @@ def project(
         len(observation_reference_diagnostics),
         len(observation_reference_diagnostics) > MAX_OBSERVATIONS,
     )
+    context_pressure_candidates = _context_pressure_candidates(
+        session_id=session.session_id,
+        campaign_id=campaign.get("identity"),
+        work_intent_id=intent.get("identity"),
+        workspace_alignment=workspace_alignment,
+        evidence_visibility=evidence_visibility,
+        observation_reference_diagnostics=observation_reference_diagnostics,
+        diagnostics_truncated=(
+            len(observation_reference_diagnostics) > MAX_OBSERVATIONS
+        ),
+    )
     if workspace_alignment["status"] in {
         "declared-repositories-not-selected",
         "workspace-selection-unavailable",
@@ -4771,6 +4950,9 @@ def project(
             "A missing subsequent-observation identity is exposed as not-recorded; the projection does not infer follow-up.",
             "A linked verification record establishes that evidence is present and integrity checked; effectiveness still requires independent follow-up.",
             "Optional improvement relations that do not meet the current contract are surfaced as unverified and excluded from improvement claims.",
+            *([
+                "Context pressure candidates are derived hypotheses from declared repository and selected-checkout mismatch plus bounded source visibility; they do not establish impact or recurrence and do not authorize selecting an outside repository.",
+            ] if context_pressure_candidates else []),
             "Session activity summarizes only the bounded recent event tail and exposes no raw invocation arguments or results.",
             "Session resource samples read the newest bounded Store-backed Monitor invocation per binding and preserve session, objective, event, and artifact provenance; a host snapshot does not attribute resource consumption to an agent.",
             "Authority denial activity exposes normalized action and reason classes with event references; raw targets and free-form reasons are omitted.",
@@ -4788,6 +4970,16 @@ def project(
             ] if history_pages > 1 else []),
         ],
     }
+    if context_pressure_candidates:
+        projection["context_pressure_candidate_count"] = len(
+            context_pressure_candidates
+        )
+        projection["context_pressure_candidates"] = context_pressure_candidates
+        projection["correlation"]["relationship"] += (
+            " Context pressure candidates separately relate declared repositories, "
+            "selected checkouts, and bounded source-visibility diagnostics without "
+            "treating a candidate as a recorded pressure or granting access."
+        )
     encoded = json.dumps(projection, ensure_ascii=False, sort_keys=True).encode("utf-8")
     if len(encoded) > max_result_bytes:
         return _compact_projection(projection, len(encoded), max_result_bytes)
