@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_workspace_read_only_source_integrity_improvement_20261024",
+  "captured_at": "2026-10-24T14:23:26+00:00",
+  "measurement_basis": "read-only-workspace-source-integrity-path",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_compiler_resource_and_cross_repository_provenance_20261024",
+      "implementation_commit": "6b47dd65bfac5bd65a3437ca6f7a6b95c73b6eb2",
+      "verification_observation_identity": "ev_environment_workspace_read_only_source_integrity_verification_20261024"
+    },
+    "outcome": {
+      "implementation_change": "When the selected session has explicit workspace read authority and a complete root scan, the projection can perform one bounded targeted discovery for an otherwise unselected referenced repository. It reads only the referenced committed blob, checks its SHA-256, caches the resolved checkout per projection, and does not add that repository to selected or writable scope.",
+      "verification_recorded": true,
+      "subsequent_observation_identity": null,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The readback verifies availability and integrity of one authentic Compiler evidence pointer. It does not add missing cgroup measurements, validate current VM inputs, establish recurrence, or demonstrate downstream Compiler-agent use."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_workspace_read_only_source_integrity_20261024",
+    "addresses_hypothesis_identity": "ph_environment_compiler_resource_and_cross_repository_provenance_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_workspace_read_only_source_integrity_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "6b47dd65bfac5bd65a3437ca6f7a6b95c73b6eb2",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "0e7dec57c697924a4252e09c2e9bc2caa9eaf711868d4a5a17941d8c59f13cc8"
+    },
+    "verification_observation_identity": "ev_environment_workspace_read_only_source_integrity_verification_20261024",
+    "basis": "The focused tests verify the positive read-only workspace path, one targeted discovery reused for two pointers, SHA-256 mismatch detection, denial without workspace read authority, refusal of an incomplete root scan, and refusal of a checkout outside the trusted root. The live campaign projection content-verifies the authentic Compiler source pointer while leaving Compiler unselected and unwritable.",
+    "not_measured": [
+      "recurrence of this source-discovery pressure across later sessions",
+      "whether the verified cross-repository evidence changes Compiler implementation decisions",
+      "whether resource attribution and stale VM provenance limitations persist"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_workspace_read_only_source_integrity_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "6b47dd65bfac5bd65a3437ca6f7a6b95c73b6eb2",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "0e7dec57c697924a4252e09c2e9bc2caa9eaf711868d4a5a17941d8c59f13cc8"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "identity": "ev_environment_workspace_read_only_source_integrity_tests_20261024",
+      "repository": "mncs-environment",
+      "commit": "6b47dd65bfac5bd65a3437ca6f7a6b95c73b6eb2",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "993be14d323631b70fa772cf3cfc5a032dfa2a8dc321a628ece8d8b185721025"
+    }
+  ],
+  "not_measured": [
+    "whether subsequent Compiler activity can resolve or narrow the original pressure hypothesis",
+    "cross-session recurrence and long-term effectiveness",
+    "resource and token cost of the read-only repository discovery path"
+  ]
+}
