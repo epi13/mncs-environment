@@ -1,0 +1,74 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_recurrence_page_scope_gap_20261024",
+  "captured_at": "2026-10-24T09:44:09+00:00",
+  "measurement_basis": "authentic-bounded-campaign-page-reads-and-projection-source-review",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {"identity": "chk_5fd065a4d86f3a28", "sequence": 22},
+    "campaign_evidence_count": 59,
+    "claim_ids": ["claim:mncs-environment:worktree:faa4f0c3f49e"]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-recurrence-page-scope-gap",
+    "source_interface": "mncs_environment MCP campaign_state",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_5fd065a4d86f3a28",
+      "evidence_pages": [
+        {"offset": 0, "limit": 32},
+        {"offset": 32, "limit": 32}
+      ]
+    },
+    "outcome": {
+      "campaign_evidence_count": 59,
+      "first_page_observation_count": 16,
+      "first_page_pressure_hypothesis_count": 6,
+      "later_page_observation_count": 16,
+      "later_page_pressure_hypothesis_count": 3,
+      "same_pressure_hypothesis_identities_across_pages": [],
+      "analysis_limit": "The current pages provide no demonstrated cross-page recurrence. The projection derives recurrence only from the selected page, so wider historical recurrence requires a bounded multi-page query."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_capability_recurrence_page_scope",
+    "title": "Environmental pressure recurrence is limited to one selected evidence page",
+    "category": "evidence-discoverability",
+    "subsystem": "mncs-environment capability intelligence recurrence projection",
+    "owner": "mncs-environment",
+    "basis": "Authenticated campaign evidence is paginated and the existing recurrence projection grouped observations from its selected page only.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Offer an opt-in bounded history window that follows authenticated cursors and reports its coverage and observation-read budget.",
+    "not_measured": [
+      "whether an agent needs recurrence across older pages in a current task",
+      "whether the same pressure recurs outside the two inspected pages",
+      "time, token, or resource impact of page-local recurrence"
+    ]
+  },
+  "supporting_sources": [
+    {"kind": "direct-operation-result", "campaign_id": "cmp_environmental_capability_intelligence_20261023", "session_id": "ses_c38b0ab35b9418ba"},
+    {
+      "kind": "committed-projection-source",
+      "repository": "mncs-environment",
+      "commit": "180d4f7b2d7d05855db794d2d4d451f1a3f0d57e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "2c42418516b221db3bdc4c0d0ca5336991eb23c6ce58b9950a03592f8f15bdff"
+    }
+  ],
+  "not_measured": [
+    "historical pressures outside the selected campaign pages",
+    "agent impact or causal effect of page-local recurrence summaries",
+    "whether a cross-page recurrence has occurred in the wider MNCS environment"
+  ]
+}

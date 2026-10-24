@@ -1,0 +1,61 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_recurrence_page_scope_followup_20261024",
+  "captured_at": "2026-10-24T09:44:09+00:00",
+  "measurement_basis": "authentic-campaign-page-reads-and-bounded-history-regression-result",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {"identity": "chk_5fd065a4d86f3a28", "sequence": 22},
+    "campaign_evidence_count": 59,
+    "claim_ids": ["claim:mncs-environment:worktree:faa4f0c3f49e"]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-bounded-history-followup",
+    "source_interface": "mncs_environment MCP page reads and focused test suite",
+    "request": {
+      "authentic_checkpoint_id": "chk_5fd065a4d86f3a28",
+      "authentic_page_offsets": [0, 32],
+      "history_cli_regression": "tests/test_capability_intelligence.py::test_cli_history_pages_correlate_pressure_within_bounded_read_budget",
+      "branch_commit": "f92637a183a2da743c409cd42d991791ea862b55"
+    },
+    "outcome": {
+      "authentic_campaign_page0": {"references": 32, "observations_verified": 16, "pressure_hypotheses": 6},
+      "authentic_campaign_page32": {"references": 27, "observations_verified": 16, "pressure_hypotheses": 3},
+      "authentic_repeated_pressure_identity_across_pages": false,
+      "bounded_fixture_two_page_result": {
+        "observations_verified": 16,
+        "observation_records_skipped_by_page_budget": 2,
+        "distinct_related_work_sessions": 2,
+        "recurrence_status": "observed-across-sessions"
+      },
+      "analysis_limit": "Authentic page reads did not establish a repeated pressure across the selected pages. The two-page recurrence result comes from the bounded regression fixture; future real campaign queries are needed to observe authentic cross-page recurrence."
+    }
+  },
+  "supporting_sources": [
+    {"kind": "direct-operation-result", "campaign_id": "cmp_environmental_capability_intelligence_20261023", "session_id": "ses_c38b0ab35b9418ba"},
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_capability_recurrence_page_scope_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "f92637a183a2da743c409cd42d991791ea862b55",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "ebeb445e3843c84ca27157326ddd8570beebd2a2819327bf5c312c5124c74707"
+    }
+  ],
+  "not_measured": [
+    "agent use of multi-page recurrence findings",
+    "whether a subsequent environmental change resolves a cross-page pressure",
+    "runtime and resource attribution for a real four-page history query"
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_recurrence_page_scope_improvement_20261024",
+  "captured_at": "2026-10-24T09:44:09+00:00",
+  "measurement_basis": "committed-bounded-historical-page-projection-change",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {"identity": "chk_5fd065a4d86f3a28", "sequence": 22},
+    "campaign_evidence_count": 59,
+    "claim_ids": ["claim:mncs-environment:worktree:faa4f0c3f49e"]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment environmental-capability projection CLI",
+    "request": {
+      "command": "mncs-env projections <session> --interpret environmental-capability --history-pages 4",
+      "maximum_pages": 4,
+      "observation_read_budget": 16,
+      "same_checkpoint_required": true,
+      "implementation_commit": "f92637a183a2da743c409cd42d991791ea862b55",
+      "verification_observation_identity": "ev_environment_capability_recurrence_page_scope_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_capability_recurrence_page_scope_followup_20261024"
+    },
+    "outcome": {
+      "implementation_change": "The environmental-capability projection can follow up to four previous-page cursors, require a stable checkpoint and evidence count, distribute at most 16 observation reads across the selected pages, and disclose page offsets, truncation, checkpoint consistency, and skipped records.",
+      "default_page_count": 1,
+      "verification_recorded": true,
+      "followup_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The bounded fixture test verifies aggregation across two pages. No cross-page recurrence was observed in the two authentic campaign pages inspected."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_capability_recurrence_page_scope_20261024",
+    "addresses_hypothesis_identity": "ph_environment_capability_recurrence_page_scope",
+    "implementation_reference": {
+      "identity": "ev_environment_capability_recurrence_page_scope_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "f92637a183a2da743c409cd42d991791ea862b55",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "ebeb445e3843c84ca27157326ddd8570beebd2a2819327bf5c312c5124c74707"
+    },
+    "verification_observation_identity": "ev_environment_capability_recurrence_page_scope_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_capability_recurrence_page_scope_followup_20261024",
+    "basis": "The CLI test covers two pages containing the same pressure in distinct sessions, per-page read limits, compact-source coverage fields, and fail-closed behavior when the checkpoint changes.",
+    "not_measured": [
+      "future agent use of the historical recurrence option",
+      "whether cross-page analysis changes a development decision",
+      "long-term recurrence or effectiveness across campaigns"
+    ]
+  },
+  "supporting_sources": [
+    {"kind": "direct-operation-result", "campaign_id": "cmp_environmental_capability_intelligence_20261023", "session_id": "ses_c38b0ab35b9418ba"},
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_capability_recurrence_page_scope_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "f92637a183a2da743c409cd42d991791ea862b55",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "ebeb445e3843c84ca27157326ddd8570beebd2a2819327bf5c312c5124c74707"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "f92637a183a2da743c409cd42d991791ea862b55",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "5ed236945c437202ba952cf5d6ffa0958d09aa801b3dcb958d407b5230422b5a"
+    }
+  ],
+  "not_measured": [
+    "agent adoption or benefit from the historical query",
+    "resource use under a broader real campaign",
+    "future cross-page recurrence or mitigation outcomes"
+  ]
+}
