@@ -302,6 +302,12 @@ def _compact_projection(
                 }
                 and value is not None
             }
+        for key in (
+            "verification_evidence_reference", "subsequent_evidence_reference",
+        ):
+            reference = relation.get(key)
+            if isinstance(reference, dict):
+                summary[key] = reference
         summary["evidence_reference"] = relation["evidence_reference"]
         compact_improvements.append(summary)
 
@@ -326,14 +332,13 @@ def _compact_projection(
     # The selected fields are individually bounded. This final reduction also
     # accounts for unusual but valid identifiers and reference paths.
     while len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")) > max_result_bytes:
-        if len(result["observations"]) > 1:
+        if result["observations"]:
             result["observations"].pop()
-        elif result["improvement_relations"]:
-            result["improvement_relations"].pop()
         elif result["pressure_hypotheses"]:
             result["pressure_hypotheses"].pop()
+        elif result["improvement_relations"]:
+            result["improvement_relations"].pop()
         else:
-            result["observations"] = []
             break
     return result
 
@@ -690,6 +695,10 @@ def project(
         hypothesis = record.get("pressure_hypothesis")
         if isinstance(hypothesis, dict) and isinstance(hypothesis.get("identity"), str):
             projected_hypothesis_ids.add(hypothesis["identity"])
+    projected_references_by_identity = {
+        record["identity"]: reference
+        for record, reference in projected_records
+    }
     for record, reference in projected_records:
         observation = record["observation"]
         work = record.get("related_work")
@@ -760,7 +769,7 @@ def project(
             implementation_status["content_integrity_status"] = _source_integrity_status(
                 improvement["implementation_reference"], source_integrity,
             )
-            improvement_relations.append({
+            relation_projection = {
                 "identity": improvement["identity"],
                 "recorded_by_observation_identity": record["identity"],
                 "addresses_hypothesis_identity": improvement["addresses_hypothesis_identity"],
@@ -793,7 +802,20 @@ def project(
                     key: reference[key]
                     for key in ("identity", "repository", "commit", "path", "sha256")
                 },
-            })
+            }
+            for identity_key, reference_key in (
+                ("verification_observation_identity", "verification_evidence_reference"),
+                ("subsequent_observation_identity", "subsequent_evidence_reference"),
+            ):
+                linked_reference = projected_references_by_identity.get(
+                    improvement[identity_key],
+                )
+                if linked_reference is not None:
+                    relation_projection[reference_key] = {
+                        key: linked_reference[key]
+                        for key in ("identity", "repository", "commit", "path", "sha256")
+                    }
+            improvement_relations.append(relation_projection)
         if len(observations) >= MAX_OBSERVATIONS:
             break
     if campaign_state is None:

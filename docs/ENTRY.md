@@ -236,6 +236,9 @@ and `source.next_evidence_offset` repeat the cursor for the page analyzed, so an
 agent reading only the projection can continue the query. A compact `partial`
 projection keeps bounded summaries and exact references; query the page
 containing a relationship to inspect its linked observations together.
+Improvement relations include exact evidence references for verified and
+follow-up observations when those records are in the projected page; otherwise
+their `not-present-in-projection` status remains page-local.
 
 Observation source summaries keep registration status separate from
 `content_integrity_status`. A selected source blob is marked

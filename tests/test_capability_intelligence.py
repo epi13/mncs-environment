@@ -553,12 +553,20 @@ def test_improvement_relation_links_pressure_change_verification_and_followup(
     assert relation["addresses_hypothesis_identity"] == "ph_capture_context"
     assert relation["pressure_hypothesis_status"] == "present-in-projection"
     assert relation["verification_record_status"] == "record-integrity-verified-in-projection"
+    assert relation["verification_evidence_reference"]["identity"] == verification["identity"]
     assert relation["subsequent_record_status"] == "record-integrity-verified-in-projection"
+    assert relation["subsequent_evidence_reference"]["identity"] == followup["identity"]
     assert relation["effectiveness_assessment"] == "not-assessed"
     assert relation["implementation_reference"]["status"] == "not-an-environmental-observation"
     assert compact["status"] == "partial"
     assert compact["improvement_relation_count"] == 1
     assert compact["improvement_relations"][0]["effectiveness_assessment"] == "not-assessed"
+    assert compact["improvement_relations"][0]["verification_evidence_reference"]["identity"] == (
+        verification["identity"]
+    )
+    assert compact["improvement_relations"][0]["subsequent_evidence_reference"]["identity"] == (
+        followup["identity"]
+    )
 
 
 def test_malformed_improvement_relation_is_not_projected(tmp_path: Path) -> None:
@@ -639,6 +647,12 @@ def test_authentic_capture_context_evidence_projects_as_one_improvement_chain(
         "record-integrity-verified-in-projection"
     )
     assert relation["effectiveness_assessment"] == "not-assessed"
+    assert relation["verification_evidence_reference"]["identity"] == (
+        "ev_environment_improvement_relations_verification_20261024"
+    )
+    assert relation["subsequent_evidence_reference"]["identity"] == (
+        "ev_environment_compiler_cache_regression_20261024"
+    )
     observations = {item["identity"]: item for item in result["observations"]}
     gap = observations["ev_environment_observation_capture_context_gap_20261024"]
     followup = observations["ev_environment_compiler_cache_regression_20261024"]
