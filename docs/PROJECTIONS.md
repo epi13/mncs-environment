@@ -230,6 +230,17 @@ Observations can also report measurements without a pressure hypothesis, so a
 resource sample is not forced into a healthy/unhealthy judgment. Its sampling
 scope and unavailable attribution remain attached to that observation.
 
+The projection subject also reports `campaign_charter` separately from
+`work_intent`. A charter objective is exposed only when one content-addressed
+`mncs.environment.campaign-charter/1` record is verified against its Git
+commit, SHA-256, and current campaign identity. No recorded charter,
+unavailable source, partial pointer index, and multiple valid charters remain
+distinct statuses; the projection does not select among conflicting
+objectives. Compact responses retain the charter status and exact evidence
+reference while bounding the objective text. The generic session Work Intent
+continues to describe the current agent task and is never overwritten by the
+campaign objective.
+
 When observations reuse one pressure identity but record different titles,
 categories, subsystems, owners, or recommendations, the projection reports
 `definition_status: conflicting-recorded-definitions`, lists the conflicting

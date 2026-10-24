@@ -27,6 +27,7 @@ from .store_backend import StoreIntegrityFailure, StoreUnavailable
 
 SCHEMA = "mncs.environment.capability-intelligence/1"
 OBSERVATION_SCHEMA = "mncs.environment.environmental-observation/1"
+CAMPAIGN_CHARTER_SCHEMA = "mncs.environment.campaign-charter/1"
 OBSERVATION_PATH_PREFIX = "evidence/environmental-capability/"
 MAX_EVIDENCE_REFS = 32
 MAX_EVIDENCE_HISTORY_PAGES = 4
@@ -35,6 +36,8 @@ MAX_OBSERVATION_BYTES = 64 * 1024
 MAX_SOURCE_BYTES = 512 * 1024
 MAX_OBSERVATION_READ_SECONDS = 8.0
 MAX_SOURCE_POINTER_VERIFICATIONS = 32
+MAX_CAMPAIGN_CHARTER_CANDIDATES = 4
+MAX_CAMPAIGN_CHARTER_OBJECTIVE_CHARS = 4096
 MAX_RESULT_BYTES = 48 * 1024
 CAPTURED_OPERATION_RESULT_SOURCE_KINDS = frozenset({
     "direct-operation-result", "direct-cli-projection-result",
@@ -507,9 +510,32 @@ def _compact_projection(
         for key in ("identity", "goal")
         if intent.get(key) is not None
     }
+    charter = subject.get("campaign_charter")
+    if isinstance(charter, dict):
+        compact_charter = {
+            "status": _short_text(charter.get("status"), 32),
+        }
+        for key in ("reason", "identity"):
+            if isinstance(charter.get(key), str):
+                compact_charter[key] = _short_text(charter[key], 160)
+        for key in ("candidate_reference_count", "references_examined",
+                    "valid_charter_count"):
+            if type(charter.get(key)) is int and charter[key] >= 0:
+                compact_charter[key] = charter[key]
+        for key, limit in (("title", 256), ("objective", 512)):
+            value = charter.get(key)
+            if isinstance(value, str):
+                compact_charter[key] = _short_text(value, limit)
+                if len(value) > limit:
+                    compact_charter[f"{key}_truncated"] = True
+        pointer = _validate_source_pointer(charter.get("evidence_reference"))
+        if pointer is not None:
+            compact_charter["evidence_reference"] = pointer
+        compact_subject["campaign_charter"] = compact_charter
     compact_source = {
         key: source.get(key)
-        for key in ("evidence_count", "evidence_page_truncated",
+        for key in ("campaign_charter_status", "campaign_charter_reference_count",
+                    "evidence_count", "evidence_page_truncated",
                     "evidence_page_offset", "evidence_page_limit",
                     "previous_evidence_offset", "next_evidence_offset",
                     "evidence_history_pages_requested",
@@ -1293,6 +1319,109 @@ def _load_observation(
             and (not isinstance(hypothesis["owner"], str) or not hypothesis["owner"])):
         return None, "observation-contract-invalid"
     return record, "verified"
+
+
+def _campaign_charter_context(
+    session: Any, state: dict[str, Any], root: Path | None, *,
+    campaign_identity: Any, deadline: float,
+) -> dict[str, Any] | None:
+    """Read one unique content-addressed charter without replacing session intent."""
+    index = state.get("campaign_charter_evidence")
+    if not isinstance(index, dict):
+        return None
+    count = index.get("count")
+    raw_references = index.get("references")
+    if (type(count) is not int or count < 0
+            or not isinstance(raw_references, list)
+            or type(index.get("truncated")) is not bool):
+        return {"status": "unavailable", "reason": "charter-index-invalid"}
+    if count == 0:
+        if raw_references or index["truncated"]:
+            return {"status": "partial", "reason": "charter-index-inconsistent"}
+        return {"status": "not-recorded", "candidate_reference_count": 0}
+
+    references = raw_references[:MAX_CAMPAIGN_CHARTER_CANDIDATES]
+    incomplete = (
+        index["truncated"]
+        or count != len(raw_references)
+        or len(raw_references) > MAX_CAMPAIGN_CHARTER_CANDIDATES
+    )
+    valid_charters: list[dict[str, Any]] = []
+    examined = 0
+    for raw_reference in references:
+        pointer = _validate_reference(raw_reference)
+        if pointer is None or "sha256" not in pointer:
+            incomplete = True
+            continue
+        examined += 1
+        if "campaign_charter" not in pointer["identity"]:
+            continue
+        if root is None:
+            incomplete = True
+            continue
+        checkout = _checkout(session, pointer["repository"], root)
+        if checkout is None:
+            incomplete = True
+            continue
+        raw, _ = _git_blob(
+            checkout, pointer["commit"], pointer["path"],
+            deadline=deadline,
+            max_bytes=MAX_OBSERVATION_BYTES,
+            oversized_status="campaign-charter-too-large",
+        )
+        if raw is None:
+            incomplete = True
+            continue
+        if hashlib.sha256(raw).hexdigest() != pointer["sha256"]:
+            incomplete = True
+            continue
+        try:
+            record = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            # The committed bytes are authentic, but they do not form a charter
+            # record and therefore cannot contribute a campaign objective.
+            continue
+        if (not isinstance(record, dict)
+                or record.get("schema_version") != CAMPAIGN_CHARTER_SCHEMA
+                or record.get("identity") != pointer["identity"]
+                or record.get("campaign_identity") != campaign_identity):
+            continue
+        objective = record.get("objective")
+        source = record.get("source")
+        title = source.get("request_title") if isinstance(source, dict) else None
+        if (not isinstance(objective, str) or not objective.strip()
+                or len(objective) > MAX_CAMPAIGN_CHARTER_OBJECTIVE_CHARS
+                or "\x00" in objective
+                or (title is not None
+                    and (not isinstance(title, str) or len(title) > 256
+                         or "\x00" in title))):
+            continue
+        valid_charters.append({
+            "identity": pointer["identity"],
+            "title": title,
+            "objective": objective,
+            "evidence_reference": pointer,
+        })
+
+    result: dict[str, Any] = {
+        "candidate_reference_count": count,
+        "references_examined": examined,
+    }
+    if incomplete:
+        return {
+            **result,
+            "status": "partial",
+            "reason": "charter-candidates-not-fully-verified",
+        }
+    if len(valid_charters) > 1:
+        return {
+            **result,
+            "status": "ambiguous",
+            "valid_charter_count": len(valid_charters),
+        }
+    if not valid_charters:
+        return {**result, "status": "not-found"}
+    return {"status": "verified", **valid_charters[0]}
 
 
 def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, Any]:
@@ -2507,6 +2636,11 @@ def project(
     unavailable = 0
     skipped_by_page_budget = 0
     read_deadline = time.monotonic() + MAX_OBSERVATION_READ_SECONDS
+    campaign_charter = _campaign_charter_context(
+        session, state, root,
+        campaign_identity=campaign.get("identity"),
+        deadline=read_deadline,
+    )
     for raw, page_index in page_entries:
         pointer = _validate_reference(raw)
         if pointer is None:
@@ -2843,30 +2977,47 @@ def project(
         event_before_sequence=session_event_before_sequence,
         event_limit=session_event_limit,
     )
+    subject = {
+        "session_id": session.session_id,
+        "campaign_id": campaign.get("identity"),
+        "environment_id": snapshot.get("environment_id"),
+        "definition_id": (snapshot.get("provenance") or {}).get("definition_id"),
+        "work_intent": {
+            "identity": intent.get("identity"),
+            "goal": intent.get("goal"),
+        },
+    }
+    if isinstance(campaign_charter, dict):
+        subject["campaign_charter"] = campaign_charter
     projection: dict[str, Any] = {
         "schema_version": SCHEMA,
         "identity": "eci_" + digest_hex({
             "session_id": session.session_id,
             "campaign_id": campaign.get("identity"),
             "evidence": [item["identity"] for item in references],
+            "campaign_charter_reference": (
+                campaign_charter.get("evidence_reference")
+                if isinstance(campaign_charter, dict) else None
+            ),
+            "campaign_charter_status": (
+                campaign_charter.get("status")
+                if isinstance(campaign_charter, dict) else None
+            ),
             "session_activity_digest": (
                 activity.get("source", {}).get("event_window_identity_digest")
                 if isinstance(activity.get("source"), dict) else None
             ),
         }, length=16),
         "status": status,
-        "subject": {
-            "session_id": session.session_id,
-            "campaign_id": campaign.get("identity"),
-            "environment_id": snapshot.get("environment_id"),
-            "definition_id": (snapshot.get("provenance") or {}).get("definition_id"),
-            "work_intent": {
-                "identity": intent.get("identity"),
-                "goal": intent.get("goal"),
-            },
-        },
+        "subject": subject,
         "source": {
             "campaign_state_checkpoint_id": state.get("checkpoint_id"),
+            **({
+                "campaign_charter_status": campaign_charter.get("status"),
+                "campaign_charter_reference_count": campaign_charter.get(
+                    "candidate_reference_count", 0,
+                ),
+            } if isinstance(campaign_charter, dict) else {}),
             "recorded_at": state.get("recorded_at"),
             "recorded_by": state.get("recorded_by"),
             "evidence_count": state.get("evidence_count", 0),
@@ -2953,7 +3104,7 @@ def project(
         "correlation": {
             "kind": "campaign-evidence-and-session-events-to-objective-and-subsystem",
             "derived": True,
-            "relationship": "Campaign observations retain affected work and recorder context; capability and authenticated Control read-operation events link to the current objective, Environment, and repository; improvement relations link pressures, implementation, verification, and follow-up.",
+            "relationship": "A verified campaign charter and session Work Intent remain separate objectives. Campaign observations and session events link work to environmental subsystems; improvement relations link pressures, implementation, verification, and follow-up.",
         },
         "observation_count": len(observations),
         "pressure_hypothesis_count": len(hypotheses),

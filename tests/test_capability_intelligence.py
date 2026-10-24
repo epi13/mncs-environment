@@ -85,6 +85,44 @@ def _session(tmp_path: Path, reports: list[dict], *, extra_refs: list[dict] | No
     return session, state
 
 
+def _add_campaign_charter(
+    session, state: dict, identity: str, objective: str,
+) -> dict[str, str]:
+    checkout = Path(session.snapshot["selected_checkouts"]["mncs-environment"]["path"])
+    relative = f"evidence/campaign-charters/{identity}.json"
+    record = {
+        "schema_version": "mncs.environment.campaign-charter/1",
+        "identity": identity,
+        "recorded_at": "2026-10-24T00:00:00Z",
+        "campaign_identity": session.snapshot["campaign"]["identity"],
+        "source": {
+            "kind": "user-directed test campaign",
+            "request_title": "Test campaign objective",
+        },
+        "objective": objective,
+        "authority_boundary": "Records intent and grants no repository authority.",
+    }
+    raw = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
+    path = checkout / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(raw)
+    _git(checkout, "add", relative)
+    _git(checkout, "commit", "--quiet", "-m", "test campaign charter")
+    reference = {
+        "identity": identity,
+        "repository": "mncs-environment",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+    index = state.setdefault("campaign_charter_evidence", {
+        "count": 0, "references": [], "truncated": False,
+    })
+    index["references"].append(reference)
+    index["count"] = len(index["references"])
+    return reference
+
+
 def _observation(identity: str, session_id: str, campaign_id: str) -> dict:
     return {
         "schema_version": capability_intelligence.OBSERVATION_SCHEMA,
@@ -177,6 +215,98 @@ def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_
     assert result["observations"][0]["supporting_sources"][1][
         "content_integrity_status"
     ] == "captured-in-observation-record"
+
+
+def test_project_exposes_verified_campaign_objective_separately_from_work_intent(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_campaign_charter_context",
+        "ses_charter_context",
+        "cmp_projection_reader",
+    )
+    session, state = _session(tmp_path, [record])
+    objective = "Grow MNCS capability from real development evidence." + (
+        " Expand supported work." * 40
+    )
+    reference = _add_campaign_charter(
+        session, state,
+        "ev_environment_campaign_charter_context",
+        objective,
+    )
+
+    result = capability_intelligence.project(session)
+    charter = result["subject"]["campaign_charter"]
+    assert charter["status"] == "verified"
+    assert charter["identity"] == reference["identity"]
+    assert charter["objective"] == objective
+    assert charter["evidence_reference"] == reference
+    assert result["subject"]["work_intent"] == {
+        "identity": "int_projection_reader",
+        "goal": "inspect current pressures",
+    }
+
+    compact = capability_intelligence.project(session, max_result_bytes=1_500)
+    compact_charter = compact["subject"]["campaign_charter"]
+    assert compact_charter["status"] == "verified"
+    assert compact_charter["objective_truncated"] is True
+    assert compact_charter["evidence_reference"]["sha256"] == reference["sha256"]
+    assert compact["subject"]["work_intent"]["goal"] == "inspect current pressures"
+
+
+def test_project_does_not_choose_between_multiple_verified_campaign_charters(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_campaign_charter_ambiguous",
+        "ses_charter_ambiguous",
+        "cmp_projection_reader",
+    )
+    session, state = _session(tmp_path, [record])
+    _add_campaign_charter(
+        session, state, "ev_environment_campaign_charter_first", "First objective.",
+    )
+    _add_campaign_charter(
+        session, state, "ev_environment_campaign_charter_second", "Second objective.",
+    )
+
+    charter = capability_intelligence.project(session)["subject"]["campaign_charter"]
+    assert charter["status"] == "ambiguous"
+    assert charter["valid_charter_count"] == 2
+    assert "objective" not in charter
+
+
+def test_project_marks_unverified_campaign_charter_pointer_partial(tmp_path: Path) -> None:
+    record = _observation(
+        "ev_environment_campaign_charter_bad_digest",
+        "ses_charter_bad_digest",
+        "cmp_projection_reader",
+    )
+    session, state = _session(tmp_path, [record])
+    pointer = _add_campaign_charter(
+        session, state, "ev_environment_campaign_charter_bad_digest", "Never trusted.",
+    )
+    pointer["sha256"] = "0" * 64
+
+    charter = capability_intelligence.project(session)["subject"]["campaign_charter"]
+    assert charter["status"] == "partial"
+    assert charter["reason"] == "charter-candidates-not-fully-verified"
+    assert "objective" not in charter
+
+
+def test_project_reports_campaign_charter_as_not_recorded(tmp_path: Path) -> None:
+    record = _observation(
+        "ev_environment_campaign_charter_absent",
+        "ses_charter_absent",
+        "cmp_projection_reader",
+    )
+    session, state = _session(tmp_path, [record])
+    state["campaign_charter_evidence"] = {
+        "count": 0, "references": [], "truncated": False,
+    }
+
+    charter = capability_intelligence.project(session)["subject"]["campaign_charter"]
+    assert charter == {"status": "not-recorded", "candidate_reference_count": 0}
 
 
 def test_captured_session_activity_reference_is_bounded_and_inspectable(
