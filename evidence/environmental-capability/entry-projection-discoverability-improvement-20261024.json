@@ -1,0 +1,75 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_entry_projection_discoverability_improvement_20261024",
+  "captured_at": "2026-10-24T16:13:53+00:00",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment read-only session entry context",
+    "request": {},
+    "outcome": {
+      "implementation_change": "Session context actions now advertise the existing bounded environmental-capability projection command without running the analysis during entry.",
+      "verification_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The command is now discoverable in context. Future agent use and any reduction in repeated orientation work remain unobserved."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_2bd5a7312102e151",
+    "campaign_evidence_count_before_recording": 50,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_entry_projection_discoverability_20261024",
+    "addresses_hypothesis_identity": "ph_environment_entry_projection_discoverability",
+    "implementation_reference": {
+      "identity": "ev_environment_entry_projection_action_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "d51f2f2c0719683eb861044404454876087f219b",
+      "path": "mncs_env/sessions.py",
+      "sha256": "0356b7803149cac777c931bf1753b1d88d0038d3353e35676e225662b62d052b"
+    },
+    "verification_observation_identity": "ev_environment_entry_projection_discoverability_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_entry_projection_action_live_readback_20261024",
+    "basis": "Focused entry-context tests verify the command is constructed with the current session and bounded projection route. A live session-context readback will verify the action is exposed after entry.",
+    "not_measured": [
+      "future agent discovery or use of the advertised action",
+      "whether context reconstruction or investigation becomes less repetitive",
+      "long-term effect on environmental capability development"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_entry_projection_action_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "d51f2f2c0719683eb861044404454876087f219b",
+      "path": "mncs_env/sessions.py",
+      "sha256": "0356b7803149cac777c931bf1753b1d88d0038d3353e35676e225662b62d052b"
+    },
+    {
+      "kind": "verified-source-test-results",
+      "identity": "ev_environment_entry_projection_discoverability_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "d51f2f2c0719683eb861044404454876087f219b",
+      "path": "tests/test_environment.py",
+      "sha256": "2bbfa73212eceb078753376d416c8028c8f9451628aab4a73339a3a30b549075"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

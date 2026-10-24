@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_entry_projection_discoverability_verification_20261024",
+  "captured_at": "2026-10-24T16:13:53+00:00",
+  "observation": {
+    "kind": "environment-entry-projection-discoverability-verification",
+    "source_interface": "pytest, Ruff, py_compile, and Git",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-observation-live-context-20261024",
+      "commit": "d51f2f2c0719683eb861044404454876087f219b",
+      "commands": [
+        "python -m pytest -q tests/test_environment.py -k 'test_valid_campaign_entry_is_compact_and_uses_isolated_state or test_status_and_context_are_read_only_and_documented'",
+        "ruff check mncs_env/sessions.py tests/test_environment.py --ignore SIM103",
+        "python -m py_compile mncs_env/sessions.py tests/test_environment.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "focused_entry_context_tests": {
+        "status": "passed",
+        "passed": 2,
+        "failed": 0
+      },
+      "ruff": {
+        "status": "pre-existing-findings",
+        "selected_file_findings": 47,
+        "changed_line_findings": 0
+      },
+      "py_compile": "passed",
+      "git_diff_check": "passed",
+      "analysis_limit": "Verification covers entry-context command construction and read-only context behavior; it does not measure future agent discovery or usage."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_2bd5a7312102e151",
+    "campaign_evidence_count_before_recording": 50,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "committed-source-change",
+      "repository": "mncs-environment",
+      "commit": "d51f2f2c0719683eb861044404454876087f219b",
+      "path": "mncs_env/sessions.py",
+      "sha256": "0356b7803149cac777c931bf1753b1d88d0038d3353e35676e225662b62d052b"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "d51f2f2c0719683eb861044404454876087f219b",
+      "path": "tests/test_environment.py",
+      "sha256": "2bbfa73212eceb078753376d416c8028c8f9451628aab4a73339a3a30b549075"
+    },
+    {
+      "kind": "committed-projection-discovery-documentation",
+      "repository": "mncs-environment",
+      "commit": "d51f2f2c0719683eb861044404454876087f219b",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "0e9d5ca93b4378c47c33f0bcf1e7a099ed810e12c521873af2c743dc63cbf1e5"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

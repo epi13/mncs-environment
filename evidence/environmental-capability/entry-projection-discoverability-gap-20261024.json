@@ -1,0 +1,69 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_entry_projection_discoverability_gap_20261024",
+  "captured_at": "2026-10-24T16:13:53+00:00",
+  "observation": {
+    "kind": "environment-entry-projection-discoverability-gap",
+    "source_interface": "mncs-env read-only session context",
+    "request": {
+      "session_id": "ses_c98eb637e20a5c14",
+      "baseline_commit": "5eb19ad34d57f40bf07f8bf4e7087c8958af712a"
+    },
+    "outcome": {
+      "environmental_capability_projection_action_present": false,
+      "next_command_count": 1,
+      "only_next_command": "capabilities",
+      "analysis_limit": "This is one observed session context. It does not establish repeated orientation work, agent impact, or difficulty using the documented CLI command."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_2bd5a7312102e151",
+    "campaign_evidence_count_before_recording": 50,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_entry_projection_discoverability",
+    "title": "Session entry context does not advertise the environmental capability projection",
+    "category": "orientation-knowledge",
+    "subsystem": "mncs-environment session context actions",
+    "owner": "mncs-environment",
+    "basis": "The live session context listed the capabilities command but no action for the existing bounded environmental-capability projection, although the projection is available through the CLI.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Advertise the existing environmental-capability projection command in the read-only session entry action list without executing it during entry.",
+    "not_measured": [
+      "whether agents failed to find the existing projection command",
+      "whether context lookup or investigation work is repeated across sessions",
+      "agent time or development impact from the missing action"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-prechange-source",
+      "repository": "mncs-environment",
+      "commit": "5eb19ad34d57f40bf07f8bf4e7087c8958af712a",
+      "path": "mncs_env/sessions.py",
+      "sha256": "2761e4cf2ecfca7b4340e4bf86279ea65c70c9c381dd0663e2ea662d71ea9076"
+    },
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
