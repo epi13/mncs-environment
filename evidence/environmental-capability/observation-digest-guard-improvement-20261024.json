@@ -1,0 +1,88 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_observation_digest_guard_improvement_20261024",
+  "captured_at": "2026-10-24T17:17:19+00:00",
+  "measurement_basis": "verified-checkpoint-contract-change-linked-to-tests-and-live-readback",
+  "observation": {
+    "kind": "environmental-observation-digest-guard-improvement-link",
+    "source_interface": "MNCS Environment checkpoint and capability-intelligence projection",
+    "request": {
+      "campaign_state_checkpoint_id_before_implementation": "chk_ed915fa3778a85b2",
+      "implementation_commit": "71cf37d08ce250482f49f4a8386db021b1c16ec0"
+    },
+    "outcome": {
+      "implementation_change": "Newly appended first-party environmental-capability JSON observation references require sha256. Historical campaign states remain reconstructible, and generic campaign references may still omit digests.",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The authenticated rejection probe and targeted tests verify the guard path; future publication activity is needed to assess whether it prevents recurring unverifiable evidence."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_ed915fa3778a85b2",
+    "campaign_evidence_count_before_recording": 80,
+    "claim_ids": ["claim:mncs-environment:worktree:567a0ed75512"]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_observation_digest_guard_20261024",
+    "addresses_hypothesis_identity": "ph_environment_observation_digest_required_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_observation_digest_guard_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "71cf37d08ce250482f49f4a8386db021b1c16ec0",
+      "path": "mncs_env/sessions.py",
+      "sha256": "4765017d771f4fb36cf1d541f016ba35b42b00e8a6fb018be5ba3f40ad6c1025"
+    },
+    "verification_observation_identity": "ev_environment_observation_digest_guard_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_observation_digest_guard_live_readback_20261024",
+    "basis": "The bounded checkpoint tests pass after the contract change; a live digestless observation append is rejected with a specific message, and a subsequent authenticated campaign-state read returns the unchanged prior checkpoint.",
+    "not_measured": [
+      "whether future campaign authors consistently supply digests",
+      "whether comparable requirements are needed for other repositories",
+      "long-term reduction in unavailable evidence records"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-checkpoint-validation",
+      "identity": "ev_environment_observation_digest_guard_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "71cf37d08ce250482f49f4a8386db021b1c16ec0",
+      "path": "mncs_env/sessions.py",
+      "sha256": "4765017d771f4fb36cf1d541f016ba35b42b00e8a6fb018be5ba3f40ad6c1025"
+    },
+    {
+      "kind": "digest-guard-verification-observation",
+      "identity": "ev_environment_observation_digest_guard_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "19263295fac653d8a50d59667392c4e7ce0398e6",
+      "path": "evidence/environmental-capability/observation-digest-guard-verification-20261024.json",
+      "sha256": "9ce3d006835295654f59bdce0ccfdfdff56c80b52ecaa1d1ceb4c768ec020abe"
+    },
+    {
+      "kind": "digest-guard-live-readback-observation",
+      "identity": "ev_environment_observation_digest_guard_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "19263295fac653d8a50d59667392c4e7ce0398e6",
+      "path": "evidence/environmental-capability/observation-digest-guard-live-readback-20261024.json",
+      "sha256": "14858d08e4e67b658c0275f8c2ca7d44cba9100f295e40cfc2f26c22be475d34"
+    }
+  ],
+  "not_measured": [
+    "future enforcement across independent sessions",
+    "effect on other campaign evidence types",
+    "agent effectiveness or productivity impact"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
