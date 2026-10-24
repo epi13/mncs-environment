@@ -1,0 +1,119 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_recorder_environment_identity_verification_20261024",
+  "captured_at": "2026-10-24T10:31:06+00:00",
+  "measurement_basis": "focused-regression-tests-and-authenticated-projection-query",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_d0b68f95d006a052",
+      "sequence": 31
+    },
+    "campaign_evidence_count": 98,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "observation": {
+    "kind": "recorder-environment-identity-projection-verification",
+    "source_interface": "pytest, ruff, py_compile, mncs-env capability projection CLI",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-capability-intelligence-20261024",
+      "commit": "e9063db8873405fb7b3c23e259b87cf95b9d6d9b",
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "python3 -m pytest tests/test_environment.py -q -k 'projection_capability_invocations_are_declared_and_session_bound or campaign_state_cli_accepts_bounded_evidence_pages'",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "python3 -m py_compile mncs_env/capability_intelligence.py",
+        "git diff --check"
+      ],
+      "live_projection": {
+        "session_id": "ses_c38b0ab35b9418ba",
+        "campaign_state_checkpoint_id": "chk_d0b68f95d006a052",
+        "evidence_count": 98,
+        "evidence_offset": 80,
+        "evidence_limit": 20,
+        "history_pages": 1
+      }
+    },
+    "outcome": {
+      "focused_capability_tests": {
+        "status": "passed",
+        "passed": 32,
+        "failed": 0
+      },
+      "Environment_interface_tests": {
+        "status": "passed",
+        "passed": 2,
+        "deselected": 230
+      },
+      "lint_and_compile": {
+        "ruff": "passed",
+        "py_compile": "passed",
+        "git_diff_check": "passed"
+      },
+      "projection": {
+        "status": "partial",
+        "response_limit_reached": true,
+        "observation_records_verified": 14,
+        "observation_records_unavailable": 0,
+        "pressure_identity": "ph_environment_recorder_resolved_identity",
+        "recurrence_status": "not-established",
+        "recording_environment_identity_status": "captured-in-record",
+        "recording_environment_id": "renv_4844ecc725485390",
+        "recording_definition_id": "env_d479727df8e9d3ef",
+        "recording_environment_version_status": "not-captured-in-record",
+        "distinct_recording_environment_id_count": 1,
+        "distinct_recording_definition_id_count": 1,
+        "distinct_recording_environment_version_count": 0,
+        "analysis_limit": "The bounded response compacted at the byte limit. The pressure summary retained the recorder identity and source pointer; no separate environment_version value was present in the record."
+      },
+      "full_test_suite_after_change": {
+        "status": "not-run",
+        "reason": "The changed projection path received focused unit, interface, and live-query verification; a full suite was not needed for this bounded slice."
+      }
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-test-source",
+      "repository": "mncs-environment",
+      "commit": "e9063db8873405fb7b3c23e259b87cf95b9d6d9b",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "33388211df9e9b3a331b56a2f4ee42ac301f260426e42b4c1c61c5beaf794d6d",
+      "measured_fields": [
+        "focused_capability_tests"
+      ]
+    },
+    {
+      "kind": "committed-projection-source",
+      "identity": "ev_environment_recorder_context_projection_implementation",
+      "repository": "mncs-environment",
+      "commit": "e9063db8873405fb7b3c23e259b87cf95b9d6d9b",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8aba5dbf4c32911e6184f42230f79fa3ed33f161db80bae6655869fd2a03d391"
+    }
+  ],
+  "not_measured": [
+    "resource and token usage attributable to the focused commands",
+    "agent uptake or decision changes caused by the recorder Environment identity",
+    "long-term recurrence or resolution of the pressure",
+    "an explicit environment_version value from Environment context or inspect"
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_recorder_environment_identity_followup_20261024",
+  "captured_at": "2026-10-24T10:31:06+00:00",
+  "measurement_basis": "direct-authenticated-capability-projection-read",
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "observation": {
+    "kind": "recorder-environment-identity-projection-followup",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "campaign_state_checkpoint_id": "chk_d0b68f95d006a052",
+      "campaign_evidence_count": 98,
+      "evidence_offset": 80,
+      "evidence_limit": 20,
+      "history_pages": 1,
+      "repository": "mncs-environment",
+      "implementation_commit": "e9063db8873405fb7b3c23e259b87cf95b9d6d9b",
+      "command": "./scripts/mncs-env projections ses_c38b0ab35b9418ba --interpret environmental-capability --evidence-offset 80 --evidence-limit 20 --history-pages 1"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_limit_reached": true,
+      "observation_records_verified": 14,
+      "observation_records_unavailable": 0,
+      "pressure_identity": "ph_environment_recorder_resolved_identity",
+      "recurrence_status": "not-established",
+      "recording_context": {
+        "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+        "session_id": "ses_c38b0ab35b9418ba",
+        "consumer_id": "local-agent",
+        "environment_id": "renv_4844ecc725485390",
+        "definition_id": "env_d479727df8e9d3ef",
+        "environment_identity_capture_status": "captured-in-record",
+        "environment_version_capture_status": "not-captured-in-record"
+      },
+      "distinct_recording_environment_id_count": 1,
+      "distinct_recording_definition_id_count": 1,
+      "distinct_recording_environment_version_count": 0,
+      "supporting_observation_identity": "ev_environment_recorder_environment_identity_gap_20261024",
+      "supporting_observation_sha256": "985cb98cef133d6de295885969d35e720d8a1905bbeb25b1c86201eaf0ba8257",
+      "analysis_limit": "The compact pressure summary retained the resolved recorder Environment identity and exact source record. It did not supply an explicit environment_version value or establish recurrence or agent uptake."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_recorder_environment_identity_gap_20261024",
+      "repository": "mncs-environment",
+      "commit": "1545bf11e41b71691c86bb68337833ee133d5621",
+      "path": "evidence/environmental-capability/recorder-environment-identity-gap-20261024.json",
+      "sha256": "985cb98cef133d6de295885969d35e720d8a1905bbeb25b1c86201eaf0ba8257",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "committed-projection-source",
+      "identity": "ev_environment_recorder_context_projection_implementation",
+      "repository": "mncs-environment",
+      "commit": "e9063db8873405fb7b3c23e259b87cf95b9d6d9b",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8aba5dbf4c32911e6184f42230f79fa3ed33f161db80bae6655869fd2a03d391"
+    }
+  ],
+  "not_measured": [
+    "agent use of the resolved recorder identity in later investigations",
+    "whether a distinct Environment version value is needed beyond the resolved environment_id",
+    "whether other sessions or Environment versions recur with the same pressure"
+  ]
+}
