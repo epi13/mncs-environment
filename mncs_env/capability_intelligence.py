@@ -35,6 +35,9 @@ MAX_SOURCE_BYTES = 512 * 1024
 MAX_OBSERVATION_READ_SECONDS = 8.0
 MAX_SOURCE_POINTER_VERIFICATIONS = 32
 MAX_RESULT_BYTES = 48 * 1024
+CAPTURED_OPERATION_RESULT_SOURCE_KINDS = frozenset({
+    "direct-operation-result", "direct-cli-projection-result",
+})
 MAX_SESSION_EVENT_WINDOW = 256
 MAX_SESSION_ACTIVITY_INTERACTIONS = 32
 MAX_SESSION_ACTIVITY_CAPABILITIES = 16
@@ -1167,9 +1170,7 @@ def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, A
                     "campaign_id", "session_id")
         if source.get(key) is not None
     }
-    if source.get("kind") in {
-        "direct-operation-result", "direct-cli-projection-result",
-    }:
+    if source.get("kind") in CAPTURED_OPERATION_RESULT_SOURCE_KINDS:
         summary["status"] = "captured-in-observation-record"
         return summary
     if source.get("kind") == "authenticated-session-activity-projection":
@@ -1256,7 +1257,8 @@ def _verify_source_pointer(
 
 
 def _source_integrity_status(source: Any, cache: dict[tuple[str, str, str, str], str]) -> str:
-    if isinstance(source, dict) and source.get("kind") == "direct-operation-result":
+    if (isinstance(source, dict)
+            and source.get("kind") in CAPTURED_OPERATION_RESULT_SOURCE_KINDS):
         return "captured-in-observation-record"
     if isinstance(source, dict) and source.get(
         "kind"

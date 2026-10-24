@@ -173,6 +173,9 @@ def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_
     assert result["observations"][0]["supporting_sources"][1]["status"] == (
         "captured-in-observation-record"
     )
+    assert result["observations"][0]["supporting_sources"][1][
+        "content_integrity_status"
+    ] == "captured-in-observation-record"
 
 
 def test_captured_session_activity_reference_is_bounded_and_inspectable(
