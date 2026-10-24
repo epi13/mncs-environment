@@ -363,6 +363,17 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 
 def cmd_projections(args: argparse.Namespace) -> int:
+    if args.evidence and args.interpret:
+        return fail(
+            "--evidence applies only to an unfiltered ambient projection read",
+            diagnostics={
+                "code": "incompatible-projection-options",
+                "next": (
+                    "run environmental-capability analysis without --evidence; "
+                    "use --evidence without --interpret for the ambient projection trail"
+                ),
+            },
+        )
     if args.history_pages != 1 and args.interpret != "environmental-capability":
         return fail('--history-pages requires --interpret environmental-capability')
     if (args.evidence_offset is not None
@@ -2245,7 +2256,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="campaign evidence references per page for environmental capability analysis (1-32)",
     )
     projections.add_argument("--evidence", action="store_true",
-                             help="print the full projection evidence trail instead of running a pass")
+                             help="print the ambient projection evidence trail (without --interpret)")
     projections.add_argument("--apply", default=None,
                              help="explicitly apply one projection by id (region splicing allowed under claim)")
     projections.add_argument("--watch", default=None, metavar="SECONDS",

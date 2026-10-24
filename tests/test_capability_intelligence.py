@@ -6,7 +6,7 @@ import json
 import os
 import subprocess
 import time
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -1024,9 +1024,13 @@ def test_malformed_improvement_relation_is_not_projected(tmp_path: Path) -> None
     result = capability_intelligence.project(session)
 
     assert result["status"] == "partial"
-    assert result["observation_count"] == 0
+    assert result["observation_count"] == 1
     assert result["improvement_relation_count"] == 0
-    assert result["source"]["observation_records_unavailable"] == 1
+    assert result["source"]["observation_records_unavailable"] == 0
+    assert result["source"]["improvement_relations_unverified_count"] == 1
+    assert result["observations"][0]["improvement_relation_status"] == (
+        "recorded-but-contract-unverified"
+    )
 
 
 def test_improvement_relations_verification_record_preserves_skip_and_resource_limits(
@@ -1605,6 +1609,27 @@ def test_projection_cli_defaults_to_capability_page_limit(
     )
 
 
+def test_interpreted_projection_rejects_ambient_evidence_option(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    opened = []
+    monkeypatch.setattr(cli, "_open", lambda _args: opened.append(True))
+    errors = io.StringIO()
+    with redirect_stderr(errors):
+        status = cli.main([
+            "--state-dir", str(tmp_path), "--persistence", "file",
+            "projections", "ses_projection_reader",
+            "--interpret", "environmental-capability", "--evidence",
+        ])
+
+    error = json.loads(errors.getvalue())
+    assert status == 2
+    assert opened == []
+    assert error["diagnostics"]["code"] == "incompatible-projection-options"
+    assert "without --evidence" in error["diagnostics"]["next"]
+
+
 def test_repeated_ledger_pointer_does_not_establish_recurrence(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_one", "ses_compiler", "cmp_compiler")
     session, state = _session(tmp_path, [record])
@@ -1617,6 +1642,172 @@ def test_repeated_ledger_pointer_does_not_establish_recurrence(tmp_path: Path) -
     assert result["observation_count"] == 1
     assert result["pressure_hypotheses"][0]["observation_count"] == 1
     assert result["pressure_hypotheses"][0]["recurrence_status"] == "not-established"
+
+
+def test_later_corrected_identity_for_same_observation_source_is_read(tmp_path: Path) -> None:
+    valid_identity = "ev_environment_corrected_pointer"
+    record = _observation(
+        valid_identity, "ses_corrected_pointer", "cmp_corrected_pointer",
+    )
+    record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000
+    session, state = _session(tmp_path, [record])
+    corrected_reference = dict(state["evidence"][0])
+    stale_reference = {**corrected_reference, "identity": "ev_environment_stale_pointer"}
+    state["evidence"] = [stale_reference, corrected_reference]
+    state["evidence_count"] = 2
+
+    result = capability_intelligence.project(session)
+
+    assert [item["identity"] for item in result["observations"]] == [valid_identity]
+    assert result["observations"][0]["evidence_reference"]["identity"] == valid_identity
+    assert result["source"]["observation_records_verified"] == 1
+    assert result["source"]["observation_records_unavailable"] == 1
+    assert result["status"] == "partial"
+    assert result["source"]["observation_reference_diagnostic_count"] == 1
+    assert result["source"]["observation_reference_diagnostics"] == [{
+        "identity": "ev_environment_stale_pointer",
+        "repository": "mncs-environment",
+        "commit": result["observations"][0]["evidence_reference"]["commit"],
+        "sha256": result["observations"][0]["evidence_reference"]["sha256"],
+        "verification": "observation-contract-invalid",
+        "path": result["observations"][0]["evidence_reference"]["path"],
+        "path_truncated": False,
+    }]
+
+
+def test_recorded_source_session_context_stays_distinct_from_related_work(tmp_path: Path) -> None:
+    record = _observation(
+        "ev_environment_nested_source_context",
+        "ses_projection_capture",
+        "cmp_projection_capture",
+    )
+    record["related_work"].pop("work_intent_id")
+    record["related_work"].pop("work_intent_goal")
+    record["pressure_hypothesis"].pop("owner")
+    record["observation"].pop("outcome")
+    record["observation"]["outcome"] = {"large_diagnostic": "x" * 8_000}
+    record["observation"]["projection_summary"] = {
+        "status": "partial",
+        "rpc_operation_event_count": 2,
+        "rpc_operation_records_returned": 2,
+    }
+    record["observation"]["operations"] = [{
+        "event_identity": "evt_activity_source",
+        "event_sequence": 4,
+        "observed_at": "2026-10-24T00:00:00Z",
+        "operation": "campaign.state",
+        "outcome_status": "succeeded",
+        "exit_code": 0,
+        "control_dispatch_elapsed_ms": 250,
+        "request_arguments": {"must_not_be_projected": True},
+    }]
+    record["observation"]["measurement_availability"] = {
+        "model_identity": "unavailable",
+        "token_usage": "unavailable",
+        "control_dispatch_elapsed_ms": "measured",
+    }
+    record["observation"]["source_session_context"] = {
+        "campaign_id": "cmp_activity_source",
+        "session_id": "ses_activity_source",
+        "work_intent_id": "int_activity_source",
+        "work_intent_goal": "advance the native compiler",
+        "repository_context_basis": "recorded session snapshot",
+    }
+    session, _state = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    projected = result["observations"][0]
+    assert result["status"] == "ready"
+    assert projected["related_work"]["campaign_id"] == "cmp_projection_capture"
+    assert "work_intent_goal" not in projected["related_work"]
+    assert projected["observation"]["source_session_context"] == {
+        "campaign_id": "cmp_activity_source",
+        "session_id": "ses_activity_source",
+        "work_intent_id": "int_activity_source",
+        "work_intent_goal": "advance the native compiler",
+        "repository_context_basis": "recorded session snapshot",
+    }
+    assert projected["observation"]["source_session_context_basis"] == (
+        "recorded-observation"
+    )
+    assert projected["observation"]["projection_summary"] == {
+        "status": "partial",
+        "rpc_operation_event_count": 2,
+        "rpc_operation_records_returned": 2,
+    }
+    assert projected["observation"]["operations"] == [{
+        "event_identity": "evt_activity_source",
+        "event_sequence": 4,
+        "observed_at": "2026-10-24T00:00:00Z",
+        "operation": "campaign.state",
+        "outcome_status": "succeeded",
+        "exit_code": 0,
+        "control_dispatch_elapsed_ms": 250,
+    }]
+    assert projected["observation"]["measurement_availability"] == {
+        "model_identity": "unavailable",
+        "token_usage": "unavailable",
+        "control_dispatch_elapsed_ms": "measured",
+    }
+    assert "owner" not in projected["pressure_hypothesis"]
+
+    compact = capability_intelligence.project(session, max_result_bytes=10_000)
+    compact_observation = compact["observations"][0]["observation"]
+    assert compact["source"]["response_truncated"] is True
+    assert compact_observation["source_session_context"] == {
+        "campaign_id": "cmp_activity_source",
+        "session_id": "ses_activity_source",
+        "work_intent_id": "int_activity_source",
+        "work_intent_goal": "advance the native compiler",
+        "repository_context_basis": "recorded session snapshot",
+    }
+    assert compact_observation["projection_summary"] == {
+        "status": "partial",
+        "rpc_operation_event_count": 2,
+        "rpc_operation_records_returned": 2,
+    }
+    assert compact_observation["operations"] == [{
+        "event_identity": "evt_activity_source",
+        "event_sequence": 4,
+        "observed_at": "2026-10-24T00:00:00Z",
+        "operation": "campaign.state",
+        "outcome_status": "succeeded",
+        "exit_code": 0,
+        "control_dispatch_elapsed_ms": 250,
+    }]
+    assert compact_observation["measurement_availability"] == {
+        "model_identity": "unavailable",
+        "token_usage": "unavailable",
+        "control_dispatch_elapsed_ms": "measured",
+    }
+    assert "must_not_be_projected" not in json.dumps(compact)
+
+
+def test_unverified_optional_improvement_link_does_not_discard_observation(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_partial_improvement_link",
+        "ses_partial_improvement_link",
+        "cmp_partial_improvement_link",
+    )
+    record["improvement_relation"] = {
+        "identity": "im_partial_improvement_link",
+        "addresses_hypothesis_identity": "ph_environment_project_session_selection",
+        "implementation_status_at_capture": "not-yet-implemented",
+        "effectiveness_assessment": "not-assessed",
+    }
+    session, _state = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    assert result["observation_count"] == 1
+    assert result["observations"][0]["improvement_relation_identity"] is None
+    assert result["observations"][0]["improvement_relation_status"] == (
+        "recorded-but-contract-unverified"
+    )
+    assert result["improvement_relation_count"] == 0
 
 
 def test_missing_campaign_state_is_reported_without_inference() -> None:

@@ -255,6 +255,31 @@ def _compact_projection(
             or source.get(key) is not None
         )
     }
+    raw_diagnostics = source.get("observation_reference_diagnostics")
+    raw_diagnostics = raw_diagnostics if isinstance(raw_diagnostics, list) else []
+    for key in (
+        "observation_reference_diagnostic_count",
+        "improvement_relations_unverified_count",
+    ):
+        if type(source.get(key)) is int and source[key] > 0:
+            compact_source[key] = source[key]
+    compact_diagnostics = []
+    for diagnostic in raw_diagnostics[:4]:
+        if not isinstance(diagnostic, dict):
+            continue
+        compact_diagnostics.append({
+            key: _short_text(diagnostic.get(key), 192 if key == "path" else 160)
+            for key in ("identity", "repository", "commit", "sha256", "verification", "path")
+            if isinstance(diagnostic.get(key), str)
+        })
+        if type(diagnostic.get("path_truncated")) is bool:
+            compact_diagnostics[-1]["path_truncated"] = diagnostic["path_truncated"]
+    if compact_diagnostics:
+        compact_source["observation_reference_diagnostics"] = compact_diagnostics
+        compact_source["observation_reference_diagnostics_truncated"] = (
+            source.get("observation_reference_diagnostics_truncated", False)
+            or len(raw_diagnostics) > len(compact_diagnostics)
+        )
     for key in ("campaign_state_checkpoint_id", "recorded_at"):
         if source.get(key) is not None:
             compact_source[key] = _short_text(source[key], 160)
@@ -389,6 +414,83 @@ def _compact_projection(
             ] if isinstance(measurement_limits, list) else [],
             "evidence_reference": item["evidence_reference"],
         }
+        if isinstance(observation.get("source_session_context"), dict):
+            source_context = observation["source_session_context"]
+            compact_observation["observation"]["source_session_context"] = {
+                key: _short_text(
+                    source_context.get(key),
+                    256 if key == "work_intent_goal" else 160,
+                )
+                for key in (
+                    "campaign_id", "session_id", "work_intent_id", "work_intent_goal",
+                    "environment_id", "repository", "repository_branch", "repository_head",
+                    "repository_context_basis",
+                )
+                if isinstance(source_context.get(key), str)
+            }
+            compact_observation["observation"]["source_session_context_basis"] = (
+                "recorded-observation"
+            )
+            compact_observation["observation"]["source_session_context_truncated"] = (
+                observation.get("source_session_context_truncated", False)
+            )
+        projection_summary = observation.get("projection_summary")
+        if isinstance(projection_summary, dict):
+            summary_fields = (
+                "status", "session_activity_status", "activity_interpretation",
+                "rpc_operation_event_count", "rpc_operation_records_returned",
+                "rpc_operation_capture_count", "rpc_failure_candidate_count",
+            )
+            compact_observation["observation"]["projection_summary"] = {
+                key: _short_text(value, 192)
+                if isinstance(value, str)
+                else value
+                for key in summary_fields
+                if (isinstance((value := projection_summary.get(key)), str) and value)
+                or (type(value) is int and value >= 0)
+            }
+        availability = observation.get("measurement_availability")
+        if isinstance(availability, dict):
+            compact_observation["observation"]["measurement_availability"] = {
+                key: _short_text(value, 64)
+                for key, value in availability.items()
+                if key in {
+                    "model_identity", "token_usage", "control_dispatch_elapsed_ms",
+                    "resource_consumption", "cache_accounting",
+                    "repository_head_live_probe",
+                }
+                and isinstance(value, str)
+            }
+        raw_operations = observation.get("operations")
+        if isinstance(raw_operations, list):
+            compact_operations = []
+            for operation in raw_operations[:4]:
+                if not isinstance(operation, dict):
+                    continue
+                compact_operation = {
+                    key: _short_text(operation[key], 128)
+                    for key in (
+                        "event_identity", "observed_at", "operation", "outcome_status",
+                    )
+                    if isinstance(operation.get(key), str)
+                }
+                for key in ("event_sequence", "exit_code"):
+                    if type(operation.get(key)) is int:
+                        compact_operation[key] = operation[key]
+                elapsed = operation.get("control_dispatch_elapsed_ms")
+                if type(elapsed) in {int, float} and 0 <= elapsed <= 600_000:
+                    compact_operation["control_dispatch_elapsed_ms"] = elapsed
+                if compact_operation:
+                    compact_operations.append(compact_operation)
+            compact_observation["observation"]["operations"] = compact_operations
+            compact_observation["observation"]["operations_truncated"] = (
+                observation.get("operations_truncated", False)
+                or len(raw_operations) > len(compact_operations)
+            )
+        if isinstance(item.get("improvement_relation_status"), str):
+            compact_observation["improvement_relation_status"] = _short_text(
+                item["improvement_relation_status"], 96,
+            )
         compact_sources = []
         raw_sources = item.get("supporting_sources")
         raw_sources = raw_sources if isinstance(raw_sources, list) else []
@@ -734,9 +836,12 @@ def _load_observation(
         return None, "observation-contract-invalid"
     observation = record.get("observation")
     related_work = record.get("related_work")
+    source_session_context = (
+        observation.get("source_session_context")
+        if isinstance(observation, dict) else None
+    )
     hypothesis = record.get("pressure_hypothesis")
     recorder = record.get("recorder")
-    improvement_relation = record.get("improvement_relation")
     if (record.get("schema_version") != OBSERVATION_SCHEMA
             or record.get("identity") != reference["identity"]
             or not isinstance(record.get("captured_at"), str)
@@ -744,10 +849,23 @@ def _load_observation(
             or not isinstance(observation.get("kind"), str)
             or not isinstance(observation.get("source_interface"), str)
             or not isinstance(observation.get("request"), dict)
-            or not isinstance(observation.get("outcome"), dict)
+            or (not isinstance(observation.get("outcome"), dict)
+                and not isinstance(observation.get("projection_summary"), dict))
             or not isinstance(related_work, dict)
             or any(not isinstance(related_work.get(key), str) or not related_work[key]
-                   for key in ("campaign_id", "session_id", "work_intent_id", "work_intent_goal"))
+                   for key in ("campaign_id", "session_id"))
+            or any(
+                related_work.get(key) is not None
+                and (not isinstance(related_work.get(key), str) or not related_work[key])
+                for key in ("work_intent_id", "work_intent_goal")
+            )
+            or (source_session_context is not None
+                and not isinstance(source_session_context, dict))
+            or (isinstance(source_session_context, dict)
+                and any(
+                    value is not None and not isinstance(value, str)
+                    for value in source_session_context.values()
+                ))
             or (recorder is not None and (
                 not isinstance(recorder, dict)
                 or any(not isinstance(recorder.get(key), str)
@@ -758,15 +876,16 @@ def _load_observation(
                        )
                        if key in recorder)
             ))
-            or (improvement_relation is not None
-                and _validate_improvement_relation(improvement_relation) is None)
             or (hypothesis is not None and not isinstance(hypothesis, dict))):
         return None, "observation-contract-invalid"
     if isinstance(hypothesis, dict) and any(
         not isinstance(hypothesis.get(key), str) or not hypothesis[key]
-        for key in ("identity", "title", "category", "subsystem", "owner",
+        for key in ("identity", "title", "category", "subsystem",
                     "actionable_recommendation")
     ):
+        return None, "observation-contract-invalid"
+    if (isinstance(hypothesis, dict) and hypothesis.get("owner") is not None
+            and (not isinstance(hypothesis["owner"], str) or not hypothesis["owner"])):
         return None, "observation-contract-invalid"
     return record, "verified"
 
@@ -1651,7 +1770,7 @@ def project(
     page_observation_references: list[list[dict[str, str]]] = [
         [] for _ in history_states
     ]
-    capacity_seen: set[tuple[str, str, str, str]] = set()
+    capacity_seen: set[tuple[str, str, str, str, str]] = set()
     for page_index, page_state in enumerate(history_states):
         page_references = page_state.get("evidence", [])
         page_references = (
@@ -1664,7 +1783,7 @@ def project(
             if pointer is None or not _is_observation_reference(pointer):
                 continue
             source_key = (
-                pointer["repository"], pointer["commit"],
+                pointer["identity"], pointer["repository"], pointer["commit"],
                 pointer["path"], pointer.get("sha256", ""),
             )
             if source_key in capacity_seen:
@@ -1682,7 +1801,7 @@ def project(
         selected = page_references[-budget:] if budget else []
         selected_observation_keys_by_page.append({
             (
-                pointer["repository"], pointer["commit"], pointer["path"],
+                pointer["identity"], pointer["repository"], pointer["commit"], pointer["path"],
                 pointer.get("sha256", ""),
             )
             for pointer in selected
@@ -1693,7 +1812,7 @@ def project(
     root = _workspace_root(session)
     references: list[dict[str, Any]] = []
     verified_records: list[tuple[dict[str, Any], dict[str, Any]]] = []
-    seen_observations: set[tuple[str, str, str, str]] = set()
+    seen_observations: set[tuple[str, str, str, str, str]] = set()
     unavailable = 0
     skipped_by_page_budget = 0
     read_deadline = time.monotonic() + MAX_OBSERVATION_READ_SECONDS
@@ -1710,7 +1829,7 @@ def project(
             references.append({**pointer, "verification": verification})
             continue
         source_key = (
-            pointer["repository"], pointer["commit"],
+            pointer["identity"], pointer["repository"], pointer["commit"],
             pointer["path"], pointer.get("sha256", ""),
         )
         if source_key in seen_observations:
@@ -1739,6 +1858,28 @@ def project(
     observations: list[dict[str, Any]] = []
     improvement_relations: list[dict[str, Any]] = []
     projected_records = verified_records[:MAX_OBSERVATIONS]
+    unverified_improvement_relation_count = sum(
+        record.get("improvement_relation") is not None
+        and _validate_improvement_relation(record.get("improvement_relation")) is None
+        for record, _ in projected_records
+    )
+    observation_reference_diagnostics = []
+    for reference in references:
+        if not _is_observation_reference(reference):
+            continue
+        if reference.get("verification") in {
+            "verified", "duplicate-reference", "not-read-page-observation-budget",
+        }:
+            continue
+        path = reference["path"]
+        observation_reference_diagnostics.append({
+            key: reference[key]
+            for key in ("identity", "repository", "commit", "sha256", "verification")
+            if reference.get(key) is not None
+        } | {
+            "path": path[:512],
+            "path_truncated": len(path) > 512,
+        })
     source_integrity: dict[tuple[str, str, str, str], str] = {}
     attempted_sources: set[tuple[str, str, str, str]] = set()
     for record, _ in projected_records:
@@ -1774,18 +1915,104 @@ def project(
         recorder = recorder if isinstance(recorder, dict) else {}
         hypothesis = record.get("pressure_hypothesis")
         hypothesis = hypothesis if isinstance(hypothesis, dict) else None
+        source_session_context = observation.get("source_session_context")
+        source_session_context = (
+            source_session_context if isinstance(source_session_context, dict) else None
+        )
+        source_session_context_fields = (
+            (
+                "campaign_id", "session_id", "work_intent_id", "work_intent_goal",
+                "environment_id", "repository", "repository_branch", "repository_head",
+                "repository_context_basis",
+            )
+            if source_session_context is not None else ()
+        )
+        source_session_context_truncated = any(
+            isinstance(source_session_context.get(key), str)
+            and len(source_session_context[key]) > 512
+            for key in source_session_context_fields
+        ) if source_session_context is not None else False
         sources = record.get("supporting_sources")
         sources = sources if isinstance(sources, list) else []
         improvement = _validate_improvement_relation(record.get("improvement_relation"))
+        projected_observation = {
+            "kind": observation.get("kind"),
+            "source_interface": observation.get("source_interface"),
+            "request": observation.get("request"),
+        }
+        if isinstance(observation.get("outcome"), dict):
+            projected_observation["outcome"] = observation["outcome"]
+        projection_summary = observation.get("projection_summary")
+        if isinstance(projection_summary, dict):
+            summary_fields = (
+                "status", "session_activity_status", "activity_interpretation",
+                "rpc_operation_event_count", "rpc_operation_records_returned",
+                "rpc_operation_capture_count", "rpc_failure_candidate_count",
+            )
+            projected_summary = {}
+            for key in summary_fields:
+                value = projection_summary.get(key)
+                if isinstance(value, str) and value:
+                    projected_summary[key] = value[:512]
+                elif type(value) is int and value >= 0:
+                    projected_summary[key] = value
+            projected_observation["projection_summary"] = projected_summary
+        raw_operations = observation.get("operations")
+        if isinstance(raw_operations, list):
+            projected_operations = []
+            for operation in raw_operations[:MAX_SESSION_ACTIVITY_RPC_OPERATIONS]:
+                if not isinstance(operation, dict):
+                    continue
+                projected_operation = {
+                    key: operation[key][:256]
+                    for key in (
+                        "event_identity", "observed_at", "operation", "outcome_status",
+                    )
+                    if isinstance(operation.get(key), str) and operation[key]
+                }
+                for key in ("event_sequence", "exit_code"):
+                    if type(operation.get(key)) is int:
+                        projected_operation[key] = operation[key]
+                elapsed = operation.get("control_dispatch_elapsed_ms")
+                if type(elapsed) in {int, float} and 0 <= elapsed <= 600_000:
+                    projected_operation["control_dispatch_elapsed_ms"] = elapsed
+                if projected_operation:
+                    projected_operations.append(projected_operation)
+            projected_observation["operations"] = projected_operations
+            projected_observation["operations_truncated"] = (
+                len(raw_operations) > MAX_SESSION_ACTIVITY_RPC_OPERATIONS
+            )
+        availability = observation.get("measurement_availability")
+        if isinstance(availability, dict):
+            projected_observation["measurement_availability"] = {
+                key: value[:64]
+                for key, value in availability.items()
+                if key in {
+                    "model_identity", "token_usage", "control_dispatch_elapsed_ms",
+                    "resource_consumption", "cache_accounting",
+                    "repository_head_live_probe",
+                }
+                and isinstance(value, str)
+            }
+        redaction = observation.get("redaction")
+        if isinstance(redaction, str):
+            projected_observation["redaction"] = redaction[:512]
+            projected_observation["redaction_truncated"] = len(redaction) > 512
         observations.append({
             "identity": record["identity"],
             "captured_at": record.get("captured_at"),
             "measurement_basis": record.get("measurement_basis", "recorded operational response"),
             "observation": {
-                "kind": observation.get("kind"),
-                "source_interface": observation.get("source_interface"),
-                "request": observation.get("request"),
-                "outcome": observation.get("outcome"),
+                **projected_observation,
+                **({
+                    "source_session_context": {
+                        key: source_session_context[key][:512]
+                        for key in source_session_context_fields
+                        if source_session_context.get(key) is not None
+                    },
+                    "source_session_context_basis": "recorded-observation",
+                    "source_session_context_truncated": source_session_context_truncated,
+                } if source_session_context is not None else {}),
             },
             "related_work": {
                 key: work.get(key)
@@ -1798,6 +2025,14 @@ def project(
             "recording_context": _recording_context(recorder),
             "improvement_relation_identity": (
                 improvement["identity"] if improvement is not None else None
+            ),
+            "improvement_relation_status": (
+                "not-recorded"
+                if record.get("improvement_relation") is None
+                else (
+                    "validated" if improvement is not None
+                    else "recorded-but-contract-unverified"
+                )
             ),
             "pressure_hypothesis": ({
                 key: hypothesis.get(key)
@@ -1891,6 +2126,7 @@ def project(
         status = "unavailable"
     elif observations and (
         unavailable or skipped_by_page_budget or history_truncated or not history_consistent
+        or unverified_improvement_relation_count
     ):
         status = "partial"
     elif observations:
@@ -1961,6 +2197,18 @@ def project(
             "observation_records_considered": len(references),
             "observation_records_verified": len(observations),
             "observation_records_unavailable": unavailable,
+            "observation_reference_diagnostics": (
+                observation_reference_diagnostics[:MAX_OBSERVATIONS]
+            ),
+            "observation_reference_diagnostic_count": len(
+                observation_reference_diagnostics
+            ),
+            "observation_reference_diagnostics_truncated": (
+                len(observation_reference_diagnostics) > MAX_OBSERVATIONS
+            ),
+            "improvement_relations_unverified_count": (
+                unverified_improvement_relation_count
+            ),
             "observation_reference_selection_policy": (
                 "newest-in-ledger-append-order-within-each-page"
             ),
@@ -2022,6 +2270,7 @@ def project(
             "Effectiveness after a proposed change remains unknown until later independent observations support it.",
             "A missing subsequent-observation identity is exposed as not-recorded; the projection does not infer follow-up.",
             "A linked verification record establishes that evidence is present and integrity checked; effectiveness still requires independent follow-up.",
+            "Optional improvement relations that do not meet the current contract are surfaced as unverified and excluded from improvement claims.",
             "Session activity summarizes only the bounded recent event tail and exposes no raw invocation arguments or results.",
             "Authenticated Control read-operation events include a measured Control-dispatch elapsed time, which includes session-queue wait and is not total agent execution duration; model identity, token usage, resource consumption, and cache accounting remain unavailable.",
             "Direct read-operation capture stops after 128 observations per session; selected-window and capture-limit fields disclose partial coverage.",
