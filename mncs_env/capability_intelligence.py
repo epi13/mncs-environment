@@ -205,8 +205,9 @@ def _compact_projection(
                 for key in ("identity", "title", "category", "subsystem", "owner")
                 if hypothesis.get(key) is not None
             }
+        improvement_identity = item.get("improvement_relation_identity")
         measurement_limits = item.get("measurement_limits")
-        compact_observations.append({
+        compact_observation = {
             "identity": item["identity"],
             "captured_at": _short_text(item.get("captured_at"), 80),
             "measurement_basis": _short_text(item.get("measurement_basis"), 128),
@@ -224,7 +225,35 @@ def _compact_projection(
                 if isinstance(value, str)
             ] if isinstance(measurement_limits, list) else [],
             "evidence_reference": item["evidence_reference"],
-        })
+        }
+        if isinstance(improvement_identity, str):
+            compact_observation["improvement_relation_identity"] = _short_text(
+                improvement_identity, 160,
+            )
+        compact_observations.append(compact_observation)
+
+    compact_improvements = []
+    for relation in projection["improvement_relations"][:8]:
+        summary = {
+            key: _short_text(relation.get(key), 256 if key == "basis" else 160)
+            for key in (
+                "identity", "recorded_by_observation_identity",
+                "addresses_hypothesis_identity", "pressure_hypothesis_status",
+                "verification_observation_identity",
+                "verification_record_status", "subsequent_observation_identity",
+                "subsequent_record_status", "effectiveness_assessment", "basis",
+            )
+            if relation.get(key) is not None
+        }
+        implementation = relation.get("implementation_reference")
+        if isinstance(implementation, dict):
+            summary["implementation_reference"] = {
+                key: _short_text(implementation.get(key), 160)
+                for key in ("identity", "repository", "commit", "path", "sha256", "status")
+                if implementation.get(key) is not None
+            }
+        summary["evidence_reference"] = relation["evidence_reference"]
+        compact_improvements.append(summary)
 
     result = {
         "schema_version": SCHEMA,
@@ -235,7 +264,9 @@ def _compact_projection(
         "correlation": projection["correlation"],
         "observation_count": projection["observation_count"],
         "pressure_hypothesis_count": projection["pressure_hypothesis_count"],
+        "improvement_relation_count": projection["improvement_relation_count"],
         "pressure_hypotheses": compact_hypotheses,
+        "improvement_relations": compact_improvements,
         "observations": compact_observations,
         "measurement_limits": [
             "The response exceeded its byte limit; payload details are summarized by digest.",
@@ -247,6 +278,8 @@ def _compact_projection(
     while len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")) > max_result_bytes:
         if len(result["observations"]) > 1:
             result["observations"].pop()
+        elif result["improvement_relations"]:
+            result["improvement_relations"].pop()
         elif result["pressure_hypotheses"]:
             result["pressure_hypotheses"].pop()
         else:
@@ -321,6 +354,7 @@ def _load_observation(
     related_work = record.get("related_work")
     hypothesis = record.get("pressure_hypothesis")
     recorder = record.get("recorder")
+    improvement_relation = record.get("improvement_relation")
     if (record.get("schema_version") != OBSERVATION_SCHEMA
             or record.get("identity") != reference["identity"]
             or not isinstance(record.get("captured_at"), str)
@@ -339,6 +373,8 @@ def _load_observation(
                        for key in ("campaign_id", "session_id", "consumer_id")
                        if key in recorder)
             ))
+            or (improvement_relation is not None
+                and _validate_improvement_relation(improvement_relation) is None)
             or (hypothesis is not None and not isinstance(hypothesis, dict))):
         return None, "observation-contract-invalid"
     if isinstance(hypothesis, dict) and any(
@@ -372,6 +408,36 @@ def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, A
         summary["status"] = match.get("verification", "unverified")
         summary["campaign_evidence_identity"] = match.get("identity")
     return summary
+
+
+def _validate_improvement_relation(value: Any) -> dict[str, Any] | None:
+    """Validate explicit links from a pressure hypothesis to change evidence."""
+    if not isinstance(value, dict):
+        return None
+    identity = value.get("identity")
+    hypothesis_identity = value.get("addresses_hypothesis_identity")
+    verification_identity = value.get("verification_observation_identity")
+    subsequent_identity = value.get("subsequent_observation_identity")
+    implementation = _validate_reference(value.get("implementation_reference"))
+    basis = value.get("basis")
+    limits = value.get("not_measured", [])
+    if (any(not isinstance(item, str) or not item or len(item) > 160
+            for item in (identity, hypothesis_identity, verification_identity,
+                         subsequent_identity))
+            or implementation is None or "sha256" not in implementation
+            or not isinstance(basis, str) or not basis or len(basis) > 1024
+            or not isinstance(limits, list) or len(limits) > 16
+            or any(not isinstance(item, str) or len(item) > 512 for item in limits)):
+        return None
+    return {
+        "identity": identity,
+        "addresses_hypothesis_identity": hypothesis_identity,
+        "implementation_reference": implementation,
+        "verification_observation_identity": verification_identity,
+        "subsequent_observation_identity": subsequent_identity,
+        "basis": basis,
+        "not_measured": list(limits),
+    }
 
 
 def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -485,7 +551,15 @@ def project(
             continue
         verified_records.append((record, reference))
     observations: list[dict[str, Any]] = []
-    for record, reference in verified_records[:MAX_OBSERVATIONS]:
+    improvement_relations: list[dict[str, Any]] = []
+    projected_records = verified_records[:MAX_OBSERVATIONS]
+    projected_record_ids = {record["identity"] for record, _ in projected_records}
+    projected_hypothesis_ids: set[str] = set()
+    for record, _ in projected_records:
+        hypothesis = record.get("pressure_hypothesis")
+        if isinstance(hypothesis, dict) and isinstance(hypothesis.get("identity"), str):
+            projected_hypothesis_ids.add(hypothesis["identity"])
+    for record, reference in projected_records:
         observation = record["observation"]
         work = record.get("related_work")
         work = work if isinstance(work, dict) else {}
@@ -495,6 +569,7 @@ def project(
         hypothesis = hypothesis if isinstance(hypothesis, dict) else None
         sources = record.get("supporting_sources")
         sources = sources if isinstance(sources, list) else []
+        improvement = _validate_improvement_relation(record.get("improvement_relation"))
         observations.append({
             "identity": record["identity"],
             "captured_at": record.get("captured_at"),
@@ -518,6 +593,9 @@ def project(
                 for key in ("campaign_id", "session_id", "consumer_id")
                 if isinstance(recorder.get(key), str) and recorder[key]
             } or None,
+            "improvement_relation_identity": (
+                improvement["identity"] if improvement is not None else None
+            ),
             "pressure_hypothesis": ({
                 key: hypothesis.get(key)
                 for key in ("identity", "title", "category", "subsystem", "owner",
@@ -538,6 +616,45 @@ def project(
                 for key in ("identity", "repository", "commit", "path", "sha256")
             },
         })
+        if improvement is not None:
+            implementation_status = _source_status(
+                improvement["implementation_reference"], references,
+            )
+            implementation_status["identity"] = improvement["implementation_reference"]["identity"]
+            improvement_relations.append({
+                "identity": improvement["identity"],
+                "recorded_by_observation_identity": record["identity"],
+                "addresses_hypothesis_identity": improvement["addresses_hypothesis_identity"],
+                "pressure_hypothesis_status": (
+                    "present-in-projection"
+                    if improvement["addresses_hypothesis_identity"] in projected_hypothesis_ids
+                    else "not-present-in-projection"
+                ),
+                "implementation_reference": implementation_status,
+                "verification_observation_identity": improvement[
+                    "verification_observation_identity"
+                ],
+                "verification_record_status": (
+                    "record-integrity-verified-in-projection"
+                    if improvement["verification_observation_identity"] in projected_record_ids
+                    else "not-present-in-projection"
+                ),
+                "subsequent_observation_identity": improvement[
+                    "subsequent_observation_identity"
+                ],
+                "subsequent_record_status": (
+                    "record-integrity-verified-in-projection"
+                    if improvement["subsequent_observation_identity"] in projected_record_ids
+                    else "not-present-in-projection"
+                ),
+                "effectiveness_assessment": "not-assessed",
+                "basis": improvement["basis"],
+                "measurement_limits": improvement["not_measured"],
+                "evidence_reference": {
+                    key: reference[key]
+                    for key in ("identity", "repository", "commit", "path", "sha256")
+                },
+            })
         if len(observations) >= MAX_OBSERVATIONS:
             break
     if campaign_state is None:
@@ -582,11 +699,13 @@ def project(
         "correlation": {
             "kind": "campaign-evidence-to-objective-and-subsystem",
             "derived": True,
-            "relationship": "each observation retains its originating campaign, session, work intent, subsystem, and immutable evidence pointer",
+            "relationship": "observations retain target work and recording context separately; explicit improvement relations connect pressure hypotheses, implementation references, verification records, and later observations",
         },
         "observation_count": len(observations),
         "pressure_hypothesis_count": len(hypotheses),
+        "improvement_relation_count": len(improvement_relations),
         "pressure_hypotheses": hypotheses,
+        "improvement_relations": improvement_relations,
         "observations": observations,
         "measurement_limits": [
             "Only committed observation records linked from this campaign-state page are considered.",
@@ -594,6 +713,7 @@ def project(
             "Repeated references to the same committed observation do not establish recurrence.",
             "Candidate continuation count is not treated as repeated pressure; recurrence requires distinct recorded observations.",
             "Effectiveness after a proposed change remains unknown until later independent observations support it.",
+            "A linked verification record establishes that evidence is present and integrity checked; effectiveness still requires independent follow-up.",
         ],
     }
     encoded = json.dumps(projection, ensure_ascii=False, sort_keys=True).encode("utf-8")

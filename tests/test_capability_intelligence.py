@@ -379,6 +379,74 @@ def test_compiler_cache_observation_keeps_resource_limits_and_source_unselected(
     assert observation["supporting_sources"][0]["status"] == "outside-selected-session"
 
 
+def test_improvement_relation_links_pressure_change_verification_and_followup(
+    tmp_path: Path,
+) -> None:
+    pressure = _observation("ev_environment_capture_gap", "ses_compiler", "cmp_compiler")
+    pressure["pressure_hypothesis"]["identity"] = "ph_capture_context"
+    verification = _observation("ev_environment_change_verification", "ses_environment", "cmp_environment")
+    verification.pop("pressure_hypothesis")
+    followup = _observation("ev_environment_change_followup", "ses_compiler", "cmp_compiler")
+    followup.pop("pressure_hypothesis")
+    change = _observation("ev_environment_capture_change", "ses_environment", "cmp_environment")
+    change.pop("pressure_hypothesis")
+    implementation = {
+        "identity": "ev_environment_capture_context_implementation",
+        "repository": "mncs-environment",
+        "commit": "a" * 40,
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "b" * 64,
+    }
+    change["improvement_relation"] = {
+        "identity": "im_capture_context",
+        "addresses_hypothesis_identity": "ph_capture_context",
+        "implementation_reference": implementation,
+        "verification_observation_identity": verification["identity"],
+        "subsequent_observation_identity": followup["identity"],
+        "basis": "Existing projection tests verify the separate recording context; later Compiler evidence uses it.",
+        "not_measured": ["whether attribution errors recur less often"],
+    }
+    session, _ = _session(
+        tmp_path,
+        [pressure, change, verification, followup],
+        extra_refs=[implementation],
+    )
+
+    result = capability_intelligence.project(session)
+    compact = capability_intelligence.project(session, max_result_bytes=5000)
+
+    relation = result["improvement_relations"][0]
+    assert result["improvement_relation_count"] == 1
+    assert relation["addresses_hypothesis_identity"] == "ph_capture_context"
+    assert relation["pressure_hypothesis_status"] == "present-in-projection"
+    assert relation["verification_record_status"] == "record-integrity-verified-in-projection"
+    assert relation["subsequent_record_status"] == "record-integrity-verified-in-projection"
+    assert relation["effectiveness_assessment"] == "not-assessed"
+    assert relation["implementation_reference"]["status"] == "not-an-environmental-observation"
+    assert compact["status"] == "partial"
+    assert compact["improvement_relation_count"] == 1
+    assert compact["improvement_relations"][0]["effectiveness_assessment"] == "not-assessed"
+
+
+def test_malformed_improvement_relation_is_not_projected(tmp_path: Path) -> None:
+    record = _observation("ev_environment_bad_improvement", "ses_environment", "cmp_environment")
+    record["improvement_relation"] = {
+        "identity": "im_broken",
+        "addresses_hypothesis_identity": "ph_missing",
+        "verification_observation_identity": "ev_missing_verification",
+        "subsequent_observation_identity": "ev_missing_followup",
+        "basis": "missing implementation reference",
+    }
+    session, _ = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["improvement_relation_count"] == 0
+    assert result["source"]["observation_records_unavailable"] == 1
+
+
 def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_large", "ses_compiler", "cmp_compiler")
     record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000

@@ -125,6 +125,20 @@ Observations can also report measurements without a pressure hypothesis, so a
 resource sample is not forced into a healthy/unhealthy judgment. Its sampling
 scope and unavailable attribution remain attached to that observation.
 
+An observation may also carry an `improvement_relation` linking one pressure
+hypothesis to an implementation source, a verification observation, and a
+later operational observation. The projection reports whether the verification
+and follow-up observation records are present in the current page and passed
+their commit digest and schema checks, and whether the linked pressure is
+present in the current view. `not-present-in-projection` means the record or
+hypothesis was not available in this bounded view; it does not establish that
+it is absent from campaign history. The implementation source remains an
+inspectable pointer with its own selection status. These links never mark a
+pressure resolved: `effectiveness_assessment` stays `not-assessed` until
+independent later evidence supports an assessment. A passing test record proves
+that its evidence blob was preserved intact, while its command results remain
+reported evidence rather than an Environment-generated attestation.
+
 The query considers at most 32 campaign evidence references, reads at most 16
 observation records of 64 KiB each within one 8 second Git-read budget, and
 caps its response at 48 KiB. If a response reaches that bound, operation
