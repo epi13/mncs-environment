@@ -3751,11 +3751,13 @@ class Session:
                 if (not same_path
                         or (isinstance(prior_identity, str)
                             and prior_identity != current_identity["checkout_identity"])):
+                    grant_chain = self._authority_scope_grant_chain(repository)
                     owner_rebind = (
-                        bool(grant.get("refresh_of"))
+                        len(grant_chain) > 1
+                        and grant_chain[-1].get("identity") == grant.get("identity")
                         and prior.get("source_ref") == "authenticated-scope-grant"
                         and prior.get("scope_grant_identity")
-                        in (None, grant.get("refresh_of"))
+                        in {item.get("identity") for item in grant_chain[:-1]}
                     )
                     if not owner_rebind:
                         report["skipped"].append({
@@ -5673,32 +5675,71 @@ class Session:
             )
         return matches[0]
 
+    def _authority_scope_grant_chain(
+        self, repository: str,
+    ) -> list[dict[str, Any]]:
+        """Return the verified immutable refresh chain for one current grant."""
+        campaign = self.snapshot.get("campaign")
+        campaign_id = campaign.get("identity") if isinstance(campaign, dict) else None
+        chain: list[dict[str, Any]] = []
+        for event in self._log():
+            if event.get("type") != "authority.scope-granted":
+                continue
+            payload = event.get("payload")
+            grant = payload.get("scope_grant") if isinstance(payload, dict) else None
+            if (not isinstance(grant, dict)
+                    or grant.get("schema_version") != "mncs.environment.authority-scope-grant/1"
+                    or grant.get("session_id") != self.session_id
+                    or grant.get("campaign_id") != campaign_id
+                    or grant.get("repository") != repository
+                    or grant.get("scope") != {
+                        "kind": "repository", "repository": repository,
+                    }):
+                continue
+            request_id = payload.get("request_id") if isinstance(payload, dict) else None
+            if (not isinstance(request_id, str) or not request_id
+                    or grant.get("identity") != "scope_" + digest_hex({
+                        "session_id": self.session_id,
+                        "campaign_id": campaign_id,
+                        "repository": repository,
+                        "request_id": request_id,
+                    })):
+                continue
+            refresh_of = grant.get("refresh_of")
+            if refresh_of is None:
+                chain = [dict(grant)]
+                continue
+            if (not chain or refresh_of != chain[-1].get("identity")
+                    or grant.get("identity") == refresh_of
+                    or grant.get("authorized_by_principal_id")
+                    != chain[-1].get("authorized_by_principal_id")
+                    or grant.get("approval_reference")
+                    != chain[-1].get("approval_reference")):
+                continue
+            chain.append(dict(grant))
+
+        current = [
+            item for item in self.authority_scope_grants()
+            if item.get("repository") == repository
+        ]
+        if (len(current) != 1 or not chain
+                or current[0].get("identity") != chain[-1].get("identity")):
+            return []
+        return chain
+
     def _external_scope_grant_repositories(
         self, workspace_root: str | Path,
     ) -> set[str]:
-        """Return exact granted checkouts that the campaign-root scan cannot enumerate.
+        """Return exact grant-backed selections the immediate scan cannot enumerate.
 
-        This only narrows the immediate workspace scan. The following scope
-        composition pass independently verifies the authenticated grant, Git
-        registration and identity, and the live matching claim before these
-        checkouts can contribute provider roots.
+        This only narrows the campaign-root scan. The following scope
+        composition pass independently verifies the current authenticated
+        grant, its Git identity, and the live matching claim before any
+        checkout contributes provider roots.
         """
         selected_checkouts = self.snapshot.get("selected_checkouts")
         if not isinstance(selected_checkouts, dict):
             return set()
-        campaign = self.snapshot.get("campaign")
-        campaign_id = campaign.get("identity") if isinstance(campaign, dict) else None
-        grants = {
-            item.get("repository"): item
-            for item in self.authority_scope_grants()
-            if isinstance(item, dict)
-            and item.get("schema_version") == "mncs.environment.authority-scope-grant/1"
-            and item.get("session_id") == self.session_id
-            and item.get("campaign_id") == campaign_id
-            and item.get("scope") == {
-                "kind": "repository", "repository": item.get("repository"),
-            }
-        }
         try:
             root = Path(workspace_root).resolve(strict=True)
         except OSError:
@@ -5709,26 +5750,53 @@ class Session:
             if (not isinstance(repository, str) or not isinstance(selected, dict)
                     or selected.get("source_ref") != "authenticated-scope-grant"):
                 continue
-            grant = grants.get(repository)
-            identity = grant.get("repository_identity") if isinstance(grant, dict) else None
-            if (not isinstance(identity, dict)
-                    or selected.get("scope_grant_identity") != grant.get("identity")
-                    or not isinstance(identity.get("path"), str)
-                    or selected.get("path") != identity.get("path")):
+            chain = self._authority_scope_grant_chain(repository)
+            selected_identity = next((
+                item.get("repository_identity") for item in chain
+                if item.get("identity") == selected.get("scope_grant_identity")
+            ), None)
+            current_identity = (
+                chain[-1].get("repository_identity") if chain else None
+            )
+            if (not isinstance(selected_identity, dict)
+                    or not isinstance(current_identity, dict)
+                    or not isinstance(selected_identity.get("path"), str)
+                    or selected.get("path") != selected_identity.get("path")
+                    or not isinstance(current_identity.get("path"), str)):
                 continue
-            path = Path(identity["path"])
-            if not path.is_absolute():
+            if any(
+                isinstance(selected.get(field), str)
+                and selected.get(field) != selected_identity.get(field)
+                for field in (
+                    "checkout_identity", "git_common_directory_identity",
+                    "manifest_identity",
+                )
+            ):
                 continue
-            absolute = Path(os.path.abspath(path))
-            try:
-                resolved = absolute.resolve(strict=True)
-            except OSError:
+            canonical_paths: list[Path] = []
+            for raw_path in (selected_identity["path"], current_identity["path"]):
+                path = Path(raw_path)
+                if not path.is_absolute():
+                    canonical_paths = []
+                    break
+                absolute = Path(os.path.abspath(path))
+                try:
+                    resolved = absolute.resolve(strict=True)
+                except OSError:
+                    canonical_paths = []
+                    break
+                if absolute != resolved:
+                    canonical_paths = []
+                    break
+                canonical_paths.append(resolved)
+            if len(canonical_paths) != 2:
                 continue
-            if absolute != resolved:
-                continue
-            try:
-                resolved.relative_to(root)
-            except ValueError:
+            direct_checkout = root / repository
+            if (canonical_paths[0] != direct_checkout
+                    or canonical_paths[1] != direct_checkout):
+                # Git's registration and the grant chain, not a missing
+                # immediate directory, identify this nested or cross-repo
+                # checkout. Preserve the last observation for composition.
                 external.add(repository)
         return external
 

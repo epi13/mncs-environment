@@ -584,6 +584,125 @@ def test_owner_grant_admits_exact_registered_worktree_outside_campaign_workspace
             session.close()
 
 
+def test_revalidation_follows_multiple_owner_grant_refreshes_after_checkout_rebind(
+    tmp_path: Path,
+) -> None:
+    campaign_workspace = tmp_path / "campaign-workspace"
+    campaign_workspace.mkdir()
+    configured_workspace = tmp_path / "configured-projects"
+    configured_workspace.mkdir()
+    session = _session(tmp_path / "state", campaign_workspace)
+    try:
+        repository = _checkout(configured_workspace, "mncs-control-mcp")
+        repository_root = configured_workspace / repository["name"]
+        first = repository_root / ".worktrees" / "first" / repository["name"]
+        first.parent.mkdir(parents=True)
+        _git(repository_root, "worktree", "add", "-b", "campaign/grant-first", str(first), "HEAD")
+        first_facts = workspace_module.verify_registered_checkout(
+            first,
+            repository=repository["name"],
+            workspace_root=configured_workspace,
+            expected_repository_root=repository_root,
+            expected_branch="campaign/grant-first",
+        )
+        first_grant = _grant(
+            session,
+            owner_authorized_checkout=first_facts,
+            request_id="req_multirefresh_grant_first",
+        )
+        first_claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="own the first exact owner-approved worktree",
+            request_id="req_multirefresh_claim_first",
+        )
+        assert session._compose_authorized_scope_checkouts()["status"] == "ready"
+        selected_first = dict(session.snapshot["selected_checkouts"]["mncs-control-mcp"])
+        assert selected_first["scope_grant_identity"] == first_grant["identity"]
+        assert session.release_claim(
+            "mncs-control-mcp",
+            claim_id=first_claim["claim_id"],
+            reason="release the old exact worktree before owner rebind",
+            request_id="req_multirefresh_release_first",
+        ) is True
+
+        second = repository_root / ".worktrees" / "second" / repository["name"]
+        second.parent.mkdir(parents=True)
+        _git(repository_root, "worktree", "add", "-b", "campaign/grant-second", str(second), "HEAD")
+        second_facts = workspace_module.verify_registered_checkout(
+            second,
+            repository=repository["name"],
+            workspace_root=configured_workspace,
+            expected_repository_root=repository_root,
+            expected_branch="campaign/grant-second",
+        )
+        second_grant = _grant(
+            session,
+            revision=session.effective_authority()["revision"],
+            owner_authorized_checkout=second_facts,
+            request_id="req_multirefresh_grant_second",
+        )
+        assert second_grant["refresh_of"] == first_grant["identity"]
+        second_claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="own the refreshed exact owner-approved worktree",
+            request_id="req_multirefresh_claim_second",
+        )
+        assert second_claim["scope"]["checkout"] == str(second.resolve())
+        assert session._compose_authorized_scope_checkouts()["status"] == "ready"
+        assert session.snapshot["selected_checkouts"]["mncs-control-mcp"]["path"] == str(
+            second.resolve()
+        )
+
+        third_grant = _grant(
+            session,
+            revision=session.effective_authority()["revision"],
+            owner_authorized_checkout=second_facts,
+            request_id="req_multirefresh_grant_third",
+        )
+        assert third_grant["refresh_of"] == second_grant["identity"]
+        # Reproduce a fresh-process snapshot that still names the first grant,
+        # while the authenticated Store contains two valid owner refreshes.
+        session.snapshot["selected_checkouts"]["mncs-control-mcp"] = selected_first
+        (campaign_workspace / "mncs-control-mcp").rename(
+            tmp_path / "unselected-campaign-control-checkout"
+        )
+        session._save()
+        session_id = session.session_id
+        session.close()
+        session = None
+
+        reopened_store = open_store(tmp_path / "state", "store", verify_on_open=False)
+        resumed = sessions.Session.open(
+            state_dir=tmp_path / "state",
+            session_id=session_id,
+            backend="store",
+            verify_on_open=False,
+            store=reopened_store,
+        )
+        try:
+            report = resumed.revalidate()
+            assert report["scope_composition"]["status"] == "ready"
+            assert "mncs-control-mcp" in (
+                report["scope_composition"]["composed"]
+                + report["scope_composition"]["retained"]
+            )
+            selected = resumed.snapshot["selected_checkouts"]["mncs-control-mcp"]
+            assert selected["path"] == str(second.resolve())
+            assert selected["scope_grant_identity"] == third_grant["identity"]
+            assert not selected.get("missing", False)
+            assert resumed.release_claim(
+                "mncs-control-mcp",
+                claim_id=second_claim["claim_id"],
+                reason="finish multi-refresh continuation test",
+                request_id="req_multirefresh_release_second",
+            ) is True
+        finally:
+            resumed.close()
+    finally:
+        if session is not None:
+            session.close()
+
+
 def test_owner_worktree_claim_resumes_after_forward_head_advance(
     tmp_path: Path,
 ) -> None:
