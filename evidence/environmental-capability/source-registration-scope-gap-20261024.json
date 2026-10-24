@@ -1,0 +1,106 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_source_registration_scope_gap_20261024",
+  "captured_at": "2026-10-24T16:41:15+00:00",
+  "measurement_basis": "derived-comparison-of-authenticated-campaign-and-projection-results",
+  "observation": {
+    "kind": "campaign-source-registration-scope-gap",
+    "source_interface": "mncs-env campaign-state and environmental-capability projection",
+    "request": {
+      "environment_campaign_session_id": "ses_c98eb637e20a5c14",
+      "environment_campaign_evidence_offset": 58,
+      "environment_campaign_evidence_limit": 1,
+      "compiler_campaign_session_id": "ses_164edc158d9b1637",
+      "compiler_campaign_evidence_offset": 685,
+      "compiler_campaign_evidence_limit": 8
+    },
+    "outcome": {
+      "environment_projection": {
+        "checkpoint_id": "chk_a6aa69930709b3a8",
+        "evidence_count": 65,
+        "projection_status_before_change": "not-registered-in-campaign-ledger",
+        "content_integrity_status": "workspace-read-only-content-integrity-verified"
+      },
+      "compiler_campaign_page": {
+        "checkpoint_id": "chk_691079cfe830f05d",
+        "evidence_count": 693,
+        "source_pointer_found": true,
+        "source_identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+        "source_repository": "mncs-compiler",
+        "source_commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+        "source_path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+        "source_sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+      },
+      "interpretation": "The Environment result described absence from its selected campaign evidence references, not absence from the Compiler campaign ledger. The status omitted the lookup scope.",
+      "analysis_limit": "The bounded Compiler page proves this exact pointer is present there. It does not establish registration status in other campaign pages or other repositories."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "campaign_objective": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "environment_id": "renv_80ef889b89dad0e9",
+    "definition_id": "env_c7d14ed20b708d09",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_source_registration_scope",
+    "title": "Missing source pointers are reported without the selected ledger scope",
+    "category": "evidence-provenance",
+    "subsystem": "mncs-environment capability intelligence source classification",
+    "owner": "mncs-environment",
+    "basis": "The same committed Compiler evidence pointer was found in its owning campaign page while the Environment projection verified its content but reported only not-registered-in-campaign-ledger. The projection had searched a bounded Environment campaign evidence window.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Name the selected campaign evidence window in missing-pointer status, and keep ledger lookup scope separate from content-integrity results. Do not infer absence from other campaigns without explicitly querying their authorized ledgers.",
+    "not_measured": [
+      "whether an agent interpreted the previous status as a global absence claim",
+      "whether this ambiguity recurs for other cross-campaign sources",
+      "whether any other campaign evidence page lacks or contains the pointer"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "prior-bounded-projection-readback",
+      "identity": "ev_environment_compiler_stage_array_compaction_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "b1056b2ec4aa302f3cd64310ed2c7e12f85ff0f2",
+      "path": "evidence/environmental-capability/compiler-stage-array-compaction-live-readback-20261024.json",
+      "sha256": "051c03425407968f06278b94a096e025169fb509fdb189860b115bbef409e377"
+    },
+    {
+      "kind": "committed-compiler-campaign-evidence",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637"
+    },
+    {
+      "kind": "committed-prechange-source",
+      "repository": "mncs-environment",
+      "commit": "b1056b2ec4aa302f3cd64310ed2c7e12f85ff0f2",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d229683e264f05ee803b0db11208bf3a2a0fcb8d9c13af1c70071e6a0090f484"
+    }
+  ],
+  "not_measured": [
+    "absence of the pointer from the complete Compiler campaign ledger",
+    "agent interpretation or impact of the previous status wording",
+    "recurrence across other source repositories"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_source_registration_scope_improvement_20261024",
+  "captured_at": "2026-10-24T16:41:15+00:00",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment capability intelligence projection",
+    "request": {},
+    "outcome": {
+      "implementation_change": "Missing source pointers now report not-present-in-selected-campaign-evidence-window and registration_scope, while content-integrity status remains independent.",
+      "verified_external_pointer": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The wording now accurately identifies the selected lookup scope. No future agent activity yet establishes whether it changes cross-campaign evidence investigation."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_a6aa69930709b3a8",
+    "campaign_evidence_count_before_recording": 65,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_source_registration_scope_20261024",
+    "addresses_hypothesis_identity": "ph_environment_source_registration_scope",
+    "implementation_reference": {
+      "identity": "ev_environment_source_registration_scope_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "aed6e458c2875c5c89a0479f45998377a945b5d0",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "1bd3f75c227a34e7be8f025589c4f5d2a50d761867b14cc256cbfec202f5bb48"
+    },
+    "verification_observation_identity": "ev_environment_source_registration_scope_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_source_registration_scope_live_readback_20261024",
+    "basis": "The focused tests verify the new bounded-window status and registration_scope in full and compact views. A live projection confirms the exact Compiler source remains content-integrity-verified while its lookup status names only the selected Environment evidence window. The same pointer is present in the Compiler campaign's authenticated page 685.",
+    "not_measured": [
+      "future agent use of the clarified source status",
+      "recurrence of the ambiguity across other campaigns",
+      "long-term effect on cross-campaign investigations"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_source_registration_scope_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "aed6e458c2875c5c89a0479f45998377a945b5d0",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "1bd3f75c227a34e7be8f025589c4f5d2a50d761867b14cc256cbfec202f5bb48"
+    },
+    {
+      "kind": "verified-source-test-results",
+      "identity": "ev_environment_source_registration_scope_test_20261024",
+      "repository": "mncs-environment",
+      "commit": "aed6e458c2875c5c89a0479f45998377a945b5d0",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "557732c09cc68dd6e1d747edd8b5e95c05db312c46cdc4f52d0a51ac9449b651"
+    }
+  ],
+  "not_measured": [
+    "whether agents interpret the new status more accurately",
+    "whether the pressure recurs in later campaign observations",
+    "effectiveness beyond the current live readback"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
