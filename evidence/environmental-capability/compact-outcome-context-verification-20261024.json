@@ -1,0 +1,83 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compact_outcome_context_verification_20261024",
+  "captured_at": "2026-10-24T15:54:31+00:00",
+  "observation": {
+    "kind": "compact-outcome-context-projection-verification",
+    "source_interface": "pytest, ruff, py_compile, and Git",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-observation-live-context-20261024",
+      "commit": "7f8bc86d55848e74131cf0a3b832530c7ef3b5a9",
+      "commands": [
+        "python -m pytest -q tests/test_capability_intelligence.py",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py --ignore SIM103",
+        "python -m py_compile mncs_env/capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "focused_capability_tests": {
+        "status": "passed",
+        "passed": 55,
+        "failed": 0
+      },
+      "ruff": "passed",
+      "py_compile": "passed",
+      "git_diff_check": "passed",
+      "authentic_compiler_compaction_regression": {
+        "status": "passed",
+        "preserved_result_status_and_claim_boundary": true,
+        "preserved_stale_vm_input_status_and_mismatch_count": true,
+        "preserved_unavailable_cgroup_memory_measurement": true,
+        "response_within_configured_byte_limit": true
+      },
+      "analysis_limit": "This verifies bounded projection behavior against one authentic Compiler evidence record and does not establish future agent uptake or long-term effectiveness."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_e3e0f9e5c88e949f",
+    "campaign_evidence_count_before_recording": 35,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "committed-source-change",
+      "repository": "mncs-environment",
+      "commit": "7f8bc86d55848e74131cf0a3b832530c7ef3b5a9",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "23bc8dd6fb4af5b069132ef1311fc71c0381b775a9089ca2ed20a390a3b0ef07"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "7f8bc86d55848e74131cf0a3b832530c7ef3b5a9",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "e1a6e276d72e38279707886dcdade5c2e018798ba417da08ef7676ffaa00311a"
+    },
+    {
+      "kind": "committed-projection-contract",
+      "repository": "mncs-environment",
+      "commit": "7f8bc86d55848e74131cf0a3b832530c7ef3b5a9",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "f646b175a87035f288e98110264ba9c9fa9874bc2a1336f5a9f51470188f5d5e"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

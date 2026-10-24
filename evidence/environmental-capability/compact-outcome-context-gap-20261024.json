@@ -1,0 +1,76 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compact_outcome_context_gap_20261024",
+  "captured_at": "2026-10-24T15:54:31+00:00",
+  "observation": {
+    "kind": "environmental-observation-compaction-context-gap",
+    "source_interface": "mncs-environment capability intelligence projection source and authentic Compiler evidence",
+    "request": {
+      "repository": "mncs-environment",
+      "baseline_commit": "90d513b433bc83b435fa37a31f30162f32355038",
+      "source_observation_identity": "ev_environment_compiler_self_consumption_resource_provenance_20261024"
+    },
+    "outcome": {
+      "baseline_preserved_measurement_summary": true,
+      "baseline_preserved_recorded_outcome_context": false,
+      "recorded_outcome_status": "passed_language_fact_v3_project_self_consumption",
+      "recorded_claim_boundary": "selected Project function application only; whole-compiler succession remains unproven",
+      "recorded_vm_runtime_build_origin": "stale-inputs",
+      "recorded_vm_source_mismatch_count": 10,
+      "analysis_limit": "The compact-path regression established that the projection omitted these recorded outcome facts; this does not establish that an agent previously acted on or was blocked by the omission."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_e3e0f9e5c88e949f",
+    "campaign_evidence_count_before_recording": 35,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_compact_observation_outcome_context",
+    "title": "Compacted environmental evidence hides recorded result scope and status",
+    "category": "environmental-observability",
+    "subsystem": "mncs-environment compact capability intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "The authentic Compiler observation carries a bounded resource summary, result status, narrow claim boundary, and stale VM input finding. Before this change, compaction retained the measurement summary and observation digest but omitted the other outcome fields.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Retain bounded outcome meaning and selected structured result facts in compact projections while preserving the complete source digest and exact evidence pointer.",
+    "not_measured": [
+      "whether an agent previously relied on the compact view and missed these details",
+      "recurrence across other observations or sessions",
+      "whether the projection change alters future development outcomes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-prechange-source",
+      "repository": "mncs-environment",
+      "commit": "90d513b433bc83b435fa37a31f30162f32355038",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "65fdf8930c2b48c16fc0a1df9d1b13e878962fa7d1800917e496aa020e67d76a"
+    },
+    {
+      "kind": "authentic-compiler-operational-evidence",
+      "identity": "ev_environment_compiler_self_consumption_resource_provenance_20261024",
+      "repository": "mncs-environment",
+      "commit": "b2f0443e3cc6eb6f1137c2e7aef26da3d1d6c844",
+      "path": "evidence/environmental-capability/compiler-self-consumption-resource-provenance-20261024.json",
+      "sha256": "de23e4d751349c4e733fd8ee2f46cb786467d2148d8a3069a5c1f1bda1e4ce71"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

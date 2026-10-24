@@ -1,0 +1,75 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compact_outcome_context_improvement_20261024",
+  "captured_at": "2026-10-24T15:54:31+00:00",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment capability intelligence projection",
+    "request": {},
+    "outcome": {
+      "implementation_change": "Compacted observations now preserve bounded outcome status, claim and interpretation limits, and small scalar values from semantically named structured result sections. The full observation digest, classified measurement summary, and exact evidence pointer remain available.",
+      "verification_recorded": true,
+      "authentic_compiler_evidence_used": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The implementation and regression are verified, but no later agent activity yet establishes that compact outcome context improves investigation or changes compiler and environmental development outcomes."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_e3e0f9e5c88e949f",
+    "campaign_evidence_count_before_recording": 35,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_compact_observation_outcome_context_20261024",
+    "addresses_hypothesis_identity": "ph_environment_compact_observation_outcome_context",
+    "implementation_reference": {
+      "identity": "ev_environment_compact_outcome_context_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "7f8bc86d55848e74131cf0a3b832530c7ef3b5a9",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "23bc8dd6fb4af5b069132ef1311fc71c0381b775a9089ca2ed20a390a3b0ef07"
+    },
+    "verification_observation_identity": "ev_environment_compact_outcome_context_verification_20261024",
+    "basis": "The focused regression forces an authentic Compiler observation through response compaction and confirms the recorded result status, bounded claim boundary, stale VM input status and mismatch count, unavailable memory attribution, and response-size bound survive.",
+    "not_measured": [
+      "future agent use of compact outcome context",
+      "whether investigation continuity or implementation decisions improve",
+      "recurrence or long-term pressure effectiveness across campaigns"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_compact_outcome_context_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "7f8bc86d55848e74131cf0a3b832530c7ef3b5a9",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "23bc8dd6fb4af5b069132ef1311fc71c0381b775a9089ca2ed20a390a3b0ef07"
+    },
+    {
+      "kind": "verified-source-test-results",
+      "identity": "ev_environment_compact_outcome_context_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "7f8bc86d55848e74131cf0a3b832530c7ef3b5a9",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "e1a6e276d72e38279707886dcdade5c2e018798ba417da08ef7676ffaa00311a"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
