@@ -1,0 +1,111 @@
+{
+  "captured_at": "2026-10-24T18:56:40Z",
+  "identity": "ev_environment_compiler_schema_family_projection_improvement_20261024",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_compiler_domain_evidence_projection_20261024",
+    "basis": "The source-format projection gap was extended to include two authentic schema-v1 Compiler families. Focused tests verify family selection, unavailable v1 measurements, exact work-context correlation, and ambiguity handling; a local read of the authenticated Compiler page verified all three source record hashes.",
+    "identity": "im_environment_compiler_schema_family_projection_20261024",
+    "implementation_reference": {
+      "commit": "38f58aa365f034e2ff55f4fba4ff1ffb046b915d",
+      "identity": "ev_environment_compiler_schema_family_projection_code_20261024",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "e38a991d115cae45f39de6ded2014a7f8d66488ee068553ac5ebd31ad862ee19"
+    },
+    "not_measured": [
+      "production exposure before main integration",
+      "recurrence of the projection gap across Compiler sessions",
+      "agent outcomes or long-term improvement effectiveness"
+    ],
+    "subsequent_observation_identity": "ev_environment_compiler_schema_family_projection_readback_20261024",
+    "verification_observation_identity": "ev_environment_compiler_schema_family_projection_verification_20261024"
+  },
+  "measurement_basis": "implementation-and-independent-verification-linked-to-existing-pressure",
+  "not_measured": [
+    "production exposure before main integration",
+    "recurrence of the projection gap across Compiler sessions",
+    "agent outcomes or long-term improvement effectiveness"
+  ],
+  "observation": {
+    "kind": "compiler-regression-schema-family-improvement-relation",
+    "outcome": {
+      "analysis_limit": "The local projection verified three authentic Compiler records. The live Control path still uses the integrated Environment version, so production exposure and later agent outcomes are unverified.",
+      "effectiveness_assessment": "not-assessed",
+      "implementation_change": "The projection now recognizes all three established Compiler regression families across schema v1 and v2. It preserves family-specific stages and missing v1 measurements, and links source work context only through a verified exact source pointer."
+    },
+    "request": {
+      "implementation_commit": "38f58aa365f034e2ff55f4fba4ff1ffb046b915d",
+      "pressure_observation_identity": "ev_environment_compiler_domain_evidence_projection_pressure_20261024",
+      "subsequent_observation_identity": "ev_environment_compiler_schema_family_projection_readback_20261024",
+      "verification_observation_identity": "ev_environment_compiler_schema_family_projection_verification_20261024"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_1991cffb20bdf206",
+    "session_id": "ses_c98eb637e20a5c14"
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "campaign_objective": "Improve MNCS's ability to observe, understand, and enhance its effectiveness in supporting autonomous agents using evidence from real development.",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_1991cffb20bdf206",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "38f58aa365f034e2ff55f4fba4ff1ffb046b915d",
+      "identity": "ev_environment_compiler_schema_family_projection_code_20261024",
+      "kind": "committed-environment-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "e38a991d115cae45f39de6ded2014a7f8d66488ee068553ac5ebd31ad862ee19"
+    },
+    {
+      "commit": "38f58aa365f034e2ff55f4fba4ff1ffb046b915d",
+      "identity": "ev_environment_compiler_schema_family_projection_tests_20261024",
+      "kind": "committed-environment-verification",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "9f91b4828b74cf31a0f8815232c22329166a49032dcd20420b3d471a643e9012"
+    },
+    {
+      "commit": "38f58aa365f034e2ff55f4fba4ff1ffb046b915d",
+      "identity": "ev_environment_compiler_schema_family_projection_docs_20261024",
+      "kind": "committed-environment-documentation",
+      "path": "docs/PROJECTIONS.md",
+      "repository": "mncs-environment",
+      "sha256": "6ebc20cadca13f76328b8eefa5390fe692985c0753ebc1ef544573d947225a38"
+    },
+    {
+      "commit": "c9d54cdfcf8c03fce0a1a904d32e147d7f287a9d",
+      "identity": "ev_compiler_digest_application_interface_invalidation_20261023",
+      "kind": "compiler-regression-source-record",
+      "path": "evidence/language-module-interface-application-invalidation-compiler-20261023.json",
+      "repository": "mncs-compiler",
+      "sha256": "ce67f0ff837bba0ff73301cb398198da5ff9125e8fe8cb75c45c5f26a1715177"
+    },
+    {
+      "commit": "e874669dbd110c5a5f808249c20a086013d7e2be",
+      "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "kind": "compiler-regression-source-record",
+      "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+      "repository": "mncs-compiler",
+      "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e"
+    },
+    {
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "kind": "compiler-regression-source-record",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "repository": "mncs-compiler",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    }
+  ]
+}

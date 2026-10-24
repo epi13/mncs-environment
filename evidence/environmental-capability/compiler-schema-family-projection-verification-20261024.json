@@ -1,0 +1,127 @@
+{
+  "captured_at": "2026-10-24T18:56:40Z",
+  "identity": "ev_environment_compiler_schema_family_projection_verification_20261024",
+  "measurement_basis": "focused-tests-and-authenticated-compiler-campaign-projection",
+  "not_measured": [
+    "production exposure until authorized main integration",
+    "cross-session recurrence or source-context coverage beyond the selected Compiler page",
+    "token use, model identity, and Compiler campaign duration",
+    "whether Compiler agents use or benefit from the projection",
+    "long-term effectiveness after integration"
+  ],
+  "observation": {
+    "kind": "compiler-regression-schema-family-projection-verification",
+    "outcome": {
+      "active_control_integration": "not-deployed-from-feature-branch",
+      "diff_check": "passed",
+      "effectiveness_assessment": "not-assessed",
+      "live_compiler_page": {
+        "adapter_source_records": 3,
+        "all_three_content_sha256_verified": true,
+        "checkpoint_id": "chk_691079cfe830f05d",
+        "evidence_count": 693
+      },
+      "local_projection": {
+        "effect_capability_schema_v2_stage_summaries": 4,
+        "generic_specialization_schema_v1_stage_summaries": 7,
+        "interface_schema_v1_stage_summaries": 10,
+        "observation_records_verified": 3,
+        "status": "ready"
+      },
+      "ruff": "passed",
+      "source_context_correlation_test": {
+        "conflicting_context_left_unattributed": true,
+        "exact_pointer_link_verified": true
+      },
+      "source_context_in_live_compiler_page": "not-present-in-selected-campaign-evidence-window",
+      "test_result": {
+        "failed": 0,
+        "passed": 69,
+        "scope": "capability-intelligence test module"
+      }
+    },
+    "request": {
+      "adapter_source_identities": [
+        "ev_compiler_digest_application_interface_invalidation_20261023",
+        "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+        "ev_compiler_digest_application_effect_capability_invalidation_20261024"
+      ],
+      "compiler_campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "compiler_checkpoint_id": "chk_691079cfe830f05d",
+      "compiler_evidence_page_limit": 8,
+      "compiler_evidence_page_offset": 685,
+      "compiler_session_id": "ses_164edc158d9b1637",
+      "lint_command": "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+      "static_check": "git diff --check",
+      "test_command": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py"
+    },
+    "source_interface": "MNCS Environment focused projection suite and authenticated Compiler campaign page"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_1991cffb20bdf206",
+    "session_id": "ses_c98eb637e20a5c14"
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "campaign_objective": "Improve MNCS's ability to observe, understand, and enhance its effectiveness in supporting autonomous agents using evidence from real development.",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_1991cffb20bdf206",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "38f58aa365f034e2ff55f4fba4ff1ffb046b915d",
+      "identity": "ev_environment_compiler_schema_family_projection_code_20261024",
+      "kind": "committed-environment-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "e38a991d115cae45f39de6ded2014a7f8d66488ee068553ac5ebd31ad862ee19"
+    },
+    {
+      "commit": "38f58aa365f034e2ff55f4fba4ff1ffb046b915d",
+      "identity": "ev_environment_compiler_schema_family_projection_tests_20261024",
+      "kind": "committed-environment-verification",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "9f91b4828b74cf31a0f8815232c22329166a49032dcd20420b3d471a643e9012"
+    },
+    {
+      "commit": "38f58aa365f034e2ff55f4fba4ff1ffb046b915d",
+      "identity": "ev_environment_compiler_schema_family_projection_docs_20261024",
+      "kind": "committed-environment-documentation",
+      "path": "docs/PROJECTIONS.md",
+      "repository": "mncs-environment",
+      "sha256": "6ebc20cadca13f76328b8eefa5390fe692985c0753ebc1ef544573d947225a38"
+    },
+    {
+      "commit": "c9d54cdfcf8c03fce0a1a904d32e147d7f287a9d",
+      "identity": "ev_compiler_digest_application_interface_invalidation_20261023",
+      "kind": "compiler-regression-source-record",
+      "path": "evidence/language-module-interface-application-invalidation-compiler-20261023.json",
+      "repository": "mncs-compiler",
+      "sha256": "ce67f0ff837bba0ff73301cb398198da5ff9125e8fe8cb75c45c5f26a1715177"
+    },
+    {
+      "commit": "e874669dbd110c5a5f808249c20a086013d7e2be",
+      "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "kind": "compiler-regression-source-record",
+      "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+      "repository": "mncs-compiler",
+      "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e"
+    },
+    {
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "kind": "compiler-regression-source-record",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "repository": "mncs-compiler",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    }
+  ]
+}
