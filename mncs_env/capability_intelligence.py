@@ -269,6 +269,9 @@ def _compact_projection(
             "distinct_work_intent_count", "distinct_environment_version_count",
             "affected_work_context_count", "distinct_recording_session_count",
             "distinct_recording_campaign_count", "recording_context_count",
+            "distinct_recording_environment_id_count",
+            "distinct_recording_definition_id_count",
+            "distinct_recording_environment_version_count",
         ):
             if type(hypothesis.get(key)) is int:
                 summary[key] = hypothesis[key]
@@ -343,7 +346,12 @@ def _compact_projection(
         recorder = item.get("recording_context")
         compact_recorder = {
             key: _short_text(recorder.get(key), 160)
-            for key in ("campaign_id", "session_id", "consumer_id")
+            for key in (
+                "campaign_id", "session_id", "consumer_id", "environment_id",
+                "definition_id", "environment_version",
+                "environment_identity_capture_status",
+                "environment_version_capture_status",
+            )
             if isinstance(recorder, dict) and recorder.get(key) is not None
         }
         hypothesis = item.get("pressure_hypothesis")
@@ -568,7 +576,10 @@ def _load_observation(
                 not isinstance(recorder, dict)
                 or any(not isinstance(recorder.get(key), str)
                        or not recorder[key] or len(recorder[key]) > 160
-                       for key in ("campaign_id", "session_id", "consumer_id")
+                       for key in (
+                           "campaign_id", "session_id", "consumer_id",
+                           "environment_id", "definition_id", "environment_version",
+                       )
                        if key in recorder)
             ))
             or (improvement_relation is not None
@@ -729,7 +740,8 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "environment_version",
         ))
         recording_contexts = _distinct_contexts(group, "recording_context", (
-            "campaign_id", "session_id", "consumer_id",
+            "campaign_id", "session_id", "consumer_id", "environment_id",
+            "definition_id", "environment_version",
         ))
         work_intents = {
             (context.get("campaign_id"), context.get("work_intent_id"))
@@ -747,6 +759,18 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
         recording_campaigns = {
             context["campaign_id"] for context in recording_contexts
             if context.get("campaign_id")
+        }
+        recording_environment_ids = {
+            context["environment_id"] for context in recording_contexts
+            if context.get("environment_id")
+        }
+        recording_definition_ids = {
+            context["definition_id"] for context in recording_contexts
+            if context.get("definition_id")
+        }
+        recording_environment_versions = {
+            context["environment_version"] for context in recording_contexts
+            if context.get("environment_version")
         }
         if len(sessions) > 1:
             recurrence_status = "observed-across-sessions"
@@ -771,6 +795,11 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "affected_work_contexts": work_contexts,
             "distinct_recording_session_count": len(recording_sessions),
             "distinct_recording_campaign_count": len(recording_campaigns),
+            "distinct_recording_environment_id_count": len(recording_environment_ids),
+            "distinct_recording_definition_id_count": len(recording_definition_ids),
+            "distinct_recording_environment_version_count": len(
+                recording_environment_versions
+            ),
             "recording_context_count": len(recording_contexts),
             "recording_contexts": recording_contexts,
             "recurrence_status": recurrence_status,
@@ -803,8 +832,47 @@ def _distinct_contexts(
             context[key] = _short_text(value, limit) or ""
             if len(value) > limit:
                 context[f"{key}_truncated"] = True
+        if field == "recording_context":
+            context["environment_identity_capture_status"] = (
+                _environment_identity_capture_status(context)
+            )
+            context["environment_version_capture_status"] = (
+                "captured-in-record" if context.get("environment_version")
+                else "not-captured-in-record"
+            )
         contexts.append(context)
     return contexts
+
+
+def _environment_identity_capture_status(context: dict[str, Any]) -> str:
+    if context.get("environment_id") and context.get("definition_id"):
+        return "captured-in-record"
+    if context.get("environment_id") or context.get("definition_id"):
+        return "partial-in-record"
+    return "not-captured-in-record"
+
+
+def _recording_context(recorder: Any) -> dict[str, str] | None:
+    if not isinstance(recorder, dict):
+        return None
+    context = {
+        key: recorder[key]
+        for key in (
+            "campaign_id", "session_id", "consumer_id", "environment_id",
+            "definition_id", "environment_version",
+        )
+        if isinstance(recorder.get(key), str) and recorder[key]
+    }
+    if not context:
+        return None
+    context["environment_identity_capture_status"] = (
+        _environment_identity_capture_status(context)
+    )
+    context["environment_version_capture_status"] = (
+        "captured-in-record" if context.get("environment_version")
+        else "not-captured-in-record"
+    )
+    return context
 
 
 def project(
@@ -1020,11 +1088,7 @@ def project(
                             "campaign_evidence_count", "claim_ids")
                 if work.get(key) is not None
             },
-            "recording_context": {
-                key: recorder[key]
-                for key in ("campaign_id", "session_id", "consumer_id")
-                if isinstance(recorder.get(key), str) and recorder[key]
-            } or None,
+            "recording_context": _recording_context(recorder),
             "improvement_relation_identity": (
                 improvement["identity"] if improvement is not None else None
             ),

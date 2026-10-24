@@ -124,6 +124,10 @@ def _observation(identity: str, session_id: str, campaign_id: str) -> dict:
 
 def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_one", "ses_compiler_one", "cmp_compiler")
+    record["recorder"].update({
+        "environment_id": "renv_observation_capture",
+        "definition_id": "env_observation_capture",
+    })
     control_source = {
         "identity": "ev_control_selector_source",
         "repository": "mncs-control-mcp",
@@ -146,6 +150,10 @@ def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_
         "campaign_id": "cmp_observation_capture",
         "session_id": "ses_observation_capture",
         "consumer_id": "local-agent",
+        "environment_id": "renv_observation_capture",
+        "definition_id": "env_observation_capture",
+        "environment_identity_capture_status": "captured-in-record",
+        "environment_version_capture_status": "not-captured-in-record",
     }
     hypothesis = result["pressure_hypotheses"][0]
     assert hypothesis["observation_count"] == 1
@@ -362,6 +370,18 @@ def test_malformed_observation_without_work_correlation_is_not_actionable(tmp_pa
 def test_invalid_recording_context_is_not_projected_as_provenance(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_unrelated", "ses_compiler", "cmp_compiler")
     record["recorder"]["session_id"] = []
+    session, _ = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["source"]["observation_records_unavailable"] == 1
+
+
+def test_invalid_recorder_environment_identity_is_rejected(tmp_path: Path) -> None:
+    record = _observation("ev_environment_observation_bad_environment_id", "ses_compiler", "cmp_compiler")
+    record["recorder"]["environment_id"] = []
     session, _ = _session(tmp_path, [record])
 
     result = capability_intelligence.project(session)
@@ -674,6 +694,8 @@ def test_authentic_capture_context_evidence_projects_as_one_improvement_chain(
         "campaign_id": "cmp_environmental_capability_intelligence_20261023",
         "session_id": "ses_c38b0ab35b9418ba",
         "consumer_id": "local-agent",
+        "environment_identity_capture_status": "not-captured-in-record",
+        "environment_version_capture_status": "not-captured-in-record",
     }]
     assert result["improvement_relation_count"] == 1
     relation = result["improvement_relations"][0]
@@ -695,8 +717,42 @@ def test_authentic_capture_context_evidence_projects_as_one_improvement_chain(
     gap = observations["ev_environment_observation_capture_context_gap_20261024"]
     followup = observations["ev_environment_compiler_cache_regression_20261024"]
     assert gap["recording_context"]["session_id"] == "ses_c38b0ab35b9418ba"
+    assert gap["recording_context"]["environment_identity_capture_status"] == (
+        "not-captured-in-record"
+    )
     assert followup["related_work"]["session_id"] == "ses_164edc158d9b1637"
     assert followup["recording_context"]["session_id"] == "ses_c38b0ab35b9418ba"
+
+
+def test_authentic_recorder_environment_identity_is_projected_separately(
+    tmp_path: Path,
+) -> None:
+    path = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability/recorder-environment-identity-gap-20261024.json"
+    )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    session, _ = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    observation = result["observations"][0]
+    assert observation["related_work"]["campaign_id"] == (
+        "cmp_mncs_native_application_readiness_compiler_20261013"
+    )
+    assert observation["recording_context"]["environment_id"] == (
+        "renv_4844ecc725485390"
+    )
+    assert observation["recording_context"]["definition_id"] == (
+        "env_d479727df8e9d3ef"
+    )
+    assert observation["recording_context"]["environment_identity_capture_status"] == (
+        "captured-in-record"
+    )
+    pressure = result["pressure_hypotheses"][0]
+    assert pressure["identity"] == "ph_environment_recorder_resolved_identity"
+    assert pressure["distinct_recording_environment_id_count"] == 1
+    assert pressure["distinct_recording_definition_id_count"] == 1
+    assert pressure["distinct_recording_environment_version_count"] == 0
 
 
 def test_read_operation_observability_hypothesis_keeps_nonrecurrence_explicit(
@@ -731,6 +787,11 @@ def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None
     record = _observation("ev_environment_observation_large", "ses_compiler", "cmp_compiler")
     record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000
     record["related_work"]["work_intent_goal"] = "g" * 300
+    record["recorder"].update({
+        "environment_id": "renv_compact_capture",
+        "definition_id": "env_compact_capture",
+        "environment_version": "a" * 40,
+    })
     session, _ = _session(tmp_path, [record])
 
     result = capability_intelligence.project(session)
@@ -749,6 +810,19 @@ def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None
     assert pressure["recording_contexts"][0]["session_id"] == (
         "ses_observation_capture"
     )
+    assert pressure["recording_contexts"][0]["environment_id"] == (
+        "renv_compact_capture"
+    )
+    assert pressure["recording_contexts"][0]["definition_id"] == (
+        "env_compact_capture"
+    )
+    assert pressure["recording_contexts"][0]["environment_version"] == "a" * 40
+    assert pressure["recording_contexts"][0]["environment_version_capture_status"] == (
+        "captured-in-record"
+    )
+    assert pressure["distinct_recording_environment_id_count"] == 1
+    assert pressure["distinct_recording_definition_id_count"] == 1
+    assert pressure["distinct_recording_environment_version_count"] == 1
 
 
 def test_observation_reader_stops_after_its_total_deadline(monkeypatch) -> None:

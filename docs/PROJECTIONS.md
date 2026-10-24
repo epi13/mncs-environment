@@ -149,15 +149,23 @@ permanent dashboard is created.
 An observation relates the recorded operation to its originating campaign,
 session, work intent, and affected subsystem. Its separate `recording_context`
 preserves the campaign, session, and consumer that captured the observation;
-this prevents a collector session from being mistaken for the work under
-observation. Both relationships remain inspectable through the immutable
-evidence pointer, while the recorded consumer field is metadata rather than an
-independent identity attestation. Pressure summaries also retain bounded
-`affected_work_contexts` and `recording_contexts`, with separate counts for
-distinct work intents, environment versions, and recording sessions or
-campaigns. The two context lists preserve their different roles; long context
-text and lists are truncated with explicit flags, and the source record remains
-authoritative. A pressure hypothesis remains
+it can also retain the recorder's `environment_id`, `definition_id`, and an
+explicitly recorded `environment_version`. The resolved `environment_id`
+identifies the environment configuration and resolution inputs bound to that
+session. This prevents a collector session from being mistaken for the work
+under observation and makes cross-session environment context inspectable.
+`environment_identity_capture_status` and
+`environment_version_capture_status` report which identity fields are present
+in the record. `not-captured-in-record` means the persisted record omits that
+field; it does not mean the session lacked an Environment identity. Both
+relationships remain inspectable through the immutable evidence pointer, while
+the recorded consumer field is metadata rather than an independent identity
+attestation. Pressure summaries also retain bounded `affected_work_contexts`
+and `recording_contexts`, with separate counts for work intents, affected-work
+environment versions, recording Environment IDs and definitions, and recorder
+sessions or campaigns. The two context lists preserve their different roles;
+long context text and lists are truncated with explicit flags, and the source
+record remains authoritative. A pressure hypothesis remains
 an interpretation: one observation does not establish recurrence, and a
 change remains unproven until later observations and independent verification
 provide evidence. Repeated candidate IDs or resource use alone do not create
