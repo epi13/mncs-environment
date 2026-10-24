@@ -7692,6 +7692,17 @@ class Session:
             return None
         return doctor_module.terse(self)
 
+    def recent_events(self, *, limit: int = 256) -> dict[str, Any]:
+        """Read a bounded tail of the durable session event stream."""
+        if type(limit) is not int or not 1 <= limit <= 256:
+            raise ValueError("recent event limit must be between 1 and 256")
+        log = self._log()
+        return {
+            "event_count": len(log),
+            "events": list(log[-limit:]),
+            "truncated": len(log) > limit,
+        }
+
     def inspect(self) -> dict[str, Any]:
         log = self._log()
         unavailable = [

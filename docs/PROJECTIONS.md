@@ -174,6 +174,25 @@ Observations can also report measurements without a pressure hypothesis, so a
 resource sample is not forced into a healthy/unhealthy judgment. Its sampling
 scope and unavailable attribution remain attached to that observation.
 
+The same projection includes a bounded view of the current session's durable
+Environment capability events. It joins `capability.invoked` and
+`invocation.completed` records by their provider request identity, relates the
+result to the current session objective and Environment identity, and keeps
+the exact source event IDs and sequences. It reports recorded outcome status
+and return code, while unmatched starts and ambiguous joins remain explicit.
+Invocation arguments and raw results are not copied into this view. Only the
+newest 256 session events are considered and at most 32 invocation records are
+projected; the selection window and omitted count are reported. The canonical
+Store reader currently materializes the session event log before selecting
+that tail, so this analysis is demand-driven and bounded but its underlying
+event read still grows with session history. This path covers calls made
+through Environment-bound capabilities; direct external tool operations may
+not be present in the session event stream. These events do not provide token
+usage, model identity, execution duration, or resource consumption unless
+another authoritative source records those measurements. An empty truncated
+window is reported as `partial-no-invocations-in-selected-window`; it does not
+assert that the full session history contains no capability calls.
+
 When response compaction is needed, each pressure summary retains bounded exact
 evidence references (identity, repository, commit, path, and digest), so an
 agent can inspect the records supporting the hypothesis even when their full

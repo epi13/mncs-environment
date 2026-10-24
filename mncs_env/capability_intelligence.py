@@ -34,6 +34,9 @@ MAX_SOURCE_BYTES = 512 * 1024
 MAX_OBSERVATION_READ_SECONDS = 8.0
 MAX_SOURCE_POINTER_VERIFICATIONS = 32
 MAX_RESULT_BYTES = 48 * 1024
+MAX_SESSION_EVENT_WINDOW = 256
+MAX_SESSION_ACTIVITY_INTERACTIONS = 32
+MAX_SESSION_ACTIVITY_CAPABILITIES = 16
 SOURCE_INTEGRITY_VERIFIED = frozenset({
     "content-integrity-verified",
     "record-integrity-verified-in-projection",
@@ -444,6 +447,60 @@ def _compact_projection(
         summary["evidence_reference"] = relation["evidence_reference"]
         compact_improvements.append(summary)
 
+    activity = projection.get("session_activity")
+    activity = activity if isinstance(activity, dict) else {}
+    activity_source = activity.get("source")
+    activity_source = activity_source if isinstance(activity_source, dict) else {}
+    compact_activity_source = {
+        key: activity_source[key]
+        for key in (
+            "event_count", "event_window_truncated",
+            "event_window_sequence_start", "event_window_sequence_end",
+            "invocation_events_considered", "invocation_records_omitted",
+        )
+        if key in activity_source
+    }
+    compact_activity_interactions = []
+    raw_interactions = activity.get("interactions")
+    raw_interactions = raw_interactions if isinstance(raw_interactions, list) else []
+    for item in raw_interactions[:8]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in (
+                "identity", "capability", "correlation_status",
+                "outcome_status", "completion_producer",
+            )
+            if isinstance(item.get(key), str)
+        }
+        if type(item.get("returncode")) is int:
+            compact_item["returncode"] = item["returncode"]
+        for key in ("invocation_event", "completion_event"):
+            reference = item.get(key)
+            if isinstance(reference, dict):
+                compact_item[key] = {
+                    item_key: reference[item_key]
+                    for item_key in ("identity", "sequence", "type")
+                    if item_key in reference
+                }
+        compact_activity_interactions.append(compact_item)
+    compact_activity = {
+        "status": _short_text(activity.get("status"), 96),
+        "source": compact_activity_source,
+        "interaction_count": activity.get("interaction_count", 0),
+        "completion_count": activity.get("completion_count", 0),
+        "unmatched_invocation_count": activity.get("unmatched_invocation_count", 0),
+        "ambiguous_correlation_count": activity.get("ambiguous_correlation_count", 0),
+        "completion_without_invocation_count": activity.get(
+            "completion_without_invocation_count", 0,
+        ),
+        "interactions": compact_activity_interactions,
+        "interactions_truncated": (
+            len(raw_interactions) > len(compact_activity_interactions)
+        ),
+    }
+
     result = {
         "schema_version": SCHEMA,
         "identity": projection["identity"],
@@ -457,6 +514,7 @@ def _compact_projection(
         "pressure_hypotheses": compact_hypotheses,
         "improvement_relations": compact_improvements,
         "observations": compact_observations,
+        "session_activity": compact_activity,
         "measurement_limits": [
             "The response exceeded its byte limit; payload details are summarized by digest.",
             "Exact observation records remain addressable through their evidence references.",
@@ -487,6 +545,9 @@ def _compact_projection(
             result["pressure_hypotheses"].pop()
         elif result["improvement_relations"]:
             result["improvement_relations"].pop()
+        elif result["session_activity"]["interactions"]:
+            result["session_activity"]["interactions"].pop()
+            result["session_activity"]["interactions_truncated"] = True
         else:
             break
     return result
@@ -875,6 +936,286 @@ def _recording_context(recorder: Any) -> dict[str, str] | None:
     return context
 
 
+def _event_reference(event: dict[str, Any]) -> dict[str, Any] | None:
+    identity = event.get("identity")
+    sequence = event.get("sequence")
+    event_type = event.get("type")
+    if (not isinstance(identity, str) or not identity or len(identity) > 160
+            or type(sequence) is not int or sequence < 1
+            or not isinstance(event_type, str) or not event_type or len(event_type) > 96):
+        return None
+    reference: dict[str, Any] = {
+        "identity": identity,
+        "sequence": sequence,
+        "type": event_type,
+    }
+    observed_at = event.get("observed_at")
+    if isinstance(observed_at, str) and observed_at and len(observed_at) <= 96:
+        reference["observed_at"] = observed_at
+    return reference
+
+
+def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Project recent Environment capability events without copying arguments."""
+    reader = getattr(session, "recent_events", None)
+    limits = [
+        "This view covers Environment-bound capability events; direct external tool operations may not appear in the session event stream.",
+        "Invocation arguments, raw results, token usage, execution duration, and resource consumption are not inferred from these events.",
+        "The canonical Store reader currently materializes the session event log before selecting this bounded tail.",
+    ]
+    if not callable(reader):
+        return {
+            "status": "unavailable",
+            "context": {},
+            "source": {"event_window_limit": MAX_SESSION_EVENT_WINDOW},
+            "interaction_count": 0,
+            "interactions": [],
+            "capabilities": [],
+            "measurement_limits": [
+                *limits,
+                "The session event tail interface is unavailable.",
+            ],
+        }
+    try:
+        page = reader(limit=MAX_SESSION_EVENT_WINDOW)
+    except (LifecycleError, StoreIntegrityFailure, StoreUnavailable, OSError, ValueError):
+        page = None
+    if (not isinstance(page, dict)
+            or type(page.get("event_count")) is not int
+            or page["event_count"] < 0
+            or not isinstance(page.get("events"), list)
+            or type(page.get("truncated")) is not bool):
+        return {
+            "status": "unavailable",
+            "context": {},
+            "source": {"event_window_limit": MAX_SESSION_EVENT_WINDOW},
+            "interaction_count": 0,
+            "interactions": [],
+            "capabilities": [],
+            "measurement_limits": [
+                *limits,
+                "The session event tail could not be read or did not match its declared shape.",
+            ],
+        }
+
+    raw_page_events = page["events"]
+    adapter_window_overflow = len(raw_page_events) > MAX_SESSION_EVENT_WINDOW
+    if adapter_window_overflow:
+        raw_page_events = raw_page_events[-MAX_SESSION_EVENT_WINDOW:]
+    raw_events = [item for item in raw_page_events if isinstance(item, dict)]
+    events = sorted(
+        raw_events,
+        key=lambda item: item.get("sequence") if type(item.get("sequence")) is int else -1,
+    )
+    invocation_events = [
+        event for event in events if event.get("type") == "capability.invoked"
+    ]
+    completion_events = [
+        event for event in events if event.get("type") == "invocation.completed"
+    ]
+    starts_by_request: dict[str, list[dict[str, Any]]] = {}
+    completions_by_request: dict[str, list[dict[str, Any]]] = {}
+    for event in invocation_events:
+        payload = event.get("payload")
+        request_id = payload.get("provider_request_id") if isinstance(payload, dict) else None
+        if isinstance(request_id, str) and request_id and len(request_id) <= 160:
+            starts_by_request.setdefault(request_id, []).append(event)
+    for event in completion_events:
+        payload = event.get("payload")
+        request_id = payload.get("provider_request_id") if isinstance(payload, dict) else None
+        if isinstance(request_id, str) and request_id and len(request_id) <= 160:
+            completions_by_request.setdefault(request_id, []).append(event)
+
+    paired_by_start: dict[int, tuple[dict[str, Any] | None, str]] = {}
+    for request_id in set(starts_by_request) | set(completions_by_request):
+        starts = starts_by_request.get(request_id, [])
+        completions = completions_by_request.get(request_id, [])
+        if len(starts) == 1 and len(completions) == 1:
+            start, completion = starts[0], completions[0]
+            start_sequence = start.get("sequence")
+            completion_sequence = completion.get("sequence")
+            if (type(start_sequence) is int and type(completion_sequence) is int
+                    and completion_sequence > start_sequence):
+                paired_by_start[id(start)] = (
+                    completion, "matched-by-provider-request-id",
+                )
+            else:
+                paired_by_start[id(start)] = (None, "completion-precedes-invocation")
+        elif len(starts) > 1:
+            for start in starts:
+                paired_by_start[id(start)] = (None, "ambiguous-provider-request-id")
+        elif len(starts) == 1:
+            correlation = (
+                "ambiguous-provider-request-id" if len(completions) > 1
+                else "completion-not-recorded-in-window"
+            )
+            paired_by_start[id(starts[0])] = (None, correlation)
+
+    interactions: list[dict[str, Any]] = []
+    for event in reversed(invocation_events):
+        payload = event.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        completion, correlation_status = paired_by_start.get(
+            id(event), (None, "provider-request-id-unavailable"),
+        )
+        invocation_reference = _event_reference(event)
+        if invocation_reference is None:
+            continue
+        completion_reference = _event_reference(completion) if completion else None
+        completion_payload = completion.get("payload") if isinstance(completion, dict) else None
+        completion_payload = completion_payload if isinstance(completion_payload, dict) else {}
+        capability = payload.get("capability")
+        interaction = {
+            "identity": "act_" + digest_hex({
+                "session_id": session.session_id,
+                "invocation_event": invocation_reference["identity"],
+                "completion_event": (
+                    completion_reference.get("identity")
+                    if completion_reference is not None else None
+                ),
+            }, length=16),
+            "capability": _short_text(capability, 160) if isinstance(capability, str) else None,
+            "correlation_status": correlation_status,
+            "outcome_status": (
+                _short_text(completion_payload.get("status"), 96)
+                if isinstance(completion_payload.get("status"), str) else None
+            ),
+            "returncode": (
+                completion_payload.get("returncode")
+                if type(completion_payload.get("returncode")) is int else None
+            ),
+            "completion_producer": (
+                _short_text(completion.get("producer"), 128)
+                if isinstance(completion, dict)
+                and isinstance(completion.get("producer"), str) else None
+            ),
+            "invocation_event": invocation_reference,
+            "completion_event": completion_reference,
+        }
+        interactions.append(interaction)
+        if len(interactions) >= MAX_SESSION_ACTIVITY_INTERACTIONS:
+            break
+
+    capability_groups: dict[str, list[dict[str, Any]]] = {}
+    for interaction in interactions:
+        key = interaction.get("capability")
+        group_key = key if isinstance(key, str) else ""
+        capability_groups.setdefault(group_key, []).append(interaction)
+    capabilities = []
+    for capability, group in sorted(capability_groups.items()):
+        status_counts: dict[str, int] = {}
+        for item in group:
+            status = item.get("outcome_status")
+            if isinstance(status, str):
+                status_counts[status] = status_counts.get(status, 0) + 1
+        capabilities.append({
+            "capability": capability or None,
+            "invocation_count": len(group),
+            "completion_count": sum(
+                item.get("completion_event") is not None for item in group
+            ),
+            "outcome_status_counts": status_counts,
+        })
+    capabilities_omitted = max(
+        0, len(capabilities) - MAX_SESSION_ACTIVITY_CAPABILITIES,
+    )
+    capabilities = capabilities[:MAX_SESSION_ACTIVITY_CAPABILITIES]
+
+    event_count = page["event_count"]
+    event_window_truncated = (
+        page["truncated"] or event_count > len(page["events"])
+        or adapter_window_overflow
+    )
+    invocations_omitted = max(0, len(invocation_events) - len(interactions))
+    partial = event_window_truncated or invocations_omitted > 0
+    if partial and not invocation_events:
+        status = "partial-no-invocations-in-selected-window"
+    elif partial:
+        status = "partial"
+    elif not invocation_events:
+        status = "no-capability-invocations-in-session-history"
+    else:
+        status = "ready"
+    window_references = [
+        reference for event in events
+        if (reference := _event_reference(event)) is not None
+    ]
+    event_type_counts: dict[str, int] = {}
+    for event in events:
+        event_type = event.get("type")
+        if isinstance(event_type, str) and event_type and len(event_type) <= 96:
+            event_type_counts[event_type] = event_type_counts.get(event_type, 0) + 1
+    unpaired_completion_count = 0
+    for event in completion_events:
+        payload = event.get("payload")
+        request_id = payload.get("provider_request_id") if isinstance(payload, dict) else None
+        starts = starts_by_request.get(request_id, []) if isinstance(request_id, str) else []
+        if len(starts) != 1:
+            unpaired_completion_count += 1
+            continue
+        start_sequence = starts[0].get("sequence")
+        completion_sequence = event.get("sequence")
+        if (type(start_sequence) is not int or type(completion_sequence) is not int
+                or completion_sequence <= start_sequence):
+            unpaired_completion_count += 1
+    snapshot_intent = snapshot.get("intent")
+    snapshot_intent = snapshot_intent if isinstance(snapshot_intent, dict) else {}
+    campaign = snapshot.get("campaign")
+    campaign = campaign if isinstance(campaign, dict) else {}
+    provenance = snapshot.get("provenance")
+    provenance = provenance if isinstance(provenance, dict) else {}
+    context = {
+        key: _short_text(value, 256 if key == "work_intent_goal" else 160)
+        for key, value in {
+            "campaign_id": campaign.get("identity"),
+            "session_id": session.session_id,
+            "work_intent_id": snapshot_intent.get("identity"),
+            "work_intent_goal": snapshot_intent.get("goal"),
+            "environment_id": snapshot.get("environment_id"),
+            "definition_id": provenance.get("definition_id"),
+        }.items()
+        if isinstance(value, str) and value
+    }
+    return {
+        "status": status,
+        "context": context,
+        "source": {
+            "event_count": event_count,
+            "event_window_limit": MAX_SESSION_EVENT_WINDOW,
+            "events_considered": len(raw_page_events),
+            "event_window_truncated": event_window_truncated,
+            "event_window_identity_digest": digest_hex(window_references, length=16),
+            "event_window_sequence_start": (
+                window_references[0]["sequence"] if window_references else None
+            ),
+            "event_window_sequence_end": (
+                window_references[-1]["sequence"] if window_references else None
+            ),
+            "event_type_counts": event_type_counts,
+            "invocation_events_considered": len(invocation_events),
+            "completion_events_considered": len(completion_events),
+            "invocation_records_omitted": invocations_omitted,
+            "capability_summaries_omitted": capabilities_omitted,
+            "selection_policy": "newest-invocation-events-by-session-sequence",
+        },
+        "interaction_count": len(interactions),
+        "completion_count": sum(
+            item.get("completion_event") is not None for item in interactions
+        ),
+        "unmatched_invocation_count": sum(
+            item.get("completion_event") is None for item in interactions
+        ),
+        "ambiguous_correlation_count": sum(
+            item.get("correlation_status") == "ambiguous-provider-request-id"
+            for item in interactions
+        ),
+        "completion_without_invocation_count": unpaired_completion_count,
+        "interactions": interactions,
+        "capabilities": capabilities,
+        "measurement_limits": limits,
+    }
+
+
 def project(
     session: Any, *, campaign_state: dict[str, Any] | None = None,
     max_result_bytes: int = MAX_RESULT_BYTES, history_pages: int = 1,
@@ -1187,12 +1528,17 @@ def project(
     else:
         status = "no-observations"
     hypotheses = _recurrence(observations)
+    activity = _session_activity(session, snapshot)
     projection: dict[str, Any] = {
         "schema_version": SCHEMA,
         "identity": "eci_" + digest_hex({
             "session_id": session.session_id,
             "campaign_id": campaign.get("identity"),
             "evidence": [item["identity"] for item in references],
+            "session_activity_digest": (
+                activity.get("source", {}).get("event_window_identity_digest")
+                if isinstance(activity.get("source"), dict) else None
+            ),
         }, length=16),
         "status": status,
         "subject": {
@@ -1279,9 +1625,9 @@ def project(
             } if history_pages > 1 else {}),
         },
         "correlation": {
-            "kind": "campaign-evidence-to-objective-and-subsystem",
+            "kind": "campaign-evidence-and-session-events-to-objective-and-subsystem",
             "derived": True,
-            "relationship": "observations retain target work and recording context separately; explicit improvement relations connect pressure hypotheses, implementation references, verification records, and later observations",
+            "relationship": "Campaign observations retain affected work and recorder context; capability events link to the current objective and Environment; improvement relations link pressures, implementation, verification, and follow-up.",
         },
         "observation_count": len(observations),
         "pressure_hypothesis_count": len(hypotheses),
@@ -1289,6 +1635,7 @@ def project(
         "pressure_hypotheses": hypotheses,
         "improvement_relations": improvement_relations,
         "observations": observations,
+        "session_activity": activity,
         "measurement_limits": [
             "Only committed observation records linked from the selected bounded campaign-state page or pages are considered.",
             "The source evidence page offset and previous/next offsets identify adjacent pages when continuing this projection.",
@@ -1299,6 +1646,8 @@ def project(
             "Candidate continuation count is not treated as repeated pressure; recurrence requires distinct recorded observations.",
             "Effectiveness after a proposed change remains unknown until later independent observations support it.",
             "A linked verification record establishes that evidence is present and integrity checked; effectiveness still requires independent follow-up.",
+            "Session activity summarizes only the bounded recent event tail and exposes no raw invocation arguments or results.",
+            "Session capability events do not establish duration, token usage, resource consumption, or activity performed outside Environment-bound capability invocation.",
             *([
                 "Multi-page recurrence covers only the selected bounded page window; source metadata reports page offsets, checkpoint consistency, and budget omissions.",
             ] if history_pages > 1 else []),

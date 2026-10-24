@@ -123,6 +123,23 @@ class InjectedInterruption(BaseException):
 
 
 class CompletionReleasesClaimsTests(unittest.TestCase):
+    def test_recent_events_returns_a_bounded_read_only_tail(self):
+        store = StubStore(_snapshot(), [])
+        store.events = [
+            {"identity": f"evt_{sequence}", "sequence": sequence}
+            for sequence in range(1, 5)
+        ]
+        session = _session(store)
+
+        page = session.recent_events(limit=2)
+
+        self.assertEqual(page["event_count"], 4)
+        self.assertEqual([event["sequence"] for event in page["events"]], [3, 4])
+        self.assertTrue(page["truncated"])
+        self.assertEqual(len(store.events), 4)
+        with self.assertRaisesRegex(ValueError, "between 1 and 256"):
+            session.recent_events(limit=257)
+
     def test_request_event_replays_and_rejects_request_identity_reuse(self):
         store = StubStore(_snapshot(), [])
         first = _session(store)

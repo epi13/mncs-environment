@@ -76,6 +76,9 @@ def _session(tmp_path: Path, reports: list[dict], *, extra_refs: list[dict] | No
             "selected_checkouts": {"mncs-environment": {"path": str(checkout)}},
         },
         campaign_state=lambda **_kwargs: state,
+        recent_events=lambda *, limit: {
+            "event_count": 0, "events": [], "truncated": False,
+        },
     )
     return session, state
 
@@ -163,10 +166,168 @@ def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_
     assert result["observations"][0]["supporting_sources"][0]["status"] == "captured-in-observation-record"
 
 
+def test_project_correlates_recent_capability_events_without_exposing_arguments(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_activity_observation",
+        "ses_compiler_activity",
+        "cmp_compiler_activity",
+    )
+    session, _ = _session(tmp_path, [record])
+    request_id = "req_compiler_activity"
+    events = [
+        {
+            "identity": "evt_capability_invoked_1", "sequence": 11,
+            "type": "capability.invoked", "producer": "local-agent",
+            "observed_at": "2026-10-24T01:00:00Z",
+            "payload": {
+                "capability": "mncs-compiler:build",
+                "provider_request_id": request_id,
+                "argv": ["build", "private-source-path"],
+            },
+        },
+        {
+            "identity": "evt_invocation_completed_1", "sequence": 12,
+            "type": "invocation.completed", "producer": "mncs-compiler",
+            "observed_at": "2026-10-24T01:00:02Z",
+            "payload": {
+                "capability": "mncs-compiler:build", "status": "failed",
+                "returncode": 2, "provider_request_id": request_id,
+            },
+        },
+        {
+            "identity": "evt_capability_invoked_2", "sequence": 13,
+            "type": "capability.invoked", "producer": "local-agent",
+            "observed_at": "2026-10-24T01:01:00Z",
+            "payload": {
+                "capability": "mncs-compiler:build",
+                "provider_request_id": "req_compiler_activity_pending",
+                "argv": ["build", "private-source-path"],
+            },
+        },
+    ]
+    session.recent_events = lambda *, limit: {
+        "event_count": len(events), "events": events[-limit:], "truncated": False,
+    }
+
+    result = capability_intelligence.project(session)
+
+    activity = result["session_activity"]
+    assert activity["status"] == "ready"
+    assert activity["context"]["campaign_id"] == "cmp_projection_reader"
+    assert activity["context"]["work_intent_goal"] == "inspect current pressures"
+    assert activity["context"]["environment_id"] == "renv_projection_reader"
+    assert activity["source"]["invocation_events_considered"] == 2
+    assert activity["interaction_count"] == 2
+    latest, prior = activity["interactions"]
+    assert latest["correlation_status"] == "completion-not-recorded-in-window"
+    assert latest["completion_event"] is None
+    assert prior["correlation_status"] == "matched-by-provider-request-id"
+    assert prior["outcome_status"] == "failed"
+    assert prior["returncode"] == 2
+    assert prior["invocation_event"]["identity"] == "evt_capability_invoked_1"
+    assert prior["completion_event"]["identity"] == "evt_invocation_completed_1"
+    assert activity["capabilities"] == [{
+        "capability": "mncs-compiler:build",
+        "invocation_count": 2,
+        "completion_count": 1,
+        "outcome_status_counts": {"failed": 1},
+    }]
+    assert "private-source-path" not in json.dumps(activity)
+    assert any("token usage" in item for item in activity["measurement_limits"])
+
+
+def test_session_activity_discloses_bounded_event_and_interaction_windows(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_activity_window_observation",
+        "ses_compiler_activity_window",
+        "cmp_compiler_activity_window",
+    )
+    session, _ = _session(tmp_path, [record])
+    events = []
+    for index in range(capability_intelligence.MAX_SESSION_ACTIVITY_INTERACTIONS + 4):
+        request_id = f"req_activity_{index}"
+        events.extend((
+            {
+                "identity": f"evt_activity_invoke_{index}",
+                "sequence": index * 2 + 1, "type": "capability.invoked",
+                "payload": {"capability": "mncs-test:run",
+                            "provider_request_id": request_id},
+            },
+            {
+                "identity": f"evt_activity_complete_{index}",
+                "sequence": index * 2 + 2, "type": "invocation.completed",
+                "payload": {"capability": "mncs-test:run", "status": "ok",
+                            "returncode": 0, "provider_request_id": request_id},
+            },
+        ))
+    requested_limits = []
+
+    def recent_events(*, limit):
+        requested_limits.append(limit)
+        return {
+            "event_count": len(events), "events": events[-limit:],
+            "truncated": len(events) > limit,
+        }
+
+    session.recent_events = recent_events
+
+    result = capability_intelligence.project(session)
+
+    activity = result["session_activity"]
+    assert requested_limits == [capability_intelligence.MAX_SESSION_EVENT_WINDOW]
+    assert activity["status"] == "partial"
+    assert activity["interaction_count"] == capability_intelligence.MAX_SESSION_ACTIVITY_INTERACTIONS
+    assert activity["source"]["invocation_records_omitted"] == 4
+    assert activity["interactions"][0]["invocation_event"]["sequence"] == len(events) - 1
+
+
+def test_session_activity_does_not_infer_absence_from_a_truncated_event_tail(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_activity_truncated_observation",
+        "ses_compiler_activity_truncated",
+        "cmp_compiler_activity_truncated",
+    )
+    session, _ = _session(tmp_path, [record])
+    session.recent_events = lambda *, limit: {
+        "event_count": limit + 1,
+        "events": [
+            {"identity": f"evt_{index}", "sequence": index + 1,
+             "type": "session.checkpointed", "payload": {}}
+            for index in range(limit)
+        ],
+        "truncated": True,
+    }
+
+    result = capability_intelligence.project(session)
+
+    activity = result["session_activity"]
+    assert activity["status"] == "partial-no-invocations-in-selected-window"
+    assert activity["source"]["event_window_truncated"] is True
+    assert activity["source"]["event_window_sequence_start"] == 1
+    assert activity["source"]["event_window_sequence_end"] == 256
+    assert activity["source"]["event_window_identity_digest"]
+    assert activity["source"]["event_type_counts"] == {"session.checkpointed": 256}
+
+
 def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_page", "ses_compiler", "cmp_compiler")
     record["observation"]["outcome"]["bounded_context"] = "x" * 8_000
     session, state = _session(tmp_path, [record])
+    activity_event = {
+        "identity": "evt_activity_compaction", "sequence": 2,
+        "type": "capability.invoked", "producer": "local-agent",
+        "payload": {"capability": "mncs-test:run",
+                    "provider_request_id": "req_activity_compaction"},
+    }
+    session.recent_events = lambda *, limit: {
+        "event_count": 2, "events": [activity_event], "truncated": False,
+    }
     state.update({
         "evidence_offset": 16,
         "evidence_limit": 8,
@@ -201,6 +362,9 @@ def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path
     assert compact_hypothesis["evidence_references"] == [expected_reference]
     assert compact_hypothesis["evidence_reference_count"] == 1
     assert compact_hypothesis["evidence_references_truncated"] is False
+    assert compact["session_activity"]["interactions"][0]["invocation_event"]["identity"] == (
+        "evt_activity_compaction"
+    )
 
 
 def test_project_does_not_read_a_supporting_repo_outside_selected_session(tmp_path: Path) -> None:
