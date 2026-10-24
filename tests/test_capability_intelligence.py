@@ -402,6 +402,12 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert activity["source"]["rpc_operation_capture_count"] == 3
     assert activity["source"]["rpc_operation_capture_limit"] == 128
     assert activity["source"]["rpc_operation_records_invalid"] == 1
+    assert activity["source"]["rpc_operation_context_basis"] == {
+        "repository_identity": "control-project-grant",
+        "repository_branch_and_head": "session-selected-checkout",
+        "environment_campaign_and_work_intent": "session-snapshot",
+        "live_repository_probe": False,
+    }
     assert activity["rpc_operation_count"] == 3
     assert activity["rpc_operations"][0]["event_reference"]["identity"] == (
         "evt_rpc_read_23"
@@ -438,6 +444,9 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     compact_activity = compact["session_activity"]
     assert compact_activity["rpc_operations"][0]["event_reference"]["identity"] == (
         "evt_rpc_read_23"
+    )
+    assert compact_activity["source"]["rpc_operation_context_basis"] == (
+        "grant+session-snapshot; branch/head not live-probed"
     )
     assert compact_activity["rpc_failure_candidates"][0]["supporting_events"][0][
         "identity"

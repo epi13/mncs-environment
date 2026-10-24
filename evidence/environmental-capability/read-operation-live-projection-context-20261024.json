@@ -1,0 +1,131 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_read_operation_live_projection_context_20261024",
+  "captured_at": "2026-10-24T12:27:19Z",
+  "measurement_basis": "authenticated-control-rpc-events-read-from-canonical-session-store",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "environment_id": "renv_1991cffb20bdf206",
+    "observation_source_campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "observation_source_session_id": "ses_c38b0ab35b9418ba",
+    "observation_source_environment_id": "renv_4844ecc725485390"
+  },
+  "observation": {
+    "kind": "authenticated-read-operation-live-projection",
+    "source_interface": "mncs-env campaign-state with environmental_capability projection",
+    "projection_commit": "021cd698aee7371f91006de1e8e218aba7a67086",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "evidence_limit": 2
+    },
+    "campaign_state": {
+      "checkpoint_id": "chk_e9239d14d8390be5",
+      "campaign_evidence_count": 130
+    },
+    "projection_summary": {
+      "status": "partial",
+      "session_activity_status": "no-capability-invocations-in-session-history",
+      "activity_interpretation": "No Environment capability invocations appeared in the selected session history; two read-only RPC events were separately projected.",
+      "rpc_operation_event_count": 2,
+      "rpc_operation_records_returned": 2,
+      "rpc_operation_capture_count": 2,
+      "rpc_failure_candidate_count": 0
+    },
+    "source_session_context": {
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "work_intent_id": "int_8475157f281c835f",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "environment_id": "renv_4844ecc725485390",
+      "repository": "mncs-environment",
+      "repository_branch": "campaign/scoped-merge-publish-authority-20261020",
+      "repository_head": "c8f35ee128b689907b3a413e6b723e82d9b9b7b9",
+      "repository_context_basis": "authenticated session-selected checkout snapshot; no per-operation Git probe"
+    },
+    "operations": [
+      {
+        "event_identity": "evt_4cad6a53eb1072a9",
+        "event_sequence": 92,
+        "observed_at": "2026-10-24T12:07:05+00:00",
+        "operation": "campaign.state",
+        "outcome_status": "succeeded",
+        "exit_code": 0,
+        "control_dispatch_elapsed_ms": 7967.962752998574
+      },
+      {
+        "event_identity": "evt_f83d631462fc7f6d",
+        "event_sequence": 93,
+        "observed_at": "2026-10-24T12:07:55+00:00",
+        "operation": "campaign.continuation",
+        "outcome_status": "succeeded",
+        "exit_code": 0,
+        "control_dispatch_elapsed_ms": 14902.454529001261
+      }
+    ],
+    "measurement_availability": {
+      "model_identity": "unavailable",
+      "token_usage": "unavailable",
+      "control_dispatch_elapsed_ms": "measured",
+      "resource_consumption": "unavailable",
+      "cache_accounting": "unavailable",
+      "repository_head_live_probe": "not-performed"
+    },
+    "redaction": "The projection returned operation identity, outcome, context and measurements without request arguments or response bodies."
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_rpc_repository_context_basis_20261024",
+    "title": "Capability projections do not label whether repository version context is live or session-selected",
+    "category": "environmental-observability",
+    "subsystem": "Control read-operation capture and Environment capability projection",
+    "recurrence": "not-established",
+    "basis": "Two authentic successful read-operation events include repository branch and head from the authenticated session-selected checkout. The projection preserved these values but did not expose their source or say that no live Git probe occurred.",
+    "actionable_recommendation": "Expose the provenance basis for repository and session context in the projection, and state explicitly when current repository state was not probed.",
+    "causal_claim": "not-established",
+    "interpretation_limit": "The two dispatch durations are measurements from different read operations in one session. They do not establish latency pressure, a recurring failure, or a relationship between duration and development outcome."
+  },
+  "improvement_relation": {
+    "identity": "im_environment_rpc_repository_context_basis_20261024",
+    "addresses_hypothesis_identity": "ph_environment_rpc_repository_context_basis_20261024",
+    "implementation_status_at_capture": "not-yet-implemented",
+    "effectiveness_assessment": "not-assessed"
+  },
+  "supporting_sources": [
+    {
+      "kind": "canonical-session-event-reference",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "event_identity": "evt_4cad6a53eb1072a9",
+      "event_sequence": 92
+    },
+    {
+      "kind": "canonical-session-event-reference",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "event_identity": "evt_f83d631462fc7f6d",
+      "event_sequence": 93
+    },
+    {
+      "kind": "committed-control-event-producer",
+      "repository": "mncs-control-mcp",
+      "commit": "325e3df138ea890e73750e2dbef03c0be22c324e",
+      "path": "src/mncs_control_mcp/environment_sessions.py"
+    },
+    {
+      "kind": "committed-environment-projection",
+      "repository": "mncs-environment",
+      "commit": "021cd698aee7371f91006de1e8e218aba7a67086",
+      "path": "mncs_env/capability_intelligence.py"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence of repository-context ambiguity",
+    "whether either dispatch duration constrained the development objective",
+    "live Git branch or head at each recorded operation",
+    "model identity, token usage, cache accounting, resource consumption, and total agent execution duration",
+    "subsequent agent behavior after the context-basis projection improvement"
+  ]
+}

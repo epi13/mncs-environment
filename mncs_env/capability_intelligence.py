@@ -473,6 +473,11 @@ def _compact_projection(
             )
             if key in activity_source
         })
+    rpc_context_basis = activity_source.get("rpc_operation_context_basis")
+    if isinstance(rpc_context_basis, dict):
+        compact_activity_source["rpc_operation_context_basis"] = (
+            "grant+session-snapshot; branch/head not live-probed"
+        )
     if activity_source.get("rpc_operation_records_omitted", 0):
         compact_activity_source["rpc_operation_records_omitted"] = (
             activity_source["rpc_operation_records_omitted"]
@@ -1165,6 +1170,10 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
     limits = [
         "Capability interactions cover Environment-bound invocations; direct external tools are outside this session event view.",
         "Control read-operation events contain bounded operation and outcome fields, never raw arguments or responses.",
+        (
+            "Control read-operation repository branch/head fields come from the authenticated "
+            "session-selected checkout; this projection does not re-probe Git at each operation."
+        ),
         "Model identity, token usage, execution duration, and resource consumption are not inferred when the runtime does not expose them.",
         "The Store tail reader verifies only selected event payloads; finding their bindings still scans the generation's metadata index.",
     ]
@@ -1545,6 +1554,12 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
                 snapshot.get("rpc_read_activity_limit_reached") is True
             ),
             "rpc_operation_selection_policy": "newest-authenticated-read-operations-in-selected-event-window",
+            "rpc_operation_context_basis": {
+                "repository_identity": "control-project-grant",
+                "repository_branch_and_head": "session-selected-checkout",
+                "environment_campaign_and_work_intent": "session-snapshot",
+                "live_repository_probe": False,
+            },
         },
         "interaction_count": len(interactions),
         "completion_count": sum(
