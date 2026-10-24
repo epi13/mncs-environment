@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_project_continuation_conflict_20261024",
+  "captured_at": "2026-10-24T06:50:00Z",
+  "observation": {
+    "kind": "project-campaign-state-read",
+    "source_interface": "mncs_environment MCP",
+    "request": {
+      "project": "mncs-compiler",
+      "cwd": ".worktrees/native-app-readiness-20261013/mncs-compiler",
+      "operation": "campaign_state",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637"
+    },
+    "outcome": {
+      "status": "blocked",
+      "code": "ENVIRONMENT_SESSION_SELECTION_REQUIRED",
+      "selection_status": "context-conflict",
+      "campaigns_count": 1,
+      "continuations_count": 3,
+      "continuation_session_ids": [
+        "ses_164edc158d9b1637",
+        "ses_6877f1f945402b73",
+        "ses_906c0b19c06e50ae"
+      ]
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "lifecycle": "active",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693,
+    "claim_ids": [
+      "claim:mncs-compiler:worktree:238af39c1c65",
+      "claim:mncs-compiler:worktree:5fa38ecf09fb"
+    ],
+    "remaining": [
+      "Run digest_app through Forge and canonical Store with the authorized bounded capability path and negative cases.",
+      "Advance a retained-session native Test workflow and one practical compiler self-consumption frontier.",
+      "Continue Language and Compiler incremental verification across nominal, generic, effect, capability, and verifier-policy changes."
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_project_session_selection",
+    "title": "A known campaign session cannot be selected when project continuations conflict",
+    "category": "coordination-continuity",
+    "subsystem": "mncs-control-mcp project continuation selection",
+    "owner": "mncs-control-mcp",
+    "basis": "one live read reproduction plus the selected-session adapter contract",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Provide an exact-session continuation selector for a caller that already knows the session identity. Control must still validate the authenticated principal, campaign, Environment definition, workspace, checkout identity, lifecycle, and claim authority before selecting it.",
+    "not_measured": [
+      "historical frequency of this conflict",
+      "time or token cost of the failed read",
+      "whether each lifecycle-active candidate still has a live agent process",
+      "why the duplicate continuations were created"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": null,
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637",
+      "measured_fields": [
+        "code",
+        "selection_status",
+        "campaigns_count",
+        "continuations_count",
+        "continuation_session_ids"
+      ]
+    },
+    {
+      "kind": "adapter-contract-source",
+      "repository": "mncs-control-mcp",
+      "commit": "6eb9ae78f96a714fe50610fcc38d8358cb3329f2",
+      "path": "src/mncs_control_mcp/local_environment_mcp.py",
+      "sha256": "8026b4ae10c0cde3ca9a53c34609b236ed87bd6b2d8cce43be5d4fa9ba05d764",
+      "observed_contract": "session_id must already equal context.selected_session_id; project continuation selectors contain campaign_id and task_identity only"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  }
+}
