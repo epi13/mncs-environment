@@ -196,6 +196,41 @@ def test_malformed_observation_without_work_correlation_is_not_actionable(tmp_pa
     assert result["source"]["observation_records_unavailable"] == 1
 
 
+def test_resource_observation_can_be_projected_without_inventing_a_pressure(tmp_path: Path) -> None:
+    record = _observation("ev_environment_resource_sample", "ses_environment", "cmp_environment")
+    record.pop("pressure_hypothesis")
+    record["measurement_basis"] = "direct-resource-observation"
+    record["observation"] = {
+        "kind": "resource-headroom-snapshot",
+        "source_interface": "mncs-env resources",
+        "request": {"command": "resources", "scope": "caller-ancestry"},
+        "outcome": {
+            "schema_version": "mncs.environment.resource-observation/1",
+            "observed_at": "2026-10-24T07:41:17.239289+00:00",
+            "system": {"memory_available_bytes": 27491688448},
+            "session_process_mapping": "not-asserted",
+        },
+    }
+    record["related_work"].update({
+        "campaign_objective": "MNCS Environmental Capability Intelligence",
+        "environment_version": "092460a44be8547d2472a9f163c69ff3346e80fa",
+    })
+    record["not_measured"] = ["mapping of sampled processes to this Environment session"]
+    session, _ = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 1
+    assert result["pressure_hypothesis_count"] == 0
+    assert result["observations"][0]["measurement_basis"] == "direct-resource-observation"
+    assert result["observations"][0]["related_work"]["environment_version"] == "092460a44be8547d2472a9f163c69ff3346e80fa"
+    assert result["observations"][0]["pressure_hypothesis"] is None
+    assert result["observations"][0]["measurement_limits"] == [
+        "mapping of sampled processes to this Environment session"
+    ]
+
+
 def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_large", "ses_compiler", "cmp_compiler")
     record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000

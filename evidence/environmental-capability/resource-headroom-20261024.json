@@ -1,0 +1,92 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_resource_headroom_20261024",
+  "captured_at": "2026-10-24T07:41:17.239289+00:00",
+  "measurement_basis": "direct-resource-observation",
+  "observation": {
+    "kind": "resource-headroom-snapshot",
+    "source_interface": "mncs-env resources",
+    "request": {
+      "command": "python3 scripts/mncs-env resources",
+      "scope": "caller-ancestry"
+    },
+    "outcome": {
+      "schema_version": "mncs.environment.resource-observation/1",
+      "observation": "live",
+      "observed_at": "2026-10-24T07:41:17.239289+00:00",
+      "scope": "caller-ancestry",
+      "ancestry_truncated": false,
+      "process_limit": 8,
+      "process_observations": {
+        "returned_count": 4,
+        "status_counts": {
+          "observed": 3,
+          "unknown": 1
+        },
+        "sampler_process": {
+          "name": "python3",
+          "status": "observed",
+          "fd_count": 4,
+          "fd_limit_soft": 524288,
+          "fd_limit_hard": 524288,
+          "fd_headroom": 524284,
+          "rss_bytes": 28852224,
+          "rss_hwm_bytes": 28852224
+        }
+      },
+      "system": {
+        "status": "observed",
+        "memory_available_bytes": 27491688448,
+        "memory_total_bytes": 33411571712,
+        "file_handles_allocated": 17037,
+        "file_handles_max": 9223372036854775807,
+        "file_handles_unused": 0
+      },
+      "session_process_mapping": "not-asserted"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_version": "092460a44be8547d2472a9f163c69ff3346e80fa",
+    "lifecycle": "active",
+    "latest_checkpoint": {
+      "identity": "chk_7b52e0bed67d6789",
+      "sequence": 5
+    },
+    "campaign_evidence_count": 2,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "not_measured": [
+    "mapping of sampled processes to this Environment session",
+    "token and cache usage",
+    "resource use attributable to the Compiler campaign",
+    "Btrfs data and metadata allocation, which this command does not query"
+  ],
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "measured_fields": [
+        "observed_at",
+        "scope",
+        "process_observations",
+        "system",
+        "session_process_mapping"
+      ]
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  }
+}

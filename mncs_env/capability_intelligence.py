@@ -157,7 +157,8 @@ def _compact_projection(
                 summary[key] = hypothesis[key]
         summary["evidence_observation_identities"] = [
             item["identity"] for item in observations
-            if item.get("pressure_hypothesis", {}).get("identity") == hypothesis.get("identity")
+            if isinstance(item.get("pressure_hypothesis"), dict)
+            and item["pressure_hypothesis"].get("identity") == hypothesis.get("identity")
         ][:8]
         compact_hypotheses.append(summary)
 
@@ -169,8 +170,12 @@ def _compact_projection(
         ).encode("utf-8")
         work = item.get("related_work") or {}
         compact_work = {
-            key: _short_text(work.get(key), 256 if key == "work_intent_goal" else 160)
-            for key in ("campaign_id", "session_id", "work_intent_id", "work_intent_goal", "lifecycle")
+            key: _short_text(
+                work.get(key), 256 if key in ("work_intent_goal", "campaign_objective") else 160,
+            )
+            for key in ("campaign_id", "session_id", "work_intent_id", "work_intent_goal",
+                        "campaign_objective", "environment_id", "definition_id",
+                        "environment_version", "lifecycle")
             if work.get(key) is not None
         }
         checkpoint = work.get("latest_checkpoint")
@@ -186,16 +191,19 @@ def _compact_projection(
                 _short_text(value, 160) for value in work["claim_ids"][:4]
                 if isinstance(value, str)
             ]
-        hypothesis = item.get("pressure_hypothesis") or {}
-        compact_hypothesis = {
-            key: _short_text(hypothesis.get(key), 256 if key == "title" else 160)
-            for key in ("identity", "title", "category", "subsystem", "owner")
-            if hypothesis.get(key) is not None
-        }
+        hypothesis = item.get("pressure_hypothesis")
+        compact_hypothesis = None
+        if isinstance(hypothesis, dict):
+            compact_hypothesis = {
+                key: _short_text(hypothesis.get(key), 256 if key == "title" else 160)
+                for key in ("identity", "title", "category", "subsystem", "owner")
+                if hypothesis.get(key) is not None
+            }
+        measurement_limits = item.get("measurement_limits")
         compact_observations.append({
             "identity": item["identity"],
             "captured_at": _short_text(item.get("captured_at"), 80),
-            "measurement_basis": "recorded operational response; payload summarized",
+            "measurement_basis": _short_text(item.get("measurement_basis"), 128),
             "observation": {
                 "kind": _short_text(observation.get("kind"), 128),
                 "source_interface": _short_text(observation.get("source_interface"), 128),
@@ -204,6 +212,10 @@ def _compact_projection(
             },
             "related_work": compact_work,
             "pressure_hypothesis": compact_hypothesis,
+            "measurement_limits": [
+                _short_text(value, 192) for value in measurement_limits[:8]
+                if isinstance(value, str)
+            ] if isinstance(measurement_limits, list) else [],
             "evidence_reference": item["evidence_reference"],
         })
 
@@ -312,10 +324,13 @@ def _load_observation(
             or not isinstance(related_work, dict)
             or any(not isinstance(related_work.get(key), str) or not related_work[key]
                    for key in ("campaign_id", "session_id", "work_intent_id", "work_intent_goal"))
-            or not isinstance(hypothesis, dict)
-            or any(not isinstance(hypothesis.get(key), str) or not hypothesis[key]
-                   for key in ("identity", "title", "category", "subsystem", "owner",
-                               "actionable_recommendation"))):
+            or (hypothesis is not None and not isinstance(hypothesis, dict))):
+        return None, "observation-contract-invalid"
+    if isinstance(hypothesis, dict) and any(
+        not isinstance(hypothesis.get(key), str) or not hypothesis[key]
+        for key in ("identity", "title", "category", "subsystem", "owner",
+                    "actionable_recommendation")
+    ):
         return None, "observation-contract-invalid"
     return record, "verified"
 
@@ -348,6 +363,8 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for observation in observations:
         hypothesis = observation["pressure_hypothesis"]
+        if not isinstance(hypothesis, dict):
+            continue
         identity = hypothesis.get("identity")
         if isinstance(identity, str) and identity:
             grouped.setdefault(identity, []).append(observation)
@@ -457,13 +474,14 @@ def project(
         observation = record["observation"]
         work = record.get("related_work")
         work = work if isinstance(work, dict) else {}
-        hypothesis = record["pressure_hypothesis"]
+        hypothesis = record.get("pressure_hypothesis")
+        hypothesis = hypothesis if isinstance(hypothesis, dict) else None
         sources = record.get("supporting_sources")
         sources = sources if isinstance(sources, list) else []
         observations.append({
             "identity": record["identity"],
             "captured_at": record.get("captured_at"),
-            "measurement_basis": "recorded operational response",
+            "measurement_basis": record.get("measurement_basis", "recorded operational response"),
             "observation": {
                 "kind": observation.get("kind"),
                 "source_interface": observation.get("source_interface"),
@@ -473,21 +491,26 @@ def project(
             "related_work": {
                 key: work.get(key)
                 for key in ("campaign_id", "session_id", "work_intent_id",
-                            "work_intent_goal", "lifecycle", "latest_checkpoint",
+                            "work_intent_goal", "campaign_objective", "environment_id",
+                            "definition_id", "environment_version", "lifecycle", "latest_checkpoint",
                             "campaign_evidence_count", "claim_ids")
                 if work.get(key) is not None
             },
-            "pressure_hypothesis": {
+            "pressure_hypothesis": ({
                 key: hypothesis.get(key)
                 for key in ("identity", "title", "category", "subsystem", "owner",
                             "basis", "recurrence", "actionable_recommendation",
                             "not_measured")
                 if hypothesis.get(key) is not None
-            },
+            } if hypothesis is not None else None),
             "supporting_sources": [
                 _source_status(source, references)
                 for source in sources[:16]
             ],
+            "measurement_limits": [
+                value[:512] for value in record.get("not_measured", [])[:16]
+                if isinstance(value, str)
+            ] if isinstance(record.get("not_measured"), list) else [],
             "evidence_reference": {
                 key: reference[key]
                 for key in ("identity", "repository", "commit", "path", "sha256")
