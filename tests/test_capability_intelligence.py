@@ -129,6 +129,41 @@ def _add_compiler_regression_evidence(
     return reference
 
 
+def _add_compiler_dependency_summary_evidence(
+    session, state: dict, report: dict,
+) -> dict[str, str]:
+    root = Path(session.snapshot["workspace"]["root"])
+    checkout = root / "mncs-compiler"
+    if not checkout.exists():
+        checkout.mkdir()
+        _git(checkout, "init", "--quiet")
+        _git(checkout, "config", "user.name", "test")
+        _git(checkout, "config", "user.email", "test@example.invalid")
+    relative = (
+        "evidence/language-verification-dependency-summary-cache-"
+        "20261023T064052.991817Z.json"
+    )
+    path = checkout / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = json.dumps(report, sort_keys=True, separators=(",", ":")).encode()
+    path.write_bytes(raw)
+    _git(checkout, "add", relative)
+    _git(checkout, "commit", "--quiet", "-m", "compiler dependency summary evidence")
+    reference = {
+        "identity": "ev_compiler_language_fact_reuse_workload_20261023",
+        "repository": "mncs-compiler",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+    session.snapshot["selected_checkouts"]["mncs-compiler"] = {
+        "path": str(checkout),
+    }
+    state["evidence"].append(reference)
+    state["evidence_count"] = len(state["evidence"])
+    return reference
+
+
 def _add_compiler_source_context(
     session, state: dict, source_reference: dict[str, str], *,
     identity: str = "ev_environment_compiler_source_context",
@@ -1537,6 +1572,178 @@ def test_compiler_interface_regression_projects_interface_application_stages(
     assert observation["observation"]["outcome"][
         "effect_capability_invalidation_measurement"
     ] == "not-recorded-in-source-schema/1"
+
+
+def test_compiler_language_dependency_summary_workload_is_projected_separately(
+    tmp_path: Path,
+) -> None:
+    cache = {
+        "status": "observed",
+        "observation": {
+            "evicted_entry_count": 1,
+            "recomputed_function_subjects": ["tests.native_readiness::idle"],
+            "reused_function_subjects": ["mncs.dependency_cache::imported_idle"],
+            "fact_seeded_function_subjects": [],
+        },
+    }
+    verification = {
+        "front_end_outcome": "verified",
+        "function_body_verification": "recomputed_with_language_fact_reuse",
+        "backend_artifact": "reused",
+        "artifact_decision_reason": "executable_closure_and_interfaces_match_after_full_frontend",
+        "front_end_invocations": 1,
+        "recomputed_semantic_facts": ["tests.native_readiness::idle"],
+        "reused_semantic_facts": ["mncs.dependency_cache::imported_idle"],
+        "verification_dependency_summary_cache": cache,
+    }
+    stages = {
+        "cold": {
+            "cache_status": "miss",
+            "execution": {"canonical_vm_output": [5], "stage0_output": [5]},
+            "build_metrics": {"wall_seconds": 0.149464, "peak_rss_bytes": 61005824},
+            "verification_work": verification,
+        },
+        "comment_edit": {
+            "cache_status": "hit",
+            "execution": {"canonical_vm_output": [5], "stage0_output": [5]},
+            "build_metrics": {"wall_seconds": 0.04831},
+            "verification_work": verification,
+        },
+        "environment_provider_request_12": {
+            "cache_status": "miss",
+            "response_schema": "mncs.compiler.application-build/15",
+            "provider_metrics": {"wall_seconds": 0.344613, "peak_process_count": 2},
+        },
+        "fresh_process_comment_edit": {
+            "cache_status": "hit",
+            "execution": {"canonical_vm_output": [8], "stage0_output": [8]},
+            "readiness_metrics": {"wall_seconds": 0.135638},
+            "verification_work": verification,
+        },
+        "invalid_source": {
+            "status": "rejected",
+            "artifact_published": False,
+            "diagnostic_count": 1,
+            "build_metrics": {"wall_seconds": 0.002402},
+        },
+        "reachable_imported_body_edit": {
+            "cache_status": "miss",
+            "execution": {"canonical_vm_output": [8], "stage0_output": [8]},
+            "build_metrics": {"wall_seconds": 0.070622},
+            "verification_work": verification,
+        },
+        "unchanged": {
+            "cache_status": "hit",
+            "build_metrics": {"wall_seconds": 0.001143},
+            "verification_work": {"front_end_invocations": 0},
+        },
+        "unreachable_body_edit": {
+            "cache_status": "hit",
+            "execution": {"canonical_vm_output": [5], "stage0_output": [5]},
+            "build_metrics": {"wall_seconds": 0.07842},
+            "verification_work": verification,
+        },
+    }
+    report = {
+        "schema_version": capability_intelligence.COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_SCHEMA,
+        "compiler_revision_before_test": "a" * 40,
+        "language_locked_revision": "b" * 40,
+        "language_source_profile": "0.18",
+        "language_cache_scope": "bounded process-local structural summaries; not verification evidence",
+        "language_dependency_summaries_actually_reused": 13,
+        "language_verified_facts_reused": 12,
+        "fresh_process_verified_facts_reused": 3,
+        "fresh_process_fact_seeded_dependency_summaries": 3,
+        "invalid_source_reused_previous_success": False,
+        "execution_matches_stage0": True,
+        "request_schema": "mncs.compiler.application-build-request/12",
+        "response_schema": "mncs.compiler.application-build/15",
+        "verification_work_schema": "mncs.compiler.application-build-verification-work/11",
+        "language_cache_schema": "mncs.language-verification-dependency-summary-cache/2",
+        "language_cache_observation_schema": "mncs.language-verification-dependency-summary-cache-observation/2",
+        "language_cache_policy_identity": "mncs-language-verification-dependency-extractor/1",
+        "stages": stages,
+    }
+    session, state = _session(tmp_path, [])
+    reference = _add_compiler_dependency_summary_evidence(session, state, report)
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 1
+    observation = result["observations"][0]
+    assert observation["identity"] == reference["identity"]
+    assert observation["related_work"]["campaign_id"] == "cmp_projection_reader"
+    assert observation["observation"]["request"]["source_record_identity_basis"] == (
+        "authenticated-campaign-evidence-pointer;source-record-has-no-identity-field"
+    )
+    outcome = observation["observation"]["outcome"]
+    assert outcome["language_cache_scope"] == report["language_cache_scope"]
+    assert outcome["direct_measurements"][
+        "language_dependency_summaries_actually_reused"
+    ] == 13
+    assert outcome["direct_measurements"]["language_verified_facts_reused"] == 12
+    assert outcome["direct_measurements"]["fresh_process_verified_facts_reused"] == 3
+    assert outcome["measurement_summary"]["measurement_availability"][
+        "token_usage"
+    ] == "not-recorded-in-source"
+    stage_summaries = {item["name"]: item for item in outcome["stage_summaries"]}
+    assert stage_summaries["comment_edit"]["stage0_outputs_match"] is True
+    assert stage_summaries["fresh_process_comment_edit"]["verification_work"][
+        "dependency_summary_cache"
+    ]["evicted_entry_count"] == 1
+    assert stage_summaries["invalid_source"]["artifact_published"] is False
+    assert observation["evidence_reference"] == reference
+
+
+def test_compiler_language_dependency_summary_requires_exact_source_schema(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema_version": "mncs.compiler.language-dependency-summary-cache-evidence/1",
+        "compiler_revision_before_test": "a" * 40,
+        "language_locked_revision": "b" * 40,
+        "language_cache_scope": "bounded process-local structural summaries",
+        "language_dependency_summaries_actually_reused": 0,
+        "language_verified_facts_reused": 0,
+        "fresh_process_verified_facts_reused": 0,
+        "fresh_process_fact_seeded_dependency_summaries": 0,
+        "invalid_source_reused_previous_success": False,
+        "execution_matches_stage0": True,
+        "stages": {
+            name: {"cache_status": "miss"}
+            for name in capability_intelligence.COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_STAGES
+        },
+    }
+    session, state = _session(tmp_path, [])
+    _add_compiler_dependency_summary_evidence(session, state, report)
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["source"]["observation_reference_diagnostics"][0]["verification"] == (
+        "observation-contract-invalid"
+    )
+
+
+def test_compiler_language_dependency_summary_rejects_internal_identity_mismatch(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema_version": capability_intelligence.COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_SCHEMA,
+        "identity": "ev_compiler_language_fact_reuse_workload_wrong_source",
+    }
+    session, state = _session(tmp_path, [])
+    _add_compiler_dependency_summary_evidence(session, state, report)
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["source"]["observation_reference_diagnostics"][0]["verification"] == (
+        "observation-identity-mismatch"
+    )
 
 
 def test_compiler_source_context_is_correlated_only_through_verified_pointer(

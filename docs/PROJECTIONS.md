@@ -212,6 +212,22 @@ preserves source-work attribution without treating the reading agent's session
 as the origin of historical Compiler measurements. Other Compiler evidence
 remains available through the normal campaign evidence page until a bounded
 adapter is justified for its schema.
+
+The projection also adapts the exact Compiler
+`mncs.compiler.language-dependency-summary-cache-evidence/2` workload at
+`evidence/language-verification-dependency-summary-cache-*.json` when its
+campaign identity starts with
+`ev_compiler_language_fact_reuse_workload_`. That source schema has no internal
+identity field, so the adapter uses the authenticated campaign pointer identity
+and still requires the selected Compiler checkout, exact commit, path, and
+SHA-256. If a source record supplies an internal identity, it must match the
+pointer. The projection keeps reported structural dependency-summary reuse
+separate from reported Language verification-fact reuse, retains bounded
+per-stage cache and build details, and derives output-match counts only from
+recorded Stage-0 and VM outputs. The source explicitly describes dependency
+summaries as process-local structural summaries rather than verification
+evidence. Model identity, token use, and source capture time are unavailable;
+build and provider metrics remain scoped to their individual requests.
 For a supporting source with no exact pointer match in the selected campaign
 evidence pages, `status` is
 `not-present-in-selected-campaign-evidence-window` and

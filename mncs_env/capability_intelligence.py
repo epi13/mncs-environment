@@ -70,6 +70,20 @@ COMPILER_CACHE_REGRESSION_REFERENCE_FAMILIES = (
         ),
     ),
 )
+COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_SCHEMA = (
+    "mncs.compiler.language-dependency-summary-cache-evidence/2"
+)
+COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_IDENTITY_PREFIX = (
+    "ev_compiler_language_fact_reuse_workload_"
+)
+COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_PATH_PREFIX = (
+    "evidence/language-verification-dependency-summary-cache-"
+)
+COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_STAGES = (
+    "cold", "comment_edit", "environment_provider_request_12",
+    "fresh_process_comment_edit", "invalid_source",
+    "reachable_imported_body_edit", "unchanged", "unreachable_body_edit",
+)
 MAX_EVIDENCE_REFS = 32
 MAX_EVIDENCE_HISTORY_PAGES = 4
 MAX_OBSERVATIONS = 16
@@ -1272,11 +1286,27 @@ def _is_compiler_regression_reference(reference: dict[str, str]) -> bool:
     return _compiler_regression_reference_family(reference) is not None
 
 
+def _is_compiler_dependency_summary_reference(reference: dict[str, str]) -> bool:
+    return (
+        reference["repository"] == "mncs-compiler"
+        and reference["identity"].startswith(
+            COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_IDENTITY_PREFIX,
+        )
+        and reference["path"].startswith(
+            COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_PATH_PREFIX,
+        )
+        and reference["path"].endswith(".json")
+    )
+
+
 def _is_observation_reference(reference: dict[str, str]) -> bool:
     if (reference["identity"].startswith("ev_environment_")
             and reference["path"].startswith(OBSERVATION_PATH_PREFIX)):
         return True
-    return _is_compiler_regression_reference(reference)
+    return (
+        _is_compiler_regression_reference(reference)
+        or _is_compiler_dependency_summary_reference(reference)
+    )
 
 
 def _git_blob(
@@ -1467,6 +1497,260 @@ def _compiler_regression_observation(
     }
 
 
+def _compiler_dependency_summary_stage(
+    name: str, stage: Any,
+) -> dict[str, Any] | None:
+    if not isinstance(stage, dict):
+        return None
+    summary: dict[str, Any] = {"name": name}
+    cache_status = stage.get("cache_status")
+    if isinstance(cache_status, str) and cache_status:
+        summary["cache_status"] = cache_status[:64]
+    status = stage.get("status")
+    if isinstance(status, str) and status:
+        summary["status"] = status[:64]
+    artifact_published = stage.get("artifact_published")
+    if type(artifact_published) is bool:
+        summary["artifact_published"] = artifact_published
+    diagnostic_count = stage.get("diagnostic_count")
+    if type(diagnostic_count) is int and diagnostic_count >= 0:
+        summary["diagnostic_count"] = diagnostic_count
+
+    execution = stage.get("execution")
+    if isinstance(execution, dict):
+        canonical_output = execution.get("canonical_vm_output")
+        stage0_output = execution.get("stage0_output")
+        if isinstance(canonical_output, list) and isinstance(stage0_output, list):
+            summary["stage0_outputs_match"] = canonical_output == stage0_output
+
+    for metric_scope in ("build_metrics", "provider_metrics", "readiness_metrics"):
+        metrics = stage.get(metric_scope)
+        if not isinstance(metrics, dict):
+            continue
+        metric_summary: dict[str, int | float] = {}
+        for key in ("wall_seconds", "cpu_seconds"):
+            value = metrics.get(key)
+            if (type(value) in (int, float) and math.isfinite(value)
+                    and value >= 0):
+                metric_summary[key] = value
+        for key in (
+            "peak_rss_bytes", "peak_open_file_descriptors", "peak_threads",
+            "peak_child_processes", "peak_process_count",
+        ):
+            value = metrics.get(key)
+            if type(value) is int and value >= 0:
+                metric_summary[key] = value
+        if metric_summary:
+            summary[metric_scope] = metric_summary
+
+    verification = stage.get("verification_work")
+    if isinstance(verification, dict):
+        verification_summary: dict[str, Any] = {}
+        for key in (
+            "front_end_outcome", "function_body_verification",
+            "backend_artifact", "artifact_decision_reason",
+        ):
+            value = verification.get(key)
+            if isinstance(value, str) and value:
+                verification_summary[key] = value[:128]
+        front_end_invocations = verification.get("front_end_invocations")
+        if type(front_end_invocations) is int and front_end_invocations >= 0:
+            verification_summary["front_end_invocations"] = front_end_invocations
+        for source_key, summary_key in (
+            ("recomputed_semantic_facts", "recomputed_semantic_fact_count"),
+            ("reused_semantic_facts", "reused_semantic_fact_count"),
+        ):
+            facts = verification.get(source_key)
+            if isinstance(facts, list) and all(
+                isinstance(item, str) and item for item in facts[:256]
+            ):
+                verification_summary[summary_key] = min(len(facts), 256)
+
+        cache = verification.get("verification_dependency_summary_cache")
+        if isinstance(cache, dict):
+            cache_summary: dict[str, Any] = {}
+            cache_status = cache.get("status")
+            if isinstance(cache_status, str) and cache_status:
+                cache_summary["status"] = cache_status[:64]
+            cache_observation = cache.get("observation")
+            if isinstance(cache_observation, dict):
+                for key, summary_key in (
+                    ("recomputed_function_subjects", "recomputed_function_subject_count"),
+                    ("reused_function_subjects", "reused_function_subject_count"),
+                    ("fact_seeded_function_subjects", "fact_seeded_function_subject_count"),
+                ):
+                    items = cache_observation.get(key)
+                    if isinstance(items, list) and all(
+                        isinstance(item, str) and item for item in items[:256]
+                    ):
+                        cache_summary[summary_key] = min(len(items), 256)
+                evicted = cache_observation.get("evicted_entry_count")
+                if type(evicted) is int and evicted >= 0:
+                    cache_summary["evicted_entry_count"] = evicted
+            if cache_summary:
+                verification_summary["dependency_summary_cache"] = cache_summary
+        if verification_summary:
+            summary["verification_work"] = verification_summary
+    return summary if len(summary) > 1 else None
+
+
+def _compiler_dependency_summary_observation(
+    session: Any, reference: dict[str, str], source: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Adapt one exact Compiler language-fact cache workload into ECI context."""
+    if source.get("schema_version") != COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_SCHEMA:
+        return None
+    integer_fields = (
+        "language_dependency_summaries_actually_reused",
+        "language_verified_facts_reused",
+        "fresh_process_verified_facts_reused",
+        "fresh_process_fact_seeded_dependency_summaries",
+    )
+    direct: dict[str, int | bool] = {}
+    for key in integer_fields:
+        value = source.get(key)
+        if type(value) is not int or value < 0:
+            return None
+        direct[key] = value
+    for key in ("execution_matches_stage0", "invalid_source_reused_previous_success"):
+        value = source.get(key)
+        if type(value) is not bool:
+            return None
+        direct[key] = value
+    for key in ("compiler_revision_before_test", "language_locked_revision"):
+        value = source.get(key)
+        if not isinstance(value, str) or not _COMMIT.fullmatch(value):
+            return None
+    cache_scope = source.get("language_cache_scope")
+    stages = source.get("stages")
+    if (not isinstance(cache_scope, str) or not cache_scope
+            or not isinstance(stages, dict)
+            or any(name not in stages for name in COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_STAGES)):
+        return None
+
+    stage_summaries = []
+    stage_matches = 0
+    stage_matches_observed = 0
+    for name in COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_STAGES:
+        summary = _compiler_dependency_summary_stage(name, stages.get(name))
+        if summary is None:
+            return None
+        stage_summaries.append(summary)
+        matches = summary.get("stage0_outputs_match")
+        if type(matches) is bool:
+            stage_matches_observed += 1
+            stage_matches += int(matches)
+
+    derived: dict[str, int] = {
+        "stage_count": len(stage_summaries),
+        "stage0_output_match_count": stage_matches,
+        "stage0_output_comparison_count": stage_matches_observed,
+    }
+    request: dict[str, Any] = {
+        "source_schema_version": COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_SCHEMA,
+        "source_record_identity_basis": (
+            "authenticated-campaign-evidence-pointer;source-record-has-no-identity-field"
+        ),
+        "compiler_revision_before_test": source["compiler_revision_before_test"],
+        "language_locked_revision": source["language_locked_revision"],
+        "language_source_profile": source.get("language_source_profile"),
+        "request_schema": source.get("request_schema"),
+        "response_schema": source.get("response_schema"),
+        "verification_work_schema": source.get("verification_work_schema"),
+        "language_cache_schema": source.get("language_cache_schema"),
+        "language_cache_observation_schema": source.get(
+            "language_cache_observation_schema",
+        ),
+        "language_cache_policy_identity": source.get("language_cache_policy_identity"),
+        "stage_names": [item["name"] for item in stage_summaries],
+    }
+    request = {
+        key: (value[:160] if isinstance(value, str) else value)
+        for key, value in request.items()
+        if (key == "source_schema_version"
+            or key == "source_record_identity_basis"
+            or key == "stage_names"
+            or isinstance(value, str) and value)
+    }
+    measurement_summary = {
+        "direct_measurements": direct,
+        "derived_measurements": derived,
+        "measurement_availability": {
+            "model_identity": "not-recorded-in-source",
+            "token_usage": "not-recorded-in-source",
+            "source_capture_time": "unavailable-in-source-record",
+            "cgroup_peak_memory": "not-available-in-source-environment",
+            "resource_consumption": "per-build-and-provider-stage-metrics",
+            "cache_accounting": "separate-language-fact-and-structural-summary-counts",
+        },
+    }
+    snapshot = session.snapshot
+    campaign = snapshot.get("campaign")
+    campaign = campaign if isinstance(campaign, dict) else {}
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+    campaign_identity = campaign.get("identity")
+    session_identity = getattr(session, "session_id", None)
+    if (not isinstance(campaign_identity, str) or not campaign_identity
+            or not isinstance(session_identity, str) or not session_identity):
+        return None
+    related_work: dict[str, str] = {
+        "campaign_id": campaign_identity,
+        "session_id": session_identity,
+    }
+    for key, value in (
+        ("work_intent_id", intent.get("identity")),
+        ("work_intent_goal", intent.get("goal")),
+        ("environment_id", snapshot.get("environment_id")),
+        ("definition_id", (snapshot.get("provenance") or {}).get("definition_id")
+         if isinstance(snapshot.get("provenance"), dict) else None),
+    ):
+        if isinstance(value, str) and value:
+            related_work[key] = value
+
+    return {
+        "schema_version": OBSERVATION_SCHEMA,
+        "identity": reference["identity"],
+        "captured_at": "unavailable-in-source-record",
+        "measurement_basis": (
+            "bounded-derived-view-of-authenticated-compiler-language-cache-evidence/1"
+        ),
+        "observation": {
+            "kind": "compiler-language-verification-fact-reuse-workload",
+            "source_interface": "MNCS Compiler campaign evidence projection",
+            "request": request,
+            "outcome": {
+                "direct_measurements": direct,
+                "derived_measurements": derived,
+                "language_cache_scope": cache_scope[:160],
+                "cache_measurement_distinction": (
+                    "Dependency summaries are process-local structural summaries; "
+                    "Language verification facts are measured separately."
+                ),
+                "stage_summaries": stage_summaries,
+                "measurement_summary": measurement_summary,
+                "resource_measurement_scope": (
+                    "per-build and provider-stage source metrics, not agent session use"
+                ),
+                "duration_measurement_scope": (
+                    "individual build/provider requests, not campaign duration"
+                ),
+                "source_capture_time": "unavailable-in-source-record",
+            },
+            "measurement_availability": measurement_summary[
+                "measurement_availability"
+            ],
+        },
+        "related_work": related_work,
+        "not_measured": [
+            "source capture timestamp and model identity",
+            "token and cache accounting for the Compiler agent session",
+            "total campaign duration or resource use outside these requests",
+            "whether this workload and cache behavior recurs in other sessions",
+        ],
+    }
+
+
 def _load_observation(
     session: Any, reference: dict[str, str], root: Path, *, deadline: float,
 ) -> tuple[dict[str, Any] | None, str]:
@@ -1486,6 +1770,14 @@ def _load_observation(
         return None, "invalid-json"
     if not isinstance(record, dict):
         return None, "observation-contract-invalid"
+    if _is_compiler_dependency_summary_reference(reference):
+        source_identity = record.get("identity")
+        if source_identity is not None and source_identity != reference["identity"]:
+            return record, "observation-identity-mismatch"
+        adapted = _compiler_dependency_summary_observation(session, reference, record)
+        if adapted is None:
+            return None, "observation-contract-invalid"
+        return adapted, "verified"
     if record.get("identity") != reference["identity"]:
         return record, "observation-identity-mismatch"
     if _is_compiler_regression_reference(reference):
