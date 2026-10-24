@@ -1659,6 +1659,76 @@ def _compiler_regression_reference_family(
     return None
 
 
+def _compiler_regression_measurement_summary(
+    source: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Expose bounded verification-process measurements without agent attribution."""
+    verification = source.get("verification")
+    if not isinstance(verification, dict):
+        return None
+
+    direct: dict[str, int | float] = {}
+    observed_counts: dict[str, int] = {}
+    availability: dict[str, str] = {}
+    qualifications: list[str] = []
+    measurement_blocks = (
+        ("harness_process_measurement", "harness_process"),
+        ("stage0_bootstrap_measurement", "stage0_bootstrap"),
+    )
+    numeric_fields = (
+        "wall_seconds", "cpu_seconds", "user_seconds", "system_seconds",
+        "cpu_percent", "peak_rss_kib", "peak_rss_bytes",
+    )
+    for source_name, measurement_name in measurement_blocks:
+        block = verification.get(source_name)
+        if not isinstance(block, dict):
+            continue
+        for field in numeric_fields:
+            value = block.get(field)
+            if (type(value) is int and 0 <= value <= 10**18
+                    or type(value) is float and math.isfinite(value)
+                    and 0 <= value <= 10**18):
+                direct[f"{measurement_name}_{field}"] = value
+        jobs = block.get("cargo_build_jobs")
+        if type(jobs) is int and 0 <= jobs <= 10**6:
+            observed_counts[f"{measurement_name}_cargo_build_jobs"] = jobs
+        if "peak_cgroup_memory_bytes" in block:
+            cgroup_peak = block.get("peak_cgroup_memory_bytes")
+            if type(cgroup_peak) is int and 0 <= cgroup_peak <= 10**18:
+                direct[f"{measurement_name}_peak_cgroup_memory_bytes"] = cgroup_peak
+            elif cgroup_peak is None:
+                availability[
+                    f"{measurement_name}_peak_cgroup_memory_bytes"
+                ] = "null-in-source-record"
+        note = block.get("note")
+        if isinstance(note, str) and note:
+            qualifications.append(
+                f"{measurement_name}: {_short_text(note, 256)}"
+            )
+
+    measurement_notes = source.get("measurement_notes")
+    if isinstance(measurement_notes, str) and measurement_notes:
+        qualifications.append(_short_text(measurement_notes, 384) or "")
+    if direct or observed_counts or availability:
+        qualifications.append(
+            "These verification-process measurements are not measurements of "
+            "resource use attributable to the Compiler agent session."
+        )
+    if not (direct or observed_counts or availability):
+        return None
+
+    summary: dict[str, Any] = {}
+    if direct:
+        summary["direct_measurements"] = direct
+    if observed_counts:
+        summary["observed_counts"] = observed_counts
+    if availability:
+        summary["measurement_availability"] = availability
+    if qualifications:
+        summary["qualifications"] = qualifications[:8]
+    return summary
+
+
 def _is_compiler_regression_reference(reference: dict[str, str]) -> bool:
     return _compiler_regression_reference_family(reference) is not None
 
@@ -1820,12 +1890,18 @@ def _compiler_regression_observation(
 
     outcome: dict[str, Any] = {
         "stage_summaries": stage_summaries,
-        "resource_measurement_scope": "per-build metrics from the source report",
+        "resource_measurement_scope": (
+            "per-build and source-reported verification-process metrics; "
+            "not Compiler agent session use"
+        ),
         "duration_measurement_scope": (
             "individual build requests, not campaign or agent duration"
         ),
         "source_capture_time": "unavailable",
     }
+    resource_measurements = _compiler_regression_measurement_summary(source)
+    if resource_measurements is not None:
+        outcome["measurement_summary"] = resource_measurements
     if type(invalidation) is bool:
         outcome["language_effect_and_capability_dependencies_invalidated"] = invalidation
     else:
@@ -1859,7 +1935,10 @@ def _compiler_regression_observation(
                 "model_identity": "not-recorded-in-source",
                 "token_usage": "not-recorded-in-source",
                 "control_dispatch_elapsed_ms": "not-recorded-in-source",
-                "resource_consumption": "per-build-metrics",
+                "resource_consumption": (
+                    "per-build + verification-process metrics; "
+                    "not agent-attributed"
+                ),
                 "cache_accounting": "status-and-fact-counts",
             },
         },
@@ -1868,6 +1947,7 @@ def _compiler_regression_observation(
             "source capture timestamp",
             "model identity and token usage",
             "total compiler campaign duration",
+            "resource consumption attributable to the Compiler agent session",
             "resource use outside the selected regression build requests",
             "whether the observed cache behavior recurs in other campaigns",
         ],

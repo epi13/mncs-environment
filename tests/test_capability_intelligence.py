@@ -2070,6 +2070,99 @@ def test_compiler_regression_evidence_is_projected_with_verified_work_context(
     assert observation["evidence_reference"] == reference
 
 
+def test_compiler_regression_projects_source_verification_resource_measurements(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema_version": capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA_V1,
+        "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+        "compiler_head": "c" * 40,
+        "language_head": "d" * 40,
+        "source_module_count": 4,
+        "actual_language_modules_reused": True,
+        "stages": {
+            "cold": {"cache_status": "miss"},
+            "generic_specialization_cold": {"cache_status": "miss"},
+            "generic_summarize_body_edit": {"cache_status": "miss"},
+            "imported_body_edit": {"cache_status": "hit"},
+            "fresh_process": {"cache_status": "hit"},
+        },
+        "verification": {
+            "harness_process_measurement": {
+                "wall_seconds": 11.11,
+                "user_seconds": 8.23,
+                "system_seconds": 3.0,
+                "peak_rss_kib": 98644,
+                "peak_cgroup_memory_bytes": None,
+            },
+            "stage0_bootstrap_measurement": {
+                "cargo_build_jobs": 2,
+                "cpu_percent": 185,
+                "wall_seconds": 230.6,
+                "user_seconds": 420.77,
+                "system_seconds": 6.1,
+                "peak_rss_kib": 1369204,
+                "note": (
+                    "one-time isolated target compilation; "
+                    "excluded from this warm harness run"
+                ),
+            },
+        },
+    }
+    session, state = _session(tmp_path, [])
+    _add_compiler_regression_evidence(session, state, report)
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["pressure_hypothesis_count"] == 0
+    observation = result["observations"][0]
+    assert observation["observation"]["measurement_availability"][
+        "resource_consumption"
+    ] == (
+        "per-build + verification-process metrics; not agent-attributed"
+    )
+    measurement_summary = observation["observation"]["outcome"][
+        "measurement_summary"
+    ]
+    assert measurement_summary["direct_measurements"] == {
+        "harness_process_peak_rss_kib": 98644,
+        "harness_process_system_seconds": 3.0,
+        "harness_process_user_seconds": 8.23,
+        "harness_process_wall_seconds": 11.11,
+        "stage0_bootstrap_cpu_percent": 185,
+        "stage0_bootstrap_peak_rss_kib": 1369204,
+        "stage0_bootstrap_system_seconds": 6.1,
+        "stage0_bootstrap_user_seconds": 420.77,
+        "stage0_bootstrap_wall_seconds": 230.6,
+    }
+    assert measurement_summary["observed_counts"] == {
+        "stage0_bootstrap_cargo_build_jobs": 2,
+    }
+    assert measurement_summary["measurement_availability"] == {
+        "harness_process_peak_cgroup_memory_bytes": "null-in-source-record",
+    }
+    assert "derived_measurements" not in measurement_summary
+    assert any(
+        "excluded from this warm harness run" in item
+        for item in measurement_summary["qualifications"]
+    )
+    assert any(
+        "not measurements of resource use attributable to the Compiler agent session"
+        in item
+        for item in measurement_summary["qualifications"]
+    )
+
+    full_size = len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode())
+    compact = capability_intelligence.project(
+        session, max_result_bytes=full_size - 1,
+    )
+    assert compact["source"]["response_truncated"] is True
+    assert compact["observations"][0]["observation"]["measurement_summary"] == (
+        measurement_summary
+    )
+
+
 def test_compiler_regression_schema_one_projects_without_inventing_effect_data(
     tmp_path: Path,
 ) -> None:

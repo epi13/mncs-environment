@@ -138,6 +138,17 @@ Recurrence describes the selected window;
 `evidence_history_truncated` indicates when it does not cover all available
 history.
 
+When the selected workspace includes a committed Compiler cache-regression
+record, the projection preserves its bounded per-build metrics and separately
+classifies any source-recorded harness or bootstrap measurements under
+`observation.outcome.measurement_summary`. Direct measurements retain their
+phase-specific names; build-job counts remain observed counts; a null cgroup
+peak remains explicitly unavailable in the source record. The source note is
+carried as a qualification, and these process measurements are not attributed
+to the Compiler agent session. Missing token, model, and session resource data
+remain unavailable. This view reports measurements; it creates no resource
+pressure hypothesis by itself.
+
 When Work Intent declares a repository that is not selected, the projection may
 also emit `context_pressure_candidates`. These candidates join the declared
 repository gap with bounded source-visibility diagnostics for that repository.
