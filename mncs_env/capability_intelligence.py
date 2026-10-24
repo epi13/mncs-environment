@@ -4115,7 +4115,9 @@ def project(
                 and all(
                     (pointer := _validate_source_pointer(source)) is not None
                     and "sha256" in pointer
-                    and _source_status(source, references).get("status") == "verified"
+                    and _source_status(source, references).get("status") in {
+                        "verified", "not-an-environmental-observation",
+                    }
                     and _source_integrity_status(source, source_integrity)
                     in SOURCE_INTEGRITY_VERIFIED
                     for source in replacement_sources

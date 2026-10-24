@@ -572,6 +572,24 @@ def test_append_only_correction_requires_exact_verified_observation_pointer(
         )
         followup.pop("pressure_hypothesis")
         session, state = _session(root, [target, verification, followup])
+        checkout = Path(session.snapshot["selected_checkouts"][
+            "mncs-environment"
+        ]["path"])
+        implementation_path = checkout / "mncs_env/capability_intelligence.py"
+        implementation_path.parent.mkdir(parents=True, exist_ok=True)
+        implementation_bytes = b"verified environmental projection implementation\n"
+        implementation_path.write_bytes(implementation_bytes)
+        _git(checkout, "add", "mncs_env/capability_intelligence.py")
+        _git(checkout, "commit", "--quiet", "-m", "implementation source")
+        implementation_source = {
+            "identity": "ev_environment_correction_implementation_source",
+            "repository": "mncs-environment",
+            "commit": _git(checkout, "rev-parse", "HEAD"),
+            "path": "mncs_env/capability_intelligence.py",
+            "sha256": hashlib.sha256(implementation_bytes).hexdigest(),
+        }
+        state["evidence"].append(implementation_source)
+        state["evidence_count"] = len(state["evidence"])
         target_reference = dict(state["evidence"][0])
         if corrupt_target_digest:
             target_reference["sha256"] = "e" * 64
@@ -593,6 +611,7 @@ def test_append_only_correction_requires_exact_verified_observation_pointer(
                 "supporting_sources": [
                     {"kind": "campaign-evidence-reference", **state["evidence"][1]},
                     {"kind": "campaign-evidence-reference", **state["evidence"][2]},
+                    {"kind": "campaign-evidence-reference", **state["evidence"][3]},
                 ],
                 "not_measured": [
                     "resource consumption attributable to this agent or child processes",
@@ -650,9 +669,14 @@ def test_append_only_correction_requires_exact_verified_observation_pointer(
         "whether samples differ across this session or campaign",
         "whether host conditions constrained a development operation",
     ]
-    assert [
-        item["status"] for item in original["supporting_sources"]
-    ] == ["verified", "verified"]
+    assert [item["status"] for item in original["supporting_sources"]] == [
+        "verified", "verified", "not-an-environmental-observation",
+    ]
+    assert all(
+        item["content_integrity_status"]
+        in capability_intelligence.SOURCE_INTEGRITY_VERIFIED
+        for item in original["supporting_sources"]
+    )
     assert [item["identity"] for item in verified["improvement_relations"]] == [
         "im_environment_relation_original",
     ]
