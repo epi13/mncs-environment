@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_recurrence_improvement_link_improvement_20261024",
+  "captured_at": "2026-10-24T10:47:00Z",
+  "measurement_basis": "verified-recurrence-projection-correction",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_9c5e96ef05da181d",
+      "sequence": 33
+    },
+    "campaign_evidence_count": 107,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "pressure-recurrence-implementation-link-correction",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "implementation_commit": "b681710f410afde77409f4c14df6251c45c6f4b9"
+    },
+    "outcome": {
+      "linked_implementation_records_counted_as_pressure_occurrence": false,
+      "independent_pressure_observations_remain_eligible": true,
+      "pressure_context_and_implementation_relation_preserved": true
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_pressure_recurrence_improvement_link",
+    "title": "An implementation record that restates its target pressure inflates the recurrence count",
+    "category": "agent-activity-observability",
+    "subsystem": "mncs-environment capability-intelligence recurrence projection",
+    "owner": "mncs-environment",
+    "basis": "The live projection grouped both a pressure-gap record and its improvement record under one pressure identity, producing repeated-within-session even though only one pressure occurrence was reported.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Retain improvement records and their pressure link, but exclude a linked implementation record from pressure recurrence counts; count a later occurrence only when an independent observation records it.",
+    "not_measured": [
+      "whether the same double-counting pattern affects other pressure hypotheses",
+      "whether a separate later operational observation shows the pressure again",
+      "whether the earlier incorrect recurrence label changed an agent decision"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_pressure_recurrence_improvement_link_20261024",
+    "addresses_hypothesis_identity": "ph_environment_pressure_recurrence_improvement_link",
+    "implementation_reference": {
+      "identity": "ev_environment_pressure_recurrence_improvement_link_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "b681710f410afde77409f4c14df6251c45c6f4b9",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e9bcf6e96ba761c6d1efd808d04e981ce70428e32f274304762849a9d7a78ddd"
+    },
+    "verification_observation_identity": "ev_environment_pressure_recurrence_improvement_link_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_pressure_recurrence_improvement_link_followup_20261024",
+    "basis": "Focused regression tests verify that an implementation record can retain the pressure link without increasing recurrence. A live projection of the recorded activity chain now reports one gap occurrence and not-established recurrence while preserving verified change references.",
+    "not_measured": [
+      "whether other pressure evidence chains contain the same pattern",
+      "whether the correction affects future development decisions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "git-commit",
+      "commit": "b681710f410afde77409f4c14df6251c45c6f4b9",
+      "files_changed": 3
+    }
+  ],
+  "not_measured": [
+    "whether repeated operational pressure is reduced",
+    "token usage, execution duration, or resource effects"
+  ]
+}

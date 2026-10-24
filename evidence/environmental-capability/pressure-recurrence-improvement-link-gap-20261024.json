@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_recurrence_improvement_link_gap_20261024",
+  "captured_at": "2026-10-24T10:47:00Z",
+  "measurement_basis": "live-projection-readback-and-recurrence-source-review",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_9c5e96ef05da181d",
+      "sequence": 33
+    },
+    "campaign_evidence_count": 107,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "pressure-recurrence-implementation-record-double-count",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "campaign_state_checkpoint_id": "chk_9c5e96ef05da181d",
+      "pressure_identity": "ph_environment_session_capability_activity_projection"
+    },
+    "outcome": {
+      "pre_correction_observation_count": 2,
+      "pre_correction_recurrence_status": "repeated-within-session",
+      "pressure_gap_record_count": 1,
+      "improvement_record_repeated_same_hypothesis": true,
+      "independent_second_pressure_occurrence_observed": false,
+      "interpretation_limit": "The second record documented the implementation and restated its target hypothesis; it did not report another encounter with that limitation."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_pressure_recurrence_improvement_link",
+    "title": "An implementation record that restates its target pressure inflates the recurrence count",
+    "category": "agent-activity-observability",
+    "subsystem": "mncs-environment capability-intelligence recurrence projection",
+    "owner": "mncs-environment",
+    "basis": "The live projection grouped both a pressure-gap record and its improvement record under one pressure identity, producing repeated-within-session even though only one pressure occurrence was reported.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Retain improvement records and their pressure link, but exclude a linked implementation record from pressure recurrence counts; count a later occurrence only when an independent observation records it.",
+    "not_measured": [
+      "whether the same double-counting pattern affects other pressure hypotheses",
+      "whether a separate later operational observation shows the pressure again",
+      "whether the earlier incorrect recurrence label changed an agent decision"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "projections",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "projection_identity": "eci_532554944a1f4a32",
+      "campaign_state_checkpoint_id": "chk_9c5e96ef05da181d",
+      "campaign_evidence_count": 107,
+      "pressure_observation_count": 2,
+      "pressure_recurrence_status": "repeated-within-session",
+      "linked_improvement_record_identity": "ev_environment_session_capability_activity_projection_improvement_20261024"
+    },
+    {
+      "kind": "source-review",
+      "repository": "mncs-environment",
+      "commit": "6a441b3213b2f9105de94af7d2c894fcf5321bbb",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "db66724291dcef763d70bf588ca4e647e9497ca5ffa128cb920705c8e8c262e6",
+      "observed_contract": "Recurrence grouped every observation record carrying the hypothesis identity without excluding implementation-linked records."
+    }
+  ],
+  "not_measured": [
+    "recurrence patterns across other campaigns and sessions",
+    "whether duplicate labels changed subsequent development activity",
+    "independent operational recurrence of the addressed session activity pressure"
+  ]
+}

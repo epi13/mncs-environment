@@ -1,0 +1,78 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_recurrence_improvement_link_verification_20261024",
+  "captured_at": "2026-10-24T10:47:00Z",
+  "measurement_basis": "focused-regression-tests-and-live-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_9c5e96ef05da181d",
+      "sequence": 33
+    },
+    "campaign_evidence_count": 107,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "pressure-recurrence-improvement-verification",
+    "source_interface": "pytest, Ruff, Python syntax compilation, and live mncs-env projection CLI",
+    "request": {
+      "test_command": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py tests/test_session_completion.py",
+      "lint_command": "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py tests/test_session_completion.py",
+      "syntax_command": "python -m py_compile mncs_env/capability_intelligence.py mncs_env/sessions.py",
+      "live_projection_identity": "eci_532554944a1f4a32"
+    },
+    "outcome": {
+      "tests_passed": 51,
+      "tests_failed": 0,
+      "ruff_result": "passed",
+      "syntax_compilation": "passed",
+      "git_diff_check": "passed",
+      "projected_pressure_observation_count_after_correction": 1,
+      "projected_pressure_recurrence_status_after_correction": "not-established",
+      "improvement_relation_verification_status": "record-integrity-verified-in-projection",
+      "improvement_relation_followup_status": "record-integrity-verified-in-projection",
+      "effectiveness_assessment": "not-assessed"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "source-review",
+      "repository": "mncs-environment",
+      "commit": "b681710f410afde77409f4c14df6251c45c6f4b9",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "01b9a557d25e2b4d9ead2c2691d465776c4065d8bb65a5893fcf7fe053b381ff",
+      "verified_behavior": "an improvement record carrying the same hypothesis does not count as a new pressure occurrence"
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "projections",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "projection_identity": "eci_532554944a1f4a32",
+      "campaign_state_checkpoint_id": "chk_9c5e96ef05da181d",
+      "campaign_evidence_count": 107,
+      "pressure_observation_count": 1,
+      "pressure_recurrence_status": "not-established"
+    }
+  ],
+  "not_measured": [
+    "effectiveness of the original capability projection in later agent work",
+    "whether other existing pressure hypotheses need correction",
+    "recurrence beyond the currently selected evidence page"
+  ]
+}

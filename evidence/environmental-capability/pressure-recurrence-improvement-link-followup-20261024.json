@@ -1,0 +1,72 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_recurrence_improvement_link_followup_20261024",
+  "captured_at": "2026-10-24T10:47:00Z",
+  "measurement_basis": "read-only-reprojection-of-committed-pressure-and-improvement-evidence",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_9c5e96ef05da181d",
+      "sequence": 33
+    },
+    "campaign_evidence_count": 107
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "pressure-recurrence-improvement-followup",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "projection_identity": "eci_532554944a1f4a32",
+      "campaign_state_checkpoint_id": "chk_9c5e96ef05da181d"
+    },
+    "outcome": {
+      "session_capability_activity_pressure_occurrence_count": 1,
+      "session_capability_activity_pressure_recurrence_status": "not-established",
+      "pressure_evidence_reference_count": 1,
+      "implementation_relation_present": true,
+      "implementation_reference_integrity": "content-integrity-verified",
+      "verification_record_integrity": "record-integrity-verified-in-projection",
+      "followup_record_integrity": "record-integrity-verified-in-projection",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "This confirms projection semantics for the selected evidence page. It does not measure subsequent operational recurrence or establish improvement effectiveness."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "projections",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "projection_identity": "eci_532554944a1f4a32",
+      "campaign_state_checkpoint_id": "chk_9c5e96ef05da181d",
+      "campaign_evidence_count": 107,
+      "pressure_observation_count": 1,
+      "pressure_recurrence_status": "not-established"
+    },
+    {
+      "kind": "source-review",
+      "repository": "mncs-environment",
+      "commit": "b681710f410afde77409f4c14df6251c45c6f4b9",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e9bcf6e96ba761c6d1efd808d04e981ce70428e32f274304762849a9d7a78ddd",
+      "observed_contract": "Improvement-linked records retain their relation but are omitted from recurrence occurrence counts."
+    }
+  ],
+  "not_measured": [
+    "whether another independent session reports the same pressure",
+    "whether the correction improves later development decisions",
+    "whether previous projection hypotheses were inflated by implementation records"
+  ]
+}
