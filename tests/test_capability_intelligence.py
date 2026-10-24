@@ -1956,3 +1956,157 @@ def test_campaign_state_projection_respects_capability_output_budget(
     assert status == 0
     assert "environmental_capability" in campaign_state
     assert len(output.getvalue().encode("utf-8")) <= cli.CAMPAIGN_STATE_OUTPUT_LIMIT_BYTES + 1
+
+
+def _compiler_source_pointer(
+    workspace_root: Path, *, checkout: Path | None = None,
+) -> tuple[Path, dict[str, str]]:
+    compiler = checkout or workspace_root / "mncs-compiler"
+    compiler.mkdir(parents=True)
+    _git(compiler, "init", "--quiet")
+    _git(compiler, "config", "user.name", "test")
+    _git(compiler, "config", "user.email", "test@example.invalid")
+    relative = "src/compiler-evidence.mn"
+    source = compiler / relative
+    source.parent.mkdir(parents=True)
+    source_bytes = b"module compiler_evidence\n"
+    source.write_bytes(source_bytes)
+    _git(compiler, "add", relative)
+    _git(compiler, "commit", "--quiet", "-m", "test compiler evidence source")
+    pointer = {
+        "identity": "ev_compiler_source_read_only",
+        "repository": "mncs-compiler",
+        "commit": _git(compiler, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(source_bytes).hexdigest(),
+    }
+    return compiler, pointer
+
+
+def _register_workspace_source(
+    session: SimpleNamespace,
+    checkout: Path,
+    pointer: dict[str, str],
+    *,
+    readable: bool = True,
+    scan_status: str = "complete",
+    include_source_record: bool = False,
+) -> None:
+    session.snapshot["authority"] = {
+        "readable": ["workspace"] if readable else [],
+        "writable": ["mncs-environment"],
+    }
+    environment_checkout = Path(
+        session.snapshot["selected_checkouts"]["mncs-environment"]["path"]
+    )
+    repositories = [{
+        "name": "mncs-environment",
+        "path": str(environment_checkout),
+        "manifest_repository": "mncs-environment",
+        "head": _git(environment_checkout, "rev-parse", "HEAD"),
+        "git_error": None,
+        "worktree_of": None,
+    }]
+    if include_source_record:
+        repositories.append({
+            "name": "mncs-compiler",
+            "path": str(checkout),
+            "manifest_repository": "mncs-compiler",
+            "head": pointer["commit"],
+            "git_error": None,
+            "worktree_of": None,
+        })
+    session.snapshot["workspace"].update({
+        "scan": {"status": scan_status},
+        "selection": ["mncs-environment"],
+        "repositories": repositories,
+    })
+
+
+def test_project_verifies_workspace_read_only_source_without_compiler_write_scope(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    compiler, pointer = _compiler_source_pointer(workspace_root)
+    record = _observation("ev_environment_observation_one", "ses_compiler_one", "cmp_compiler")
+    record["supporting_sources"].append({
+        "kind": "compiler-source",
+        **pointer,
+    })
+    bad_pointer = dict(pointer)
+    bad_pointer.update({
+        "identity": "ev_compiler_source_bad_digest",
+        "sha256": "0" * 64,
+    })
+    record["supporting_sources"].append({
+        "kind": "compiler-source",
+        **bad_pointer,
+    })
+    session, _ = _session(tmp_path, [record])
+    _register_workspace_source(session, compiler, pointer)
+    assert session.snapshot["selected_checkouts"].keys() == {"mncs-environment"}
+    assert session.snapshot["authority"]["writable"] == ["mncs-environment"]
+    assert _git(compiler, "status", "--porcelain") == ""
+    discovery_calls = 0
+    discover_workspace = capability_intelligence.workspace_module.discover_workspace
+
+    def counted_discovery(*args, **kwargs):
+        nonlocal discovery_calls
+        discovery_calls += 1
+        return discover_workspace(*args, **kwargs)
+
+    monkeypatch.setattr(
+        capability_intelligence.workspace_module, "discover_workspace", counted_discovery,
+    )
+
+    result = capability_intelligence.project(session)
+
+    source = result["observations"][0]["supporting_sources"][1]
+    bad_source = result["observations"][0]["supporting_sources"][2]
+    assert source["status"] == "not-registered-in-campaign-ledger"
+    assert source["content_integrity_status"] == (
+        "workspace-read-only-content-integrity-verified"
+    )
+    assert bad_source["content_integrity_status"] == "sha256-mismatch"
+    assert result["source"]["source_pointer_content_integrity_verified_count"] == 1
+    assert result["source"]["source_pointer_content_integrity_not_verified_count"] == 1
+    assert discovery_calls == 1
+    assert session.snapshot["authority"]["writable"] == ["mncs-environment"]
+    assert _git(compiler, "status", "--porcelain") == ""
+
+
+def test_project_requires_workspace_read_authority_and_complete_root_scan(
+    tmp_path: Path,
+) -> None:
+    scenarios = (
+        ("no-workspace-read", False, "complete", False),
+        ("incomplete-scan", True, "timed_out", False),
+        ("outside-root", True, "complete", True),
+    )
+    for name, readable, scan_status, outside_root in scenarios:
+        scenario_root = tmp_path / name
+        workspace_root = scenario_root / "workspace"
+        external_checkout = scenario_root / "external" / "mncs-compiler"
+        compiler, pointer = _compiler_source_pointer(
+            workspace_root,
+            checkout=external_checkout if outside_root else None,
+        )
+        record = _observation(
+            f"ev_environment_observation_{name}", "ses_compiler_one", "cmp_compiler",
+        )
+        record["supporting_sources"].append({
+            "kind": "compiler-source",
+            **pointer,
+        })
+        session, _ = _session(scenario_root, [record])
+        _register_workspace_source(
+            session, compiler, pointer,
+            readable=readable, scan_status=scan_status,
+            include_source_record=outside_root,
+        )
+
+        result = capability_intelligence.project(session)
+
+        source = result["observations"][0]["supporting_sources"][1]
+        assert source["status"] == "not-registered-in-campaign-ledger"
+        assert source["content_integrity_status"] == "outside-selected-session"

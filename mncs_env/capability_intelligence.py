@@ -44,6 +44,7 @@ MAX_RPC_READ_ACTIVITY_OBSERVATIONS = 128
 SOURCE_INTEGRITY_VERIFIED = frozenset({
     "content-integrity-verified",
     "record-integrity-verified-in-projection",
+    "workspace-read-only-content-integrity-verified",
 })
 _COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -151,6 +152,110 @@ def _checkout(session: Any, repository: str, root: Path) -> Path | None:
     if not path.is_dir() or path.is_symlink():
         return None
     return path
+
+
+def _workspace_read_only_checkout(
+    session: Any, repository: str, root: Path,
+    deadline: float,
+) -> Path | None:
+    """Resolve one repository only under explicit read-only workspace authority."""
+    if (not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", repository)
+            or repository in {".", ".."}):
+        return None
+    authority = session.snapshot.get("authority")
+    readable = authority.get("readable") if isinstance(authority, dict) else None
+    if not isinstance(readable, list) or "workspace" not in readable:
+        return None
+    workspace = session.snapshot.get("workspace")
+    if not isinstance(workspace, dict):
+        return None
+    try:
+        recorded_root = Path(workspace.get("root", "")).resolve(strict=True)
+        trusted_root = root.resolve(strict=True)
+    except (OSError, TypeError, ValueError):
+        return None
+    if recorded_root != trusted_root:
+        return None
+    scan = workspace.get("scan")
+    if not isinstance(scan, dict) or scan.get("status") != "complete":
+        return None
+    records = workspace.get("repositories")
+    if not isinstance(records, list):
+        return None
+    matches = [
+        record for record in records
+        if isinstance(record, dict)
+        and record.get("name") == repository
+        and record.get("worktree_of") is None
+    ]
+    if not matches:
+        # The session registry can be intentionally limited to selected
+        # checkouts. Workspace read authority permits one bounded lookup.
+        remaining = deadline - time.monotonic()
+        if remaining <= 0.1:
+            return None
+        discovery = workspace_module.discover_workspace(
+            trusted_root, timeout_seconds=min(2.0, remaining), repositories=[repository],
+        )
+        discovery_scan = discovery.get("scan")
+        if (not isinstance(discovery_scan, dict)
+                or discovery_scan.get("status") != "complete"):
+            return None
+        discovered = discovery.get("repositories")
+        if not isinstance(discovered, list):
+            return None
+        matches = [
+            record for record in discovered
+            if isinstance(record, dict)
+            and record.get("name") == repository
+            and record.get("worktree_of") is None
+        ]
+    if len(matches) != 1:
+        return None
+    record = matches[0]
+    raw_path = record.get("path")
+    if not isinstance(raw_path, str) or not raw_path:
+        return None
+    candidate = Path(raw_path)
+    if not candidate.is_absolute():
+        candidate = trusted_root / candidate
+    try:
+        if candidate.is_symlink():
+            return None
+        checkout = candidate.resolve(strict=True)
+        relative = checkout.relative_to(trusted_root)
+    except (OSError, ValueError):
+        return None
+    if (len(relative.parts) != 1 or relative.parts[0] != repository
+            or checkout.name != repository or not checkout.is_dir()
+            or not (checkout / ".git").exists()
+            or record.get("git_error") is not None
+            or not isinstance(record.get("head"), str)
+            or not record["head"]):
+        return None
+    manifest_repository = record.get("manifest_repository")
+    if (manifest_repository is not None
+            and manifest_repository != repository):
+        return None
+    return checkout
+
+
+def _source_checkout(
+    session: Any, repository: str, root: Path,
+    workspace_checkouts: dict[str, Path | None],
+    deadline: float,
+) -> tuple[Path | None, str | None]:
+    selected = _checkout(session, repository, root)
+    if selected is not None:
+        return selected, "selected-checkout"
+    if repository not in workspace_checkouts:
+        workspace_checkouts[repository] = _workspace_read_only_checkout(
+            session, repository, root, deadline,
+        )
+    readable = workspace_checkouts[repository]
+    if readable is not None:
+        return readable, "workspace-read-only"
+    return None, None
 
 
 def _validate_reference(reference: Any) -> dict[str, str] | None:
@@ -988,16 +1093,14 @@ def _verify_source_pointer(
     session: Any, source: Any, references: list[dict[str, Any]], root: Path | None,
     *, deadline: float, cache: dict[tuple[str, str, str, str], str],
     attempted: set[tuple[str, str, str, str]],
+    workspace_checkouts: dict[str, Path | None],
 ) -> None:
-    """Verify selected source blobs within the projection's shared read budget."""
+    """Verify accessible source blobs within the projection's shared read budget."""
     pointer = _validate_source_pointer(source)
     if pointer is None:
         return
     key = _source_pointer_key(pointer)
     if key in cache or key in attempted:
-        return
-    if root is None or _checkout(session, pointer["repository"], root) is None:
-        cache[key] = "outside-selected-session"
         return
     if "sha256" not in pointer:
         cache[key] = "sha256-unavailable"
@@ -1010,11 +1113,22 @@ def _verify_source_pointer(
     if len(attempted) >= MAX_SOURCE_POINTER_VERIFICATIONS:
         cache[key] = "source-verification-limit-exhausted"
         return
-    attempted.add(key)
-    checkout = _checkout(session, pointer["repository"], root)
-    if checkout is None:
-        cache[key] = "outside-selected-session"
+    if time.monotonic() >= deadline:
+        cache[key] = "source-read-budget-exhausted"
         return
+    checkout, verification_basis = (
+        _source_checkout(
+            session, pointer["repository"], root, workspace_checkouts, deadline,
+        )
+        if root is not None else (None, None)
+    )
+    if checkout is None:
+        cache[key] = (
+            "source-read-budget-exhausted"
+            if time.monotonic() >= deadline else "outside-selected-session"
+        )
+        return
+    attempted.add(key)
     raw, status = _git_blob(
         checkout, pointer["commit"], pointer["path"], deadline=deadline,
         max_bytes=MAX_SOURCE_BYTES, oversized_status="source-object-too-large",
@@ -1026,6 +1140,8 @@ def _verify_source_pointer(
         }.get(status, status if status.startswith("source-") else f"source-{status}")
     elif hashlib.sha256(raw).hexdigest() != pointer["sha256"]:
         cache[key] = "sha256-mismatch"
+    elif verification_basis == "workspace-read-only":
+        cache[key] = "workspace-read-only-content-integrity-verified"
     else:
         cache[key] = "content-integrity-verified"
 
@@ -1945,6 +2061,7 @@ def project(
         })
     source_integrity: dict[tuple[str, str, str, str], str] = {}
     attempted_sources: set[tuple[str, str, str, str]] = set()
+    workspace_checkouts: dict[str, Path | None] = {}
     for record, _ in projected_records:
         raw_sources = record.get("supporting_sources")
         raw_sources = raw_sources if isinstance(raw_sources, list) else []
@@ -1952,6 +2069,7 @@ def project(
             _verify_source_pointer(
                 session, source, references, root, deadline=read_deadline,
                 cache=source_integrity, attempted=attempted_sources,
+                workspace_checkouts=workspace_checkouts,
             )
         improvement = _validate_improvement_relation(record.get("improvement_relation"))
         if improvement is not None:
@@ -1959,6 +2077,7 @@ def project(
                 session, improvement["implementation_reference"], references, root,
                 deadline=read_deadline, cache=source_integrity,
                 attempted=attempted_sources,
+                workspace_checkouts=workspace_checkouts,
             )
     projected_record_ids = {record["identity"] for record, _ in projected_records}
     projected_hypothesis_ids: set[str] = set()

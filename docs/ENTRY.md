@@ -268,13 +268,20 @@ Observation source summaries keep registration status separate from
 `content_integrity_status`. A selected source blob is marked
 `content-integrity-verified` only after its committed Git content matches the
 recorded digest; an observation already verified by the projection is marked
-`record-integrity-verified-in-projection`. Sources outside the selected session
-remain `outside-selected-session` and are not read. Compact projections retain
-up to four source pointers per observation and their integrity status; the exact
+`record-integrity-verified-in-projection`. When the session has explicit
+workspace read authority and a complete workspace-root scan, a pointer outside
+the selected checkouts may be verified using one bounded discovery for its
+named repository under that root. This does not select the checkout or grant
+write authority; a matching digest is reported as
+`workspace-read-only-content-integrity-verified`. Pointers without that
+authority or a uniquely resolved in-root checkout remain
+`outside-selected-session` and are not read. Compact projections retain up to
+four source pointers per observation and their integrity status; the exact
 observation evidence reference can be used to inspect the complete source list.
 The projection source reports unique valid pointer and verified/not-verified
 counts; source blob reads are limited to 512 KiB each, share the eight-second
-projection budget, and are capped at 32 source pointers per page.
+projection budget, and are capped at 32 source pointers per page. Workspace
+discovery shares that deadline and is limited to two seconds per repository.
 
 Campaign metadata updates use optimistic concurrency. Copy the
 `campaign_state_checkpoint_id` from the current capsule into
