@@ -224,6 +224,15 @@ agent can inspect the records supporting the hypothesis even when their full
 observation summaries are omitted. `evidence_reference_count` and
 `evidence_references_truncated` disclose when the compact view contains only a
 subset; use the source page cursor and campaign ledger to continue inspection.
+When an observation body itself must be compacted, its digest still covers the
+complete recorded observation, while `outcome_context` retains bounded
+interpretation fields such as status, claim boundary, verification limits, and
+small scalar summaries from structured outcome sections. This keeps evidence
+such as a compiler result's narrow scope or stale-input finding visible without
+copying its full diagnostic payload. `measurement_summary` separately retains
+classified measurements, unavailable attribution, interpretations, and
+qualifications. Both are summaries of recorded evidence, not independent
+attestations; the evidence pointer remains the route to the source record.
 
 An observation may also carry an `improvement_relation` linking one pressure
 hypothesis to an implementation source, a verification observation, and a

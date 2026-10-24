@@ -372,6 +372,72 @@ def _compact_measurement_summary(outcome: Any) -> dict[str, Any] | None:
     return result or None
 
 
+def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
+    """Retain bounded outcome meaning when compacting a large observation."""
+    if not isinstance(outcome, dict):
+        return None
+    result: dict[str, Any] = {}
+    text_fields = (
+        "status", "result_status", "claim_boundary", "analysis_limit",
+        "interpretation_limit", "implementation_change",
+        "effectiveness_assessment", "recurrence_status",
+        "verification_record_status", "subsequent_record_status",
+    )
+    for key in text_fields:
+        value = outcome.get(key)
+        if isinstance(value, str) and value:
+            result[key] = _short_text(value, 256 if key in {
+                "claim_boundary", "analysis_limit", "interpretation_limit",
+                "implementation_change",
+            } else 128)
+
+    compact_objects = {}
+    section_hints = (
+        "build", "diagnostic", "fact", "implementation", "measurement",
+        "origin", "outcome", "resource", "reuse", "runtime", "source",
+        "test", "verification",
+    )
+    field_hints = (
+        "available", "byte", "cache", "case", "checkpoint", "code",
+        "count", "deselect", "diagnostic", "duration", "error", "evidence",
+        "exit", "fact", "failed", "failure", "fresh", "implementation",
+        "integrity", "limit", "mask", "memory", "mismatch", "observation",
+        "origin", "passed", "peak", "publish", "record", "resource",
+        "result", "return", "reuse", "rss", "skip", "source", "state",
+        "status", "success", "test", "token", "usage", "verified", "wall",
+    )
+    for name, value in sorted(outcome.items()):
+        if (not isinstance(name, str) or not name or len(name) > 80
+                or name in text_fields or not isinstance(value, dict)
+                or not any(hint in name.lower() for hint in section_hints)):
+            continue
+        scalar_fields = {}
+        valid_fields = []
+        for key, field_value in value.items():
+            if (not isinstance(key, str) or not key or len(key) > 80
+                    or not any(hint in key.lower() for hint in field_hints)):
+                continue
+            if isinstance(field_value, str) and field_value:
+                valid_fields.append((key, _short_text(field_value, 128)))
+            elif (type(field_value) is bool
+                  or (type(field_value) is int and abs(field_value) <= 10**18)
+                  or (type(field_value) is float and math.isfinite(field_value)
+                      and abs(field_value) <= 10**18)):
+                valid_fields.append((key, field_value))
+        for key, field_value in sorted(valid_fields)[:6]:
+            scalar_fields[key] = field_value
+        if scalar_fields:
+            compact_objects[name] = {
+                "values": scalar_fields,
+                "fields_truncated": len(valid_fields) > len(scalar_fields),
+            }
+    if compact_objects:
+        result["sections"] = dict(sorted(compact_objects.items())[:4])
+        if len(compact_objects) > len(result["sections"]):
+            result["sections_truncated"] = True
+    return result or None
+
+
 def _compact_projection(
     projection: dict[str, Any], original_size: int, max_result_bytes: int,
 ) -> dict[str, Any]:
@@ -599,6 +665,11 @@ def _compact_projection(
         if measurement_summary is not None:
             compact_observation["observation"]["measurement_summary"] = (
                 measurement_summary
+            )
+        outcome_context = _compact_outcome_context(observation.get("outcome"))
+        if outcome_context is not None:
+            compact_observation["observation"]["outcome_context"] = (
+                outcome_context
             )
         if isinstance(observation.get("source_session_context"), dict):
             source_context = observation["source_session_context"]

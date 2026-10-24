@@ -2239,19 +2239,36 @@ def test_compiler_artifact_observation_preserves_scope_and_measurement_uncertain
         "compiler-self-consumption-resource-provenance-20261024.json"
     )
     record = json.loads(path.read_text(encoding="utf-8"))
+    record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000
     session, _state = _session(tmp_path, [record])
 
     result = capability_intelligence.project(session)
 
     observation = result["observations"][0]
+    assert result["source"]["response_truncated"] is True
+    assert len(json.dumps(result).encode("utf-8")) <= capability_intelligence.MAX_RESULT_BYTES
+    assert observation["observation"]["details_omitted"] is True
     assert observation["related_work"]["campaign_id"] == (
         "cmp_environmental_capability_intelligence_followup_20261024"
     )
     assert observation["observation"]["source_session_context"]["campaign_id"] == (
         "cmp_mncs_native_application_readiness_compiler_20261013"
     )
-    assert observation["observation"]["outcome"]["measurement_summary"][
+    assert observation["observation"]["measurement_summary"][
         "measurement_availability"]["phase_cgroup_memory_peak_bytes"] == "unavailable"
+    assert observation["observation"]["outcome_context"]["status"] == (
+        "passed_language_fact_v3_project_self_consumption"
+    )
+    assert observation["observation"]["outcome_context"]["claim_boundary"] == (
+        "selected Project function application only; whole-compiler succession remains unproven"
+    )
+    assert observation["observation"]["outcome_context"]["sections"][
+        "vm_runtime_build_origin"]["values"] == {
+            "mismatch_count": 10,
+            "status": "stale-inputs",
+        }
+    assert observation["observation"]["outcome_context"]["sections"][
+        "invalid_source"]["values"]["status"] == "rejected"
     assert result["pressure_hypotheses"][0]["recurrence_status"] == "not-established"
     assert result["source"]["source_pointer_content_integrity_not_verified_count"] == 1
     assert observation["supporting_sources"][0]["content_integrity_status"] == (
