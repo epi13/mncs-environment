@@ -1,0 +1,96 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_projection_page_default_correction_20261024",
+  "captured_at": "2026-10-24T10:10:10+00:00",
+  "measurement_basis": "observed-cli-error-and-post-fix-command-verification",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_29d29c083705bd95",
+      "sequence": 27
+    },
+    "campaign_evidence_count": 87,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "capability-projection-default-limit-integration-correction",
+    "source_interface": "mncs-env projections and focused verification",
+    "request": {
+      "pre_fix_commit": "5256fa3969e51473f5071dcf5c7b3c8b248c7926",
+      "post_fix_commit": "b8bfd3355ca992f1fb238c7d4ece97a5d85fa283",
+      "command": "./scripts/mncs-env projections ses_c38b0ab35b9418ba --interpret environmental-capability --history-pages 4"
+    },
+    "outcome": {
+      "pre_fix_default_command": {
+        "status": "failed",
+        "error": "capability projection evidence limit must be between 1 and 32",
+        "cause": "The CLI reused the campaign ledger's 128-reference maximum as the projection page default, exceeding the projection's 32-reference cap."
+      },
+      "correction": "The direct projection CLI now defaults to MAX_EVIDENCE_REFS (32) and tests that an omitted evidence limit passes 32 to the projection reader.",
+      "focused_capability_tests": {
+        "status": "passed",
+        "passed": 30,
+        "failed": 0,
+        "duration_seconds": 0.9
+      },
+      "environment_interface_tests": {
+        "status": "passed",
+        "passed": 2,
+        "failed": 0,
+        "deselected": 230,
+        "duration_seconds": 0.18
+      },
+      "static_checks": "Changed-file Ruff, selected E4/E7/E9 projection rules, py_compile, and diff checks passed.",
+      "post_fix_live_query": {
+        "status": "partial",
+        "campaign_state_checkpoint_id": "chk_29d29c083705bd95",
+        "campaign_evidence_count": 87,
+        "default_page_limit": 32,
+        "observations_verified": 16,
+        "unavailable": 0,
+        "skipped_by_budget": 41,
+        "improvement_relation_count": 3
+      },
+      "analysis_limit": "The partial projection is expected because the 16-observation history budget omits records. The default argument regression was a defect in this new CLI integration, not evidence of an environmental pressure affecting other agents."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "direct-source-change",
+      "repository": "mncs-environment",
+      "commit": "b8bfd3355ca992f1fb238c7d4ece97a5d85fa283",
+      "path": "mncs_env/cli.py",
+      "sha256": "80ebfd502ebcd355d78139365e2a23c85e6f0477c837e05ddecb7c300d1f6216"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "b8bfd3355ca992f1fb238c7d4ece97a5d85fa283",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "54084beb7436c14d100ecee366848b0643dcc57801fa12c5ac60fe9d2e38ef07"
+    }
+  ],
+  "not_measured": [
+    "whether the regression affected another agent or persisted in any released environment",
+    "full repository-wide test result",
+    "long-term use of the targeted projection interface"
+  ]
+}
