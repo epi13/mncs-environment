@@ -1,0 +1,129 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_event_page_campaign_projection_readback_20261024",
+  "captured_at": "2026-10-24T17:41:18Z",
+  "measurement_basis": "post-checkpoint-campaign-projection-content-integrity-and-relation-readback",
+  "observation": {
+    "kind": "session-event-page-campaign-projection-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "source_session_context": {
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "work_intent_id": "int_8475157f281c835f",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "environment_id": "renv_1991cffb20bdf206",
+      "repository": "mncs-environment",
+      "repository_branch": "campaign/scoped-merge-publish-authority-20261020",
+      "repository_head": "c8f35ee128b689907b3a413e6b723e82d9b9b7b9",
+      "repository_context_basis": "authenticated-control-grant-and-session-snapshot"
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_d9099feaf88c7c26",
+      "campaign_evidence_count": 86,
+      "evidence_page_offset": 83,
+      "evidence_page_limit": 3,
+      "session_event_before_sequence": 100,
+      "session_event_limit": 24
+    },
+    "outcome": {
+      "projection_identity": "eci_02f162c1e38635ab",
+      "projection_status": "ready",
+      "observation_records_verified": 3,
+      "observation_records_unavailable": 0,
+      "pressure_hypothesis": {
+        "identity": "ph_environment_session_activity_older_pages_20261024",
+        "observation_count": 1,
+        "recurrence_status": "not-established"
+      },
+      "improvement_relation": {
+        "identity": "im_environment_session_event_page_cursor_20261024",
+        "pressure_hypothesis_status": "present-in-projection",
+        "implementation_content_integrity": "content-integrity-verified",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "record-integrity-verified-in-projection",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "session_event_page": {
+        "event_count": 220,
+        "event_window_sequence_start": 76,
+        "event_window_sequence_end": 99,
+        "event_page_before_sequence": 100,
+        "next_event_before_sequence": 76,
+        "rpc_operation_events_considered": 11,
+        "rpc_operation_records_returned": 11,
+        "rpc_operation_records_omitted": 0
+      },
+      "analysis_limit": "The projection verified this campaign page and one historical session page. The recorded Work Intent remains a generic Control persistence exercise, so it is retained separately from the explicit campaign objective. The single pressure observation does not establish recurrence or long-term effectiveness."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_d9099feaf88c7c26",
+    "campaign_evidence_count_before_recording": 86,
+    "claim_ids": ["claim:mncs-environment:worktree:567a0ed75512"]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "event_identities": [
+        "evt_e851cadc54399293",
+        "evt_af7dec6e913c06ac",
+        "evt_e9da52612651a511",
+        "evt_0eb16b3c89e70497",
+        "evt_711396f0f5f64988",
+        "evt_690b201bfd6d8245",
+        "evt_9ddf522ea6af5ac8",
+        "evt_d3cb0be6ce32a4b4",
+        "evt_05218152653f07f6",
+        "evt_888e94a1e90b4aef",
+        "evt_a1f8441bb1b94878"
+      ]
+    },
+    {
+      "kind": "verified-pressure-hypothesis-observation",
+      "identity": "ev_environment_session_event_page_cursor_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "e941d59919833bd967aa500fd8ececb27d10f9e9",
+      "path": "evidence/environmental-capability/session-event-page-cursor-verification-20261024.json",
+      "sha256": "780783d6fdff8cf4374db53f1b82cb5b5bdb62be2897bde547da8a28f878f9f7"
+    },
+    {
+      "kind": "authenticated-session-event-live-readback",
+      "identity": "ev_environment_session_event_page_cursor_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "e941d59919833bd967aa500fd8ececb27d10f9e9",
+      "path": "evidence/environmental-capability/session-event-page-cursor-live-readback-20261024.json",
+      "sha256": "63f82c0d7c6fb8f0552d7aa48e8478d8f46ec5530379c587e4513824053e9a17"
+    },
+    {
+      "kind": "validated-pressure-improvement-relation",
+      "identity": "ev_environment_session_event_page_cursor_improvement_20261024",
+      "repository": "mncs-environment",
+      "commit": "e941d59919833bd967aa500fd8ececb27d10f9e9",
+      "path": "evidence/environmental-capability/session-event-page-cursor-improvement-20261024.json",
+      "sha256": "8ccfbb019406deb1b7f915b240fcb415e45f5f9c8e96a1c06d9b20e44df3f5a7"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence",
+    "agent effectiveness or outcome changes",
+    "future recurrence of the recorded session-activity limitation"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
