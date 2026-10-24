@@ -1,0 +1,68 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_evidence_page_cursor_followup_20261024",
+  "captured_at": "2026-10-24T09:10:27+00:00",
+  "measurement_basis": "direct-post-change-Environment-campaign-state-result",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_5d6a1645293fec20",
+      "sequence": 14
+    },
+    "campaign_evidence_count": 23,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "campaign-evidence-page-projection-followup",
+    "source_interface": "mncs_environment MCP campaign_state",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_5d6a1645293fec20",
+      "evidence_offset": 8,
+      "evidence_limit": 8,
+      "branch_commit": "dfe28b04f6bb1bca0bee5fd931d2c945084d37cb"
+    },
+    "outcome": {
+      "projection_status": "ready",
+      "campaign_evidence_count": 23,
+      "evidence_page_count": 8,
+      "observation_records_considered": 8,
+      "observation_records_verified": 5,
+      "observation_records_unavailable": 0,
+      "projection_source_page_offset": 8,
+      "projection_source_page_limit": 8,
+      "projection_source_next_evidence_offset": 16,
+      "projection_source_page_truncated": true,
+      "pressure_hypothesis_count": 1,
+      "pressure_hypothesis_identity": "ph_environment_observation_capture_context",
+      "recurrence_status": "not-established",
+      "improvement_relation_count": 1,
+      "effectiveness_assessment": "not-assessed"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    }
+  ],
+  "not_measured": [
+    "whether agents use the cursor to query later pages",
+    "whether the complete set of campaign evidence was inspected after this read",
+    "long-term effectiveness or recurrence of this improvement"
+  ]
+}

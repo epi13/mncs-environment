@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_evidence_page_cursor_gap_20261024",
+  "captured_at": "2026-10-24T09:11:26+00:00",
+  "measurement_basis": "live-campaign-state-projection-and-committed-source-review",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_5d6a1645293fec20",
+      "sequence": 14
+    },
+    "campaign_evidence_count": 23,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-page-cursor-gap",
+    "source_interface": "mncs_environment MCP campaign_state",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_5d6a1645293fec20",
+      "evidence_offset": 8,
+      "evidence_limit": 8
+    },
+    "outcome": {
+      "projection_status": "ready",
+      "evidence_page_count": 8,
+      "evidence_page_truncated": true,
+      "envelope_next_evidence_offset": 16,
+      "observation_records_verified": 5,
+      "projection_source_had_evidence_page_truncated": true,
+      "projection_source_had_evidence_page_offset": false,
+      "projection_source_had_evidence_page_limit": false,
+      "projection_source_had_next_evidence_offset": false,
+      "analysis_limit": "The Environment response envelope carried the cursor, but a consumer holding only the derived projection could not identify the page offset or continue offset from that projection."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_capability_evidence_page_cursor",
+    "title": "Environmental capability projections omit the evidence page cursor",
+    "category": "evidence-discoverability",
+    "subsystem": "mncs-environment capability intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "One live campaign-state page exposed eight evidence references and a next offset in the outer response, while the ready environmental_capability source summary exposed only the total count and truncation flag.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Include the analyzed evidence page offset, page limit, and next offset in the projection source summary, including compact responses.",
+    "not_measured": [
+      "whether an agent missed a later page because the projection omitted its cursor",
+      "recurrence of this projection discoverability gap across other sessions",
+      "whether carrying the cursor changes agent decisions or reduces repeated reads"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba"
+    },
+    {
+      "kind": "source-review",
+      "identity": "ev_environment_capability_page_cursor_prechange_source_20261024",
+      "repository": "mncs-environment",
+      "commit": "da6e8e8c0069bbc4d397774feb4884fc3580e13c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "f9b235d4582b5f5af0f2199b6fa29eb55de48fb546ba7a27272da5a8f111a022"
+    }
+  ],
+  "not_measured": [
+    "whether this gap caused incomplete investigation or repeated page reads",
+    "recurrence across campaigns or Environment versions",
+    "time, token, or resource impact attributable to the missing cursor"
+  ]
+}
