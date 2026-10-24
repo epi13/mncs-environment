@@ -296,11 +296,26 @@ def _load_observation(
         record = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
         return None, "invalid-json"
-    if (not isinstance(record, dict)
-            or record.get("schema_version") != OBSERVATION_SCHEMA
+    if not isinstance(record, dict):
+        return None, "observation-contract-invalid"
+    observation = record.get("observation")
+    related_work = record.get("related_work")
+    hypothesis = record.get("pressure_hypothesis")
+    if (record.get("schema_version") != OBSERVATION_SCHEMA
             or record.get("identity") != reference["identity"]
-            or not isinstance(record.get("observation"), dict)
-            or not isinstance(record.get("pressure_hypothesis"), dict)):
+            or not isinstance(record.get("captured_at"), str)
+            or not isinstance(observation, dict)
+            or not isinstance(observation.get("kind"), str)
+            or not isinstance(observation.get("source_interface"), str)
+            or not isinstance(observation.get("request"), dict)
+            or not isinstance(observation.get("outcome"), dict)
+            or not isinstance(related_work, dict)
+            or any(not isinstance(related_work.get(key), str) or not related_work[key]
+                   for key in ("campaign_id", "session_id", "work_intent_id", "work_intent_goal"))
+            or not isinstance(hypothesis, dict)
+            or any(not isinstance(hypothesis.get(key), str) or not hypothesis[key]
+                   for key in ("identity", "title", "category", "subsystem", "owner",
+                               "actionable_recommendation"))):
         return None, "observation-contract-invalid"
     return record, "verified"
 

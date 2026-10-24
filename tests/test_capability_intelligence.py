@@ -183,6 +183,19 @@ def test_project_requires_digest_before_exposing_a_pressure(tmp_path: Path) -> N
     assert result["source"]["observation_records_unavailable"] == 1
 
 
+def test_malformed_observation_without_work_correlation_is_not_actionable(tmp_path: Path) -> None:
+    record = _observation("ev_environment_observation_unrelated", "ses_compiler", "cmp_compiler")
+    record.pop("related_work")
+    session, _ = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["pressure_hypothesis_count"] == 0
+    assert result["source"]["observation_records_unavailable"] == 1
+
+
 def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_large", "ses_compiler", "cmp_compiler")
     record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000
