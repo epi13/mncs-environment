@@ -1,0 +1,124 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_intelligence_verification_20261024",
+  "captured_at": "2026-10-24T08:07:55+00:00",
+  "measurement_basis": "direct-test-and-proof-command-results",
+  "observation": {
+    "kind": "capability-intelligence-implementation-verification",
+    "source_interface": "pytest, ruff, MNCS Environment proof scripts",
+    "request": {
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-capability-intelligence-20261024",
+      "commit": "bf469e26587040e8286ac8a06b1f5db2a5fc0651",
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "python3 -m pytest tests/ -q",
+        "python3 scripts/vertical_proof.py",
+        "python3 scripts/campaign_proofs.py"
+      ]
+    },
+    "outcome": {
+      "implementation_status": "verified",
+      "focused_capability_tests": {
+        "status": "passed",
+        "passed": 15,
+        "failed": 0
+      },
+      "lint_and_compile": {
+        "ruff": "passed",
+        "py_compile": "passed",
+        "json_validation": "passed",
+        "git_diff_check": "passed"
+      },
+      "full_test_suite": {
+        "status": "passed",
+        "passed": 813,
+        "skipped": 81,
+        "failed": 0,
+        "duration_seconds": 660.29
+      },
+      "vertical_proof": {
+        "status": "passed",
+        "session_checkpoints": 3,
+        "handoffs": 1,
+        "completed_events": 15
+      },
+      "campaign_proofs": {
+        "status": "passed",
+        "passed": 14,
+        "skipped": 2,
+        "failed": 0,
+        "skip_reasons": [
+          "language.live-delta: host binary absent at /home/epi13/Documents/Projects/mncs-environment/.worktrees/mncs-language-service/target/debug/mnls-language-service-host",
+          "memory.untouched: mncs-memory checkout absent"
+        ]
+      },
+      "post_suite_resource_observation": {
+        "measurement_basis": "point-in-time read after tests, not resource attribution to pytest",
+        "btrfs_device_unallocated_bytes": 28992077824,
+        "btrfs_free_estimated_bytes": 37087424512,
+        "btrfs_data_used_bytes": 204526505984,
+        "btrfs_data_size_bytes": 212621852672,
+        "btrfs_metadata_used_bytes": 3745300480,
+        "btrfs_metadata_size_bytes": 5825888256,
+        "btrfs_global_reserve_used_bytes": 0,
+        "btrfs_device_error_counters": {
+          "write_io_errs": 0,
+          "read_io_errs": 0,
+          "flush_io_errs": 0,
+          "corruption_errs": 0,
+          "generation_errs": 0
+        },
+        "memory_available_bytes": 27419987968,
+        "process_count": 350,
+        "file_descriptor_limit": 524288
+      }
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_68eb24d09a28770e",
+      "sequence": 7
+    },
+    "campaign_evidence_count": 5,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-command-results",
+      "repository": "mncs-environment",
+      "commit": "bf469e26587040e8286ac8a06b1f5db2a5fc0651",
+      "measured_fields": [
+        "focused_capability_tests",
+        "lint_and_compile",
+        "full_test_suite",
+        "vertical_proof",
+        "campaign_proofs",
+        "post_suite_resource_observation"
+      ]
+    }
+  ],
+  "not_measured": [
+    "whether tests changed token or cache use",
+    "which system processes accounted for the resource measurements",
+    "filesystem resource use attributable specifically to pytest or the proof scripts",
+    "whether the two skipped proof targets pass when their host dependencies are present",
+    "Environment runtime version during these commands; the repository commit is pinned separately",
+    "whether subsequent Compiler sessions experience fewer selection or continuity limitations"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  }
+}

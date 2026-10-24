@@ -295,6 +295,30 @@ def test_task_selector_recovery_remains_a_single_unresolved_hypothesis(tmp_path:
     )
 
 
+def test_verification_observation_keeps_resource_context_without_health_scoring(
+    tmp_path: Path,
+) -> None:
+    path = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability/capability-intelligence-verification-20261024.json"
+    )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    session, _ = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    observation = result["observations"][0]
+    assert result["status"] == "ready"
+    assert result["pressure_hypothesis_count"] == 0
+    assert observation["measurement_basis"] == "direct-test-and-proof-command-results"
+    assert observation["observation"]["outcome"]["full_test_suite"]["passed"] == 813
+    assert observation["observation"]["outcome"]["post_suite_resource_observation"][
+        "measurement_basis"
+    ] == "point-in-time read after tests, not resource attribution to pytest"
+    assert observation["recording_context"]["campaign_id"] == (
+        "cmp_environmental_capability_intelligence_20261023"
+    )
+
+
 def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_large", "ses_compiler", "cmp_compiler")
     record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000
