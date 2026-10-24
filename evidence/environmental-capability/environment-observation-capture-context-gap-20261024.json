@@ -1,0 +1,87 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_observation_capture_context_gap_20261024",
+  "captured_at": "2026-10-24T08:32:52+00:00",
+  "measurement_basis": "committed-observation-and-projection-source-review",
+  "observation": {
+    "kind": "projection-capture-context-gap-analysis",
+    "source_interface": "mncs-environment campaign evidence and committed Git source",
+    "request": {
+      "operation_record_identity": "ev_environment_compiler_campaign_state_20261024",
+      "pre_change_projection_commit": "e56623e07c74c35a17a4d5799ca6915d9b1c47a1",
+      "pre_change_projection_path": "mncs_env/capability_intelligence.py",
+      "pre_change_projection_sha256": "e94eb52b01b919d5892d5c14b650ee5f3e6e9dbc293aa34a1f78d4ad6809a53a"
+    },
+    "outcome": {
+      "target_work_campaign": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "target_work_session": "ses_164edc158d9b1637",
+      "recorded_capture_campaign": "cmp_environmental_capability_intelligence_20261023",
+      "recorded_capture_session": "ses_c38b0ab35b9418ba",
+      "source_record_contains_distinct_recorder_and_related_work": true,
+      "pre_change_projection_exposed_recording_context": false,
+      "analysis_limit": "The source review establishes an attribution field was omitted; it does not establish that an agent misattributed this record or that the omission recurred."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_observation_capture_context",
+    "title": "The capability projection omits the recorder when it differs from the work being observed",
+    "category": "evidence-provenance",
+    "subsystem": "mncs-environment capability intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "One committed Compiler campaign-state observation has distinct recorder and target-work sessions; the prior projection source emitted related_work without the recorder context.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Expose the observation recorder's campaign, session, and consumer separately from the campaign and work intent under observation, while preserving the exact evidence pointer and treating consumer identity as recorded metadata.",
+    "not_measured": [
+      "whether this omission caused a user to misattribute an observation",
+      "frequency of cross-session observations without recorder context",
+      "time, token, or resource cost attributable to the omission"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "commit": "bf469e26587040e8286ac8a06b1f5db2a5fc0651",
+      "path": "evidence/environmental-capability/compiler-campaign-state-20261024.json",
+      "sha256": "13f96c984f0f3ea93b3cec8eb62a1a44236c1942ef7ae4b6b572e85c1145cb95",
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "session_id": "ses_164edc158d9b1637",
+      "measured_fields": [
+        "recorder.campaign_id",
+        "recorder.session_id",
+        "related_work.campaign_id",
+        "related_work.session_id"
+      ]
+    },
+    {
+      "kind": "source-review",
+      "repository": "mncs-environment",
+      "commit": "e56623e07c74c35a17a4d5799ca6915d9b1c47a1",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e94eb52b01b919d5892d5c14b650ee5f3e6e9dbc293aa34a1f78d4ad6809a53a",
+      "observed_contract": "projected observation retained related_work but did not expose the record recorder context"
+    }
+  ],
+  "not_measured": [
+    "recurrence of missing capture attribution in other agent sessions",
+    "whether the omission changed decisions or duplicated work",
+    "whether a later recorder-context projection reduces misattribution"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  }
+}
