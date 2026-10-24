@@ -1,0 +1,83 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_campaign_objective_context_improvement_20261024",
+  "captured_at": "2026-10-24T18:20:19Z",
+  "measurement_basis": "verified-content-addressed-charter-projection-linked-to-context-pressure",
+  "observation": {
+    "kind": "campaign-objective-context-improvement-relation",
+    "source_interface": "MNCS Environment environmental-capability projection and campaign charter evidence index",
+    "request": {
+      "pressure_observation_identity": "ev_environment_campaign_objective_context_pressure_20261024",
+      "verification_observation_identity": "ev_environment_campaign_objective_context_verification_20261024",
+      "implementation_commit": "1e12179afc8577208e3113f736724bb26cd8762e",
+      "subsequent_observation_identity": "ev_environment_campaign_objective_context_projection_readback_20261024"
+    },
+    "outcome": {
+      "implementation_change": "The capability projection reads the bounded campaign charter pointer index, verifies candidate Git blobs by exact commit and SHA-256, requires the campaign-charter schema and matching campaign identity, and exposes a unique objective separately from session Work Intent. Missing, partial, ambiguous, or unverified charter context does not produce an objective.",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "One campaign charter is verified and shown separately from the generic Work Intent. The change does not establish charter completeness in other campaigns or a change in agent outcomes."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_8f08a296f43197d1",
+    "campaign_evidence_count_before_recording": 92,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "direct-cli-projection-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    },
+    {
+      "kind": "campaign-objective-context-verification-record",
+      "identity": "ev_environment_campaign_objective_context_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "554e0cb4f26ebecb8990c23273273b6ff3ed94bd",
+      "path": "evidence/environmental-capability/campaign-objective-context-verification-20261024.json",
+      "sha256": "072508703bd20f43ce239990739cfcc5b79567faf27653ac1b819d90fee99dd3"
+    }
+  ],
+  "improvement_relation": {
+    "identity": "im_environment_campaign_objective_context_20261024",
+    "addresses_hypothesis_identity": "ph_environment_campaign_objective_context_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_campaign_charter_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "1e12179afc8577208e3113f736724bb26cd8762e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "efc1941ddc8e8d58d099e935349243089c48d12effef78f77d6b93cb73ac60eb"
+    },
+    "verification_observation_identity": "ev_environment_campaign_objective_context_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_campaign_objective_context_projection_readback_20261024",
+    "basis": "Targeted tests verify unique charter selection, exact digest and campaign checks, ambiguity handling, partial status, compact response retention, and Work Intent separation. The canonical projection verified one user-directed charter while retaining the independent generic Work Intent.",
+    "not_measured": [
+      "cross-campaign charter completeness",
+      "whether agents reconstruct campaign objectives less often",
+      "whether separate campaign and session objectives change agent outcomes",
+      "long-term effectiveness after subsequent development activity"
+    ]
+  },
+  "not_measured": [
+    "cross-campaign recurrence of missing campaign objective context",
+    "agent outcomes or effort after this context improvement",
+    "long-term charter coverage"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
