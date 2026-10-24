@@ -1,0 +1,82 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_history_read_budget_improvement_20261024",
+  "captured_at": "2026-10-24T09:53:15+00:00",
+  "measurement_basis": "committed-capacity-aware-bounded-read-allocation",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {"identity": "chk_ab6b2fdfebf30b95", "sequence": 24},
+    "campaign_evidence_count": 75,
+    "claim_ids": ["claim:mncs-environment:worktree:faa4f0c3f49e"]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "mncs-environment environmental-capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_capability_history_read_budget_underuse",
+      "implementation_commit": "1373370c2c087d8c4e076b37427c72e1cafc2fc6",
+      "verification_observation_identity": "ev_environment_capability_history_read_budget_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_capability_history_read_budget_followup_20261024"
+    },
+    "outcome": {
+      "implementation_change": "The projection counts unique valid observation references per selected page, fairly distributes the total 16-record ceiling across pages with remaining capacity, and reports each page's capacity and assigned read budget.",
+      "verification_recorded": true,
+      "followup_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The new live query uses the full 16-record ceiling. Its checkpoint contains 75 references rather than the earlier 68, so the two query results are not a controlled before-and-after comparison."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_capability_history_read_budget_underuse_20261024",
+    "addresses_hypothesis_identity": "ph_environment_capability_history_read_budget_underuse",
+    "implementation_reference": {
+      "identity": "ev_environment_capability_history_read_budget_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "1373370c2c087d8c4e076b37427c72e1cafc2fc6",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "2fe3adee030c8b792fc9c3b0fd592d8b793eb81b3f632bf3964e03ebf0141265"
+    },
+    "verification_observation_identity": "ev_environment_capability_history_read_budget_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_capability_history_read_budget_followup_20261024",
+    "basis": "The regression test reallocates reads around a short oldest page while respecting the total ceiling. The live query reports capacities 17, 20, and 8 and budgets 5, 6, and 5, using all 16 allowed observation reads.",
+    "not_measured": [
+      "whether the added observations change a pressure interpretation",
+      "whether agents use the page-capacity breakdown",
+      "long-term recurrence or effectiveness"
+    ]
+  },
+  "supporting_sources": [
+    {"kind": "direct-operation-result", "campaign_id": "cmp_environmental_capability_intelligence_20261023", "session_id": "ses_c38b0ab35b9418ba"},
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_capability_history_read_budget_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "1373370c2c087d8c4e076b37427c72e1cafc2fc6",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "2fe3adee030c8b792fc9c3b0fd592d8b793eb81b3f632bf3964e03ebf0141265"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "repository": "mncs-environment",
+      "commit": "1373370c2c087d8c4e076b37427c72e1cafc2fc6",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "9cd0ec5181e44273eaf5232216a234eb45c5e49803fccae447d7e3d14c224a80"
+    }
+  ],
+  "not_measured": [
+    "causal efficiency gain from the changed page allocation",
+    "agent uptake of the new projection metadata",
+    "future recurrence or outcome of the pressure"
+  ]
+}

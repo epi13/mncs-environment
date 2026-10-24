@@ -1,0 +1,65 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_history_read_budget_followup_20261024",
+  "captured_at": "2026-10-24T09:53:15+00:00",
+  "measurement_basis": "live-post-change-authenticated-campaign-history-query",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {"identity": "chk_ab6b2fdfebf30b95", "sequence": 24},
+    "campaign_evidence_count": 75,
+    "claim_ids": ["claim:mncs-environment:worktree:faa4f0c3f49e"]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-history-read-budget-followup",
+    "source_interface": "mncs-env projections",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_ab6b2fdfebf30b95",
+      "history_pages": 4,
+      "branch_commit": "1373370c2c087d8c4e076b37427c72e1cafc2fc6"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "evidence_count": 75,
+      "history_pages_read": 3,
+      "page_offsets": [43, 11, 0],
+      "page_limits": [32, 32, 11],
+      "page_observation_reference_capacities": [17, 20, 8],
+      "per_page_read_budgets": [5, 6, 5],
+      "observations_verified": 16,
+      "observation_records_unavailable": 0,
+      "observation_records_skipped_by_budget": 29,
+      "history_truncated": false,
+      "checkpoint_consistent": true,
+      "pressure_recurrence_observed_in_verified_records": false,
+      "analysis_limit": "All campaign reference pages were covered, but 29 observation records remain unread under the global ceiling. No recurrence was observed among the 16 verified records; the omitted records could contain further evidence. The checkpoint differs from the earlier 68-reference query, so these readings do not isolate the allocation change."
+    }
+  },
+  "supporting_sources": [
+    {"kind": "direct-operation-result", "campaign_id": "cmp_environmental_capability_intelligence_20261023", "session_id": "ses_c38b0ab35b9418ba"},
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_capability_history_read_budget_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "1373370c2c087d8c4e076b37427c72e1cafc2fc6",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "2fe3adee030c8b792fc9c3b0fd592d8b793eb81b3f632bf3964e03ebf0141265"
+    }
+  ],
+  "not_measured": [
+    "whether the additional verified record changes recurrence assessment",
+    "agent use or benefit of the history projection",
+    "long-term pressure resolution and resource effect"
+  ]
+}

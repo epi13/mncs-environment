@@ -1,0 +1,74 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_capability_history_read_budget_gap_20261024",
+  "captured_at": "2026-10-24T09:53:15+00:00",
+  "measurement_basis": "authentic-bounded-history-query-and-recorded-page-capacity-analysis",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {"identity": "chk_ab6b2fdfebf30b95", "sequence": 24},
+    "campaign_evidence_count": 75,
+    "claim_ids": ["claim:mncs-environment:worktree:faa4f0c3f49e"]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "environmental-capability-history-read-budget-gap",
+    "source_interface": "mncs-env environmental-capability projection",
+    "request": {
+      "session_id": "ses_c38b0ab35b9418ba",
+      "prechange_checkpoint_id": "chk_c7310a7ece51f4c4",
+      "prechange_history_page_offsets": [36, 4, 0],
+      "prechange_history_page_limits": [32, 32, 4],
+      "prechange_implementation_commit": "7680c394f0d7c04501e1437fccc24e70493c2e0a"
+    },
+    "outcome": {
+      "prechange_observation_records_verified": 13,
+      "prechange_observation_records_unavailable": 0,
+      "global_observation_read_ceiling": 16,
+      "prechange_observation_records_skipped_by_page_budget": 28,
+      "prechange_per_page_budget": 5,
+      "analysis": "The short oldest page could contain at most four evidence references but still had a budget of five; the equal split used at most fifteen of sixteen global reads. The recorded result verified thirteen and had no unavailable reads.",
+      "analysis_basis": "Derived from the authenticated page limits and saved projection result; it does not establish agent time, token, or resource impact."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_capability_history_read_budget_underuse",
+    "title": "Equal page budgets can leave observation reads unused while denser pages omit records",
+    "category": "resource-operational-pressure",
+    "subsystem": "mncs-environment capability intelligence history analysis",
+    "owner": "mncs-environment",
+    "basis": "An authentic multi-page query had a fixed five-record allowance per page, 13 verified observations, zero unavailable observations, and a four-reference oldest page while records remained unread on denser pages.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Redistribute the global observation ceiling according to verified unique observation-reference capacity and expose each page's capacity and assigned budget.",
+    "not_measured": [
+      "whether budget underuse affected a current agent investigation",
+      "agent time, token, memory, or CPU impact",
+      "recurrence across other campaign sizes"
+    ]
+  },
+  "supporting_sources": [
+    {"kind": "direct-operation-result", "campaign_id": "cmp_environmental_capability_intelligence_20261023", "session_id": "ses_c38b0ab35b9418ba"},
+    {
+      "kind": "committed-prior-followup-observation",
+      "identity": "ev_environment_capability_history_page_overlap_followup_20261024",
+      "repository": "mncs-environment",
+      "commit": "d2080a06fa56f92b990ebd3727e841da073c3eca",
+      "path": "evidence/environmental-capability/environment-capability-history-page-overlap-followup-20261024.json",
+      "sha256": "abdd071d915c5a90c532bd1af96d9b886b6df1611d9176343d3d1080e90955fd"
+    }
+  ],
+  "not_measured": [
+    "whether all skipped records contain additional pressure evidence",
+    "agent benefit from using all available reads",
+    "long-term recurrence or mitigation effectiveness"
+  ]
+}
