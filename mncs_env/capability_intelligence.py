@@ -864,8 +864,10 @@ def _validate_improvement_relation(value: Any) -> dict[str, Any] | None:
     basis = value.get("basis")
     limits = value.get("not_measured", [])
     if (any(not isinstance(item, str) or not item or len(item) > 160
-            for item in (identity, hypothesis_identity, verification_identity,
-                         subsequent_identity))
+            for item in (identity, hypothesis_identity, verification_identity))
+            or (subsequent_identity is not None
+                and (not isinstance(subsequent_identity, str)
+                     or not subsequent_identity or len(subsequent_identity) > 160))
             or implementation is None or "sha256" not in implementation
             or not isinstance(basis, str) or not basis or len(basis) > 1024
             or not isinstance(limits, list) or len(limits) > 16
@@ -1837,9 +1839,13 @@ def project(
                     "subsequent_observation_identity"
                 ],
                 "subsequent_record_status": (
-                    "record-integrity-verified-in-projection"
-                    if improvement["subsequent_observation_identity"] in projected_record_ids
-                    else "not-present-in-projection"
+                    "not-recorded"
+                    if improvement["subsequent_observation_identity"] is None
+                    else (
+                        "record-integrity-verified-in-projection"
+                        if improvement["subsequent_observation_identity"] in projected_record_ids
+                        else "not-present-in-projection"
+                    )
                 ),
                 "effectiveness_assessment": "not-assessed",
                 "basis": improvement["basis"],
@@ -1853,6 +1859,8 @@ def project(
                 ("verification_observation_identity", "verification_evidence_reference"),
                 ("subsequent_observation_identity", "subsequent_evidence_reference"),
             ):
+                if improvement[identity_key] is None:
+                    continue
                 linked_reference = projected_references_by_identity.get(
                     improvement[identity_key],
                 )
@@ -1997,6 +2005,7 @@ def project(
             "Within each selected page, bounded observation reads select the newest references in ledger append order; earlier references in that page may remain unread.",
             "Candidate continuation count is not treated as repeated pressure; recurrence requires distinct recorded observations.",
             "Effectiveness after a proposed change remains unknown until later independent observations support it.",
+            "A missing subsequent-observation identity is exposed as not-recorded; the projection does not infer follow-up.",
             "A linked verification record establishes that evidence is present and integrity checked; effectiveness still requires independent follow-up.",
             "Session activity summarizes only the bounded recent event tail and exposes no raw invocation arguments or results.",
             "Authenticated Control read-operation events include a measured Control-dispatch elapsed time, which includes session-queue wait and is not total agent execution duration; model identity, token usage, resource consumption, and cache accounting remain unavailable.",

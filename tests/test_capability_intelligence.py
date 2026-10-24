@@ -902,6 +902,59 @@ def test_improvement_relation_links_pressure_change_verification_and_followup(
     )
 
 
+def test_improvement_relation_without_followup_preserves_unassessed_status(
+    tmp_path: Path,
+) -> None:
+    pressure = _observation("ev_environment_pressure_occurrence", "ses_agent", "cmp_agent")
+    pressure["pressure_hypothesis"]["identity"] = "ph_unobserved_followup"
+    verification = _observation(
+        "ev_environment_change_verification", "ses_environment", "cmp_environment",
+    )
+    verification.pop("pressure_hypothesis")
+    change = _observation(
+        "ev_environment_change_implementation", "ses_environment", "cmp_environment",
+    )
+    change.pop("pressure_hypothesis")
+    implementation_reference = {
+        "identity": "ev_environment_change_source",
+        "repository": "mncs-environment",
+        "commit": "a" * 40,
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "b" * 64,
+    }
+    change["improvement_relation"] = {
+        "identity": "im_unobserved_followup",
+        "addresses_hypothesis_identity": "ph_unobserved_followup",
+        "implementation_reference": implementation_reference,
+        "verification_observation_identity": verification["identity"],
+        "basis": "The implementation and verification are recorded; no subsequent independent activity is available yet.",
+        "not_measured": ["whether the pressure persists after the change"],
+    }
+    session, _ = _session(
+        tmp_path, [pressure, change, verification],
+        extra_refs=[implementation_reference],
+    )
+
+    result = capability_intelligence.project(session)
+    compact = capability_intelligence.project(session, max_result_bytes=5000)
+
+    relation = result["improvement_relations"][0]
+    assert result["improvement_relation_count"] == 1
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["subsequent_observation_identity"] is None
+    assert relation["subsequent_record_status"] == "not-recorded"
+    assert "subsequent_evidence_reference" not in relation
+    assert relation["effectiveness_assessment"] == "not-assessed"
+    assert compact["improvement_relations"][0]["subsequent_record_status"] == (
+        "not-recorded"
+    )
+    assert compact["improvement_relations"][0]["effectiveness_assessment"] == (
+        "not-assessed"
+    )
+
+
 def test_improvement_record_does_not_count_as_another_pressure_occurrence(
     tmp_path: Path,
 ) -> None:
