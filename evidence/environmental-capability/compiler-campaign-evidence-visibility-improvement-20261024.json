@@ -1,0 +1,86 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_campaign_evidence_visibility_improvement_20261024",
+  "captured_at": "2026-10-24T23:30:59Z",
+  "measurement_basis": "derived-improvement-link-from-live-compiler-context-and-projection-verification",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-improvement-link-record",
+    "source_interface": "mncs-environment environmental-capability projection",
+    "request": {
+      "operation": "relate-compiler-workspace-context-candidate-to-live-projection-change",
+      "pressure_identity": "ph_environment_compiler_campaign_evidence_outside_selection_20261024"
+    },
+    "outcome": {
+      "relationship_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "subsequent_observation_status": "not-recorded",
+      "basis": "The new projection candidate makes the compiler session's declared-versus-selected repository mismatch and four outside-selected pointers visible in one explicitly hypothetical, traceable object. The focused ECI suite and the active compiler session's read-only projection query verify its shape and source classifications. It does not read compiler source through the unselected session, change checkout selection, establish that work was blocked, or establish recurrence."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_compiler_workspace_context_candidate_20261024",
+    "addresses_hypothesis_identity": "ph_environment_compiler_campaign_evidence_outside_selection_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_workspace_context_pressure_candidate_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "fb85a7ade2875849464b19ae0f154b5bffb4f97b",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "4febd4cc0a5252917e367db089717857e3eefc23dea7a041cd525c18ecb0dba5"
+    },
+    "verification_observation_identity": "ev_environment_compiler_campaign_evidence_visibility_verification_20261024",
+    "subsequent_observation_identity": null,
+    "basis": "The projection now emits a bounded context-pressure candidate separate from persisted pressure hypotheses, linking Work Intent scope, selected repositories, and exact outside-selected evidence references. Targeted tests and the live read-only compiler projection verify this behavior. No later compiler activity or independent agent use has been observed, so effectiveness remains unassessed.",
+    "not_measured": [
+      "whether the context candidate changes subsequent compiler-agent actions",
+      "whether the checkout mismatch blocks or delays compiler development",
+      "whether similar scope gaps recur across sessions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_compiler_campaign_evidence_visibility_pressure_20261024",
+      "repository": "mncs-environment",
+      "commit": "fb85a7ade2875849464b19ae0f154b5bffb4f97b",
+      "path": "evidence/environmental-capability/compiler-campaign-evidence-visibility-pressure-20261024.json",
+      "sha256": "92ef37c6f167d9c10dda20cb0f2c56dcbf52ada5142747096d254d89d78340b3"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_compiler_campaign_evidence_visibility_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "654a5fb2e3bb69bdb3906d88a00d1df6fc5210aa",
+      "path": "evidence/environmental-capability/compiler-campaign-evidence-visibility-verification-20261024.json",
+      "sha256": "0deda50ff02b42b01430dcf8f0a8420993cbb70ebaf40072d02d4c2f255a3224"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_workspace_context_pressure_candidate_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "fb85a7ade2875849464b19ae0f154b5bffb4f97b",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "4febd4cc0a5252917e367db089717857e3eefc23dea7a041cd525c18ecb0dba5"
+    }
+  ],
+  "not_measured": [
+    "empirical elimination of the workspace-selection pressure",
+    "independent later use of the context-pressure candidate",
+    "whether this observation enables previously impractical compiler work"
+  ]
+}
