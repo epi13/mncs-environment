@@ -1263,6 +1263,49 @@ def test_authentic_capture_context_evidence_projects_as_one_improvement_chain(
     assert followup["recording_context"]["session_id"] == "ses_c38b0ab35b9418ba"
 
 
+def test_pressure_context_refinement_projects_its_verified_followup_chain(
+    tmp_path: Path,
+) -> None:
+    evidence_dir = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability"
+    )
+    records = [
+        json.loads((evidence_dir / filename).read_text(encoding="utf-8"))
+        for filename in (
+            "pressure-summary-work-context-gap-20261024.json",
+            "pressure-context-and-session-source-verification-20261024.json",
+            "pressure-context-and-session-source-improvement-20261024.json",
+            "pressure-context-and-session-source-live-readback-20261024.json",
+        )
+    ]
+    implementation = records[2]["improvement_relation"]["implementation_reference"]
+    session, _ = _session(tmp_path, records, extra_refs=[implementation])
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["pressure_hypothesis_count"] == 1
+    assert result["pressure_hypotheses"][0]["identity"] == (
+        "ph_environment_pressure_summary_work_context"
+    )
+    assert result["improvement_relation_count"] == 1
+    relation = result["improvement_relations"][0]
+    assert relation["pressure_hypothesis_status"] == "present-in-projection"
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["subsequent_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["effectiveness_assessment"] == "not-assessed"
+    assert relation["verification_evidence_reference"]["identity"] == (
+        "ev_environment_pressure_context_and_session_source_verification_20261024"
+    )
+    assert relation["subsequent_evidence_reference"]["identity"] == (
+        "ev_environment_pressure_context_and_session_source_live_readback_20261024"
+    )
+
+
 def test_authentic_recorder_environment_identity_is_projected_separately(
     tmp_path: Path,
 ) -> None:
