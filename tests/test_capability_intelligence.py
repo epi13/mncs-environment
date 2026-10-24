@@ -1522,6 +1522,77 @@ def test_recurrence_requires_distinct_recorded_observations_and_sessions(tmp_pat
     assert hypothesis["recurrence_status"] == "observed-across-sessions"
 
 
+def test_conflicting_pressure_recommendations_are_preserved_as_ambiguous(
+    tmp_path: Path,
+) -> None:
+    first = _observation(
+        "ev_environment_selection_recommendation_first",
+        "ses_compiler_selection",
+        "cmp_compiler_selection",
+    )
+    second = _observation(
+        "ev_environment_selection_recommendation_second",
+        "ses_compiler_selection",
+        "cmp_compiler_selection",
+    )
+    second["pressure_hypothesis"]["actionable_recommendation"] = (
+        "Return the exact required registered worktree context after validating "
+        "the caller's campaign and session."
+    )
+    session, _ = _session(tmp_path, [first, second])
+
+    full = capability_intelligence.project(session)
+    pressure = full["pressure_hypotheses"][0]
+
+    assert pressure["definition_status"] == "conflicting-recorded-definitions"
+    assert pressure["definition_conflict_fields"] == ["recommendation"]
+    assert pressure["title"] == first["pressure_hypothesis"]["title"]
+    assert "recommendation" not in pressure
+    assert pressure["definition_evidence_observation_identities"] == [
+        first["identity"], second["identity"],
+    ]
+
+    compact = capability_intelligence.project(session, max_result_bytes=6_000)
+    compact_pressure = compact["pressure_hypotheses"][0]
+    assert compact["source"]["response_truncated"] is True
+    assert compact_pressure["definition_status"] == (
+        "conflicting-recorded-definitions"
+    )
+    assert compact_pressure["definition_conflict_fields"] == ["recommendation"]
+    assert "recommendation" not in compact_pressure
+    assert compact_pressure["definition_evidence_observation_identities"] == [
+        first["identity"], second["identity"],
+    ]
+
+
+def test_authentic_compiler_selection_records_surface_recommendation_conflict(
+    tmp_path: Path,
+) -> None:
+    evidence_root = Path(__file__).resolve().parents[1] / "evidence" / "environmental-capability"
+    identities = (
+        "project-continuation-conflict-20261024.json",
+        "compiler-project-context-selection-recurrence-20261024.json",
+    )
+    records = [
+        json.loads((evidence_root / name).read_text(encoding="utf-8"))
+        for name in identities
+    ]
+    session, _ = _session(tmp_path, records)
+
+    projection = capability_intelligence.project(session)
+
+    pressure = next(
+        item for item in projection["pressure_hypotheses"]
+        if item["identity"] == "ph_environment_project_session_selection"
+    )
+    assert pressure["definition_status"] == "conflicting-recorded-definitions"
+    assert pressure["definition_conflict_fields"] == ["recommendation"]
+    assert "recommendation" not in pressure
+    assert pressure["definition_evidence_observation_identities"] == [
+        record["identity"] for record in records
+    ]
+
+
 def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     tmp_path: Path, monkeypatch,
 ) -> None:

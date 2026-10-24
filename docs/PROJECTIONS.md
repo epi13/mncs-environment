@@ -184,6 +184,15 @@ Observations can also report measurements without a pressure hypothesis, so a
 resource sample is not forced into a healthy/unhealthy judgment. Its sampling
 scope and unavailable attribution remain attached to that observation.
 
+When observations reuse one pressure identity but record different titles,
+categories, subsystems, owners, or recommendations, the projection reports
+`definition_status: conflicting-recorded-definitions`, lists the conflicting
+fields, and omits those ambiguous summary values. It retains the supporting
+observation identities and evidence references so an agent can inspect each
+recorded definition. It does not choose a recommendation based on ledger order.
+A single recorded value remains visible if another record leaves an optional
+field such as owner unspecified.
+
 The same projection includes a bounded view of the current session's durable
 Environment capability events. It joins `capability.invoked` and
 `invocation.completed` records by their provider request identity, relates the

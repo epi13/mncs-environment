@@ -458,6 +458,21 @@ def _compact_projection(
                         "interpretation", "recurrence_status", "recommendation")
             if hypothesis.get(key) is not None
         }
+        for key in ("definition_status", "definition_conflict_fields"):
+            if hypothesis.get(key) is not None:
+                summary[key] = hypothesis[key]
+        definition_observations = hypothesis.get(
+            "definition_evidence_observation_identities",
+        )
+        if isinstance(definition_observations, list):
+            summary["definition_evidence_observation_identities"] = [
+                _short_text(identity, 160)
+                for identity in definition_observations[:MAX_OBSERVATIONS]
+                if isinstance(identity, str)
+            ]
+            summary["definition_evidence_observation_identities_truncated"] = (
+                len(definition_observations) > MAX_OBSERVATIONS
+            )
         for key in (
             "observation_count", "distinct_session_count", "distinct_campaign_count",
             "distinct_work_intent_count", "distinct_environment_version_count",
@@ -1304,13 +1319,34 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
             recurrence_status = "repeated-within-session"
         else:
             recurrence_status = "not-established"
-        hypothesis = group[0]["pressure_hypothesis"]
-        result.append({
+        definition_values = {
+            "title": "title",
+            "category": "category",
+            "subsystem": "subsystem",
+            "owner": "owner",
+            "recommendation": "actionable_recommendation",
+        }
+        definition_conflicts = []
+        definition = {}
+        for output_key, source_key in definition_values.items():
+            values = sorted({
+                item["pressure_hypothesis"].get(source_key)
+                for item in group
+                if isinstance(item["pressure_hypothesis"].get(source_key), str)
+                and item["pressure_hypothesis"][source_key]
+            })
+            if len(values) > 1:
+                definition_conflicts.append(output_key)
+            elif values:
+                definition[output_key] = values[0]
+        definition_status = (
+            "conflicting-recorded-definitions"
+            if definition_conflicts else "consistent"
+        )
+        summary = {
             "identity": identity,
-            "title": hypothesis.get("title"),
-            "category": hypothesis.get("category"),
-            "subsystem": hypothesis.get("subsystem"),
-            "owner": hypothesis.get("owner"),
+            **definition,
+            "definition_status": definition_status,
             "interpretation": "hypothesis",
             "observation_count": len(group),
             "distinct_session_count": len(sessions),
@@ -1329,9 +1365,14 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "recording_context_count": len(recording_contexts),
             "recording_contexts": recording_contexts,
             "recurrence_status": recurrence_status,
-            "recommendation": hypothesis.get("actionable_recommendation"),
             "evidence": [item["evidence_reference"] for item in group],
-        })
+        }
+        if definition_conflicts:
+            summary["definition_conflict_fields"] = definition_conflicts
+            summary["definition_evidence_observation_identities"] = [
+                item["identity"] for item in group
+            ]
+        result.append(summary)
     return result
 
 
