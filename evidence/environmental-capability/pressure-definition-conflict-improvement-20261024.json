@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_definition_conflict_improvement_20261024",
+  "captured_at": "2026-10-24T15:28:25Z",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability-intelligence pressure projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_pressure_definition_conflict",
+      "implementation_commit": "7182209aa15678f18c1bd509a26aa8bdf8df1205",
+      "verification_observation_identity": "ev_environment_pressure_definition_conflict_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_pressure_definition_conflict_live_readback_20261024"
+    },
+    "outcome": {
+      "implementation_change": "Pressure summaries now detect conflicting recorded definitions, omit only ambiguous summary fields, and expose the conflict fields and supporting observation identities in full and compact projections.",
+      "verification_recorded": true,
+      "live_projection_readback_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The authentic Compiler records demonstrate the projection ambiguity and the authenticated readback verifies the new projection behavior. This does not establish how agents use the detail or whether the unrelated Control continuation limitation was reduced."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_pressure_definition_conflict_20261024",
+    "addresses_hypothesis_identity": "ph_environment_pressure_definition_conflict",
+    "implementation_reference": {
+      "identity": "ev_environment_pressure_definition_conflict_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "7182209aa15678f18c1bd509a26aa8bdf8df1205",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "9ad06f92de9dd2adc57c742c7c1f2833cb389dc4ca44af66ff2f8ff7a6f07a10"
+    },
+    "verification_observation_identity": "ev_environment_pressure_definition_conflict_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_pressure_definition_conflict_live_readback_20261024",
+    "basis": "A regression loads the two exact committed Compiler observations, verifies that the shared pressure identity reports a recommendation conflict and does not choose a recommendation, and checks that compact output preserves the conflict and source identities. An authenticated campaign-state readback after the implementation commit shows the same behavior over the durable campaign evidence.",
+    "not_measured": [
+      "whether agents inspect or use the supporting evidence identities",
+      "whether the projection change alters development choices or time spent investigating",
+      "recurrence or effectiveness across later Environment versions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_pressure_definition_conflict_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "7182209aa15678f18c1bd509a26aa8bdf8df1205",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "9ad06f92de9dd2adc57c742c7c1f2833cb389dc4ca44af66ff2f8ff7a6f07a10"
+    },
+    {
+      "kind": "committed-source-observation",
+      "identity": "ev_environment_project_continuation_conflict_20261024",
+      "repository": "mncs-environment",
+      "commit": "6d59dac14428b8e3bbd1d9437d15dfc066824096",
+      "path": "evidence/environmental-capability/project-continuation-conflict-20261024.json",
+      "sha256": "ecbc4c1145fb553b9e3a01134ebabfc4e08b29736118017d6037e1850c143a77"
+    },
+    {
+      "kind": "committed-source-observation",
+      "identity": "ev_environment_compiler_project_context_selection_recurrence_20261024",
+      "repository": "mncs-environment",
+      "commit": "21759c3ad998cda91711f50f008f4ff84cd24526",
+      "path": "evidence/environmental-capability/compiler-project-context-selection-recurrence-20261024.json",
+      "sha256": "3709ff0953f009db450220ea537eef295c939568a61ee7891d06eb9d75cf019c"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "measurement_basis": "authenticated-projection-readback-and-focused-regression-tests",
+  "not_measured": [
+    "observed improvement in agent experience or discovery",
+    "whether a future projection consumer uses the conflicting-source context",
+    "long-term recurrence and effectiveness across subsequent Compiler activity"
+  ]
+}

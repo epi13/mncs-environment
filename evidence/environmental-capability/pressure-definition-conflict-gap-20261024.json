@@ -1,0 +1,99 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_definition_conflict_gap_20261024",
+  "captured_at": "2026-10-24T15:27:56Z",
+  "observation": {
+    "kind": "authentic-pressure-definition-conflict-review",
+    "source_interface": "MNCS Environment campaign-state environmental_capability projection",
+    "request": {
+      "pressure_hypothesis_identity": "ph_environment_project_session_selection",
+      "source_observation_identities": [
+        "ev_environment_project_continuation_conflict_20261024",
+        "ev_environment_compiler_project_context_selection_recurrence_20261024"
+      ],
+      "pre_change_projection_commit": "078a46a828f5eaa903f1ea8d9ae9e116563e2d6e"
+    },
+    "outcome": {
+      "same_pressure_identity": true,
+      "distinct_recorded_recommendations": true,
+      "affected_compiler_session_count": 1,
+      "recording_environment_session_count": 2,
+      "pre_change_code_path_review": "Source inspection showed that the projection selected the first record's definition when summarizing a shared pressure identity and did not surface disagreements between definitions.",
+      "analysis_limit": "This is one observed projection ambiguity in evidence about one Compiler session. It does not establish recurrence across Compiler sessions or identify a cause for the underlying Control continuation pressure."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_id": "int_8fb697d8987722d5",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "campaign_objective": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "environment_id": "renv_80ef889b89dad0e9",
+    "definition_id": "env_c7d14ed20b708d09",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "campaign_evidence_count": 693,
+    "claim_ids": [
+      "claim:mncs-compiler:worktree:238af39c1c65",
+      "claim:mncs-compiler:worktree:5fa38ecf09fb"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_pressure_definition_conflict",
+    "title": "A shared pressure identity can carry conflicting recorded recommendations",
+    "category": "evidence-provenance",
+    "subsystem": "mncs-environment capability-intelligence pressure projection",
+    "owner": "mncs-environment",
+    "basis": "Two authentic observations about the same Compiler campaign pressure share one pressure identity but prescribe different Control continuation behavior. The prior projection summarized the first definition without exposing the conflict, making the actionable recommendation depend on record order.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "When a pressure identity has conflicting recorded metadata, expose the conflicting fields and supporting observation identities, and omit ambiguous summary values instead of selecting one by ledger order.",
+    "not_measured": [
+      "how often pressure identities have conflicting metadata across campaign evidence",
+      "whether agents relied on the previously selected recommendation",
+      "whether conflicting recommendations affect implementation choices",
+      "time, token, cache, or resource impact of this projection ambiguity",
+      "whether the underlying Compiler session-selection pressure recurs across distinct sessions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_project_continuation_conflict_20261024",
+      "repository": "mncs-environment",
+      "commit": "6d59dac14428b8e3bbd1d9437d15dfc066824096",
+      "path": "evidence/environmental-capability/project-continuation-conflict-20261024.json",
+      "sha256": "ecbc4c1145fb553b9e3a01134ebabfc4e08b29736118017d6037e1850c143a77"
+    },
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_compiler_project_context_selection_recurrence_20261024",
+      "repository": "mncs-environment",
+      "commit": "21759c3ad998cda91711f50f008f4ff84cd24526",
+      "path": "evidence/environmental-capability/compiler-project-context-selection-recurrence-20261024.json",
+      "sha256": "3709ff0953f009db450220ea537eef295c939568a61ee7891d06eb9d75cf019c"
+    },
+    {
+      "kind": "committed-pre-change-projection-implementation",
+      "identity": "ev_environment_capability_intelligence_predefinition-conflict_20261024",
+      "repository": "mncs-environment",
+      "commit": "078a46a828f5eaa903f1ea8d9ae9e116563e2d6e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "98190ba644619e181f901cc6276dbc64bbe4434d0006a87823fc931d532667c3"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "measurement_basis": "authentic-Compiler-campaign-observations-and-pre-change-projection-implementation-review",
+  "not_measured": [
+    "whether any compiler agent saw or relied on the ambiguous projection summary",
+    "frequency of this projection limitation outside the selected evidence page",
+    "agent or system cost attributable to the ambiguity"
+  ]
+}

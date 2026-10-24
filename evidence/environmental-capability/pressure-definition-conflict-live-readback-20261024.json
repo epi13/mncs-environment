@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_definition_conflict_live_readback_20261024",
+  "captured_at": "2026-10-24T15:27:56Z",
+  "observation": {
+    "kind": "pressure-definition-conflict-live-projection-readback",
+    "source_interface": "authenticated MNCS Environment campaign_state environmental_capability projection",
+    "request": {
+      "checkpoint_id": "chk_315321ce72f775f1",
+      "evidence_offset": 0,
+      "evidence_limit": 32,
+      "pressure_hypothesis_identity": "ph_environment_project_session_selection"
+    },
+    "projection_summary": {
+      "status": "partial",
+      "observation_count": 16,
+      "evidence_count": 25,
+      "pressure_hypothesis_identity": "ph_environment_project_session_selection",
+      "definition_status": "conflicting-recorded-definitions",
+      "definition_conflict_fields": [
+        "recommendation"
+      ],
+      "ambiguous_recommendation_omitted": true,
+      "definition_evidence_observation_identities": [
+        "ev_environment_project_continuation_conflict_20261024",
+        "ev_environment_compiler_project_context_selection_recurrence_20261024"
+      ],
+      "affected_compiler_session_count": 1,
+      "recording_environment_session_count": 2
+    },
+    "outcome": {
+      "readback": "The authenticated Environment projection marks the existing Compiler pressure definition as conflicting, withholds the ambiguous recommendation, and returns exact source identities and commit/path/digest references.",
+      "coverage_limit": "The campaign projection is partial because it selects at most 16 observation records. No long-term effectiveness or cross-Compiler-session recurrence is established."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_315321ce72f775f1",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "supporting_sources": [
+    {
+      "kind": "authenticated-campaign-state-projection",
+      "identity": "ev_environment_project_continuation_conflict_20261024",
+      "repository": "mncs-environment",
+      "commit": "6d59dac14428b8e3bbd1d9437d15dfc066824096",
+      "path": "evidence/environmental-capability/project-continuation-conflict-20261024.json",
+      "sha256": "ecbc4c1145fb553b9e3a01134ebabfc4e08b29736118017d6037e1850c143a77"
+    },
+    {
+      "kind": "authenticated-campaign-state-projection",
+      "identity": "ev_environment_compiler_project_context_selection_recurrence_20261024",
+      "repository": "mncs-environment",
+      "commit": "21759c3ad998cda91711f50f008f4ff84cd24526",
+      "path": "evidence/environmental-capability/compiler-project-context-selection-recurrence-20261024.json",
+      "sha256": "3709ff0953f009db450220ea537eef295c939568a61ee7891d06eb9d75cf019c"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_pressure_definition_conflict_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "7182209aa15678f18c1bd509a26aa8bdf8df1205",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "9ad06f92de9dd2adc57c742c7c1f2833cb389dc4ca44af66ff2f8ff7a6f07a10"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "measurement_basis": "authenticated-live-projection-readback-after-implementation-commit",
+  "not_measured": [
+    "whether later agents inspect or act on conflicting-definition details",
+    "whether the underlying Compiler project-continuation limitation recurs across distinct sessions",
+    "long-term effectiveness after additional development evidence is recorded"
+  ]
+}

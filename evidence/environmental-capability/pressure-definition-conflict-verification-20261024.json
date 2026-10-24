@@ -1,0 +1,98 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_definition_conflict_verification_20261024",
+  "captured_at": "2026-10-24T15:28:25Z",
+  "observation": {
+    "kind": "pressure-definition-conflict-regression-verification",
+    "source_interface": "pytest and Ruff",
+    "request": {
+      "implementation_commit": "7182209aa15678f18c1bd509a26aa8bdf8df1205",
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-observation-live-context-20261024",
+      "authentic_source_observation_identities": [
+        "ev_environment_project_continuation_conflict_20261024",
+        "ev_environment_compiler_project_context_selection_recurrence_20261024"
+      ]
+    },
+    "outcome": {
+      "focused_test_command": "python -m pytest tests/test_capability_intelligence.py -q",
+      "focused_test_result": "54 passed",
+      "authentic_record_projection_regression": "passed; the exact committed Compiler records expose definition_status=conflicting-recorded-definitions, list recommendation as the conflicting field, and withhold the ambiguous recommendation",
+      "compact_projection_regression": "passed; compact output retains the conflict status, field, and exact supporting observation identities",
+      "lint_command": "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+      "lint_result": "all checks passed",
+      "git_diff_check": "passed"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_315321ce72f775f1",
+    "campaign_evidence_count_before_recording": 25,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_pressure_definition_conflict_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "7182209aa15678f18c1bd509a26aa8bdf8df1205",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "9ad06f92de9dd2adc57c742c7c1f2833cb389dc4ca44af66ff2f8ff7a6f07a10"
+    },
+    {
+      "kind": "committed-regression-tests",
+      "identity": "ev_environment_pressure_definition_conflict_tests_20261024",
+      "repository": "mncs-environment",
+      "commit": "7182209aa15678f18c1bd509a26aa8bdf8df1205",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "27977d792eca192e27dea05b91c1994eca7449dbb484199fb050ef5c17a928d2"
+    },
+    {
+      "kind": "committed-contract-documentation",
+      "identity": "ev_environment_pressure_definition_conflict_contract_20261024",
+      "repository": "mncs-environment",
+      "commit": "7182209aa15678f18c1bd509a26aa8bdf8df1205",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "037e1d01babb8a4b1d88cbcb42184efc0b4b9de285b8fb27642b2d494faff293"
+    },
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_project_continuation_conflict_20261024",
+      "repository": "mncs-environment",
+      "commit": "6d59dac14428b8e3bbd1d9437d15dfc066824096",
+      "path": "evidence/environmental-capability/project-continuation-conflict-20261024.json",
+      "sha256": "ecbc4c1145fb553b9e3a01134ebabfc4e08b29736118017d6037e1850c143a77"
+    },
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_compiler_project_context_selection_recurrence_20261024",
+      "repository": "mncs-environment",
+      "commit": "21759c3ad998cda91711f50f008f4ff84cd24526",
+      "path": "evidence/environmental-capability/compiler-project-context-selection-recurrence-20261024.json",
+      "sha256": "3709ff0953f009db450220ea537eef295c939568a61ee7891d06eb9d75cf019c"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "measurement_basis": "focused-projection-tests-and-lint",
+  "not_measured": [
+    "whether agents act on the conflict report",
+    "whether the ambiguous field omission changes development outcomes",
+    "long-term recurrence and effectiveness across later Environment versions"
+  ]
+}
