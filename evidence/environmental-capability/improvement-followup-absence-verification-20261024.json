@@ -1,0 +1,88 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_improvement_followup_absence_verification_20261024",
+  "captured_at": "2026-10-24T11:38:15Z",
+  "measurement_basis": "focused-regression-tests-and-canonical-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_fed133b840adcbae",
+      "sequence": 35
+    },
+    "campaign_evidence_count": 114,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "optional-improvement-followup-verification",
+    "source_interface": "pytest and MNCS Environment capability-intelligence projection",
+    "request": {
+      "focused_test": "tests/test_capability_intelligence.py -k improvement_relation",
+      "projection_query": {
+        "session_id": "ses_c38b0ab35b9418ba",
+        "evidence_offset": 112,
+        "evidence_limit": 2,
+        "history_pages": 2
+      }
+    },
+    "outcome": {
+      "tests": {
+        "passed": 4,
+        "failed": 0,
+        "deselected": 34
+      },
+      "ruff": "passed for touched implementation and test files with E4,E7,E9,F rules",
+      "git_diff_check": "passed",
+      "projection": {
+        "checkpoint_id": "chk_fed133b840adcbae",
+        "records_verified": 4,
+        "records_unavailable": 0,
+        "implementation_record": "ev_environment_read_operation_activity_implementation_20261024",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "not-recorded",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "scope_limit": "This verifies evidence representation and projection on the campaign branch; it does not establish live service deployment or effectiveness of the underlying environmental change."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-test-source",
+      "repository": "mncs-environment",
+      "commit": "09e85b9a3f321269eed1b4162246e85f293f3069",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "e4f48b28ce365749f070e13b23a3bab0699e6983b858dc6c89e30851c0382947"
+    },
+    {
+      "kind": "committed-implementation-source",
+      "repository": "mncs-environment",
+      "commit": "09e85b9a3f321269eed1b4162246e85f293f3069",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "f08d359c2e519f79876b2e9c7db86cb4e3b03bdf45469c2c8ee587172f27ae74"
+    },
+    {
+      "kind": "canonical-campaign-readback",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "checkpoint_id": "chk_fed133b840adcbae",
+      "evidence_count": 114
+    }
+  ],
+  "not_measured": [
+    "production deployment",
+    "post-change user uptake",
+    "whether prior agent interruptions or repeated work are reduced"
+  ]
+}

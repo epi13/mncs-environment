@@ -1,0 +1,87 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_improvement_followup_absence_gap_20261024",
+  "captured_at": "2026-10-24T11:38:15Z",
+  "measurement_basis": "direct-canonical-store-projection-read-and-source-review",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_fed133b840adcbae",
+      "sequence": 35
+    },
+    "campaign_evidence_count": 114,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "improvement-relation-projection-load-gap",
+    "source_interface": "MNCS Environment capability-intelligence projection over the canonical campaign ledger",
+    "request": {
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "evidence_offset": 112,
+      "evidence_limit": 2,
+      "history_pages": 2
+    },
+    "outcome": {
+      "checkpoint_id": "chk_fed133b840adcbae",
+      "campaign_evidence_count": 114,
+      "observation_records_verified": 3,
+      "observation_records_unavailable": 1,
+      "unavailable_observation_identity": "ev_environment_read_operation_activity_implementation_20261024",
+      "source_contract_finding": "The improvement-relation validator required a nonempty subsequent_observation_identity even though no independent post-change observation existed.",
+      "interpretation": "The committed implementation observation was not projectable until a follow-up identity was supplied; inventing one would misstate the evidence.",
+      "required_behavior": "Represent absence as not-recorded and leave effectiveness not-assessed."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_improvement_followup_absence",
+    "title": "The improvement projection cannot represent that no independent follow-up is recorded",
+    "category": "environmental-improvement-evidence",
+    "subsystem": "mncs-environment capability-intelligence improvement relations",
+    "owner": "mncs-environment",
+    "basis": "A live canonical campaign projection omitted one committed implementation observation; source review showed that a missing subsequent-observation identity invalidated the whole relation.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Allow an absent subsequent-observation identity and project an explicit not-recorded state while retaining not-assessed effectiveness.",
+    "not_measured": [
+      "frequency of this constraint across other campaigns",
+      "whether the gap changed agent decisions",
+      "whether the underlying environmental change is effective"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-campaign-observation",
+      "identity": "ev_environment_read_operation_activity_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "34da21af838478f2f5be081b3618f994cc2896f7",
+      "path": "evidence/environmental-capability/read-operation-activity-implementation-20261024.json",
+      "sha256": "24a467fb109e81b901fc429ef51246b60716ebf8824bb6501da8fd17b1801d7d"
+    },
+    {
+      "kind": "committed-source-review",
+      "repository": "mncs-environment",
+      "commit": "0893e621956052cae62841a05c18a38ec1994577",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "5543fb9a4fc9f98ca4325713b344aa9b3776bf513b62ed1cc5b9795e48adfd45",
+      "observed_contract": "_validate_improvement_relation rejected a missing subsequent-observation identity."
+    }
+  ],
+  "not_measured": [
+    "frequency of this constraint across other campaigns",
+    "whether the gap changed agent decisions",
+    "whether the underlying environmental change is effective"
+  ]
+}
