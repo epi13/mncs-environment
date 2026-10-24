@@ -1,0 +1,78 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compact_projection_recency_pressure_20261024",
+  "captured_at": "2026-10-24T23:07:41Z",
+  "measurement_basis": "retrospective-recording-of-live-query-output-and-source-review",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "compact-projection-recency-pressure-analysis",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_2c72c698f6d6ff5d",
+      "campaign_evidence_count": 15,
+      "response_limit_bytes": 49152
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_records_verified": 9,
+      "compact_observation_count": 8,
+      "latest_observation_identity": "ev_environment_resource_sample_correction_live_readback_20261024",
+      "latest_observation_in_compact_view": false,
+      "recorded_basis": "The earlier live query reported nine verified records but returned eight observation summaries; its returned identities ended with the correction record and omitted the newest correction readback. The original command output was not separately persisted, so this is a retrospective record of the active session's observed result, not a reconstructed timestamp or independent source artifact.",
+      "interpretation": "One observed omission indicates that bounded compaction could hide a newly recorded result even when it had verified the evidence. Recurrence and impact on other agents are not established."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_compact_projection_recency_20261024",
+    "title": "Compact projections can omit the newest verified observation",
+    "category": "environmental-discovery",
+    "subsystem": "mncs-environment capability-intelligence response compaction",
+    "owner": "mncs-environment",
+    "basis": "At campaign checkpoint chk_2c72c698f6d6ff5d, the projection reported nine verified observations but returned eight compact summaries and omitted the newest correction readback. The code at commit 3feefc871acd53df94ea70225a193f41c8c5f56c selected observations with a prefix slice. This is one observed case; recurrence is not established.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Preserve the newest observation tail using ledger page offsets when compacting, and report how many verified summaries were omitted.",
+    "not_measured": [
+      "whether the same omission occurred in other campaigns",
+      "whether an agent missed or delayed work because of the omitted readback",
+      "whether compact response size or detail level affected subsequent development outcomes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_observation_correction_source_classification_fix_20261024",
+      "repository": "mncs-environment",
+      "commit": "3feefc871acd53df94ea70225a193f41c8c5f56c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "621f34adadb8e30bde2aaa6ae2ac98d3ca1f88302b703563f1f190b7bc41cefe"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_resource_sample_correction_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "bc13e81b8f723ecd15eb4ea91decc05c76a108c3",
+      "path": "evidence/environmental-capability/resource-sample-correction-live-readback-20261024.json",
+      "sha256": "1c8e20c770eed28d9e6ea0e583a56c83055cdf4e718eca9a52f37d471b385be9"
+    }
+  ],
+  "not_measured": [
+    "recurrence of this selection problem in other sessions or evidence windows",
+    "whether the omitted observation changed an agent decision",
+    "whether later compact views will need to omit more than one older record"
+  ]
+}
