@@ -152,14 +152,17 @@ def _compact_projection(
         key: source.get(key)
         for key in ("evidence_count", "evidence_page_truncated",
                     "evidence_page_offset", "evidence_page_limit",
-                    "next_evidence_offset",
+                    "previous_evidence_offset", "next_evidence_offset",
                     "source_pointer_count",
                     "source_pointer_content_integrity_verified_count",
                     "source_pointer_content_integrity_not_verified_count",
                     "observation_records_considered",
                     "observation_records_verified",
                     "observation_records_unavailable")
-        if source.get(key) is not None
+        if key in source and (
+            key in {"previous_evidence_offset", "next_evidence_offset"}
+            or source.get(key) is not None
+        )
     }
     for key in ("campaign_state_checkpoint_id", "recorded_at"):
         if source.get(key) is not None:
@@ -863,6 +866,11 @@ def project(
                 if type(state.get("evidence_limit")) is int
                 and state["evidence_limit"] > 0 else None
             ),
+            "previous_evidence_offset": (
+                state.get("previous_evidence_offset")
+                if type(state.get("previous_evidence_offset")) is int
+                and state["previous_evidence_offset"] >= 0 else None
+            ),
             "next_evidence_offset": (
                 state.get("next_evidence_offset")
                 if type(state.get("next_evidence_offset")) is int
@@ -894,7 +902,7 @@ def project(
         "observations": observations,
         "measurement_limits": [
             "Only committed observation records linked from this campaign-state page are considered.",
-            "The source evidence page offset and next offset identify the page to inspect when continuing this projection.",
+            "The source evidence page offset and previous/next offsets identify adjacent pages when continuing this projection.",
             "Source pointer integrity counts cover unique committed pointers; sources outside selected checkouts are not read and remain not verified.",
             "An unavailable or unselected source is surfaced without reading it or treating it as verified.",
             "Repeated references to the same committed observation do not establish recurrence.",

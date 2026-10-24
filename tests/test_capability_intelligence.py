@@ -160,20 +160,33 @@ def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path
     record["observation"]["outcome"]["bounded_context"] = "x" * 8_000
     session, state = _session(tmp_path, [record])
     state.update({
-        "evidence_offset": 8,
+        "evidence_offset": 16,
         "evidence_limit": 8,
         "evidence_truncated": True,
-        "next_evidence_offset": 16,
+        "previous_evidence_offset": 8,
+        "next_evidence_offset": 24,
     })
 
     projection = capability_intelligence.project(session)
     compact = capability_intelligence.project(session, max_result_bytes=5_000)
 
     for result in (projection, compact):
-        assert result["source"]["evidence_page_offset"] == 8
+        assert result["source"]["evidence_page_offset"] == 16
         assert result["source"]["evidence_page_limit"] == 8
-        assert result["source"]["next_evidence_offset"] == 16
+        assert result["source"]["previous_evidence_offset"] == 8
+        assert result["source"]["next_evidence_offset"] == 24
         assert result["source"]["evidence_page_truncated"] is True
+
+    state.update({
+        "evidence_offset": 0,
+        "previous_evidence_offset": None,
+        "next_evidence_offset": None,
+    })
+    first_page = capability_intelligence.project(
+        session, max_result_bytes=5_000,
+    )
+    assert first_page["source"]["previous_evidence_offset"] is None
+    assert first_page["source"]["next_evidence_offset"] is None
 
 
 def test_project_does_not_read_a_supporting_repo_outside_selected_session(tmp_path: Path) -> None:
