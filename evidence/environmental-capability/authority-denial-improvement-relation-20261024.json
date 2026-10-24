@@ -1,0 +1,88 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_authority_denial_improvement_relation_20261024",
+  "captured_at": "2026-10-24T18:11:10Z",
+  "measurement_basis": "verified-authority-boundary-and-sanitized-session-activity-projection",
+  "observation": {
+    "kind": "authority-denial-improvement-relation",
+    "source_interface": "MNCS Environment capability projection, exact checkout authority validation, and targeted regressions",
+    "request": {
+      "pressure_observation_identity": "ev_environment_authority_denial_pressure_20261024",
+      "verification_observation_identity": "ev_environment_authority_denial_correlation_verification_20261024",
+      "implementation_commit": "66905f215fc8ff0c1f3dc88fc42515c3bf629bd0",
+      "subsequent_observation_identity": "ev_environment_authority_denial_campaign_projection_readback_20261024"
+    },
+    "outcome": {
+      "implementation_change": "The environmental-capability projection now preserves bounded sanitized authority.denied records and same-session repetition candidates with exact event references. Absolute Git targets resolve through observed checkout identity and mutation checks require matching registered checkout scope.",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "Tests verify the authority contract and projection behavior. No post-change agent merge operation has been observed, and the intended scope and appropriateness of either historical denial remain unknown."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_d3069fdad2b6c703",
+    "campaign_evidence_count_before_recording": 89,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "event_identities": [
+        "evt_ff4ba1f567b8e58c",
+        "evt_5f766aaaacee13c0"
+      ]
+    },
+    {
+      "kind": "authority-denial-correlation-verification-record",
+      "identity": "ev_environment_authority_denial_correlation_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "3282c6504cce3015fa0ccbf17d0e880d31d83a48",
+      "path": "evidence/environmental-capability/authority-denial-correlation-verification-20261024.json",
+      "sha256": "ca08e956679c25c7aa5377d7923ae1e80fecfafbd70c526ef01a37d61605a69d"
+    }
+  ],
+  "improvement_relation": {
+    "identity": "im_environment_authority_denial_correlation_20261024",
+    "addresses_hypothesis_identity": "ph_authority_0ab070c8e6dee6b2",
+    "implementation_reference": {
+      "identity": "ev_environment_authority_denial_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "66905f215fc8ff0c1f3dc88fc42515c3bf629bd0",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8638a66e8a8ca65ed7509cebfaf76bba7be6b6801559c17c88630f7ad5f0ef75"
+    },
+    "verification_observation_identity": "ev_environment_authority_denial_correlation_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_authority_denial_campaign_projection_readback_20261024",
+    "basis": "The projection exposes two sanitized merge-denial records with canonical event references and derives a same-session pressure candidate. The authority boundary maps absolute targets through observed checkout identity and checks the exact worktree claim. Focused tests cover exact-claim authorization, unknown-target denial, and mismatched-scope denial. This change is verified; historical target appropriateness and post-change operational effect remain unestablished.",
+    "not_measured": [
+      "whether either historical denial was incorrect",
+      "cross-session recurrence of this authority pressure",
+      "whether agents use the new event references in subsequent work",
+      "post-change agent outcomes or reduction in unnecessary denials"
+    ]
+  },
+  "not_measured": [
+    "cross-session recurrence",
+    "the appropriateness of the historical denied operations",
+    "long-term effectiveness of the authority and projection changes"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
