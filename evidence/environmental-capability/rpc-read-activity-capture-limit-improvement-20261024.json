@@ -1,0 +1,84 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_rpc_read_activity_capture_improvement_20261024",
+  "captured_at": "2026-10-24T19:56:18Z",
+  "measurement_basis": "authenticated-pressure-observation-linked-to-verified-implementation",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": null,
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability-intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_rpc_read_activity_capture_bound_20261024",
+      "implementation_commit": "92ad7845f8421d276f3e9a83e9261383f41dd5a8",
+      "verification_observation_identity": "ev_environment_rpc_read_activity_capture_verification_20261024",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "Authenticated per-session read-operation capture now uses the existing 256-event reconciliation bound. Capability intelligence imports the recorder's bound instead of duplicating it. A successful read after an older 128-record limit clears the stale saturation flag and records the next operation.",
+      "verification_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The implementation and focused regression suite verify bounded capture and upgrade behavior. No later live session read under the expanded limit has yet been inspected, so sustained observation and agent impact remain unassessed."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_rpc_read_activity_capture_bound_20261024",
+    "addresses_hypothesis_identity": "ph_environment_rpc_read_activity_capture_bound_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_rpc_read_activity_capture_sessions_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "92ad7845f8421d276f3e9a83e9261383f41dd5a8",
+      "path": "mncs_env/sessions.py",
+      "sha256": "aee0b0d365053fae384eb20c1f97de9c4983ed339ac57a8afd21e17cc390c503"
+    },
+    "verification_observation_identity": "ev_environment_rpc_read_activity_capture_verification_20261024",
+    "subsequent_observation_identity": null,
+    "basis": "An authenticated Environment projection showed the prior per-session RPC capture count and limit both at 128 with limit_reached=true. The implementation increases the same bounded recorder to 256, aligns it with the existing reconciliation tail, and makes the projection consume the recorder's single limit constant. The focused session-event and capability-intelligence regressions passed, including resumption from an older persisted saturation flag.",
+    "not_measured": [
+      "whether the expanded bound produces enough coverage for other long-running campaigns",
+      "production storage and resource overhead of the additional bounded event capacity",
+      "whether an agent's development decisions or outcomes change after capture resumes",
+      "cross-session recurrence or long-term resolution of the pressure"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_rpc_read_activity_capture_sessions_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "92ad7845f8421d276f3e9a83e9261383f41dd5a8",
+      "path": "mncs_env/sessions.py",
+      "sha256": "aee0b0d365053fae384eb20c1f97de9c4983ed339ac57a8afd21e17cc390c503"
+    },
+    {
+      "kind": "committed-verification",
+      "identity": "ev_environment_rpc_read_activity_capture_verification_20261024",
+      "repository": "mncs-environment",
+      "commit": "92ad7845f8421d276f3e9a83e9261383f41dd5a8",
+      "path": "evidence/environmental-capability/rpc-read-activity-capture-limit-verification-20261024.json",
+      "sha256": "29314fcfefa6d37fc5f43dc811de268d443b1b092a01e10ff2f1bd3b7ae9b02d"
+    }
+  ],
+  "not_measured": [
+    "future session activity under the expanded limit",
+    "whether additional operation observations change agent behavior"
+  ]
+}

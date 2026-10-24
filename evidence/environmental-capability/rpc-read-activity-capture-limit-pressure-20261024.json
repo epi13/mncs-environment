@@ -1,0 +1,105 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_rpc_read_activity_capture_limit_20261024",
+  "captured_at": "2026-10-24T19:56:18Z",
+  "measurement_basis": "authenticated-canonical-Store-session-activity-projection",
+  "observation": {
+    "kind": "session-rpc-read-activity-capture-saturation",
+    "source_interface": "MNCS Environment capability-intelligence projection embedded in campaign-state read",
+    "source_session_context": {
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "work_intent_id": "int_8475157f281c835f",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "environment_id": "renv_1991cffb20bdf206",
+      "repository": "mncs-environment",
+      "repository_branch": "campaign/scoped-merge-publish-authority-20261020",
+      "repository_head": "c8f35ee128b689907b3a413e6b723e82d9b9b7b9",
+      "repository_context_basis": "authenticated-control-grant-and-session-snapshot"
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_a863698bedaf716f",
+      "campaign_evidence_count": 112,
+      "campaign_evidence_offset": 0,
+      "campaign_evidence_limit": 16,
+      "projection_identity": "eci_2be55be85d6c857f",
+      "projection_status": "partial"
+    },
+    "outcome": {
+      "rpc_operation_capture_count": 128,
+      "rpc_operation_capture_limit": 128,
+      "rpc_operation_capture_limit_reached": true,
+      "session_event_count": 265,
+      "event_window_sequence_start": 10,
+      "event_window_sequence_end": 265,
+      "latest_captured_operation_ordinal": 128,
+      "latest_captured_operation_event_identity": "evt_22084570b40eea9d",
+      "latest_captured_operation_event_sequence": 193,
+      "rpc_operation_records_returned": 32,
+      "rpc_operation_records_omitted_from_projection": 89,
+      "analysis_limit": "The 89 omitted operation records are the projection's bounded response omission count; they do not measure operations rejected by the capture limit. The projection establishes that the 128-record capture limit was reached in this session, but not how many later operations were unrecorded. The repository branch and head are the session snapshot, not a live Git probe. One session does not establish cross-session recurrence."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_rpc_read_activity_capture_bound_20261024",
+    "title": "Long-running sessions can reach the authenticated read-activity capture bound before their work ends",
+    "category": "agent-activity-observability",
+    "subsystem": "MNCS Environment session activity capture",
+    "owner": "mncs-environment",
+    "basis": "One authenticated Environment projection reports 128 captured Control read operations, a 128-operation per-session limit, and limit_reached=true. The selected event window continues through sequence 265 while the newest captured RPC operation is ordinal 128 at sequence 193. This establishes saturation in one real session; it does not establish how many later operations were suppressed.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Keep session activity capture bounded, but align its capacity with the existing bounded event-tail reconciliation window and report when a session resumes after an older limit.",
+    "not_measured": [
+      "the number of read operations that were not captured after saturation",
+      "recurrence in other sessions or campaigns",
+      "whether the cap changed agent decisions or duplicated investigation",
+      "storage and resource overhead of the expanded bound in later sessions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14",
+      "event_identities": [
+        "evt_22084570b40eea9d"
+      ]
+    },
+    {
+      "kind": "committed-campaign-evidence",
+      "identity": "ev_environment_session_event_page_cursor_live_readback_20261024",
+      "repository": "mncs-environment",
+      "commit": "185b88c94cfe1cb989732bac49356b28072c94c5",
+      "path": "evidence/environmental-capability/session-event-page-cursor-live-readback-20261024.json",
+      "sha256": "63f82c0d7c6fb8f0552d7aa48e8478d8f46ec5530379c587e4513824053e9a17",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    }
+  ],
+  "not_measured": [
+    "how often the limit is reached across Environment sessions",
+    "the number of reads suppressed after the limit",
+    "agent effectiveness or development outcomes after the cap change",
+    "model identity, token use, cache accounting, execution duration, and resource consumption"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
