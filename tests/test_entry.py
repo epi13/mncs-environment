@@ -1011,6 +1011,33 @@ class EntryContractTests(unittest.TestCase):
             wrong_common_directory, checkout,
         ))
 
+        wrong_checkout_identity = json.loads(json.dumps(snapshot))
+        wrong_checkout_identity["selected_checkouts"]["fixture"][
+            "checkout_identity"
+        ] = "checkout-from-another-worktree"
+        self.assertFalse(entry._working_checkout_matches_snapshot(
+            wrong_checkout_identity, checkout,
+        ))
+
+        wrong_manifest_identity = json.loads(json.dumps(snapshot))
+        wrong_manifest_identity["selected_checkouts"]["fixture"][
+            "manifest_identity"
+        ] = "manifest-from-another-checkout"
+        self.assertFalse(entry._working_checkout_matches_snapshot(
+            wrong_manifest_identity, checkout,
+        ))
+
+        legacy = {
+            "workspace": {"root": str(self.base.resolve())},
+            "campaign": {"repository_refs": [{
+                "repository": "fixture",
+                "observed_path": "fixture",
+                "branch": "campaign/previous",
+                "head": "a" * 40,
+            }]},
+        }
+        self.assertFalse(entry._working_checkout_matches_snapshot(legacy, checkout))
+
     def test_pathless_legacy_reference_tracks_one_registered_branch_after_commits(self):
         (self.project / ".mncs" / "project.json").write_text(
             json.dumps({"repository": "fixture"}),
