@@ -1,0 +1,103 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_task_selector_diagnostic_analysis_20261024",
+  "captured_at": "2026-10-24T08:10:03+00:00",
+  "measurement_basis": "direct-error-and-committed-source-inspection",
+  "observation": {
+    "kind": "task-selector-error-source-analysis",
+    "source_interface": "mncs_environment MCP and committed Control source",
+    "request": {
+      "source_observation": "ev_environment_task_selector_recovery_20261024",
+      "source_repository": "mncs-control-mcp",
+      "source_commit": "6eb9ae78f96a714fe50610fcc38d8358cb3329f2",
+      "source_path": "src/mncs_control_mcp/environment_sessions.py",
+      "source_sha256": "6ef6930f69f2beb5c2b3f499a2c511bf7dfae9278efa212fb7979261a691c647"
+    },
+    "outcome": {
+      "observed_error": {
+        "code": "ENVIRONMENT_TASK_SELECTOR_TARGET_UNAVAILABLE",
+        "message": "task-selector target no longer matches its recorded Environment owner and context"
+      },
+      "source_guard_conditions": [
+        "target snapshot is present",
+        "authenticated principal matches",
+        "working checkout matches",
+        "campaign identity matches the binding",
+        "Environment definition matches",
+        "workspace root matches"
+      ],
+      "diagnostic_surface": {
+        "code_for_failed_guard_condition": "ENVIRONMENT_TASK_SELECTOR_TARGET_UNAVAILABLE",
+        "message_for_failed_guard_condition": "task-selector target no longer matches its recorded Environment owner and context",
+        "failed_guard_identified_in_response": false
+      },
+      "analysis_limit": "The committed branch combines these target checks into one response; it does not identify which predicate failed for the observed request."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4844ecc725485390",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_bb08c048d5ae41e7",
+      "sequence": 8
+    },
+    "campaign_evidence_count": 6,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:faa4f0c3f49e"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_task_selector_diagnostic_specificity",
+    "title": "Task-selector target-unavailable diagnostics do not identify the failed owner/context guard",
+    "category": "diagnostic-observability",
+    "subsystem": "mncs-control-mcp task selector",
+    "owner": "mncs-control-mcp",
+    "basis": "one live target-unavailable response and one committed source branch mapping multiple predicates to the same response",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Return a bounded mismatch category to the authenticated caller so an authorized agent can distinguish stale target state from changed campaign, definition, workspace, checkout, or principal context; preserve existing ownership checks and do not expose unrelated session identities.",
+    "not_measured": [
+      "which target predicate failed for the observed request",
+      "whether this generic diagnostic blocks other sessions or campaigns",
+      "time, token, or resource cost caused by the diagnostic limitation",
+      "whether a more specific diagnostic would change the underlying selection result"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "commit": "bf469e26587040e8286ac8a06b1f5db2a5fc0651",
+      "path": "evidence/environmental-capability/environment-task-selector-recovery-20261024.json",
+      "sha256": "8e3a16250b10b9b00d3195fb246ea66405a7fe24b7c8cbc4d83c6204508138fa",
+      "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+      "session_id": "ses_c38b0ab35b9418ba",
+      "measured_fields": [
+        "initial_attempt.code",
+        "initial_attempt.message"
+      ]
+    },
+    {
+      "kind": "adapter-contract-source",
+      "repository": "mncs-control-mcp",
+      "commit": "6eb9ae78f96a714fe50610fcc38d8358cb3329f2",
+      "path": "src/mncs_control_mcp/environment_sessions.py",
+      "sha256": "6ef6930f69f2beb5c2b3f499a2c511bf7dfae9278efa212fb7979261a691c647",
+      "observed_contract": "six target checks map to one target-unavailable error without identifying the failed predicate"
+    }
+  ],
+  "not_measured": [
+    "actual cause of the session-selector mismatch",
+    "recurrence of this diagnostic limitation across campaigns",
+    "whether the observed binding target was stale or its current context had changed"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+    "session_id": "ses_c38b0ab35b9418ba",
+    "consumer_id": "local-agent"
+  }
+}

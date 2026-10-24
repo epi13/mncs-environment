@@ -319,6 +319,33 @@ def test_verification_observation_keeps_resource_context_without_health_scoring(
     )
 
 
+def test_selector_diagnostic_hypothesis_keeps_unselected_source_explicit(tmp_path: Path) -> None:
+    path = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability/environment-task-selector-diagnostic-analysis-20261024.json"
+    )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    source = record["supporting_sources"][1]
+    session, _ = _session(tmp_path, [record], extra_refs=[{
+        "identity": "ev_control_task_selector_guard_source",
+        "repository": source["repository"],
+        "commit": source["commit"],
+        "path": source["path"],
+        "sha256": source["sha256"],
+    }])
+
+    result = capability_intelligence.project(session)
+
+    assert result["pressure_hypothesis_count"] == 1
+    hypothesis = result["pressure_hypotheses"][0]
+    assert hypothesis["recurrence_status"] == "not-established"
+    assert result["observations"][0]["supporting_sources"][1]["status"] == (
+        "outside-selected-session"
+    )
+    assert result["observations"][0]["recording_context"]["session_id"] == (
+        "ses_c38b0ab35b9418ba"
+    )
+
+
 def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_large", "ses_compiler", "cmp_compiler")
     record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000
