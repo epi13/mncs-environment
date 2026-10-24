@@ -1,0 +1,79 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_context_and_session_source_improvement_20261024",
+  "captured_at": "2026-10-24T14:47:40+00:00",
+  "measurement_basis": "verified-projection-context-enrichment-and-bounded-session-event-provenance",
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": null,
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability-intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_pressure_summary_work_context",
+      "implementation_commit": "cb115c208eb4e1d72d870639f7e03449e1955f71",
+      "verification_observation_identity": "ev_environment_pressure_context_and_session_source_verification_20261024",
+      "subsequent_observation_identity": "ev_environment_pressure_context_and_session_source_live_readback_20261024"
+    },
+    "outcome": {
+      "implementation_change": "Pressure context summaries now merge sparse and enriched records only when one compatible campaign/session/work-intent context exists; ambiguous or conflicting contexts remain separate. Authenticated session-activity pointers are validated as bounded record-captured references, their exact event IDs are exposed in full projections, and compact projections preserve up to eight IDs with an explicit truncation flag.",
+      "verification_recorded": true,
+      "subsequent_observation_identity": "ev_environment_pressure_context_and_session_source_live_readback_20261024",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "Focused tests and an authenticated Compiler campaign projection verify the representation and provenance path. They do not establish agent uptake, reduction in investigation burden, or long-term recurrence or resolution of the related pressure."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_pressure_context_and_session_source_20261024",
+    "addresses_hypothesis_identity": "ph_environment_pressure_summary_work_context",
+    "implementation_reference": {
+      "identity": "ev_environment_pressure_context_projection_refinement_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "cb115c208eb4e1d72d870639f7e03449e1955f71",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "43f3d85b34e44840642125124a6e7646ee4db2c169aa6e34a1bb262e3a53ec37"
+    },
+    "verification_observation_identity": "ev_environment_pressure_context_and_session_source_verification_20261024",
+    "subsequent_observation_identity": "ev_environment_pressure_context_and_session_source_live_readback_20261024",
+    "basis": "This refinement continues the capability projection context pressure: after contexts were added, sparse and environment-enriched records for one work item could still be counted separately, and a captured authenticated event reference was omitted from compact output. Regression tests verify unique-context enrichment, ambiguous/conflicting-context separation, valid and malformed event pointers, and bounded compact event-ID retention. The authenticated live projection relates two real Compiler observations to one Compiler work context and two recorder sessions, retains the exact two event IDs, and links the source evidence.",
+    "not_measured": [
+      "whether agents use the refined context and event pointers to reduce source-record navigation",
+      "whether the original pressure recurs after this change in later campaigns",
+      "whether the underlying Control project-session selector has changed",
+      "whether this representation changes Compiler implementation decisions",
+      "long-term effectiveness across other Environment versions, repositories, or agent runtimes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_pressure_context_projection_refinement_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "cb115c208eb4e1d72d870639f7e03449e1955f71",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "43f3d85b34e44840642125124a6e7646ee4db2c169aa6e34a1bb262e3a53ec37"
+    }
+  ],
+  "not_measured": [
+    "whether a future agent would make a different development decision with this context available",
+    "whether the pressure summary changes reduce analysis time or resource use",
+    "empirical effectiveness after subsequent Compiler work"
+  ]
+}
