@@ -238,6 +238,8 @@ def test_project_exposes_verified_campaign_objective_separately_from_work_intent
     result = capability_intelligence.project(session)
     charter = result["subject"]["campaign_charter"]
     assert charter["status"] == "verified"
+    assert charter["candidate_reference_count"] == 1
+    assert charter["references_examined"] == 1
     assert charter["identity"] == reference["identity"]
     assert charter["objective"] == objective
     assert charter["evidence_reference"] == reference
@@ -245,6 +247,7 @@ def test_project_exposes_verified_campaign_objective_separately_from_work_intent
         "identity": "int_projection_reader",
         "goal": "inspect current pressures",
     }
+    assert result["source"]["campaign_charter_reference_count"] == 1
 
     compact = capability_intelligence.project(session, max_result_bytes=1_500)
     compact_charter = compact["subject"]["campaign_charter"]

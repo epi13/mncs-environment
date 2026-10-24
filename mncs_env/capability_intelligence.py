@@ -1421,7 +1421,7 @@ def _campaign_charter_context(
         }
     if not valid_charters:
         return {**result, "status": "not-found"}
-    return {"status": "verified", **valid_charters[0]}
+    return {**result, "status": "verified", **valid_charters[0]}
 
 
 def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, Any]:
