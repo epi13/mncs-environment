@@ -1,0 +1,30 @@
+{
+  "schema_version": "mncs.environment.campaign-charter/1",
+  "identity": "ev_environment_campaign_charter_capability_intelligence_20261024",
+  "recorded_at": "2026-10-24T18:18:02Z",
+  "campaign_identity": "cmp_environmental_capability_intelligence_followup_20261024",
+  "source": {
+    "kind": "user-directed MNCS development campaign",
+    "request_title": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "date": "2026-10-24"
+  },
+  "objective": "Improve MNCS's ability to observe, understand, and enhance its effectiveness in supporting autonomous agents. Use authentic evidence from real MNCS development to identify and resolve limitations across the language, compiler, environment, and interconnected tooling.",
+  "central_question": "How effectively does MNCS serve and potentiate its agents, and which improvements expand what those agents can accomplish?",
+  "workstreams": [
+    {
+      "name": "environmental capability intelligence",
+      "intent": "Connect real agent objectives, environmental conditions, tool activity, diagnostics, verification, resource observations, continuity, and implementation outcomes through bounded durable evidence and on-demand projections."
+    },
+    {
+      "name": "compiler and language operational evidence",
+      "intent": "Use authentic compiler and language development to expose environmental pressures and validate improvements while preserving the separate ownership and active claims of the Compiler campaign."
+    }
+  ],
+  "acceptance": [
+    "Agents can inspect authentic, provenance-linked evidence of environmental pressures through existing Environment projections.",
+    "Pressure hypotheses remain traceable to source observations and preserve uncertainty about causes, recurrence, and effectiveness.",
+    "Verified environmental changes link the pressure they address to independent verification and later observations where available.",
+    "Unavailable measurements remain explicit and resource or token counts are not treated as agent-efficiency scores."
+  ],
+  "authority_boundary": "This charter records the user-directed campaign objective. It grants no repository scope, claim transfer, merge, push, cleanup, or compiler worktree authority; existing Environment, Control, and repository-owner governance remains authoritative."
+}
