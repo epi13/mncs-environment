@@ -1042,6 +1042,7 @@ def test_compiler_cache_observation_keeps_resource_limits_and_source_unselected(
     assert first_stage["name"] == "fresh_process"
     assert first_stage["cache_status"] == "hit"
     assert first_stage["output_equal_to_stage0"] is True
+    assert first_stage["cpu_seconds"] == 0.61
     assert first_stage["peak_cgroup_memory_bytes"] is None
 
 

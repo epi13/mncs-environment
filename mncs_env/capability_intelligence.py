@@ -401,7 +401,7 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
         "stage", "test", "verification",
     )
     field_hints = (
-        "available", "byte", "cache", "case", "checkpoint", "code",
+        "available", "byte", "cache", "case", "checkpoint", "code", "cpu",
         "count", "deselect", "diagnostic", "duration", "error", "evidence",
         "exit", "fact", "failed", "failure", "fresh", "implementation",
         "integrity", "limit", "mask", "memory", "mismatch", "observation",
