@@ -20,6 +20,7 @@ from typing import Any
 
 from . import actions as actions_module
 from . import capabilities as capabilities_module
+from . import capability_intelligence as capability_intelligence_module
 from . import claims as claims_module
 from . import diagnostics as diagnostics_module
 from . import doctor as doctor_module
@@ -42,6 +43,8 @@ from .session_store import ClaimBatchConflict, SnapshotConflict, open_store
 from .store_backend import StoreIntegrityFailure, StoreUnavailable
 
 DEFAULT_STATE_DIR = Path.home() / ".local" / "share" / "mncs-environment"
+CAMPAIGN_STATE_OUTPUT_LIMIT_BYTES = 128 * 1024
+CAMPAIGN_STATE_PROJECTION_MIN_BYTES = 4 * 1024
 # Leave room for the largest currently supported native application-build
 # artifact while keeping artifact-read output explicitly bounded.
 MAX_ARTIFACT_READ_BYTES = 1_300_000
@@ -200,10 +203,30 @@ def cmd_campaign_state(args: argparse.Namespace) -> int:
                     evidence_offset=args.evidence_offset,
                     evidence_limit=args.evidence_limit,
                 )
-                sys.stdout.write(json.dumps(
+                state_size = len(json.dumps(
                     state, ensure_ascii=False, sort_keys=True,
                     separators=(",", ":"),
-                ) + "\n")
+                ).encode("utf-8"))
+                projection_budget = min(
+                    capability_intelligence_module.MAX_RESULT_BYTES,
+                    CAMPAIGN_STATE_OUTPUT_LIMIT_BYTES - state_size - 64,
+                )
+                if projection_budget >= CAMPAIGN_STATE_PROJECTION_MIN_BYTES:
+                    state["environmental_capability"] = capability_intelligence_module.project(
+                        session, campaign_state=state,
+                        max_result_bytes=projection_budget,
+                    )
+                encoded = json.dumps(
+                    state, ensure_ascii=False, sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+                if len(encoded) > CAMPAIGN_STATE_OUTPUT_LIMIT_BYTES:
+                    state.pop("environmental_capability", None)
+                    encoded = json.dumps(
+                        state, ensure_ascii=False, sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode("utf-8")
+                sys.stdout.write(encoded.decode("utf-8") + "\n")
             except sessions_module.LifecycleError as error:
                 return fail(
                     str(error),
@@ -341,7 +364,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 def cmd_projections(args: argparse.Namespace) -> int:
     if args.interpret:
-        if not args.repository:
+        if args.interpret != "environmental-capability" and not args.repository:
             return fail('--interpret requires --repository')
         with closing(_open(args)) as session:
             try:
@@ -2191,7 +2214,9 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.set_defaults(func=cmd_doctor)
 
     projections = session_parser("projections", "ambient projection coherence pass with a terse summary")
-    projections.add_argument('--interpret', choices=('capabilities', 'dependencies', 'blockers', 'architecture', 'structure', 'why'))
+    projections.add_argument('--interpret', choices=(
+        'capabilities', 'dependencies', 'blockers', 'architecture',
+        'structure', 'why', 'environmental-capability'))
     projections.add_argument('--repository')
     projections.add_argument("--evidence", action="store_true",
                              help="print the full projection evidence trail instead of running a pass")

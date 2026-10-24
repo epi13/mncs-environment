@@ -29,8 +29,8 @@ from pathlib import Path
 from typing import Any
 
 from . import capabilities as capabilities_module
+from . import capability_intelligence, evidence_store
 from . import claims as claims_module
-from . import evidence_store
 from . import projection_sources as semantic_sources
 from . import projection_store as store_module
 from . import projection_verification as verification_module
@@ -1178,6 +1178,8 @@ def ambient_pass(session, *, mode: str = "ambient",
 
 def interpretation(session, repository, route):
     """Ephemeral query over the same canonical subjects as outward views."""
+    if route == "environmental-capability":
+        return capability_intelligence.project(session)
     root = _workspace_root(session)
     if root is None:
         raise ValueError('workspace unavailable')

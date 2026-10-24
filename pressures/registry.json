@@ -320,5 +320,17 @@
     "desired_contract": "Expose an authenticated, session-scoped completion operation through Control for an Environment session authorized to the project grant. Preserve Environment lifecycle validation, exact principal and session provenance, idempotent request identity, and structured conflict or ambiguous-publication diagnostics.",
     "effect": "A claim-free proof session remains reported active after its work ends, and consumers cannot record lifecycle completion through the normal restricted execution path.",
     "workaround": "Keep the recipient session active and claim-free; return its claim to the original owner and preserve UNKNOWN for lifecycle completion."
+  },
+  {
+    "description": "A read-only campaign_state request named the active Compiler campaign and exact session, but project-scoped continuation selection returned context-conflict with three candidates. The request could not inspect that campaign evidence through its selected project context. This is one live observation; recurrence and candidate process liveness are unknown.",
+    "desired_contract": "Allow a caller that already knows a session identity to request exact project continuation, after Control revalidates the authenticated principal, campaign, Environment definition, workspace and checkout identity, lifecycle, and claim authority; fail closed on any mismatch.",
+    "effect": "One Compiler campaign evidence read was blocked. The environmental-capability projection exposes the linked observation as a single unconfirmed coordination-continuity hypothesis; no recurrence or improvement is claimed.",
+    "evidence": "mncs-environment/evidence/environmental-capability/project-continuation-conflict-20261024.json @6d59dac14428b8e3bbd1d9437d15dfc066824096 sha256 ecbc4c1145fb553b9e3a01134ebabfc4e08b29736118017d6037e1850c143a77; Control selector contract source @6eb9ae78f96a714fe50610fcc38d8358cb3329f2 sha256 8026b4ae10c0cde3ca9a53c34609b236ed87bd6b2d8cce43be5d4fa9ba05d764",
+    "identity": "prs_c5e9447c853c53f0",
+    "owner": "mncs-control-mcp",
+    "schema_version": "mncs.environment.pressure/1",
+    "title": "Exact project-session selection fails when campaign continuations conflict",
+    "why_not_local": "Control owns authenticated project continuation selection and must enforce principal, campaign, definition, workspace, checkout, lifecycle, and claim invariants. Environment must not bypass those checks or create a competing selector.",
+    "workaround": "Preserve the observation and existing Compiler ownership. Do not create or adopt a replacement Compiler session solely to work around the read failure."
   }
 ]

@@ -89,6 +89,40 @@ Related surfaces:
   verification resolutions without re-entry. Quiet ticks reuse the
   epoch; the entry lock is held per tick, never across the sleep.
 
+## Environmental capability interpretation
+
+The same projection interface can derive an on-demand view of real work
+pressures from the newest page of authenticated campaign evidence:
+
+```bash
+./scripts/mncs-env projections <session> \
+  --interpret environmental-capability
+```
+
+`campaign-state <session>` includes this derived view when the existing
+128 KiB campaign-state response budget permits, so a caller reading the durable
+ledger can inspect related environmental context in the same response. When
+the page leaves too little room, query the projection directly. The projection
+reads only committed records using the
+`mncs.environment.environmental-observation/1` schema, verifies each recorded
+SHA-256 against the selected checkout, and retains exact commit/path pointers.
+Evidence in an unselected repository is named but not opened. Results are
+computed when requested; no transcript copy, separate telemetry store, or
+permanent dashboard is created.
+
+An observation relates the recorded operation to its originating campaign,
+session, work intent, and affected subsystem. A pressure hypothesis remains
+an interpretation: one observation does not establish recurrence, and a
+change remains unproven until later observations and independent verification
+provide evidence. Repeated candidate IDs or resource use alone do not create
+an efficiency score or a causal claim. Missing measurements remain explicit.
+
+The query considers at most 32 campaign evidence references, reads at most 16
+observation records of 64 KiB each within one 8 second Git-read budget, and
+caps its response at 48 KiB. If a response reaches that bound, operation
+payloads are summarized by digest and the exact evidence pointers remain
+available for inspection.
+
 ## What the ambient pass refuses
 
 - **Occupied checkouts.** Foreign claims, unknown dirt, foreign branches,
