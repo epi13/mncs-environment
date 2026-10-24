@@ -29,6 +29,15 @@ SCHEMA = "mncs.environment.capability-intelligence/1"
 OBSERVATION_SCHEMA = "mncs.environment.environmental-observation/1"
 CAMPAIGN_CHARTER_SCHEMA = "mncs.environment.campaign-charter/1"
 OBSERVATION_PATH_PREFIX = "evidence/environmental-capability/"
+COMPILER_CACHE_REGRESSION_SCHEMA = (
+    "mncs.compiler.language-module-elaboration-cache-regression/2"
+)
+COMPILER_CACHE_REGRESSION_IDENTITY_PREFIX = (
+    "ev_compiler_digest_application_effect_capability_invalidation_"
+)
+COMPILER_CACHE_REGRESSION_PATH_PREFIX = (
+    "evidence/native-app-readiness-effect-capability-fact-invalidation-"
+)
 MAX_EVIDENCE_REFS = 32
 MAX_EVIDENCE_HISTORY_PAGES = 4
 MAX_OBSERVATIONS = 16
@@ -1201,8 +1210,15 @@ def _compact_projection(
 
 
 def _is_observation_reference(reference: dict[str, str]) -> bool:
-    return (reference["identity"].startswith("ev_environment_")
-            and reference["path"].startswith(OBSERVATION_PATH_PREFIX))
+    if (reference["identity"].startswith("ev_environment_")
+            and reference["path"].startswith(OBSERVATION_PATH_PREFIX)):
+        return True
+    return (
+        reference["repository"] == "mncs-compiler"
+        and reference["identity"].startswith(COMPILER_CACHE_REGRESSION_IDENTITY_PREFIX)
+        and reference["path"].startswith(COMPILER_CACHE_REGRESSION_PATH_PREFIX)
+        and reference["path"].endswith(".json")
+    )
 
 
 def _git_blob(
@@ -1245,6 +1261,138 @@ def _git_blob(
     return blob.stdout, "read"
 
 
+def _compiler_regression_observation(
+    session: Any, reference: dict[str, str], source: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Adapt one established Compiler regression report into bounded ECI context."""
+    if source.get("schema_version") != COMPILER_CACHE_REGRESSION_SCHEMA:
+        return None
+    invalidation = source.get("language_effect_and_capability_dependencies_invalidated")
+    source_module_count = source.get("source_module_count")
+    stages = source.get("stages")
+    if (type(invalidation) is not bool or type(source_module_count) is not int
+            or source_module_count < 1 or not isinstance(stages, dict)):
+        return None
+
+    stage_summaries: list[dict[str, Any]] = []
+    for name in (
+        "cold", "effect_assumption_edit", "capability_assumption_edit",
+        "fresh_process",
+    ):
+        stage = stages.get(name)
+        if not isinstance(stage, dict):
+            continue
+        summary: dict[str, Any] = {"name": name}
+        cache_status = stage.get("cache_status")
+        if isinstance(cache_status, str) and cache_status:
+            summary["cache_status"] = cache_status[:64]
+        execution = stage.get("execution")
+        execution = execution if isinstance(execution, dict) else {}
+        output_equal = execution.get("output_equal_to_stage0")
+        if type(output_equal) is bool:
+            summary["output_equal_to_stage0"] = output_equal
+        semantic = stage.get("semantic_work")
+        if isinstance(semantic, dict):
+            semantic_summary = {
+                key: semantic[key]
+                for key in (
+                    "front_end_invocations", "recomputed_fact_count",
+                    "reused_fact_count",
+                )
+                if type(semantic.get(key)) is int and semantic[key] >= 0
+            }
+            if semantic_summary:
+                summary["semantic_work"] = semantic_summary
+        metrics = stage.get("build_metrics")
+        if isinstance(metrics, dict):
+            metric_summary: dict[str, int | float] = {}
+            for key in ("wall_seconds", "cpu_seconds"):
+                value = metrics.get(key)
+                if (type(value) in (int, float) and math.isfinite(value)
+                        and value >= 0):
+                    metric_summary[key] = value
+            for key in (
+                "peak_rss_bytes", "peak_open_file_descriptors", "peak_threads",
+            ):
+                value = metrics.get(key)
+                if type(value) is int and value >= 0:
+                    metric_summary[key] = value
+            if metric_summary:
+                summary["build_metrics"] = metric_summary
+        if len(summary) > 1:
+            stage_summaries.append(summary)
+    if not stage_summaries:
+        return None
+
+    snapshot = session.snapshot
+    campaign = snapshot.get("campaign")
+    campaign = campaign if isinstance(campaign, dict) else {}
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+    campaign_identity = campaign.get("identity")
+    session_identity = getattr(session, "session_id", None)
+    if (not isinstance(campaign_identity, str) or not campaign_identity
+            or not isinstance(session_identity, str) or not session_identity):
+        return None
+    related_work: dict[str, str] = {
+        "campaign_id": campaign_identity,
+        "session_id": session_identity,
+    }
+    for key, value in (
+        ("work_intent_id", intent.get("identity")),
+        ("work_intent_goal", intent.get("goal")),
+        ("environment_id", snapshot.get("environment_id")),
+        ("definition_id", (snapshot.get("provenance") or {}).get("definition_id")
+         if isinstance(snapshot.get("provenance"), dict) else None),
+    ):
+        if isinstance(value, str) and value:
+            related_work[key] = value
+
+    return {
+        "schema_version": OBSERVATION_SCHEMA,
+        "identity": reference["identity"],
+        "captured_at": "unavailable-in-source-record",
+        "measurement_basis": (
+            "bounded-derived-view-of-verified-compiler-regression/2"
+        ),
+        "observation": {
+            "kind": "compiler-effect-capability-cache-regression",
+            "source_interface": "MNCS Compiler campaign evidence projection",
+            "request": {
+                "source_schema_version": COMPILER_CACHE_REGRESSION_SCHEMA,
+                "compiler_head": source.get("compiler_head"),
+                "language_head": source.get("language_head"),
+                "source_module_count": source_module_count,
+                "stage_names": [item["name"] for item in stage_summaries],
+            },
+            "outcome": {
+                "language_effect_and_capability_dependencies_invalidated": invalidation,
+                "stage_summaries": stage_summaries,
+                "resource_measurement_scope": "per-build metrics from the source report",
+                "duration_measurement_scope": (
+                    "individual build requests, not campaign or agent duration"
+                ),
+                "source_capture_time": "unavailable",
+            },
+            "measurement_availability": {
+                "model_identity": "not-recorded-in-source",
+                "token_usage": "not-recorded-in-source",
+                "control_dispatch_elapsed_ms": "not-recorded-in-source",
+                "resource_consumption": "per-build-metrics",
+                "cache_accounting": "status-and-fact-counts",
+            },
+        },
+        "related_work": related_work,
+        "not_measured": [
+            "source capture timestamp",
+            "model identity and token usage",
+            "total compiler campaign duration",
+            "resource use outside the selected regression build requests",
+            "whether the observed cache behavior recurs in other campaigns",
+        ],
+    }
+
+
 def _load_observation(
     session: Any, reference: dict[str, str], root: Path, *, deadline: float,
 ) -> tuple[dict[str, Any] | None, str]:
@@ -1266,6 +1414,13 @@ def _load_observation(
         return None, "observation-contract-invalid"
     if record.get("identity") != reference["identity"]:
         return record, "observation-identity-mismatch"
+    if (reference["repository"] == "mncs-compiler"
+            and reference["identity"].startswith(COMPILER_CACHE_REGRESSION_IDENTITY_PREFIX)
+            and reference["path"].startswith(COMPILER_CACHE_REGRESSION_PATH_PREFIX)):
+        adapted = _compiler_regression_observation(session, reference, record)
+        if adapted is None:
+            return None, "observation-contract-invalid"
+        return adapted, "verified"
     observation = record.get("observation")
     related_work = record.get("related_work")
     source_session_context = (
@@ -2519,9 +2674,10 @@ def project(
 ) -> dict[str, Any]:
     """Build a bounded read-only relationship view from campaign evidence.
 
-    Only records in ``evidence/environmental-capability/`` are read. Their
-    exact Git commit and SHA-256 must be present in the authenticated campaign
-    ledger, and the repository must be selected by this Environment session.
+    Environmental observations under ``evidence/environmental-capability/``
+    and one allowlisted Compiler regression schema are read. Their exact Git
+    commit and SHA-256 must be present in the authenticated campaign ledger,
+    and the repository must be selected by this Environment session.
     """
     if (type(max_result_bytes) is not int
             or max_result_bytes < 1 or max_result_bytes > MAX_RESULT_BYTES):

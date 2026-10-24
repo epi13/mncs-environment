@@ -171,12 +171,26 @@ resolved scope.
 128 KiB campaign-state response budget permits, so a caller reading the durable
 ledger can inspect related environmental context in the same response. When
 the page leaves too little room, query the projection directly. The projection
-reads only committed records using the
-`mncs.environment.environmental-observation/1` schema, verifies each recorded
-SHA-256 against the selected checkout, and retains exact commit/path pointers.
-Evidence in an unselected repository is named but not opened. Results are
-computed when requested; no transcript copy, separate telemetry store, or
-permanent dashboard is created.
+reads committed records using the
+`mncs.environment.environmental-observation/1` schema and the one bounded
+Compiler evidence adapter described below. It verifies each recorded SHA-256
+against the selected checkout and retains exact commit/path pointers. Evidence
+in an unselected repository is named but not opened. Results are computed when
+requested; no transcript copy, separate telemetry store, or permanent dashboard
+is created.
+
+The same projection has one bounded adapter for the Compiler's
+`mncs.compiler.language-module-elaboration-cache-regression/2` evidence under
+`evidence/native-app-readiness-effect-capability-fact-invalidation-*.json`.
+It requires the selected Compiler checkout, the campaign's exact commit and
+SHA-256, the expected evidence identity prefix, and the recognized schema. It
+projects only the cold, effect-edit, capability-edit, and fresh-process stage
+summaries, with their recorded fact-reuse counts and per-build resource
+measurements. The original Compiler artifact remains authoritative and is
+returned as the observation's evidence reference. The adapter does not infer
+campaign duration, model identity, token use, or resource use outside those
+build requests. Other Compiler evidence remains available through the normal
+campaign evidence page until a bounded adapter is justified for its schema.
 For a supporting source with no exact pointer match in the selected campaign
 evidence pages, `status` is
 `not-present-in-selected-campaign-evidence-window` and

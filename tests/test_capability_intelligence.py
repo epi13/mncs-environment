@@ -49,7 +49,10 @@ def _session(tmp_path: Path, reports: list[dict], *, extra_refs: list[dict] | No
             "path": relative,
             "sha256": hashlib.sha256(raw).hexdigest(),
         })
-    _git(checkout, "commit", "--quiet", "-m", "test observation records")
+    if references:
+        _git(checkout, "commit", "--quiet", "-m", "test observation records")
+    else:
+        _git(checkout, "commit", "--allow-empty", "--quiet", "-m", "test observation records")
     head = _git(checkout, "rev-parse", "HEAD")
     for reference in references:
         reference["commit"] = head
@@ -83,6 +86,40 @@ def _session(tmp_path: Path, reports: list[dict], *, extra_refs: list[dict] | No
         },
     )
     return session, state
+
+
+def _add_compiler_regression_evidence(
+    session, state: dict, report: dict,
+) -> dict[str, str]:
+    root = Path(session.snapshot["workspace"]["root"])
+    checkout = root / "mncs-compiler"
+    checkout.mkdir()
+    _git(checkout, "init", "--quiet")
+    _git(checkout, "config", "user.name", "test")
+    _git(checkout, "config", "user.email", "test@example.invalid")
+    relative = (
+        "evidence/native-app-readiness-effect-capability-fact-invalidation-"
+        "20261024.json"
+    )
+    path = checkout / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = json.dumps(report, sort_keys=True, separators=(",", ":")).encode()
+    path.write_bytes(raw)
+    _git(checkout, "add", relative)
+    _git(checkout, "commit", "--quiet", "-m", "compiler regression evidence")
+    reference = {
+        "identity": report["identity"],
+        "repository": "mncs-compiler",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+    session.snapshot["selected_checkouts"]["mncs-compiler"] = {
+        "path": str(checkout),
+    }
+    state["evidence"].append(reference)
+    state["evidence_count"] = len(state["evidence"])
+    return reference
 
 
 def _add_campaign_charter(
@@ -1190,6 +1227,123 @@ def test_compiler_campaign_state_observation_preserves_target_and_recorder(tmp_p
         "cmp_environmental_capability_intelligence_20261023"
     )
     assert observation["observation"]["outcome"]["evidence_page"]["truncated"] is True
+
+
+def test_compiler_regression_evidence_is_projected_with_verified_work_context(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema_version": capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA,
+        "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+        "compiler_head": "a" * 40,
+        "language_head": "b" * 40,
+        "source_module_count": 4,
+        "language_effect_and_capability_dependencies_invalidated": True,
+        "stages": {
+            "cold": {
+                "cache_status": "miss",
+                "execution": {"output_equal_to_stage0": True},
+                "semantic_work": {
+                    "front_end_invocations": 1,
+                    "recomputed_fact_count": 30,
+                    "reused_fact_count": 0,
+                },
+                "build_metrics": {
+                    "wall_seconds": 0.764341,
+                    "cpu_seconds": 0.75,
+                    "peak_rss_bytes": 61272064,
+                    "peak_open_file_descriptors": 4,
+                    "peak_threads": 1,
+                },
+            },
+            "effect_assumption_edit": {
+                "cache_status": "miss",
+                "execution": {"output_equal_to_stage0": True},
+                "semantic_work": {
+                    "front_end_invocations": 1,
+                    "recomputed_fact_count": 2,
+                    "reused_fact_count": 28,
+                },
+                "build_metrics": {"wall_seconds": 0.758744},
+            },
+            "capability_assumption_edit": {
+                "cache_status": "miss",
+                "execution": {"output_equal_to_stage0": True},
+                "semantic_work": {
+                    "front_end_invocations": 1,
+                    "recomputed_fact_count": 2,
+                    "reused_fact_count": 28,
+                },
+                "build_metrics": {"wall_seconds": 0.766849},
+            },
+            "fresh_process": {
+                "cache_status": "hit",
+                "execution": {"output_equal_to_stage0": True},
+                "semantic_work": {
+                    "front_end_invocations": 1,
+                    "recomputed_fact_count": 0,
+                    "reused_fact_count": 30,
+                },
+                "build_metrics": {"wall_seconds": 0.623001},
+            },
+        },
+    }
+    session, state = _session(tmp_path, [])
+    reference = _add_compiler_regression_evidence(session, state, report)
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 1
+    assert result["pressure_hypothesis_count"] == 0
+    observation = result["observations"][0]
+    assert observation["identity"] == report["identity"]
+    assert observation["related_work"]["campaign_id"] == "cmp_projection_reader"
+    assert observation["related_work"]["session_id"] == "ses_projection_reader"
+    assert observation["observation"]["request"]["source_schema_version"] == (
+        capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA
+    )
+    assert observation["observation"]["outcome"][
+        "language_effect_and_capability_dependencies_invalidated"
+    ] is True
+    stages = {
+        item["name"]: item
+        for item in observation["observation"]["outcome"]["stage_summaries"]
+    }
+    assert stages["effect_assumption_edit"]["semantic_work"] == {
+        "front_end_invocations": 1,
+        "recomputed_fact_count": 2,
+        "reused_fact_count": 28,
+    }
+    assert stages["fresh_process"]["cache_status"] == "hit"
+    assert stages["cold"]["build_metrics"]["peak_rss_bytes"] == 61272064
+    assert observation["observation"]["measurement_availability"]["token_usage"] == (
+        "not-recorded-in-source"
+    )
+    assert observation["evidence_reference"] == reference
+
+
+def test_compiler_regression_adapter_rejects_unrecognized_source_schema(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema_version": "mncs.compiler.unknown-regression/1",
+        "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+        "source_module_count": 4,
+        "language_effect_and_capability_dependencies_invalidated": True,
+        "stages": {"cold": {"cache_status": "miss"}},
+    }
+    session, state = _session(tmp_path, [])
+    _add_compiler_regression_evidence(session, state, report)
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["source"]["observation_records_unavailable"] == 1
+    assert result["source"]["observation_reference_diagnostics"][0]["verification"] == (
+        "observation-contract-invalid"
+    )
 
 
 def test_task_selector_recovery_remains_a_single_unresolved_hypothesis(tmp_path: Path) -> None:
