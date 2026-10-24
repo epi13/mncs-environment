@@ -152,7 +152,12 @@ preserves the campaign, session, and consumer that captured the observation;
 this prevents a collector session from being mistaken for the work under
 observation. Both relationships remain inspectable through the immutable
 evidence pointer, while the recorded consumer field is metadata rather than an
-independent identity attestation. A pressure hypothesis remains
+independent identity attestation. Pressure summaries also retain bounded
+`affected_work_contexts` and `recording_contexts`, with separate counts for
+distinct work intents, environment versions, and recording sessions or
+campaigns. The two context lists preserve their different roles; long context
+text and lists are truncated with explicit flags, and the source record remains
+authoritative. A pressure hypothesis remains
 an interpretation: one observation does not establish recurrence, and a
 change remains unproven until later observations and independent verification
 provide evidence. Repeated candidate IDs or resource use alone do not create

@@ -656,6 +656,25 @@ def test_authentic_capture_context_evidence_projects_as_one_improvement_chain(
     assert result["pressure_hypotheses"][0]["identity"] == (
         "ph_environment_observation_capture_context"
     )
+    pressure = result["pressure_hypotheses"][0]
+    assert pressure["distinct_work_intent_count"] == 1
+    assert pressure["affected_work_context_count"] == 1
+    assert pressure["affected_work_contexts"] == [{
+        "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+        "session_id": "ses_164edc158d9b1637",
+        "work_intent_id": "int_8fb697d8987722d5",
+        "work_intent_goal": (
+            "Mature mncs-compiler for reliable native multi-module application "
+            "development while advancing verified self-consumption"
+        ),
+    }]
+    assert pressure["recording_context_count"] == 1
+    assert pressure["distinct_recording_session_count"] == 1
+    assert pressure["recording_contexts"] == [{
+        "campaign_id": "cmp_environmental_capability_intelligence_20261023",
+        "session_id": "ses_c38b0ab35b9418ba",
+        "consumer_id": "local-agent",
+    }]
     assert result["improvement_relation_count"] == 1
     relation = result["improvement_relations"][0]
     assert relation["pressure_hypothesis_status"] == "present-in-projection"
@@ -711,6 +730,7 @@ def test_read_operation_observability_hypothesis_keeps_nonrecurrence_explicit(
 def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None:
     record = _observation("ev_environment_observation_large", "ses_compiler", "cmp_compiler")
     record["observation"]["outcome"]["large_diagnostic"] = "x" * 60_000
+    record["related_work"]["work_intent_goal"] = "g" * 300
     session, _ = _session(tmp_path, [record])
 
     result = capability_intelligence.project(session)
@@ -721,6 +741,14 @@ def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None
     assert result["observations"][0]["observation"]["details_omitted"] is True
     assert result["observations"][0]["evidence_reference"]["identity"] == record["identity"]
     assert result["observations"][0]["recording_context"]["campaign_id"] == "cmp_observation_capture"
+    pressure = result["pressure_hypotheses"][0]
+    assert pressure["affected_work_context_count"] == 1
+    assert len(pressure["affected_work_contexts"][0]["work_intent_goal"]) <= 256
+    assert pressure["affected_work_contexts"][0]["work_intent_goal_truncated"] is True
+    assert pressure["recording_context_count"] == 1
+    assert pressure["recording_contexts"][0]["session_id"] == (
+        "ses_observation_capture"
+    )
 
 
 def test_observation_reader_stops_after_its_total_deadline(monkeypatch) -> None:
@@ -748,6 +776,9 @@ def test_recurrence_requires_distinct_recorded_observations_and_sessions(tmp_pat
     hypothesis = result["pressure_hypotheses"][0]
     assert hypothesis["observation_count"] == 2
     assert hypothesis["distinct_session_count"] == 2
+    assert hypothesis["distinct_work_intent_count"] == 1
+    assert hypothesis["affected_work_context_count"] == 2
+    assert hypothesis["distinct_recording_session_count"] == 1
     assert hypothesis["recurrence_status"] == "observed-across-sessions"
 
 

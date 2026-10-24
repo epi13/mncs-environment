@@ -264,9 +264,35 @@ def _compact_projection(
                         "interpretation", "recurrence_status", "recommendation")
             if hypothesis.get(key) is not None
         }
-        for key in ("observation_count", "distinct_session_count", "distinct_campaign_count"):
+        for key in (
+            "observation_count", "distinct_session_count", "distinct_campaign_count",
+            "distinct_work_intent_count", "distinct_environment_version_count",
+            "affected_work_context_count", "distinct_recording_session_count",
+            "distinct_recording_campaign_count", "recording_context_count",
+        ):
             if type(hypothesis.get(key)) is int:
                 summary[key] = hypothesis[key]
+        for context_key in ("affected_work_contexts", "recording_contexts"):
+            raw_contexts = hypothesis.get(context_key)
+            raw_contexts = raw_contexts if isinstance(raw_contexts, list) else []
+            compact_contexts = []
+            for context in raw_contexts[:4]:
+                if not isinstance(context, dict):
+                    continue
+                compact_context = {}
+                for key, value in context.items():
+                    if isinstance(value, str):
+                        limit = 256 if key in (
+                            "work_intent_goal", "campaign_objective",
+                        ) else 160
+                        compact_context[key] = _short_text(value, limit)
+                    elif isinstance(value, bool):
+                        compact_context[key] = value
+                compact_contexts.append(compact_context)
+            summary[context_key] = compact_contexts
+            summary[f"{context_key}_truncated"] = (
+                len(raw_contexts) > len(compact_contexts)
+            )
         raw_evidence = hypothesis.get("evidence")
         raw_evidence = raw_evidence if isinstance(raw_evidence, list) else []
         evidence_references = [
@@ -697,6 +723,31 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
             if isinstance(item.get("related_work"), dict)
             and isinstance(item["related_work"].get("campaign_id"), str)
         })
+        work_contexts = _distinct_contexts(group, "related_work", (
+            "campaign_id", "session_id", "work_intent_id", "work_intent_goal",
+            "environment_id", "definition_id",
+            "environment_version",
+        ))
+        recording_contexts = _distinct_contexts(group, "recording_context", (
+            "campaign_id", "session_id", "consumer_id",
+        ))
+        work_intents = {
+            (context.get("campaign_id"), context.get("work_intent_id"))
+            for context in work_contexts
+            if context.get("campaign_id") and context.get("work_intent_id")
+        }
+        environment_versions = {
+            context["environment_version"] for context in work_contexts
+            if context.get("environment_version")
+        }
+        recording_sessions = {
+            context["session_id"] for context in recording_contexts
+            if context.get("session_id")
+        }
+        recording_campaigns = {
+            context["campaign_id"] for context in recording_contexts
+            if context.get("campaign_id")
+        }
         if len(sessions) > 1:
             recurrence_status = "observed-across-sessions"
         elif len(group) > 1:
@@ -714,11 +765,46 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "observation_count": len(group),
             "distinct_session_count": len(sessions),
             "distinct_campaign_count": len(campaigns),
+            "distinct_work_intent_count": len(work_intents),
+            "distinct_environment_version_count": len(environment_versions),
+            "affected_work_context_count": len(work_contexts),
+            "affected_work_contexts": work_contexts,
+            "distinct_recording_session_count": len(recording_sessions),
+            "distinct_recording_campaign_count": len(recording_campaigns),
+            "recording_context_count": len(recording_contexts),
+            "recording_contexts": recording_contexts,
             "recurrence_status": recurrence_status,
             "recommendation": hypothesis.get("actionable_recommendation"),
             "evidence": [item["evidence_reference"] for item in group],
         })
     return result
+
+
+def _distinct_contexts(
+    observations: list[dict[str, Any]], field: str, keys: tuple[str, ...],
+) -> list[dict[str, Any]]:
+    """Retain bounded, distinct target or recorder contexts for one pressure."""
+    contexts: list[dict[str, Any]] = []
+    seen: set[tuple[tuple[str, str], ...]] = set()
+    for observation in observations:
+        raw = observation.get(field)
+        if not isinstance(raw, dict):
+            continue
+        identity = tuple(
+            (key, raw[key]) for key in keys
+            if isinstance(raw.get(key), str) and raw[key]
+        )
+        if not identity or identity in seen:
+            continue
+        seen.add(identity)
+        context: dict[str, Any] = {}
+        for key, value in identity:
+            limit = 256 if key in ("work_intent_goal", "campaign_objective") else 160
+            context[key] = _short_text(value, limit) or ""
+            if len(value) > limit:
+                context[f"{key}_truncated"] = True
+        contexts.append(context)
+    return contexts
 
 
 def project(
