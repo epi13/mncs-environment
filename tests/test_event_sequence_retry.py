@@ -147,6 +147,38 @@ def test_rpc_read_activity_is_idempotent_and_capped(
     assert store.event_tail_reads == 2
 
 
+def test_rpc_read_activity_resumes_after_the_previous_capture_limit() -> None:
+    from mncs_env import capability_intelligence, sessions
+
+    session_id = "ses_rpc_activity_limit_upgrade"
+    store = EventStore(session_id)
+    session = Session(store, session_id)
+    assert sessions.MAX_RPC_READ_ACTIVITY_OBSERVATIONS == 256
+    assert capability_intelligence.MAX_RPC_READ_ACTIVITY_OBSERVATIONS == 256
+
+    for ordinal in range(1, 129):
+        digest = f"{ordinal:064x}"
+        result = session.record_rpc_read_activity(
+            _rpc_activity_payload(digest=digest),
+            request_id=f"req_rpc_upgrade_{ordinal}",
+            operation_digest=digest,
+        )
+        assert result["status"] == "recorded"
+
+    # A session produced by the previous 128-record build persists this flag.
+    store.snapshot["rpc_read_activity_limit_reached"] = True
+    resumed = Session(store, session_id).record_rpc_read_activity(
+        _rpc_activity_payload(digest="f" * 64),
+        request_id="req_rpc_upgrade_129",
+        operation_digest="f" * 64,
+    )
+
+    assert resumed["status"] == "recorded"
+    assert resumed["event"]["payload"]["observation_ordinal"] == 129
+    assert store.snapshot["rpc_read_activity_count"] == 129
+    assert store.snapshot["rpc_read_activity_limit_reached"] is False
+
+
 def test_rpc_read_activity_rejects_request_identity_reuse() -> None:
     session_id = "ses_rpc_activity_conflict"
     store = EventStore(session_id)

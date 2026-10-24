@@ -954,7 +954,7 @@ def test_session_activity_correlates_authenticated_control_read_operations(
 
     assert activity["context"]["work_intent_goal"] == "inspect current pressures"
     assert activity["source"]["rpc_operation_capture_count"] == 3
-    assert activity["source"]["rpc_operation_capture_limit"] == 128
+    assert activity["source"]["rpc_operation_capture_limit"] == 256
     assert activity["source"]["rpc_operation_records_invalid"] == 1
     assert activity["source"]["rpc_operation_context_basis"] == {
         "repository_identity": "control-project-grant",

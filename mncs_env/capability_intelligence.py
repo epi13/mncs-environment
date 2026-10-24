@@ -22,7 +22,7 @@ from typing import Any
 from . import authority as authority_module
 from . import workspace as workspace_module
 from .identity import digest_hex
-from .sessions import LifecycleError
+from .sessions import MAX_RPC_READ_ACTIVITY_OBSERVATIONS, LifecycleError
 from .store_backend import StoreIntegrityFailure, StoreUnavailable
 
 SCHEMA = "mncs.environment.capability-intelligence/1"
@@ -104,7 +104,6 @@ MAX_SESSION_ACTIVITY_RPC_OPERATIONS = 32
 MAX_SESSION_ACTIVITY_RPC_PRESSURE_CANDIDATES = 8
 MAX_SESSION_ACTIVITY_AUTHORITY_DENIALS = 16
 MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES = 8
-MAX_RPC_READ_ACTIVITY_OBSERVATIONS = 128
 SOURCE_INTEGRITY_VERIFIED = frozenset({
     "content-integrity-verified",
     "record-integrity-verified-in-projection",

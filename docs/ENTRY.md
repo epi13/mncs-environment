@@ -250,12 +250,16 @@ when available, and repository/environment context. Raw arguments and
 responses are not copied. Control records its dispatch elapsed time, including
 time waiting for that session's request lock; this is not total agent execution
 time. Model identity, token use, resource consumption, and cache accounting
-remain unavailable. Capture is bounded to 128 read-operation records per
-session; the projection identifies the selected event window and reports when
-that cap is reached. A bounded request index supports retries even after the
-event leaves the recent tail, and the recent tail can repair a snapshot update
-interrupted after event publication. Repeated read-operation failures appear
-as investigation candidates with exact event references. They describe
+remain unavailable. Capture is bounded to 256 read-operation records per
+session, matching the recent event-tail reconciliation bound. The projection
+reports the capture count, current limit, and whether the limit has been
+reached. A session persisted at an older limit resumes capture after the first
+successful read under the expanded bound and clears its stale limit flag.
+Calls rejected after the bound are not persisted as activity records. A
+bounded request index supports retries even after the event leaves the recent
+tail, and the recent tail can repair a snapshot update interrupted after event
+publication. Repeated read-operation failures appear as investigation
+candidates with exact event references. They describe
 repetition only in that session's selected event window; cross-session
 recurrence is not yet derived, and these candidates do not establish cause or
 a confirmed environmental defect. Projection attribution requires the

@@ -58,8 +58,8 @@ CHECKPOINT_SCHEMA = "mncs.environment.checkpoint/1"
 HANDOFF_SCHEMA = "mncs.environment.handoff/1"
 
 MAX_EMIT_RETRIES = 16
-MAX_RPC_READ_ACTIVITY_OBSERVATIONS = 128
 MAX_RPC_ACTIVITY_RECONCILIATION_EVENTS = 256
+MAX_RPC_READ_ACTIVITY_OBSERVATIONS = MAX_RPC_ACTIVITY_RECONCILIATION_EVENTS
 RPC_READ_ACTIVITY_EVENT = "environment.rpc.read_observed"
 RPC_READ_ACTIVITY_REQUEST_INDEX = "rpc_read_activity_request_index"
 
@@ -5906,9 +5906,10 @@ class Session:
     ) -> dict[str, Any]:
         """Record one bounded, authenticated Control read-operation outcome.
 
-        The event log keeps at most 128 such records for a session. A count in
-        the session snapshot makes that bound durable without rescanning all
-        prior events to decide whether another observation can be accepted.
+        The event log keeps at most 256 such records for a session, aligned
+        with the bounded event-tail reconciliation window. A count in the
+        session snapshot makes that bound durable without rescanning all prior
+        events to decide whether another observation can be accepted.
         """
         caller = payload.get("caller") if isinstance(payload, dict) else None
         context = payload.get("context") if isinstance(payload, dict) else None
@@ -6192,8 +6193,9 @@ class Session:
                 "observation_ordinal": ordinal,
             },
         ]
-        if ordinal >= MAX_RPC_READ_ACTIVITY_OBSERVATIONS:
-            self.snapshot["rpc_read_activity_limit_reached"] = True
+        self.snapshot["rpc_read_activity_limit_reached"] = (
+            ordinal >= MAX_RPC_READ_ACTIVITY_OBSERVATIONS
+        )
         self._save()
         return {"status": "recorded", "event": event}
 
