@@ -7598,6 +7598,14 @@ class EntryFrictionTests(unittest.TestCase):
             self.assertEqual(context["protected_repositories"], ["mncs-memory"])
             self.assertIn("available", context["capabilities"])
             self.assertIn("unavailable_count", context["capabilities"])
+            projection_action = context["actions"][
+                "environmental_capability_projection"
+            ]["argv"]
+            self.assertEqual(
+                projection_action[-4:],
+                ["projections", context["session_id"], "--interpret",
+                 "environmental-capability"],
+            )
             self.assertNotIn("available_capabilities", context)
             self.assertTrue(context["next_commands"])
             self.assertFalse((shared / "sessions").exists())

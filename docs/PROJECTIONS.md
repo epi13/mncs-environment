@@ -120,7 +120,10 @@ The selected page is read from the current campaign checkpoint. Combining an
 offset with `--history-pages` continues toward older pages from that point.
 Smaller segments let agents inspect records omitted by the global 16-record
 analysis budget without increasing that budget; page cursors and checkpoint
-consistency remain visible in the result.
+consistency remain visible in the result. The read-only session entry context
+also advertises the same bounded command as
+`actions.environmental_capability_projection.argv` so agents can discover the
+analysis without running it during entry.
 
 The default remains one page. Historical reads follow authenticated
 previous-page cursors, stop if the checkpoint changes, and cap the scan at four

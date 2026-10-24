@@ -7900,6 +7900,12 @@ class Session:
         actions = {name: {"argv": [*prefix, name, self.session_id]} for name in
                    ("health", "reconcile", "inspect", "capabilities")}
         actions["resources"] = {"argv": [*prefix, "resources"]}
+        actions["environmental_capability_projection"] = {
+            "argv": [
+                *prefix, "projections", self.session_id,
+                "--interpret", "environmental-capability",
+            ],
+        }
         return actions
 
     def health(self, *, live: bool = False) -> dict[str, Any]:
