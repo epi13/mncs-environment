@@ -1,0 +1,142 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_resource_sample_correction_live_readback_20261024",
+  "captured_at": "2026-10-24T23:00:18Z",
+  "measurement_basis": "live-environmental-capability-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "append-only-observation-correction-live-projection-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_c01ca32d0af155c1",
+      "campaign_state_checkpoint_id": "chk_84987a7446704c9c",
+      "campaign_evidence_count": 13,
+      "evidence_limit": 32,
+      "response_limit_bytes": 49152
+    },
+    "outcome": {
+      "status": "correction-applied",
+      "projection_status": "partial",
+      "response_byte_count": 69572,
+      "response_truncated": true,
+      "compacted_projection_bytes": 47731,
+      "compacted_projection_within_limit": true,
+      "correction_count": 1,
+      "corrections_applied_count": 1,
+      "corrections_unverified_count": 0,
+      "observation_records_verified": 8,
+      "observation_records_unavailable": 0,
+      "source_pointer_count": 8,
+      "source_pointer_content_integrity_verified_count": 8,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "corrected_target": {
+        "identity": "ev_environment_resource_sample_followup_relation_20261024",
+        "evidence_reference": {
+          "identity": "ev_environment_resource_sample_followup_relation_20261024",
+          "repository": "mncs-environment",
+          "commit": "7741e481c26f86e9838adffa34753eaa43d2ecea",
+          "path": "evidence/environmental-capability/resource-sample-followup-relation-20261024.json",
+          "sha256": "ca65a13325cfddb120505740045696f131a4f051c7497eaad72d63d9f13bc09f"
+        },
+        "correction_identity": "ev_environment_resource_sample_followup_relation_correction_20261024",
+        "correction_status": "corrected-by-verified-record",
+        "corrected_field_paths": [
+          "supporting_sources",
+          "not_measured"
+        ],
+        "measurement_limits": [
+          "resource consumption attributable to this agent or its child processes",
+          "CPU utilization for this sample",
+          "whether any other samples differ across this session or campaign",
+          "Btrfs data or metadata allocation headroom",
+          "whether the host conditions constrained any development operation"
+        ],
+        "supporting_sources": [
+          {
+            "identity": "ev_environment_resource_sample_live_readback_20261024",
+            "status": "verified",
+            "content_integrity_status": "record-integrity-verified-in-projection"
+          },
+          {
+            "identity": "ev_environment_resource_sample_session_linked_followup_20261024",
+            "status": "verified",
+            "content_integrity_status": "record-integrity-verified-in-projection"
+          },
+          {
+            "identity": "ev_environment_resource_sample_projection_implementation_20261024",
+            "status": "not-an-environmental-observation",
+            "content_integrity_status": "content-integrity-verified"
+          },
+          {
+            "identity": "ev_environment_observation_correction_projection_implementation_20261024",
+            "status": "not-an-environmental-observation",
+            "content_integrity_status": "content-integrity-verified"
+          }
+        ]
+      },
+      "improvement_relation": {
+        "identity": "im_environment_monitor_resource_samples_followup_20261024",
+        "status": "validated",
+        "effectiveness_assessment": "not-assessed",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "record-integrity-verified-in-projection"
+      },
+      "interpretation": "The correction applied to the exact verified target. Its source record remains inspectable, four exact replacement source pointers have verified content, and the replacement measurement limits match the linked resource sample. The full projection was compacted to 47,731 bytes within the 49,152-byte limit, so status remains partial to disclose omitted detail. The resource sample does not establish agent-attributed consumption, pressure, or improvement effectiveness."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_resource_sample_followup_relation_20261024",
+      "repository": "mncs-environment",
+      "commit": "7741e481c26f86e9838adffa34753eaa43d2ecea",
+      "path": "evidence/environmental-capability/resource-sample-followup-relation-20261024.json",
+      "sha256": "ca65a13325cfddb120505740045696f131a4f051c7497eaad72d63d9f13bc09f"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_resource_sample_followup_relation_correction_20261024",
+      "repository": "mncs-environment",
+      "commit": "3f7d22196213ef0b7eb07203fb2b429d896785fd",
+      "path": "evidence/environmental-capability/resource-sample-followup-relation-correction-20261024.json",
+      "sha256": "da53b085730e2ec7809e4b966524e25453befe628fc58636ccc23dda04a343cd"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_resource_sample_session_linked_followup_20261024",
+      "repository": "mncs-environment",
+      "commit": "7741e481c26f86e9838adffa34753eaa43d2ecea",
+      "path": "evidence/environmental-capability/resource-sample-session-linked-followup-20261024.json",
+      "sha256": "0cb1741955f975192a3ec286b1bc20c3b0ee9b1af9b5cd97add3cee2f1e2fd7c"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_observation_correction_source_classification_fix_20261024",
+      "repository": "mncs-environment",
+      "commit": "3feefc871acd53df94ea70225a193f41c8c5f56c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "621f34adadb8e30bde2aaa6ae2ac98d3ca1f88302b703563f1f190b7bc41cefe"
+    }
+  ],
+  "not_measured": [
+    "whether another agent independently uses this correction projection",
+    "whether response compaction changes subsequent development outcomes",
+    "whether the resource sample indicates pressure or constrained development",
+    "whether the linked improvement is empirically effective"
+  ]
+}
