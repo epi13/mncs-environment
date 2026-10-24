@@ -1,0 +1,66 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_entry_projection_action_live_readback_20261024",
+  "captured_at": "2026-10-24T16:15:25+00:00",
+  "observation": {
+    "kind": "environment-entry-projection-action-live-readback",
+    "source_interface": "mncs-env read-only session context",
+    "request": {
+      "campaign_checkpoint_id": "chk_a0a5bcce246b2720",
+      "campaign_evidence_count": 56,
+      "session_id": "ses_c98eb637e20a5c14"
+    },
+    "outcome": {
+      "environmental_capability_projection_action_present": true,
+      "advertised_command": "projections ses_c98eb637e20a5c14 --interpret environmental-capability",
+      "command_is_bounded_to_current_campaign_page_by_default": true,
+      "projection_executed_during_context_read": false,
+      "analysis_limit": "This confirms the action is present for one live session. Future agent discovery and use, repeated orientation activity, and development effects remain unobserved."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_a0a5bcce246b2720",
+    "campaign_evidence_count_before_recording": 56,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:567a0ed75512"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+      "session_id": "ses_c98eb637e20a5c14"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_entry_projection_action_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "d51f2f2c0719683eb861044404454876087f219b",
+      "path": "mncs_env/sessions.py",
+      "sha256": "0356b7803149cac777c931bf1753b1d88d0038d3353e35676e225662b62d052b"
+    },
+    {
+      "kind": "campaign-observation-record",
+      "identity": "ev_environment_entry_projection_discoverability_gap_20261024",
+      "repository": "mncs-environment",
+      "commit": "4a425533b665551a7af76a9053e5a7f4a02abedb",
+      "path": "evidence/environmental-capability/entry-projection-discoverability-gap-20261024.json",
+      "sha256": "6a56a8654ccca718a30800d92a1feec7a7beb9598013839c26f89cf6abd72830"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
