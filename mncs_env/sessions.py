@@ -8039,20 +8039,47 @@ class Session:
             return None
         return doctor_module.terse(self)
 
-    def recent_events(self, *, limit: int = 256) -> dict[str, Any]:
-        """Read a bounded tail of the durable session event stream."""
+    def recent_events(
+        self, *, limit: int = 256, before_sequence: int | None = None,
+    ) -> dict[str, Any]:
+        """Read one bounded page from the durable session event stream."""
         if type(limit) is not int or not 1 <= limit <= 256:
             raise ValueError("recent event limit must be between 1 and 256")
+        if (type(before_sequence) not in (int, type(None))
+                or (before_sequence is not None and before_sequence < 1)):
+            raise ValueError("event page cursor must be a positive sequence")
+        page_reader = getattr(self.store, "read_event_page", None)
+        if callable(page_reader):
+            page = page_reader(
+                self.session_id, limit=limit, before_sequence=before_sequence,
+            )
+            if not isinstance(page, dict):
+                raise ValueError("event page reader returned an invalid page")
+            return page
         reader = getattr(self.store, "read_event_tail", None)
-        if callable(reader):
+        if callable(reader) and before_sequence is None:
             events, event_count = reader(self.session_id, limit=limit)
+            has_older = event_count > len(events)
         else:
             log = self._log()
-            events, event_count = log[-limit:], len(log)
+            eligible = [
+                event for event in log
+                if before_sequence is None
+                or (type(event.get("sequence")) is int
+                    and event["sequence"] < before_sequence)
+            ]
+            eligible.sort(key=lambda event: event.get("sequence", 0))
+            events, event_count = eligible[-limit:], len(log)
+            has_older = len(eligible) > len(events)
+        sequences = [
+            event["sequence"] for event in events
+            if type(event.get("sequence")) is int
+        ]
         return {
             "event_count": event_count,
             "events": list(events),
-            "truncated": event_count > len(events),
+            "truncated": has_older,
+            "next_before_sequence": min(sequences) if has_older and sequences else None,
         }
 
     def inspect(self) -> dict[str, Any]:

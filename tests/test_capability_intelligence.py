@@ -77,8 +77,9 @@ def _session(tmp_path: Path, reports: list[dict], *, extra_refs: list[dict] | No
             "selected_checkouts": {"mncs-environment": {"path": str(checkout)}},
         },
         campaign_state=lambda **_kwargs: state,
-        recent_events=lambda *, limit: {
+        recent_events=lambda *, limit, before_sequence=None: {
             "event_count": 0, "events": [], "truncated": False,
+            "next_before_sequence": None,
         },
     )
     return session, state
@@ -494,6 +495,50 @@ def test_session_activity_does_not_infer_absence_from_a_truncated_event_tail(
     assert activity["source"]["event_type_counts"] == {"session.checkpointed": 256}
 
 
+def test_session_activity_exposes_bounded_older_pages_and_next_cursor(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_activity_older_page",
+        "ses_compiler_activity_older_page",
+        "cmp_compiler_activity_older_page",
+    )
+    session, _ = _session(tmp_path, [record])
+    events = [
+        {"identity": f"evt_older_{sequence}", "sequence": sequence,
+         "type": "session.checkpointed", "payload": {}}
+        for sequence in range(1, 7)
+    ]
+    requests = []
+
+    def recent_events(*, limit, before_sequence=None):
+        requests.append((limit, before_sequence))
+        eligible = [event for event in events
+                    if before_sequence is None or event["sequence"] < before_sequence]
+        selected = eligible[-limit:]
+        has_older = len(eligible) > len(selected)
+        return {
+            "event_count": len(events), "events": selected,
+            "truncated": has_older,
+            "next_before_sequence": selected[0]["sequence"] if has_older else None,
+        }
+
+    session.recent_events = recent_events
+    result = capability_intelligence.project(
+        session, session_event_before_sequence=5, session_event_limit=2,
+    )
+
+    activity = result["session_activity"]
+    assert requests == [(2, 5)]
+    assert activity["status"] == "partial-no-invocations-in-selected-window"
+    assert activity["source"]["event_page_scoped"] is True
+    assert activity["source"]["event_page_before_sequence"] == 5
+    assert activity["source"]["event_window_sequence_start"] == 3
+    assert activity["source"]["event_window_sequence_end"] == 4
+    assert activity["source"]["next_event_before_sequence"] == 3
+    assert activity["source"]["event_page_has_older_records"] is True
+
+
 def test_session_activity_correlates_authenticated_control_read_operations(
     tmp_path: Path,
 ) -> None:
@@ -642,8 +687,9 @@ def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path
         "payload": {"capability": "mncs-test:run",
                     "provider_request_id": "req_activity_compaction"},
     }
-    session.recent_events = lambda *, limit: {
-        "event_count": 2, "events": [activity_event], "truncated": False,
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": 6, "events": [activity_event], "truncated": True,
+        "next_before_sequence": 2,
     }
     state.update({
         "evidence_offset": 16,
@@ -653,8 +699,13 @@ def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path
         "next_evidence_offset": 24,
     })
 
-    projection = capability_intelligence.project(session)
-    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+    projection = capability_intelligence.project(
+        session, session_event_before_sequence=4, session_event_limit=8,
+    )
+    compact = capability_intelligence.project(
+        session, max_result_bytes=8_000,
+        session_event_before_sequence=4, session_event_limit=8,
+    )
 
     for result in (projection, compact):
         assert result["source"]["evidence_page_offset"] == 16
@@ -662,6 +713,14 @@ def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path
         assert result["source"]["previous_evidence_offset"] == 8
         assert result["source"]["next_evidence_offset"] == 24
         assert result["source"]["evidence_page_truncated"] is True
+        assert result["session_activity"]["source"][
+            "event_page_before_sequence"
+        ] == 4
+        assert result["session_activity"]["source"][
+            "next_event_before_sequence"
+        ] == 2
+        assert result["session_activity"]["source"]["event_window_truncated"] is True
+    assert projection["session_activity"]["source"]["event_window_limit"] == 8
 
     state.update({
         "evidence_offset": 0,
@@ -1692,6 +1751,8 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
             "projections", session.session_id, "--interpret", "environmental-capability",
             "--evidence-offset", "9", "--evidence-limit", "9",
             "--history-pages", "2",
+            "--session-event-before-sequence", "12",
+            "--session-event-limit", "64",
         ])
 
     projection = json.loads(output.getvalue())
@@ -1709,6 +1770,10 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     assert projection["source"]["evidence_history_page_offsets"] == [9, 0]
     assert projection["source"]["evidence_history_truncated"] is False
     assert projection["source"]["evidence_history_checkpoint_consistent"] is True
+    assert projection["session_activity"]["source"][
+        "event_page_before_sequence"
+    ] == 12
+    assert projection["session_activity"]["source"]["event_window_limit"] == 64
     assert projection["source"]["evidence_history_observation_budgets_by_page"] == [
         {
             "offset": 9,

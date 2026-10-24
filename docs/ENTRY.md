@@ -262,7 +262,12 @@ a confirmed environmental defect. Projection attribution requires the
 recorded principal and environment/campaign/intent context to match the
 selected authenticated session. Canonical Store-backed recent-event
 projections read at most 256 verified event payloads; the current Store
-generation's binding metadata is still scanned to select that tail.
+generation's binding metadata is still scanned to select that page. When the
+selected event window is incomplete, `session_activity.source.next_event_before_sequence`
+can be passed to `projections <session> --interpret environmental-capability
+--session-event-before-sequence <cursor>` to inspect the preceding bounded
+page. Each historical page is explicitly partial and reports whether an older
+page remains.
 
 Observation source summaries keep registration status separate from
 `content_integrity_status`. A selected source blob is marked

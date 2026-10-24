@@ -138,6 +138,25 @@ Recurrence describes the selected window;
 `evidence_history_truncated` indicates when it does not cover all available
 history.
 
+Session activity uses a separate bounded event page. To inspect older events,
+pass the `next_event_before_sequence` cursor from the projection source and
+optionally lower the page size:
+
+```bash
+./scripts/mncs-env projections <session> \
+  --interpret environmental-capability \
+  --session-event-before-sequence 512 --session-event-limit 128
+```
+
+The cursor is exclusive. The result identifies the selected page with
+`event_page_before_sequence`, reports whether still older records remain, and
+returns the next cursor when they do. Historical pages are marked partial
+because newer session events are outside the selected window; absence in one
+page does not establish absence from the session. Canonical Store reads scan
+the current generation's binding metadata but materialize only the selected
+verified event payloads. Event page reads are on demand and do not copy the
+session transcript.
+
 `campaign-state <session>` includes this derived view when the existing
 128 KiB campaign-state response budget permits, so a caller reading the durable
 ledger can inspect related environmental context in the same response. When

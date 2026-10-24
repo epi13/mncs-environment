@@ -341,12 +341,23 @@ class StoreBackend:
         self, session_id: str, *, limit: int,
     ) -> tuple[list[dict[str, Any]], int]:
         """Read only the newest event payloads while counting all event bindings."""
+        page = self.read_event_page(session_id, limit=limit)
+        return page["events"], page["event_count"]
+
+    def read_event_page(
+        self, session_id: str, *, limit: int, before_sequence: int | None = None,
+    ) -> dict[str, Any]:
+        """Read a bounded event page from binding metadata and selected payloads."""
         if type(limit) is not int or not 1 <= limit <= 256:
             raise ValueError("recent event limit must be between 1 and 256")
+        if (type(before_sequence) not in (int, type(None))
+                or (before_sequence is not None and before_sequence < 1)):
+            raise ValueError("event page cursor must be a positive sequence")
         prefix = f"{session_id}:evt:".encode()
         generation = self._store.current_generation
         selected: list[tuple[int, bytes]] = []
         event_count = 0
+        minimum_sequence: int | None = None
         for schema, identity in self._store.domain_bindings_at(generation):
             if schema != SCHEMA_EVENT or not identity.startswith(prefix):
                 continue
@@ -360,6 +371,12 @@ class StoreBackend:
             if sequence < 1 or suffix != f"{sequence:010d}".encode():
                 continue
             event_count += 1
+            minimum_sequence = (
+                sequence if minimum_sequence is None
+                else min(minimum_sequence, sequence)
+            )
+            if before_sequence is not None and sequence >= before_sequence:
+                continue
             item = (sequence, identity)
             if len(selected) < limit:
                 heapq.heappush(selected, item)
@@ -378,7 +395,16 @@ class StoreBackend:
                     and type(event.get("sequence")) is int
                     and event["sequence"] == sequence):
                 events.append(event)
-        return events, event_count
+        has_older = bool(
+            selected and minimum_sequence is not None
+            and selected[0][0] > minimum_sequence
+        )
+        return {
+            "event_count": event_count,
+            "events": events,
+            "truncated": has_older,
+            "next_before_sequence": selected[0][0] if has_older else None,
+        }
 
     # -- snapshots -----------------------------------------------------------
 

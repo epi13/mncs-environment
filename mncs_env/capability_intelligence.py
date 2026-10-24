@@ -872,10 +872,13 @@ def _compact_projection(
         key: activity_source[key]
         for key in (
             "event_count", "event_window_truncated",
+            "event_page_before_sequence", "next_event_before_sequence",
             "event_window_sequence_start", "event_window_sequence_end",
             "invocation_events_considered", "invocation_records_omitted",
         )
         if key in activity_source
+        and (key not in {"event_page_before_sequence", "next_event_before_sequence"}
+             or activity_source[key] is not None)
     }
     if activity_source.get("rpc_operation_capture_count") is not None:
         compact_activity_source.update({
@@ -1720,7 +1723,11 @@ def _authenticated_rpc_read_event(
     )
 
 
-def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
+def _session_activity(
+    session: Any, snapshot: dict[str, Any], *,
+    event_before_sequence: int | None = None,
+    event_limit: int = MAX_SESSION_EVENT_WINDOW,
+) -> dict[str, Any]:
     """Project bounded capability and authenticated Control read activity."""
     reader = getattr(session, "recent_events", None)
     limits = [
@@ -1731,13 +1738,16 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
             "session-selected checkout; this projection does not re-probe Git at each operation."
         ),
         "Model identity, token usage, execution duration, and resource consumption are not inferred when the runtime does not expose them.",
-        "The Store tail reader verifies only selected event payloads; finding their bindings still scans the generation's metadata index.",
+        "The Store page reader verifies only selected event payloads; finding their bindings still scans the generation's metadata index.",
     ]
     if not callable(reader):
         return {
             "status": "unavailable",
             "context": {},
-            "source": {"event_window_limit": MAX_SESSION_EVENT_WINDOW},
+            "source": {
+                "event_window_limit": event_limit,
+                "event_page_before_sequence": event_before_sequence,
+            },
             "interaction_count": 0,
             "interactions": [],
             "rpc_operation_count": 0,
@@ -1746,11 +1756,16 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
             "capabilities": [],
             "measurement_limits": [
                 *limits,
-                "The session event tail interface is unavailable.",
+                "The session event page interface is unavailable.",
             ],
         }
     try:
-        page = reader(limit=MAX_SESSION_EVENT_WINDOW)
+        if event_before_sequence is None:
+            page = reader(limit=event_limit)
+        else:
+            page = reader(
+                limit=event_limit, before_sequence=event_before_sequence,
+            )
     except (LifecycleError, StoreIntegrityFailure, StoreUnavailable, OSError, ValueError):
         page = None
     if (not isinstance(page, dict)
@@ -1761,7 +1776,10 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
         return {
             "status": "unavailable",
             "context": {},
-            "source": {"event_window_limit": MAX_SESSION_EVENT_WINDOW},
+            "source": {
+                "event_window_limit": event_limit,
+                "event_page_before_sequence": event_before_sequence,
+            },
             "interaction_count": 0,
             "interactions": [],
             "capabilities": [],
@@ -1772,9 +1790,9 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
         }
 
     raw_page_events = page["events"]
-    adapter_window_overflow = len(raw_page_events) > MAX_SESSION_EVENT_WINDOW
+    adapter_window_overflow = len(raw_page_events) > event_limit
     if adapter_window_overflow:
-        raw_page_events = raw_page_events[-MAX_SESSION_EVENT_WINDOW:]
+        raw_page_events = raw_page_events[-event_limit:]
     raw_events = [item for item in raw_page_events if isinstance(item, dict)]
     events = sorted(
         raw_events,
@@ -2021,11 +2039,15 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
 
     event_count = page["event_count"]
     event_window_truncated = (
-        page["truncated"] or event_count > len(page["events"])
+        page["truncated"]
+        or (event_before_sequence is None and event_count > len(page["events"]))
         or adapter_window_overflow
     )
     invocations_omitted = max(0, len(invocation_events) - len(interactions))
-    partial = event_window_truncated or invocations_omitted > 0
+    partial = (
+        event_window_truncated or event_before_sequence is not None
+        or invocations_omitted > 0
+    )
     if partial and not invocation_events:
         status = "partial-no-invocations-in-selected-window"
     elif partial:
@@ -2038,6 +2060,17 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
         reference for event in events
         if (reference := _event_reference(event)) is not None
     ]
+    next_event_before_sequence = page.get("next_before_sequence")
+    if (type(next_event_before_sequence) is not int
+            or next_event_before_sequence < 1
+            or (event_before_sequence is not None
+                and next_event_before_sequence >= event_before_sequence)):
+        next_event_before_sequence = (
+            min(reference["sequence"] for reference in window_references)
+            if event_window_truncated and window_references else None
+        )
+    if not event_window_truncated:
+        next_event_before_sequence = None
     event_type_counts: dict[str, int] = {}
     for event in events:
         event_type = event.get("type")
@@ -2079,7 +2112,11 @@ def _session_activity(session: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
         "context": context,
         "source": {
             "event_count": event_count,
-            "event_window_limit": MAX_SESSION_EVENT_WINDOW,
+            "event_window_limit": event_limit,
+            "event_page_before_sequence": event_before_sequence,
+            "event_page_scoped": event_before_sequence is not None,
+            "next_event_before_sequence": next_event_before_sequence,
+            "event_page_has_older_records": event_window_truncated,
             "events_considered": len(raw_page_events),
             "event_window_truncated": event_window_truncated,
             "event_window_identity_digest": digest_hex(window_references, length=16),
@@ -2143,6 +2180,8 @@ def project(
     max_result_bytes: int = MAX_RESULT_BYTES, history_pages: int = 1,
     evidence_offset: int | None = None,
     evidence_limit: int = MAX_EVIDENCE_REFS,
+    session_event_before_sequence: int | None = None,
+    session_event_limit: int = MAX_SESSION_EVENT_WINDOW,
 ) -> dict[str, Any]:
     """Build a bounded read-only relationship view from campaign evidence.
 
@@ -2167,6 +2206,16 @@ def project(
         raise ValueError(
             "capability projection evidence limit must be between 1 and "
             f"{MAX_EVIDENCE_REFS}"
+        )
+    if (type(session_event_before_sequence) not in (int, type(None))
+            or (session_event_before_sequence is not None
+                and session_event_before_sequence < 1)):
+        raise ValueError("capability projection session event cursor must be positive")
+    if (type(session_event_limit) is not int
+            or not 1 <= session_event_limit <= MAX_SESSION_EVENT_WINDOW):
+        raise ValueError(
+            "capability projection session event limit must be between 1 and "
+            f"{MAX_SESSION_EVENT_WINDOW}"
         )
     if campaign_state is not None and (
         evidence_offset is not None or evidence_limit != MAX_EVIDENCE_REFS
@@ -2584,7 +2633,11 @@ def project(
     else:
         status = "no-observations"
     hypotheses = _recurrence(observations)
-    activity = _session_activity(session, snapshot)
+    activity = _session_activity(
+        session, snapshot,
+        event_before_sequence=session_event_before_sequence,
+        event_limit=session_event_limit,
+    )
     projection: dict[str, Any] = {
         "schema_version": SCHEMA,
         "identity": "eci_" + digest_hex({

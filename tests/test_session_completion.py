@@ -160,6 +160,44 @@ class CompletionReleasesClaimsTests(unittest.TestCase):
         self.assertEqual([event["sequence"] for event in page["events"]], [3, 4])
         self.assertTrue(page["truncated"])
 
+    def test_recent_events_reads_an_older_bounded_page_before_sequence(self):
+        store = StubStore(_snapshot(), [])
+        store.events = [
+            {"identity": f"evt_{sequence}", "sequence": sequence}
+            for sequence in range(1, 7)
+        ]
+        page = _session(store).recent_events(limit=2, before_sequence=5)
+
+        self.assertEqual(page["event_count"], 6)
+        self.assertEqual([event["sequence"] for event in page["events"]], [3, 4])
+        self.assertTrue(page["truncated"])
+        self.assertEqual(page["next_before_sequence"], 3)
+
+    def test_store_session_store_never_materializes_history_for_cursor_fallback(self):
+        from mncs_env.session_store import StoreSessionStore
+        from mncs_env.store_backend import StoreUnavailable
+
+        class TailOnlyBackend:
+            def read_event_tail(self, session_id, *, limit):
+                assert session_id == "ses_test"
+                events = [
+                    {"identity": "evt_3", "sequence": 3},
+                    {"identity": "evt_4", "sequence": 4},
+                ][-limit:]
+                return events, 4
+
+            def read_events(self, _session_id):
+                raise AssertionError("canonical Store fallback loaded full history")
+
+        store = StoreSessionStore.__new__(StoreSessionStore)
+        store.backend = TailOnlyBackend()
+
+        newest_page = store.read_event_page("ses_test", limit=2)
+        self.assertEqual([event["sequence"] for event in newest_page["events"]], [3, 4])
+        self.assertEqual(newest_page["next_before_sequence"], 3)
+        with self.assertRaises(StoreUnavailable):
+            store.read_event_page("ses_test", limit=2, before_sequence=3)
+
     def test_request_event_replays_and_rejects_request_identity_reuse(self):
         store = StubStore(_snapshot(), [])
         first = _session(store)

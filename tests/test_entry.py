@@ -2024,6 +2024,25 @@ def test_read_event_tail_materializes_only_selected_payloads():
     assert [event["sequence"] for event in events] == [4, 5]
     assert payload_reads == identities[-2:]
 
+    payload_reads.clear()
+    page = backend.read_event_page(
+        session_id, limit=2, before_sequence=4,
+    )
+    assert page["event_count"] == 5
+    assert [event["sequence"] for event in page["events"]] == [2, 3]
+    assert page["truncated"] is True
+    assert page["next_before_sequence"] == 2
+    assert payload_reads == identities[1:3]
+
+    payload_reads.clear()
+    oldest_page = backend.read_event_page(
+        session_id, limit=2, before_sequence=2,
+    )
+    assert [event["sequence"] for event in oldest_page["events"]] == [1]
+    assert oldest_page["truncated"] is False
+    assert oldest_page["next_before_sequence"] is None
+    assert payload_reads == identities[:1]
+
 
 def test_list_sessions_reads_binding_metadata_only():
     from mncs_env.store_backend import SCHEMA_EVENT, SCHEMA_SNAPSHOT, StoreBackend

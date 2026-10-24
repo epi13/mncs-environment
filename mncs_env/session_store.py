@@ -323,6 +323,36 @@ class SessionStore:
         events = self.read_events(session_id)
         return events[-limit:], len(events)
 
+    def read_event_page(
+        self, session_id: str, *, limit: int, before_sequence: int | None = None,
+    ) -> dict[str, Any]:
+        """Read one bounded event page, optionally preceding a sequence cursor."""
+        if type(limit) is not int or not 1 <= limit <= 256:
+            raise ValueError("recent event limit must be between 1 and 256")
+        if (type(before_sequence) not in (int, type(None))
+                or (before_sequence is not None and before_sequence < 1)):
+            raise ValueError("event page cursor must be a positive sequence")
+        events = self.read_events(session_id)
+        valid_events = [
+            event for event in events
+            if isinstance(event, dict)
+            and type(event.get("sequence")) is int
+            and event["sequence"] >= 1
+        ]
+        eligible = [
+            event for event in valid_events
+            if before_sequence is None or event["sequence"] < before_sequence
+        ]
+        eligible.sort(key=lambda event: event["sequence"])
+        selected = eligible[-limit:]
+        has_older = bool(selected and eligible[0]["sequence"] < selected[0]["sequence"])
+        return {
+            "event_count": len(valid_events),
+            "events": selected,
+            "truncated": has_older,
+            "next_before_sequence": selected[0]["sequence"] if has_older else None,
+        }
+
     def put_event(self, session_id: str, sequence: int, event: dict[str, Any]) -> None:
         """Persist one sequenced event; raise SequenceTaken on foreign conflict."""
         raise NotImplementedError
@@ -679,6 +709,39 @@ class StoreSessionStore(SessionStore):
         if callable(reader):
             return reader(session_id, limit=limit)
         return super().read_event_tail(session_id, limit=limit)
+
+    def read_event_page(
+        self, session_id: str, *, limit: int, before_sequence: int | None = None,
+    ) -> dict[str, Any]:
+        if type(limit) is not int or not 1 <= limit <= 256:
+            raise ValueError("recent event limit must be between 1 and 256")
+        if (type(before_sequence) not in (int, type(None))
+                or (before_sequence is not None and before_sequence < 1)):
+            raise ValueError("event page cursor must be a positive sequence")
+        reader = getattr(self.backend, "read_event_page", None)
+        if callable(reader):
+            return reader(
+                session_id, limit=limit, before_sequence=before_sequence,
+            )
+        tail_reader = getattr(self.backend, "read_event_tail", None)
+        if callable(tail_reader) and before_sequence is None:
+            events, event_count = tail_reader(session_id, limit=limit)
+            return {
+                "event_count": event_count,
+                "events": events,
+                "truncated": event_count > len(events),
+                "next_before_sequence": (
+                    min((event["sequence"] for event in events
+                         if type(event.get("sequence")) is int), default=None)
+                    if event_count > len(events) else None
+                ),
+            }
+        from .store_backend import StoreUnavailable
+
+        raise StoreUnavailable(
+            "selected Store provider does not expose bounded historical event pages",
+            code="provider-operation-unsupported",
+        )
 
     def put_event(self, session_id: str, sequence: int, event: dict[str, Any]) -> None:
         from .store_backend import _SequenceTaken
