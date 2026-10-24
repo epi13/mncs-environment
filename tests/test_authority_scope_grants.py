@@ -517,13 +517,19 @@ def test_owner_grant_admits_exact_registered_worktree_outside_campaign_workspace
         assert claim["scope"]["checkout"] == str(checkout.resolve())
         assert claim["scope"]["branch"] == "campaign/compiler-scope"
         assert claim["scope"]["exclusive"] is False
+        # The campaign contains no checkout with this repository name; its
+        # only authorized checkout is the exact external worktree above.
+        (campaign_workspace / "mncs-control-mcp").rename(
+            tmp_path / "unselected-campaign-control-checkout"
+        )
+        # Persist the selected repository set a continued campaign has after
+        # scope composition, even though this checkout is outside the campaign
+        # workspace's immediate repository layout.
+        composition = session._compose_authorized_scope_checkouts()
+        assert composition["status"] == "ready"
+        assert "mncs-control-mcp" in session.snapshot["workspace"]["selection"]
+        session._save()
         session_id = session.session_id
-        assert session.release_claim(
-            "mncs-control-mcp",
-            claim_id=claim["claim_id"],
-            reason="exercise exact checkout continuation after restart",
-            request_id="req_external_owner_scope_release",
-        ) is True
         session.close()
         session = None
 
@@ -538,19 +544,39 @@ def test_owner_grant_admits_exact_registered_worktree_outside_campaign_workspace
             store=reopened_store,
         )
         try:
-            resumed_claim = resumed.acquire_claim(
+            held_claim = next(
+                item for item in claims.active_claims(resumed.store.read_claims()).values()
+                if item.get("claim_id") == claim["claim_id"]
+            )
+            assert held_claim["session_id"] == resumed.session_id
+            report = resumed.revalidate()
+            assert report["scope_composition"]["status"] == "ready"
+            assert "mncs-control-mcp" in (
+                report["scope_composition"]["composed"]
+                + report["scope_composition"]["retained"]
+            )
+            selected = resumed.snapshot["selected_checkouts"]["mncs-control-mcp"]
+            assert selected["path"] == str(checkout.resolve())
+            assert not selected.get("missing", False)
+            assert resumed.release_claim(
+                "mncs-control-mcp",
+                claim_id=claim["claim_id"],
+                reason="exercise owner-grant claim recovery after restart",
+                request_id="req_external_owner_scope_release",
+            ) is True
+            reclaimed = resumed.acquire_claim(
                 "mncs-control-mcp",
                 reason="resume the exact owner-approved worktree claim",
                 request_id="req_external_owner_scope_reclaim",
             )
-            assert resumed_claim["scope"]["checkout"] == str(checkout.resolve())
-            assert resumed_claim["scope"]["branch"] == "campaign/compiler-scope"
-            report = resumed.revalidate()
-            assert report["scope_composition"]["status"] == "ready"
-            assert "mncs-control-mcp" in report["scope_composition"]["composed"]
-            selected = resumed.snapshot["selected_checkouts"]["mncs-control-mcp"]
-            assert selected["path"] == str(checkout.resolve())
-            assert not selected.get("missing", False)
+            assert reclaimed["scope"]["checkout"] == str(checkout.resolve())
+            assert reclaimed["scope"]["branch"] == "campaign/compiler-scope"
+            assert resumed.release_claim(
+                "mncs-control-mcp",
+                claim_id=reclaimed["claim_id"],
+                reason="finish owner-grant claim recovery test",
+                request_id="req_external_owner_scope_reclaim_release",
+            ) is True
         finally:
             resumed.close()
     finally:
