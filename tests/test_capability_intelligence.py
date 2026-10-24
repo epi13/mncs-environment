@@ -822,6 +822,7 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     )
     assert compact["source"]["response_truncated"] is True
     assert compact["source"]["evidence_history_page_offsets"] == [9, 0]
+    assert compact["source"]["evidence_history_page_limits"] == [9, 9]
     assert compact["source"]["evidence_history_truncated"] is False
     assert compact["source"]["evidence_history_checkpoint_consistent"] is True
     assert compact["source"]["observation_records_skipped_by_page_budget"] == 2
@@ -837,6 +838,68 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     assert inconsistent["source"]["evidence_history_checkpoint_consistent"] is False
     assert inconsistent["source"]["evidence_history_truncated"] is True
     assert inconsistent["status"] == "partial"
+
+
+def test_history_window_uses_cursor_distance_for_short_first_page(tmp_path: Path) -> None:
+    reports = [
+        _observation(
+            f"ev_environment_short_history_{index:02d}",
+            "ses_short_history_old" if index < 9 else "ses_short_history_new",
+            "cmp_short_history",
+        )
+        for index in range(17)
+    ]
+    session, full_state = _session(tmp_path, reports)
+    references = full_state["evidence"]
+    latest_page = {
+        **full_state,
+        "evidence": references[9:],
+        "evidence_offset": 9,
+        "evidence_limit": 8,
+        "previous_evidence_offset": 1,
+        "next_evidence_offset": None,
+        "evidence_truncated": True,
+    }
+    middle_page = {
+        **full_state,
+        "evidence": references[1:9],
+        "evidence_offset": 1,
+        "evidence_limit": 8,
+        "previous_evidence_offset": 0,
+        "next_evidence_offset": 9,
+        "evidence_truncated": True,
+    }
+    first_page = {
+        **full_state,
+        "evidence": references[:1],
+        "evidence_offset": 0,
+        "evidence_limit": 1,
+        "previous_evidence_offset": None,
+        "next_evidence_offset": 1,
+        "evidence_truncated": True,
+    }
+    requests = []
+
+    def campaign_state(*, evidence_offset=None, evidence_limit=32):
+        requests.append((evidence_offset, evidence_limit))
+        return middle_page if evidence_offset == 1 else first_page
+
+    session.campaign_state = campaign_state
+    result = capability_intelligence.project(
+        session, campaign_state=latest_page, history_pages=3,
+    )
+
+    hypothesis = result["pressure_hypotheses"][0]
+    assert requests == [(1, 8), (0, 1)]
+    assert result["source"]["evidence_history_page_offsets"] == [9, 1, 0]
+    assert result["source"]["evidence_history_page_limits"] == [8, 8, 1]
+    assert result["source"]["observation_records_considered"] == 17
+    assert result["source"]["observation_records_verified"] == 11
+    assert result["source"]["observation_records_skipped_by_page_budget"] == 6
+    assert result["source"]["evidence_history_truncated"] is False
+    assert hypothesis["recurrence_status"] == "observed-across-sessions"
+    assert hypothesis["observation_count"] == 11
+    assert hypothesis["distinct_session_count"] == 2
 
 
 def test_repeated_ledger_pointer_does_not_establish_recurrence(tmp_path: Path) -> None:

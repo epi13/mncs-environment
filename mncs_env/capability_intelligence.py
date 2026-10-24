@@ -73,13 +73,19 @@ def _evidence_history_pages(
         previous_offset = current.get("previous_evidence_offset")
         if previous_offset is None:
             break
-        if type(previous_offset) is not int or previous_offset < 0:
+        current_offset = current.get("evidence_offset")
+        if (type(previous_offset) is not int or previous_offset < 0
+                or type(current_offset) is not int or current_offset <= previous_offset):
+            consistent = False
+            break
+        older_limit = current_offset - previous_offset
+        if older_limit > page_limit:
             consistent = False
             break
         try:
             older = session.campaign_state(
                 evidence_offset=previous_offset,
-                evidence_limit=page_limit,
+                evidence_limit=older_limit,
             )
         except (LifecycleError, StoreIntegrityFailure, StoreUnavailable):
             consistent = False
@@ -87,7 +93,9 @@ def _evidence_history_pages(
         if (not isinstance(older, dict)
                 or older.get("checkpoint_id") != checkpoint_id
                 or older.get("evidence_count") != evidence_count
-                or older.get("evidence_offset") != previous_offset):
+                or older.get("evidence_offset") != previous_offset
+                or older.get("evidence_limit") != older_limit
+                or older.get("next_evidence_offset") != current_offset):
             consistent = False
             break
         pages.append(older)
@@ -205,6 +213,7 @@ def _compact_projection(
                     "previous_evidence_offset", "next_evidence_offset",
                     "evidence_history_pages_requested",
                     "evidence_history_pages_read", "evidence_history_page_offsets",
+                    "evidence_history_page_limits",
                     "evidence_history_truncated",
                     "evidence_history_checkpoint_consistent",
                     "evidence_history_observation_budget_per_page",
@@ -1010,6 +1019,10 @@ def project(
                 "evidence_history_page_offsets": [
                     page["evidence_offset"] for page in history_states
                     if type(page.get("evidence_offset")) is int
+                ],
+                "evidence_history_page_limits": [
+                    page["evidence_limit"] for page in history_states
+                    if type(page.get("evidence_limit")) is int
                 ],
                 "evidence_history_truncated": history_truncated,
                 "evidence_history_checkpoint_consistent": history_consistent,
