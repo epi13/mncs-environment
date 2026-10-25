@@ -49,6 +49,8 @@ CAMPAIGN_STATE_PROJECTION_MIN_BYTES = 4 * 1024
 # artifact while keeping artifact-read output explicitly bounded.
 MAX_ARTIFACT_READ_BYTES = 1_300_000
 MAX_CLAIM_PAGE_OUTPUT_BYTES = 48 * 1024
+DEFAULT_ECI_EVIDENCE_PAGE_SIZE = 2
+DEFAULT_ECI_SESSION_EVENT_LIMIT = 4
 
 
 def out(value: object) -> None:
@@ -389,7 +391,7 @@ def cmd_projections(args: argparse.Namespace) -> int:
     if (args.evidence_offset is not None
             and args.interpret != "environmental-capability"):
         return fail('--evidence-offset requires --interpret environmental-capability')
-    if (args.evidence_limit != capability_intelligence_module.MAX_EVIDENCE_REFS
+    if (args.evidence_limit is not None
             and args.interpret != "environmental-capability"):
         return fail('--evidence-limit requires --interpret environmental-capability')
     if (args.session_event_before_sequence is not None
@@ -398,8 +400,7 @@ def cmd_projections(args: argparse.Namespace) -> int:
             '--session-event-before-sequence requires '
             '--interpret environmental-capability'
         )
-    if (args.session_event_limit
-            != capability_intelligence_module.MAX_SESSION_EVENT_WINDOW
+    if (args.session_event_limit is not None
             and args.interpret != "environmental-capability"):
         return fail(
             '--session-event-limit requires '
@@ -408,15 +409,27 @@ def cmd_projections(args: argparse.Namespace) -> int:
     if args.interpret:
         if args.interpret != "environmental-capability" and not args.repository:
             return fail('--interpret requires --repository')
+        if args.interpret == "environmental-capability":
+            evidence_limit = (args.evidence_limit
+                              if args.evidence_limit is not None
+                              else DEFAULT_ECI_EVIDENCE_PAGE_SIZE)
+            session_event_limit = (
+                args.session_event_limit
+                if args.session_event_limit is not None
+                else DEFAULT_ECI_SESSION_EVENT_LIMIT
+            )
+        else:
+            evidence_limit = capability_intelligence_module.MAX_EVIDENCE_REFS
+            session_event_limit = capability_intelligence_module.MAX_SESSION_EVENT_WINDOW
         with closing(_open(args)) as session:
             try:
                 out(projections_module.interpretation(
                     session, args.repository, args.interpret,
                     history_pages=args.history_pages,
                     evidence_offset=args.evidence_offset,
-                    evidence_limit=args.evidence_limit,
+                    evidence_limit=evidence_limit,
                     session_event_before_sequence=args.session_event_before_sequence,
-                    session_event_limit=args.session_event_limit,
+                    session_event_limit=session_event_limit,
                 ))
             except ValueError as error:
                 return fail(str(error))
@@ -2277,18 +2290,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="start environmental capability analysis at this campaign evidence offset",
     )
     projections.add_argument(
-        '--evidence-limit', type=int,
-        default=capability_intelligence_module.MAX_EVIDENCE_REFS,
-        help="campaign evidence references per page for environmental capability analysis (1-32)",
+        '--evidence-limit', type=int, default=None,
+        help=("campaign evidence references per page for environmental capability analysis "
+              f"(1-{capability_intelligence_module.MAX_EVIDENCE_REFS}; default "
+              f"{DEFAULT_ECI_EVIDENCE_PAGE_SIZE})"),
     )
     projections.add_argument(
         '--session-event-before-sequence', type=int, default=None,
         help="read the bounded session event page preceding this sequence",
     )
     projections.add_argument(
-        '--session-event-limit', type=int,
-        default=capability_intelligence_module.MAX_SESSION_EVENT_WINDOW,
-        help="session event records per environmental capability page (1-256)",
+        '--session-event-limit', type=int, default=None,
+        help=("session event records per environmental capability page "
+              f"(1-{capability_intelligence_module.MAX_SESSION_EVENT_WINDOW}; default "
+              f"{DEFAULT_ECI_SESSION_EVENT_LIMIT})"),
     )
     projections.add_argument("--evidence", action="store_true",
                              help="print the ambient projection evidence trail (without --interpret)")
