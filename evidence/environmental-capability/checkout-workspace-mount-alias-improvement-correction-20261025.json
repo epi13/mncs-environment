@@ -1,0 +1,75 @@
+{
+  "captured_at": "2026-10-25T15:02:07Z",
+  "identity": "ev_environment_checkout_workspace_mount_alias_improvement_correction_20261025",
+  "measurement_basis": "append-only source-pointer correction to the protected-runtime improvement observation",
+  "not_measured": [
+    "whether the complete authenticated Environment RPC now succeeds",
+    "future recurrence and cross-agent usability effect"
+  ],
+  "observation": {
+    "kind": "environmental-evidence-source-correction",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "operation": "correct_supporting_source_references",
+      "target_identity": "ev_environment_checkout_workspace_mount_alias_improvement_20261025",
+      "corrected_field_paths": ["supporting_sources"]
+    },
+    "outcome": {
+      "status": "correction-recorded",
+      "original_evidence_preserved": true,
+      "interpretation": "Replace free-form runtime labels with the content-addressed implementation and verification sources already recorded in the campaign."
+    }
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_checkout_workspace_mount_alias_improvement_20261025",
+      "repository": "mncs-environment",
+      "commit": "d8290f4a029b5cbed7af1150ed4e9a931c29bad8",
+      "path": "evidence/environmental-capability/checkout-workspace-mount-alias-improvement-20261025.json",
+      "sha256": "4385f2dff043c40fa221cd35cc8f397dc3dadbca61f98cc833674727fe92885f"
+    },
+    "corrected_field_paths": ["supporting_sources"],
+    "replacement_values": {
+      "supporting_sources": [
+        {
+          "identity": "src_environment_control_workspace_alias_resolver_4427ed4",
+          "repository": "mncs-environment",
+          "commit": "4427ed4d7e7327b5df2def934d9a059a4516469d",
+          "path": "mncs_env/workspace.py",
+          "sha256": "2c0fd6699642162af46b4c60f79543d1f731765b5dde9b60dbf85a57ddc6840f"
+        },
+        {
+          "identity": "ev_environment_checkout_workspace_mount_alias_verification_20261025",
+          "repository": "mncs-environment",
+          "commit": "d8290f4a029b5cbed7af1150ed4e9a931c29bad8",
+          "path": "evidence/environmental-capability/checkout-workspace-mount-alias-verification-20261025.json",
+          "sha256": "08934c5ae1d0d27bb9c0f301dbe1afcc9207092c42b6f45b1265ae44323fc246"
+        }
+      ]
+    },
+    "reason": "The source ledger accepts content-addressed implementation and verification pointers; the original free-form tool result was retained in the immutable record but is not a durable source artifact."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "consumer_id": "local-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_4179379f9332b176",
+    "session_id": "ses_5530f63cd8293e03"
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [{
+    "identity": "ev_environment_checkout_workspace_mount_alias_improvement_20261025",
+    "repository": "mncs-environment",
+    "commit": "d8290f4a029b5cbed7af1150ed4e9a931c29bad8",
+    "path": "evidence/environmental-capability/checkout-workspace-mount-alias-improvement-20261025.json",
+    "sha256": "4385f2dff043c40fa221cd35cc8f397dc3dadbca61f98cc833674727fe92885f"
+  }]
+}
