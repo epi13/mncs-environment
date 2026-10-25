@@ -1,0 +1,135 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_cache_agent_context_gap_20261025",
+  "captured_at": "2026-10-25T13:59:18Z",
+  "measurement_basis": "verified-committed-source-inspection",
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "compiler-regression-provenance-and-capability-accountability",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "compiler_repository": "mncs-compiler",
+      "compiler_commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "compiler_regression_evidence_count": 3,
+      "evidence_families": [
+        "effect and capability dependency invalidation",
+        "generic specialization application invalidation",
+        "interface application invalidation"
+      ],
+      "environment_adapter_commit": "603839ee09b2ba2736e24a34036aeeee8be1d62c"
+    },
+    "outcome": {
+      "authenticated_source_records": {
+        "count": 3,
+        "campaign_session_work_intent_fields_present": [],
+        "source_record_context_resolution": "unavailable-from-these-records",
+        "record_level_pattern": "The same missing objective and session linkage appears in three distinct committed regression records; the records do not establish that they came from three distinct sessions."
+      },
+      "compiler_capability_evidence": {
+        "effect_capability_report": {
+          "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+          "source_module_count": 4,
+          "actual_language_modules_reused": true,
+          "language_effect_and_capability_dependencies_invalidated": true,
+          "effect_assumption_edit": {
+            "cache_status": "miss",
+            "output_equal_to_stage0": true,
+            "reused_fact_count": 28,
+            "recomputed_fact_count": 2
+          },
+          "capability_assumption_edit": {
+            "cache_status": "miss",
+            "output_equal_to_stage0": true,
+            "reused_fact_count": 28,
+            "recomputed_fact_count": 2
+          }
+        },
+        "resource_measurement_scope": "The report's resource and duration values are per-build measurements. They do not establish Compiler agent session consumption or campaign duration.",
+        "native_adoption_scope": "These cache regression reports demonstrate compiler behavior; they do not establish implementation ownership, host-code displacement, migration readiness, or a native-versus-host adoption ratio."
+      },
+      "environmental_capability_accountability": {
+        "implementation": "The Environment main commit contains a schema- and identity-family-specific adapter for these Compiler regression reports.",
+        "integration": "Registering the exact committed source pointers in the campaign evidence ledger makes the reports available to the on-demand environmental-capability projection.",
+        "agent_objective_attribution": "not-established; none of the three Compiler source records contains campaign, session, or work-intent fields, and no exact authenticated source-context record is available here.",
+        "agent_discoverability_or_successful_use": "not-measured"
+      },
+      "actionable_opportunity": {
+        "title": "Connect verified Compiler regression evidence to its authenticated development objective",
+        "candidate_boundary": "Compiler regression evidence capture and Environment exact-source-context correlation",
+        "readiness": "The projection can expose bounded cache-stage evidence. Agent-objective attribution remains unavailable until an authenticated Compiler context record references the exact committed evidence blob.",
+        "safe_next_step": "Have the Compiler evidence producer attach or reference authenticated campaign, session, and work-intent context through the established Environment provenance mechanism; retain unknown attribution when that context cannot be established."
+      }
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_compiler_regression_agent_context_20261025",
+    "title": "Committed Compiler regression evidence cannot yet be joined to its originating development objective",
+    "category": "session-continuity-and-provenance",
+    "subsystem": "Compiler regression evidence capture and Environment provenance projection",
+    "owner": "mncs-compiler and mncs-environment maintainers",
+    "basis": "Three distinct committed Compiler cache regression records omit campaign, session, and work-intent identifiers. The Environment adapter can derive bounded compiler behavior from exact source pointers, but attribution requires a verified supporting context record; report multiplicity does not prove cross-session recurrence.",
+    "actionable_recommendation": "Connect each Compiler regression artifact to its authenticated objective through an exact verified source-context record, then use the Environment projection to inspect the derived compiler evidence and its provenance together.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether the three reports originated in one or multiple Compiler sessions",
+      "which agent or model produced the reports",
+      "whether agents successfully discovered or used the represented compiler capabilities",
+      "agent-attributed resource consumption, token use, or execution duration",
+      "whether the cache implementation displaced any host-language implementation",
+      "whether the context gap caused repeated work or constrained an objective"
+    ]
+  },
+  "not_measured": [
+    "cross-session or cross-agent recurrence of the missing source-context relationship",
+    "agent discovery, successful use, or usability of the compiler capabilities represented by the reports",
+    "campaign objective and environment version associated with each Compiler report",
+    "causal effect of adding authenticated source context on subsequent agent work",
+    "native-versus-host implementation ownership or migration readiness"
+  ],
+  "supporting_sources": [
+    {
+      "kind": "compiler-effect-capability-cache-regression",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    },
+    {
+      "kind": "compiler-generic-specialization-cache-regression",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+      "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e"
+    },
+    {
+      "kind": "compiler-interface-cache-regression",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/language-module-interface-application-invalidation-compiler-20261023.json",
+      "identity": "ev_compiler_digest_application_interface_invalidation_20261023",
+      "sha256": "ce67f0ff837bba0ff73301cb398198da5ff9125e8fe8cb75c45c5f26a1715177"
+    },
+    {
+      "kind": "committed-environment-capability-intelligence-adapter",
+      "repository": "mncs-environment",
+      "commit": "603839ee09b2ba2736e24a34036aeeee8be1d62c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "f7991c1b749676e08952d750694b2582834d033072b3f842072413d31f02003a"
+    }
+  ]
+}
