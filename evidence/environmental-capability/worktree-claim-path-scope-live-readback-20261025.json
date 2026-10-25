@@ -1,0 +1,109 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_worktree_path_claim_live_readback_20261025",
+  "captured_at": "2026-10-25T08:56:02Z",
+  "measurement_basis": "authenticated claims acquire/release and scope_grant results on one registered worktree",
+  "observation": {
+    "kind": "worktree-claim-scope-live-readback",
+    "source_interface": "MNCS Environment claims and scope_grant operations",
+    "request": {
+      "repository": "mncs-environment",
+      "worktree": ".worktrees/campaign-charter-observation-20261025",
+      "branch": "campaign/campaign-charter-observation-20261025",
+      "paths": [
+        "mncs_env/claims.py",
+        "tests/test_claim_scope_narrowing.py"
+      ],
+      "claim_id": "claim:mncs-environment:worktree:0b97001213b0",
+      "scope_grant_approval_reference": "campaign-writable-checkout:cmp_mncs_env_capability_intelligence_20261025:mncs-environment:ses_fa3a19fe06634f62"
+    },
+    "outcome": {
+      "narrow_claim": {
+        "status": "acquired-then-released",
+        "identity": "clm_2af343a5a77570d2",
+        "claim_id": "claim:mncs-environment:worktree:0b97001213b0",
+        "acquired_at": "2026-10-25T08:51:06+00:00",
+        "released": true,
+        "scope": {
+          "kind": "worktree",
+          "branch": "campaign/campaign-charter-observation-20261025",
+          "paths": [
+            "mncs_env/claims.py",
+            "tests/test_claim_scope_narrowing.py"
+          ]
+        }
+      },
+      "whole_checkout_scope_grant": {
+        "status": "denied-conflict",
+        "code": "authority-scope-conflict",
+        "message": "selected worktree scope has an existing live claim: mncs-environment",
+        "publication_completed": false
+      },
+      "other_campaign_claims": "No claim was transferred or displaced.",
+      "measurement_limit": "The claim ledger accepted and released the disjoint narrow scope. This readback does not prove a subsequent Git mutation under that claim or long-term scheduling effectiveness."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_worktree_claim_paths_20261025",
+    "title": "Worktree claims cannot express a disjoint file subset",
+    "category": "coordination-continuity",
+    "subsystem": "MNCS Environment claim scope normalization and overlap analysis",
+    "owner": "mncs-environment",
+    "basis": "The initial claim behavior treated a worktree claim as a whole-checkout reservation. After the path-preserving change, a live claim on two disjoint files was acquired and released while other campaign claims remained in place.",
+    "actionable_recommendation": "Keep checkout-bound path scope available through the authenticated claims interface; retain whole-checkout conflict checks for scope_grant and preserve other owners' claims.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether this limitation recurs across other campaigns",
+      "whether a subsequent Git mutation is admitted under the acquired narrow claim",
+      "long-term coordination effectiveness across multiple active agents"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_worktree_path_claim_implementation_20261025",
+      "repository": "mncs-environment",
+      "commit": "d18624cb06c164d43e12adce1fd2119ce91051d9",
+      "path": "mncs_env/claims.py",
+      "sha256": "cc7d0d93dd7a926ff979dd7d4bfcfb83fc2be7866d3070e6d041d236433541c5"
+    },
+    {
+      "kind": "committed-verification-tests",
+      "identity": "ev_environment_worktree_path_claim_tests_20261025",
+      "repository": "mncs-environment",
+      "commit": "d18624cb06c164d43e12adce1fd2119ce91051d9",
+      "path": "tests/test_claim_scope_narrowing.py",
+      "sha256": "1cbe316f94aa45cfa66e9a26dd95101f969b2c5442e0e4296c427f11737df399"
+    },
+    {
+      "kind": "committed-Control-implementation",
+      "identity": "ev_environment_campaign_checkout_binding_control_implementation_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "1fba10757b688c7d4877f81636f52c595660d3a0",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "8fb78aef1b099b8237d3b7de9b74ac93e761c7a19164996f410910ff90a60597"
+    },
+    {
+      "kind": "prior-pressure-record",
+      "identity": "ev_environment_worktree_path_claim_pressure_20261025",
+      "repository": "mncs-environment",
+      "commit": "e364582c0d7e0d76604bc85db65c0078b7c8323b",
+      "path": "evidence/environmental-capability/worktree-claim-path-scope-pressure-20261025.json",
+      "sha256": "557541e5a589bab2db6b535d4e15c7056e0291d6cf28fa9064224b122cb63732"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

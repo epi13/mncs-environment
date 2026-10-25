@@ -58,6 +58,16 @@ on the same checkout or shared branch. A path claim without a worktree anchor
 remains repository-relative and conservatively conflicts with an overlapping
 worktree claim because it does not identify a branch.
 
+For a repository that is already writable in the campaign, `claims acquire`
+can target a registered linked worktree directly with `--worktree` and an
+optional `--paths` subset. This records ownership at that exact branch and
+path scope without adding repository authority or displacing another claim.
+It does not change the session's selected checkout. Use `scope_grant` when the
+session must bind a different checkout; that broader selection still respects
+all live claim conflicts. When whole-checkout selection conflicts but the
+requested files are disjoint, a direct narrow claim can proceed if its exact
+registered checkout and paths pass Environment's checks.
+
 When a campaign already has write authority for a repository, Control may bind
 one exact registered checkout in that same repository without a second
 per-campaign approval token. Environment rechecks the campaign's existing
