@@ -670,6 +670,11 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
                 for key in ("classification", "limitation", "harness_limitation")
                 if isinstance(host_adapter.get(key), str)
             }
+        capability_contract = _compiler_capability_contract_view(
+            sample.get("compiler_capability_contract"),
+        )
+        if capability_contract is not None:
+            compact_sample["compiler_capability_contract"] = capability_contract
         evidence_reference = _validate_reference(sample.get("evidence_reference"))
         if evidence_reference is not None:
             compact_sample["evidence_reference"] = evidence_reference
@@ -694,6 +699,60 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
             for item in measurement_limits[:4]
             if isinstance(item, str)
         ] if isinstance(measurement_limits, list) else [],
+    }
+
+
+def _compiler_capability_contract_view(value: Any) -> dict[str, Any] | None:
+    """Keep the exact Compiler capability boundary distinct from Environment delivery."""
+    if not isinstance(value, dict):
+        return None
+    required_identity = value.get("required_identity")
+    dispatch_alias = value.get("runtime_dispatch_alias")
+    raw_effects = value.get("effect_contract")
+    proof_relationship = value.get("proof_relationship")
+    canonical_execution_relationship = value.get(
+        "canonical_execution_relationship",
+    )
+    environment_delivery = value.get("environment_delivery")
+    if (not isinstance(required_identity, str) or not required_identity
+            or len(required_identity) > 256
+            or not isinstance(dispatch_alias, str) or not dispatch_alias
+            or len(dispatch_alias) > 128
+            or not isinstance(raw_effects, list) or len(raw_effects) != 2
+            or proof_relationship != "compiler-artifact-admission-matches"
+            or canonical_execution_relationship
+            != "declared-effects-matched-across-proof-cases"
+            or environment_delivery != "not-measured-by-this-compiler-proof"):
+        return None
+    effects: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for raw_effect in raw_effects:
+        if not isinstance(raw_effect, dict):
+            return None
+        capability = raw_effect.get("capability")
+        kind = raw_effect.get("kind")
+        target = raw_effect.get("target")
+        if (capability != required_identity
+                or not isinstance(kind, str)
+                or kind not in {"structured_read", "structured_write"}
+                or not isinstance(target, str) or not target or len(target) > 128):
+            return None
+        effect_key = (capability, kind, target)
+        if effect_key in seen:
+            return None
+        seen.add(effect_key)
+        effects.append({"capability": capability, "kind": kind, "target": target})
+    if {effect["kind"] for effect in effects} != {
+        "structured_read", "structured_write",
+    }:
+        return None
+    return {
+        "required_identity": required_identity,
+        "runtime_dispatch_alias": dispatch_alias,
+        "effect_contract": effects,
+        "proof_relationship": proof_relationship,
+        "canonical_execution_relationship": canonical_execution_relationship,
+        "environment_delivery": environment_delivery,
     }
 
 
@@ -2938,6 +2997,21 @@ def _compiler_native_application_proof_observation(
     if (not isinstance(canonical_cases, list) or len(canonical_cases) != 3
             or execution.get("exact_result_agreement") is not True):
         return None
+    capability_contract = _compiler_capability_contract_view({
+        "required_identity": application.get("required_capability"),
+        "runtime_dispatch_alias": application.get("runtime_dispatch_alias"),
+        "effect_contract": application.get("effect_contract"),
+        "proof_relationship": "compiler-artifact-admission-matches",
+        "canonical_execution_relationship": (
+            "declared-effects-matched-across-proof-cases"
+        ),
+        "environment_delivery": "not-measured-by-this-compiler-proof",
+    })
+    if capability_contract is None:
+        return None
+    expected_effect_operations = [
+        effect["kind"] for effect in capability_contract["effect_contract"]
+    ]
     for index, case in enumerate(canonical_cases):
         if not isinstance(case, dict):
             return None
@@ -2947,8 +3021,10 @@ def _compiler_native_application_proof_observation(
                 or case.get("artifact_identity") != artifact_identity
                 or not isinstance(application_exit, dict)
                 or application_exit.get("exit_code") != 0
-                or case.get("effect_outcomes") != ["completed", "completed"]
-                or case.get("effect_operations") != ["structured_read", "structured_write"]
+                or case.get("effect_outcomes") != [
+                    "completed" for _ in expected_effect_operations
+                ]
+                or case.get("effect_operations") != expected_effect_operations
                 or not isinstance(output_digest, str)
                 or not _SHA256.fullmatch(output_digest)
                 or case.get("stage0_output_sha256") != output_digest):
@@ -2956,9 +3032,9 @@ def _compiler_native_application_proof_observation(
     capability_admission = execution.get("capability_admission")
     if (not isinstance(capability_admission, dict)
             or capability_admission.get("authorized_capability_identity")
-            != application.get("required_capability")
+            != capability_contract["required_identity"]
             or capability_admission.get("runtime_dispatch_alias")
-            != application.get("runtime_dispatch_alias")):
+            != capability_contract["runtime_dispatch_alias"]):
         return None
 
     raw_limitations = source.get("limitations")
@@ -3008,6 +3084,7 @@ def _compiler_native_application_proof_observation(
                     "canonical_vm_case_count": len(canonical_cases),
                     "canonical_vm_case_success_count": len(canonical_cases),
                     "stage0_result_agreement": "verified-in-source-proof",
+                    "compiler_capability_contract": capability_contract,
                     "host_test_adapter": {
                         "classification": "test-only-provider-adapter",
                         "limitation": test_adapter_limit[:512],
@@ -3616,6 +3693,9 @@ def _implementation_accountability_projection(
             ownership_status = "partially-source-integrity-verified"
         else:
             ownership_status = "source-integrity-not-established"
+        capability_contract = _compiler_capability_contract_view(
+            accountability.get("compiler_capability_contract"),
+        )
         samples.append({
             "identity": observation_record.get("identity"),
             "application_entry": accountability.get("application_entry"),
@@ -3657,6 +3737,8 @@ def _implementation_accountability_projection(
                 "canonical_vm_case_success_count",
             ),
             "host_test_adapter": accountability.get("host_test_adapter"),
+            **({"compiler_capability_contract": capability_contract}
+               if capability_contract is not None else {}),
             "native_migration_opportunity": accountability.get(
                 "native_migration_opportunity", "not-established",
             ),

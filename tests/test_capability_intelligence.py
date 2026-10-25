@@ -167,6 +167,7 @@ def _add_compiler_dependency_summary_evidence(
 
 def _add_compiler_native_application_proof_evidence(
     session, state: dict, *, failed_case: bool = False,
+    invalid_effect_contract: bool = False,
 ) -> dict[str, str]:
     root = Path(session.snapshot["workspace"]["root"])
     sources = []
@@ -209,6 +210,13 @@ def _add_compiler_native_application_proof_evidence(
             "output_sha256": output_digest,
             "stage0_output_sha256": output_digest,
         })
+    required_capability = (
+        "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact"
+    )
+    contract_capability = (
+        "mncs:0.2:capability:mncs.test.digest::digest_app::wrong"
+        if invalid_effect_contract else required_capability
+    )
     report = {
         "schema_version": capability_intelligence.COMPILER_NATIVE_APPLICATION_PROOF_SCHEMA,
         "created_at": "2026-10-18T10:28:51.441053+00:00",
@@ -221,8 +229,20 @@ def _add_compiler_native_application_proof_evidence(
         },
         "application": {
             "entry": capability_intelligence.COMPILER_NATIVE_APPLICATION_ENTRY,
-            "required_capability": "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact",
+            "required_capability": required_capability,
             "runtime_dispatch_alias": "test_artifact",
+            "effect_contract": [
+                {
+                    "capability": contract_capability,
+                    "kind": "structured_read",
+                    "target": "digest_app",
+                },
+                {
+                    "capability": required_capability,
+                    "kind": "structured_write",
+                    "target": "digest_app",
+                },
+            ],
             "module_sources": sources,
         },
         "build": {
@@ -239,7 +259,7 @@ def _add_compiler_native_application_proof_evidence(
             "exact_result_agreement": True,
             "capability_admission": {
                 "authorized_capability_identity": (
-                    "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact"
+                    required_capability
                 ),
                 "runtime_dispatch_alias": "test_artifact",
             },
@@ -3193,6 +3213,20 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
     assert accountability["native_module_count"] == 4
     assert accountability["canonical_vm_case_success_count"] == 3
     assert accountability["native_migration_opportunity"] == "not-established"
+    capability_contract = accountability["compiler_capability_contract"]
+    assert capability_contract["required_identity"] == (
+        "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact"
+    )
+    assert capability_contract["runtime_dispatch_alias"] == "test_artifact"
+    assert [effect["kind"] for effect in capability_contract["effect_contract"]] == [
+        "structured_read", "structured_write",
+    ]
+    assert capability_contract["proof_relationship"] == (
+        "compiler-artifact-admission-matches"
+    )
+    assert capability_contract["environment_delivery"] == (
+        "not-measured-by-this-compiler-proof"
+    )
     assert "not attributed" in accountability["evidence_relationship_basis"]
     assert accountability["host_test_adapter"]["classification"] == (
         "test-only-provider-adapter"
@@ -3223,6 +3257,15 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
     assert projected_accountability["samples"][0][
         "native_migration_opportunity"
     ] == "not-established"
+    projected_contract = projected_accountability["samples"][0][
+        "compiler_capability_contract"
+    ]
+    assert projected_contract["required_identity"] == (
+        capability_contract["required_identity"]
+    )
+    assert projected_contract["effect_contract"] == capability_contract[
+        "effect_contract"
+    ]
 
     encoded = json.dumps(result, ensure_ascii=False, sort_keys=True).encode()
     compact = capability_intelligence._compact_projection(
@@ -3236,6 +3279,9 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
     assert compact_accountability["samples"][0]["compiler_proof_reference"][
         "identity"
     ] == reference["identity"]
+    assert compact_accountability["samples"][0]["compiler_capability_contract"][
+        "environment_delivery"
+    ] == "not-measured-by-this-compiler-proof"
 
 
 def test_compiler_native_application_proof_rejects_failed_canonical_case(
@@ -3254,6 +3300,24 @@ def test_compiler_native_application_proof_rejects_failed_canonical_case(
     assert result["implementation_accountability"][
         "systemwide_native_adoption_ratio"
     ]["status"] == "not-measured"
+    assert result["source"]["observation_reference_diagnostics"][0][
+        "verification"
+    ] == "observation-contract-invalid"
+
+
+def test_compiler_native_application_proof_rejects_mismatched_effect_capability(
+    tmp_path: Path,
+) -> None:
+    session, state = _session(tmp_path, [])
+    _add_compiler_native_application_proof_evidence(
+        session, state, invalid_effect_contract=True,
+    )
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["implementation_accountability"]["sample_count"] == 0
     assert result["source"]["observation_reference_diagnostics"][0][
         "verification"
     ] == "observation-contract-invalid"
