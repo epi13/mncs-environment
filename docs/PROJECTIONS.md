@@ -416,6 +416,24 @@ another authoritative source records those measurements. An empty truncated
 window is reported as `partial-no-invocations-in-selected-window`; it does not
 assert that the full session history contains no capability calls.
 
+The compact view also relates the current session binding snapshot to observed
+capability calls. `capability_delivery.bindings` reports each bounded binding's
+recorded substrate availability, verification class, observed invocations and
+outcome counts, with exact invocation event references.
+`capabilities_not_in_current_binding_snapshot` preserves calls whose capability
+name is absent from the current snapshot; this may reflect binding changes or
+provider scope and is not itself a failure. Availability transitions retain
+their source event references. The projection labels capability discoverability
+`not-measured`: a binding proves Environment discovery and availability state,
+not that the capability was presented to or understood by the agent.
+Availability probes establish substrate presence, not successful provider
+behavior. Invocation events do not record provider identity, so attribution is
+explicitly ambiguous when multiple current bindings share a capability name.
+No invocation is reported only within the selected event window unless complete
+session history is available. These relationships make availability and use
+inspectable without treating absence of use as evidence of poor discoverability
+or usability.
+
 When response compaction is needed, each pressure summary retains bounded exact
 evidence references (identity, repository, commit, path, and digest), so an
 agent can inspect the records supporting the hypothesis even when their full

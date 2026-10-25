@@ -148,6 +148,10 @@ SYSTEM_RESOURCE_SAMPLE_STATUSES = frozenset({
 })
 MAX_SESSION_ACTIVITY_INTERACTIONS = 32
 MAX_SESSION_ACTIVITY_CAPABILITIES = 16
+MAX_SESSION_ACTIVITY_BINDINGS = 32
+MAX_SESSION_ACTIVITY_BINDING_SCAN = 512
+MAX_SESSION_ACTIVITY_CAPABILITY_EVENTS = 12
+MAX_CAPABILITY_SUPPORTING_EVENTS = 3
 MAX_SESSION_ACTIVITY_RPC_OPERATIONS = 32
 MAX_SESSION_ACTIVITY_RPC_PRESSURE_CANDIDATES = 8
 MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS = 32
@@ -1424,6 +1428,188 @@ def _compact_projection(
                     if item_key in reference
                 }
         compact_activity_interactions.append(compact_item)
+    raw_activity_capabilities = activity.get("capabilities")
+    raw_activity_capabilities = (
+        raw_activity_capabilities
+        if isinstance(raw_activity_capabilities, list) else []
+    )
+    compact_activity_capabilities = []
+    for item in raw_activity_capabilities[:MAX_SESSION_ACTIVITY_CAPABILITIES]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in ("capability",)
+            if isinstance(item.get(key), str)
+        }
+        for key in ("invocation_count", "completion_count"):
+            if type(item.get(key)) is int and item[key] >= 0:
+                compact_item[key] = item[key]
+        status_counts = item.get("outcome_status_counts")
+        if isinstance(status_counts, dict):
+            compact_item["outcome_status_counts"] = {
+                _short_text(key, 64): value
+                for key, value in sorted(status_counts.items())[:8]
+                if isinstance(key, str) and type(value) is int and value >= 0
+            }
+        references = item.get("supporting_events")
+        if isinstance(references, list):
+            compact_item["supporting_events"] = [
+                {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                }
+                for reference in references[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                if isinstance(reference, dict)
+            ]
+        compact_activity_capabilities.append(compact_item)
+
+    raw_capability_delivery = activity.get("capability_delivery")
+    raw_capability_delivery = (
+        raw_capability_delivery
+        if isinstance(raw_capability_delivery, dict) else {}
+    )
+    compact_capability_delivery: dict[str, Any] = {}
+    for key in (
+        "status", "inventory_source", "discoverability_status",
+    ):
+        if isinstance(raw_capability_delivery.get(key), str):
+            compact_capability_delivery[key] = _short_text(
+                raw_capability_delivery[key], 96,
+            )
+    for key in (
+        "binding_count", "binding_records_examined",
+        "binding_records_not_examined", "binding_records_invalid", "bindings_omitted",
+        "availability_transition_event_count",
+        "availability_transition_events_omitted",
+        "capabilities_not_in_current_binding_snapshot_omitted",
+    ):
+        if type(raw_capability_delivery.get(key)) is int:
+            compact_capability_delivery[key] = raw_capability_delivery[key]
+    availability_counts = raw_capability_delivery.get("availability_counts")
+    if isinstance(availability_counts, dict):
+        compact_capability_delivery["availability_counts"] = {
+            _short_text(key, 48): value
+            for key, value in sorted(availability_counts.items())[:8]
+            if isinstance(key, str) and type(value) is int and value >= 0
+        }
+    use_event_window = raw_capability_delivery.get("use_event_window")
+    if isinstance(use_event_window, dict):
+        compact_capability_delivery["use_event_window"] = {
+            key: use_event_window[key]
+            for key in (
+                "scope", "truncated", "complete_history",
+                "invocation_summaries_omitted",
+            )
+            if key in use_event_window
+        }
+    compact_capability_bindings = []
+    raw_capability_bindings = raw_capability_delivery.get("bindings")
+    raw_capability_bindings = (
+        raw_capability_bindings if isinstance(raw_capability_bindings, list) else []
+    )
+    for item in raw_capability_bindings[:16]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in (
+                "provider", "capability", "availability_status", "binding_id",
+                "availability_verification", "availability_observed_at",
+                "use_observation_status", "provider_attribution",
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in ("invocation_count", "completion_count"):
+            if type(item.get(key)) is int and item[key] >= 0:
+                compact_item[key] = item[key]
+        status_counts = item.get("outcome_status_counts")
+        if isinstance(status_counts, dict):
+            compact_item["outcome_status_counts"] = {
+                _short_text(key, 64): value
+                for key, value in sorted(status_counts.items())[:8]
+                if isinstance(key, str) and type(value) is int and value >= 0
+            }
+        references = item.get("supporting_events")
+        if isinstance(references, list):
+            compact_item["supporting_events"] = [
+                {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                }
+                for reference in references[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                if isinstance(reference, dict)
+            ]
+        availability_references = item.get("availability_event_references")
+        if isinstance(availability_references, list):
+            compact_item["availability_event_references"] = [
+                {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                }
+                for reference in availability_references[:3]
+                if isinstance(reference, dict)
+            ]
+        compact_capability_bindings.append(compact_item)
+    if compact_capability_bindings:
+        compact_capability_delivery["bindings"] = compact_capability_bindings
+        if len(raw_capability_bindings) > len(compact_capability_bindings):
+            compact_capability_delivery["bindings_truncated"] = True
+    transition_events = raw_capability_delivery.get("availability_transition_events")
+    if isinstance(transition_events, list):
+        compact_capability_delivery["availability_transition_events"] = [
+            {
+                **({"capability": _short_text(item["capability"], 160)}
+                   if isinstance(item.get("capability"), str) else {}),
+                **({"provider": _short_text(item["provider"], 128)}
+                   if isinstance(item.get("provider"), str) else {}),
+                **({"previous_availability_status": _short_text(
+                    item["previous_availability_status"], 64,
+                )} if isinstance(item.get("previous_availability_status"), str) else {}),
+                **({"event_reference": {
+                    key: item["event_reference"][key]
+                    for key in ("identity", "sequence", "type")
+                    if key in item["event_reference"]
+                }} if isinstance(item.get("event_reference"), dict) else {}),
+            }
+            for item in transition_events[:8]
+            if isinstance(item, dict)
+        ]
+    outside_inventory = raw_capability_delivery.get(
+        "capabilities_not_in_current_binding_snapshot",
+    )
+    if isinstance(outside_inventory, list):
+        compact_capability_delivery[
+            "capabilities_not_in_current_binding_snapshot"
+        ] = [
+            {
+                "capability": _short_text(item["capability"], 160),
+                "invocation_count": item.get("invocation_count", 0),
+                "outcome_status_counts": dict(item.get("outcome_status_counts", {})),
+                "interpretation": _short_text(item.get("interpretation"), 128),
+                "supporting_events": [
+                    {
+                        key: reference[key]
+                        for key in ("identity", "sequence", "type")
+                        if key in reference
+                    }
+                    for reference in item.get("supporting_events", [])[:2]
+                    if isinstance(reference, dict)
+                ],
+            }
+            for item in outside_inventory[:8]
+            if isinstance(item, dict) and isinstance(item.get("capability"), str)
+        ]
+    delivery_limits = raw_capability_delivery.get("measurement_limits")
+    if isinstance(delivery_limits, list):
+        compact_capability_delivery["measurement_limits"] = [
+            _short_text(item, 256)
+            for item in delivery_limits[:4]
+            if isinstance(item, str)
+        ]
     compact_rpc_operations = []
     raw_rpc_operations = activity.get("rpc_operations")
     raw_rpc_operations = raw_rpc_operations if isinstance(raw_rpc_operations, list) else []
@@ -1631,6 +1817,14 @@ def _compact_projection(
             len(raw_interactions) > len(compact_activity_interactions)
         ),
     }
+    if compact_activity_capabilities:
+        compact_activity["capabilities"] = compact_activity_capabilities
+        if activity.get("source", {}).get("capability_summaries_omitted", 0):
+            compact_activity["capabilities_omitted"] = activity["source"][
+                "capability_summaries_omitted"
+            ]
+    if compact_capability_delivery:
+        compact_activity["capability_delivery"] = compact_capability_delivery
     if (activity_source.get("rpc_operation_capture_count") is not None
             or raw_rpc_operations or raw_rpc_summary):
         compact_activity["rpc_operation_count"] = activity.get(
@@ -1835,6 +2029,29 @@ def _compact_projection(
     # The selected fields are individually bounded. This final reduction also
     # accounts for unusual but valid identifiers and reference paths.
     while len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")) > max_result_bytes:
+        activity_result = result["session_activity"]
+        delivery_result = activity_result.get("capability_delivery")
+        if isinstance(delivery_result, dict):
+            if delivery_result.get("measurement_limits"):
+                delivery_result["measurement_limits"].pop()
+            elif delivery_result.get("bindings"):
+                delivery_result["bindings"].pop()
+                delivery_result["bindings_truncated"] = True
+            elif delivery_result.get("availability_transition_events"):
+                delivery_result["availability_transition_events"].pop()
+                delivery_result["availability_transition_events_truncated"] = True
+            elif delivery_result.get("capabilities_not_in_current_binding_snapshot"):
+                delivery_result["capabilities_not_in_current_binding_snapshot"].pop()
+                delivery_result[
+                    "capabilities_not_in_current_binding_snapshot_truncated"
+                ] = True
+            else:
+                activity_result.pop("capability_delivery")
+            continue
+        if activity_result.get("capabilities"):
+            activity_result["capabilities"].pop()
+            activity_result["capabilities_truncated"] = True
+            continue
         if result["observations"]:
             result["observations"].pop(0)
         elif any(
@@ -3818,6 +4035,220 @@ def _event_reference(event: dict[str, Any]) -> dict[str, Any] | None:
     return reference
 
 
+def _capability_delivery_view(
+    snapshot: dict[str, Any], capability_summaries: list[dict[str, Any]],
+    interactions: list[dict[str, Any]], events: list[dict[str, Any]], *,
+    event_window_truncated: bool, event_page_scoped: bool,
+    invocation_summaries_omitted: int,
+) -> dict[str, Any]:
+    """Relate this session's binding snapshot to bounded, observed capability use."""
+    raw_bindings = snapshot.get("bindings")
+    if not isinstance(raw_bindings, list):
+        if not capability_summaries:
+            return {}
+        return {
+            "status": "unavailable",
+            "inventory_source": "current-session-binding-snapshot",
+            "binding_count": 0,
+            "bindings": [],
+            "discoverability_status": "not-measured",
+            "measurement_limits": [
+                "The session binding snapshot is unavailable.",
+                "Environment bindings do not establish that a capability was presented to or discovered by the agent.",
+            ],
+        }
+
+    summary_by_capability = {
+        item["capability"]: item
+        for item in capability_summaries
+        if isinstance(item.get("capability"), str)
+    }
+    binding_records: list[dict[str, Any]] = []
+    seen_bindings: set[tuple[str, str]] = set()
+    invalid_binding_count = 0
+    availability_counts: dict[str, int] = {}
+    bindings_by_capability: dict[str, int] = {}
+    examined_bindings = raw_bindings[:MAX_SESSION_ACTIVITY_BINDING_SCAN]
+    for raw in examined_bindings:
+        if not isinstance(raw, dict):
+            invalid_binding_count += 1
+            continue
+        capability = raw.get("capability")
+        provider = raw.get("provider")
+        if (not isinstance(capability, str) or not capability or len(capability) > 256
+                or not isinstance(provider, str) or not provider or len(provider) > 160):
+            invalid_binding_count += 1
+            continue
+        binding_key = (provider, capability)
+        if binding_key in seen_bindings:
+            invalid_binding_count += 1
+            continue
+        seen_bindings.add(binding_key)
+        availability = raw.get("availability")
+        availability = availability if isinstance(availability, dict) else {}
+        status = availability.get("status")
+        if (not isinstance(status, str)
+                or status not in {"available", "unavailable", "unknown"}):
+            status = "unrecorded"
+        availability_counts[status] = availability_counts.get(status, 0) + 1
+        bindings_by_capability[capability] = bindings_by_capability.get(capability, 0) + 1
+        binding_records.append({
+            "provider": provider,
+            "capability": capability,
+            "availability_status": status,
+            **({"binding_id": _short_text(raw["binding_id"], 160)}
+               if isinstance(raw.get("binding_id"), str) and raw["binding_id"] else {}),
+            **({"availability_verification": _short_text(
+                availability["verification"], 64,
+            )} if isinstance(availability.get("verification"), str) else {}),
+            **({"availability_observed_at": _short_text(
+                availability["observed_at"], 96,
+            )} if isinstance(availability.get("observed_at"), str) else {}),
+        })
+
+    interaction_references: dict[str, list[dict[str, Any]]] = {}
+    for interaction in interactions:
+        capability = interaction.get("capability")
+        reference = interaction.get("invocation_event")
+        if isinstance(capability, str) and isinstance(reference, dict):
+            refs = interaction_references.setdefault(capability, [])
+            if len(refs) < MAX_CAPABILITY_SUPPORTING_EVENTS:
+                refs.append({
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                })
+
+    complete_history = not event_window_truncated and not event_page_scoped
+    for binding in binding_records:
+        capability = binding["capability"]
+        summary = summary_by_capability.get(capability)
+        if summary is None:
+            use_status = (
+                "not-observed-in-session-history" if complete_history
+                else "not-observed-in-selected-event-window"
+            )
+            binding["use_observation_status"] = use_status
+            binding["invocation_count"] = 0
+            binding["completion_count"] = 0
+            binding["outcome_status_counts"] = {}
+            binding["supporting_events"] = []
+            continue
+        binding["use_observation_status"] = "invoked-in-selected-event-window"
+        binding["invocation_count"] = summary["invocation_count"]
+        binding["completion_count"] = summary["completion_count"]
+        binding["outcome_status_counts"] = dict(summary["outcome_status_counts"])
+        binding["supporting_events"] = interaction_references.get(capability, [])
+        binding["provider_attribution"] = (
+            "ambiguous-current-bindings"
+            if bindings_by_capability.get(capability, 0) > 1
+            else "capability-name-match; invocation-event-does-not-record-provider"
+        )
+
+    outside_inventory = [
+        {
+            "capability": item["capability"],
+            "invocation_count": item["invocation_count"],
+            "outcome_status_counts": dict(item["outcome_status_counts"]),
+            "supporting_events": interaction_references.get(item["capability"], []),
+            "interpretation": "observed-invocation-not-in-current-session-binding-snapshot",
+        }
+        for item in capability_summaries
+        if isinstance(item.get("capability"), str)
+        and item["capability"] not in bindings_by_capability
+    ]
+    transition_events: list[dict[str, Any]] = []
+    transition_count = 0
+    transition_types = {
+        "capability.bound", "capability.changed", "capability.unbound",
+        "capability.available", "capability.unavailable", "capability.unknown",
+    }
+    for event in reversed(events):
+        if event.get("type") not in transition_types:
+            continue
+        payload = event.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        reference = _event_reference(event)
+        capability = payload.get("capability")
+        if reference is None or not isinstance(capability, str) or not capability:
+            continue
+        transition_count += 1
+        if len(transition_events) >= MAX_SESSION_ACTIVITY_CAPABILITY_EVENTS:
+            continue
+        provider = payload.get("provider")
+        item = {
+            "capability": _short_text(capability, 160),
+            "event_reference": reference,
+        }
+        if isinstance(provider, str) and provider:
+            item["provider"] = _short_text(provider, 128)
+        if isinstance(payload.get("previous"), str):
+            item["previous_availability_status"] = _short_text(
+                payload["previous"], 64,
+            )
+        transition_events.append(item)
+
+    for binding in binding_records:
+        matching_events = [
+            item for item in transition_events
+            if item.get("capability") == binding["capability"]
+            and item.get("provider") in {None, binding["provider"]}
+            and item["event_reference"].get("type") in {
+                "capability.available", "capability.unavailable",
+                "capability.unknown", "capability.bound", "capability.changed",
+            }
+        ]
+        if matching_events:
+            binding["availability_event_references"] = [
+                item["event_reference"] for item in matching_events[:3]
+            ]
+
+    binding_records.sort(key=lambda item: (item["capability"], item["provider"]))
+    binding_count = len(binding_records)
+    omitted_bindings = max(0, binding_count - MAX_SESSION_ACTIVITY_BINDINGS)
+    binding_records_not_examined = max(
+        0, len(raw_bindings) - len(examined_bindings),
+    )
+    outside_inventory.sort(key=lambda item: item["capability"])
+    return {
+        "status": (
+            "partial"
+            if invalid_binding_count or omitted_bindings or binding_records_not_examined
+            else "ready"
+        ),
+        "inventory_source": "current-session-binding-snapshot",
+        "binding_count": binding_count,
+        "binding_records_examined": len(examined_bindings),
+        "binding_records_not_examined": binding_records_not_examined,
+        "binding_records_invalid": invalid_binding_count,
+        "availability_counts": dict(sorted(availability_counts.items())),
+        "bindings_omitted": omitted_bindings,
+        "bindings": binding_records[:MAX_SESSION_ACTIVITY_BINDINGS],
+        "availability_transition_event_count": transition_count,
+        "availability_transition_events_omitted": max(
+            0, transition_count - len(transition_events),
+        ),
+        "availability_transition_events": transition_events,
+        "capabilities_not_in_current_binding_snapshot": outside_inventory[:MAX_SESSION_ACTIVITY_CAPABILITIES],
+        "capabilities_not_in_current_binding_snapshot_omitted": max(
+            0, len(outside_inventory) - MAX_SESSION_ACTIVITY_CAPABILITIES,
+        ),
+        "discoverability_status": "not-measured",
+        "use_event_window": {
+            "scope": "selected-session-event-window",
+            "truncated": event_window_truncated,
+            "complete_history": complete_history,
+            "invocation_summaries_omitted": invocation_summaries_omitted,
+        },
+        "measurement_limits": [
+            "Environment bindings do not establish that a capability was presented to or discovered by the agent.",
+            "Availability records a substrate probe, not verified provider behavior.",
+            "Invocation events do not record provider identity; capability-name matches are ambiguous when multiple current bindings expose the same name.",
+            "No observed invocation is scoped to the selected event window unless complete session history is explicitly available.",
+        ],
+    }
+
+
 def _authenticated_rpc_read_event(
     event: dict[str, Any], snapshot: dict[str, Any],
 ) -> bool:
@@ -4432,7 +4863,13 @@ def _session_activity(
                 item.get("completion_event") is not None for item in group
             ),
             "outcome_status_counts": status_counts,
+            "supporting_events": [
+                item["invocation_event"]
+                for item in group[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                if isinstance(item.get("invocation_event"), dict)
+            ],
         })
+    all_capability_summaries = capabilities
     capabilities_omitted = max(
         0, len(capabilities) - MAX_SESSION_ACTIVITY_CAPABILITIES,
     )
@@ -4650,6 +5087,12 @@ def _session_activity(
         event_type = event.get("type")
         if isinstance(event_type, str) and event_type and len(event_type) <= 96:
             event_type_counts[event_type] = event_type_counts.get(event_type, 0) + 1
+    capability_delivery = _capability_delivery_view(
+        snapshot, all_capability_summaries, interactions, events,
+        event_window_truncated=event_window_truncated,
+        event_page_scoped=event_before_sequence is not None,
+        invocation_summaries_omitted=capabilities_omitted,
+    )
     denial_events = [
         event for event in events if event.get("type") == "authority.denied"
     ]
@@ -4842,6 +5285,7 @@ def _session_activity(
         "authority_denials": authority_denials,
         "authority_denial_candidates": authority_denial_candidates,
         "capabilities": capabilities,
+        "capability_delivery": capability_delivery,
         "measurement_limits": limits,
     }
 

@@ -1302,8 +1302,37 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
         "cmp_compiler_activity",
     )
     session, _ = _session(tmp_path, [record])
+    session.snapshot["bindings"] = [
+        {
+            "binding_id": "cap_compiler_build",
+            "provider": "mncs-compiler",
+            "capability": "mncs-compiler:build",
+            "availability": {
+                "status": "available", "verification": "substrate",
+                "observed_at": "2026-10-24T01:00:00Z",
+            },
+        },
+        {
+            "binding_id": "cap_compiler_inspect",
+            "provider": "mncs-compiler",
+            "capability": "mncs-compiler:inspect",
+            "availability": {
+                "status": "unavailable", "verification": "substrate",
+                "observed_at": "2026-10-24T01:00:00Z",
+            },
+        },
+    ]
     request_id = "req_compiler_activity"
     events = [
+        {
+            "identity": "evt_capability_available_1", "sequence": 10,
+            "type": "capability.available", "producer": "environment",
+            "observed_at": "2026-10-24T00:59:59Z",
+            "payload": {
+                "capability": "mncs-compiler:build",
+                "provider": "mncs-compiler", "previous": "unknown",
+            },
+        },
         {
             "identity": "evt_capability_invoked_1", "sequence": 11,
             "type": "capability.invoked", "producer": "local-agent",
@@ -1360,7 +1389,57 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
         "invocation_count": 2,
         "completion_count": 1,
         "outcome_status_counts": {"failed": 1},
+        "supporting_events": [
+            {"identity": "evt_capability_invoked_2", "sequence": 13,
+             "type": "capability.invoked",
+             "observed_at": "2026-10-24T01:01:00Z"},
+            {"identity": "evt_capability_invoked_1", "sequence": 11,
+             "type": "capability.invoked",
+             "observed_at": "2026-10-24T01:00:00Z"},
+        ],
     }]
+    delivery = activity["capability_delivery"]
+    assert delivery["status"] == "ready"
+    assert delivery["binding_count"] == 2
+    assert delivery["availability_counts"] == {"available": 1, "unavailable": 1}
+    assert delivery["discoverability_status"] == "not-measured"
+    build = next(
+        item for item in delivery["bindings"]
+        if item["capability"] == "mncs-compiler:build"
+    )
+    assert build["availability_status"] == "available"
+    assert build["use_observation_status"] == "invoked-in-selected-event-window"
+    assert build["invocation_count"] == 2
+    assert build["outcome_status_counts"] == {"failed": 1}
+    assert build["supporting_events"][0]["identity"] == "evt_capability_invoked_2"
+    assert build["availability_event_references"][0]["identity"] == (
+        "evt_capability_available_1"
+    )
+    assert delivery["availability_transition_events"][0]["event_reference"][
+        "identity"
+    ] == "evt_capability_available_1"
+    inspect = next(
+        item for item in delivery["bindings"]
+        if item["capability"] == "mncs-compiler:inspect"
+    )
+    assert inspect["availability_status"] == "unavailable"
+    assert inspect["use_observation_status"] == "not-observed-in-session-history"
+    compact = capability_intelligence._compact_projection(
+        result, 100_000, capability_intelligence.MAX_RESULT_BYTES,
+    )
+    assert compact["session_activity"]["capabilities"][0]["supporting_events"][0][
+        "identity"
+    ] == "evt_capability_invoked_2"
+    assert compact["session_activity"]["capability_delivery"][
+        "discoverability_status"
+    ] == "not-measured"
+    compact_build = next(
+        item for item in compact["session_activity"]["capability_delivery"]["bindings"]
+        if item["capability"] == "mncs-compiler:build"
+    )
+    assert compact_build["availability_event_references"][0]["identity"] == (
+        "evt_capability_available_1"
+    )
     assert "private-source-path" not in json.dumps(activity)
     assert any("token usage" in item for item in activity["measurement_limits"])
 
