@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_control_path_claim_recovery_improvement_20261025",
+  "captured_at": "2026-10-25T09:56:08Z",
+  "measurement_basis": "merged and pushed Control implementation with targeted independent regression verification",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Control Environment RPC claim recovery",
+    "request": {
+      "implementation_commit": "c282d8c4cab67518f5301d9dd1c568638b7b2960",
+      "verification_observation_identity": "ev_environment_control_path_claim_recovery_verification_20261025",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "Control now carries an explicit --paths scope into worktree-scoped and path-scoped recovery candidates. Empty, repeated, or malformed scopes refuse widening. Existing host-liveness and fail-closed overlap checks remain active.",
+      "delivery": {
+        "repository": "mncs-control-mcp",
+        "branch": "main",
+        "commit": "c282d8c4cab67518f5301d9dd1c568638b7b2960",
+        "remote_ref": "origin/main",
+        "status": "pushed-and-verified"
+      },
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The code path and regression behavior are verified. No production stale-claim recovery has yet established whether this correction removes the observed pickup blockage in routine concurrent work."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_control_path_claim_recovery_implementation_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "c282d8c4cab67518f5301d9dd1c568638b7b2960",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "a70f9d03f618e52f0ebbfa781740116bfe06d1d53bd3513b699af599b3090b72"
+    },
+    {
+      "identity": "ev_control_path_claim_recovery_tests_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "c282d8c4cab67518f5301d9dd1c568638b7b2960",
+      "path": "tests/test_environment_rpc.py",
+      "sha256": "be58c9a523f2e8026bb711fd16bd9da4a09f28ea9b86e6cba578186b65879447"
+    }
+  ],
+  "improvement_relation": {
+    "identity": "im_environment_control_path_claim_recovery_20261025",
+    "addresses_hypothesis_identity": "ph_environment_control_path_claim_recovery_20261025",
+    "implementation_reference": {
+      "identity": "ev_control_path_claim_recovery_implementation_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "c282d8c4cab67518f5301d9dd1c568638b7b2960",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "a70f9d03f618e52f0ebbfa781740116bfe06d1d53bd3513b699af599b3090b72"
+    },
+    "verification_observation_identity": "ev_environment_control_path_claim_recovery_verification_20261025",
+    "subsequent_observation_identity": null,
+    "basis": "The merged fix preserves requested paths when selecting automatic same-operator recovery candidates. Regression tests show narrow requests ignore disjoint claim paths and broad ambiguous requests remain fail-closed, with liveness fencing preserved. The implementation is on pushed Control main.",
+    "not_measured": [
+      "live production recovery success after deployment",
+      "whether the change resolves all recurring branch pickup, merge, and publish friction",
+      "long-term effects under multiple independent active agents"
+    ]
+  },
+  "not_measured": [
+    "subsequent live-use evidence",
+    "the prevalence of remaining authorization friction in other workflows"
+  ]
+}

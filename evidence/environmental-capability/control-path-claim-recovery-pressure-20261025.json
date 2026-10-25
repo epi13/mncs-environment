@@ -1,0 +1,78 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_control_path_claim_recovery_pressure_20261025",
+  "captured_at": "2026-10-25T09:56:08Z",
+  "measurement_basis": "authenticated Environment campaign activity, Control source inspection, and a bounded regression reproduction",
+  "observation": {
+    "kind": "claim-recovery-request-scope-loss",
+    "source_interface": "MNCS Control Environment RPC claim recovery",
+    "request": {
+      "operation": "claims acquire",
+      "requested_scope": {
+        "repository": "mncs-environment",
+        "kind": "worktree",
+        "branch": "campaign/campaign-charter-observation-20261025",
+        "paths": [
+          "evidence/environmental-capability/control-path-claim-recovery-pressure-20261025.json",
+          "evidence/environmental-capability/control-path-claim-recovery-verification-20261025.json",
+          "evidence/environmental-capability/control-path-claim-recovery-improvement-20261025.json"
+        ]
+      },
+      "failure_mode": "The same-operator recovery parser forwarded the requested worktree and branch but dropped --paths. Recovery then evaluated the broad worktree scope, so multiple otherwise-disjoint claims could make a legitimate narrow recovery ambiguous.",
+      "reproduction_basis": "Control regression test constructs disjoint and overlapping live claims and verifies that an explicit narrow path request selects only the overlapping claim while a broad request remains fail-closed."
+    },
+    "outcome": {
+      "status": "reproduced-in-regression-test",
+      "interpretation": "A concrete claim-recovery scope defect was present in the Control bridge. This is evidence of one authorization-path limitation; it does not establish the cause of every prior pickup, merge, or publish difficulty.",
+      "live_pre_fix_recovery": "not-performed"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_control_claim_recovery_baseline_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "1fba10757b688c7d4877f81636f52c595660d3a0",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "8fb78aef1b099b8237d3b7de9b74ac93e761c7a19164996f410910ff90a60597"
+    },
+    {
+      "identity": "ev_control_claim_recovery_regression_test_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "c282d8c4cab67518f5301d9dd1c568638b7b2960",
+      "path": "tests/test_environment_rpc.py",
+      "sha256": "be58c9a523f2e8026bb711fd16bd9da4a09f28ea9b86e6cba578186b65879447"
+    }
+  ],
+  "pressure_hypothesis": {
+    "identity": "ph_environment_control_path_claim_recovery_20261025",
+    "title": "Same-operator claim recovery loses requested path scope",
+    "category": "coordination-continuity",
+    "subsystem": "MNCS Control Environment RPC and Environment claim recovery",
+    "owner": "mncs-control-mcp",
+    "actionable_recommendation": "Preserve the exact requested path set when deriving same-operator recovery candidates; refuse malformed or empty path scopes rather than widening them, while retaining host-liveness and conservative overlap checks.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether this defect caused any specific earlier campaign delay",
+      "frequency of ambiguous same-operator recovery requests in production",
+      "behavior during sustained concurrent use after deployment"
+    ]
+  },
+  "not_measured": [
+    "a live stale-claim recovery before the fix",
+    "whether this was the sole cause of the user's repeated pickup and delivery difficulties"
+  ]
+}
