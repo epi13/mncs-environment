@@ -1,0 +1,114 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_regression_readonly_adaptation_followup_20261025",
+  "captured_at": "2026-10-25T16:07:00Z",
+  "measurement_basis": "post-implementation-campaign-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recording_context": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51",
+    "environment_identity_capture_status": "captured-in-record",
+    "environment_version_capture_status": "not-captured-in-record"
+  },
+  "observation": {
+    "kind": "compiler-regression-readonly-adaptation-campaign-readback",
+    "source_interface": "MNCS Environment projections --interpret environmental-capability",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_50477b7c605e206c",
+      "evidence_page_offset": 23,
+      "evidence_page_limit": 3,
+      "session_event_limit": 1
+    },
+    "outcome": {
+      "projection_status": "ready",
+      "selected_page_observation_records_considered": 3,
+      "selected_page_observation_records_verified": 3,
+      "selected_page_observation_records_unavailable": 0,
+      "source_pointer_content_integrity_verified_count": 7,
+      "pressure_hypothesis_count": 1,
+      "pressure_hypothesis_identity": "ph_environment_compiler_regression_source_objective_context_20261025",
+      "improvement_relation_count": 1,
+      "improvement_relation_identity": "im_environment_compiler_regression_readonly_adaptation_20261025",
+      "improvement_relation_status": "validated",
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "subsequent_observation_identity_in_linked_relation": null,
+      "effectiveness_assessment": "not-assessed",
+      "interpretation": "The current campaign projection reconstructs the Compiler evidence pressure and connects it to the committed read-only adapter and its verification record. This is a bounded readback of this campaign's own implementation evidence. It does not link this readback as an independent effectiveness observation, establish that Compiler agents can discover or use the projection, or show that any native implementation opportunity is now unblocked."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "environmental-pressure-observation",
+      "identity": "ev_environment_compiler_regression_readonly_adaptation_pressure_20261025",
+      "repository": "mncs-environment",
+      "commit": "f1071f96d0e8b21f5b46d8659b59dc00180d2de4",
+      "path": "evidence/environmental-capability/compiler-regression-readonly-adaptation-pressure-20261025.json",
+      "sha256": "14fc26bfba3ee7a01c34d9c147b9d4dff1320c146e8a6ffac2bdce63cf9311c1"
+    },
+    {
+      "kind": "environmental-improvement-observation",
+      "identity": "ev_environment_compiler_regression_readonly_adaptation_improvement_20261025",
+      "repository": "mncs-environment",
+      "commit": "79b0930ab6d4bfc81deea988a5463c1696c4a946",
+      "path": "evidence/environmental-capability/compiler-regression-readonly-adaptation-improvement-20261025.json",
+      "sha256": "d33109381b416c1b22bd7d5e5840cfcdd744bb9228a20703f349b09e4f80686e"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_compiler_regression_readonly_adaptation_verification_20261025",
+      "repository": "mncs-environment",
+      "commit": "79b0930ab6d4bfc81deea988a5463c1696c4a946",
+      "path": "evidence/environmental-capability/compiler-regression-readonly-adaptation-verification-20261025.json",
+      "sha256": "8e1e97a8411642f8cbcf59298f638f060b51adf75da70cf1c1e79c04440534dc"
+    },
+    {
+      "kind": "committed-environment-implementation",
+      "identity": "src_environment_compiler_regression_readonly_adapter_d1e8241",
+      "repository": "mncs-environment",
+      "commit": "d1e8241e12cfd9670ef6c1649db41666d5a591a3",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "a483991d6b1079a4270f2cdfa3f5f4e233ecfbf2b2f5fb23ce56d4952e30c1ee"
+    },
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    },
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+      "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e"
+    },
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_interface_invalidation_20261023",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/language-module-interface-application-invalidation-compiler-20261023.json",
+      "sha256": "ce67f0ff837bba0ff73301cb398198da5ff9125e8fe8cb75c45c5f26a1715177"
+    }
+  ],
+  "not_measured": [
+    "independent agent discovery, usability, or outcomes",
+    "effectiveness across compiler sessions, agents, models, or environment versions",
+    "source Compiler objective or session attribution",
+    "native-versus-host ownership or migration readiness",
+    "whether subsequent compiler activity changes the observed pressure"
+  ]
+}
