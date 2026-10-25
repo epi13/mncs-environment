@@ -154,6 +154,7 @@ MAX_SESSION_ACTIVITY_INTERACTIONS = 32
 MAX_SESSION_ACTIVITY_CAPABILITIES = 16
 MAX_SESSION_ACTIVITY_BINDINGS = 32
 MAX_SESSION_ACTIVITY_BINDING_SCAN = 512
+MAX_CONTEXT_RESPONSE_CAPABILITY_LIST = 20
 MAX_SESSION_ACTIVITY_CAPABILITY_EVENTS = 12
 MAX_CAPABILITY_SUPPORTING_EVENTS = 3
 MAX_SESSION_ACTIVITY_RPC_OPERATIONS = 32
@@ -1613,7 +1614,7 @@ def _compact_projection(
             key: _short_text(context_activity[key], 128)
             for key in (
                 "status", "scope", "response_capability_list_status",
-                "agent_receipt_status",
+                "agent_receipt_status", "binding_snapshot_comparison_basis",
             )
             if isinstance(context_activity.get(key), str)
         }
@@ -1667,6 +1668,22 @@ def _compact_projection(
                     for item_key in ("identity", "sequence", "type")
                     if item_key in reference
                 }
+            comparison = summary.get("binding_snapshot_comparison")
+            if isinstance(comparison, dict):
+                compact_comparison = {
+                    key: _short_text(comparison[key], 128)
+                    for key in ("status", "basis", "reason")
+                    if isinstance(comparison.get(key), str)
+                }
+                for key in (
+                    "available_count_matches",
+                    "available_identity_digest_matches",
+                ):
+                    if type(comparison.get(key)) is bool:
+                        compact_comparison[key] = comparison[key]
+                compact_summary["binding_snapshot_comparison"] = (
+                    compact_comparison
+                )
             compact_response_summaries.append(compact_summary)
         compact_context_activity["response_summaries"] = compact_response_summaries
         if type(context_activity.get("response_summaries_omitted")) is int:
@@ -1681,7 +1698,7 @@ def _compact_projection(
         if isinstance(context_limits, list):
             compact_context_activity["measurement_limits"] = [
                 _short_text(item, 256)
-                for item in context_limits[:2]
+                for item in context_limits[:3]
                 if isinstance(item, str)
             ]
         compact_capability_delivery["context_operation_activity"] = (
@@ -4145,6 +4162,54 @@ def _event_reference(event: dict[str, Any]) -> dict[str, Any] | None:
     return reference
 
 
+def _current_context_binding_snapshot_summary(
+    snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    """Return a bounded digest of currently available session bindings."""
+    bindings = snapshot.get("bindings")
+    if not isinstance(bindings, list):
+        return {"status": "unavailable", "reason": "binding-inventory-unavailable"}
+    if len(bindings) > MAX_SESSION_ACTIVITY_BINDING_SCAN:
+        return {"status": "partial", "reason": "binding-scan-limit"}
+
+    identities: list[dict[str, str]] = []
+    for binding in bindings:
+        if not isinstance(binding, dict):
+            return {"status": "partial", "reason": "binding-record-invalid"}
+        availability = binding.get("availability") or {}
+        if not isinstance(availability, dict):
+            return {"status": "partial", "reason": "binding-availability-invalid"}
+        if availability.get("status") != "available":
+            continue
+        identity = {
+            "capability": binding.get("capability"),
+            "provider": binding.get("provider"),
+            "contract_revision": binding.get("contract_revision"),
+        }
+        if any(
+            not isinstance(value, str) or not value or len(value) > 256
+            or "\x00" in value
+            for value in identity.values()
+        ):
+            return {"status": "partial", "reason": "binding-identity-incomplete"}
+        identities.append(identity)
+        if len(identities) > MAX_CONTEXT_RESPONSE_CAPABILITY_LIST:
+            return {"status": "partial", "reason": "available-list-truncated"}
+
+    identities.sort(key=lambda item: (
+        item["capability"], item["provider"], item["contract_revision"],
+    ))
+    digest = hashlib.sha256(json.dumps(
+        identities, ensure_ascii=False, sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")).hexdigest()
+    return {
+        "status": "ready",
+        "available_count": len(identities),
+        "available_identity_digest": digest,
+    }
+
+
 def _capability_delivery_view(
     snapshot: dict[str, Any], capability_summaries: list[dict[str, Any]],
     interactions: list[dict[str, Any]], events: list[dict[str, Any]],
@@ -4153,6 +4218,7 @@ def _capability_delivery_view(
 ) -> dict[str, Any]:
     """Relate this session's binding snapshot to bounded, observed capability use."""
     complete_history = not event_window_truncated and not event_page_scoped
+    binding_snapshot_summary = _current_context_binding_snapshot_summary(snapshot)
     context_outcome_counts: dict[str, int] = {}
     context_supporting_events = []
     response_capture_status_counts: dict[str, int] = {}
@@ -4192,13 +4258,44 @@ def _capability_delivery_view(
         response_identity_digest_status_counts[digest_status] = (
             response_identity_digest_status_counts.get(digest_status, 0) + 1
         )
-        if reference is not None and len(response_summaries) < MAX_CAPABILITY_SUPPORTING_EVENTS:
+        if reference is not None:
+            comparison = {
+                "status": "not-comparable",
+                "basis": "current-session-binding-snapshot-at-projection-time",
+                "reason": "response-identities-incomplete-or-truncated",
+            }
+            if binding_snapshot_summary.get("status") != "ready":
+                comparison["reason"] = binding_snapshot_summary.get(
+                    "reason", "current-binding-snapshot-unavailable",
+                )
+            elif (response_summary["capture_status"] == "captured"
+                  and response_summary["identity_digest_status"] == "complete"
+                  and response_summary["capabilities_truncated"] is False):
+                count_matches = (
+                    response_summary["available_count"]
+                    == binding_snapshot_summary["available_count"]
+                )
+                digest_matches = (
+                    response_summary["available_identity_digest"]
+                    == binding_snapshot_summary["available_identity_digest"]
+                )
+                comparison = {
+                    "status": (
+                        "matches-current-session-binding-snapshot"
+                        if count_matches and digest_matches
+                        else "differs-from-current-session-binding-snapshot"
+                    ),
+                    "basis": "current-session-binding-snapshot-at-projection-time",
+                    "available_count_matches": count_matches,
+                    "available_identity_digest_matches": digest_matches,
+                }
             response_summaries.append({
                 "event_reference": {
                     key: reference[key]
                     for key in ("identity", "sequence", "type")
                     if key in reference
                 },
+                "binding_snapshot_comparison": comparison,
                 **{
                     key: response_summary[key]
                     for key in (
@@ -4210,6 +4307,15 @@ def _capability_delivery_view(
                     )
                 },
             })
+            response_summaries.sort(
+                key=lambda item: (
+                    item.get("event_reference", {}).get("sequence")
+                    if type(item.get("event_reference", {}).get("sequence")) is int
+                    else 0
+                ),
+                reverse=True,
+            )
+            del response_summaries[MAX_CAPABILITY_SUPPORTING_EVENTS:]
     context_supporting_events = sorted(
         context_supporting_events,
         key=lambda item: (
@@ -4274,10 +4380,14 @@ def _capability_delivery_view(
             0, context_response_summary_count - len(response_summaries),
         ),
         "response_summary_scope": "authenticated-session.context-events-in-selected-window",
+        "binding_snapshot_comparison_basis": (
+            "current-session-binding-snapshot-at-projection-time"
+        ),
         "agent_receipt_status": "not-established",
         "measurement_limits": [
             "Control records only a bounded capability-list shape and digest; it does not persist capability names or the full response body.",
             "A successful session.context operation and captured response summary do not establish the consumer's receipt, discovery, or use of a capability.",
+            "Binding comparison uses the current session snapshot; the event has no binding revision, so a difference does not establish a response failure.",
         ],
     }
     raw_bindings = snapshot.get("bindings")

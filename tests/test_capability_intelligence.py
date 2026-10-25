@@ -1849,11 +1849,20 @@ def test_session_activity_correlates_authenticated_control_read_operations(
         "binding_id": "cap_projection_context_test",
         "provider": "mncs-test",
         "capability": "mncs-test:run",
+        "contract_revision": "r1",
         "availability": {
             "status": "available", "verification": "substrate",
             "observed_at": "2026-10-24T01:00:00Z",
         },
     }]
+    context_identity_digest = hashlib.sha256(json.dumps(
+        [{
+            "capability": "mncs-test:run",
+            "provider": "mncs-test",
+            "contract_revision": "r1",
+        }],
+        ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+    ).encode("utf-8")).hexdigest()
     events = []
     for sequence, operation, outcome, exit_code, failure_code in (
         (21, "session.inspect", "failed", 2, "ENVIRONMENT_SESSION_MISSING"),
@@ -1919,7 +1928,7 @@ def test_session_activity_correlates_authenticated_control_read_operations(
                 "unavailable_count": 0,
                 "unknown_count": 0,
                 "capabilities_truncated": False,
-                "available_identity_digest": "e" * 64,
+                "available_identity_digest": context_identity_digest,
                 "identity_digest_status": "complete",
             }
         events.append({
@@ -2020,7 +2029,13 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     ] == "evt_rpc_read_24"
     assert context_activity["response_summaries"][0][
         "available_identity_digest"
-    ] == "e" * 64
+    ] == context_identity_digest
+    comparison = context_activity["response_summaries"][0][
+        "binding_snapshot_comparison"
+    ]
+    assert comparison["status"] == "matches-current-session-binding-snapshot"
+    assert comparison["available_count_matches"] is True
+    assert comparison["available_identity_digest_matches"] is True
     assert context_activity["agent_receipt_status"] == "not-established"
     assert len(activity["rpc_failure_candidates"]) == 1
     assert result["session_activity_pressure_candidate_count"] == 1
@@ -2062,6 +2077,13 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert compact_context_activity["response_summaries"][0]["event_reference"][
         "identity"
     ] == "evt_rpc_read_24"
+    assert compact_context_activity["response_summaries"][0][
+        "binding_snapshot_comparison"
+    ]["status"] == "matches-current-session-binding-snapshot"
+    assert any(
+        "no binding revision" in limit
+        for limit in compact_context_activity["measurement_limits"]
+    )
     assert "mncs-test:run" not in json.dumps(compact_context_activity)
     assert compact_summary["groups"][1]["supporting_events"][0]["identity"] == (
         "evt_rpc_read_24"
@@ -2073,6 +2095,31 @@ def test_session_activity_correlates_authenticated_control_read_operations(
         "identity"
     ] == "evt_rpc_read_21"
     assert compact_activity["rpc_failure_candidates"][0]["distinct_session_count"] == 1
+
+    context_event = next(
+        event for event in events
+        if event["sequence"] == 24
+    )
+    context_event["payload"]["context_response_summary"][
+        "available_identity_digest"
+    ] = "f" * 64
+    mismatch = capability_intelligence.project(session)["session_activity"]
+    mismatch_comparison = mismatch["capability_delivery"][
+        "context_operation_activity"
+    ]["response_summaries"][0]["binding_snapshot_comparison"]
+    assert mismatch_comparison["status"] == (
+        "differs-from-current-session-binding-snapshot"
+    )
+    assert mismatch_comparison["available_count_matches"] is True
+    assert mismatch_comparison["available_identity_digest_matches"] is False
+
+    session.snapshot["bindings"][0]["contract_revision"] = None
+    incomplete = capability_intelligence.project(session)["session_activity"]
+    incomplete_comparison = incomplete["capability_delivery"][
+        "context_operation_activity"
+    ]["response_summaries"][0]["binding_snapshot_comparison"]
+    assert incomplete_comparison["status"] == "not-comparable"
+    assert incomplete_comparison["reason"] == "binding-identity-incomplete"
 
 
 def test_session_activity_marks_truncated_authenticated_rpc_only_history_partial(

@@ -437,13 +437,25 @@ inspectable without treating an absent record as evidence of poor
 discoverability or usability.
 
 `context_operation_activity` also summarizes authenticated `session.context`
-RPC records. The Environment context implementation returns up to 20 available
-capabilities with total and truncation counts, so a successful operation is
-evidence that the orientation endpoint ran. The RPC event does not retain the
-response fields or establish that the consumer read or acted on them; the view
-keeps response capability-list capture and agent receipt explicitly unmeasured.
-Supporting event references for these counts remain in the adjacent
-`rpc_operation_summary` groups.
+RPC records. New `/2` records preserve a bounded summary of the returned
+capability list: available, unavailable, and unknown counts; truncation state;
+and a digest of available capability, provider, and contract-revision
+identities when the list is complete. Capability names and the full response
+body are not copied into the event. `response_summaries` retain the source
+event references, and capture-status counts distinguish these records from
+older `/1` events, which remain `not-captured-in-rpc-event` rather than being
+backfilled. The selected window and omitted summary count remain explicit.
+
+For an untruncated complete response, the projection compares its count and
+identity digest with the current session binding snapshot. The comparison is
+made against projection-time state because the RPC event does not carry a
+binding revision. A difference is therefore evidence to investigate, not
+proof that the endpoint returned an incorrect response. These records show
+that Control observed the endpoint's response shape; they do not establish
+that the consumer received, discovered, understood, or used a capability.
+Agent receipt and discoverability remain unmeasured. This delivery evidence is
+separate from `implementation_accountability`: an available capability does
+not establish native implementation ownership or migration readiness.
 
 When response compaction is needed, each pressure summary retains bounded exact
 evidence references (identity, repository, commit, path, and digest), so an

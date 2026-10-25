@@ -365,3 +365,43 @@ def test_persisted_rpc_read_activity_flows_into_session_pressure_projection() ->
         item["identity"] for item in candidate["supporting_events"]
     ] == [event["identity"] for event in store.events[1:]]
     assert store.event_log_reads == 0
+
+
+def test_context_response_projection_keeps_newest_bounded_summaries() -> None:
+    from mncs_env.capability_intelligence import (
+        MAX_CAPABILITY_SUPPORTING_EVENTS,
+        _session_activity,
+    )
+
+    session_id = "ses_rpc_context_summary_window"
+    store = EventStore(session_id)
+    session = Session(store, session_id)
+    session.snapshot["bindings"] = []
+    response_event_sequences = []
+    for ordinal in range(10):
+        digest = f"{ordinal + 1:064x}"
+        payload = _rpc_activity_payload("session.context", digest)
+        payload["schema_version"] = "mncs.environment.rpc-read-activity/2"
+        payload["context_response_summary"] = _context_response_summary()
+        recorded = session.record_rpc_read_activity(
+            payload,
+            request_id=f"req_rpc_context_window_{ordinal}",
+            operation_digest=digest,
+        )
+        response_event_sequences.append(recorded["event"]["sequence"])
+
+    activity = _session_activity(session, session.snapshot)
+    context_activity = activity["capability_delivery"][
+        "context_operation_activity"
+    ]
+
+    expected_sequences = sorted(response_event_sequences, reverse=True)[
+        :MAX_CAPABILITY_SUPPORTING_EVENTS
+    ]
+    assert [
+        item["event_reference"]["sequence"]
+        for item in context_activity["response_summaries"]
+    ] == expected_sequences
+    assert context_activity["response_summaries_omitted"] == (
+        max(0, 10 - MAX_CAPABILITY_SUPPORTING_EVENTS)
+    )
