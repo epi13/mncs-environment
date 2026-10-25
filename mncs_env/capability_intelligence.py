@@ -3700,6 +3700,7 @@ def _session_activity(
 
     rpc_operations: list[dict[str, Any]] = []
     invalid_rpc_event_count = 0
+    valid_rpc_event_count = 0
     for event in reversed(rpc_events):
         payload = event.get("payload")
         payload = payload if isinstance(payload, dict) else {}
@@ -3713,6 +3714,9 @@ def _session_activity(
                 or not isinstance(caller, dict)
                 or not isinstance(context_value, dict)):
             invalid_rpc_event_count += 1
+            continue
+        valid_rpc_event_count += 1
+        if len(rpc_operations) >= MAX_SESSION_ACTIVITY_RPC_OPERATIONS:
             continue
         caller_projection = {
             key: _short_text(caller.get(key), 128)
@@ -3773,10 +3777,8 @@ def _session_activity(
             if (type(elapsed) in {int, float} and 0 <= elapsed <= 600_000):
                 item["measurements"] = {"control_dispatch_elapsed_ms": elapsed}
         rpc_operations.append(item)
-        if len(rpc_operations) >= MAX_SESSION_ACTIVITY_RPC_OPERATIONS:
-            break
 
-    rpc_operations_omitted = max(0, len(rpc_events) - len(rpc_operations))
+    rpc_operations_omitted = max(0, valid_rpc_event_count - len(rpc_operations))
     failures_by_identity: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for item in rpc_operations:
         if item.get("outcome_status") != "failed":
@@ -3826,16 +3828,26 @@ def _session_activity(
         or adapter_window_overflow
     )
     invocations_omitted = max(0, len(invocation_events) - len(interactions))
+    rpc_capture_limit_reached = (
+        snapshot.get("rpc_read_activity_limit_reached") is True
+    )
     partial = (
         event_window_truncated or event_before_sequence is not None
-        or invocations_omitted > 0
+        or invocations_omitted > 0 or rpc_operations_omitted > 0
+        or rpc_capture_limit_reached
     )
     if partial and not invocation_events:
-        status = "partial-no-invocations-in-selected-window"
+        status = (
+            "partial-rpc-only-in-selected-window"
+            if rpc_operations else "partial-no-invocations-in-selected-window"
+        )
     elif partial:
         status = "partial"
     elif not invocation_events:
-        status = "no-capability-invocations-in-session-history"
+        status = (
+            "rpc-only-in-session-history"
+            if rpc_operations else "no-capability-invocations-in-session-history"
+        )
     else:
         status = "ready"
     window_references = [

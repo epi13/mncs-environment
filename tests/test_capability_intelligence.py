@@ -1610,9 +1610,11 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     activity = result["session_activity"]
 
     assert activity["context"]["work_intent_goal"] == "inspect current pressures"
+    assert activity["status"] == "rpc-only-in-session-history"
     assert activity["source"]["rpc_operation_capture_count"] == 3
     assert activity["source"]["rpc_operation_capture_limit"] == 256
     assert activity["source"]["rpc_operation_records_invalid"] == 1
+    assert activity["source"]["rpc_operation_records_omitted"] == 0
     assert activity["source"]["rpc_operation_context_basis"] == {
         "repository_identity": "control-project-grant",
         "repository_branch_and_head": "session-selected-checkout",
@@ -1663,6 +1665,84 @@ def test_session_activity_correlates_authenticated_control_read_operations(
         "identity"
     ] == "evt_rpc_read_21"
     assert compact_activity["rpc_failure_candidates"][0]["distinct_session_count"] == 1
+
+
+def test_session_activity_marks_truncated_authenticated_rpc_only_history_partial(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_rpc_activity_truncated_observation",
+        "ses_compiler_rpc_activity_truncated",
+        "cmp_compiler_rpc_activity_truncated",
+    )
+    session, _ = _session(tmp_path, [record])
+    event_count = capability_intelligence.MAX_SESSION_ACTIVITY_RPC_OPERATIONS + 1
+    session.snapshot["rpc_read_activity_count"] = event_count
+    events = []
+    principal_id = session.snapshot["authenticated_principal_id"]
+    for sequence in range(1, event_count + 1):
+        request_digest = hashlib.sha256(
+            f"rpc-truncated-request-{sequence}".encode(),
+        ).hexdigest()
+        events.append({
+            "identity": f"evt_rpc_truncated_{sequence}",
+            "sequence": sequence,
+            "type": "environment.rpc.read_observed",
+            "producer": "mncs-control-mcp",
+            "payload": {
+                "schema_version": "mncs.environment.rpc-read-activity/1",
+                "operation": "session.inspect",
+                "outcome_status": "succeeded",
+                "exit_code": 0,
+                "failure_code": None,
+                "observation_ordinal": sequence,
+                "request_id": f"req_rpc_truncated_{sequence}",
+                "request_digest": request_digest,
+                "request_operation_digest": request_digest,
+                "request_event_digest": hashlib.sha256(
+                    f"rpc-truncated-event-{sequence}".encode(),
+                ).hexdigest()[:16],
+                "caller": {
+                    "authenticated_principal_id": principal_id,
+                    "control_grant_id": "b" * 32,
+                    "process_identity": "proc_" + "c" * 32,
+                },
+                "context": {
+                    "repository": "mncs-control-mcp",
+                    "environment_id": session.snapshot["environment_id"],
+                    "campaign_id": session.snapshot["campaign"]["identity"],
+                    "work_intent_id": session.snapshot["intent"]["identity"],
+                },
+                "measurement_availability": {
+                    "model_identity": "unavailable",
+                    "token_usage": "unavailable",
+                    "control_dispatch_elapsed_ms": "measured",
+                    "resource_consumption": "unavailable",
+                    "cache_accounting": "unavailable",
+                },
+                "measurements": {"control_dispatch_elapsed_ms": 1.0},
+            },
+        })
+    session.recent_events = lambda *, limit: {
+        "event_count": len(events), "events": events[-limit:], "truncated": False,
+    }
+
+    result = capability_intelligence.project(session)
+    activity = result["session_activity"]
+
+    assert activity["status"] == "partial-rpc-only-in-selected-window"
+    assert activity["interaction_count"] == 0
+    assert activity["rpc_operation_count"] == (
+        capability_intelligence.MAX_SESSION_ACTIVITY_RPC_OPERATIONS
+    )
+    assert activity["source"]["rpc_operation_records_omitted"] == 1
+    assert activity["source"]["rpc_operation_records_invalid"] == 0
+    assert activity["rpc_operations"][0]["event_reference"]["sequence"] == event_count
+
+    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+    compact_activity = compact["session_activity"]
+    assert compact_activity["status"] == "partial-rpc-only-in-selected-window"
+    assert compact_activity["source"]["rpc_operation_records_omitted"] == 1
 
 
 def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path) -> None:

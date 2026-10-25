@@ -177,6 +177,16 @@ the current generation's binding metadata but materialize only the selected
 verified event payloads. Event page reads are on demand and do not copy the
 session transcript.
 
+Session activity keeps authenticated Control read observations distinct from
+Environment-bound capability invocations. If valid Control reads are present
+without Environment invocations, status is `rpc-only-in-session-history`; a
+bounded or incomplete read page uses `partial-rpc-only-in-selected-window`.
+`rpc_operation_records_omitted` counts authenticated valid records beyond the
+projection limit, while invalid events are counted separately and do not imply
+activity or omitted records. A reached capture limit also marks the activity
+view partial. These statuses describe the available Environment evidence; they
+do not claim that no other agent or tool activity occurred.
+
 The selected page can also expose bounded `authority_denials`: action,
 observed repository when resolvable, normalized reason class, and the exact
 source event reference. The projection omits raw target paths and free-form
