@@ -1,0 +1,100 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_agent_observation_delivery_pressure_20261025",
+  "captured_at": "2026-10-25T11:38:38Z",
+  "measurement_basis": "baseline source inspection and bounded Store-backed session and projection reads",
+  "observation": {
+    "kind": "agent-facing-observation-delivery-gap",
+    "source_interface": "MNCS Environment brief and environmental-capability projection",
+    "request": {
+      "baseline_commit": "3c011b442dd7e343941bb0bed322e6a1d114f60f",
+      "selected_session_id": "ses_71e494f35c9d83c3",
+      "large_projection_page": {
+        "evidence_limit": 8,
+        "session_event_limit": 256
+      }
+    },
+    "outcome": {
+      "baseline_brief_mapping": "environment.rpc.read_observed was absent from the baseline EVENT_CLASSES mapping.",
+      "authenticated_read_event_count": 14,
+      "large_projection_read": {
+        "output_bytes": 57570,
+        "projection_status": "partial",
+        "cause": "not-established"
+      },
+      "interpretation_limit": "The bounded read establishes a delivery limitation in this selected campaign context. It does not establish cross-session recurrence, agent impact, or that response size was the only cause of the partial projection."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_continuation_20261025",
+    "campaign_objective": "Improve MNCS's ability to understand and enhance how well its language, compiler, tools, and environmental services enable real autonomous development. Connect authentic agent activity and implementation evidence to traceable, queryable pressure hypotheses and independently verified improvements.",
+    "session_id": "ses_71e494f35c9d83c3",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_continuation_20261025",
+    "session_id": "ses_71e494f35c9d83c3",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_8ae70703cbde4e1d",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_agent_observation_delivery_20261025",
+    "title": "Agent-facing Environment evidence is not consistently surfaced within useful bounded views",
+    "category": "capability-accountability-and-discoverability",
+    "subsystem": "MNCS Environment agent brief and environmental-capability projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Surface authenticated Environment read outcomes through the existing brief with event references and accurately scoped measurements, and choose default projection pages that remain inspectable while preserving explicit larger windows and continuation cursors.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "cross-session recurrence or impact across different agents and models",
+      "whether agents discover and act on the surfaced evidence",
+      "whether the partial projection result was caused only by response size"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-baseline-source",
+      "identity": "ev_environment_agent_observation_delivery_baseline_brief_20261025",
+      "repository": "mncs-environment",
+      "commit": "3c011b442dd7e343941bb0bed322e6a1d114f60f",
+      "path": "mncs_env/briefing.py",
+      "sha256": "1012dc0e83f708001fbe4edfa74e6b2481630ef379fc07c3d6195f98068199a0"
+    },
+    {
+      "kind": "committed-baseline-source",
+      "identity": "ev_environment_agent_observation_delivery_baseline_cli_20261025",
+      "repository": "mncs-environment",
+      "commit": "3c011b442dd7e343941bb0bed322e6a1d114f60f",
+      "path": "mncs_env/cli.py",
+      "sha256": "00d303e712caa22927da6ce25c77224f88b2414a0433aae410534e3410c712e8"
+    },
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "session_id": "ses_71e494f35c9d83c3",
+      "event_identities": [
+        "evt_a361403389bfe8c5",
+        "evt_44e758ac7a94b222",
+        "evt_6b635f850ded512f",
+        "evt_3c4a6e4dde0916ed",
+        "evt_c2b08494eb2bb502",
+        "evt_10bd1646bb5462da",
+        "evt_47dee6a3df51b5fc",
+        "evt_53b6e8825b08e51a",
+        "evt_28a868bce0ce4c0f",
+        "evt_e9bc14d174457497",
+        "evt_7c57f5e2724251f6",
+        "evt_7a6f4fe75001c10a",
+        "evt_bea115c1c8146641",
+        "evt_d035cc1d837c41b9"
+      ]
+    }
+  ],
+  "not_measured": [
+    "recurrence outside the selected session",
+    "whether the observed interface gaps constrained a development objective",
+    "downstream use or effectiveness across subsequent independent sessions"
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_agent_observation_delivery_improvement_20261025",
+  "captured_at": "2026-10-25T11:38:38Z",
+  "measurement_basis": "committed Environment interface improvements linked to focused verification and a subsequent selected-session readback",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment brief and environmental-capability projection",
+    "request": {
+      "implementation_commits": [
+        "da90b1a2a9eafb524b8254751b0723376c369df4",
+        "db2e061ecb3cd4548dfc59ee8a811b341615f6e1"
+      ],
+      "verification_observation_identity": "ev_environment_agent_observation_delivery_verification_20261025",
+      "subsequent_observation_identity": "ev_environment_agent_observation_delivery_followup_20261025"
+    },
+    "outcome": {
+      "implementation_change": "The existing update capsule classifies authenticated Environment read events, includes operation, outcome, event reference, and directly measured Control dispatch timing with queue-wait scope, and classifies failed reads as diagnostics. The existing environmental-capability CLI now defaults to two evidence references and four session events while preserving explicit larger pages.",
+      "delivery": {
+        "repository": "mncs-environment",
+        "branch": "main",
+        "commit": "db2e061ecb3cd4548dfc59ee8a811b341615f6e1",
+        "remote_ref": "origin/main",
+        "status": "pushed-and-verified"
+      },
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The post-deployment readback verifies selected-session exposure and a ready default projection with visible pagination limits. It does not demonstrate improved discovery, cross-agent usability, or reduced repeated work."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_continuation_20261025",
+    "campaign_objective": "Improve MNCS's ability to understand and enhance how well its language, compiler, tools, and environmental services enable real autonomous development. Connect authentic agent activity and implementation evidence to traceable, queryable pressure hypotheses and independently verified improvements.",
+    "session_id": "ses_71e494f35c9d83c3",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_continuation_20261025",
+    "session_id": "ses_71e494f35c9d83c3",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_8ae70703cbde4e1d",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "improvement_relation": {
+    "identity": "im_environment_agent_observation_delivery_20261025",
+    "addresses_hypothesis_identity": "ph_environment_agent_observation_delivery_20261025",
+    "implementation_reference": {
+      "identity": "ev_environment_agent_observation_delivery_projection_impl_20261025",
+      "repository": "mncs-environment",
+      "commit": "db2e061ecb3cd4548dfc59ee8a811b341615f6e1",
+      "path": "mncs_env/cli.py",
+      "sha256": "cbe432b0eb01e2123028315db65424fdf3d41e5fc606373896f230621c2b09ab"
+    },
+    "verification_observation_identity": "ev_environment_agent_observation_delivery_verification_20261025",
+    "subsequent_observation_identity": "ev_environment_agent_observation_delivery_followup_20261025",
+    "basis": "The committed changes and focused checks are independently recorded. A later read of the real selected session confirms Environment RPC events appear in the existing brief and the default environmental-capability projection returns ready with its bounded evidence and event cursors visible.",
+    "not_measured": [
+      "effectiveness across independent sessions or agents",
+      "cross-session recurrence or resolution of the observed interface pressure",
+      "whether all relevant brief items remain visible in longer event histories"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_agent_observation_delivery_brief_impl_20261025",
+      "repository": "mncs-environment",
+      "commit": "db2e061ecb3cd4548dfc59ee8a811b341615f6e1",
+      "path": "mncs_env/briefing.py",
+      "sha256": "09178bc862ef20f8ca094f0631aa8301efedad572e1d0e5938ece328b61b13cc"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_agent_observation_delivery_projection_impl_20261025",
+      "repository": "mncs-environment",
+      "commit": "db2e061ecb3cd4548dfc59ee8a811b341615f6e1",
+      "path": "mncs_env/cli.py",
+      "sha256": "cbe432b0eb01e2123028315db65424fdf3d41e5fc606373896f230621c2b09ab"
+    },
+    {
+      "kind": "committed-verification-tests",
+      "identity": "ev_environment_agent_observation_delivery_brief_tests_20261025",
+      "repository": "mncs-environment",
+      "commit": "db2e061ecb3cd4548dfc59ee8a811b341615f6e1",
+      "path": "tests/test_briefing.py",
+      "sha256": "830b16456553fa33cfc092b9d855896af9e7727867ab32676ea4d08a8067a891"
+    },
+    {
+      "kind": "committed-verification-tests",
+      "identity": "ev_environment_agent_observation_delivery_projection_tests_20261025",
+      "repository": "mncs-environment",
+      "commit": "db2e061ecb3cd4548dfc59ee8a811b341615f6e1",
+      "path": "tests/test_capability_projection_cli.py",
+      "sha256": "17e7be0c6ac89356a8049cdc440fd435851c5f6ac401fe1ae12d7897cae72a71"
+    }
+  ],
+  "not_measured": [
+    "whether subsequent agents discover and use the improved briefing and projection defaults",
+    "whether the changes reduce repeated context reconstruction or improve legitimate development outcomes"
+  ]
+}

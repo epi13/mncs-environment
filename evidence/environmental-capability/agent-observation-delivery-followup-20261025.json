@@ -1,0 +1,100 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_agent_observation_delivery_followup_20261025",
+  "captured_at": "2026-10-25T11:38:38Z",
+  "measurement_basis": "post-deployment read-only brief and environmental-capability projection over the selected Store-backed session",
+  "observation": {
+    "kind": "environmental-improvement-follow-up",
+    "source_interface": "MNCS Environment brief and environmental-capability projection",
+    "request": {
+      "implementation_commit": "db2e061ecb3cd4548dfc59ee8a811b341615f6e1",
+      "brief_read": {
+        "session_id": "ses_71e494f35c9d83c3",
+        "cursor_index": 0,
+        "session_event_count": 38
+      },
+      "projection_read": {
+        "command": "projections --interpret environmental-capability",
+        "campaign_state_checkpoint_id": "chk_b015657ce6024ce8"
+      }
+    },
+    "outcome": {
+      "runtime_exposure_status": "verified-for-selected-session",
+      "brief": {
+        "rpc_read_events_in_store": 14,
+        "rpc_read_items_in_bounded_capsule": 12,
+        "supporting_event_sequences": [
+          3,
+          6,
+          11,
+          14,
+          17,
+          18,
+          19,
+          20,
+          23,
+          24,
+          25,
+          28
+        ],
+        "capsule_item_limit": 30,
+        "truncated": true
+      },
+      "default_projection": {
+        "status": "ready",
+        "output_bytes": 27351,
+        "evidence_count": 31,
+        "evidence_page_offset": 29,
+        "evidence_page_limit": 2,
+        "session_event_limit": 4,
+        "events_considered": 4,
+        "event_window_truncated": true,
+        "observation_records_verified": 1
+      },
+      "analysis": "The existing brief now surfaces authenticated Environment read operations with event references and measured Control dispatch timing. Its bounded 30-item capsule contains 12 of the 14 selected-session RPC read events and reports truncation. The default capability projection returns ready at the measured size while explicitly limiting its evidence and event windows. Older records remain available through the existing cursors. This verifies exposure and bounded access for the selected session, not cross-agent discovery or effectiveness."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_continuation_20261025",
+    "campaign_objective": "Improve MNCS's ability to understand and enhance how well its language, compiler, tools, and environmental services enable real autonomous development. Connect authentic agent activity and implementation evidence to traceable, queryable pressure hypotheses and independently verified improvements.",
+    "session_id": "ses_71e494f35c9d83c3",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_continuation_20261025",
+    "session_id": "ses_71e494f35c9d83c3",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_8ae70703cbde4e1d",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "session_id": "ses_71e494f35c9d83c3",
+      "event_identities": [
+        "evt_a361403389bfe8c5",
+        "evt_44e758ac7a94b222",
+        "evt_6b635f850ded512f",
+        "evt_3c4a6e4dde0916ed",
+        "evt_c2b08494eb2bb502",
+        "evt_10bd1646bb5462da",
+        "evt_47dee6a3df51b5fc",
+        "evt_53b6e8825b08e51a",
+        "evt_28a868bce0ce4c0f",
+        "evt_e9bc14d174457497",
+        "evt_7c57f5e2724251f6",
+        "evt_7a6f4fe75001c10a",
+        "evt_bea115c1c8146641",
+        "evt_d035cc1d837c41b9"
+      ]
+    }
+  ],
+  "not_measured": [
+    "whether agents act on these projections or discover the new presentation independently",
+    "whether the capsule item limit masks other relevant event classes in longer sessions",
+    "whether the projection's partial result on larger pages has the same cause across campaigns",
+    "whether surfaced measurement reduces repeated investigation or improves completion of development objectives"
+  ]
+}
