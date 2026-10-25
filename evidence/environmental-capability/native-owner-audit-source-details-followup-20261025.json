@@ -1,0 +1,108 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_owner_audit_source_details_followup_20261025",
+  "captured_at": "2026-10-25T16:24:10Z",
+  "measurement_basis": "live bounded environmental-capability projection reads through the established MNCS CLI",
+  "observation": {
+    "kind": "environmental-capability-projection-followup-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "queries": [
+        {
+          "evidence_offset": 0,
+          "evidence_limit": 1,
+          "projection_status": "ready",
+          "observation_identity": "ev_environment_native_userland_owner_audit_correlation_20261025"
+        },
+        {
+          "evidence_offset": 27,
+          "evidence_limit": 1,
+          "projection_status": "ready",
+          "observation_identity": "ev_environment_native_owner_audit_source_details_pressure_20261025"
+        },
+        {
+          "evidence_offset": 28,
+          "evidence_limit": 1,
+          "projection_status": "ready",
+          "observation_identity": "ev_environment_native_owner_audit_source_details_improvement_20261025"
+        },
+        {
+          "evidence_offset": 29,
+          "evidence_limit": 1,
+          "projection_status": "ready",
+          "observation_identity": "ev_environment_native_owner_audit_source_details_verification_20261025"
+        }
+      ],
+      "combined_three_record_page": {
+        "evidence_offset": 27,
+        "evidence_limit": 3,
+        "projection_status": "partial"
+      }
+    },
+    "outcome": {
+      "owner_audit_projection": {
+        "parsed_repository_count": 2,
+        "repositories": [
+          "mncs-actions",
+          "mncs-test"
+        ],
+        "source_pointer_count": 4,
+        "source_pointer_content_integrity_verified_count": 4,
+        "source_detail_status": "content-integrity-verified-owner-declarations-available",
+        "implementation_ownership_status": "owner-declared; not independently verified",
+        "systemwide_native_adoption_ratio": "not-measured"
+      },
+      "evidence_relationship": {
+        "pressure_identity": "ph_environment_native_owner_audit_source_details_20261025",
+        "improvement_relation_identity": "ir_environment_native_owner_audit_source_details_20261025",
+        "verification_observation_identity": "ev_environment_native_owner_audit_source_details_verification_20261025",
+        "followup_is_same_campaign_session": true
+      },
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "Single-record pages made the owner audit, pressure, improvement relation, and verification record individually queryable with ready status. The three-record page returned partial and is recorded as such. This readback demonstrates use by this campaign session only; it does not establish discovery across agents, independent implementation ownership, host-code displacement, or later pressure resolution."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_native_owner_audit_source_details_pressure_20261025",
+      "repository": "mncs-environment",
+      "commit": "cd12b751046e609c757b7e4b379470ad640aa45a",
+      "path": "evidence/environmental-capability/native-owner-audit-source-details-pressure-20261025.json",
+      "sha256": "90909ed967b27cfbdda5b219d8daaf3a28f8687734ab555239077a84ceb35641"
+    },
+    {
+      "identity": "ev_environment_native_owner_audit_source_details_improvement_20261025",
+      "repository": "mncs-environment",
+      "commit": "330e29ff68019f4fd52cb22c9917f77eb9e44d96",
+      "path": "evidence/environmental-capability/native-owner-audit-source-details-improvement-20261025.json",
+      "sha256": "a8f30d8adcabd1dd9929a6c4e66f1ec42e3478043433d5788b94a88d8665b0fb"
+    },
+    {
+      "identity": "ev_environment_native_owner_audit_source_details_verification_20261025",
+      "repository": "mncs-environment",
+      "commit": "330e29ff68019f4fd52cb22c9917f77eb9e44d96",
+      "path": "evidence/environmental-capability/native-owner-audit-source-details-verification-20261025.json",
+      "sha256": "25a31850e14125743460d258af6f7607af4d0b3f9ebf71f43daac80c4e19b68c"
+    }
+  ],
+  "not_measured": [
+    "whether an independent agent discovers and uses the projected audit details",
+    "whether the remaining host responsibilities are migrated without regressions",
+    "whether the candidate improvements change development outcomes",
+    "systemwide native adoption ratio or denominator"
+  ]
+}
