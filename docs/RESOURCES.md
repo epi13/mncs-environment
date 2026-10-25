@@ -21,6 +21,18 @@ receipt or application-level producer attestation. This is a process sample,
 not a service identity, leak verdict, RSS aggregate, or ownership grant.
 Doctor/provider policies retain health interpretation.
 
+When `/proc/<pid>/cgroup` identifies one unified cgroup v2 membership, each
+process row also contains `cgroup_resource_limits` with cgroup memory current
+and maximum, CPU quota and period, and PID current and maximum. `quota_cores`
+is derived as `quota_us / period_us` and carries an explicit derivation basis.
+Kernel `max` values are represented as `unbounded`; unavailable files and
+partial sets remain explicit. Cgroup v1 membership is currently unavailable.
+Each cgroup value is bounded to 4,096 bytes, and resolved paths must remain
+under the configured cgroup root. The memory and PID current values describe
+the entire cgroup, not only the sampled process. The record therefore says
+`session_process_mapping: not-asserted`; it does not attribute a cgroup's
+resource use to an Environment session or agent.
+
 The command reads procfs directly without opening Store, scanning repositories,
 spawning tools, retaining output files, starting services, or modifying target
 processes. It bounds each descriptor scan at 8,192 and each watch-entry count
