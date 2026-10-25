@@ -1,0 +1,112 @@
+{
+  "captured_at": "2026-10-25T07:15:07Z",
+  "identity": "ev_environment_compiler_capability_contract_projection_verification_20261025",
+  "measurement_basis": "focused-capability-verification-and-authenticated-campaign-state-readback",
+  "not_measured": [
+    "systemwide native adoption ratio or denominator",
+    "production host dependency ownership or native migration readiness",
+    "Environment delivery of the Compiler artifact capability",
+    "cross-agent discoverability or long-term effectiveness after independent sessions",
+    "complete campaign history beyond the selected evidence page"
+  ],
+  "observation": {
+    "kind": "native-capability-contract-projection-verification",
+    "outcome": {
+      "application_entry": "mncs.test.digest::digest_app",
+      "canonical_vm_case_success_count": 3,
+      "capability_contract": {
+        "canonical_execution_relationship": "declared-effects-matched-across-proof-cases",
+        "effect_contract": [
+          {
+            "capability": "test_artifact",
+            "kind": "structured_read",
+            "target": "digest_app"
+          },
+          {
+            "capability": "test_artifact",
+            "kind": "structured_write",
+            "target": "digest_app"
+          }
+        ],
+        "environment_delivery": "not-measured-by-this-compiler-proof",
+        "proof_relationship": "compiler-artifact-admission-matches",
+        "required_identity": "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact",
+        "runtime_dispatch_alias": "test_artifact"
+      },
+      "host_test_adapter_classification": "test-only-provider-adapter",
+      "implementation_sample_count": 1,
+      "native_migration_opportunity": "not-established",
+      "native_module_count": 4,
+      "projection_status": "partial",
+      "projection_status_basis": "The read selected campaign evidence offset 20 of 32; other history and response compaction remain bounded.",
+      "source_integrity_verified_module_count": 4,
+      "systemwide_native_adoption_ratio": "not-measured",
+      "verification_commands": {
+        "capability_intelligence_suite": "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "capability_intelligence_suite_result": "90 passed",
+        "git_diff_check": "passed",
+        "py_compile": "passed for mncs_env/capability_intelligence.py and tests/test_capability_intelligence.py",
+        "ruff": "passed for mncs_env/capability_intelligence.py and tests/test_capability_intelligence.py"
+      }
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_37ae2fb4cc4b6ac8",
+      "evidence_limit": 20,
+      "evidence_offset": 20,
+      "source_campaign_state_event": {
+        "identity": "evt_5bad85bf6aa83064",
+        "sequence": 208,
+        "type": "environment.rpc.read_observed"
+      }
+    },
+    "source_interface": "MNCS Environment campaign_state environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_37ae2fb4cc4b6ac8",
+    "session_id": "ses_c6b0d153689d7388",
+    "task_identity": "task_environment_capability_intelligence_followup_20261025"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "8e53ff753c6656456e7e4984600f29bc08905ddb",
+      "identity": "ev_environment_compiler_capability_contract_implementation_20261025",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "8502f3e1e24ee9d246a9b65b0ca9a73db044203386267ab9af8eec3128772585"
+    },
+    {
+      "commit": "8e53ff753c6656456e7e4984600f29bc08905ddb",
+      "identity": "ev_environment_compiler_capability_contract_tests_20261025",
+      "kind": "committed-verification-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "10875477654bf38c5c61ce99d8fe1402e7829096da72e9628d78e1b0c6f2df8f"
+    },
+    {
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "identity": "ev_compiler_native_application_proof_digest_app_20261018",
+      "kind": "compiler-native-application-proof",
+      "path": "evidence/native-app-readiness-test-digest-app.json",
+      "repository": "mncs-compiler",
+      "sha256": "f0b2117709a50be49a636aa6fe0505eff42bff78477c28a602664c75edf89140"
+    },
+    {
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "event_identities": ["evt_5bad85bf6aa83064"],
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "session_id": "ses_c6b0d153689d7388"
+    }
+  ]
+}

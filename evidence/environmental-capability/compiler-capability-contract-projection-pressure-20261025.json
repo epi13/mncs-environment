@@ -1,0 +1,78 @@
+{
+  "captured_at": "2026-10-25T07:15:07Z",
+  "identity": "ev_environment_compiler_capability_contract_projection_pressure_20261025",
+  "measurement_basis": "baseline-projection-source-review-and-authenticated-compiler-proof-readback",
+  "not_measured": [
+    "whether an agent attempted or failed to discover this contract before the projection change",
+    "recurrence across independent sessions or Compiler applications",
+    "Environment-side delivery or provider availability for the Compiler capability",
+    "production host dependency ownership or native migration readiness",
+    "systemwide native adoption ratio and denominator"
+  ],
+  "observation": {
+    "kind": "native-capability-contract-projection-coverage",
+    "outcome": {
+      "agent_impact": "not-established",
+      "baseline_projection_support": "The baseline ownership sample exposed the native module closure and test-adapter limitation but omitted the required capability identity, runtime alias, and effect contract present in the Compiler proof.",
+      "contract_semantics": "The proof records the full required identity in capability admission; effect-contract capability fields use the runtime alias.",
+      "coverage_scope": "one authenticated Compiler native-application proof",
+      "production_host_dependency_status": "not-established"
+    },
+    "request": {
+      "baseline_environment_commit": "84b16dbfb6037c4195648cf4a68df0e4a0bb36a0",
+      "compiler_proof_identity": "ev_compiler_native_application_proof_digest_app_20261018"
+    },
+    "source_interface": "MNCS Environment capability-intelligence projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Project the Compiler proof's required identity, runtime alias, and verified effects together, preserving the distinction between artifact admission and Environment delivery.",
+    "basis": "The source-backed Compiler proof contained a verified capability boundary that the baseline Environment ownership sample did not expose. This establishes a projection coverage gap, not an agent failure or migration opportunity.",
+    "category": "capability-accountability-and-discoverability",
+    "identity": "ph_environment_compiler_capability_contract_exposure_20261025",
+    "not_measured": [
+      "agent discovery or attempted use before the projection change",
+      "cross-session recurrence",
+      "Environment service availability for this Compiler artifact capability",
+      "production host implementation ownership or migration readiness",
+      "systemwide native adoption"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "not-established",
+    "subsystem": "MNCS Environment native implementation accountability projection",
+    "title": "Compiler-proven capability boundary is omitted from the native ownership sample"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_37ae2fb4cc4b6ac8",
+    "session_id": "ses_c6b0d153689d7388",
+    "task_identity": "task_environment_capability_intelligence_followup_20261025",
+    "work_intent_correlation": "linked through the authenticated campaign task; the session's separate continuity-probe Work Intent is not treated as this development objective"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "84b16dbfb6037c4195648cf4a68df0e4a0bb36a0",
+      "identity": "ev_environment_native_ownership_projection_baseline_20261025",
+      "kind": "baseline-environmental-projection-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "208b18876885c1ae73f68481c6f12dd97865d8aab3f3e53439b8db26a6b42c3a"
+    },
+    {
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "identity": "ev_compiler_native_application_proof_digest_app_20261018",
+      "kind": "compiler-native-application-proof",
+      "path": "evidence/native-app-readiness-test-digest-app.json",
+      "repository": "mncs-compiler",
+      "sha256": "f0b2117709a50be49a636aa6fe0505eff42bff78477c28a602664c75edf89140"
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "captured_at": "2026-10-25T07:15:07Z",
+  "identity": "ev_environment_compiler_capability_contract_projection_improvement_20261025",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_compiler_capability_contract_exposure_20261025",
+    "basis": "The Environment projection now validates and exposes the Compiler proof's full required capability identity separately from the runtime alias and effect aliases, preserves that contract through compact responses, and marks Environment delivery unmeasured. Focused tests reject a mismatched effect alias; an authenticated campaign_state readback accepted the real proof and verified all four module sources. Long-term discovery and migration effectiveness remain unmeasured.",
+    "effectiveness_assessment": "not-assessed",
+    "identity": "im_environment_compiler_capability_contract_exposure_20261025",
+    "implementation_reference": {
+      "commit": "8e53ff753c6656456e7e4984600f29bc08905ddb",
+      "identity": "ev_environment_compiler_capability_contract_implementation_20261025",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "8502f3e1e24ee9d246a9b65b0ca9a73db044203386267ab9af8eec3128772585"
+    },
+    "not_measured": [
+      "whether agents discover or use the exposed capability more reliably across models",
+      "Environment-side service availability for the Compiler artifact capability",
+      "production host dependency ownership or migration readiness",
+      "systemwide native adoption or its denominator",
+      "long-term recurrence after independent sessions"
+    ],
+    "subsequent_observation_identity": null,
+    "verification_observation_identity": "ev_environment_compiler_capability_contract_projection_verification_20261025"
+  },
+  "measurement_basis": "committed-projection-change-linked-to-independent-tests-and-authenticated-source-backed-readback",
+  "not_measured": [
+    "systemwide native adoption ratio and denominator",
+    "production host migration opportunity",
+    "cross-agent discoverability and long-term effectiveness"
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "analysis_limit": "This verifies one Compiler application contract in one campaign evidence page. It does not establish production host migration readiness, Environment service availability, systemwide adoption, or long-term effectiveness.",
+      "implementation_change": "The existing implementation-accountability projection now shows the exact required Compiler capability identity, runtime dispatch alias, and effect aliases next to its source-verified native module closure.",
+      "verified_capability": "The authenticated campaign_state projection accepted the real Compiler proof, surfaced the separated identity and effect aliases, and verified 4 of 4 native module source pointers."
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_compiler_capability_contract_exposure_20261025",
+      "implementation_commit": "8e53ff753c6656456e7e4984600f29bc08905ddb",
+      "subsequent_observation_identity": null,
+      "verification_observation_identity": "ev_environment_compiler_capability_contract_projection_verification_20261025"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_37ae2fb4cc4b6ac8",
+    "session_id": "ses_c6b0d153689d7388",
+    "task_identity": "task_environment_capability_intelligence_followup_20261025"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "8e53ff753c6656456e7e4984600f29bc08905ddb",
+      "identity": "ev_environment_compiler_capability_contract_tests_20261025",
+      "kind": "committed-verification-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "10875477654bf38c5c61ce99d8fe1402e7829096da72e9628d78e1b0c6f2df8f"
+    },
+    {
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "identity": "ev_compiler_native_application_proof_digest_app_20261018",
+      "kind": "compiler-native-application-proof",
+      "path": "evidence/native-app-readiness-test-digest-app.json",
+      "repository": "mncs-compiler",
+      "sha256": "f0b2117709a50be49a636aa6fe0505eff42bff78477c28a602664c75edf89140"
+    },
+    {
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "event_identities": ["evt_5bad85bf6aa83064"],
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "session_id": "ses_c6b0d153689d7388"
+    }
+  ]
+}
