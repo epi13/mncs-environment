@@ -124,6 +124,12 @@ COMPILER_NATIVE_APPLICATION_MODULES = (
 IMPLEMENTATION_ACCOUNTABILITY_SCHEMA = (
     "mncs.environment.implementation-accountability/1"
 )
+NATIVE_USERLAND_AUDIT_SCHEMA = "mncs.native-userland-audit/1"
+NATIVE_USERLAND_AUDIT_SOURCE_REPOSITORIES = frozenset({
+    "mncs-actions", "mncs-test",
+})
+MAX_NATIVE_USERLAND_AUDIT_RECORDS = 4
+MAX_NATIVE_USERLAND_AUDIT_ITEMS = 8
 MAX_EVIDENCE_REFS = 32
 MAX_EVIDENCE_HISTORY_PAGES = 4
 MAX_OBSERVATIONS = 16
@@ -737,7 +743,10 @@ def _compact_owner_audit_evidence(value: Any) -> dict[str, Any] | None:
             )
             if isinstance(audit.get(key), str)
         }
-        for key in ("source_declared_audit_count", "projected_audit_record_count"):
+        for key in (
+            "source_declared_audit_count", "projected_audit_record_count",
+            "source_audit_details_content_integrity_verified_count",
+        ):
             if type(audit.get(key)) is int and audit[key] >= 0:
                 compact_audit[key] = audit[key]
         adoption = audit.get("systemwide_native_adoption_ratio")
@@ -808,6 +817,105 @@ def _compact_owner_audit_evidence(value: Any) -> dict[str, Any] | None:
             for source in sources[:8]
             if isinstance(source, dict)
         ]
+        raw_source_audits = audit.get("source_audit_details")
+        raw_source_audits = (
+            raw_source_audits if isinstance(raw_source_audits, list) else []
+        )
+        source_audits = []
+        for source_audit in raw_source_audits[:MAX_NATIVE_USERLAND_AUDIT_RECORDS]:
+            if not isinstance(source_audit, dict):
+                continue
+            compact_source_audit = {
+                key: _short_text(source_audit.get(key), 192)
+                for key in (
+                    "identity", "repository", "source_record_status",
+                    "owner_declared_status", "next_native_slice",
+                    "native_entrypoint", "canonical_entrypoint",
+                )
+                if isinstance(source_audit.get(key), str)
+            }
+            if type(source_audit.get("migration_order")) is int:
+                compact_source_audit["migration_order"] = source_audit[
+                    "migration_order"
+                ]
+            for key in ("rust_boundary_only",):
+                raw_values = source_audit.get(key)
+                if not isinstance(raw_values, list):
+                    continue
+                compact_source_audit[key] = [
+                    _short_text(item, 160)
+                    for item in raw_values[:MAX_NATIVE_USERLAND_AUDIT_ITEMS]
+                    if isinstance(item, str)
+                ]
+                compact_source_audit[f"{key}_truncated"] = (
+                    len(raw_values) > MAX_NATIVE_USERLAND_AUDIT_ITEMS
+                )
+            for key in ("remaining_host_responsibilities", "responsibilities"):
+                raw_items = source_audit.get(key)
+                if not isinstance(raw_items, list):
+                    continue
+                compact_items = []
+                for item in raw_items[:MAX_NATIVE_USERLAND_AUDIT_ITEMS]:
+                    if not isinstance(item, dict):
+                        continue
+                    compact_items.append({
+                        field: _short_text(item.get(field), 192)
+                        for field in (
+                            "area", "classification", "eliminating_capability",
+                            "canonical_owner",
+                        )
+                        if isinstance(item.get(field), str)
+                    })
+                compact_source_audit[key] = compact_items
+                compact_source_audit[f"{key}_truncated"] = (
+                    len(raw_items) > MAX_NATIVE_USERLAND_AUDIT_ITEMS
+                )
+            raw_paths = source_audit.get("remaining_host_paths")
+            if isinstance(raw_paths, list):
+                compact_source_audit["remaining_host_paths"] = [
+                    {
+                        field: _short_text(item.get(field), 192)
+                        for field in ("path", "role")
+                        if isinstance(item.get(field), str)
+                    }
+                    for item in raw_paths[:MAX_NATIVE_USERLAND_AUDIT_ITEMS]
+                    if isinstance(item, dict)
+                ]
+                compact_source_audit["remaining_host_paths_truncated"] = (
+                    len(raw_paths) > MAX_NATIVE_USERLAND_AUDIT_ITEMS
+                )
+            verification = source_audit.get("verification_plan_ingestion")
+            if isinstance(verification, dict):
+                compact_source_audit["verification_plan_ingestion"] = {
+                    key: verification[key]
+                    for key in ("shell_projection", "jq_required")
+                    if type(verification.get(key)) is bool
+                } | {
+                    key: _short_text(verification.get(key), 256)
+                    for key in (
+                        "status", "entrypoint", "selection_authority",
+                        "remaining_blocker",
+                    )
+                    if isinstance(verification.get(key), str)
+                }
+            projection = source_audit.get("native_semantic_projection")
+            if isinstance(projection, dict):
+                compact_source_audit["native_semantic_projection"] = {
+                    key: _short_text(projection.get(key), 192)
+                    for key in ("test", "suite", "obligation_selection")
+                    if isinstance(projection.get(key), str)
+                }
+            if compact_source_audit:
+                source_audits.append(compact_source_audit)
+        if source_audits:
+            compact_audit["source_audit_details"] = source_audits
+            compact_audit["source_audit_details_truncated"] = (
+                len(raw_source_audits) > len(source_audits)
+            )
+        if isinstance(audit.get("source_audit_details_status"), str):
+            compact_audit["source_audit_details_status"] = _short_text(
+                audit["source_audit_details_status"], 96,
+            )
         reference = _validate_reference(audit.get("evidence_reference"))
         if reference is not None:
             compact_audit["evidence_reference"] = reference
@@ -3893,6 +4001,7 @@ def _verify_source_pointer(
     *, deadline: float, cache: dict[tuple[str, str, str, str], str],
     attempted: set[tuple[str, str, str, str]],
     workspace_checkouts: dict[str, Path | None],
+    source_payloads: dict[tuple[str, str, str, str], bytes] | None = None,
 ) -> None:
     """Verify accessible source blobs within the projection's shared read budget."""
     pointer = _validate_source_pointer(source)
@@ -3906,9 +4015,17 @@ def _verify_source_pointer(
         return
     matching_reference = next((reference for reference in references
                                if _source_pointer_key(reference) == key), None)
-    if matching_reference is not None and matching_reference.get("verification") == "verified":
+    wants_source_payload = (
+        source_payloads is not None
+        and key not in source_payloads
+        and len(source_payloads) < MAX_NATIVE_USERLAND_AUDIT_RECORDS
+        and _is_native_userland_audit_source_pointer(pointer)
+    )
+    if (matching_reference is not None
+            and matching_reference.get("verification") == "verified"):
         cache[key] = "record-integrity-verified-in-projection"
-        return
+        if not wants_source_payload:
+            return
     if len(attempted) >= MAX_SOURCE_POINTER_VERIFICATIONS:
         cache[key] = "source-verification-limit-exhausted"
         return
@@ -3941,8 +4058,12 @@ def _verify_source_pointer(
         cache[key] = "sha256-mismatch"
     elif verification_basis == "workspace-read-only":
         cache[key] = "workspace-read-only-content-integrity-verified"
+        if wants_source_payload and source_payloads is not None:
+            source_payloads[key] = raw
     else:
         cache[key] = "content-integrity-verified"
+        if wants_source_payload and source_payloads is not None:
+            source_payloads[key] = raw
 
 
 def _source_integrity_status(source: Any, cache: dict[tuple[str, str, str, str], str]) -> str:
@@ -3963,10 +4084,154 @@ def _source_integrity_status(source: Any, cache: dict[tuple[str, str, str, str],
     return cache.get(_source_pointer_key(pointer), "not-checked")
 
 
+def _is_native_userland_audit_source_pointer(pointer: dict[str, str]) -> bool:
+    repository = pointer.get("repository")
+    if repository not in NATIVE_USERLAND_AUDIT_SOURCE_REPOSITORIES:
+        return False
+    identity_prefix = "audit_" + repository.replace("-", "_") + "_native_userland_"
+    return (
+        pointer.get("identity", "").startswith(identity_prefix)
+        and pointer.get("path") == "native-userland-audit.json"
+        and isinstance(pointer.get("sha256"), str)
+    )
+
+
+def _bounded_source_strings(value: Any) -> tuple[list[str], bool]:
+    if not isinstance(value, list):
+        return [], False
+    return (
+        [
+            _short_text(item, 192)
+            for item in value[:MAX_NATIVE_USERLAND_AUDIT_ITEMS]
+            if isinstance(item, str)
+        ],
+        len(value) > MAX_NATIVE_USERLAND_AUDIT_ITEMS,
+    )
+
+
+def _bounded_native_userland_responsibilities(value: Any) -> tuple[list[dict[str, str]], bool]:
+    if not isinstance(value, list):
+        return [], False
+    records: list[dict[str, str]] = []
+    for item in value[:MAX_NATIVE_USERLAND_AUDIT_ITEMS]:
+        if not isinstance(item, dict):
+            continue
+        record = {
+            key: _short_text(item.get(key), 192)
+            for key in (
+                "area", "classification", "eliminating_capability",
+                "canonical_owner",
+            )
+            if isinstance(item.get(key), str)
+        }
+        if record:
+            records.append(record)
+    return records, len(value) > MAX_NATIVE_USERLAND_AUDIT_ITEMS
+
+
+def _native_userland_audit_source_view(
+    source: Any, source_payloads: dict[tuple[str, str, str, str], bytes],
+    source_integrity: dict[tuple[str, str, str, str], str],
+) -> dict[str, Any] | None:
+    pointer = _validate_source_pointer(source)
+    if pointer is None or not _is_native_userland_audit_source_pointer(pointer):
+        return None
+    integrity = _source_integrity_status(source, source_integrity)
+    result: dict[str, Any] = {
+        "identity": pointer["identity"],
+        "repository": pointer["repository"],
+    }
+    if integrity not in SOURCE_INTEGRITY_VERIFIED:
+        result["source_record_status"] = "source-content-not-verified"
+        result["source_content_integrity_status"] = integrity
+        return result
+    raw = source_payloads.get(_source_pointer_key(pointer))
+    if raw is None:
+        result["source_record_status"] = "verified-payload-unavailable"
+        return result
+    try:
+        record = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        result["source_record_status"] = "verified-content-not-json"
+        return result
+    if (not isinstance(record, dict)
+            or record.get("schema_version") != NATIVE_USERLAND_AUDIT_SCHEMA
+            or record.get("repository") != pointer["repository"]):
+        result["source_record_status"] = "unsupported-or-mismatched-audit-record"
+        return result
+    result.update({
+        "source_record_status": "content-integrity-verified-owner-declaration",
+    })
+    for source_key, output_key in (
+        ("status", "owner_declared_status"),
+        ("native_entrypoint", "native_entrypoint"),
+        ("canonical_entrypoint", "canonical_entrypoint"),
+        ("next_native_slice", "next_native_slice"),
+    ):
+        value = record.get(source_key)
+        if isinstance(value, str):
+            result[output_key] = _short_text(value, 256)
+    migration_order = record.get("migration_order")
+    if type(migration_order) is int and migration_order >= 0:
+        result["migration_order"] = migration_order
+    for source_key in ("remaining_host_responsibilities", "responsibilities"):
+        records, truncated = _bounded_native_userland_responsibilities(
+            record.get(source_key),
+        )
+        if records or isinstance(record.get(source_key), list):
+            result[source_key] = records
+            result[f"{source_key}_truncated"] = truncated
+    raw_paths = record.get("remaining_host_paths")
+    if isinstance(raw_paths, list):
+        result["remaining_host_paths"] = [
+            {
+                key: _short_text(item.get(key), 192)
+                for key in ("path", "role")
+                if isinstance(item.get(key), str)
+            }
+            for item in raw_paths[:MAX_NATIVE_USERLAND_AUDIT_ITEMS]
+            if isinstance(item, dict)
+        ]
+        result["remaining_host_paths_truncated"] = (
+            len(raw_paths) > MAX_NATIVE_USERLAND_AUDIT_ITEMS
+        )
+    semantic_projection = record.get("native_semantic_projection")
+    if isinstance(semantic_projection, dict):
+        result["native_semantic_projection"] = {
+            key: _short_text(semantic_projection.get(key), 192)
+            for key in ("test", "suite", "obligation_selection")
+            if isinstance(semantic_projection.get(key), str)
+        }
+        boundaries, truncated = _bounded_source_strings(
+            semantic_projection.get("rust_boundary_only"),
+        )
+        if boundaries or isinstance(semantic_projection.get("rust_boundary_only"), list):
+            result["rust_boundary_only"] = boundaries
+            result["rust_boundary_only_truncated"] = truncated
+    verification = record.get("verification_plan_ingestion")
+    if isinstance(verification, dict):
+        result["verification_plan_ingestion"] = {
+            key: _short_text(verification.get(key), 256)
+            for key in (
+                "status", "entrypoint", "selection_authority",
+                "remaining_blocker",
+            )
+            if isinstance(verification.get(key), str)
+        }
+        for key in ("shell_projection", "jq_required"):
+            if type(verification.get(key)) is bool:
+                result["verification_plan_ingestion"][key] = verification[key]
+    return result
+
+
 def _implementation_accountability_projection(
     observations: list[dict[str, Any]], *, native_proof_reference_present: bool,
     selected_session_capability_delivery: Any = None,
     selected_session_id: str = "",
+    owner_audit_source_payloads: dict[
+        tuple[str, str, str, str], bytes,
+    ] | None = None,
+    source_integrity: dict[tuple[str, str, str, str], str] | None = None,
 ) -> dict[str, Any] | None:
     """Summarize source-verified proofs and separate owner-declared audit evidence."""
     samples: list[dict[str, Any]] = []
@@ -4011,6 +4276,32 @@ def _implementation_accountability_projection(
             declared_count = outcome.get("owner_audit_count")
             source_pointers = observation_record.get("supporting_sources")
             source_pointers = source_pointers if isinstance(source_pointers, list) else []
+            owner_audit_source_details = [
+                detail
+                for source in source_pointers[:16]
+                if (detail := _native_userland_audit_source_view(
+                    source,
+                    owner_audit_source_payloads or {},
+                    source_integrity or {},
+                )) is not None
+            ]
+            verified_owner_audit_details = sum(
+                detail.get("source_record_status")
+                == "content-integrity-verified-owner-declaration"
+                for detail in owner_audit_source_details
+            )
+            owner_audit_detail_status = (
+                "not-present-in-source-record"
+                if not owner_audit_source_details else (
+                    "content-integrity-verified-owner-declarations-available"
+                    if verified_owner_audit_details
+                    == len(owner_audit_source_details) else (
+                        "partially-available-owner-declarations"
+                        if verified_owner_audit_details
+                        else "owner-audit-source-content-unavailable"
+                    )
+                )
+            )
             actionable = outcome.get("actionable_opportunity")
             actionable = actionable if isinstance(actionable, dict) else {}
             pressure = observation_record.get("pressure_hypothesis")
@@ -4058,6 +4349,11 @@ def _implementation_accountability_projection(
                     for source in source_pointers[:8]
                     if isinstance(source, dict)
                 ],
+                "source_audit_details": owner_audit_source_details,
+                "source_audit_details_status": owner_audit_detail_status,
+                "source_audit_details_content_integrity_verified_count": (
+                    verified_owner_audit_details
+                ),
                 "pressure_hypothesis": {
                     key: _short_text(pressure.get(key), 256)
                     for key in ("identity", "title", "category", "recurrence")
@@ -6564,6 +6860,7 @@ def project(
             "path_truncated": len(path) > 512,
         })
     source_integrity: dict[tuple[str, str, str, str], str] = {}
+    source_payloads: dict[tuple[str, str, str, str], bytes] = {}
     attempted_sources: set[tuple[str, str, str, str]] = set()
     workspace_checkouts: dict[str, Path | None] = {}
     for record, _ in projected_records:
@@ -6574,6 +6871,7 @@ def project(
                 session, source, references, root, deadline=read_deadline,
                 cache=source_integrity, attempted=attempted_sources,
                 workspace_checkouts=workspace_checkouts,
+                source_payloads=source_payloads,
             )
         improvement = _validate_improvement_relation(record.get("improvement_relation"))
         if improvement is not None:
@@ -6582,6 +6880,7 @@ def project(
                 deadline=read_deadline, cache=source_integrity,
                 attempted=attempted_sources,
                 workspace_checkouts=workspace_checkouts,
+                source_payloads=source_payloads,
             )
         correction = _validate_observation_correction(
             record.get("record_correction"),
@@ -6592,6 +6891,7 @@ def project(
                 deadline=read_deadline, cache=source_integrity,
                 attempted=attempted_sources,
                 workspace_checkouts=workspace_checkouts,
+                source_payloads=source_payloads,
             )
             for source in correction["replacement_values"].get(
                 "supporting_sources", [],
@@ -6601,6 +6901,7 @@ def project(
                     deadline=read_deadline, cache=source_integrity,
                     attempted=attempted_sources,
                     workspace_checkouts=workspace_checkouts,
+                    source_payloads=source_payloads,
                 )
     projected_records_by_identity = {
         record["identity"]: record for record, _ in projected_records
@@ -7237,6 +7538,8 @@ def project(
             "capability_delivery",
         ),
         selected_session_id=session.session_id,
+        owner_audit_source_payloads=source_payloads,
+        source_integrity=source_integrity,
     )
     if workspace_alignment["status"] in {
         "declared-repositories-not-selected",

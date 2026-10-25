@@ -3473,6 +3473,14 @@ def test_native_userland_owner_audit_is_actionable_without_claiming_verified_own
     assert audit["supporting_source_references"][0][
         "content_integrity_status"
     ] != "content-integrity-verified"
+    assert audit["source_audit_details_status"] == (
+        "owner-audit-source-content-unavailable"
+    )
+    assert all(
+        detail["source_record_status"] == "source-content-not-verified"
+        and "remaining_host_responsibilities" not in detail
+        for detail in audit["source_audit_details"]
+    )
 
     compact = capability_intelligence._compact_implementation_accountability(
         accountability,
@@ -3487,6 +3495,163 @@ def test_native_userland_owner_audit_is_actionable_without_claiming_verified_own
     )
     assert compact_audit["actionable_opportunity"]["readiness"].startswith(
         "not-established"
+    )
+
+
+def test_native_userland_audit_projection_retains_verified_owner_blockers(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "workspace"
+    root.mkdir()
+    audit_records = {
+        "mncs-actions": {
+            "schema_version": "mncs.native-userland-audit/1",
+            "repository": "mncs-actions",
+            "status": "native_canonical",
+            "canonical_mncs_surfaces": ["typed receipts and evidence records"],
+            "migration_order": 2,
+            "next_native_slice": "native receipt and evidence publication",
+            "existing_pressures": ["MNCS-TOOLING-146FB6F4BBC6"],
+            "native_entrypoint": "native/mncs/actions/family.mncs",
+            "remaining_host_responsibilities": [{
+                "area": "external evidence JSON decoding and receipt packaging",
+                "classification": "boundary_adapter",
+                "eliminating_capability": (
+                    "native filesystem reads and receipt/evidence artifact publication"
+                ),
+            }],
+        },
+        "mncs-test": {
+            "schema_version": "mncs.native-userland-audit/1",
+            "repository": "mncs-test",
+            "status": "native_canonical",
+            "migration_order": 1,
+            "next_native_slice": "native Commons pressure query materialization",
+            "existing_pressures": ["MNCS-TEST-P-006"],
+            "native_semantic_projection": {
+                "test": "mncs.test.assertions.project_test",
+                "suite": "mncs.test.suite.project",
+                "rust_boundary_only": ["external TestResult JSON envelope"],
+            },
+            "verification_plan_ingestion": {
+                "status": "native_structural_admission",
+                "entrypoint": "mncs test --verification-plan FILE",
+                "selection_authority": "native obligation-selection kernel",
+                "shell_projection": False,
+                "jq_required": False,
+                "remaining_blocker": "Commons plan publication remains external",
+            },
+            "responsibilities": [{
+                "area": "TestResult construction and failure classification",
+                "classification": "already_naturally_expressible_in_mncs",
+                "canonical_owner": "mncs.test.assertions and mncs.test.suite",
+            }],
+            "remaining_host_paths": [{
+                "path": "tools/mncs_test.py",
+                "role": "JSON/process transport and compatibility adapter",
+            }],
+        },
+    }
+    audit_references = []
+    workspace_repositories = []
+    for repository, record in audit_records.items():
+        checkout = root / repository
+        checkout.mkdir()
+        _git(checkout, "init", "--quiet")
+        _git(checkout, "config", "user.name", "test")
+        _git(checkout, "config", "user.email", "test@example.invalid")
+        relative = "native-userland-audit.json"
+        raw = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
+        (checkout / relative).write_bytes(raw)
+        _git(checkout, "add", relative)
+        _git(checkout, "commit", "--quiet", "-m", "owner audit")
+        commit = _git(checkout, "rev-parse", "HEAD")
+        audit_references.append({
+            "identity": f"audit_{repository.replace('-', '_')}_native_userland_20261025",
+            "kind": "repository-owner-native-userland-audit",
+            "repository": repository,
+            "commit": commit,
+            "path": relative,
+            "sha256": hashlib.sha256(raw).hexdigest(),
+        })
+        workspace_repositories.append({
+            "name": repository,
+            "path": str(checkout),
+            "head": commit,
+            "worktree_of": None,
+            "git_error": None,
+        })
+
+    source_path = (
+        Path(__file__).resolve().parent.parent
+        / "evidence/environmental-capability/native-userland-accountability-20261025.json"
+    )
+    report = json.loads(source_path.read_text(encoding="utf-8"))
+    report["supporting_sources"] = audit_references
+    session, _state = _session(tmp_path, [report])
+    session.snapshot["authority"] = {"readable": ["workspace"]}
+    session.snapshot["workspace"].update({
+        "scan": {"status": "complete"},
+        "repositories": workspace_repositories,
+    })
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    accountability = result["implementation_accountability"]
+    assert accountability["systemwide_native_adoption_ratio"]["status"] == (
+        "not-measured"
+    )
+    audit = accountability["owner_audit_evidence"]["audits"][0]
+    assert audit["source_audit_details_status"] == (
+        "content-integrity-verified-owner-declarations-available"
+    )
+    details = {item["repository"]: item for item in audit["source_audit_details"]}
+    assert set(details) == {"mncs-actions", "mncs-test"}
+    actions = details["mncs-actions"]
+    assert actions["source_record_status"] == (
+        "content-integrity-verified-owner-declaration"
+    )
+    assert accountability["owner_audit_evidence"][
+        "implementation_ownership_status"
+    ] == (
+        "owner-declared; not independently verified"
+    )
+    actions_reference = next(
+        source for source in audit["supporting_source_references"]
+        if source["identity"] == actions["identity"]
+    )
+    assert actions_reference["content_integrity_status"] == (
+        "workspace-read-only-content-integrity-verified"
+    )
+    assert actions["remaining_host_responsibilities"][0]["classification"] == (
+        "boundary_adapter"
+    )
+    assert "native filesystem reads" in actions[
+        "remaining_host_responsibilities"
+    ][0]["eliminating_capability"]
+    test_audit = details["mncs-test"]
+    assert test_audit["responsibilities"][0]["classification"] == (
+        "already_naturally_expressible_in_mncs"
+    )
+    assert test_audit["verification_plan_ingestion"]["shell_projection"] is False
+    assert test_audit["verification_plan_ingestion"]["jq_required"] is False
+    assert test_audit["remaining_host_paths"][0]["path"] == "tools/mncs_test.py"
+
+    compact = capability_intelligence._compact_implementation_accountability(
+        accountability,
+    )
+    compact_audits = compact["owner_audit_evidence"]["audits"][0][
+        "source_audit_details"
+    ]
+    compact_by_repository = {item["repository"]: item for item in compact_audits}
+    assert compact_by_repository["mncs-actions"][
+        "remaining_host_responsibilities"
+    ][0]["eliminating_capability"] == actions[
+        "remaining_host_responsibilities"
+    ][0]["eliminating_capability"]
+    assert compact["systemwide_native_adoption_ratio"]["status"] == (
+        "not-measured"
     )
 
 
