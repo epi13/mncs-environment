@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_owner_audit_projection_improvement_20261025",
+  "captured_at": "2026-10-25T15:49:11Z",
+  "measurement_basis": "committed Environment projection extension linked to focused tests and bounded live projection readback",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "implementation_commit": "043dcd294bba0094f53f91b093d6f9b3b59bdd2b",
+      "verification_observation_identity": "ev_environment_native_owner_audit_projection_verification_20261025",
+      "subsequent_observation_identity": "ev_environment_native_owner_audit_projection_followup_20261025"
+    },
+    "outcome": {
+      "implementation_change": "The existing implementation-accountability projection now preserves bounded cross-project repository-owner audit evidence, exact audit and source references, the shared pressure identity, actionable native opportunity, and host responsibilities. It labels ownership owner-declared and keeps the systemwide native ratio, denominator, and migration readiness unestablished.",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "This change makes existing evidence queryable. It does not transfer implementation responsibility, verify the owner classifications, establish agent discovery across sessions, or show that a host-language boundary has been removed."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "improvement_relation": {
+    "identity": "ir_environment_native_owner_audit_projection_20261025",
+    "addresses_hypothesis_identity": "ph_environment_native_owner_audit_discoverability_20261025",
+    "implementation_reference": {
+      "identity": "src_environment_native_owner_audit_projection_043dcd2",
+      "repository": "mncs-environment",
+      "commit": "043dcd294bba0094f53f91b093d6f9b3b59bdd2b",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "693b2700b792fd050b4ee18dab5b26da5a10cc5ff6c6ff1bc0a331cfbf17d08f"
+    },
+    "verification_observation_identity": "ev_environment_native_owner_audit_projection_verification_20261025",
+    "subsequent_observation_identity": "ev_environment_native_owner_audit_projection_followup_20261025",
+    "basis": "The baseline-to-implementation change adds the repository-owner audit to the existing bounded implementation-accountability projection; focused tests preserve the distinction between source integrity and declared ownership, and a live projection read exposes the source-linked candidate opportunity. This establishes projection capability, not native migration or cross-agent effectiveness.",
+    "not_measured": [
+      "whether other agents discover or use the projected evidence",
+      "whether the underlying host result/JSON boundary has been removed",
+      "whether the native candidate meets parity or migration requirements",
+      "systemwide native adoption ratio or denominator"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "src_environment_native_owner_audit_projection_043dcd2",
+      "repository": "mncs-environment",
+      "commit": "043dcd294bba0094f53f91b093d6f9b3b59bdd2b",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "693b2700b792fd050b4ee18dab5b26da5a10cc5ff6c6ff1bc0a331cfbf17d08f"
+    },
+    {
+      "kind": "committed-verification-test",
+      "identity": "test_native_userland_owner_audit_is_actionable_without_claiming_verified_ownership",
+      "repository": "mncs-environment",
+      "commit": "043dcd294bba0094f53f91b093d6f9b3b59bdd2b",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "5a1315160ea5fb3431be5a6678f527c9a774f22c62cbe3aa4f6f95c84c0762fe"
+    },
+    {
+      "kind": "authenticated-campaign-owner-audit-observation",
+      "identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+      "repository": "mncs-environment",
+      "commit": "fa06cc9d56648c48d17594d7af65f0babd2c35c8",
+      "path": "evidence/environmental-capability/native-userland-accountability-20261025.json",
+      "sha256": "14af1e6885b24b324491af644f7a9a4bb589e60d391d4649b9c93c49832b6b66",
+      "status": "source record content integrity verified; owner classifications remain declared"
+    }
+  ],
+  "not_measured": [
+    "effectiveness across independent sessions, agents, models, or environments",
+    "resolution or recurrence of the host-language implementation pressure",
+    "causal effect of the new projection on agent decisions or outcomes"
+  ]
+}

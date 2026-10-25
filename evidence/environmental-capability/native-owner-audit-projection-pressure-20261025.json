@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_owner_audit_projection_pressure_20261025",
+  "captured_at": "2026-10-25T15:49:11Z",
+  "measurement_basis": "authenticated campaign evidence and committed-baseline source inspection, followed by bounded Store-backed projection readback",
+  "observation": {
+    "kind": "native-owner-audit-projection-discoverability-gap",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "baseline_commit": "523173edbac4bdbe7ffa7ebc955e9c8ef6c2f9eb",
+      "campaign_evidence_identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+      "query": "projections --interpret environmental-capability --history-pages 1 --evidence-offset 0 --evidence-limit 2 --session-event-limit 1"
+    },
+    "outcome": {
+      "baseline_projection_capability": "The baseline implementation-accountability projection handled source-backed native-ownership proof samples but did not adapt the repository-owner cross-project native-userland audit record present in this campaign evidence history.",
+      "source_evidence": "One committed Environmental observation correlates two project-owner audits and a shared typed-result/host-JSON pressure. The exact record is queryable, and its four supporting source blobs are independently content-integrity-verified by bounded read-only reads.",
+      "owner_declaration_scope": {
+        "source_declared_audit_count": 2,
+        "repositories": [
+          "mncs-actions",
+          "mncs-test"
+        ],
+        "classification": "repository-owner-declared; not independent implementation-ownership verification"
+      },
+      "native_adoption": {
+        "systemwide_ratio": "not-measured",
+        "denominator": "not-established",
+        "migration_readiness": "not-established"
+      },
+      "actionable_opportunity": "Connect compiler-owned typed projection contracts to one application-level result/artifact path, retaining host adapters until independent round-trip, failure, artifact-integrity, and reliability parity is verified.",
+      "recurrence": "one selected campaign evidence path; recurrence across agent sessions is not established"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_native_owner_audit_discoverability_20261025",
+    "title": "Existing native-userland owner audits were not available through the implementation-accountability projection",
+    "category": "environmental-capability-integration",
+    "subsystem": "Environment implementation accountability and native owner-audit projection",
+    "owner": "mncs-environment maintainers",
+    "basis": "The authenticated campaign ledger contains the exact committed cross-project owner-audit observation, while baseline commit 523173e only projected source-backed native proof samples. This is an implementation/discoverability gap established from the selected campaign evidence and baseline source; it does not establish failed discovery by other agents.",
+    "actionable_recommendation": "Extend the existing bounded implementation-accountability projection to expose the exact owner-audit record, source references, shared pressure identity, and candidate next step while retaining owner-declared status, incomplete denominator, and unverified migration readiness.",
+    "recurrence": "not-established-across-sessions",
+    "not_measured": [
+      "whether another agent failed to discover or use the owner audit",
+      "systemwide native-versus-host implementation inventory, ratio, or denominator",
+      "semantic correctness of repository-owner classifications beyond source blob integrity",
+      "whether the candidate native result/artifact path satisfies parity or is migration-ready",
+      "whether this projection changes agent behavior or resolves the underlying host boundary"
+    ]
+  },
+  "not_measured": [
+    "cross-agent discoverability or successful use before this implementation",
+    "systemwide native adoption ratio or denominator",
+    "implementation ownership beyond repository-owner declarations",
+    "migration readiness or effectiveness of replacing host JSON/artifact responsibilities"
+  ],
+  "supporting_sources": [
+    {
+      "kind": "committed-baseline-source",
+      "identity": "src_environment_capability_intelligence_baseline_523173e",
+      "repository": "mncs-environment",
+      "commit": "523173edbac4bdbe7ffa7ebc955e9c8ef6c2f9eb",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "f7991c1b749676e08952d750694b2582834d033072b3f842072413d31f02003a"
+    },
+    {
+      "kind": "authenticated-campaign-owner-audit-observation",
+      "identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+      "repository": "mncs-environment",
+      "commit": "fa06cc9d56648c48d17594d7af65f0babd2c35c8",
+      "path": "evidence/environmental-capability/native-userland-accountability-20261025.json",
+      "sha256": "14af1e6885b24b324491af644f7a9a4bb589e60d391d4649b9c93c49832b6b66",
+      "status": "source record content integrity verified; owner classifications remain declared"
+    }
+  ]
+}
