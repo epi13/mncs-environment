@@ -207,6 +207,14 @@ schema. A link makes an owner-declared pressure record traceable; it does not
 establish that the pressure blocks a specific host responsibility or that
 native migration is ready. Systemwide adoption remains `not-measured`.
 
+When that same evidence contains an integrity-verified `mncs-test.pressure/1`
+record, the projection can also match its source-declared `commons_pressure_id`
+to an owner-audit pressure ID. It labels this as an alias relationship and
+retains the exact MNCS-Test source pointer. Unverified records do not create
+aliases, and multiple verified records for one alias remain ambiguous. This
+does not establish that a shared pressure causally blocks a particular host
+responsibility.
+
 When the selected session has a capability-delivery view, the sample also
 exposes `selected_session_delivery_observation`. It compares the proof's
 canonical capability identity with that session's current binding snapshot and

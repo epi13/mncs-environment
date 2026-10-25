@@ -3600,7 +3600,9 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
             "migration_order": 1,
             "next_native_slice": "native Commons pressure query materialization",
             "existing_pressures": [
-                "MNCS-TEST-P-004", "MNCS-TEST-P-006", "MNCS-TEST-P-999",
+                "MNCS-TEST-P-004", "MNCS-TEST-P-006",
+                "MNCS-TOOLING-146FB6F4BBC6", "MNCS-LANG-52A5E0C72A39",
+                "MNCS-TEST-P-999",
             ],
             "native_semantic_projection": {
                 "test": "mncs.test.assertions.project_test",
@@ -3640,15 +3642,23 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
         (checkout / relative).write_bytes(raw)
         _git(checkout, "add", relative)
         if repository == "mncs-test":
-            for identity, kind in (
-                ("MNCS-TEST-P-004", "repository-owner-language-and-runtime-pressure"),
-                ("MNCS-TEST-P-006", "repository-owner-native-result-transport-pressure"),
+            for identity, kind, commons_pressure_id in (
+                (
+                    "MNCS-TEST-P-004",
+                    "repository-owner-language-and-runtime-pressure",
+                    "MNCS-LANG-52A5E0C72A39",
+                ),
+                (
+                    "MNCS-TEST-P-006",
+                    "repository-owner-native-result-transport-pressure",
+                    "MNCS-TOOLING-146FB6F4BBC6",
+                ),
             ):
                 pressure_path = f"pressures/{identity}.json"
                 pressure_record = {
-                    "identity": identity,
-                    "kind": kind,
-                    "schema_version": "mncs.test.pressure/1",
+                    "schema_version": "mncs-test.pressure/1",
+                    "id": identity,
+                    "commons_pressure_id": commons_pressure_id,
                 }
                 pressure_raw = json.dumps(
                     pressure_record, sort_keys=True, separators=(",", ":"),
@@ -3744,7 +3754,9 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
     ][0]["eliminating_capability"]
     test_audit = details["mncs-test"]
     assert test_audit["existing_pressures"] == [
-        "MNCS-TEST-P-004", "MNCS-TEST-P-006", "MNCS-TEST-P-999",
+        "MNCS-TEST-P-004", "MNCS-TEST-P-006",
+        "MNCS-TOOLING-146FB6F4BBC6", "MNCS-LANG-52A5E0C72A39",
+        "MNCS-TEST-P-999",
     ]
     pressure_links = test_audit["pressure_source_links"]
     assert pressure_links["status"] == "partially-linked"
@@ -3758,6 +3770,18 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
     )
     assert links["MNCS-TEST-P-006"]["status"] == (
         "linked-to-integrity-verified-pressure-source"
+    )
+    assert links["MNCS-TOOLING-146FB6F4BBC6"]["status"] == (
+        "linked-through-integrity-verified-pressure-alias"
+    )
+    assert links["MNCS-TOOLING-146FB6F4BBC6"]["relationship_basis"] == (
+        "mncs-test.pressure/1.commons_pressure_id"
+    )
+    assert links["MNCS-TOOLING-146FB6F4BBC6"]["source_reference"][
+        "identity"
+    ] == "MNCS-TEST-P-006"
+    assert links["MNCS-LANG-52A5E0C72A39"]["status"] == (
+        "linked-through-integrity-verified-pressure-alias"
     )
     assert links["MNCS-TEST-P-999"]["status"] == (
         "no-matching-supporting-source-reference"
@@ -3796,7 +3820,10 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
         links["MNCS-TEST-P-004"]["source_reference"]["sha256"]
     )
     assert compact_pressure_links["links"][2]["status"] == (
-        "no-matching-supporting-source-reference"
+        "linked-through-integrity-verified-pressure-alias"
+    )
+    assert compact_pressure_links["links"][2]["relationship_basis"] == (
+        "mncs-test.pressure/1.commons_pressure_id"
     )
     assert compact["systemwide_native_adoption_ratio"]["status"] == (
         "not-measured"
@@ -3875,6 +3902,43 @@ def test_owner_declared_pressure_links_keep_ambiguity_and_bounded_absence_explic
     assert bounded["supporting_source_window_truncated"] is True
     assert bounded["links"][0]["status"] == (
         "not-found-in-bounded-supporting-source-window"
+    )
+
+    alias_sources = []
+    alias_payloads = {}
+    alias_integrity = {}
+    for index in (1, 2):
+        identity = f"MNCS-TEST-P-{index:03d}"
+        pointer = source(
+            identity, f"pressures/{identity}.json",
+            "repository-owner-language-pressure",
+        )
+        raw = json.dumps({
+            "schema_version": "mncs-test.pressure/1",
+            "id": identity,
+            "commons_pressure_id": "MNCS-LANG-ALIAS",
+        }, sort_keys=True, separators=(",", ":")).encode()
+        pointer["sha256"] = hashlib.sha256(raw).hexdigest()
+        key = capability_intelligence._source_pointer_key(pointer)
+        alias_sources.append(pointer)
+        alias_payloads[key] = raw
+        alias_integrity[key] = "content-integrity-verified"
+    ambiguous_alias = capability_intelligence._owner_declared_pressure_links(
+        ["MNCS-LANG-ALIAS"], alias_sources, alias_integrity,
+        source_payloads=alias_payloads,
+    )
+    assert ambiguous_alias is not None
+    assert ambiguous_alias["links"][0]["status"] == (
+        "ambiguous-integrity-verified-pressure-aliases"
+    )
+
+    unverified_alias = capability_intelligence._owner_declared_pressure_links(
+        ["MNCS-LANG-ALIAS"], alias_sources, {},
+        source_payloads=alias_payloads,
+    )
+    assert unverified_alias is not None
+    assert unverified_alias["links"][0]["status"] == (
+        "no-matching-supporting-source-reference"
     )
 
 

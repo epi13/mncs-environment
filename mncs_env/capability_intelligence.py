@@ -128,7 +128,13 @@ NATIVE_USERLAND_AUDIT_SCHEMA = "mncs.native-userland-audit/1"
 NATIVE_USERLAND_AUDIT_SOURCE_REPOSITORIES = frozenset({
     "mncs-actions", "mncs-test",
 })
+NATIVE_USERLAND_PRESSURE_SCHEMA = "mncs-test.pressure/1"
 MAX_NATIVE_USERLAND_AUDIT_RECORDS = 4
+MAX_NATIVE_USERLAND_PRESSURE_SOURCE_RECORDS = 8
+MAX_NATIVE_USERLAND_SOURCE_PAYLOADS = (
+    MAX_NATIVE_USERLAND_AUDIT_RECORDS
+    + MAX_NATIVE_USERLAND_PRESSURE_SOURCE_RECORDS
+)
 MAX_NATIVE_USERLAND_AUDIT_ITEMS = 8
 MAX_EVIDENCE_REFS = 32
 MAX_EVIDENCE_HISTORY_PAGES = 4
@@ -949,7 +955,8 @@ def _compact_owner_audit_evidence(value: Any) -> dict[str, Any] | None:
                         key: _short_text(link.get(key), 192)
                         for key in (
                             "identity", "status", "causal_relation_status",
-                            "source_content_integrity_status", "source_kind",
+                            "relationship_basis", "source_content_integrity_status",
+                            "source_kind",
                         )
                         if isinstance(link.get(key), str)
                     }
@@ -4101,11 +4108,15 @@ def _verify_source_pointer(
         return
     matching_reference = next((reference for reference in references
                                if _source_pointer_key(reference) == key), None)
+    preserve_userland_source_payload = (
+        _is_native_userland_audit_source_pointer(pointer)
+        or _is_native_userland_pressure_source_pointer(pointer, source)
+    )
     wants_source_payload = (
         source_payloads is not None
         and key not in source_payloads
-        and len(source_payloads) < MAX_NATIVE_USERLAND_AUDIT_RECORDS
-        and _is_native_userland_audit_source_pointer(pointer)
+        and len(source_payloads) < MAX_NATIVE_USERLAND_SOURCE_PAYLOADS
+        and preserve_userland_source_payload
     )
     if (matching_reference is not None
             and matching_reference.get("verification") == "verified"):
@@ -4179,6 +4190,19 @@ def _is_native_userland_audit_source_pointer(pointer: dict[str, str]) -> bool:
         pointer.get("identity", "").startswith(identity_prefix)
         and pointer.get("path") == "native-userland-audit.json"
         and isinstance(pointer.get("sha256"), str)
+    )
+
+
+def _is_native_userland_pressure_source_pointer(
+    pointer: dict[str, str], source: Any,
+) -> bool:
+    kind = source.get("kind") if isinstance(source, dict) else None
+    identity = pointer.get("identity", "")
+    match = re.fullmatch(r"pressures/(MNCS-TEST-P-[0-9]{3})\.json", pointer.get("path", ""))
+    return (
+        pointer.get("repository") == "mncs-test"
+        and isinstance(kind, str) and "pressure" in kind.lower()
+        and match is not None and match.group(1) == identity
     )
 
 
@@ -4269,7 +4293,7 @@ def _native_userland_audit_source_view(
             result[f"{key}_truncated"] = truncated
     pressure_links = _owner_declared_pressure_links(
         result.get("existing_pressures"), supporting_sources or [],
-        source_integrity,
+        source_integrity, source_payloads=source_payloads,
         identities_truncated=result.get("existing_pressures_truncated") is True,
     )
     if pressure_links is not None:
@@ -4324,16 +4348,55 @@ def _native_userland_audit_source_view(
     return result
 
 
+def _native_userland_pressure_aliases(
+    sources: list[Any],
+    source_integrity: dict[tuple[str, str, str, str], str],
+    source_payloads: dict[tuple[str, str, str, str], bytes],
+) -> dict[str, list[tuple[dict[str, str], dict[str, Any]]]]:
+    """Read only verified MNCS-Test pressure records for their declared Commons ID."""
+    aliases: dict[str, list[tuple[dict[str, str], dict[str, Any]]]] = {}
+    for source in sources:
+        pointer = _validate_source_pointer(source)
+        if pointer is None or not _is_native_userland_pressure_source_pointer(
+            pointer, source,
+        ):
+            continue
+        key = _source_pointer_key(pointer)
+        if source_integrity.get(key) not in SOURCE_INTEGRITY_VERIFIED:
+            continue
+        raw = source_payloads.get(key)
+        if raw is None:
+            continue
+        try:
+            record = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if (not isinstance(record, dict)
+                or record.get("schema_version") != NATIVE_USERLAND_PRESSURE_SCHEMA
+                or record.get("id") != pointer.get("identity")):
+            continue
+        pressure_identity = record.get("commons_pressure_id")
+        if (not isinstance(pressure_identity, str) or not pressure_identity
+                or len(pressure_identity) > 160 or "\x00" in pressure_identity):
+            continue
+        aliases.setdefault(pressure_identity, []).append((pointer, source))
+    return aliases
+
+
 def _owner_declared_pressure_links(
     identities: Any, supporting_sources: list[Any],
     source_integrity: dict[tuple[str, str, str, str], str], *,
+    source_payloads: dict[tuple[str, str, str, str], bytes] | None = None,
     identities_truncated: bool = False,
 ) -> dict[str, Any] | None:
-    """Join owner-declared pressure IDs to exact source pointers in one observation."""
+    """Join owner-declared IDs to direct pointers or verified pressure aliases."""
     if not isinstance(identities, list):
         return None
     source_window = supporting_sources[:MAX_SOURCE_POINTER_VERIFICATIONS]
     source_window_truncated = len(supporting_sources) > len(source_window)
+    aliases_by_identity = _native_userland_pressure_aliases(
+        source_window, source_integrity, source_payloads or {},
+    )
     by_identity: dict[str, list[tuple[dict[str, str], dict[str, Any]]]] = {}
     for source in source_window:
         pointer = _validate_source_pointer(source)
@@ -4362,6 +4425,50 @@ def _owner_declared_pressure_links(
                 unique_matches[key] = (pointer, [])
             unique_matches[key][1].append(source)
         if not unique_matches:
+            alias_matches = aliases_by_identity.get(identity, [])
+            unique_aliases: dict[tuple[str, str, str, str], tuple[
+                dict[str, str], list[dict[str, Any]],
+            ]] = {}
+            for pointer, source in alias_matches:
+                key = _source_pointer_key(pointer)
+                if key not in unique_aliases:
+                    unique_aliases[key] = (pointer, [])
+                unique_aliases[key][1].append(source)
+            if len(unique_aliases) > 1:
+                links.append({
+                    "identity": identity,
+                    "status": "ambiguous-integrity-verified-pressure-aliases",
+                    "causal_relation_status": "not-established",
+                })
+                continue
+            if len(unique_aliases) == 1:
+                pointer, alias_sources = next(iter(unique_aliases.values()))
+                source_kinds = sorted({
+                    source["kind"] for source in alias_sources
+                    if isinstance(source.get("kind"), str)
+                })
+                integrity = _source_integrity_status(
+                    alias_sources[0], source_integrity,
+                )
+                if len(source_kinds) != 1:
+                    links.append({
+                        "identity": identity,
+                        "status": "ambiguous-supporting-source-kinds",
+                        "causal_relation_status": "not-established",
+                    })
+                    continue
+                links.append({
+                    "identity": identity,
+                    "status": "linked-through-integrity-verified-pressure-alias",
+                    "causal_relation_status": "not-established",
+                    "relationship_basis": (
+                        "mncs-test.pressure/1.commons_pressure_id"
+                    ),
+                    "source_content_integrity_status": integrity,
+                    "source_kind": _short_text(source_kinds[0], 128),
+                    "source_reference": dict(pointer),
+                })
+                continue
             status = (
                 "not-found-in-bounded-supporting-source-window"
                 if source_window_truncated
@@ -4403,6 +4510,7 @@ def _owner_declared_pressure_links(
             "identity": identity,
             "status": status,
             "causal_relation_status": "not-established",
+            "relationship_basis": "direct-owner-audit-pressure-identity-match",
             "source_content_integrity_status": integrity,
         }
         if isinstance(source_kind, str):
@@ -4411,7 +4519,10 @@ def _owner_declared_pressure_links(
         links.append(link)
 
     verified_link_count = sum(
-        item.get("status") == "linked-to-integrity-verified-pressure-source"
+        item.get("status") in {
+            "linked-to-integrity-verified-pressure-source",
+            "linked-through-integrity-verified-pressure-alias",
+        }
         for item in links
     )
     if not identities:
@@ -4425,8 +4536,8 @@ def _owner_declared_pressure_links(
     return {
         "status": status,
         "relationship_basis": (
-            "owner-declared pressure identities matched to source pointers in the "
-            "same accountability observation"
+            "owner-declared pressure identities matched directly or through an "
+            "integrity-verified pressure-record alias in the same observation"
         ),
         "causal_relation_status": "not-established",
         "supporting_source_count_examined": len(source_window),
@@ -4434,9 +4545,10 @@ def _owner_declared_pressure_links(
         "links": links,
         "links_truncated": len(identities) > len(links),
         "interpretation_limit": (
-            "A matching, integrity-verified pointer makes an owner-declared pressure "
-            "record traceable; it does not establish that the pressure blocks a "
-            "specific host responsibility or that native migration is ready."
+            "A matching pointer or verified pressure-record alias makes an "
+            "owner-declared pressure ID traceable; it does not establish that the "
+            "pressure blocks a specific host responsibility or that native "
+            "migration is ready."
         ),
     }
 
