@@ -1539,13 +1539,17 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     session, _ = _session(tmp_path, [record])
     session.snapshot["rpc_read_activity_count"] = 3
     events = []
-    for sequence, outcome in ((21, "failed"), (22, "failed"), (23, "succeeded")):
+    for sequence, outcome, exit_code, failure_code in (
+        (21, "failed", 2, "ENVIRONMENT_SESSION_MISSING"),
+        (22, "failed", None, "ENVIRONMENT_SESSION_MISSING"),
+        (23, "succeeded", 0, None),
+    ):
         payload = {
             "schema_version": "mncs.environment.rpc-read-activity/1",
             "operation": "session.inspect" if sequence < 23 else "campaign.state",
             "outcome_status": outcome,
-            "exit_code": 2 if outcome == "failed" else 0,
-            "failure_code": "ENVIRONMENT_SESSION_MISSING" if outcome == "failed" else None,
+            "exit_code": exit_code,
+            "failure_code": failure_code,
             "observation_ordinal": sequence - 20,
             "request_id": f"req_rpc_read_{sequence}",
             "request_digest": hashlib.sha256(
@@ -1622,6 +1626,16 @@ def test_session_activity_correlates_authenticated_control_read_operations(
         "live_repository_probe": False,
     }
     assert activity["rpc_operation_count"] == 3
+    failed_operations = {
+        item["event_reference"]["identity"]: item
+        for item in activity["rpc_operations"]
+        if item["outcome_status"] == "failed"
+    }
+    assert failed_operations["evt_rpc_read_21"]["exit_code"] == 2
+    assert "exit_code" not in failed_operations["evt_rpc_read_22"]
+    assert failed_operations["evt_rpc_read_22"]["failure_code"] == (
+        "ENVIRONMENT_SESSION_MISSING"
+    )
     summary = activity["rpc_operation_summary"]
     assert summary["scope"] == "authenticated-records-in-selected-event-window"
     assert summary["record_count"] == 3
