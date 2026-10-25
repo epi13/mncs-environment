@@ -1,0 +1,117 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_owner_audit_pressure_link_verification_20261025",
+  "captured_at": "2026-10-25T16:32:51Z",
+  "measurement_basis": "focused projection tests, static checks, and bounded live readback over authenticated campaign evidence",
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment implementation-accountability and environmental-capability projection",
+    "request": {
+      "implementation_commit": "dc2ee1d728ab085bad78722aa877b32974c1f997",
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py tests/test_capability_projection_actions.py tests/test_capability_projection_cli.py -q",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "python3 -m py_compile mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "git diff --check",
+        "./scripts/mncs-env projections ses_5530f63cd8293e03 --interpret environmental-capability --history-pages 1 --evidence-offset 0 --evidence-limit 1 --session-event-limit 1"
+      ]
+    },
+    "outcome": {
+      "status": "passed",
+      "results": [
+        {
+          "command_index": 0,
+          "passed": 103
+        },
+        {
+          "command_index": 1,
+          "status": "passed"
+        },
+        {
+          "command_index": 2,
+          "status": "passed"
+        },
+        {
+          "command_index": 3,
+          "status": "passed"
+        },
+        {
+          "command_index": 4,
+          "exit_code": 0,
+          "projection_status": "ready",
+          "response_bytes": 47159,
+          "observation_records_verified": 1,
+          "source_pointer_count": 4,
+          "source_pointer_content_integrity_verified_count": 4,
+          "source_audit_detail_status": "content-integrity-verified-owner-declarations-available",
+          "canonical_surface_counts": {
+            "mncs-actions": 4,
+            "mncs-test": 6
+          },
+          "source_declared_pressure_ids": {
+            "mncs-actions": [
+              "MNCS-TOOLING-146FB6F4BBC6",
+              "MNCS-TOOLING-B665F138D324",
+              "MNCS-TOOLING-CB736AB5B3F0",
+              "MNCS-LANG-52A5E0C72A39"
+            ],
+            "mncs-test": [
+              "MNCS-TEST-P-004",
+              "MNCS-TEST-P-006",
+              "MNCS-TOOLING-146FB6F4BBC6",
+              "MNCS-LANG-52A5E0C72A39"
+            ]
+          },
+          "implementation_ownership_status": "owner-declared; not independently verified",
+          "systemwide_native_adoption_ratio": "not-measured"
+        }
+      ],
+      "coverage": "The focused suite verifies bounded canonical surface and pressure-ID projection, preservation through compact output, and owner-declared labeling for content-integrity-verified audit records. Static checks pass. The live projection exposes authentic owner-declared surfaces and pressure identities while preserving source pointers, reports a ready page and four of four supporting pointers content-integrity verified, and retains the systemwide native ratio as not measured."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "supporting_sources": [
+    {
+      "identity": "src_environment_native_owner_audit_pressure_link_dc2ee1d",
+      "repository": "mncs-environment",
+      "commit": "dc2ee1d728ab085bad78722aa877b32974c1f997",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "77087010893b2dcc8d5fe5c549c8523a7fbbe31d2199682f6341bdf223b97556"
+    },
+    {
+      "kind": "committed-verification-test",
+      "identity": "test_native_userland_audit_projection_retains_verified_owner_blockers",
+      "repository": "mncs-environment",
+      "commit": "dc2ee1d728ab085bad78722aa877b32974c1f997",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "fb95cf1c31a592dcd4670c17ecac3fdb77279fc0bce1515aa6decb436ccaa7b7"
+    },
+    {
+      "kind": "committed-documentation-source",
+      "identity": "docs_environment_projection_native_pressure_links_dc2ee1d",
+      "repository": "mncs-environment",
+      "commit": "dc2ee1d728ab085bad78722aa877b32974c1f997",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "a5a6c89e379cf70c8252e1edff8ad93353437c72dcdc2ab863508cfe87ffd0fa"
+    }
+  ],
+  "not_measured": [
+    "independent agent use or cross-session discoverability",
+    "whether every owner-declared pressure ID has an independently verified record in selected evidence",
+    "systemwide native implementation ownership or adoption ratio",
+    "causal pressure resolution after the projection change"
+  ]
+}

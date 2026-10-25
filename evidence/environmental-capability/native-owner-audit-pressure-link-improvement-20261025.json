@@ -1,0 +1,97 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_owner_audit_pressure_link_improvement_20261025",
+  "captured_at": "2026-10-25T16:32:51Z",
+  "measurement_basis": "committed bounded projection update, focused tests, and live campaign projection readback",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "pressure_identity": "ph_environment_native_owner_audit_pressure_link_20261025",
+      "implementation_commit": "dc2ee1d728ab085bad78722aa877b32974c1f997",
+      "verification_observation_identity": "ev_environment_native_owner_audit_pressure_link_verification_20261025",
+      "subsequent_observation_identity": "ev_environment_native_owner_audit_pressure_link_followup_20261025"
+    },
+    "outcome": {
+      "implementation_change": "The existing implementation-accountability projection now exposes bounded canonical_mncs_surfaces and existing_pressures lists from the two exact, content-integrity-verified owner audit records. Values are explicitly source-declared. Parent project summaries remain the source for owner-declared status and next native slice; per-source details omit those duplicates and identical canonical/native entrypoints to preserve output headroom. The string lists retain existing item and text bounds and explicit truncation flags.",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The projected IDs help agents trace owner-declared native surfaces to named pressures. They do not verify every referenced pressure record, establish that a pressure causally blocks migration, or demonstrate agent use across sessions. The systemwide native ratio remains not-measured."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "improvement_relation": {
+    "identity": "ir_environment_native_owner_audit_pressure_link_20261025",
+    "addresses_hypothesis_identity": "ph_environment_native_owner_audit_pressure_link_20261025",
+    "implementation_reference": {
+      "identity": "src_environment_native_owner_audit_pressure_link_dc2ee1d",
+      "repository": "mncs-environment",
+      "commit": "dc2ee1d728ab085bad78722aa877b32974c1f997",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "77087010893b2dcc8d5fe5c549c8523a7fbbe31d2199682f6341bdf223b97556"
+    },
+    "verification_observation_identity": "ev_environment_native_owner_audit_pressure_link_verification_20261025",
+    "subsequent_observation_identity": "ev_environment_native_owner_audit_pressure_link_followup_20261025",
+    "basis": "The baseline source-backed owner audit exposed project summaries but omitted the canonical MNCS surfaces and existing pressure identities present in its immutable source audit records. The projection now exposes those bounded lists alongside responsibility classifications and source pointers. A live read returns both authentic audit records with ready status, four of four supporting source pointers content-integrity verified, and the exact source-declared pressure lists. Compact projection remains under the response limit; it is 47159 bytes in the recorded read. This improves traceability but does not establish that each pressure entry is independently verified or that a host implementation can yet be replaced.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "cross-agent discovery and use of the newly exposed pressure links",
+      "independent verification of every pressure ID listed by each owner audit",
+      "causal relation between named pressures and remaining host responsibilities",
+      "systemwide native implementation ownership or adoption denominator",
+      "long-term projection size and usefulness across larger evidence windows"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "environmental-pressure-observation",
+      "identity": "ev_environment_native_owner_audit_pressure_link_pressure_20261025",
+      "repository": "mncs-environment",
+      "commit": "4de278cff09111524a77b3080bd1a45234ef3950",
+      "path": "evidence/environmental-capability/native-owner-audit-pressure-link-pressure-20261025.json",
+      "sha256": "5372188647359f62077f4677fe83bf8253c543be53d382977271c415db4e028f"
+    },
+    {
+      "identity": "src_environment_native_owner_audit_pressure_link_dc2ee1d",
+      "repository": "mncs-environment",
+      "commit": "dc2ee1d728ab085bad78722aa877b32974c1f997",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "77087010893b2dcc8d5fe5c549c8523a7fbbe31d2199682f6341bdf223b97556"
+    },
+    {
+      "kind": "repository-owner-native-userland-audit",
+      "identity": "audit_mncs_actions_native_userland_20261025",
+      "repository": "mncs-actions",
+      "commit": "ca62f3d33ef9c3b5096bc4d39f6039adc445e579",
+      "path": "native-userland-audit.json",
+      "sha256": "76e5845b033c775f93bc3e821a069cf8bb21eb437784e505847db3c19446c48a",
+      "projected_status": "workspace-read-only-content-integrity-verified; owner declaration"
+    },
+    {
+      "kind": "repository-owner-native-userland-audit",
+      "identity": "audit_mncs_test_native_userland_20261025",
+      "repository": "mncs-test",
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "path": "native-userland-audit.json",
+      "sha256": "cd4e760c250504cc62b5094769bedf07b73b2dd6d0765206c571290a27bb5560",
+      "projected_status": "workspace-read-only-content-integrity-verified; owner declaration"
+    }
+  ],
+  "not_measured": [
+    "independent capability use by other agents or models",
+    "native migration parity or pressure resolution",
+    "systemwide native adoption ratio"
+  ]
+}
