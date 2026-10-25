@@ -554,6 +554,15 @@ server-observed response relationship at projection time. The response
 summary does not carry the binding ID, so it does not distinguish duplicate
 bindings with the same tuple. A response mismatch or missing digest leaves
 inclusion unestablished; it is not evidence that the capability was omitted.
+`context_response_use_sequence_relation` then compares the matched response
+event with exact-binding invocation events in the same session. It reports
+whether an invocation was recorded before or after that response, or whether
+an exact invocation record is absent from the available history. Sequence
+order does not show that the agent received the response or that it caused a
+later invocation; the relation keeps its causal claim unestablished and notes
+when the event window is partial or response/invocation summaries were
+omitted. A missing exact invocation record also does not account for use
+through external interfaces.
 These records do not establish that the consumer received, discovered,
 understood, or used a capability. Agent receipt and discoverability remain
 unmeasured. This delivery evidence is separate from

@@ -2295,6 +2295,10 @@ def _compact_projection(
                 )
                 if isinstance(context_inclusion.get(key), str)
             }
+            if type(context_inclusion.get("response_summaries_omitted")) is int:
+                compact_context_inclusion["response_summaries_omitted"] = max(
+                    0, context_inclusion["response_summaries_omitted"],
+                )
             references = context_inclusion.get("supporting_events")
             if isinstance(references, list):
                 compact_context_inclusion["supporting_events"] = [
@@ -2308,6 +2312,55 @@ def _compact_projection(
                 ]
             compact_item["context_response_inclusion"] = (
                 compact_context_inclusion
+            )
+        sequence_relation = item.get("context_response_use_sequence_relation")
+        if isinstance(sequence_relation, dict):
+            compact_sequence_relation = {
+                key: _short_text(sequence_relation[key], 160)
+                for key in (
+                    "status", "reason", "context_response_inclusion_status",
+                    "temporal_basis", "causal_claim", "event_window_status",
+                    "response_comparison_time_basis",
+                )
+                if isinstance(sequence_relation.get(key), str)
+            }
+            for count_key in (
+                "response_summaries_omitted", "invocation_summaries_omitted",
+            ):
+                if type(sequence_relation.get(count_key)) is int:
+                    compact_sequence_relation[count_key] = max(
+                        0, sequence_relation[count_key],
+                    )
+            for event_key in ("response_events",):
+                references = sequence_relation.get(event_key)
+                if isinstance(references, list):
+                    compact_sequence_relation[event_key] = [
+                        {
+                            key: reference[key]
+                            for key in ("identity", "sequence", "type")
+                            if key in reference
+                        }
+                        for reference in references[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                        if isinstance(reference, dict)
+                    ]
+            pairs = sequence_relation.get("observed_pairs")
+            if isinstance(pairs, list):
+                compact_sequence_relation["observed_pairs"] = [
+                    {
+                        key: {
+                            reference_key: pair[key][reference_key]
+                            for reference_key in ("identity", "sequence", "type")
+                            if reference_key in pair[key]
+                        }
+                        for key in ("context_response_event", "invocation_event")
+                        if isinstance(pair.get(key), dict)
+                    } | ({"relation": _short_text(pair["relation"], 128)}
+                         if isinstance(pair.get("relation"), str) else {})
+                    for pair in pairs[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                    if isinstance(pair, dict)
+                ]
+            compact_item["context_response_use_sequence_relation"] = (
+                compact_sequence_relation
             )
         compact_capability_bindings.append(compact_item)
     if compact_capability_bindings:
@@ -5972,6 +6025,7 @@ def _context_response_binding_inclusion(
     binding: dict[str, Any], response_summaries: list[dict[str, Any]],
     context_supporting_events: list[dict[str, Any]], *,
     context_operation_count: int, complete_history: bool,
+    response_summaries_omitted: int = 0,
 ) -> dict[str, Any]:
     """Relate a current binding to a captured context response without implying receipt."""
     event_window_status = "complete" if complete_history else "partial"
@@ -5981,6 +6035,7 @@ def _context_response_binding_inclusion(
             "reason": "the context response list contains available bindings only",
             "scope": "authenticated-session.context-events-in-selected-window",
             "event_window_status": event_window_status,
+            "response_summaries_omitted": response_summaries_omitted,
         }
 
     identity_fields = ("capability", "provider", "contract_revision")
@@ -5993,6 +6048,7 @@ def _context_response_binding_inclusion(
             "reason": "binding-identity-incomplete",
             "scope": "authenticated-session.context-events-in-selected-window",
             "event_window_status": event_window_status,
+            "response_summaries_omitted": response_summaries_omitted,
         }
 
     matching_responses = [
@@ -6015,6 +6071,7 @@ def _context_response_binding_inclusion(
             "comparison_time_basis": "current-session-binding-snapshot-at-projection-time",
             "scope": "authenticated-session.context-events-in-selected-window",
             "event_window_status": event_window_status,
+            "response_summaries_omitted": response_summaries_omitted,
             "supporting_events": [
                 summary["event_reference"]
                 for summary in matching_responses[:MAX_CAPABILITY_SUPPORTING_EVENTS]
@@ -6035,7 +6092,9 @@ def _context_response_binding_inclusion(
             for summary in response_summaries
             if isinstance(summary, dict)
         ]
-        if "differs-from-current-session-binding-snapshot" in comparisons:
+        if response_summaries_omitted:
+            reason = "context-response-summaries-omitted"
+        elif "differs-from-current-session-binding-snapshot" in comparisons:
             reason = "captured-response-differs-from-current-snapshot"
         elif "not-comparable" in comparisons:
             reason = "current-session-binding-snapshot-not-comparable"
@@ -6055,7 +6114,151 @@ def _context_response_binding_inclusion(
         "reason": reason,
         "scope": "authenticated-session.context-events-in-selected-window",
         "event_window_status": event_window_status,
+        "response_summaries_omitted": response_summaries_omitted,
         "supporting_events": references[:MAX_CAPABILITY_SUPPORTING_EVENTS],
+    }
+
+
+def _context_response_use_sequence_relation(
+    inclusion: dict[str, Any], exact_interactions: list[dict[str, Any]], *,
+    complete_history: bool, response_summaries_omitted: int = 0,
+    invocation_summaries_omitted: int = 0,
+) -> dict[str, Any]:
+    """Describe same-session sequence order without inferring a causal effect."""
+    event_window_status = "complete" if complete_history else "partial"
+    if inclusion.get("status") != "identity-tuple-in-matched-response":
+        return {
+            "status": "not-comparable",
+            "reason": "context-response-inclusion-not-established",
+            "context_response_inclusion_status": inclusion.get("status"),
+            "temporal_basis": "same-session-event-sequence",
+            "causal_claim": "not-established",
+            "event_window_status": event_window_status,
+            "response_summaries_omitted": response_summaries_omitted,
+            "invocation_summaries_omitted": invocation_summaries_omitted,
+        }
+
+    response_references = inclusion.get("supporting_events")
+    response_references = (
+        response_references if isinstance(response_references, list) else []
+    )
+    response_events = [
+        reference for reference in response_references
+        if (isinstance(reference, dict)
+            and type(reference.get("sequence")) is int
+            and reference["sequence"] >= 0)
+    ]
+    invocation_events = [
+        interaction["invocation_event"]
+        for interaction in exact_interactions
+        if (isinstance(interaction, dict)
+            and isinstance(interaction.get("invocation_event"), dict)
+            and type(interaction["invocation_event"].get("sequence")) is int
+            and interaction["invocation_event"]["sequence"] >= 0)
+    ]
+    response_events.sort(key=lambda item: item["sequence"])
+    invocation_events.sort(key=lambda item: item["sequence"])
+    if not response_events:
+        return {
+            "status": "not-comparable",
+            "reason": "context-response-event-sequence-unavailable",
+            "temporal_basis": "same-session-event-sequence",
+            "causal_claim": "not-established",
+            "event_window_status": event_window_status,
+            "response_summaries_omitted": response_summaries_omitted,
+            "invocation_summaries_omitted": invocation_summaries_omitted,
+        }
+
+    observed_pairs: list[dict[str, Any]] = []
+    for invocation in invocation_events:
+        prior_responses = [
+            response for response in response_events
+            if response["sequence"] < invocation["sequence"]
+        ]
+        if prior_responses:
+            observed_pairs.append({
+                "context_response_event": prior_responses[-1],
+                "invocation_event": invocation,
+                "relation": "context-response-sequence-precedes-invocation",
+            })
+    if observed_pairs:
+        return {
+            "status": "invocation-observed-after-context-response",
+            "temporal_basis": "same-session-event-sequence",
+            "causal_claim": "not-established",
+            "event_window_status": event_window_status,
+            "response_comparison_time_basis": (
+                "current-session-binding-snapshot-at-projection-time"
+            ),
+            "response_summaries_omitted": response_summaries_omitted,
+            "invocation_summaries_omitted": invocation_summaries_omitted,
+            "observed_pairs": observed_pairs[:MAX_CAPABILITY_SUPPORTING_EVENTS],
+        }
+
+    if invocation_events:
+        if response_summaries_omitted:
+            return {
+                "status": "not-comparable",
+                "reason": "context-response-summaries-omitted",
+                "temporal_basis": "same-session-event-sequence",
+                "causal_claim": "not-established",
+                "event_window_status": event_window_status,
+                "response_summaries_omitted": response_summaries_omitted,
+                "invocation_summaries_omitted": invocation_summaries_omitted,
+            }
+        following_responses = [
+            response for response in response_events
+            if any(invocation["sequence"] < response["sequence"]
+                   for invocation in invocation_events)
+        ]
+        return {
+            "status": "invocation-observed-before-context-response",
+            "temporal_basis": "same-session-event-sequence",
+            "causal_claim": "not-established",
+            "event_window_status": event_window_status,
+            "response_comparison_time_basis": (
+                "current-session-binding-snapshot-at-projection-time"
+            ),
+            "response_summaries_omitted": response_summaries_omitted,
+            "invocation_summaries_omitted": invocation_summaries_omitted,
+            "observed_pairs": [
+                {
+                    "context_response_event": response,
+                    "invocation_event": max(
+                        (invocation for invocation in invocation_events
+                         if invocation["sequence"] < response["sequence"]),
+                        key=lambda item: item["sequence"],
+                    ),
+                    "relation": "invocation-sequence-precedes-context-response",
+                }
+                for response in following_responses[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+            ],
+        }
+
+    if invocation_summaries_omitted:
+        return {
+            "status": "not-observed-in-interaction-window",
+            "reason": "some-invocation-summaries-were-omitted",
+            "temporal_basis": "same-session-event-sequence",
+            "causal_claim": "not-established",
+            "event_window_status": event_window_status,
+            "response_summaries_omitted": response_summaries_omitted,
+            "invocation_summaries_omitted": invocation_summaries_omitted,
+        }
+
+    return {
+        "status": (
+            "no-exact-binding-invocation-record-in-session-history"
+            if complete_history
+            else "no-exact-binding-invocation-observed-in-selected-window"
+        ),
+        "reason": "this does not account for use through external interfaces",
+        "temporal_basis": "same-session-event-sequence",
+        "causal_claim": "not-established",
+        "event_window_status": event_window_status,
+        "response_summaries_omitted": response_summaries_omitted,
+        "invocation_summaries_omitted": invocation_summaries_omitted,
+        "response_events": response_events[:MAX_CAPABILITY_SUPPORTING_EVENTS],
     }
 
 
@@ -6325,6 +6528,9 @@ def _capability_delivery_view(
                 binding, response_summaries, context_supporting_events,
                 context_operation_count=context_operation_count,
                 complete_history=complete_history,
+                response_summaries_omitted=max(
+                    0, context_response_summary_count - len(response_summaries),
+                ),
             )
         )
 
@@ -6461,6 +6667,30 @@ def _capability_delivery_view(
             "ambiguous-current-bindings"
             if bindings_by_capability.get(capability, 0) > 1
             else "capability-name-match-only; provider-and-binding-identity-unavailable"
+        )
+
+    for binding in binding_records:
+        identity_complete = all(
+            isinstance(binding.get(key), str) and binding[key]
+            for key in ("provider", "capability", "binding_id", "contract_revision")
+        )
+        exact_interactions = (
+            identified_interactions_by_binding.get((
+                binding["provider"], binding["capability"], binding["binding_id"],
+                binding["contract_revision"],
+            ), [])
+            if identity_complete else []
+        )
+        binding["context_response_use_sequence_relation"] = (
+            _context_response_use_sequence_relation(
+                binding.get("context_response_inclusion", {}),
+                exact_interactions,
+                complete_history=complete_history,
+                response_summaries_omitted=max(
+                    0, context_response_summary_count - len(response_summaries),
+                ),
+                invocation_summaries_omitted=invocation_summaries_omitted,
+            )
         )
 
     outside_inventory = [
