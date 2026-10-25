@@ -1,0 +1,87 @@
+{
+  "captured_at": "2026-10-25T15:06:08Z",
+  "identity": "ev_environment_checkout_workspace_mount_alias_claim_flow_verification_20261025",
+  "measurement_basis": "Session.acquire_claim regression through the exact verified mount-alias path plus a direct protected-Control runtime resolver reproduction",
+  "not_measured": [
+    "completion of the authenticated Environment scope-grant RPC, whose provider transport remains unavailable",
+    "cross-agent recurrence or differences in usability",
+    "whether future real sessions demonstrate sustained improvement",
+    "resource overhead"
+  ],
+  "observation": {
+    "kind": "environmental-checkout-claim-flow-verification",
+    "source_interface": "MNCS Environment Session.acquire_claim and MNCS Control protected runtime",
+    "request": {
+      "operation": "Session.acquire_claim",
+      "repository": "mncs-environment",
+      "selected_anchor_branch": "campaign/environment-native-userland-projection-20261025",
+      "requested_checkout_branch": "main"
+    },
+    "outcome": {
+      "status": "registered-main-claim-held",
+      "regression_result": "passed",
+      "protected_runtime_resolver_result": "passed",
+      "claim_checkout_branch": "main",
+      "claim_checkout_identity_verified": true,
+      "authorized_anchor_common_directory_verified": true,
+      "interpretation": "The claim acquisition path now accepts Control's verified workspace mount alias, creates a held claim for the registered main checkout, and still verifies the selected campaign anchor and common Git directory. The full Environment RPC round trip remains untested."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "pr_environment_checkout_workspace_mount_alias_20261025",
+    "title": "Control workspace mount aliases block authorized branch checkout",
+    "category": "coordination",
+    "subsystem": "Environment checkout authorization",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Resolve the host-path alias only when it targets the verified active /workspace mount, then retain Git worktree registration, branch, and identity checks."
+  },
+  "improvement_relation": {
+    "identity": "ir_environment_checkout_workspace_alias_claim_flow_20261025",
+    "addresses_hypothesis_identity": "pr_environment_checkout_workspace_mount_alias_20261025",
+    "implementation_reference": {
+      "identity": "src_environment_control_workspace_alias_resolver_4427ed4",
+      "repository": "mncs-environment",
+      "commit": "4427ed4d7e7327b5df2def934d9a059a4516469d",
+      "path": "mncs_env/workspace.py",
+      "sha256": "2c0fd6699642162af46b4c60f79543d1f731765b5dde9b60dbf85a57ddc6840f"
+    },
+    "verification_observation_identity": "ev_environment_checkout_workspace_mount_alias_claim_flow_verification_20261025",
+    "subsequent_observation_identity": null,
+    "basis": "The full Session.acquire_claim regression reaches claim publication for registered main after independently verifying the selected worktree anchor; the direct protected-runtime probe exercises the actual /workspace mount alias.",
+    "not_measured": [
+      "authenticated Environment scope-grant RPC completion",
+      "sustained cross-agent effectiveness"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "consumer_id": "local-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_4179379f9332b176",
+    "session_id": "ses_5530f63cd8293e03"
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "identity": "src_environment_control_workspace_alias_claim_regression_87ec78e",
+      "repository": "mncs-environment",
+      "commit": "87ec78ec95d943772139d85ea2f7cffe74959472",
+      "path": "tests/test_workspace_root_alias.py",
+      "sha256": "96a9598884193d976954a14cc047411b5eb9e9c067741d351345d7ca0db5d5e6"
+    },
+    {
+      "identity": "src_environment_control_workspace_alias_resolver_4427ed4",
+      "repository": "mncs-environment",
+      "commit": "4427ed4d7e7327b5df2def934d9a059a4516469d",
+      "path": "mncs_env/workspace.py",
+      "sha256": "2c0fd6699642162af46b4c60f79543d1f731765b5dde9b60dbf85a57ddc6840f"
+    }
+  ]
+}
