@@ -39,6 +39,17 @@ print(json.dumps({"schema_version": value.get("schema", "fixture.status/1"), **v
 '''
 
 
+def test_development_definition_tracks_the_current_linked_worktree():
+    definition_path = ROOT / ".mncs" / "environment.json"
+    definition, _ = entry.select_definition(definition_path, None)
+
+    assert definition.get("working_checkout") == "current"
+    checkout = entry.current_working_checkout(definition, definition_path)
+
+    assert checkout is not None
+    assert checkout["path"] == str(ROOT.resolve())
+
+
 class EntryContractTests(unittest.TestCase):
     def test_project_definition_symlink_is_rejected(self):
         alias = self.project / ".mncs" / "environment-alias.json"

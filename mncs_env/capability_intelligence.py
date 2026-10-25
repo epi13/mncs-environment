@@ -20,6 +20,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from . import authority as authority_module
+from . import invocation_artifacts as invocation_artifacts_module
 from . import workspace as workspace_module
 from .identity import digest_hex
 from .sessions import MAX_RPC_READ_ACTIVITY_OBSERVATIONS, LifecycleError
@@ -98,6 +99,17 @@ CAPTURED_OPERATION_RESULT_SOURCE_KINDS = frozenset({
     "direct-operation-result", "direct-cli-projection-result",
 })
 MAX_SESSION_EVENT_WINDOW = 256
+MAX_SESSION_RESOURCE_ARTIFACT_WINDOW = 256
+MAX_SESSION_RESOURCE_SAMPLES = 4
+MAX_RESOURCE_SAMPLE_BYTES = 64 * 1024
+SYSTEM_RESOURCE_SAMPLE_CAPABILITY = "mncs-system-monitor:system-resource-sample"
+SYSTEM_RESOURCE_SAMPLE_SCHEMA = "mncs.system-monitor.resource-sample.v1"
+SYSTEM_RESOURCE_SAMPLE_PATH = "system-resource-sample.json"
+SYSTEM_RESOURCE_SAMPLE_STATUSES = frozenset({
+    "observed", "unknown", "unavailable", "unsupported", "permission_denied",
+    "malformed", "disappeared", "stale", "counter_regression",
+    "invalid_interval",
+})
 MAX_SESSION_ACTIVITY_INTERACTIONS = 32
 MAX_SESSION_ACTIVITY_CAPABILITIES = 16
 MAX_SESSION_ACTIVITY_RPC_OPERATIONS = 32
@@ -970,6 +982,7 @@ def _compact_projection(
             "event_page_before_sequence", "next_event_before_sequence",
             "event_window_sequence_start", "event_window_sequence_end",
             "invocation_events_considered", "invocation_records_omitted",
+            "resource_sample_identity_digest",
         )
         if key in activity_source
         and (key not in {"event_page_before_sequence", "next_event_before_sequence"}
@@ -1199,6 +1212,143 @@ def _compact_projection(
         if len(raw_authority_candidates) > len(compact_authority_candidates):
             compact_activity["authority_denial_candidates_truncated"] = True
 
+    resource_samples = activity.get("resource_samples")
+    resource_samples = resource_samples if isinstance(resource_samples, dict) else {}
+    resource_source = resource_samples.get("source")
+    resource_source = resource_source if isinstance(resource_source, dict) else {}
+    raw_resource_observations = resource_samples.get("observations")
+    raw_resource_observations = (
+        raw_resource_observations
+        if isinstance(raw_resource_observations, list) else []
+    )
+    compact_resource_observations = []
+    for item in raw_resource_observations[:MAX_SESSION_RESOURCE_SAMPLES]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in ("identity", "status")
+            if isinstance(item.get(key), str)
+        }
+        item_context = item.get("context")
+        if isinstance(item_context, dict):
+            compact_item["context"] = {
+                key: _short_text(item_context[key], 160)
+                for key in (
+                    "session_id", "campaign_id", "work_intent_id",
+                    "environment_id", "definition_id",
+                )
+                if isinstance(item_context.get(key), str)
+            }
+        item_source = item.get("source")
+        if isinstance(item_source, dict):
+            compact_item_source = {
+                key: _short_text(item_source[key], 160)
+                for key in (
+                    "capability", "binding_id", "provider_request_id",
+                    "event_correlation_status", "invocation_recorded_at",
+                    "provider", "contract_revision",
+                )
+                if isinstance(item_source.get(key), str)
+            }
+            for key in ("invocation_event", "completion_event"):
+                reference = item_source.get(key)
+                if isinstance(reference, dict):
+                    compact_item_source[key] = {
+                        field: reference[field]
+                        for field in ("identity", "sequence", "type", "observed_at")
+                        if field in reference
+                    }
+            artifact_reference = item_source.get("artifact_reference")
+            if isinstance(artifact_reference, dict):
+                compact_item_source["artifact_reference"] = {
+                    "store_reference": _short_text(
+                        artifact_reference.get("store_reference"), 512,
+                    ),
+                    "path": _short_text(artifact_reference.get("path"), 160),
+                    "byte_count": artifact_reference.get("byte_count"),
+                    "sha256": _short_text(artifact_reference.get("sha256"), 64),
+                }
+            compact_item["source"] = compact_item_source
+        sample = item.get("sample")
+        if isinstance(sample, dict):
+            compact_sample: dict[str, Any] = {
+                "schema": _short_text(sample.get("schema"), 96),
+            }
+            if sample.get("measurement_basis") == (
+                "system-monitor-reported-resource-sample"
+            ):
+                compact_sample["measurement_basis"] = sample["measurement_basis"]
+            availability = sample.get("measurement_availability")
+            if isinstance(availability, dict):
+                compact_sample["measurement_availability"] = {
+                    key: value
+                    for key, value in availability.items()
+                    if key in {
+                        "host.cpu_count", "host.cpu_utilization",
+                        "host.load_average", "host.memory_total_bytes",
+                        "host.memory_available_bytes",
+                    }
+                    and value in {"measured", "derived", "unavailable"}
+                }
+            if type(sample.get("observed_at")) is int:
+                compact_sample["observed_at"] = sample["observed_at"]
+            sample_time = sample.get("sample_time")
+            if isinstance(sample_time, dict):
+                compact_sample["sample_time"] = {
+                    key: sample_time[key]
+                    for key in ("wall_time_unix_ms", "monotonic_ns")
+                    if key in sample_time
+                    and (type(sample_time[key]) is int or sample_time[key] is None)
+                }
+            host = sample.get("host")
+            if isinstance(host, dict):
+                compact_host = {}
+                for key in (
+                    "cpu_count", "memory_total_bytes", "memory_available_bytes",
+                ):
+                    if key in host and (
+                        type(host.get(key)) is int or host.get(key) is None
+                    ):
+                        compact_host[key] = host[key]
+                for key in ("cpu_utilization",):
+                    if key in host and (
+                        type(host.get(key)) in (int, float) or host.get(key) is None
+                    ):
+                        compact_host[key] = host[key]
+                load_average = host.get("load_average")
+                if "load_average" in host and (
+                    isinstance(load_average, (list, dict)) or load_average is None
+                ):
+                    compact_host["load_average"] = load_average
+                for key in ("cpu_status", "memory_available_status"):
+                    if isinstance(host.get(key), str):
+                        compact_host[key] = _short_text(host[key], 64)
+                compact_sample["host"] = compact_host
+            compact_item["sample"] = compact_sample
+        compact_resource_observations.append(compact_item)
+    compact_resource_samples = {
+        "status": _short_text(resource_samples.get("status"), 96),
+        "observation_count": resource_samples.get("observation_count", 0),
+        "records_examined": resource_samples.get("records_examined", 0),
+        "source": {
+            key: resource_source[key]
+            for key in (
+                "artifact_window_count", "artifact_window_limit",
+                "artifact_window_truncated", "selection_policy",
+                "records_omitted", "observation_identity_digest",
+            )
+            if key in resource_source
+        },
+        "observations": compact_resource_observations,
+    }
+    if len(raw_resource_observations) > len(compact_resource_observations):
+        compact_resource_samples["observations_truncated"] = True
+    if (raw_resource_observations
+            or resource_source.get("artifact_window_truncated") is True
+            or resource_source.get("records_omitted", 0) > 0):
+        compact_activity["resource_samples"] = compact_resource_samples
+
     result = {
         "schema_version": SCHEMA,
         "identity": projection["identity"],
@@ -1261,6 +1411,9 @@ def _compact_projection(
         elif result["session_activity"].get("authority_denials"):
             result["session_activity"]["authority_denials"].pop()
             result["session_activity"]["authority_denials_truncated"] = True
+        elif result["session_activity"].get("resource_samples", {}).get("observations"):
+            result["session_activity"]["resource_samples"]["observations"].pop()
+            result["session_activity"]["resource_samples"]["observations_truncated"] = True
         else:
             break
     return result
@@ -2484,6 +2637,308 @@ def _authority_denial_reason_class(reason: Any) -> str:
                  if fragment in normalized), "other-denial")
 
 
+def _resource_sample_payload(value: Any) -> tuple[dict[str, Any] | None, str | None]:
+    """Select the privacy-minimized, bounded fields from one Monitor sample."""
+    if not isinstance(value, dict) or value.get("schema") != SYSTEM_RESOURCE_SAMPLE_SCHEMA:
+        return None, "resource-sample-schema-mismatch"
+    observed_at = value.get("observed_at")
+    if observed_at is not None and (
+        type(observed_at) is not int or observed_at < 0 or observed_at > 2**63 - 1
+    ):
+        return None, "resource-sample-time-invalid"
+    raw_time = value.get("sample_time")
+    sample_time = None
+    if raw_time is not None:
+        if not isinstance(raw_time, dict):
+            return None, "resource-sample-time-invalid"
+        sample_time = {}
+        for key in ("wall_time_unix_ms", "monotonic_ns"):
+            field_value = raw_time.get(key)
+            if field_value is None:
+                if key in raw_time:
+                    sample_time[key] = None
+                continue
+            if type(field_value) is not int or field_value < 0 or field_value > 2**64 - 1:
+                return None, "resource-sample-time-invalid"
+            sample_time[key] = field_value
+    raw_host = value.get("host")
+    if not isinstance(raw_host, dict):
+        return None, "resource-sample-host-facts-unavailable"
+    host: dict[str, Any] = {}
+    for key in ("cpu_count", "memory_total_bytes", "memory_available_bytes"):
+        if key not in raw_host:
+            continue
+        field_value = raw_host[key]
+        if field_value is None:
+            host[key] = None
+        elif type(field_value) is int and 0 <= field_value <= 2**63 - 1:
+            host[key] = field_value
+        else:
+            return None, "resource-sample-host-fact-invalid"
+    if "cpu_utilization" in raw_host:
+        field_value = raw_host["cpu_utilization"]
+        if field_value is None:
+            host["cpu_utilization"] = None
+        elif (type(field_value) in (int, float) and math.isfinite(field_value)
+              and abs(field_value) <= 1_000_000):
+            host["cpu_utilization"] = field_value
+        else:
+            return None, "resource-sample-host-fact-invalid"
+    if "load_average" in raw_host:
+        load_average = raw_host["load_average"]
+        if load_average is None:
+            host["load_average"] = None
+        elif isinstance(load_average, list) and len(load_average) <= 3:
+            if any(
+                item is not None and (
+                    type(item) not in (int, float) or not math.isfinite(item)
+                    or abs(item) > 1_000_000
+                )
+                for item in load_average
+            ):
+                return None, "resource-sample-host-fact-invalid"
+            host["load_average"] = load_average
+        else:
+            return None, "resource-sample-host-fact-invalid"
+    for key in ("cpu_status", "memory_available_status"):
+        if key in raw_host:
+            field_value = raw_host[key]
+            if field_value not in SYSTEM_RESOURCE_SAMPLE_STATUSES:
+                return None, "resource-sample-host-fact-invalid"
+            host[key] = field_value
+    sample: dict[str, Any] = {"schema": SYSTEM_RESOURCE_SAMPLE_SCHEMA, "host": host}
+    sample["measurement_basis"] = "system-monitor-reported-resource-sample"
+    sample["measurement_availability"] = {
+        "host.cpu_count": (
+            "measured" if host.get("cpu_count") is not None else "unavailable"
+        ),
+        "host.cpu_utilization": (
+            "derived" if host.get("cpu_utilization") is not None else "unavailable"
+        ),
+        "host.load_average": (
+            "measured" if host.get("load_average") is not None else "unavailable"
+        ),
+        "host.memory_total_bytes": (
+            "measured" if host.get("memory_total_bytes") is not None else "unavailable"
+        ),
+        "host.memory_available_bytes": (
+            "measured" if host.get("memory_available_bytes") is not None else "unavailable"
+        ),
+    }
+    if observed_at is not None or "observed_at" in value:
+        sample["observed_at"] = observed_at
+    if sample_time is not None:
+        sample["sample_time"] = sample_time
+    return sample, None
+
+
+def _session_resource_samples(
+    session: Any, snapshot: dict[str, Any], events: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Read the newest bounded Store-backed resource sample per session binding."""
+    raw_artifacts = snapshot.get("artifacts")
+    raw_artifacts = raw_artifacts if isinstance(raw_artifacts, list) else []
+    artifact_window = raw_artifacts[-MAX_SESSION_RESOURCE_ARTIFACT_WINDOW:]
+    latest_by_binding: dict[str, dict[str, Any]] = {}
+    for artifact in reversed(artifact_window):
+        if (not isinstance(artifact, dict)
+                or artifact.get("kind") != "invocation-result"
+                or artifact.get("capability") != SYSTEM_RESOURCE_SAMPLE_CAPABILITY):
+            continue
+        binding_id = artifact.get("binding_id")
+        if (isinstance(binding_id, str) and binding_id and len(binding_id) <= 160
+                and binding_id not in latest_by_binding):
+            latest_by_binding[binding_id] = artifact
+    candidates = list(latest_by_binding.items())
+    omitted = max(0, len(candidates) - MAX_SESSION_RESOURCE_SAMPLES)
+    candidates = candidates[:MAX_SESSION_RESOURCE_SAMPLES]
+    source = {
+        "artifact_window_count": len(artifact_window),
+        "artifact_window_limit": MAX_SESSION_RESOURCE_ARTIFACT_WINDOW,
+        "artifact_window_truncated": len(raw_artifacts) > len(artifact_window),
+        "selection_policy": "newest-resource-sample-invocation-per-binding",
+        "records_omitted": omitted,
+        "observation_identity_digest": digest_hex([], length=16),
+    }
+    if not candidates:
+        return {
+            "status": (
+                "not-present-in-selected-invocation-artifact-window"
+                if source["artifact_window_truncated"]
+                else "not-captured-in-session"
+            ),
+            "observation_count": 0,
+            "records_examined": 0,
+            "source": source,
+            "observations": [],
+        }
+
+    binding_records = snapshot.get("bindings")
+    binding_records = binding_records if isinstance(binding_records, list) else []
+    campaign = snapshot.get("campaign")
+    campaign = campaign if isinstance(campaign, dict) else {}
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+    provenance = snapshot.get("provenance")
+    provenance = provenance if isinstance(provenance, dict) else {}
+    context = {
+        key: _short_text(value, 160)
+        for key, value in {
+            "session_id": session.session_id,
+            "campaign_id": campaign.get("identity"),
+            "work_intent_id": intent.get("identity"),
+            "environment_id": snapshot.get("environment_id"),
+            "definition_id": provenance.get("definition_id"),
+        }.items()
+        if isinstance(value, str) and value
+    }
+    observations: list[dict[str, Any]] = []
+    statuses: list[str] = []
+    for binding_id, artifact in candidates:
+        request_id = artifact.get("provider_request_id")
+        if (not isinstance(request_id, str) or not request_id
+                or len(request_id) > 160):
+            request_id = None
+        matching_starts: list[dict[str, Any]] = []
+        matching_completions: list[dict[str, Any]] = []
+        if isinstance(request_id, str) and request_id:
+            for event in events:
+                payload = event.get("payload")
+                if not isinstance(payload, dict):
+                    continue
+                if (payload.get("provider_request_id") != request_id
+                        or payload.get("capability") != SYSTEM_RESOURCE_SAMPLE_CAPABILITY):
+                    continue
+                if event.get("type") == "capability.invoked":
+                    matching_starts.append(event)
+                elif event.get("type") == "invocation.completed":
+                    matching_completions.append(event)
+        invocation_event = (
+            _event_reference(matching_starts[0])
+            if len(matching_starts) == 1 else None
+        )
+        completion_event = (
+            _event_reference(matching_completions[0])
+            if len(matching_completions) == 1 else None
+        )
+        correlation_status = "not-present-in-selected-event-window"
+        if not isinstance(request_id, str) or not request_id:
+            correlation_status = "provider-request-id-unavailable"
+        elif len(matching_starts) > 1 or len(matching_completions) > 1:
+            correlation_status = "ambiguous-provider-request-id"
+        elif invocation_event is not None and completion_event is not None:
+            completion_payload = matching_completions[0].get("payload")
+            expected_reference = artifact.get("artifact_store_ref")
+            invocation_sequence = matching_starts[0].get("sequence")
+            completion_sequence = matching_completions[0].get("sequence")
+            if (type(invocation_sequence) is int
+                    and type(completion_sequence) is int
+                    and completion_sequence <= invocation_sequence):
+                correlation_status = "completion-precedes-invocation"
+            elif (isinstance(expected_reference, str) and expected_reference
+                    and isinstance(completion_payload, dict)
+                    and completion_payload.get("artifact_store_ref") == expected_reference):
+                correlation_status = "matched-by-provider-request-id"
+            else:
+                correlation_status = "artifact-reference-mismatch"
+
+        binding = next((
+            item for item in binding_records
+            if isinstance(item, dict) and item.get("binding_id") == binding_id
+        ), None)
+        projection: dict[str, Any] = {
+            "identity": "rsm_" + digest_hex({
+                "session_id": session.session_id,
+                "provider_request_id": request_id,
+                "artifact_store_ref": artifact.get("artifact_store_ref"),
+            }, length=16),
+            "status": "unavailable",
+            "context": dict(context),
+            "source": {
+                "capability": SYSTEM_RESOURCE_SAMPLE_CAPABILITY,
+                "binding_id": binding_id,
+                "provider_request_id": request_id,
+                "event_correlation_status": correlation_status,
+                "invocation_event": invocation_event,
+                "completion_event": completion_event,
+            },
+        }
+        if isinstance(binding, dict):
+            for key in ("provider", "contract_revision"):
+                if isinstance(binding.get(key), str):
+                    projection["source"][key] = _short_text(binding[key], 128)
+        if isinstance(artifact.get("at"), str):
+            projection["source"]["invocation_recorded_at"] = _short_text(
+                artifact["at"], 64,
+            )
+        if artifact.get("status") != "ok":
+            projection["status"] = "latest-invocation-unsuccessful"
+            statuses.append(projection["status"])
+            observations.append(projection)
+            continue
+        try:
+            metadata, content = invocation_artifacts_module.read_latest_invocation_file(
+                session,
+                SYSTEM_RESOURCE_SAMPLE_CAPABILITY,
+                binding_id,
+                SYSTEM_RESOURCE_SAMPLE_PATH,
+                max_bytes=MAX_RESOURCE_SAMPLE_BYTES,
+            )
+        except invocation_artifacts_module.InvocationArtifactError:
+            projection["status"] = "resource-artifact-unavailable"
+            statuses.append(projection["status"])
+            observations.append(projection)
+            continue
+        except StoreIntegrityFailure:
+            projection["status"] = "resource-artifact-integrity-failure"
+            statuses.append(projection["status"])
+            observations.append(projection)
+            continue
+        except (StoreUnavailable, LifecycleError, OSError, ValueError):
+            projection["status"] = "resource-artifact-unavailable"
+            statuses.append(projection["status"])
+            observations.append(projection)
+            continue
+        try:
+            decoded = json.loads(content)
+        except (UnicodeDecodeError, ValueError):
+            decoded = None
+        sample, diagnostic = _resource_sample_payload(decoded)
+        projection["source"]["artifact_reference"] = {
+            "store_reference": metadata["store_reference"],
+            "path": metadata["path"],
+            "byte_count": metadata["byte_count"],
+            "sha256": metadata["sha256"],
+        }
+        if sample is None:
+            projection["status"] = diagnostic or "resource-sample-invalid"
+        else:
+            projection["status"] = "available"
+            projection["sample"] = sample
+        statuses.append(projection["status"])
+        observations.append(projection)
+
+    available = sum(item.get("status") == "available" for item in observations)
+    source["observation_identity_digest"] = digest_hex(
+        [item["identity"] for item in observations], length=16,
+    )
+    if available == len(observations) and not omitted:
+        status = "available"
+    elif available:
+        status = "partial"
+    elif len(observations) == 1:
+        status = statuses[0]
+    else:
+        status = "partial"
+    return {
+        "status": status,
+        "observation_count": available,
+        "records_examined": len(observations),
+        "source": source,
+        "observations": observations,
+    }
+
+
 def _session_activity(
     session: Any, snapshot: dict[str, Any], *,
     event_before_sequence: int | None = None,
@@ -2500,14 +2955,19 @@ def _session_activity(
         ),
         "Model identity, token usage, execution duration, and resource consumption are not inferred when the runtime does not expose them.",
         "The Store page reader verifies only selected event payloads; finding their bindings still scans the generation's metadata index.",
+        "Resource samples are bounded aggregate host snapshots linked to Environment invocations; they do not measure agent-attributed consumption or establish pressure by themselves.",
     ]
     if not callable(reader):
+        resource_samples = _session_resource_samples(session, snapshot, [])
         return {
             "status": "unavailable",
             "context": {},
             "source": {
                 "event_window_limit": event_limit,
                 "event_page_before_sequence": event_before_sequence,
+                "resource_sample_identity_digest": resource_samples["source"][
+                    "observation_identity_digest"
+                ],
             },
             "interaction_count": 0,
             "interactions": [],
@@ -2515,6 +2975,7 @@ def _session_activity(
             "rpc_operations": [],
             "rpc_failure_candidates": [],
             "capabilities": [],
+            "resource_samples": resource_samples,
             "measurement_limits": [
                 *limits,
                 "The session event page interface is unavailable.",
@@ -2534,16 +2995,21 @@ def _session_activity(
             or page["event_count"] < 0
             or not isinstance(page.get("events"), list)
             or type(page.get("truncated")) is not bool):
+        resource_samples = _session_resource_samples(session, snapshot, [])
         return {
             "status": "unavailable",
             "context": {},
             "source": {
                 "event_window_limit": event_limit,
                 "event_page_before_sequence": event_before_sequence,
+                "resource_sample_identity_digest": resource_samples["source"][
+                    "observation_identity_digest"
+                ],
             },
             "interaction_count": 0,
             "interactions": [],
             "capabilities": [],
+            "resource_samples": resource_samples,
             "measurement_limits": [
                 *limits,
                 "The session event tail could not be read or did not match its declared shape.",
@@ -2949,9 +3415,11 @@ def _session_activity(
         }.items()
         if isinstance(value, str) and value
     }
+    resource_samples = _session_resource_samples(session, snapshot, events)
     return {
         "status": status,
         "context": context,
+        "resource_samples": resource_samples,
         "source": {
             "event_count": event_count,
             "event_window_limit": event_limit,
@@ -2962,6 +3430,9 @@ def _session_activity(
             "events_considered": len(raw_page_events),
             "event_window_truncated": event_window_truncated,
             "event_window_identity_digest": digest_hex(window_references, length=16),
+            "resource_sample_identity_digest": resource_samples["source"][
+                "observation_identity_digest"
+            ],
             "event_window_sequence_start": (
                 window_references[0]["sequence"] if window_references else None
             ),
@@ -3579,6 +4050,19 @@ def project(
         event_before_sequence=session_event_before_sequence,
         event_limit=session_event_limit,
     )
+    if campaign_state is None:
+        activity_samples = activity.get("resource_samples")
+        activity_samples = (
+            activity_samples if isinstance(activity_samples, dict) else {}
+        )
+        activity_has_evidence = (
+            activity_samples.get("observation_count", 0) > 0
+            or activity.get("interaction_count", 0) > 0
+            or activity.get("rpc_operation_count", 0) > 0
+            or activity.get("authority_denial_count", 0) > 0
+        )
+        if activity_has_evidence:
+            status = "partial"
     subject = {
         "session_id": session.session_id,
         "campaign_id": campaign.get("identity"),
@@ -3607,6 +4091,10 @@ def project(
             ),
             "session_activity_digest": (
                 activity.get("source", {}).get("event_window_identity_digest")
+                if isinstance(activity.get("source"), dict) else None
+            ),
+            "session_resource_sample_digest": (
+                activity.get("source", {}).get("resource_sample_identity_digest")
                 if isinstance(activity.get("source"), dict) else None
             ),
         }, length=16),
@@ -3731,6 +4219,7 @@ def project(
             "A linked verification record establishes that evidence is present and integrity checked; effectiveness still requires independent follow-up.",
             "Optional improvement relations that do not meet the current contract are surfaced as unverified and excluded from improvement claims.",
             "Session activity summarizes only the bounded recent event tail and exposes no raw invocation arguments or results.",
+            "Session resource samples read the newest bounded Store-backed Monitor invocation per binding and preserve session, objective, event, and artifact provenance; a host snapshot does not attribute resource consumption to an agent.",
             "Authority denial activity exposes normalized action and reason classes with event references; raw targets and free-form reasons are omitted.",
             "Authenticated Control read-operation events include a measured Control-dispatch elapsed time, which includes session-queue wait and is not total agent execution duration; model identity, token usage, resource consumption, and cache accounting remain unavailable.",
             "Direct read-operation capture stops after 128 observations per session; selected-window and capture-limit fields disclose partial coverage.",

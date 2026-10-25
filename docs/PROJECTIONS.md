@@ -167,6 +167,30 @@ For absolute targets, repository attribution uses observed checkout paths.
 Merge and publish authorization still requires a live claim covering the
 resolved scope.
 
+The same session activity view exposes up to four newest successful
+`mncs-system-monitor:system-resource-sample` artifacts, one per binding. The
+Environment definition selects this read-only capability, but sampling remains
+explicit. Invoke it, then query the projection:
+
+```bash
+./scripts/mncs-env invoke <session> \
+  mncs-system-monitor:system-resource-sample --
+./scripts/mncs-env projections <session> --interpret environmental-capability
+```
+
+Each sample is read from the canonical Store through the existing
+invocation-artifact reader and is correlated to the Environment invocation
+events by provider request identity and Store reference. The view preserves session, campaign,
+work-intent, environment, binding, event, and Store-file SHA-256 provenance.
+Only aggregate CPU and memory fields from the Monitor schema are projected;
+hostnames, process lists, and unknown fields are omitted. Missing samples,
+failed invocations, artifacts outside the selected bounded window, and
+integrity failures remain distinct states. A host snapshot describes conditions
+at capture time; it is not agent-attributed consumption and a single sample does
+not establish resource pressure. Each metric carries availability, and the
+projection identifies Monitor-derived CPU utilization separately from sampled
+host facts; it never fills missing values with zero.
+
 `campaign-state <session>` includes this derived view when the existing
 128 KiB campaign-state response budget permits, so a caller reading the durable
 ledger can inspect related environmental context in the same response. When
@@ -178,6 +202,13 @@ against the selected checkout and retains exact commit/path pointers. Evidence
 in an unselected repository is named but not opened. Results are computed when
 requested; no transcript copy, separate telemetry store, or permanent dashboard
 is created.
+
+Campaign evidence and current session activity have independent availability.
+If the campaign ledger cannot be read but the session contains authenticated
+tool interactions, Control read observations, authority denials, or verified
+resource samples, the top-level projection reports `partial` and keeps the
+available session evidence inspectable. It remains `unavailable` when neither
+source provides usable evidence.
 
 The same projection has bounded adapters for three exact Compiler
 language-module regression report families. The effect and capability
