@@ -1,0 +1,114 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_owner_audit_pressure_link_pressure_20261025",
+  "captured_at": "2026-10-25T16:32:51Z",
+  "measurement_basis": "committed baseline source and content-integrity-verified repository-owner audit records",
+  "observation": {
+    "kind": "native-owner-audit-pressure-link-visibility-gap",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "baseline_commit": "fb373824817f18968a061cdff402c5a247a8ade6",
+      "audit_observation_identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+      "query": "projections --interpret environmental-capability --history-pages 1 --evidence-offset 0 --evidence-limit 1 --session-event-limit 1"
+    },
+    "outcome": {
+      "baseline_projection_capability": "The implementation-accountability projection exposed owner-declared surfaces, plain host-responsibility summaries, and verified source pointers, but its per-source audit detail omitted canonical MNCS surfaces and the pressure identities recorded by each repository owner.",
+      "source_evidence": "The exact mncs-actions and mncs-test native-userland-audit.json records list canonical native surfaces and source-declared pressure identities. The parent Environmental observation also points to mncs-test P-004 and P-006 pressure records; their content integrity is separately represented by the existing source pointer projection.",
+      "actionable_opportunity": "Expose bounded canonical-surface and existing-pressure lists from the exact verified audit blobs so agents can move from a remaining host responsibility to the native surfaces and pressure records its owner named.",
+      "interpretation_limit": "The lists remain owner declarations. A pressure identity string does not establish that every named pressure record is present, verified, or causally blocks a migration. The audit sample does not establish a complete adoption denominator.",
+      "native_adoption": {
+        "systemwide_ratio": "not-measured",
+        "denominator": "not-established",
+        "implementation_ownership": "owner-declared; not independently verified"
+      },
+      "recurrence": "One campaign evidence path; recurrence across independent sessions is not established."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_native_owner_audit_pressure_link_20261025",
+    "title": "Native surfaces and source-declared pressure links were omitted from owner-audit details",
+    "category": "environmental-capability-integration",
+    "subsystem": "Environment implementation accountability and native-userland source projection",
+    "owner": "mncs-environment maintainers",
+    "basis": "The committed fb37382 baseline exposes each audit's source pointer and summary but not the canonical_mncs_surfaces or existing_pressures fields in the verified owner-audit source records. This is a projection coverage gap established from source and campaign evidence, not evidence that another agent failed to discover the information.",
+    "actionable_recommendation": "Add bounded, explicitly owner-declared canonical-surface and pressure-identity fields to the existing projection, keep exact source pointers visible, and do not promote pressure strings into verified causal claims.",
+    "recurrence": "not-established-across-sessions",
+    "not_measured": [
+      "whether another agent previously failed to find these source fields",
+      "whether all source-declared pressure identities correspond to currently verified records",
+      "causal blockage of any host implementation by a named pressure",
+      "complete native and host ownership inventory or systemwide ratio",
+      "whether exposing these links changes agent implementation choices"
+    ]
+  },
+  "not_measured": [
+    "independent agent discoverability or successful use",
+    "semantic validity of repository-owner pressure classifications",
+    "systemwide native adoption ratio or denominator",
+    "causal readiness to replace any host implementation"
+  ],
+  "supporting_sources": [
+    {
+      "kind": "committed-baseline-source",
+      "identity": "src_environment_native_audit_detail_baseline_fb37382",
+      "repository": "mncs-environment",
+      "commit": "fb373824817f18968a061cdff402c5a247a8ade6",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "3528382166b063e72e813081bd1c5a7c7d2b71708887f7f20d17484a59720046"
+    },
+    {
+      "kind": "authenticated-campaign-owner-audit-observation",
+      "identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+      "repository": "mncs-environment",
+      "commit": "fa06cc9d56648c48d17594d7af65f0babd2c35c8",
+      "path": "evidence/environmental-capability/native-userland-accountability-20261025.json",
+      "sha256": "14af1e6885b24b324491af644f7a9a4bb589e60d391d4649b9c93c49832b6b66"
+    },
+    {
+      "kind": "repository-owner-native-userland-audit",
+      "identity": "audit_mncs_actions_native_userland_20261025",
+      "repository": "mncs-actions",
+      "commit": "ca62f3d33ef9c3b5096bc4d39f6039adc445e579",
+      "path": "native-userland-audit.json",
+      "sha256": "76e5845b033c775f93bc3e821a069cf8bb21eb437784e505847db3c19446c48a"
+    },
+    {
+      "kind": "repository-owner-native-userland-audit",
+      "identity": "audit_mncs_test_native_userland_20261025",
+      "repository": "mncs-test",
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "path": "native-userland-audit.json",
+      "sha256": "cd4e760c250504cc62b5094769bedf07b73b2dd6d0765206c571290a27bb5560"
+    },
+    {
+      "kind": "repository-owner-language-and-runtime-pressure",
+      "identity": "MNCS-TEST-P-004",
+      "repository": "mncs-test",
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "path": "pressures/MNCS-TEST-P-004.json",
+      "sha256": "1b3a90dedc869f666e898450af81634aa27863a4c144b7d4b5d87caa992b42bf"
+    },
+    {
+      "kind": "repository-owner-native-result-transport-pressure",
+      "identity": "MNCS-TEST-P-006",
+      "repository": "mncs-test",
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "path": "pressures/MNCS-TEST-P-006.json",
+      "sha256": "26d0e4eae997127cad0b17ae8f0ebb733983ddb64162b72ae96fa319ac616f86"
+    }
+  ]
+}
