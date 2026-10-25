@@ -1,0 +1,66 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_diagnostic_work_context_pressure_20261025",
+  "captured_at": "2026-10-25T10:26:07Z",
+  "measurement_basis": "source inspection of the prior ambient diagnostic evidence payload and the authenticated campaign session context",
+  "observation": {
+    "kind": "diagnostic-evidence-work-context-gap",
+    "source_interface": "MNCS Environment ambient diagnostics evidence and read_evidence interface",
+    "request": {
+      "evidence_schema": "mncs.environment.diagnostics/1",
+      "baseline_commit": "67953dd3b8029d1eb132125a0adadd86232d9b92",
+      "available_session_context": [
+        "campaign identity",
+        "Work Intent identity and goal",
+        "Environment identity",
+        "definition identity"
+      ]
+    },
+    "outcome": {
+      "status": "source-contract-gap-confirmed",
+      "observed_limitation": "The durable diagnostic payload retained failures, outcomes, and witness references but did not carry related_work or recording_context. A consumer opening the evidence had to join it back to session state to identify the campaign objective and Environment that recorded it.",
+      "interpretation_limit": "This establishes a missing relationship in the evidence contract; it does not establish that an agent was blocked or that the context was unavailable elsewhere."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_diagnostic_context_baseline_20261025",
+      "repository": "mncs-environment",
+      "commit": "67953dd3b8029d1eb132125a0adadd86232d9b92",
+      "path": "mncs_env/diagnostics.py",
+      "sha256": "57bdd86c3fae9efd21fdc13774ea9528481f79618655e869bdc2fcae9a83fad5"
+    }
+  ],
+  "pressure_hypothesis": {
+    "identity": "ph_environment_diagnostic_work_context_20261025",
+    "title": "Durable diagnostic evidence omits its originating work context",
+    "category": "capability-accountability-and-discoverability",
+    "subsystem": "MNCS Environment ambient diagnostics and session evidence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Carry available campaign, session, Work Intent, Environment, consumer, and definition context in the existing durable diagnostic evidence payload. Omit unavailable fields instead of inventing them, and preserve failure and verification semantics.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether diagnostic consumers previously repeated session-context reconstruction",
+      "whether missing context affected an agent's interpretation or recovery",
+      "use of the added fields by independent projection consumers"
+    ]
+  },
+  "not_measured": [
+    "cross-session recurrence of this evidence-contract gap",
+    "runtime usability of the new context fields in a subsequent real diagnostic event"
+  ]
+}

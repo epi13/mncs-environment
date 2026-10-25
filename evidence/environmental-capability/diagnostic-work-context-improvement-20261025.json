@@ -1,0 +1,79 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_diagnostic_work_context_improvement_20261025",
+  "captured_at": "2026-10-25T10:26:07Z",
+  "measurement_basis": "verified implementation in the existing durable ambient diagnostics evidence path",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment ambient diagnostics evidence and read_evidence interface",
+    "request": {
+      "implementation_commit": "eed23371afaf8ed86f00f44168a17bf57a5b4504",
+      "verification_observation_identity": "ev_environment_diagnostic_work_context_verification_20261025",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "The existing diagnostics evidence payload now carries available related_work fields for campaign, session, Work Intent, and Environment, plus recording_context fields for campaign, session, consumer, Environment, definition, and Environment version when present. Invalid, absent, or oversized values are omitted; diagnostic results and verdicts are unchanged.",
+      "delivery": {
+        "repository": "mncs-environment",
+        "branch": "main",
+        "commit": "eed23371afaf8ed86f00f44168a17bf57a5b4504",
+        "remote_ref": "origin/main",
+        "status": "pushed-and-verified"
+      },
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The existing read_evidence interface and unit fixtures verify the payload contract. A real Store-backed diagnostic after deployment is still needed to establish runtime exposure to agents."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_diagnostic_context_implementation_20261025",
+      "repository": "mncs-environment",
+      "commit": "eed23371afaf8ed86f00f44168a17bf57a5b4504",
+      "path": "mncs_env/diagnostics.py",
+      "sha256": "5b5fce1c68361c16af881de9084f5f724aa1f1922b0067e84ba8f965966d29ec"
+    },
+    {
+      "identity": "ev_environment_diagnostic_context_tests_20261025",
+      "repository": "mncs-environment",
+      "commit": "eed23371afaf8ed86f00f44168a17bf57a5b4504",
+      "path": "tests/test_diagnostics.py",
+      "sha256": "9127a7b997e17b6682f8e75c16937c701e0382d68c0cdcf2ed8979edfef93cf9"
+    }
+  ],
+  "improvement_relation": {
+    "identity": "im_environment_diagnostic_work_context_20261025",
+    "addresses_hypothesis_identity": "ph_environment_diagnostic_work_context_20261025",
+    "implementation_reference": {
+      "identity": "ev_environment_diagnostic_context_implementation_20261025",
+      "repository": "mncs-environment",
+      "commit": "eed23371afaf8ed86f00f44168a17bf57a5b4504",
+      "path": "mncs_env/diagnostics.py",
+      "sha256": "5b5fce1c68361c16af881de9084f5f724aa1f1922b0067e84ba8f965966d29ec"
+    },
+    "verification_observation_identity": "ev_environment_diagnostic_work_context_verification_20261025",
+    "subsequent_observation_identity": null,
+    "basis": "Focused tests verify the durable evidence returned through read_evidence includes source and recording context when available and omits invalid or missing fields. No new telemetry store, diagnostic verdict, or agent efficiency measure was introduced.",
+    "not_measured": [
+      "runtime exposure of these fields through a real Store-backed session",
+      "downstream use and benefit across independent sessions"
+    ]
+  },
+  "not_measured": [
+    "subsequent real diagnostic activity after deployment",
+    "whether the relationship reduces repeated context reconstruction"
+  ]
+}
