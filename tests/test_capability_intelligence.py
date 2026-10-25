@@ -1411,6 +1411,9 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
     assert build["use_observation_status"] == "invoked-in-selected-event-window"
     assert build["invocation_count"] == 2
     assert build["outcome_status_counts"] == {"failed": 1}
+    assert build["provider_attribution"] == (
+        "capability-name-match-only; provider-and-binding-identity-unavailable"
+    )
     assert build["supporting_events"][0]["identity"] == "evt_capability_invoked_2"
     assert build["availability_event_references"][0]["identity"] == (
         "evt_capability_available_1"
@@ -1423,7 +1426,9 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
         if item["capability"] == "mncs-compiler:inspect"
     )
     assert inspect["availability_status"] == "unavailable"
-    assert inspect["use_observation_status"] == "not-observed-in-session-history"
+    assert inspect["use_observation_status"] == (
+        "no-environment-invocation-record-in-session-history"
+    )
     compact = capability_intelligence._compact_projection(
         result, 100_000, capability_intelligence.MAX_RESULT_BYTES,
     )

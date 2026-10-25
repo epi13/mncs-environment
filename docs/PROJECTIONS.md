@@ -427,12 +427,14 @@ their source event references. The projection labels capability discoverability
 `not-measured`: a binding proves Environment discovery and availability state,
 not that the capability was presented to or understood by the agent.
 Availability probes establish substrate presence, not successful provider
-behavior. Invocation events do not record provider identity, so attribution is
-explicitly ambiguous when multiple current bindings share a capability name.
-No invocation is reported only within the selected event window unless complete
-session history is available. These relationships make availability and use
-inspectable without treating absence of use as evidence of poor discoverability
-or usability.
+behavior. Invocation events do not record provider or binding identity, so a
+name match cannot establish the exact provider or contract revision used and
+is ambiguous when multiple current bindings share a capability name. A missing
+invocation means no Environment invocation record in the selected event window,
+unless complete session history is available; it does not account for use
+through external interfaces. These relationships make availability and use
+inspectable without treating an absent record as evidence of poor
+discoverability or usability.
 
 When response compaction is needed, each pressure summary retains bounded exact
 evidence references (identity, repository, commit, path, and digest), so an

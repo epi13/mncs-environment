@@ -4125,8 +4125,9 @@ def _capability_delivery_view(
         summary = summary_by_capability.get(capability)
         if summary is None:
             use_status = (
-                "not-observed-in-session-history" if complete_history
-                else "not-observed-in-selected-event-window"
+                "no-environment-invocation-record-in-session-history"
+                if complete_history
+                else "no-environment-invocation-record-in-selected-window"
             )
             binding["use_observation_status"] = use_status
             binding["invocation_count"] = 0
@@ -4142,7 +4143,7 @@ def _capability_delivery_view(
         binding["provider_attribution"] = (
             "ambiguous-current-bindings"
             if bindings_by_capability.get(capability, 0) > 1
-            else "capability-name-match; invocation-event-does-not-record-provider"
+            else "capability-name-match-only; provider-and-binding-identity-unavailable"
         )
 
     outside_inventory = [
@@ -4243,7 +4244,7 @@ def _capability_delivery_view(
         "measurement_limits": [
             "Environment bindings do not establish that a capability was presented to or discovered by the agent.",
             "Availability records a substrate probe, not verified provider behavior.",
-            "Invocation events do not record provider identity; capability-name matches are ambiguous when multiple current bindings expose the same name.",
+            "Invocation events do not record provider or binding identity; capability-name matches cannot establish a contract revision and are ambiguous when multiple current bindings expose the same name.",
             "No observed invocation is scoped to the selected event window unless complete session history is explicitly available.",
         ],
     }
