@@ -1,0 +1,55 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_control_rpc_session_order_pressure_20261025",
+  "captured_at": "2026-10-25T18:01:59Z",
+  "measurement_basis": "Two protected Environment claim attempts exposed first-non-option session binding; the failure was isolated to option-value parsing and captured as an RPC regression case.",
+  "not_measured": [
+    "frequency of this argument ordering across other agents and commands",
+    "whether different CLI clients produce the same failure",
+    "cross-agent discoverability or improvement effect",
+    "resource overhead attributable to session parsing"
+  ],
+  "observation": {
+    "kind": "environment-control-rpc-session-binding-pressure",
+    "source_interface": "MNCS Control authenticated Environment RPC",
+    "request": {
+      "operation": "claims --acquire",
+      "argument_order": "repository and claim options precede the positional session identity",
+      "repository": "mncs-environment"
+    },
+    "outcome": {
+      "status": "session-resolution-failed-before-store-lookup",
+      "error": "Environment session is not present in canonical Store",
+      "interpretation": "Control treated the repository option value as the selected session because it chose the first non-option token without skipping option values."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "pr_environment_control_rpc_session_order_20261025",
+    "title": "Control misbinds Environment sessions when options precede the positional identity",
+    "category": "tooling",
+    "subsystem": "Control Environment RPC argument parsing",
+    "owner": "mncs-control-mcp",
+    "actionable_recommendation": "Parse the documented CLI argument grammar, skip option values, and bind mutations to the exact session selected by the authenticated continuation."
+  },
+  "related_work": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "campaign_objective": "Implement MNCS environmental capability intelligence: connect authentic agent-session, diagnostics, resource, and compiler evidence to provenance-aware queryable projections that reveal actionable recurring environmental pressures, then verify and improve the observation-to-action loop.",
+    "session_id": "ses_71fd38cce3a4ad5c",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "session_id": "ses_71fd38cce3a4ad5c"
+  },
+  "supporting_sources": [
+    {
+      "kind": "protected-runtime-failure",
+      "tool": "MNCS Control terminal",
+      "repository": "mncs-environment",
+      "request_order": "claims --acquire <repository> ... <session>"
+    }
+  ]
+}

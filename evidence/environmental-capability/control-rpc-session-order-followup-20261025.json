@@ -1,0 +1,57 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_control_rpc_session_order_followup_20261025",
+  "captured_at": "2026-10-25T18:00:50Z",
+  "measurement_basis": "Protected Control execution ran the exact campaign continuation and then acquired a path claim with options before the trailing session positional.",
+  "not_measured": [
+    "future recurrence across sessions and agents",
+    "cross-agent discoverability or usability differences",
+    "successful branch merge or push through this Environment claim",
+    "resource consumption or improvement effect beyond this operation"
+  ],
+  "observation": {
+    "kind": "environment-control-rpc-session-order-live-followup",
+    "source_interface": "MNCS Control terminal invoking mncs-env continuation followed by claims",
+    "request": {
+      "operation": "claims --acquire",
+      "repository": "mncs-environment",
+      "session_id": "ses_71fd38cce3a4ad5c",
+      "argument_order": "options precede the trailing session identity",
+      "claim_id": "claim:mncs-environment:paths:28c5615c539b"
+    },
+    "outcome": {
+      "status": "claim-acquired",
+      "selected_session_matched_requester": true,
+      "claim_scope": "four exact environmental-capability evidence paths",
+      "interpretation": "The protected operation selected the exact session through continuation, skipped option values during session extraction, and recorded the path-scoped claim for that same session."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "campaign_objective": "Implement MNCS environmental capability intelligence: connect authentic agent-session, diagnostics, resource, and compiler evidence to provenance-aware queryable projections that reveal actionable recurring environmental pressures, then verify and improve the observation-to-action loop.",
+    "session_id": "ses_71fd38cce3a4ad5c",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "session_id": "ses_71fd38cce3a4ad5c"
+  },
+  "supporting_sources": [
+    {
+      "identity": "src_control_environment_rpc_session_order_parser_703b201",
+      "repository": "mncs-control-mcp",
+      "commit": "703b201072f3cec4a18e8a4b0aae8b1bfe478dd7",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "7d50501f59e2f0ab89876b553ab8979991b43039dcc5689e52aff3fcbda49367"
+    },
+    {
+      "kind": "protected-runtime-probe",
+      "repository": "mncs-environment",
+      "tool": "MNCS Control terminal",
+      "request_result": "claim:mncs-environment:paths:28c5615c539b acquired"
+    }
+  ]
+}
