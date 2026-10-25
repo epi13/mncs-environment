@@ -7636,6 +7636,32 @@ class EntryFrictionTests(unittest.TestCase):
         payload = json.loads(stdout.getvalue()) if stdout.getvalue().strip() else {}
         return code, payload, stderr.getvalue()
 
+    def test_uninitialized_campaign_state_read_explains_first_checkpoint(self) -> None:
+        session = mock.Mock()
+        session.campaign_state.side_effect = sessions.LifecycleError(
+            "campaign has no persisted state checkpoint"
+        )
+        with mock.patch.object(cli, "_open", return_value=session):
+            code, payload, stderr = self._run_cli(
+                "campaign-state", "ses_uninitialized_campaign",
+            )
+
+        self.assertEqual(code, 2)
+        self.assertEqual(payload, {})
+        diagnostic = json.loads(stderr)
+        self.assertEqual(
+            diagnostic["error"], "campaign has no persisted state checkpoint",
+        )
+        self.assertEqual(
+            diagnostic["diagnostics"]["code"], "campaign-state-unavailable",
+        )
+        self.assertEqual(
+            diagnostic["diagnostics"]["next"],
+            "initialize campaign metadata with a checkpoint using "
+            "campaign_base_checkpoint='none' and campaign_evidence=[], "
+            "then retry the campaign-state read",
+        )
+
     def test_broad_campaign_root_rejected_before_state_or_git_scan(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "Projects"
