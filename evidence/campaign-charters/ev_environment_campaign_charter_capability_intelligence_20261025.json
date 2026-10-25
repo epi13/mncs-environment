@@ -1,0 +1,25 @@
+{
+  "schema_version": "mncs.environment.campaign-charter/1",
+  "identity": "ev_environment_campaign_charter_capability_intelligence_20261025",
+  "recorded_at": "2026-10-25T17:30:00Z",
+  "campaign_identity": "cmp_environment_capability_intelligence_continuation_20261025",
+  "source": {
+    "kind": "user-directed campaign objective",
+    "request_title": "MNCS Environmental Capability Intelligence and Continuous Improvement"
+  },
+  "objective": "Implement MNCS environmental capability intelligence: connect authentic agent-session, diagnostics, resource, and compiler evidence to provenance-aware queryable projections that reveal actionable recurring environmental pressures, then verify and improve the observation-to-action loop.",
+  "working_principles": [
+    "Use legitimate MNCS development activity as operational evidence; do not create synthetic agent benchmarks or efficiency scores.",
+    "Relate agent objectives, environmental capabilities, observations, pressures, implementation changes, verification, and later evidence through existing authoritative records and projections.",
+    "Preserve the difference between measured facts, derived values, hypotheses, unverified source declarations, and unavailable information.",
+    "Use compiler and language progress as both evidence of environmental limitations and a beneficiary of environmental improvement.",
+    "Preserve active campaign ownership and integrate independent work through the established repository and claim workflows."
+  ],
+  "success_conditions": [
+    "Authentic agent-session, diagnostic, resource, and compiler evidence can be related to objectives and environmental subsystems through a bounded queryable projection.",
+    "Recurring pressure hypotheses retain inspectable provenance and are distinguished from isolated observations and causal conclusions.",
+    "A real pressure can be connected to a code change, independent verification, and subsequent observed behavior without claiming effectiveness before evidence supports it.",
+    "The environment can expose what it can support, what remains constrained, and which measurements or relationships remain unavailable."
+  ],
+  "authority_boundary": "This charter records the user-directed campaign objective only. It grants no repository access, claim transfer, merge authority, or permission to bypass existing ownership and safety checks."
+}
