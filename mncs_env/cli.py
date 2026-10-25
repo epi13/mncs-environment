@@ -787,10 +787,36 @@ def cmd_capabilities(args: argparse.Namespace) -> int:
 def cmd_authority(args: argparse.Namespace) -> int:
     session = _open(args)
     result = session.inspect()["authority"]
+    claim_id = getattr(args, "claim_id", None)
+    scope = None
+    if claim_id:
+        if not args.action:
+            return fail("--claim-id requires --action")
+        holders = result.get("claim_holders", {})
+        matches = [
+            holder
+            for repository_holders in holders.values()
+            if isinstance(repository_holders, list)
+            for holder in repository_holders
+            if isinstance(holder, dict)
+            and holder.get("claim_id") == claim_id
+            and holder.get("session_id") == session.session_id
+            and isinstance(holder.get("scope"), dict)
+        ] if isinstance(holders, dict) else []
+        if len(matches) != 1:
+            return fail(
+                "--claim-id must identify one live claim owned by this session",
+                code=3,
+                diagnostics={"code": "claim-not-live-or-not-owned"},
+            )
+        scope = matches[0]["scope"]
     if args.action:
         result = {
-            "evaluation": session.check(action=args.action, target=args.target or "*"),
+            "evaluation": session.check(
+                action=args.action, target=args.target or "*", scope=scope,
+            ),
             "context": result,
+            **({"scope_claim_id": claim_id} if claim_id else {}),
         }
     out(result)
     return 0
@@ -2399,6 +2425,10 @@ def build_parser() -> argparse.ArgumentParser:
     authority = session_parser("authority", "show authority or evaluate an action")
     authority.add_argument("--action", default=None)
     authority.add_argument("--target", default=None)
+    authority.add_argument(
+        "--claim-id", default=None,
+        help="evaluate against this live claim owned by the selected session",
+    )
     authority.set_defaults(func=cmd_authority)
 
     scope_grant = session_parser(

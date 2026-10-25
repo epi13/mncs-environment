@@ -318,20 +318,26 @@ def evaluate(
             "verdict": "deny",
             "reason": "absolute integration target must identify an observed checkout root",
         }
-    if action in MUTATING_ACTIONS and os.path.isabs(target) and scope is not None:
+    if (action in MUTATING_ACTIONS or action in ("merge", "publish")) \
+            and os.path.isabs(target) and scope is not None:
         scope_kind = scope.get("kind", "repository")
         if scope_kind not in {"repository", "worktree"}:
             return {
                 "verdict": "deny",
-                "reason": "absolute mutation target requires repository or worktree scope",
+                "reason": "absolute mutation or delivery target requires repository or worktree scope",
             }
-        if (scope_kind == "worktree" and target_checkout is not None
-                and os.path.normpath(str(scope.get("checkout", "")))
-                != os.path.normpath(str(target_checkout[1].get("path", "")))):
-            return {
-                "verdict": "deny",
-                "reason": "worktree scope does not match the observed absolute target",
-            }
+        if scope_kind == "worktree":
+            target_path = (
+                target_checkout[1].get("path")
+                if target_checkout is not None else None
+            )
+            if (not isinstance(target_path, str)
+                    or os.path.normpath(str(scope.get("checkout", "")))
+                    != os.path.normpath(target_path)):
+                return {
+                    "verdict": "deny",
+                    "reason": "worktree scope does not match the observed absolute target",
+                }
     if action in MUTATING_ACTIONS or action in ("publish", "merge", "verify"):
         fence = next((item for item in context.get("claim_fences", [])
                       if isinstance(item, dict)

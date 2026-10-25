@@ -322,10 +322,18 @@ Authority decisions distinguish the lease needed to continue from an owner
 approval. A missing exact claim for merge, publish, retire, or another scoped
 mutation reports `required_authorization: session-claim` and
 `next_step: acquire-exact-claim`; acquire the available scope through the
-normal claims operation, then re-evaluate authority. This does not request a
-second user approval. Foreign overlapping claims, protected repositories, or
-scope outside the campaign's writable repositories remain blocking conditions.
-Decisions that actually require owner approval identify that separately as
+normal claims operation, then re-evaluate authority with its claim identity:
+
+```sh
+./scripts/mncs-env authority "$SESSION" --action merge \
+  --target "$CHECKOUT" --claim-id "$CLAIM_ID"
+```
+
+`--claim-id` uses the selected session's current live claim scope and refuses
+claims owned by another session. This does not request a second user approval.
+Foreign overlapping claims, protected repositories, or scope outside the
+campaign's writable repositories remain blocking conditions. Decisions that
+actually require owner approval identify that separately as
 `required_authorization: owner-approval`.
 
 Observation source summaries keep registration status separate from

@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from mncs_env import authority
+from argparse import Namespace
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from mncs_env import authority, cli
 
 
 def _context() -> dict:
@@ -21,7 +25,7 @@ def _scope() -> dict:
         "repository": "mncs-environment",
         "checkout": "/workspace/mncs-environment/.worktrees/main",
         "branch": "main",
-        "paths": None,
+        "paths": ["docs/ENTRY.md", "mncs_env/authority.py"],
         "exclusive": False,
     }
 
@@ -81,7 +85,7 @@ def test_exact_delivery_claim_allows_merge_and_publish() -> None:
         decision = authority.evaluate(
             context,
             action=action,
-            target="mncs-environment",
+            target=scope["checkout"],
             session_id="ses_campaign",
             claims=claims,
             repo_facts={
@@ -96,3 +100,73 @@ def test_exact_delivery_claim_allows_merge_and_publish() -> None:
 
         assert decision["verdict"] == "allow"
         assert "next_step" not in decision
+
+
+def test_delivery_claim_for_another_checkout_cannot_authorize_absolute_target() -> None:
+    scope = _scope()
+    other_scope = {**scope, "checkout": "/workspace/mncs-environment/.worktrees/feature"}
+    decision = authority.evaluate(
+        _context(),
+        action="merge",
+        target=scope["checkout"],
+        session_id="ses_campaign",
+        claims={"mncs-environment": [{
+            "session_id": "ses_campaign",
+            "scope": other_scope,
+        }]},
+        repo_facts={
+            "mncs-environment@main": {
+                **scope,
+                "path": scope["checkout"],
+                "repository": "mncs-environment",
+            },
+        },
+        scope=other_scope,
+    )
+
+    assert decision["verdict"] == "deny"
+    assert "does not match" in decision["reason"]
+
+
+def test_authority_cli_rechecks_with_the_exact_owned_claim_scope() -> None:
+    session_id = "ses_campaign"
+    claim_id = "claim:mncs-environment:worktree:exact"
+    scope = _scope()
+    calls = {}
+    fake_session = SimpleNamespace(
+        session_id=session_id,
+        inspect=lambda: {"authority": {
+            "claim_holders": {"mncs-environment": [{
+                "claim_id": claim_id,
+                "session_id": session_id,
+                "scope": scope,
+            }]},
+        }},
+        check=lambda **kwargs: calls.update(kwargs) or {
+            "verdict": "allow", "reason": "merge by scoped claim",
+        },
+    )
+    args = Namespace(
+        session=session_id,
+        action="merge",
+        target=scope["checkout"],
+        claim_id=claim_id,
+    )
+
+    with patch.object(cli, "_open", return_value=fake_session), patch.object(
+        cli, "out",
+    ) as output:
+        assert cli.cmd_authority(args) == 0
+
+    assert calls == {
+        "action": "merge",
+        "target": scope["checkout"],
+        "scope": scope,
+    }
+    payload = output.call_args.args[0]
+    assert payload["scope_claim_id"] == claim_id
+    parsed = cli.build_parser().parse_args([
+        "authority", session_id, "--action", "merge",
+        "--target", scope["checkout"], "--claim-id", claim_id,
+    ])
+    assert parsed.claim_id == claim_id
