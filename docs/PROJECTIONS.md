@@ -189,6 +189,14 @@ omitted, and invalid counts so this accounting remains inspectable when the
 projection is size-bounded. These statuses describe the available Environment
 evidence; they do not claim that no other agent or tool activity occurred.
 
+`session_activity.rpc_operation_summary` groups every authenticated valid read
+record in the selected event window by Control operation and outcome, even when
+the detailed event list is capped. Each group keeps a small set of source event
+references; excess groups and their record counts remain explicit. The summary
+is descriptive of the selected window, not a whole-session frequency score, an
+efficiency measure, or a pressure diagnosis. Invalid records are excluded and
+remain visible in the separate invalid count.
+
 The selected page can also expose bounded `authority_denials`: action,
 observed repository when resolvable, normalized reason class, and the exact
 source event reference. The projection omits raw target paths and free-form

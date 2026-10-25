@@ -115,6 +115,8 @@ MAX_SESSION_ACTIVITY_INTERACTIONS = 32
 MAX_SESSION_ACTIVITY_CAPABILITIES = 16
 MAX_SESSION_ACTIVITY_RPC_OPERATIONS = 32
 MAX_SESSION_ACTIVITY_RPC_PRESSURE_CANDIDATES = 8
+MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS = 32
+MAX_SESSION_ACTIVITY_RPC_SUMMARY_REFERENCES = 3
 MAX_SESSION_ACTIVITY_AUTHORITY_DENIALS = 16
 MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES = 8
 SOURCE_INTEGRITY_VERIFIED = frozenset({
@@ -1298,6 +1300,68 @@ def _compact_projection(
         if isinstance(measured_values, dict):
             compact_item["measurements"] = dict(measured_values)
         compact_rpc_operations.append(compact_item)
+    raw_rpc_summary = activity.get("rpc_operation_summary")
+    raw_rpc_summary = raw_rpc_summary if isinstance(raw_rpc_summary, dict) else {}
+    raw_rpc_summary_groups = raw_rpc_summary.get("groups")
+    raw_rpc_summary_groups = (
+        raw_rpc_summary_groups if isinstance(raw_rpc_summary_groups, list) else []
+    )
+    compact_rpc_summary_groups = []
+    for group in raw_rpc_summary_groups[:16]:
+        if not isinstance(group, dict):
+            continue
+        compact_group = {
+            key: _short_text(group.get(key), 128)
+            for key in ("operation", "outcome_status")
+            if isinstance(group.get(key), str)
+        }
+        if type(group.get("occurrence_count")) is int:
+            compact_group["occurrence_count"] = group["occurrence_count"]
+        references = group.get("supporting_events")
+        if isinstance(references, list):
+            compact_group["supporting_events"] = [
+                {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                }
+                for reference in references[:2]
+                if isinstance(reference, dict)
+            ]
+        compact_rpc_summary_groups.append(compact_group)
+    compact_rpc_summary: dict[str, Any] = {}
+    if raw_rpc_summary:
+        raw_summary_omitted_groups = raw_rpc_summary.get("groups_omitted", 0)
+        raw_summary_omitted_records = raw_rpc_summary.get("omitted_record_count", 0)
+        raw_reference_limit = raw_rpc_summary.get(
+            "supporting_event_limit_per_group", 2,
+        )
+        if type(raw_summary_omitted_groups) is not int:
+            raw_summary_omitted_groups = 0
+        if type(raw_summary_omitted_records) is not int:
+            raw_summary_omitted_records = 0
+        if type(raw_reference_limit) is not int:
+            raw_reference_limit = 2
+        compact_rpc_summary = {
+            "scope": _short_text(raw_rpc_summary.get("scope"), 128),
+            "record_count": raw_rpc_summary.get("record_count", 0),
+            "group_count": raw_rpc_summary.get("group_count", 0),
+            "groups_omitted": raw_summary_omitted_groups + max(
+                0, len(raw_rpc_summary_groups) - len(compact_rpc_summary_groups),
+            ),
+            "omitted_record_count": raw_summary_omitted_records + sum(
+                group.get("occurrence_count", 0)
+                for group in raw_rpc_summary_groups[
+                    len(compact_rpc_summary_groups):
+                ]
+                if isinstance(group, dict)
+                and type(group.get("occurrence_count")) is int
+            ),
+            "supporting_event_limit_per_group": min(
+                2, raw_reference_limit,
+            ),
+            "groups": compact_rpc_summary_groups,
+        }
     compact_rpc_pressure = []
     raw_rpc_pressure = activity.get("rpc_failure_candidates")
     raw_rpc_pressure = raw_rpc_pressure if isinstance(raw_rpc_pressure, list) else []
@@ -1405,13 +1469,19 @@ def _compact_projection(
         ),
     }
     if (activity_source.get("rpc_operation_capture_count") is not None
-            or raw_rpc_operations):
+            or raw_rpc_operations or raw_rpc_summary):
         compact_activity["rpc_operation_count"] = activity.get(
             "rpc_operation_count", 0,
         )
         compact_activity["rpc_operations"] = compact_rpc_operations
         if len(raw_rpc_operations) > len(compact_rpc_operations):
             compact_activity["rpc_operations_truncated"] = True
+        if compact_rpc_summary:
+            compact_activity["rpc_operation_summary"] = compact_rpc_summary
+            if compact_rpc_summary["groups_omitted"]:
+                compact_activity["rpc_operation_summary"][
+                    "groups_truncated"
+                ] = True
     if raw_rpc_pressure:
         compact_activity["rpc_failure_candidates"] = compact_rpc_pressure
         if len(raw_rpc_pressure) > len(compact_rpc_pressure):
@@ -1622,6 +1692,14 @@ def _compact_projection(
         elif result["session_activity"].get("rpc_operations"):
             result["session_activity"]["rpc_operations"].pop()
             result["session_activity"]["rpc_operations_truncated"] = True
+        elif result["session_activity"].get("rpc_operation_summary", {}).get("groups"):
+            summary = result["session_activity"]["rpc_operation_summary"]
+            removed_group = summary["groups"].pop()
+            summary["groups_omitted"] += 1
+            summary["omitted_record_count"] += removed_group.get(
+                "occurrence_count", 0,
+            )
+            summary["groups_truncated"] = True
         elif result["session_activity"].get("rpc_failure_candidates"):
             result["session_activity"]["rpc_failure_candidates"].pop()
             result["session_activity"]["rpc_failure_candidates_truncated"] = True
@@ -3706,6 +3784,7 @@ def _session_activity(
     capabilities = capabilities[:MAX_SESSION_ACTIVITY_CAPABILITIES]
 
     rpc_operations: list[dict[str, Any]] = []
+    rpc_operation_groups: dict[tuple[str, str], dict[str, Any]] = {}
     invalid_rpc_event_count = 0
     valid_rpc_event_count = 0
     for event in reversed(rpc_events):
@@ -3723,6 +3802,20 @@ def _session_activity(
             invalid_rpc_event_count += 1
             continue
         valid_rpc_event_count += 1
+        group_key = (operation, outcome)
+        summary_group = rpc_operation_groups.setdefault(
+            group_key,
+            {
+                "operation": operation,
+                "outcome_status": outcome,
+                "occurrence_count": 0,
+                "supporting_events": [],
+            },
+        )
+        summary_group["occurrence_count"] += 1
+        if (len(summary_group["supporting_events"])
+                < MAX_SESSION_ACTIVITY_RPC_SUMMARY_REFERENCES):
+            summary_group["supporting_events"].append(reference)
         if len(rpc_operations) >= MAX_SESSION_ACTIVITY_RPC_OPERATIONS:
             continue
         caller_projection = {
@@ -3786,6 +3879,31 @@ def _session_activity(
         rpc_operations.append(item)
 
     rpc_operations_omitted = max(0, valid_rpc_event_count - len(rpc_operations))
+    ordered_rpc_groups = [
+        {
+            **group,
+            "supporting_events": sorted(
+                group["supporting_events"],
+                key=lambda item: item["sequence"],
+            ),
+        }
+        for _, group in sorted(rpc_operation_groups.items())
+    ]
+    rpc_summary_groups = ordered_rpc_groups[:MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS]
+    rpc_summary_omitted_groups = ordered_rpc_groups[
+        MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS:
+    ]
+    rpc_operation_summary = {
+        "scope": "authenticated-records-in-selected-event-window",
+        "record_count": valid_rpc_event_count,
+        "group_count": len(ordered_rpc_groups),
+        "groups_omitted": len(rpc_summary_omitted_groups),
+        "omitted_record_count": sum(
+            group["occurrence_count"] for group in rpc_summary_omitted_groups
+        ),
+        "supporting_event_limit_per_group": MAX_SESSION_ACTIVITY_RPC_SUMMARY_REFERENCES,
+        "groups": rpc_summary_groups,
+    }
     failures_by_identity: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for item in rpc_operations:
         if item.get("outcome_status") != "failed":
@@ -4063,6 +4181,7 @@ def _session_activity(
         "interactions": interactions,
         "rpc_operation_count": len(rpc_operations),
         "rpc_operations": rpc_operations,
+        **({"rpc_operation_summary": rpc_operation_summary} if rpc_events else {}),
         "rpc_failure_candidates": rpc_failure_candidates,
         "authority_denial_count": len(authority_denials),
         "authority_denials": authority_denials,

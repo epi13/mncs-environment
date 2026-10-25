@@ -1622,6 +1622,21 @@ def test_session_activity_correlates_authenticated_control_read_operations(
         "live_repository_probe": False,
     }
     assert activity["rpc_operation_count"] == 3
+    summary = activity["rpc_operation_summary"]
+    assert summary["scope"] == "authenticated-records-in-selected-event-window"
+    assert summary["record_count"] == 3
+    assert summary["group_count"] == 2
+    assert summary["groups_omitted"] == 0
+    assert [
+        (group["operation"], group["outcome_status"], group["occurrence_count"])
+        for group in summary["groups"]
+    ] == [
+        ("campaign.state", "succeeded", 1),
+        ("session.inspect", "failed", 2),
+    ]
+    assert [
+        event["identity"] for event in summary["groups"][1]["supporting_events"]
+    ] == ["evt_rpc_read_21", "evt_rpc_read_22"]
     assert activity["rpc_operations"][0]["event_reference"]["identity"] == (
         "evt_rpc_read_23"
     )
@@ -1662,6 +1677,13 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert compact_activity["source"]["rpc_operation_records_returned"] == 3
     assert compact_activity["source"]["rpc_operation_records_omitted"] == 0
     assert compact_activity["source"]["rpc_operation_records_invalid"] == 1
+    compact_summary = compact_activity["rpc_operation_summary"]
+    assert compact_summary["record_count"] == 3
+    assert compact_summary["group_count"] == 2
+    assert compact_summary["groups_omitted"] == 0
+    assert compact_summary["groups"][1]["supporting_events"][0]["identity"] == (
+        "evt_rpc_read_21"
+    )
     assert compact_activity["source"]["rpc_operation_context_basis"] == (
         "grant+session-snapshot; branch/head not live-probed"
     )
@@ -1742,6 +1764,10 @@ def test_session_activity_marks_truncated_authenticated_rpc_only_history_partial
     assert activity["source"]["rpc_operation_records_omitted"] == 1
     assert activity["source"]["rpc_operation_records_invalid"] == 0
     assert activity["rpc_operations"][0]["event_reference"]["sequence"] == event_count
+    summary = activity["rpc_operation_summary"]
+    assert summary["record_count"] == event_count
+    assert summary["group_count"] == 1
+    assert summary["groups"][0]["occurrence_count"] == event_count
 
     compact = capability_intelligence.project(session, max_result_bytes=5_000)
     compact_activity = compact["session_activity"]
@@ -1752,6 +1778,95 @@ def test_session_activity_marks_truncated_authenticated_rpc_only_history_partial
     )
     assert compact_activity["source"]["rpc_operation_records_omitted"] == 1
     assert compact_activity["source"]["rpc_operation_records_invalid"] == 0
+    assert compact_activity["rpc_operation_summary"]["record_count"] == event_count
+    assert compact_activity["rpc_operation_summary"]["groups"][0][
+        "occurrence_count"
+    ] == event_count
+
+
+def test_session_activity_bounds_authenticated_rpc_operation_summary_groups(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_rpc_activity_summary_bounds",
+        "ses_compiler_rpc_activity_summary_bounds",
+        "cmp_compiler_rpc_activity_summary_bounds",
+    )
+    session, _ = _session(tmp_path, [record])
+    event_count = capability_intelligence.MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS + 2
+    session.snapshot["rpc_read_activity_count"] = event_count
+    principal_id = session.snapshot["authenticated_principal_id"]
+    events = []
+    for sequence in range(1, event_count + 1):
+        request_digest = hashlib.sha256(
+            f"rpc-summary-request-{sequence}".encode(),
+        ).hexdigest()
+        events.append({
+            "identity": f"evt_rpc_summary_{sequence}",
+            "sequence": sequence,
+            "type": "environment.rpc.read_observed",
+            "producer": "mncs-control-mcp",
+            "payload": {
+                "schema_version": "mncs.environment.rpc-read-activity/1",
+                "operation": f"session.read-{sequence:03d}",
+                "outcome_status": "succeeded",
+                "exit_code": 0,
+                "failure_code": None,
+                "observation_ordinal": sequence,
+                "request_id": f"req_rpc_summary_{sequence}",
+                "request_digest": request_digest,
+                "request_operation_digest": request_digest,
+                "request_event_digest": hashlib.sha256(
+                    f"rpc-summary-event-{sequence}".encode(),
+                ).hexdigest()[:16],
+                "caller": {
+                    "authenticated_principal_id": principal_id,
+                    "control_grant_id": "b" * 32,
+                    "process_identity": None,
+                },
+                "context": {
+                    "repository": "mncs-environment",
+                    "environment_id": session.snapshot["environment_id"],
+                    "campaign_id": session.snapshot["campaign"]["identity"],
+                    "work_intent_id": session.snapshot["intent"]["identity"],
+                },
+                "measurement_availability": {
+                    "model_identity": "unavailable",
+                    "token_usage": "unavailable",
+                    "control_dispatch_elapsed_ms": "measured",
+                    "resource_consumption": "unavailable",
+                    "cache_accounting": "unavailable",
+                },
+                "measurements": {"control_dispatch_elapsed_ms": 1.0},
+            },
+        })
+    session.recent_events = lambda *, limit: {
+        "event_count": len(events), "events": events[-limit:], "truncated": False,
+    }
+
+    activity = capability_intelligence.project(session)["session_activity"]
+    summary = activity["rpc_operation_summary"]
+
+    assert summary["record_count"] == event_count
+    assert summary["group_count"] == event_count
+    assert len(summary["groups"]) == capability_intelligence.MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS
+    assert summary["groups_omitted"] == 2
+    assert summary["omitted_record_count"] == 2
+    assert sum(group["occurrence_count"] for group in summary["groups"]) + (
+        summary["omitted_record_count"]
+    ) == summary["record_count"]
+
+    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+    compact_summary = compact["session_activity"]["rpc_operation_summary"]
+    assert compact_summary["record_count"] == event_count
+    assert compact_summary["group_count"] == event_count
+    assert len(compact_summary["groups"]) <= 16
+    assert compact_summary["groups_omitted"] == event_count - len(
+        compact_summary["groups"],
+    )
+    assert sum(group["occurrence_count"] for group in compact_summary["groups"]) + (
+        compact_summary["omitted_record_count"]
+    ) == compact_summary["record_count"]
 
 
 def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path) -> None:
