@@ -136,6 +136,22 @@ MAX_NATIVE_USERLAND_SOURCE_PAYLOADS = (
     + MAX_NATIVE_USERLAND_PRESSURE_SOURCE_RECORDS
 )
 MAX_NATIVE_USERLAND_AUDIT_ITEMS = 8
+NATIVE_CAPABILITY_CORRESPONDENCE_KIND = (
+    "native-capability-pressure-correspondence"
+)
+NATIVE_CAPABILITY_CORRESPONDENCE_SOURCE_ROLES = {
+    "native-language-capability-contract": "language_contract",
+    "native-language-compiler-support": "compiler_support",
+    "native-runtime-provider-implementation": "host_runtime_provider",
+    "native-runtime-operation-dispatch": "host_runtime_dispatch",
+    "native-runtime-provider-test-source": "runtime_provider_test_source",
+    "native-language-lifecycle-test-source": "native_language_test_source",
+    "mncs-test-pressure-source": "target_pressure_source",
+    "native-userland-audit-source": "owner_audit_source",
+    "host-boundary-readiness-document": "host_boundary_readiness_document",
+}
+MAX_NATIVE_CAPABILITY_CORRESPONDENCES = 8
+MAX_NATIVE_CAPABILITY_SOURCE_REFERENCES = 16
 MAX_EVIDENCE_REFS = 32
 MAX_EVIDENCE_HISTORY_PAGES = 4
 MAX_OBSERVATIONS = 16
@@ -613,6 +629,114 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
     return result or None
 
 
+def _compact_native_capability_correspondences(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    compact_items = []
+    for item in value[:4]:
+        if not isinstance(item, dict):
+            continue
+        compact = {
+            key: _short_text(item.get(key), 192)
+            for key in (
+                "identity", "target_pressure_identity",
+                "native_capability_identity", "relationship_assessment",
+                "recorded_pressure_status", "target_pressure_summary",
+                "host_boundary_summary",
+                "source_evidence_status", "causal_relation_status",
+                "native_migration_readiness", "agent_usage_status",
+                "classification_provenance", "next_investigation",
+                "interpretation_limit",
+            )
+            if isinstance(item.get(key), str)
+        }
+        role_groups = item.get("source_evidence_by_role")
+        compact_groups = {}
+        if isinstance(role_groups, dict):
+            for role, group in list(role_groups.items())[:8]:
+                if not isinstance(role, str) or not isinstance(group, dict):
+                    continue
+                compact_group = {
+                    key: _short_text(group.get(key), 96)
+                    for key in ("status",)
+                    if isinstance(group.get(key), str)
+                }
+                for key in ("source_reference_count", "verified_reference_count"):
+                    if type(group.get(key)) is int and group[key] >= 0:
+                        compact_group[key] = group[key]
+                references = group.get("source_references")
+                references = references if isinstance(references, list) else []
+                compact_group["source_references"] = [
+                    {
+                        **{
+                            key: _short_text(source.get(key), 192 if key == "path" else 160)
+                            for key in (
+                                "identity", "kind", "repository", "commit", "path",
+                                "sha256", "content_integrity_status",
+                            )
+                            if isinstance(source.get(key), str)
+                        },
+                    }
+                    for source in references[:2]
+                    if isinstance(source, dict)
+                ]
+                compact_group["source_references_truncated"] = (
+                    group.get("source_references_truncated") is True
+                    or len(references) > 2
+                )
+                compact_groups[role] = compact_group
+        if compact_groups:
+            compact["source_evidence_by_role"] = compact_groups
+        pressure_links = item.get("pressure_source_links")
+        if isinstance(pressure_links, dict):
+            links = pressure_links.get("links")
+            links = links if isinstance(links, list) else []
+            compact_links = []
+            for link in links[:4]:
+                if not isinstance(link, dict):
+                    continue
+                compact_link = {
+                    key: _short_text(link.get(key), 160)
+                    for key in (
+                        "identity", "status", "causal_relation_status",
+                        "relationship_basis", "source_content_integrity_status",
+                        "source_kind",
+                    )
+                    if isinstance(link.get(key), str)
+                }
+                reference = _validate_reference(link.get("source_reference"))
+                if reference is not None:
+                    compact_link["source_reference"] = reference
+                compact_links.append(compact_link)
+            compact["pressure_source_links"] = {
+                key: _short_text(pressure_links.get(key), 192)
+                for key in (
+                    "status", "relationship_basis", "causal_relation_status",
+                    "interpretation_limit",
+                )
+                if isinstance(pressure_links.get(key), str)
+            } | {"links": compact_links}
+        verification = item.get("verification_observation")
+        if isinstance(verification, dict):
+            compact_verification = {
+                key: _short_text(verification.get(key), 256)
+                for key in (
+                    "status", "command", "test_identity", "result_summary",
+                    "interpretation_limit",
+                )
+                if isinstance(verification.get(key), str)
+            }
+            for key in ("passed", "failed", "filtered"):
+                if type(verification.get(key)) is int and verification[key] >= 0:
+                    compact_verification[key] = verification[key]
+            for key in ("unsupported_branch_may_return_early",):
+                if type(verification.get(key)) is bool:
+                    compact_verification[key] = verification[key]
+            compact["verification_observation"] = compact_verification
+        compact_items.append(compact)
+    return compact_items
+
+
 def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
     if (not isinstance(value, dict)
             or value.get("schema_version") != IMPLEMENTATION_ACCOUNTABILITY_SCHEMA):
@@ -621,6 +745,9 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
     raw_samples = raw_samples if isinstance(raw_samples, list) else []
     owner_audit_evidence = _compact_owner_audit_evidence(
         value.get("owner_audit_evidence"),
+    )
+    capability_correspondences = _compact_native_capability_correspondences(
+        value.get("native_capability_correspondences"),
     )
     if not raw_samples:
         result = {
@@ -634,6 +761,8 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
         }
         if owner_audit_evidence is not None:
             result["owner_audit_evidence"] = owner_audit_evidence
+        if capability_correspondences:
+            result["native_capability_correspondences"] = capability_correspondences
         return result
     samples = []
     for sample in raw_samples[:4]:
@@ -753,6 +882,8 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
     }
     if owner_audit_evidence is not None:
         result["owner_audit_evidence"] = owner_audit_evidence
+    if capability_correspondences:
+        result["native_capability_correspondences"] = capability_correspondences
     return result
 
 
@@ -4553,6 +4684,201 @@ def _owner_declared_pressure_links(
     }
 
 
+def _native_capability_correspondence_projection(
+    observations: list[dict[str, Any]],
+    source_integrity: dict[tuple[str, str, str, str], str] | None = None,
+    source_payloads: dict[tuple[str, str, str, str], bytes] | None = None,
+) -> list[dict[str, Any]]:
+    """Expose bounded candidate links between host boundaries and MNCS APIs."""
+    integrity = source_integrity or {}
+    payloads = source_payloads or {}
+    correspondences: list[dict[str, Any]] = []
+    required_roles = (
+        "language_contract", "host_runtime_provider", "host_runtime_dispatch",
+        "target_pressure_source", "host_boundary_readiness_document",
+    )
+    for record in observations:
+        observation = record.get("observation")
+        observation = observation if isinstance(observation, dict) else {}
+        if observation.get("kind") != NATIVE_CAPABILITY_CORRESPONDENCE_KIND:
+            continue
+        outcome = observation.get("outcome")
+        outcome = outcome if isinstance(outcome, dict) else {}
+        raw_sources = record.get("supporting_sources")
+        raw_sources = raw_sources if isinstance(raw_sources, list) else []
+        role_sources: dict[str, list[dict[str, Any]]] = {}
+        all_valid_source_count = 0
+        all_verified_source_count = 0
+        for source in raw_sources[:MAX_NATIVE_CAPABILITY_SOURCE_REFERENCES]:
+            if not isinstance(source, dict):
+                continue
+            pointer = _validate_source_pointer(source)
+            if pointer is None:
+                continue
+            all_valid_source_count += 1
+            source_status = _source_integrity_status(source, integrity)
+            if source_status in SOURCE_INTEGRITY_VERIFIED:
+                all_verified_source_count += 1
+            kind = source.get("kind")
+            role = NATIVE_CAPABILITY_CORRESPONDENCE_SOURCE_ROLES.get(kind)
+            if role is None:
+                continue
+            role_sources.setdefault(role, []).append({
+                **pointer,
+                "kind": kind,
+                "content_integrity_status": source_status,
+            })
+
+        source_evidence_by_role: dict[str, dict[str, Any]] = {}
+        for role, references in role_sources.items():
+            verified_count = sum(
+                reference.get("content_integrity_status")
+                in SOURCE_INTEGRITY_VERIFIED
+                for reference in references
+            )
+            source_evidence_by_role[role] = {
+                "status": (
+                    "content-integrity-verified"
+                    if verified_count == len(references) else (
+                        "partially-content-integrity-verified"
+                        if verified_count else "content-integrity-not-verified"
+                    )
+                ),
+                "source_reference_count": len(references),
+                "verified_reference_count": verified_count,
+                "source_references": references[:4],
+                "source_references_truncated": len(references) > 4,
+            }
+        required_roles_verified = all(
+            source_evidence_by_role.get(role, {}).get("status")
+            == "content-integrity-verified"
+            for role in required_roles
+        )
+        pressure_identity = outcome.get("target_pressure_identity")
+        pressure_link_projection = _owner_declared_pressure_links(
+            [pressure_identity] if isinstance(pressure_identity, str) else [],
+            raw_sources,
+            integrity,
+            source_payloads=payloads,
+        )
+        pressure_links = (
+            pressure_link_projection.get("links", [])
+            if isinstance(pressure_link_projection, dict) else []
+        )
+        integrity_linked_pressure = any(
+            isinstance(link, dict)
+            and isinstance(link.get("status"), str)
+            and "integrity-verified" in link["status"]
+            and link.get("source_content_integrity_status")
+            in SOURCE_INTEGRITY_VERIFIED
+            for link in pressure_links
+        )
+        source_evidence_status = (
+            "required-source-blobs-and-pressure-alias-verified"
+            if required_roles_verified and integrity_linked_pressure else (
+                "partial-source-evidence"
+                if all_verified_source_count else "source-evidence-not-verified"
+            )
+        )
+        verification = outcome.get("verification_observation")
+        verification = verification if isinstance(verification, dict) else {}
+        result = {
+            "identity": record.get("identity"),
+            "target_pressure_identity": _short_text(pressure_identity, 160),
+            "native_capability_identity": _short_text(
+                outcome.get("native_capability_identity"), 192,
+            ),
+            "relationship_assessment": _short_text(
+                outcome.get("relationship_assessment"), 128,
+            ),
+            "recorded_pressure_status": _short_text(
+                outcome.get("recorded_pressure_status"), 96,
+            ),
+            "target_pressure_summary": _short_text(
+                outcome.get("target_pressure_summary"), 512,
+            ),
+            "host_boundary_summary": _short_text(
+                outcome.get("host_boundary_summary"), 512,
+            ),
+            "source_evidence_status": source_evidence_status,
+            "source_evidence_by_role": source_evidence_by_role,
+            "supporting_source_reference_count": all_valid_source_count,
+            "supporting_source_content_integrity_verified_count": (
+                all_verified_source_count
+            ),
+            "supporting_sources_truncated": (
+                len(raw_sources) > MAX_NATIVE_CAPABILITY_SOURCE_REFERENCES
+            ),
+            "pressure_source_links": pressure_link_projection or {
+                "status": "target-pressure-identity-unavailable",
+                "causal_relation_status": "not-established",
+                "links": [],
+            },
+            "implementation_boundary": {
+                key: _short_text(outcome.get("implementation_boundary", {}).get(key), 256)
+                for key in (
+                    "mncs_language_surface", "host_runtime_provider",
+                    "consumer_boundary",
+                )
+                if isinstance(outcome.get("implementation_boundary"), dict)
+                and isinstance(
+                    outcome["implementation_boundary"].get(key), str,
+                )
+            },
+            "verification_observation": {
+                "status": _short_text(verification.get("status"), 96),
+                "command": _short_text(verification.get("command"), 512),
+                "test_identity": _short_text(verification.get("test_identity"), 192),
+                "result_summary": _short_text(
+                    verification.get("result_summary"), 256,
+                ),
+                "interpretation_limit": _short_text(
+                    verification.get("interpretation_limit"), 512,
+                ),
+                **{
+                    key: verification[key]
+                    for key in ("passed", "failed", "filtered")
+                    if type(verification.get(key)) is int
+                    and verification[key] >= 0
+                },
+                **({
+                    "unsupported_branch_may_return_early": verification[
+                        "unsupported_branch_may_return_early"
+                    ],
+                } if type(verification.get(
+                    "unsupported_branch_may_return_early",
+                )) is bool else {}),
+            },
+            "agent_usage_status": "not-measured",
+            "causal_relation_status": "not-established",
+            "native_migration_readiness": "not-established",
+            "systemwide_native_adoption_ratio": {"status": "not-measured"},
+            "classification_provenance": (
+                "Campaign-authored source-role interpretation; source integrity "
+                "does not independently prove implementation ownership, consumer "
+                "integration, or migration suitability."
+            ),
+            "next_investigation": _short_text(
+                outcome.get("next_investigation"), 512,
+            ),
+            "interpretation_limit": (
+                "A source correspondence identifies a candidate for investigation; "
+                "it does not establish that the pressure caused the host boundary, "
+                "that agents can discover or use the API, or that migration is ready."
+            ),
+        }
+        if isinstance(outcome.get("measurement_limits"), list):
+            result["measurement_limits"] = [
+                _short_text(value, 384)
+                for value in outcome["measurement_limits"][:8]
+                if isinstance(value, str)
+            ]
+        correspondences.append(result)
+        if len(correspondences) >= MAX_NATIVE_CAPABILITY_CORRESPONDENCES:
+            break
+    return correspondences
+
+
 def _implementation_accountability_projection(
     observations: list[dict[str, Any]], *, native_proof_reference_present: bool,
     selected_session_capability_delivery: Any = None,
@@ -4563,6 +4889,13 @@ def _implementation_accountability_projection(
     source_integrity: dict[tuple[str, str, str, str], str] | None = None,
 ) -> dict[str, Any] | None:
     """Summarize source-verified proofs and separate owner-declared audit evidence."""
+    native_capability_correspondences = (
+        _native_capability_correspondence_projection(
+            observations,
+            source_integrity,
+            owner_audit_source_payloads,
+        )
+    )
     samples: list[dict[str, Any]] = []
     owner_audits: list[dict[str, Any]] = []
     for observation_record in observations:
@@ -4874,7 +5207,8 @@ def _implementation_accountability_projection(
             },
         }
     if not samples:
-        if not native_proof_reference_present and owner_audit_evidence is None:
+        if (not native_proof_reference_present and owner_audit_evidence is None
+                and not native_capability_correspondences):
             return None
         result = {
             "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
@@ -4887,6 +5221,10 @@ def _implementation_accountability_projection(
         }
         if owner_audit_evidence is not None:
             result["owner_audit_evidence"] = owner_audit_evidence
+        if native_capability_correspondences:
+            result["native_capability_correspondences"] = (
+                native_capability_correspondences
+            )
         return result
     result = {
         "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
@@ -4906,6 +5244,10 @@ def _implementation_accountability_projection(
     }
     if owner_audit_evidence is not None:
         result["owner_audit_evidence"] = owner_audit_evidence
+    if native_capability_correspondences:
+        result["native_capability_correspondences"] = (
+            native_capability_correspondences
+        )
     return result
 
 

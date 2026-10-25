@@ -215,6 +215,17 @@ aliases, and multiple verified records for one alias remain ambiguous. This
 does not establish that a shared pressure causally blocks a particular host
 responsibility.
 
+The same `implementation_accountability` view can expose a bounded
+`native_capability_correspondences` list. Each record links a target pressure
+identity to exact MNCS-language contract, runtime-provider, dispatch, test, and
+host-boundary source pointers. The projection reports source integrity by role
+and can join a shared pressure identity through a verified `commons_pressure_id`
+alias. The roles are campaign interpretations of source content; verified
+digests do not establish implementation ownership or suitability. A recorded
+test result remains distinct from source presence, consumer integration,
+agent usage, causal attribution, and migration readiness. These statuses stay
+`not-measured` or `not-established` until independent evidence supports them.
+
 When the selected session has a capability-delivery view, the sample also
 exposes `selected_session_delivery_observation`. It compares the proof's
 canonical capability identity with that session's current binding snapshot and

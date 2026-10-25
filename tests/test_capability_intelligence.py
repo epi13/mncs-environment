@@ -3924,6 +3924,142 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
     )
 
 
+def test_native_capability_correspondence_links_candidate_without_claiming_migration():
+    pressure_source = {
+        "identity": "MNCS-TEST-P-001",
+        "kind": "mncs-test-pressure-source",
+        "repository": "mncs-test",
+        "commit": "a" * 40,
+        "path": "pressures/MNCS-TEST-P-001.json",
+        "sha256": "1" * 64,
+    }
+    sources = [
+        pressure_source,
+        {
+            "identity": "process_contract",
+            "kind": "native-language-capability-contract",
+            "repository": "mncs-language",
+            "commit": "b" * 40,
+            "path": "library/std/process.mncs",
+            "sha256": "2" * 64,
+        },
+        {
+            "identity": "process_provider",
+            "kind": "native-runtime-provider-implementation",
+            "repository": "mncs-language",
+            "commit": "b" * 40,
+            "path": "crates/mncs-model/src/process_runtime.rs",
+            "sha256": "3" * 64,
+        },
+        {
+            "identity": "process_dispatch",
+            "kind": "native-runtime-operation-dispatch",
+            "repository": "mncs-language",
+            "commit": "b" * 40,
+            "path": "crates/mncs-model/src/execution.rs",
+            "sha256": "4" * 64,
+        },
+        {
+            "identity": "host_readiness_review",
+            "kind": "host-boundary-readiness-document",
+            "repository": "mncs-compiler",
+            "commit": "c" * 40,
+            "path": "docs/native-tool-conversion-readiness.md",
+            "sha256": "5" * 64,
+        },
+    ]
+    pressure_raw = json.dumps({
+        "schema_version": "mncs-test.pressure/1",
+        "id": "MNCS-TEST-P-001",
+        "commons_pressure_id": "MNCS-TOOLING-B665F138D324",
+    }, sort_keys=True, separators=(",", ":")).encode()
+    source_integrity = {
+        capability_intelligence._source_pointer_key(source): (
+            "content-integrity-verified"
+        )
+        for source in sources
+    }
+    record = {
+        "identity": "ev_environment_native_process_correspondence_20261025",
+        "observation": {
+            "kind": capability_intelligence.NATIVE_CAPABILITY_CORRESPONDENCE_KIND,
+            "outcome": {
+                "target_pressure_identity": "MNCS-TOOLING-B665F138D324",
+                "native_capability_identity": "mncs.std.process.v1",
+                "relationship_assessment": "candidate-correspondence",
+                "implementation_boundary": {
+                    "mncs_language_surface": "MNCS typed process API",
+                    "host_runtime_provider": "Rust process runtime provider",
+                    "consumer_boundary": "MNCS-Test host process adapter",
+                },
+                "verification_observation": {
+                    "status": "passed",
+                    "command": "cargo test -p mncs-model --lib process_runtime::tests::lifecycle_handle_is_provider_issued_and_cancel_requires_reap -- --exact --nocapture",
+                    "test_identity": "process_runtime::tests::lifecycle_handle_is_provider_issued_and_cancel_requires_reap",
+                    "result_summary": "1 passed; 0 failed; 255 filtered; 0.05 seconds",
+                    "passed": 1,
+                    "failed": 0,
+                    "filtered": 255,
+                    "unsupported_branch_may_return_early": True,
+                    "interpretation_limit": "The provider test returns early when the platform reports Unsupported.",
+                },
+                "next_investigation": "Establish end-to-end parity and discoverability for a real MNCS consumer before recommending host-boundary migration.",
+            },
+        },
+        "supporting_sources": sources,
+    }
+    projected = capability_intelligence._implementation_accountability_projection(
+        [record],
+        native_proof_reference_present=False,
+        owner_audit_source_payloads={
+            capability_intelligence._source_pointer_key(pressure_source): pressure_raw,
+        },
+        source_integrity=source_integrity,
+    )
+
+    assert projected is not None
+    assert projected["sample_count"] == 0
+    correspondence = projected["native_capability_correspondences"][0]
+    assert correspondence["source_evidence_status"] == (
+        "required-source-blobs-and-pressure-alias-verified"
+    )
+    assert correspondence["native_capability_identity"] == "mncs.std.process.v1"
+    assert correspondence["relationship_assessment"] == "candidate-correspondence"
+    assert correspondence["pressure_source_links"]["links"][0]["status"] == (
+        "linked-through-integrity-verified-pressure-alias"
+    )
+    assert correspondence["pressure_source_links"]["links"][0][
+        "source_reference"]["identity"] == "MNCS-TEST-P-001"
+    assert correspondence["source_evidence_by_role"]["host_runtime_provider"][
+        "status"
+    ] == "content-integrity-verified"
+    assert correspondence["verification_observation"][
+        "unsupported_branch_may_return_early"
+    ] is True
+    assert correspondence["agent_usage_status"] == "not-measured"
+    assert correspondence["causal_relation_status"] == "not-established"
+    assert correspondence["native_migration_readiness"] == "not-established"
+    assert correspondence["systemwide_native_adoption_ratio"]["status"] == (
+        "not-measured"
+    )
+
+    compact = capability_intelligence._compact_implementation_accountability(
+        projected,
+    )
+    compact_correspondence = compact[
+        "native_capability_correspondences"
+    ][0]
+    assert compact_correspondence["source_evidence_by_role"][
+        "language_contract"]["source_references"][0]["path"] == (
+            "library/std/process.mncs"
+        )
+    assert compact_correspondence["pressure_source_links"]["links"][0][
+        "source_reference"]["identity"] == "MNCS-TEST-P-001"
+    assert compact_correspondence["native_migration_readiness"] == (
+        "not-established"
+    )
+
+
 def test_owner_declared_pressure_links_keep_ambiguity_and_bounded_absence_explicit(
 ) -> None:
     def source(identity: str, path: str, kind: str) -> dict[str, str]:

@@ -1,0 +1,156 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_process_capability_correspondence_20261025",
+  "captured_at": "2026-10-25T22:21:31Z",
+  "measurement_basis": "Content-addressed workspace source correspondence plus one targeted MNCS runtime-provider test command observed by the environmental capability campaign. Source roles are campaign classifications; provider-test success is conditional on platform support and is not MNCS-Test parity evidence.",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_codex_20261025T1957",
+    "session_id": "ses_6c794a018a1a0b5a",
+    "environment_id": "renv_5b0c0fe32bee2ced"
+  },
+  "observation": {
+    "kind": "native-capability-pressure-correspondence",
+    "source_interface": "MNCS Environment implementation-accountability projection",
+    "request": {
+      "target_pressure_identity": "MNCS-TOOLING-B665F138D324",
+      "native_capability_identity": "mncs.std.process.v1"
+    },
+    "outcome": {
+      "target_pressure_identity": "MNCS-TOOLING-B665F138D324",
+      "recorded_pressure_status": "open",
+      "target_pressure_summary": "MNCS-TEST-P-001 requests a bounded, capability-controlled process-session API for future native tooling; it records the current test runner's host boundary and remains open in the referenced source revision.",
+      "native_capability_identity": "mncs.std.process.v1",
+      "relationship_assessment": "candidate-correspondence; not a causal finding or migration decision",
+      "implementation_boundary": {
+        "mncs_language_surface": "The MNCS standard library declares a typed, capability-gated process lifecycle API with explicit argv, resource bounds, output limits, and deadlines.",
+        "host_runtime_provider": "The executable provider and compiler runtime dispatch are implemented in Rust within mncs-language; this is a host provider behind the MNCS API, not an MNCS-language implementation of the operating-system process mechanism.",
+        "consumer_boundary": "The referenced MNCS-Test process runner remains a separate host boundary; these sources do not establish that it consumes or has measured parity with mncs.std.process.v1."
+      },
+      "host_boundary_summary": "The referenced native-tool readiness document classifies process launch, transport, timeout, output capture, and temporary request/result files as retained operating-system mechanisms until bounded capability parity is measured.",
+      "verification_observation": {
+        "status": "passed-in-campaign-run",
+        "command": "cargo test -p mncs-model --lib process_runtime::tests::lifecycle_handle_is_provider_issued_and_cancel_requires_reap -- --exact --nocapture",
+        "test_identity": "process_runtime::tests::lifecycle_handle_is_provider_issued_and_cancel_requires_reap",
+        "result_summary": "1 passed; 0 failed; 255 filtered; 0.05 seconds",
+        "passed": 1,
+        "failed": 0,
+        "filtered": 255,
+        "unsupported_branch_may_return_early": true,
+        "interpretation_limit": "The Rust provider test returns early when the platform reports Unsupported. Its pass does not prove the provider is available on every platform or that an MNCS consumer can use it. The MNCS source-level lifecycle fixture was not run in this test command."
+      },
+      "next_investigation": "Establish how an existing native MNCS consumer discovers and invokes this capability, then measure parity against a legitimate bounded host-tool operation before any migration recommendation.",
+      "measurement_limits": [
+        "The pressure and readiness statements are source declarations at their referenced commits; this observation does not establish that those records have since been revised.",
+        "Source roles are campaign-authored classifications backed by exact content-integrity checks; digest verification alone does not establish semantic ownership or suitability.",
+        "No current agent usage, cross-agent discoverability, pressure recurrence, causal relationship, or consumer integration was measured.",
+        "No native-versus-host systemwide adoption denominator or functionality-weighted ratio was measured.",
+        "The provider unit test result is not a substitute for executing the MNCS lifecycle fixture or a representative application parity test."
+      ]
+    }
+  },
+  "supporting_sources": [
+    {
+      "identity": "MNCS-TEST-P-001",
+      "kind": "native-userland-pressure-source",
+      "repository": "mncs-test",
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "path": "pressures/MNCS-TEST-P-001.json",
+      "sha256": "38cb0494d2362b9b9b760ab3c76a4f27c6bd6595ca337b15765564e8ad0975de"
+    },
+    {
+      "identity": "audit_mncs_test_native_userland_20261025",
+      "kind": "native-userland-audit-source",
+      "repository": "mncs-test",
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "path": "native-userland-audit.json",
+      "sha256": "cd4e760c250504cc62b5094769bedf07b73b2dd6d0765206c571290a27bb5560"
+    },
+    {
+      "identity": "audit_mncs_actions_native_userland_20261025",
+      "kind": "native-userland-audit-source",
+      "repository": "mncs-actions",
+      "commit": "ca62f3d33ef9c3b5096bc4d39f6039adc445e579",
+      "path": "native-userland-audit.json",
+      "sha256": "76e5845b033c775f93bc3e821a069cf8bb21eb437784e505847db3c19446c48a"
+    },
+    {
+      "identity": "mncs_language_process_contract_6a3f6907",
+      "kind": "native-language-capability-contract",
+      "repository": "mncs-language",
+      "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+      "path": "library/std/process.mncs",
+      "sha256": "c1261785be0bb78292ba5262dd082a28521338daafcd32e3ff0388f6f4ff0e30"
+    },
+    {
+      "identity": "mncs_language_process_compiler_inventory_6a3f6907",
+      "kind": "native-language-compiler-support",
+      "repository": "mncs-language",
+      "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+      "path": "crates/mncs-compiler/src/inventory.rs",
+      "sha256": "f6aada06a0a16a303c41133d4193f8acadcec6e21d7f32e6d61792c65eb9a019"
+    },
+    {
+      "identity": "mncs_language_process_compiler_frontend_6a3f6907",
+      "kind": "native-language-compiler-support",
+      "repository": "mncs-language",
+      "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+      "path": "crates/mncs-compiler/src/frontend.rs",
+      "sha256": "9adf10dfa8796edcf7f229a878ffbb7579d709b28478008f8640f5d1153d8377"
+    },
+    {
+      "identity": "mncs_language_process_runtime_6a3f6907",
+      "kind": "native-runtime-provider-implementation",
+      "repository": "mncs-language",
+      "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+      "path": "crates/mncs-model/src/process_runtime.rs",
+      "sha256": "61fd703075fa711fa9bcafdc822bde33ba06cfe39a11d4de03686d79ed50ae41"
+    },
+    {
+      "identity": "mncs_language_process_runtime_tests_6a3f6907",
+      "kind": "native-runtime-provider-test-source",
+      "repository": "mncs-language",
+      "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+      "path": "crates/mncs-model/src/process_runtime.rs",
+      "sha256": "61fd703075fa711fa9bcafdc822bde33ba06cfe39a11d4de03686d79ed50ae41"
+    },
+    {
+      "identity": "mncs_language_process_execution_dispatch_6a3f6907",
+      "kind": "native-runtime-operation-dispatch",
+      "repository": "mncs-language",
+      "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+      "path": "crates/mncs-model/src/execution.rs",
+      "sha256": "23e6d9fb3a051aeff9a74a087e0ffa85e113fbb99ac34709bb113a0d8f3c7e05"
+    },
+    {
+      "identity": "mncs_language_process_ssa_dispatch_6a3f6907",
+      "kind": "native-runtime-operation-dispatch",
+      "repository": "mncs-language",
+      "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+      "path": "crates/mncs-model/src/ssa_execution.rs",
+      "sha256": "80f619468b65580258fbcf20a4b796f6adc1a762890a46057e14292fb0985434"
+    },
+    {
+      "identity": "mncs_language_process_lifecycle_test_6a3f6907",
+      "kind": "native-language-lifecycle-test-source",
+      "repository": "mncs-language",
+      "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+      "path": "tests/process_lifecycle_effect.mncs",
+      "sha256": "e3663a5f2437f403d708c58363b9bfdbcc4ae91957c6db1e0d0f21df115ddd90"
+    },
+    {
+      "identity": "mncs_compiler_native_tool_readiness_20261025",
+      "kind": "host-boundary-readiness-document",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "docs/native-tool-conversion-readiness.md",
+      "sha256": "0261e249737209155785bca02dbd0cfeda32fbda144e222b61570d8da1704036"
+    }
+  ],
+  "not_measured": [
+    "Whether any MNCS-Test or MNCS-Actions component consumes mncs.std.process.v1.",
+    "Parity between the Rust host adapter and the process capability for arguments, environment, deadlines, output capture, exit status, cancellation, resource limits, and cleanup.",
+    "Whether agents reliably discover and use this native API across sessions or model configurations.",
+    "Whether this correspondence resolves the source-declared P-001 pressure.",
+    "Native-versus-host systemwide adoption ratio and its functionality denominator."
+  ]
+}
