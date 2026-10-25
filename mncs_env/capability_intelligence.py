@@ -14,6 +14,7 @@ import json
 import math
 import os
 import re
+import selectors
 import subprocess
 import time
 from pathlib import Path, PurePosixPath
@@ -147,6 +148,7 @@ NATIVE_CAPABILITY_CORRESPONDENCE_SOURCE_ROLES = {
     "native-runtime-provider-test-source": "runtime_provider_test_source",
     "native-language-lifecycle-test-source": "native_language_test_source",
     "mncs-test-pressure-source": "target_pressure_source",
+    "native-userland-pressure-source": "target_pressure_source",
     "native-userland-audit-source": "owner_audit_source",
     "host-boundary-readiness-document": "host_boundary_readiness_document",
 }
@@ -157,6 +159,7 @@ MAX_EVIDENCE_HISTORY_PAGES = 4
 MAX_OBSERVATIONS = 16
 MAX_OBSERVATION_BYTES = 64 * 1024
 MAX_SOURCE_BYTES = 512 * 1024
+MAX_SOURCE_HASH_BYTES = 4 * 1024 * 1024
 MAX_OBSERVATION_READ_SECONDS = 8.0
 MAX_SOURCE_POINTER_VERIFICATIONS = 32
 MAX_EVIDENCE_REFERENCE_CORRECTIONS = 8
@@ -3132,6 +3135,99 @@ def _git_blob(
     return blob.stdout, "read"
 
 
+def _git_blob_sha256(
+    checkout: Path, commit: str, path: str, *, deadline: float,
+    max_bytes: int = MAX_SOURCE_HASH_BYTES,
+    oversized_status: str = "source-object-too-large",
+) -> tuple[str | None, str]:
+    """Hash one bounded Git blob incrementally without retaining its contents."""
+    object_name = f"{commit}:{path}"
+    environment = {**os.environ, "GIT_OPTIONAL_LOCKS": "0"}
+    process: subprocess.Popen[bytes] | None = None
+    selector: selectors.BaseSelector | None = None
+    try:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None, "read-budget-exhausted"
+        size = subprocess.run(
+            [workspace_module.git_binary(), "-C", str(checkout), "cat-file", "-s", object_name],
+            capture_output=True, timeout=min(1.0, remaining), check=False, env=environment,
+        )
+        if size.returncode != 0:
+            return None, "commit-path-unavailable"
+        raw_size = size.stdout.strip()
+        if not raw_size.isdigit():
+            return None, "object-size-unavailable"
+        object_size = int(raw_size)
+        if object_size > max_bytes:
+            return None, oversized_status
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None, "read-budget-exhausted"
+        process = subprocess.Popen(
+            [workspace_module.git_binary(), "-C", str(checkout), "cat-file", "blob", object_name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            bufsize=0,
+            env=environment,
+        )
+        if process.stdout is None:
+            return None, "git-read-unavailable"
+        source_fd = process.stdout.fileno()
+        os.set_blocking(source_fd, False)
+        selector = selectors.DefaultSelector()
+        selector.register(source_fd, selectors.EVENT_READ)
+        digest = hashlib.sha256()
+        bytes_read = 0
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return None, "read-budget-exhausted"
+            events = selector.select(min(remaining, 0.25))
+            if not events:
+                continue
+            try:
+                chunk = os.read(source_fd, 64 * 1024)
+            except BlockingIOError:
+                continue
+            if not chunk:
+                break
+            bytes_read += len(chunk)
+            if bytes_read > max_bytes:
+                return None, oversized_status
+            digest.update(chunk)
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None, "read-budget-exhausted"
+        try:
+            exit_code = process.wait(timeout=min(1.0, remaining))
+        except subprocess.TimeoutExpired:
+            return None, "read-budget-exhausted"
+        if exit_code != 0:
+            return None, "commit-path-unavailable"
+        if bytes_read != object_size:
+            return None, "object-size-mismatch"
+        return digest.hexdigest(), "read"
+    except subprocess.TimeoutExpired:
+        return None, "read-budget-exhausted"
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None, "git-read-unavailable"
+    finally:
+        if selector is not None:
+            selector.close()
+        if process is not None:
+            if process.poll() is None:
+                process.kill()
+                try:
+                    process.wait(timeout=0.25)
+                except subprocess.TimeoutExpired:
+                    pass
+            if process.stdout is not None:
+                process.stdout.close()
+
+
 def _compiler_regression_observation(
     session: Any, reference: dict[str, str], source: dict[str, Any],
 ) -> dict[str, Any] | None:
@@ -4277,6 +4373,30 @@ def _verify_source_pointer(
         checkout, pointer["commit"], pointer["path"], deadline=deadline,
         max_bytes=MAX_SOURCE_BYTES, oversized_status="source-object-too-large",
     )
+    if raw is None and status == "source-object-too-large" and not wants_source_payload:
+        streamed_digest, stream_status = _git_blob_sha256(
+            checkout, pointer["commit"], pointer["path"],
+            deadline=deadline,
+            max_bytes=MAX_SOURCE_HASH_BYTES,
+            oversized_status="source-object-too-large",
+        )
+        if streamed_digest is not None:
+            if streamed_digest != pointer["sha256"]:
+                cache[key] = "sha256-mismatch"
+            elif verification_basis == "workspace-read-only":
+                cache[key] = "workspace-read-only-content-integrity-verified"
+            else:
+                cache[key] = "content-integrity-verified"
+            return
+        cache[key] = {
+            "read-budget-exhausted": "source-read-budget-exhausted",
+            "commit-path-unavailable": "source-object-unavailable",
+            "source-object-too-large": "source-object-too-large",
+            "object-size-unavailable": "source-object-size-unavailable",
+            "object-size-mismatch": "source-object-size-mismatch",
+            "git-read-unavailable": "source-git-read-unavailable",
+        }.get(stream_status, f"source-{stream_status}")
+        return
     if raw is None:
         cache[key] = {
             "read-budget-exhausted": "source-read-budget-exhausted",

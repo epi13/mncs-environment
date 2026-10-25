@@ -2533,7 +2533,7 @@ def test_project_does_not_read_a_supporting_repo_outside_selected_session(tmp_pa
 
 
 def test_selected_source_digest_is_verified_and_compact_pointer_is_preserved(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch,
 ) -> None:
     identity = "ev_environment_source_integrity"
     record = _observation(identity, "ses_compiler", "cmp_compiler")
@@ -2551,7 +2551,18 @@ def test_selected_source_digest_is_verified_and_compact_pointer_is_preserved(
     oversized_source_bytes = b"x" * (capability_intelligence.MAX_SOURCE_BYTES + 1)
     oversized_source_path.write_bytes(oversized_source_bytes)
     relative_oversized_source = "src/oversized-source.mn"
-    _git(checkout, "add", relative_source, relative_oversized_source)
+    hash_limited_source_path = checkout / "src" / "hash-limited-source.mn"
+    hash_limit = capability_intelligence.MAX_SOURCE_BYTES + 32
+    hash_limited_source_bytes = b"y" * (hash_limit + 1)
+    hash_limited_source_path.write_bytes(hash_limited_source_bytes)
+    relative_hash_limited_source = "src/hash-limited-source.mn"
+    _git(
+        checkout, "add", relative_source, relative_oversized_source,
+        relative_hash_limited_source,
+    )
+    monkeypatch.setattr(
+        capability_intelligence, "MAX_SOURCE_HASH_BYTES", hash_limit,
+    )
     _git(checkout, "commit", "--quiet", "-m", "test selected source")
     source_commit = _git(checkout, "rev-parse", "HEAD")
     source_digest = hashlib.sha256(source_bytes).hexdigest()
@@ -2580,6 +2591,25 @@ def test_selected_source_digest_is_verified_and_compact_pointer_is_preserved(
         "commit": source_commit,
         "path": relative_oversized_source,
         "sha256": oversized_source_digest,
+    })
+    record["supporting_sources"].append({
+        "kind": "committed-source",
+        "identity": "ev_environment_selected_source_oversized_bad_digest",
+        "repository": "mncs-environment",
+        "commit": source_commit,
+        "path": relative_oversized_source,
+        "sha256": "f" * 64,
+    })
+    hash_limited_source_digest = hashlib.sha256(
+        hash_limited_source_bytes,
+    ).hexdigest()
+    record["supporting_sources"].append({
+        "kind": "committed-source",
+        "identity": "ev_environment_selected_source_hash_limit",
+        "repository": "mncs-environment",
+        "commit": source_commit,
+        "path": relative_hash_limited_source,
+        "sha256": hash_limited_source_digest,
     })
     observation_path = checkout / state["evidence"][0]["path"]
     raw = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
@@ -2612,6 +2642,20 @@ def test_selected_source_digest_is_verified_and_compact_pointer_is_preserved(
         "path": relative_oversized_source,
         "sha256": oversized_source_digest,
     })
+    state["evidence"].append({
+        "identity": "ev_environment_selected_source_oversized_bad_digest",
+        "repository": "mncs-environment",
+        "commit": source_commit,
+        "path": relative_oversized_source,
+        "sha256": "f" * 64,
+    })
+    state["evidence"].append({
+        "identity": "ev_environment_selected_source_hash_limit",
+        "repository": "mncs-environment",
+        "commit": source_commit,
+        "path": relative_hash_limited_source,
+        "sha256": hash_limited_source_digest,
+    })
 
     result = capability_intelligence.project(session)
 
@@ -2634,10 +2678,25 @@ def test_selected_source_digest_is_verified_and_compact_pointer_is_preserved(
         item for item in result["observations"][0]["supporting_sources"]
         if item.get("identity") == "ev_environment_selected_source_oversized"
     )
-    assert oversized_source["content_integrity_status"] == "source-object-too-large"
-    assert result["source"]["source_pointer_count"] == 3
-    assert result["source"]["source_pointer_content_integrity_verified_count"] == 1
-    assert result["source"]["source_pointer_content_integrity_not_verified_count"] == 2
+    assert oversized_source["content_integrity_status"] == (
+        "content-integrity-verified"
+    )
+    assert result["source"]["source_pointer_count"] == 5
+    assert result["source"]["source_pointer_content_integrity_verified_count"] == 2
+    assert result["source"]["source_pointer_content_integrity_not_verified_count"] == 3
+    streamed_digest, streamed_status = capability_intelligence._git_blob_sha256(
+        checkout, source_commit, relative_oversized_source,
+        deadline=time.monotonic() + 2,
+    )
+    assert streamed_status == "read"
+    assert streamed_digest == oversized_source_digest
+    limited_digest, limited_status = capability_intelligence._git_blob_sha256(
+        checkout, source_commit, relative_hash_limited_source,
+        deadline=time.monotonic() + 2,
+        max_bytes=hash_limit,
+    )
+    assert limited_digest is None
+    assert limited_status == "source-object-too-large"
 
 
 def test_project_requires_digest_before_exposing_a_pressure(tmp_path: Path) -> None:
@@ -5479,6 +5538,21 @@ def test_observation_reader_stops_after_its_total_deadline(monkeypatch) -> None:
     )
 
     assert content is None
+    assert status == "read-budget-exhausted"
+
+
+def test_streamed_source_hash_stops_after_its_total_deadline(monkeypatch) -> None:
+    def unexpected_git(*_args, **_kwargs):
+        raise AssertionError("Git should not run after the source hash deadline")
+
+    monkeypatch.setattr(capability_intelligence.subprocess, "run", unexpected_git)
+
+    digest, status = capability_intelligence._git_blob_sha256(
+        Path("/unselected"), "a" * 40, "src/large-source.rs",
+        deadline=time.monotonic() - 1,
+    )
+
+    assert digest is None
     assert status == "read-budget-exhausted"
 
 

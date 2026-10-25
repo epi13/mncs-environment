@@ -226,6 +226,14 @@ test result remains distinct from source presence, consumer integration,
 agent usage, causal attribution, and migration readiness. These statuses stay
 `not-measured` or `not-established` until independent evidence supports them.
 
+Source pointers up to 512 KiB may be loaded when the projection needs their
+bounded payload for parsing or schema checks. Larger generic source pointers
+that only need digest verification are streamed through Git in 64 KiB chunks,
+with a 4 MiB per-object cap under the shared 8 second read deadline; their blob
+contents are not retained. Objects above that cap, or reads that exceed the
+deadline, remain explicitly unverified. Streaming verifies the pointer digest
+only; it does not establish the source's meaning, ownership, or suitability.
+
 When the selected session has a capability-delivery view, the sample also
 exposes `selected_session_delivery_observation`. It compares the proof's
 canonical capability identity with that session's current binding snapshot and
