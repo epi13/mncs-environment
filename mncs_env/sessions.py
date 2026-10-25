@@ -2958,19 +2958,18 @@ class Session:
             prior_grant is not None
             and owner_authorized_checkout is not None
             and isinstance(selected, dict)
-            and isinstance(prior_identity, dict)
             and isinstance(selected.get("path"), str)
-            and isinstance(prior_identity.get("path"), str)
-            and Path(os.path.abspath(selected["path"]))
-            == Path(os.path.abspath(prior_identity["path"]))
             and isinstance(owner_authorized_checkout.get("path"), str)
-            and Path(os.path.abspath(owner_authorized_checkout["path"]))
-            != Path(os.path.abspath(prior_identity["path"]))
+            and Path(os.path.abspath(selected["path"]))
+            != Path(os.path.abspath(owner_authorized_checkout["path"]))
         ):
-            # A Control-verified owner grant can move this repository's
-            # selected checkout. The prior selection is only a projection of
-            # the grant being refreshed, so it must not make that exact,
-            # authenticated rebind look like a competing selection.
+            # A Control-verified owner grant is authoritative for this
+            # repository's checkout selection. The snapshot may still contain
+            # the campaign's entry-time checkout even after an earlier grant
+            # selected a linked worktree, so that stale projection must not
+            # veto an exact, authenticated refresh. The owner checkout is
+            # independently verified below, and claim conflicts are checked
+            # against its registered path before the grant is recorded.
             selected_for_verification = None
         try:
             resolved_checkout, checkout_facts = _verified_scope_checkout(

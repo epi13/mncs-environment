@@ -1458,6 +1458,75 @@ def test_scope_grant_refresh_rebinds_to_an_owner_verified_registered_worktree(
         session.close()
 
 
+def test_scope_grant_refresh_accepts_owner_branch_when_entry_checkout_projection_is_stale(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(
+        tmp_path / "state", workspace, acquire_environment_claim=False,
+    )
+    try:
+        entry_checkout = workspace / "mncs-control-mcp"
+        entry_facts = workspace_module.verify_registered_checkout(
+            entry_checkout,
+            repository="mncs-control-mcp",
+            workspace_root=workspace,
+            expected_repository_root=entry_checkout,
+        )
+        entry_selection = {
+            **entry_facts,
+            "repository": "mncs-control-mcp",
+            "path": str(entry_checkout.resolve()),
+            "source_ref": "current-working-checkout",
+        }
+        checkout, first_facts = _nested_target_checkout(
+            session, workspace, "refresh-stale-entry", "campaign/scope-refresh-stale-entry",
+        )
+        session.snapshot["selected_checkouts"]["mncs-control-mcp"] = entry_selection
+
+        first = _grant(
+            session,
+            request_id="req_refresh_stale_entry_initial",
+            owner_authorized_checkout=first_facts,
+        )
+        assert first["repository_identity"]["path"] == str(checkout)
+
+        next_branch = "campaign/scope-refresh-stale-entry-next"
+        _git(checkout, "switch", "-c", next_branch)
+        refreshed_facts = _refresh_owner_facts(
+            checkout, workspace, "mncs-control-mcp", next_branch,
+        )
+        refreshed = _grant(
+            session,
+            revision=session.effective_authority()["revision"],
+            request_id="req_refresh_stale_entry_branch",
+            owner_authorized_checkout=refreshed_facts,
+        )
+
+        assert refreshed["refresh_of"] == first["identity"]
+        assert refreshed["repository_identity"]["path"] == str(checkout)
+        assert refreshed["repository_identity"]["branch"] == next_branch
+        assert session.snapshot["selected_checkouts"]["mncs-control-mcp"]["path"] == (
+            str(entry_checkout.resolve())
+        )
+
+        target_claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="claim the refreshed owner-approved feature branch",
+            scope={
+                "kind": "worktree",
+                "checkout": str(checkout),
+                "branch": next_branch,
+            },
+            request_id="req_refresh_stale_entry_claim",
+        )
+        assert target_claim["scope"]["checkout"] == str(checkout)
+        assert target_claim["scope"]["branch"] == next_branch
+    finally:
+        session.close()
+
+
 def test_scope_grant_rebind_requires_control_verified_checkout_facts(
     tmp_path: Path,
 ) -> None:
