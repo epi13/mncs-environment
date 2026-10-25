@@ -165,6 +165,119 @@ def _add_compiler_dependency_summary_evidence(
     return reference
 
 
+def _add_compiler_native_application_proof_evidence(
+    session, state: dict, *, failed_case: bool = False,
+) -> dict[str, str]:
+    root = Path(session.snapshot["workspace"]["root"])
+    sources = []
+    revisions = {}
+    for module, repository, relative, revision_field in (
+        capability_intelligence.COMPILER_NATIVE_APPLICATION_MODULES
+    ):
+        checkout = root / repository
+        if not checkout.exists():
+            checkout.mkdir()
+            _git(checkout, "init", "--quiet")
+            _git(checkout, "config", "user.name", "test")
+            _git(checkout, "config", "user.email", "test@example.invalid")
+        path = checkout / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"module {module}\n", encoding="utf-8")
+        _git(checkout, "add", relative)
+        _git(checkout, "commit", "--quiet", "-m", f"add {module} source")
+        revision = _git(checkout, "rev-parse", "HEAD")
+        revisions[revision_field] = revision
+        sources.append({
+            "module": module,
+            "path": str(path),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        })
+        session.snapshot["selected_checkouts"][repository] = {
+            "path": str(checkout),
+        }
+
+    artifact_identity = "sha256:" + "e" * 64
+    cases = []
+    for index in range(3):
+        output_digest = f"{index + 1:x}" * 64
+        cases.append({
+            "case_index": index,
+            "artifact_identity": artifact_identity,
+            "application_exit": {"exit_code": 1 if failed_case and index == 0 else 0},
+            "effect_operations": ["structured_read", "structured_write"],
+            "effect_outcomes": ["completed", "completed"],
+            "output_sha256": output_digest,
+            "stage0_output_sha256": output_digest,
+        })
+    report = {
+        "schema_version": capability_intelligence.COMPILER_NATIVE_APPLICATION_PROOF_SCHEMA,
+        "created_at": "2026-10-18T10:28:51.441053+00:00",
+        "objective": "Execute the real MNCS test digest application through the canonical VM provider boundary",
+        "producer": {
+            "compiler_revision": "a" * 40,
+            "language_revision": "b" * 40,
+            "stdlib_revision": revisions["stdlib_revision"],
+            "test_revision": revisions["test_revision"],
+        },
+        "application": {
+            "entry": capability_intelligence.COMPILER_NATIVE_APPLICATION_ENTRY,
+            "required_capability": "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact",
+            "runtime_dispatch_alias": "test_artifact",
+            "module_sources": sources,
+        },
+        "build": {
+            "artifact_identity": artifact_identity,
+            "cache": {
+                "publication": "stored",
+                "verification_work": {
+                    "front_end_outcome": "verified",
+                    "resolved_module_count": len(sources),
+                },
+            },
+        },
+        "execution": {
+            "exact_result_agreement": True,
+            "capability_admission": {
+                "authorized_capability_identity": (
+                    "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact"
+                ),
+                "runtime_dispatch_alias": "test_artifact",
+            },
+            "canonical_vm_cases": cases,
+        },
+        "limitations": [
+            "The file provider is a bounded test adapter for the canonical VM Provider API; it is not a production MNCS service provider.",
+            "The provider harness is a separate Rust test program in the Compiler repository; it performs bounded structured file transport.",
+        ],
+    }
+    compiler = root / "mncs-compiler"
+    if not compiler.exists():
+        compiler.mkdir()
+        _git(compiler, "init", "--quiet")
+        _git(compiler, "config", "user.name", "test")
+        _git(compiler, "config", "user.email", "test@example.invalid")
+    relative_proof = capability_intelligence.COMPILER_NATIVE_APPLICATION_PROOF_PATH
+    proof_path = compiler / relative_proof
+    proof_path.parent.mkdir(parents=True, exist_ok=True)
+    raw = json.dumps(report, sort_keys=True, separators=(",", ":")).encode()
+    proof_path.write_bytes(raw)
+    _git(compiler, "add", relative_proof)
+    _git(compiler, "commit", "--quiet", "-m", "compiler native application proof")
+    reference = {
+        "identity": capability_intelligence.COMPILER_NATIVE_APPLICATION_PROOF_IDENTITY,
+        "repository": "mncs-compiler",
+        "commit": _git(compiler, "rev-parse", "HEAD"),
+        "path": relative_proof,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+    session.snapshot["selected_checkouts"]["mncs-compiler"] = {
+        "path": str(compiler),
+    }
+    state["evidence"].append(reference)
+    state["evidence_count"] = len(state["evidence"])
+    return reference
+
+
 def _add_compiler_source_context(
     session, state: dict, source_reference: dict[str, str], *,
     identity: str = "ev_environment_compiler_source_context",
@@ -2822,6 +2935,117 @@ def test_compiler_language_dependency_summary_rejects_internal_identity_mismatch
     assert result["source"]["observation_reference_diagnostics"][0]["verification"] == (
         "observation-identity-mismatch"
     )
+
+
+def test_compiler_native_application_proof_projects_scoped_implementation_ownership(
+    tmp_path: Path,
+) -> None:
+    session, state = _session(tmp_path, [])
+    reference = _add_compiler_native_application_proof_evidence(session, state)
+    root = Path(session.snapshot["workspace"]["root"])
+    session.snapshot["selected_checkouts"] = {
+        "mncs-environment": session.snapshot["selected_checkouts"][
+            "mncs-environment"
+        ],
+    }
+    session.snapshot["authority"] = {"readable": ["workspace"]}
+    session.snapshot["workspace"].update({
+        "scan": {"status": "complete"},
+        "repositories": [
+            {
+                "name": repository,
+                "path": str(root / repository),
+                "head": _git(root / repository, "rev-parse", "HEAD"),
+                "worktree_of": None,
+                "git_error": None,
+            }
+            for repository in ("mncs-compiler", "mncs-stdlib", "mncs-test")
+        ],
+    })
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 1
+    observation = result["observations"][0]
+    assert observation["identity"] == reference["identity"]
+    assert observation["observation"]["kind"] == (
+        "compiler-native-application-implementation-ownership"
+    )
+    assert observation["related_work"] == {}
+    accountability = observation["observation"]["outcome"][
+        "implementation_accountability"
+    ]
+    assert accountability["native_semantic_ownership"] == (
+        "verified-for-this-application-proof"
+    )
+    assert accountability["native_module_count"] == 4
+    assert accountability["canonical_vm_case_success_count"] == 3
+    assert accountability["native_migration_opportunity"] == "not-established"
+    assert "not attributed" in accountability["evidence_relationship_basis"]
+    assert accountability["host_test_adapter"]["classification"] == (
+        "test-only-provider-adapter"
+    )
+    assert observation["measurement_basis"].endswith(
+        "workspace-read-only-checkout"
+    )
+    module_sources = [
+        source for source in observation["supporting_sources"]
+        if source.get("kind") == "native-language-module-source"
+    ]
+    assert {source["module"] for source in module_sources} == {
+        module for module, _repository, _path, _revision_field
+        in capability_intelligence.COMPILER_NATIVE_APPLICATION_MODULES
+    }
+    assert all(source["content_integrity_status"] == (
+        "workspace-read-only-content-integrity-verified"
+    ) for source in module_sources)
+
+    projected_accountability = result["implementation_accountability"]
+    assert projected_accountability["sample_count"] == 1
+    assert projected_accountability["samples"][0]["ownership_status"] == (
+        "source-integrity-verified-for-sample"
+    )
+    ratio = projected_accountability["systemwide_native_adoption_ratio"]
+    assert ratio["status"] == "not-measured"
+    assert "denominator" in ratio["reason"]
+    assert projected_accountability["samples"][0][
+        "native_migration_opportunity"
+    ] == "not-established"
+
+    encoded = json.dumps(result, ensure_ascii=False, sort_keys=True).encode()
+    compact = capability_intelligence._compact_projection(
+        result, len(encoded), 4096,
+    )
+    compact_accountability = compact["implementation_accountability"]
+    assert compact_accountability["systemwide_native_adoption_ratio"][
+        "status"
+    ] == "not-measured"
+    assert compact_accountability["samples"][0]["native_module_count"] == 4
+    assert compact_accountability["samples"][0]["compiler_proof_reference"][
+        "identity"
+    ] == reference["identity"]
+
+
+def test_compiler_native_application_proof_rejects_failed_canonical_case(
+    tmp_path: Path,
+) -> None:
+    session, state = _session(tmp_path, [])
+    _add_compiler_native_application_proof_evidence(
+        session, state, failed_case=True,
+    )
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["implementation_accountability"]["sample_count"] == 0
+    assert result["implementation_accountability"][
+        "systemwide_native_adoption_ratio"
+    ]["status"] == "not-measured"
+    assert result["source"]["observation_reference_diagnostics"][0][
+        "verification"
+    ] == "observation-contract-invalid"
 
 
 def test_compiler_source_context_is_correlated_only_through_verified_pointer(

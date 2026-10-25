@@ -89,6 +89,37 @@ COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_STAGES = (
     "fresh_process_comment_edit", "invalid_source",
     "reachable_imported_body_edit", "unchanged", "unreachable_body_edit",
 )
+COMPILER_NATIVE_APPLICATION_PROOF_SCHEMA = (
+    "mncs.compiler.native-application-proof/2"
+)
+COMPILER_NATIVE_APPLICATION_PROOF_IDENTITY = (
+    "ev_compiler_native_application_proof_digest_app_20261018"
+)
+COMPILER_NATIVE_APPLICATION_PROOF_PATH = (
+    "evidence/native-app-readiness-test-digest-app.json"
+)
+COMPILER_NATIVE_APPLICATION_ENTRY = "mncs.test.digest::digest_app"
+COMPILER_NATIVE_APPLICATION_MODULES = (
+    (
+        "mncs.std.application.v1", "mncs-stdlib",
+        "library/std/application.mncs", "stdlib_revision",
+    ),
+    (
+        "mncs.test.assertions", "mncs-test",
+        "native/mncs/test/assertions.mncs", "test_revision",
+    ),
+    (
+        "mncs.test.suite", "mncs-test",
+        "native/mncs/test/suite.mncs", "test_revision",
+    ),
+    (
+        "mncs.test.digest", "mncs-test",
+        "native/mncs/test/digest.mncs", "test_revision",
+    ),
+)
+IMPLEMENTATION_ACCOUNTABILITY_SCHEMA = (
+    "mncs.environment.implementation-accountability/1"
+)
 MAX_EVIDENCE_REFS = 32
 MAX_EVIDENCE_HISTORY_PAGES = 4
 MAX_OBSERVATIONS = 16
@@ -559,6 +590,102 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
         if len(compact_objects) > len(result["sections"]):
             result["sections_truncated"] = True
     return result or None
+
+
+def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
+    if (not isinstance(value, dict)
+            or value.get("schema_version") != IMPLEMENTATION_ACCOUNTABILITY_SCHEMA):
+        return None
+    raw_samples = value.get("samples")
+    raw_samples = raw_samples if isinstance(raw_samples, list) else []
+    if not raw_samples:
+        return {
+            "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
+            "sample_count": 0,
+            "samples": [],
+            "systemwide_native_adoption_ratio": {
+                "status": "not-measured",
+                "reason": "A complete, ownership-verified MNCS implementation inventory is unavailable.",
+            },
+        }
+    samples = []
+    for sample in raw_samples[:4]:
+        if not isinstance(sample, dict):
+            continue
+        compact_sample = {
+            key: _short_text(sample.get(key), 192 if key == "sample_scope" else 160)
+            for key in (
+                "identity", "application_entry", "sample_scope",
+                "native_semantic_ownership", "ownership_status",
+                "artifact_identity", "compiler_front_end_outcome",
+                "native_migration_opportunity", "source_campaign_context",
+                "evidence_relationship_basis",
+            )
+            if isinstance(sample.get(key), str)
+        }
+        for key in (
+            "native_module_count", "source_integrity_verified_module_count",
+            "canonical_vm_case_count", "canonical_vm_case_success_count",
+        ):
+            if type(sample.get(key)) is int and sample[key] >= 0:
+                compact_sample[key] = sample[key]
+        compact_modules = []
+        raw_modules = sample.get("native_modules")
+        raw_modules = raw_modules if isinstance(raw_modules, list) else []
+        for module in raw_modules[:4]:
+            if not isinstance(module, dict):
+                continue
+            compact_modules.append({
+                key: _short_text(module.get(key), 192 if key == "path" else 160)
+                for key in (
+                    "module", "repository", "commit", "path", "sha256",
+                    "status", "content_integrity_status",
+                )
+                if isinstance(module.get(key), str)
+            })
+        compact_sample["native_modules"] = compact_modules
+        proof_reference = sample.get("compiler_proof_reference")
+        if isinstance(proof_reference, dict):
+            compact_sample["compiler_proof_reference"] = {
+                key: _short_text(proof_reference.get(key), 192 if key == "path" else 160)
+                for key in (
+                    "identity", "repository", "commit", "path", "sha256",
+                    "status", "content_integrity_status",
+                )
+                if isinstance(proof_reference.get(key), str)
+            }
+        host_adapter = sample.get("host_test_adapter")
+        if isinstance(host_adapter, dict):
+            compact_sample["host_test_adapter"] = {
+                key: _short_text(host_adapter.get(key), 256)
+                for key in ("classification", "limitation", "harness_limitation")
+                if isinstance(host_adapter.get(key), str)
+            }
+        evidence_reference = _validate_reference(sample.get("evidence_reference"))
+        if evidence_reference is not None:
+            compact_sample["evidence_reference"] = evidence_reference
+        samples.append(compact_sample)
+    ratio = value.get("systemwide_native_adoption_ratio")
+    compact_ratio = {
+        "status": "not-measured",
+        "reason": "A complete, ownership-verified inventory of MNCS functionality and its denominator is unavailable.",
+    }
+    if isinstance(ratio, dict) and isinstance(ratio.get("reason"), str):
+        compact_ratio["reason"] = _short_text(ratio["reason"], 256) or compact_ratio["reason"]
+    measurement_limits = value.get("measurement_limits")
+    return {
+        "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
+        "scope": _short_text(value.get("scope"), 192),
+        "sample_count": value.get("sample_count", len(raw_samples)),
+        "samples": samples,
+        "samples_truncated": len(raw_samples) > len(samples),
+        "systemwide_native_adoption_ratio": compact_ratio,
+        "measurement_limits": [
+            _short_text(item, 192)
+            for item in measurement_limits[:4]
+            if isinstance(item, str)
+        ] if isinstance(measurement_limits, list) else [],
+    }
 
 
 def _compact_projection(
@@ -1146,7 +1273,7 @@ def _compact_projection(
             compact_supporting_source = {
                 key: _short_text(source.get(key), 128)
                 for key in ("kind", "campaign_evidence_identity", "campaign_id",
-                            "session_id", "status", "registration_scope",
+                            "session_id", "module", "status", "registration_scope",
                             "content_integrity_status", "event_reference_status")
                 if isinstance(source.get(key), str)
             }
@@ -1629,17 +1756,21 @@ def _compact_projection(
                 for key in (
                     "cpu_count", "memory_total_bytes", "memory_available_bytes",
                 ):
-                    if type(host.get(key)) is int or host.get(key) is None:
-                        if key in host:
-                            compact_host[key] = host[key]
+                    if key in host and (
+                        type(host.get(key)) is int or host.get(key) is None
+                    ):
+                        compact_host[key] = host[key]
                 for key in ("cpu_utilization",):
-                    if type(host.get(key)) in (int, float) or host.get(key) is None:
-                        if key in host:
-                            compact_host[key] = host[key]
+                    if key in host and (
+                        type(host.get(key)) in (int, float)
+                        or host.get(key) is None
+                    ):
+                        compact_host[key] = host[key]
                 load_average = host.get("load_average")
-                if isinstance(load_average, (list, dict)) or load_average is None:
-                    if "load_average" in host:
-                        compact_host["load_average"] = load_average
+                if "load_average" in host and (
+                    isinstance(load_average, (list, dict)) or load_average is None
+                ):
+                    compact_host["load_average"] = load_average
                 for key in ("cpu_status", "memory_available_status"):
                     if isinstance(host.get(key), str):
                         compact_host[key] = _short_text(host[key], 64)
@@ -1691,6 +1822,11 @@ def _compact_projection(
             "The bounded read selects the newest observation references in each page; older skipped references may contain additional evidence.",
         ],
     }
+    compact_accountability = _compact_implementation_accountability(
+        projection.get("implementation_accountability"),
+    )
+    if compact_accountability is not None:
+        result["implementation_accountability"] = compact_accountability
     if compact_context_candidates:
         result["context_pressure_candidate_count"] = projection.get(
             "context_pressure_candidate_count", len(compact_context_candidates),
@@ -1748,6 +1884,30 @@ def _compact_projection(
         elif result["session_activity"].get("resource_samples", {}).get("observations"):
             result["session_activity"]["resource_samples"]["observations"].pop()
             result["session_activity"]["resource_samples"]["observations_truncated"] = True
+        elif (isinstance(result.get("implementation_accountability"), dict)
+              and result["implementation_accountability"].get("samples")):
+            accountability = result["implementation_accountability"]
+            sample = accountability["samples"][-1]
+            if sample.get("native_modules"):
+                sample["native_modules"].pop()
+                accountability["samples_truncated"] = True
+            elif len(accountability["samples"]) > 1:
+                accountability["samples"].pop()
+                accountability["samples_truncated"] = True
+            else:
+                sample = accountability["samples"][0]
+                optional_fields = (
+                    "host_test_adapter", "sample_scope", "artifact_identity",
+                    "compiler_front_end_outcome", "canonical_vm_case_count",
+                    "canonical_vm_case_success_count", "native_semantic_ownership",
+                )
+                removable = next(
+                    (key for key in optional_fields if key in sample), None,
+                )
+                if removable is None:
+                    break
+                sample.pop(removable)
+                accountability["samples_truncated"] = True
         else:
             break
     projection_source = projection.get("source")
@@ -1867,6 +2027,16 @@ def _is_compiler_dependency_summary_reference(reference: dict[str, str]) -> bool
     )
 
 
+def _is_compiler_native_application_proof_reference(
+    reference: dict[str, str],
+) -> bool:
+    return (
+        reference["repository"] == "mncs-compiler"
+        and reference["identity"] == COMPILER_NATIVE_APPLICATION_PROOF_IDENTITY
+        and reference["path"] == COMPILER_NATIVE_APPLICATION_PROOF_PATH
+    )
+
+
 def _is_observation_reference(reference: dict[str, str]) -> bool:
     if (reference["identity"].startswith("ev_environment_")
             and reference["path"].startswith(OBSERVATION_PATH_PREFIX)):
@@ -1874,6 +2044,7 @@ def _is_observation_reference(reference: dict[str, str]) -> bool:
     return (
         _is_compiler_regression_reference(reference)
         or _is_compiler_dependency_summary_reference(reference)
+        or _is_compiler_native_application_proof_reference(reference)
     )
 
 
@@ -2329,10 +2500,213 @@ def _compiler_dependency_summary_observation(
     }
 
 
+def _compiler_native_application_proof_observation(
+    reference: dict[str, str], source: dict[str, Any],
+    root: Path, *, repository_read_basis: str,
+) -> dict[str, Any] | None:
+    """Adapt one source-backed Compiler proof without inferring a codebase ratio."""
+    if source.get("schema_version") != COMPILER_NATIVE_APPLICATION_PROOF_SCHEMA:
+        return None
+    if source.get("identity") not in (None, reference["identity"]):
+        return None
+    application = source.get("application")
+    producer = source.get("producer")
+    build = source.get("build")
+    execution = source.get("execution")
+    if (not isinstance(application, dict)
+            or application.get("entry") != COMPILER_NATIVE_APPLICATION_ENTRY
+            or not isinstance(producer, dict)
+            or not isinstance(build, dict)
+            or not isinstance(execution, dict)):
+        return None
+
+    revisions: dict[str, str] = {}
+    for field in (
+        "compiler_revision", "language_revision", "stdlib_revision",
+        "test_revision",
+    ):
+        value = producer.get(field)
+        if not isinstance(value, str) or not _COMMIT.fullmatch(value):
+            return None
+        revisions[field] = value
+
+    try:
+        workspace_root = root.resolve(strict=True)
+    except (OSError, RuntimeError):
+        return None
+    raw_modules = application.get("module_sources")
+    expected_modules = {
+        module: (repository, path, revision_field)
+        for module, repository, path, revision_field
+        in COMPILER_NATIVE_APPLICATION_MODULES
+    }
+    if not isinstance(raw_modules, list) or len(raw_modules) != len(expected_modules):
+        return None
+    source_pointers: list[dict[str, str]] = []
+    seen_modules: set[str] = set()
+    for raw_module in raw_modules:
+        if not isinstance(raw_module, dict):
+            return None
+        module_name = raw_module.get("module")
+        expected = expected_modules.get(module_name)
+        raw_path = raw_module.get("path")
+        source_digest = raw_module.get("sha256")
+        if (expected is None or module_name in seen_modules
+                or not isinstance(raw_path, str) or not Path(raw_path).is_absolute()
+                or not isinstance(source_digest, str)
+                or not _SHA256.fullmatch(source_digest)):
+            return None
+        repository, expected_path, revision_field = expected
+        try:
+            resolved_source_path = Path(raw_path).resolve(strict=False)
+            relative_source_path = resolved_source_path.relative_to(workspace_root)
+        except (OSError, RuntimeError, ValueError):
+            return None
+        if relative_source_path.as_posix() != f"{repository}/{expected_path}":
+            return None
+        seen_modules.add(module_name)
+        source_pointers.append({
+            "kind": "native-language-module-source",
+            "identity": "src_" + module_name.replace(".", "_"),
+            "module": module_name,
+            "repository": repository,
+            "commit": revisions[revision_field],
+            "path": expected_path,
+            "sha256": source_digest,
+        })
+    if seen_modules != set(expected_modules):
+        return None
+
+    artifact_identity = build.get("artifact_identity")
+    if (not isinstance(artifact_identity, str)
+            or not artifact_identity.startswith("sha256:")
+            or not _SHA256.fullmatch(artifact_identity.removeprefix("sha256:"))):
+        return None
+    cache = build.get("cache")
+    verification_work = cache.get("verification_work") if isinstance(cache, dict) else None
+    if (not isinstance(verification_work, dict)
+            or verification_work.get("front_end_outcome") != "verified"
+            or verification_work.get("resolved_module_count") != len(expected_modules)):
+        return None
+    canonical_cases = execution.get("canonical_vm_cases")
+    if (not isinstance(canonical_cases, list) or len(canonical_cases) != 3
+            or execution.get("exact_result_agreement") is not True):
+        return None
+    for index, case in enumerate(canonical_cases):
+        if not isinstance(case, dict):
+            return None
+        application_exit = case.get("application_exit")
+        output_digest = case.get("output_sha256")
+        if (case.get("case_index") != index
+                or case.get("artifact_identity") != artifact_identity
+                or not isinstance(application_exit, dict)
+                or application_exit.get("exit_code") != 0
+                or case.get("effect_outcomes") != ["completed", "completed"]
+                or case.get("effect_operations") != ["structured_read", "structured_write"]
+                or not isinstance(output_digest, str)
+                or not _SHA256.fullmatch(output_digest)
+                or case.get("stage0_output_sha256") != output_digest):
+            return None
+    capability_admission = execution.get("capability_admission")
+    if (not isinstance(capability_admission, dict)
+            or capability_admission.get("authorized_capability_identity")
+            != application.get("required_capability")
+            or capability_admission.get("runtime_dispatch_alias")
+            != application.get("runtime_dispatch_alias")):
+        return None
+
+    raw_limitations = source.get("limitations")
+    if (not isinstance(raw_limitations, list)
+            or any(not isinstance(item, str) for item in raw_limitations)):
+        return None
+    test_adapter_limit = next((item for item in raw_limitations
+                               if "bounded test adapter" in item
+                               and "not a production MNCS service provider" in item), None)
+    rust_harness_limit = next((item for item in raw_limitations
+                               if "separate Rust test program" in item), None)
+    if test_adapter_limit is None or rust_harness_limit is None:
+        return None
+
+    proof_source = {
+        "kind": "compiler-native-application-proof",
+        **reference,
+    }
+    created_at = source.get("created_at")
+    return {
+        "schema_version": OBSERVATION_SCHEMA,
+        "identity": reference["identity"],
+        "captured_at": created_at if isinstance(created_at, str)
+        else "unavailable-in-source-record",
+        "measurement_basis": (
+            "bounded-derived-view-of-compiler-native-application-proof/2"
+            f";{repository_read_basis}"
+        ),
+        "observation": {
+            "kind": "compiler-native-application-implementation-ownership",
+            "source_interface": "MNCS Environment capability projection",
+            "request": {
+                "source_schema_version": COMPILER_NATIVE_APPLICATION_PROOF_SCHEMA,
+                "application_entry": COMPILER_NATIVE_APPLICATION_ENTRY,
+                "compiler_revision": revisions["compiler_revision"],
+                "language_revision": revisions["language_revision"],
+            },
+            "outcome": {
+                "implementation_accountability": {
+                    "sample_scope": "one compiler-proven MNCS application and its four-module source closure",
+                    "application_entry": COMPILER_NATIVE_APPLICATION_ENTRY,
+                    "native_semantic_ownership": "verified-for-this-application-proof",
+                    "native_module_count": len(source_pointers),
+                    "source_integrity_basis": "module commit, repository path, and SHA-256 from proof; rechecked through Environment source-pointer verification",
+                    "artifact_identity": artifact_identity,
+                    "compiler_front_end_outcome": "verified",
+                    "canonical_vm_case_count": len(canonical_cases),
+                    "canonical_vm_case_success_count": len(canonical_cases),
+                    "stage0_result_agreement": "verified-in-source-proof",
+                    "host_test_adapter": {
+                        "classification": "test-only-provider-adapter",
+                        "limitation": test_adapter_limit[:512],
+                        "harness_limitation": rust_harness_limit[:512],
+                    },
+                    "native_migration_opportunity": "not-established",
+                    "source_campaign_context": "not-recorded-in-source-proof",
+                    "evidence_relationship_basis": "authenticated-campaign-ledger-pointer; source proof production is not attributed to the Environment projection session",
+                    "systemwide_native_adoption_ratio": {
+                        "status": "not-measured",
+                        "reason": "This single application proof is not a complete, ownership-verified inventory of MNCS functionality.",
+                    },
+                },
+                "source_repository_read_basis": repository_read_basis,
+            },
+            "measurement_availability": {
+                "source_campaign_identity": "not-recorded-in-source-proof",
+                "agent_model_identity": "not-recorded-in-source-proof",
+                "agent_token_usage": "not-recorded-in-source-proof",
+                "production_host_dependency_inventory": "not-established-by-this-proof",
+            },
+        },
+        "supporting_sources": [proof_source, *source_pointers],
+        "not_measured": [
+            "systemwide native-versus-host functionality ratio and its denominator",
+            "production host-language dependency ownership or migration readiness",
+            "the Compiler campaign or agent session that produced this proof",
+            "whether other agents can discover or use the same native capability reliably",
+            "whether this implementation pattern recurs across other applications",
+        ],
+    }
+
+
 def _load_observation(
     session: Any, reference: dict[str, str], root: Path, *, deadline: float,
 ) -> tuple[dict[str, Any] | None, str]:
     checkout = _checkout(session, reference["repository"], root)
+    repository_read_basis = "selected-checkout"
+    if (checkout is None
+            and _is_compiler_native_application_proof_reference(reference)):
+        checkout = _workspace_read_only_checkout(
+            session, reference["repository"], root, deadline,
+        )
+        if checkout is not None:
+            repository_read_basis = "workspace-read-only-checkout"
     if checkout is None:
         return None, "outside-selected-session"
     raw, status = _git_blob(
@@ -2353,6 +2727,17 @@ def _load_observation(
         if source_identity is not None and source_identity != reference["identity"]:
             return record, "observation-identity-mismatch"
         adapted = _compiler_dependency_summary_observation(session, reference, record)
+        if adapted is None:
+            return None, "observation-contract-invalid"
+        return adapted, "verified"
+    if _is_compiler_native_application_proof_reference(reference):
+        source_identity = record.get("identity")
+        if source_identity is not None and source_identity != reference["identity"]:
+            return record, "observation-identity-mismatch"
+        adapted = _compiler_native_application_proof_observation(
+            reference, record, root,
+            repository_read_basis=repository_read_basis,
+        )
         if adapted is None:
             return None, "observation-contract-invalid"
         return adapted, "verified"
@@ -2530,6 +2915,9 @@ def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, A
                     "campaign_id", "session_id")
         if source.get(key) is not None
     }
+    module = source.get("module")
+    if isinstance(module, str) and module and len(module) <= 160 and "\x00" not in module:
+        summary["module"] = module
     if source.get("kind") in CAPTURED_OPERATION_RESULT_SOURCE_KINDS:
         summary["status"] = "captured-in-observation-record"
         return summary
@@ -2837,6 +3225,131 @@ def _source_integrity_status(source: Any, cache: dict[tuple[str, str, str, str],
     if pointer is None:
         return "source-reference-invalid"
     return cache.get(_source_pointer_key(pointer), "not-checked")
+
+
+def _implementation_accountability_projection(
+    observations: list[dict[str, Any]], *, native_proof_reference_present: bool,
+) -> dict[str, Any] | None:
+    """Summarize verified native-ownership samples without asserting coverage."""
+    samples: list[dict[str, Any]] = []
+    for observation_record in observations:
+        observation = observation_record.get("observation")
+        observation = observation if isinstance(observation, dict) else {}
+        if observation.get("kind") != (
+            "compiler-native-application-implementation-ownership"
+        ):
+            continue
+        outcome = observation.get("outcome")
+        outcome = outcome if isinstance(outcome, dict) else {}
+        accountability = outcome.get("implementation_accountability")
+        if not isinstance(accountability, dict):
+            continue
+        sources = observation_record.get("supporting_sources")
+        sources = sources if isinstance(sources, list) else []
+        module_sources = [
+            source for source in sources
+            if isinstance(source, dict)
+            and source.get("kind") == "native-language-module-source"
+        ]
+        module_integrity_count = sum(
+            source.get("content_integrity_status") in SOURCE_INTEGRITY_VERIFIED
+            for source in module_sources
+        )
+        proof_source = next((source for source in sources
+                             if isinstance(source, dict)
+                             and source.get("kind") == (
+                                 "compiler-native-application-proof"
+                             )), None)
+        declared_module_count = accountability.get("native_module_count")
+        if type(declared_module_count) is not int or declared_module_count < 0:
+            declared_module_count = len(module_sources)
+        if (len(module_sources) == declared_module_count
+                and module_integrity_count == declared_module_count):
+            ownership_status = "source-integrity-verified-for-sample"
+        elif module_integrity_count:
+            ownership_status = "partially-source-integrity-verified"
+        else:
+            ownership_status = "source-integrity-not-established"
+        samples.append({
+            "identity": observation_record.get("identity"),
+            "application_entry": accountability.get("application_entry"),
+            "sample_scope": accountability.get("sample_scope"),
+            "native_semantic_ownership": accountability.get(
+                "native_semantic_ownership",
+            ),
+            "ownership_status": ownership_status,
+            "native_module_count": declared_module_count,
+            "source_integrity_verified_module_count": module_integrity_count,
+            "native_modules": [
+                {
+                    key: source[key]
+                    for key in (
+                        "module", "repository", "commit", "path", "sha256",
+                        "status", "content_integrity_status",
+                    )
+                    if isinstance(source.get(key), str)
+                }
+                for source in module_sources[:len(COMPILER_NATIVE_APPLICATION_MODULES)]
+            ],
+            "compiler_proof_reference": {
+                key: proof_source[key]
+                for key in (
+                    "identity", "repository", "commit", "path", "sha256",
+                    "status", "content_integrity_status",
+                )
+                if isinstance(proof_source, dict)
+                and isinstance(proof_source.get(key), str)
+            },
+            "artifact_identity": accountability.get("artifact_identity"),
+            "compiler_front_end_outcome": accountability.get(
+                "compiler_front_end_outcome",
+            ),
+            "canonical_vm_case_count": accountability.get(
+                "canonical_vm_case_count",
+            ),
+            "canonical_vm_case_success_count": accountability.get(
+                "canonical_vm_case_success_count",
+            ),
+            "host_test_adapter": accountability.get("host_test_adapter"),
+            "native_migration_opportunity": accountability.get(
+                "native_migration_opportunity", "not-established",
+            ),
+            "source_campaign_context": accountability.get(
+                "source_campaign_context", "not-recorded-in-source-proof",
+            ),
+            "evidence_relationship_basis": accountability.get(
+                "evidence_relationship_basis",
+            ),
+            "evidence_reference": observation_record.get("evidence_reference"),
+        })
+    if not samples:
+        if not native_proof_reference_present:
+            return None
+        return {
+            "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
+            "sample_count": 0,
+            "samples": [],
+            "systemwide_native_adoption_ratio": {
+                "status": "not-measured",
+                "reason": "A complete, ownership-verified MNCS implementation inventory is unavailable.",
+            },
+        }
+    return {
+        "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
+        "scope": "source-backed implementation samples linked from the selected campaign evidence",
+        "sample_count": len(samples),
+        "samples": samples[:8],
+        "systemwide_native_adoption_ratio": {
+            "status": "not-measured",
+            "reason": "A complete, ownership-verified inventory of MNCS functionality and its denominator is unavailable.",
+        },
+        "measurement_limits": [
+            "Verified samples establish implementation ownership only for the referenced application and source closure.",
+            "The Compiler proof does not inventory production host-language dependencies or establish native migration opportunities.",
+            "Source campaign and agent identity are unavailable unless recorded in the source proof.",
+            "This projection does not measure whether different agents can discover or use the demonstrated capability.",
+        ],
+    }
 
 
 def _validate_captured_session_activity_reference(source: Any) -> bool:
@@ -4344,9 +4857,10 @@ def project(
     """Build a bounded read-only relationship view from campaign evidence.
 
     Environmental observations under ``evidence/environmental-capability/``
-    and one allowlisted Compiler regression schema are read. Their exact Git
-    commit and SHA-256 must be present in the authenticated campaign ledger,
-    and the repository must be selected by this Environment session.
+    and exact allowlisted Compiler evidence families are read. Their exact Git
+    commit and SHA-256 must be present in the authenticated campaign ledger.
+    The native application proof may also be read through the Environment's
+    bounded workspace-read-only authority when Compiler is not selected.
     """
     if (type(max_result_bytes) is not int
             or max_result_bytes < 1 or max_result_bytes > MAX_RESULT_BYTES):
@@ -5317,6 +5831,13 @@ def project(
             len(observation_reference_diagnostics) > MAX_OBSERVATIONS
         ),
     )
+    implementation_accountability = _implementation_accountability_projection(
+        observations,
+        native_proof_reference_present=any(
+            _is_compiler_native_application_proof_reference(reference)
+            for reference in references
+        ),
+    )
     if workspace_alignment["status"] in {
         "declared-repositories-not-selected",
         "workspace-selection-unavailable",
@@ -5527,6 +6048,8 @@ def project(
             ] if history_pages > 1 else []),
         ],
     }
+    if implementation_accountability is not None:
+        projection["implementation_accountability"] = implementation_accountability
     if context_pressure_candidates:
         projection["context_pressure_candidate_count"] = len(
             context_pressure_candidates

@@ -149,6 +149,21 @@ to the Compiler agent session. Missing token, model, and session resource data
 remain unavailable. This view reports measurements; it creates no resource
 pressure hypothesis by itself.
 
+The same projection exposes a bounded `implementation_accountability` view
+when the authenticated campaign ledger links the exact Compiler
+`native-application-proof/2` digest application record. It resolves the
+recorded source revisions and module paths, then checks each source blob by
+repository, commit, path, and SHA-256 through selected or workspace-read-only
+checkouts. The sample reports the four-module MNCS source closure, the
+compiler-verified build, and successful canonical VM cases. It identifies the
+Rust file-provider harness only as a test adapter because that is how the proof
+describes it. This sample does not inventory production host dependencies or
+establish a migration opportunity. The systemwide native-adoption ratio
+therefore remains `not-measured` until a complete, ownership-verified
+implementation inventory and denominator exist. Missing source campaign or
+agent identity remains unavailable rather than being attributed to the
+Environment projection session.
+
 When Work Intent declares a repository that is not selected, the projection may
 also emit `context_pressure_candidates`. These candidates join the declared
 repository gap with bounded source-visibility diagnostics for that repository.
