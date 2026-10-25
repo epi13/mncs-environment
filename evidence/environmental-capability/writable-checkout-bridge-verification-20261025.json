@@ -1,0 +1,84 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_writable_checkout_bridge_verification_20261025",
+  "captured_at": "2026-10-25T08:31:02Z",
+  "measurement_basis": "authenticated campaign activity, source inspection, and bounded verification",
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment and Control campaign interfaces",
+    "request": {
+      "commands": [
+        "python3 -m pytest tests/test_environment_rpc.py -k scope_grant -q",
+        "python3 -m pytest tests/test_local_environment_mcp.py -k scope_grant -q",
+        "ruff check src/mncs_control_mcp/environment_rpc.py src/mncs_control_mcp/local_environment_mcp.py tests/test_environment_rpc.py tests/test_local_environment_mcp.py"
+      ]
+    },
+    "outcome": {
+      "status": "passed",
+      "results": [
+        {
+          "command_index": 0,
+          "passed": 4
+        },
+        {
+          "command_index": 1,
+          "passed": 2
+        },
+        {
+          "command_index": 2,
+          "status": "passed"
+        }
+      ],
+      "diff_check": "passed",
+      "coverage": "The exact campaign/repository/session binding is accepted; an arbitrary owner reference, another session marker, and a different repository remain denied."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_campaign_checkout_binding_control_implementation_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "1fba10757b688c7d4877f81636f52c595660d3a0",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "8fb78aef1b099b8237d3b7de9b74ac93e761c7a19164996f410910ff90a60597"
+    },
+    {
+      "identity": "ev_environment_campaign_checkout_binding_local_bridge_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "1fba10757b688c7d4877f81636f52c595660d3a0",
+      "path": "src/mncs_control_mcp/local_environment_mcp.py",
+      "sha256": "702503857cd29ed94bb4c22d4e041c648ab5e30fad06007e7763f4352dccd243"
+    },
+    {
+      "identity": "ev_environment_campaign_checkout_binding_rpc_tests_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "1fba10757b688c7d4877f81636f52c595660d3a0",
+      "path": "tests/test_environment_rpc.py",
+      "sha256": "4eaf84d6fb01c011d43a4394df4dcbbf1f1f62d703eaa217891c3413c6ef47f4"
+    },
+    {
+      "identity": "ev_environment_campaign_checkout_binding_bridge_tests_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "1fba10757b688c7d4877f81636f52c595660d3a0",
+      "path": "tests/test_local_environment_mcp.py",
+      "sha256": "a40d52b5ed89c29aac40bf54931201437641413964c28f0ca4902663a21c14d6"
+    }
+  ],
+  "not_measured": [
+    "live operation success through the existing connected bridge",
+    "service adoption of the committed source after restart or reload"
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_worktree_path_claim_verification_20261025",
+  "captured_at": "2026-10-25T08:31:02Z",
+  "measurement_basis": "authenticated campaign activity, source inspection, and bounded verification",
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment and Control campaign interfaces",
+    "request": {
+      "commands": [
+        "python3 -m pytest tests/test_claim_scope_narrowing.py -q",
+        "python3 -m pytest tests/test_environment.py -k 'worktree_claims_are_local or same_attached_branch_conflicts or detached_worktrees' -q",
+        "python3 -m py_compile mncs_env/claims.py tests/test_claim_scope_narrowing.py",
+        "ruff check --ignore BLE001 mncs_env/claims.py tests/test_claim_scope_narrowing.py"
+      ]
+    },
+    "outcome": {
+      "status": "passed",
+      "results": [
+        {
+          "command_index": 0,
+          "passed": 4
+        },
+        {
+          "command_index": 1,
+          "passed": 3,
+          "deselected": 233
+        },
+        {
+          "command_index": 2,
+          "status": "passed"
+        },
+        {
+          "command_index": 3,
+          "status": "passed"
+        }
+      ],
+      "diff_check": "passed"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_worktree_path_claim_implementation_20261025",
+      "repository": "mncs-environment",
+      "commit": "d18624cb06c164d43e12adce1fd2119ce91051d9",
+      "path": "mncs_env/claims.py",
+      "sha256": "cc7d0d93dd7a926ff979dd7d4bfcfb83fc2be7866d3070e6d041d236433541c5"
+    },
+    {
+      "identity": "ev_environment_worktree_path_claim_tests_20261025",
+      "repository": "mncs-environment",
+      "commit": "d18624cb06c164d43e12adce1fd2119ce91051d9",
+      "path": "tests/test_claim_scope_narrowing.py",
+      "sha256": "1cbe316f94aa45cfa66e9a26dd95101f969b2c5442e0e4296c427f11737df399"
+    }
+  ],
+  "not_measured": [
+    "runtime scheduling behavior after more than one campaign acquires disjoint narrow claims",
+    "live claim acquisition in the connected Environment service"
+  ]
+}

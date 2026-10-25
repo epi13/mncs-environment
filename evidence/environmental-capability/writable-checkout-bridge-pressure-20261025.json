@@ -1,0 +1,82 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_writable_checkout_bridge_pressure_20261025",
+  "captured_at": "2026-10-25T08:31:02Z",
+  "measurement_basis": "authenticated campaign activity, source inspection, and bounded verification",
+  "observation": {
+    "kind": "same-campaign-worktree-binding-interface",
+    "source_interface": "MNCS Environment and Control campaign interfaces",
+    "request": {
+      "operation": "scope_grant",
+      "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+      "repository": "mncs-environment",
+      "checkout_path": ".worktrees/campaign-charter-observation-20261025",
+      "approval_reference": "omitted"
+    },
+    "outcome": {
+      "attempts": [
+        {
+          "input": "approval_reference omitted",
+          "code": "ENVIRONMENT_LOCAL_BRIDGE_FAILED",
+          "message": "approval_reference must be bounded text"
+        },
+        {
+          "input": "unrelated user-authorization reference",
+          "code": "ENVIRONMENT_AUTHORITY_DENIED",
+          "message": "a new repository scope still needs an exact owner grant; checkout selection without one is limited to the authenticated project repository"
+        }
+      ],
+      "session_authority": {
+        "writable_repositories": [
+          "mncs-environment"
+        ],
+        "escalation_required": []
+      },
+      "connected_tool_description": "scope_grant is described as owner-approved; it does not describe the campaign-writable checkout binding implemented in current Control source.",
+      "source_version_contrast": "Control source at the verified main commit already supports automatic same-repository checkout binding when approval_reference is omitted; the connected bridge response remains incompatible.",
+      "root_cause_status": "runtime or argument-serialization cause not isolated"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_campaign_checkout_binding_local_bridge_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "1fba10757b688c7d4877f81636f52c595660d3a0",
+      "path": "src/mncs_control_mcp/local_environment_mcp.py",
+      "sha256": "702503857cd29ed94bb4c22d4e041c648ab5e30fad06007e7763f4352dccd243"
+    }
+  ],
+  "pressure_hypothesis": {
+    "identity": "ph_environment_writable_checkout_bridge_20261025",
+    "title": "The bridge rejects a same-campaign writable checkout before Environment can bind it",
+    "category": "tooling-interoperability",
+    "subsystem": "MNCS Environment scope_grant and Control local bridge",
+    "owner": "mncs-control-mcp",
+    "actionable_recommendation": "Keep the checkout-only binding reachable when a bridge requires a reference, accepting only the exact campaign, repository, and session-bound marker and preserving Environment's registered-checkout verification.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "which deployed bridge version or argument serializer produced the required-reference error",
+      "whether other agents encounter the same failure",
+      "whether the source change works after the shared service loads the new version"
+    ]
+  },
+  "not_measured": [
+    "live successful checkout binding through the connected service",
+    "the process or package version of the connected bridge",
+    "whether the bridge mismatch affects other sessions or tools"
+  ]
+}

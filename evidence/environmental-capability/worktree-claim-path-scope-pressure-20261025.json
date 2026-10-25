@@ -1,0 +1,82 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_worktree_path_claim_pressure_20261025",
+  "captured_at": "2026-10-25T08:31:02Z",
+  "measurement_basis": "authenticated campaign activity, source inspection, and bounded verification",
+  "observation": {
+    "kind": "worktree-claim-scope-conflict",
+    "source_interface": "MNCS Environment and Control campaign interfaces",
+    "request": {
+      "operation": "claims acquire",
+      "repository": "mncs-environment",
+      "requested_scope": {
+        "kind": "worktree",
+        "branch": "campaign/campaign-charter-observation-20261025",
+        "paths": [
+          "evidence/campaign-charters/environmental-capability-accountability-20261025.json"
+        ]
+      },
+      "existing_live_claims": [
+        {
+          "claim_id": "claim:mncs-environment:worktree:5409d571c51b",
+          "branch": "campaign/environment-native-accountability-20261024",
+          "paths": null
+        },
+        {
+          "claim_id": "claim:mncs-environment:paths:37dab97f8834",
+          "paths": [
+            "mncs_env/sessions.py",
+            "tests/test_event_sequence_retry.py"
+          ]
+        }
+      ]
+    },
+    "outcome": {
+      "status": "claim-conflict",
+      "observed_limitation": "Before the change, normalize_scope discarded paths for kind=worktree. A checkout-scoped claim therefore became whole-worktree scope and could conflict with an unrelated repository-relative claim even when the requested files were disjoint.",
+      "other_campaign_ownership": "The existing live claims remained with their recorded owner and were not displaced."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "kind": "baseline-source",
+      "identity": "ev_environment_worktree_path_claim_baseline_20261025",
+      "repository": "mncs-environment",
+      "commit": "3c8cac3528c5c9a3017c2ae7b024e65ef0dfe12e",
+      "path": "mncs_env/claims.py",
+      "sha256": "b4bbb4d26a040febbf369238e53e49285b5fa4f5064d45880d46a03603763ff1"
+    }
+  ],
+  "pressure_hypothesis": {
+    "identity": "ph_environment_worktree_claim_paths_20261025",
+    "title": "Worktree claims cannot express a disjoint file subset",
+    "category": "coordination-continuity",
+    "subsystem": "MNCS Environment claim scope normalization and overlap analysis",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Preserve repo-relative paths on checkout-bound worktree claims and compare overlap within the same checkout or shared branch while keeping unanchored repository-relative claims conservative.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "number of other campaigns affected by this scope representation",
+      "whether the limitation caused delays outside this campaign",
+      "live claim acquisition through the connected bridge after the implementation"
+    ]
+  },
+  "not_measured": [
+    "live claim acquisition with a narrow scope after the code change",
+    "whether the observed policy affected other independent campaigns"
+  ]
+}

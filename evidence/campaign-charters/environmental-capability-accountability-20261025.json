@@ -1,0 +1,33 @@
+{
+  "schema_version": "mncs.environment.campaign-charter/1",
+  "identity": "ev_environment_campaign_charter_capability_accountability_20261025",
+  "recorded_at": "2026-10-25T08:31:02Z",
+  "campaign_identity": "cmp_mncs_env_capability_intelligence_20261025",
+  "source": {
+    "kind": "user-directed MNCS development campaign and goal amendment",
+    "request_title": "MNCS Environmental Capability Campaign — Goal Amendment",
+    "date": "2026-10-25"
+  },
+  "objective": "Improve MNCS's ability to understand and enhance how well its language, compiler, tools, and environmental services enable real autonomous development. Connect authentic agent activity and implementation evidence to traceable, queryable pressure hypotheses and independently verified improvements.",
+  "central_question": "How effectively does MNCS serve and potentiate agents, which delivered capabilities are difficult to discover or use, and what evidence shows that an improvement expands what agents can accomplish?",
+  "workstreams": [
+    {
+      "name": "environmental capability intelligence",
+      "intent": "Use durable session, tool, diagnostic, resource, continuity, and outcome evidence through existing Environment projections; preserve measured, derived, interpreted, and unavailable information separately."
+    },
+    {
+      "name": "capability accountability and machine-native adoption",
+      "intent": "Relate authoritative implementation ownership, integration, discoverability, use, limitations, language pressure, verification, and subsequent observations. Assess host-to-native migration readiness only from verified evidence."
+    }
+  ],
+  "native_adoption_aspiration": "The approximately 99.99% reduction of unnecessary host-language implementations is a long-term architectural aspiration, not a quota or agent score. Any future ratio must state its verified ownership scope and denominator; wrappers, relocated code, removed functionality, and unverified ownership must not imply displacement.",
+  "acceptance": [
+    "Authentic development observations remain linked to campaign and session context and to inspectable source evidence.",
+    "Capability availability is distinguished from discovery, use, provider behavior, and verified outcomes.",
+    "Pressure hypotheses separate observations from interpretations and preserve uncertainty about recurrence and causation.",
+    "Native and host implementation ownership, migration readiness, bootstrap components, bridges, and legitimate dependencies are represented only where evidence supports them.",
+    "Changes link the original pressure to implementation and independent verification; effectiveness remains unassessed until subsequent evidence exists.",
+    "The campaign creates no synthetic benchmark, agent leaderboard, token-efficiency target, or single composite progress score."
+  ],
+  "authority_boundary": "This charter records user-directed intent. It does not alter Environment repository authority, claim ownership, protected operations, or active Compiler campaign ownership. The user's explicit branch-delivery instruction authorizes the requested implementation workflow; Environment and repository governance remain authoritative."
+}
