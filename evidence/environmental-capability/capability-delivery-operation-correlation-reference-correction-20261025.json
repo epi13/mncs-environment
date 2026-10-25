@@ -1,0 +1,86 @@
+{
+  "captured_at": "2026-10-25T13:38:10Z",
+  "identity": "ev_environment_capability_delivery_rpc_correlation_reference_correction_20261025",
+  "measurement_basis": "append-only-correction-linking-verified-session-activity-follow-up",
+  "not_measured": [
+    "whether either Environment RPC call was mediated by a capability binding",
+    "cross-agent use and discoverability",
+    "long-term pressure resolution or agent outcomes"
+  ],
+  "observation": {
+    "kind": "capability-delivery-event-reference-correction",
+    "outcome": {
+      "capability_binding_relationship": "not-established",
+      "correction_basis": "The original supporting source labeled authenticated event identities with a kind the projection did not recognize. The follow-up retains the same event identities under the authenticated-session-activity-projection contract, and this correction links the original pressure hypothesis to that committed follow-up record.",
+      "effectiveness_assessment": "not-assessed",
+      "original_evidence_preserved": true,
+      "status": "correction-recorded"
+    },
+    "request": {
+      "corrected_field_paths": [
+        "supporting_sources"
+      ],
+      "operation": "correct_supporting_source_reference",
+      "target_identity": "ev_environment_capability_delivery_rpc_correlation_20261025"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "record_correction": {
+    "corrected_field_paths": [
+      "supporting_sources"
+    ],
+    "reason": "Replace the unsupported raw event-source label with a content-addressed follow-up record whose authenticated session-event references are validated by the projection; the target record and its historical bytes remain unchanged.",
+    "replacement_values": {
+      "supporting_sources": [
+        {
+          "commit": "d55063f9716b280b09f71a96d1b373e5eecb0c57",
+          "identity": "ev_environment_capability_delivery_rpc_correlation_followup_20261025",
+          "kind": "campaign-evidence-reference",
+          "path": "evidence/environmental-capability/capability-delivery-operation-correlation-followup-20261025.json",
+          "repository": "mncs-environment",
+          "sha256": "248056492bd8bae8deb6fe6232f8c7234be1fb4379e6fde8a66bb902f1505468"
+        }
+      ]
+    },
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "commit": "579ef9a7267197f5b847617c98fc7fa5a641f7e9",
+      "identity": "ev_environment_capability_delivery_rpc_correlation_20261025",
+      "path": "evidence/environmental-capability/capability-delivery-operation-correlation-20261025.json",
+      "repository": "mncs-environment",
+      "sha256": "39977514cfe355e36117eba7327907981e52d70e6d8154391e45ff0d031d02c9"
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "consumer_id": "local-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_4179379f9332b176",
+    "session_id": "ses_5530f63cd8293e03"
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "579ef9a7267197f5b847617c98fc7fa5a641f7e9",
+      "identity": "ev_environment_capability_delivery_rpc_correlation_20261025",
+      "path": "evidence/environmental-capability/capability-delivery-operation-correlation-20261025.json",
+      "repository": "mncs-environment",
+      "sha256": "39977514cfe355e36117eba7327907981e52d70e6d8154391e45ff0d031d02c9"
+    },
+    {
+      "commit": "d55063f9716b280b09f71a96d1b373e5eecb0c57",
+      "identity": "ev_environment_capability_delivery_rpc_correlation_followup_20261025",
+      "kind": "campaign-evidence-reference",
+      "path": "evidence/environmental-capability/capability-delivery-operation-correlation-followup-20261025.json",
+      "repository": "mncs-environment",
+      "sha256": "248056492bd8bae8deb6fe6232f8c7234be1fb4379e6fde8a66bb902f1505468"
+    }
+  ]
+}
