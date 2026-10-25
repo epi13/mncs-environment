@@ -447,6 +447,34 @@ def _control_error_domain_details(
         if (isinstance(approved_hosts, int) and not isinstance(approved_hosts, bool)
                 and 0 <= approved_hosts <= 100_000):
             result["approved_persistent_agent_hosts"] = approved_hosts
+        host_rejections = details.get(
+            "approved_persistent_agent_host_rejections",
+        )
+        if isinstance(host_rejections, list):
+            allowed_reasons = {
+                "process_start_identity_changed",
+                "process_metadata_unavailable",
+                "parent_not_same_uid_systemd",
+                "codex_app_server_signature_mismatch",
+                "codex_app_server_inside_repository_scope",
+            }
+            projected_rejections = []
+            for item in host_rejections[:8]:
+                if not isinstance(item, dict):
+                    continue
+                reason = item.get("reason")
+                count = item.get("count")
+                if (reason in allowed_reasons
+                        and isinstance(count, int) and not isinstance(count, bool)
+                        and 0 <= count <= 100_000):
+                    projected_rejections.append({
+                        "reason": reason,
+                        "count": count,
+                    })
+            if projected_rejections:
+                result["approved_persistent_agent_host_rejections"] = (
+                    projected_rejections
+                )
         matching_processes = details.get("matching_processes")
         if isinstance(matching_processes, list):
             allowed_reasons = {

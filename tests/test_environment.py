@@ -1907,6 +1907,10 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
                 "recovery_basis": "operator-approved-config",
                 "persistent_agent_exemption_enabled": True,
                 "approved_persistent_agent_hosts": 1,
+                "approved_persistent_agent_host_rejections": [
+                    {"reason": "process_metadata_unavailable", "count": 1},
+                    {"reason": "private-command-data", "count": 9},
+                ],
                 "matching_processes": [
                     {
                         "pid": 100,
@@ -1931,6 +1935,9 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
             "recovery_basis": "operator-approved-config",
             "persistent_agent_exemption_enabled": True,
             "approved_persistent_agent_hosts": 1,
+            "approved_persistent_agent_host_rejections": [
+                {"reason": "process_metadata_unavailable", "count": 1},
+            ],
             "active_processes": 2,
             "active_processes_by_reason": [
                 {"reason": "former-session-authenticated-client", "count": 1},
