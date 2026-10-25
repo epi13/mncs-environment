@@ -1,0 +1,131 @@
+{
+  "captured_at": "2026-10-25T13:32:10Z",
+  "identity": "ev_environment_capability_delivery_rpc_correlation_20261025",
+  "not_measured": [
+    "whether the RPC calls used either declared capability binding",
+    "successful use by agents outside this authenticated session",
+    "cause of any missing binding-to-operation relationship",
+    "cross-agent recurrence and effectiveness",
+    "agent-attributed resource consumption"
+  ],
+  "observation": {
+    "kind": "capability-delivery-and-environment-rpc-correlation",
+    "outcome": {
+      "actionable_question": "Should supported Environment RPC operations carry an explicit capability-binding identity, or remain an independent service-operation evidence type? Define this mapping only where the call path is authoritative; preserve unresolved use attribution otherwise.",
+      "capability_delivery_view": {
+        "capabilities": {
+          "mncs-environment:campaign-state-inspection": {
+            "availability_status": "available",
+            "completion_count": 0,
+            "invocation_count": 0,
+            "use_observation_status": "no-environment-invocation-record-in-selected-window"
+          },
+          "mncs-environment:projection-evidence-inspection": {
+            "availability_status": "available",
+            "completion_count": 0,
+            "invocation_count": 0,
+            "use_observation_status": "no-environment-invocation-record-in-selected-window"
+          }
+        },
+        "relationship_to_successful_rpc_operations": "not-established-by-this-projection-sample"
+      },
+      "directly_observed_rpc_operations": [
+        {
+          "control_dispatch_elapsed_ms": 4489.689971000189,
+          "event_identity": "evt_3084f43a1f595e5c",
+          "event_sequence": 29,
+          "identity": "rpc_19534aaa022176a2",
+          "observed_at": "2026-10-25T13:31:16+00:00",
+          "operation": "environmental-capability.projection",
+          "outcome_status": "succeeded"
+        },
+        {
+          "control_dispatch_elapsed_ms": 4511.189725002623,
+          "event_identity": "evt_9d89c5b8ebf8194a",
+          "event_sequence": 30,
+          "identity": "rpc_af89336336eace3f",
+          "observed_at": "2026-10-25T13:31:40+00:00",
+          "operation": "environmental-capability.projection",
+          "outcome_status": "succeeded"
+        }
+      ],
+      "interpretation": "The authenticated session records two successful environmental-capability projection RPC operations, while the selected capability-delivery sample separately reports two relevant bindings as available with no bound invocation record in its selected window. The existing evidence does not establish whether these operations should map to those bindings or prove successful agent use of the bindings. Keep RPC success and binding use as separate observations until an authoritative relation is defined.",
+      "measurement_limits": {
+        "cache_accounting": "unavailable",
+        "control_dispatch_elapsed_ms": "measured; includes Control/session queue wait and is not total agent execution duration",
+        "model_identity": "unavailable",
+        "resource_consumption": "unavailable",
+        "token_usage": "unavailable"
+      },
+      "recurrence": "two projection calls in one session only; cross-session or cross-agent recurrence is not established"
+    },
+    "request": {
+      "evidence_limit": 32,
+      "history_pages": 1,
+      "operation": "environmental-capability.projection",
+      "session_id": "ses_5530f63cd8293e03"
+    },
+    "source_interface": "Authenticated MNCS Environment environmental-capability projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Determine whether this RPC surface is backed by one of the available capability bindings. If so, preserve the authoritative binding identity on the operation event; if not, expose service-operation success separately from capability use. Do not infer invocation or agent benefit from availability or operation names.",
+    "basis": "One authenticated session projection surfaced two succeeded environmental-capability.projection RPC event references and available campaign-state/projection-evidence bindings with zero bound invocation records; the relationship between these two evidence types is not established.",
+    "category": "capability-accountability-and-observability",
+    "identity": "ph_environment_capability_use_attribution_20261025",
+    "not_measured": [
+      "whether either projection call was mediated by the campaign-state-inspection or projection-evidence-inspection binding",
+      "whether the selected bindings were discoverable or used by a different agent",
+      "whether missing invocation attribution reflects capture coverage, selection window, or a valid separation between service operations and capabilities",
+      "cross-session recurrence",
+      "agent outcome or effectiveness",
+      "total operation duration, token/cache usage, and resource consumption"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "not-established",
+    "subsystem": "Environment RPC operation observations and session capability-delivery projection",
+    "title": "Successful Environment projection operations are not related to available capability bindings in the selected delivery view"
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "consumer_id": "local-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_4179379f9332b176",
+    "session_id": "ses_5530f63cd8293e03"
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "campaign_id": "cmp_626be396de28e0d8",
+      "event_identities": [
+        "evt_3084f43a1f595e5c",
+        "evt_9d89c5b8ebf8194a"
+      ],
+      "kind": "authenticated-session-activity",
+      "repository": "mncs-environment",
+      "session_id": "ses_5530f63cd8293e03"
+    },
+    {
+      "commit": "fa06cc9d56648c48d17594d7af65f0babd2c35c8",
+      "identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+      "kind": "committed-environmental-observation",
+      "path": "evidence/environmental-capability/native-userland-accountability-20261025.json",
+      "repository": "mncs-environment",
+      "sha256": "14af1e6885b24b324491af644f7a9a4bb589e60d391d4649b9c93c49832b6b66"
+    },
+    {
+      "commit": "c49a1cb5c02f474d17c950d3305a49a7e07057fa",
+      "identity": "src_environment_capability_intelligence_baseline",
+      "kind": "capability-delivery-projection-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "f7991c1b749676e08952d750694b2582834d033072b3f842072413d31f02003a"
+    }
+  ]
+}
