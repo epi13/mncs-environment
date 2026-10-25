@@ -1,0 +1,128 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_owner_audit_pressure_link_followup_20261025",
+  "captured_at": "2026-10-25T16:35:12Z",
+  "measurement_basis": "single-record live environmental-capability projection readbacks over the authenticated campaign evidence ledger",
+  "observation": {
+    "kind": "native-owner-audit-pressure-link-projection-followup",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "owner_audit_query": {
+        "evidence_offset": 0,
+        "evidence_limit": 1,
+        "projection_status": "ready",
+        "response_bytes": 47165,
+        "source_pointer_count": 4,
+        "source_pointer_content_integrity_verified_count": 4,
+        "observation_identity": "ev_environment_native_userland_owner_audit_correlation_20261025"
+      },
+      "pressure_query": {
+        "evidence_offset": 31,
+        "evidence_limit": 1,
+        "projection_status": "ready",
+        "source_pointer_count": 6,
+        "source_pointer_content_integrity_verified_count": 6,
+        "observation_identity": "ev_environment_native_owner_audit_pressure_link_pressure_20261025"
+      },
+      "improvement_query": {
+        "evidence_offset": 32,
+        "evidence_limit": 1,
+        "projection_status": "ready",
+        "source_pointer_count": 4,
+        "source_pointer_content_integrity_verified_count": 4,
+        "observation_identity": "ev_environment_native_owner_audit_pressure_link_improvement_20261025"
+      },
+      "verification_query": {
+        "evidence_offset": 33,
+        "evidence_limit": 1,
+        "projection_status": "ready",
+        "source_pointer_count": 3,
+        "source_pointer_content_integrity_verified_count": 3,
+        "observation_identity": "ev_environment_native_owner_audit_pressure_link_verification_20261025"
+      }
+    },
+    "outcome": {
+      "owner_audit_details": {
+        "repositories": [
+          "mncs-actions",
+          "mncs-test"
+        ],
+        "canonical_surface_counts": {
+          "mncs-actions": 4,
+          "mncs-test": 6
+        },
+        "source_declared_pressure_ids": {
+          "mncs-actions": [
+            "MNCS-TOOLING-146FB6F4BBC6",
+            "MNCS-TOOLING-B665F138D324",
+            "MNCS-TOOLING-CB736AB5B3F0",
+            "MNCS-LANG-52A5E0C72A39"
+          ],
+          "mncs-test": [
+            "MNCS-TEST-P-004",
+            "MNCS-TEST-P-006",
+            "MNCS-TOOLING-146FB6F4BBC6",
+            "MNCS-LANG-52A5E0C72A39"
+          ]
+        },
+        "implementation_ownership_status": "owner-declared; not independently verified",
+        "systemwide_native_adoption_ratio": "not-measured"
+      },
+      "pressure_identity": "ph_environment_native_owner_audit_pressure_link_20261025",
+      "improvement_relation_identity": "ir_environment_native_owner_audit_pressure_link_20261025",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The existing projection now makes the source-declared native surfaces and pressure identities directly inspectable alongside host responsibilities and source pointers. The queries were made by this campaign session only; they do not establish discovery by another agent, causal pressure, successful migration, or subsequent resolution."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+      "repository": "mncs-environment",
+      "commit": "fa06cc9d56648c48d17594d7af65f0babd2c35c8",
+      "path": "evidence/environmental-capability/native-userland-accountability-20261025.json",
+      "sha256": "14af1e6885b24b324491af644f7a9a4bb589e60d391d4649b9c93c49832b6b66"
+    },
+    {
+      "identity": "ev_environment_native_owner_audit_pressure_link_pressure_20261025",
+      "repository": "mncs-environment",
+      "commit": "4de278cff09111524a77b3080bd1a45234ef3950",
+      "path": "evidence/environmental-capability/native-owner-audit-pressure-link-pressure-20261025.json",
+      "sha256": "5372188647359f62077f4677fe83bf8253c543be53d382977271c415db4e028f"
+    },
+    {
+      "identity": "ev_environment_native_owner_audit_pressure_link_improvement_20261025",
+      "repository": "mncs-environment",
+      "commit": "3face3be42a0c009433a3984e10ffef7efbb02ac",
+      "path": "evidence/environmental-capability/native-owner-audit-pressure-link-improvement-20261025.json",
+      "sha256": "d5e0d753d629b04874e0fd4cd7742752f7d14be060b11e2aacd7256605829a00"
+    },
+    {
+      "identity": "ev_environment_native_owner_audit_pressure_link_verification_20261025",
+      "repository": "mncs-environment",
+      "commit": "3face3be42a0c009433a3984e10ffef7efbb02ac",
+      "path": "evidence/environmental-capability/native-owner-audit-pressure-link-verification-20261025.json",
+      "sha256": "bfcb77486116a621963b700ae9d6b7b9366228980dd9f8d4eda95a4f5f0cc5dc"
+    }
+  ],
+  "not_measured": [
+    "independent agent capability discovery, usability, or outcome",
+    "whether all source-declared pressure IDs exist and are verified",
+    "causal blockage of the audited host responsibilities",
+    "host implementation displacement and parity",
+    "systemwide native adoption ratio or denominator"
+  ]
+}
