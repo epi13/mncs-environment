@@ -435,6 +435,18 @@ def _control_error_domain_details(
             value = details.get(source)
             if isinstance(value, list):
                 result[target] = len(value)
+        recovery_basis = details.get("recovery_basis")
+        if recovery_basis in {
+            "operator-approved-config", "same-principal-host-liveness",
+        }:
+            result["recovery_basis"] = recovery_basis
+        exemption_enabled = details.get("persistent_agent_exemption_enabled")
+        if isinstance(exemption_enabled, bool):
+            result["persistent_agent_exemption_enabled"] = exemption_enabled
+        approved_hosts = details.get("approved_persistent_agent_hosts")
+        if (isinstance(approved_hosts, int) and not isinstance(approved_hosts, bool)
+                and 0 <= approved_hosts <= 100_000):
+            result["approved_persistent_agent_hosts"] = approved_hosts
         matching_processes = details.get("matching_processes")
         if isinstance(matching_processes, list):
             allowed_reasons = {

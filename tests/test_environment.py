@@ -1904,6 +1904,9 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
                 "owner_session_id": "ses_owner",
                 "active_jobs": [{"job_id": "job_private"}],
                 "active_owner_requests": [],
+                "recovery_basis": "operator-approved-config",
+                "persistent_agent_exemption_enabled": True,
+                "approved_persistent_agent_hosts": 1,
                 "matching_processes": [
                     {
                         "pid": 100,
@@ -1925,6 +1928,9 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
             "cause_code": "ENVIRONMENT_OWNER_EXECUTION_ACTIVE",
             "active_jobs": 1,
             "active_owner_requests": 0,
+            "recovery_basis": "operator-approved-config",
+            "persistent_agent_exemption_enabled": True,
+            "approved_persistent_agent_hosts": 1,
             "active_processes": 2,
             "active_processes_by_reason": [
                 {"reason": "former-session-authenticated-client", "count": 1},
