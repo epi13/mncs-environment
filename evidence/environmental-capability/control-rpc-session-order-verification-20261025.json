@@ -1,0 +1,69 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_control_rpc_session_order_verification_20261025",
+  "captured_at": "2026-10-25T18:01:59Z",
+  "measurement_basis": "Full Control Environment RPC module tests and lint passed on the tested feature commit; that tree was merged and pushed to main.",
+  "not_measured": [
+    "recurrence across later sessions or other agents",
+    "every parser branch outside the exercised argument shapes",
+    "resource overhead"
+  ],
+  "observation": {
+    "kind": "environment-control-rpc-session-order-verification",
+    "source_interface": "mncs-control-mcp verification and Git delivery",
+    "request": {
+      "operation": "verify_environment_rpc_session_argument_parsing",
+      "tested_commit": "2f4e6e043df94395d577a7ecd638f218fa2b6012",
+      "merged_main_commit": "703b201072f3cec4a18e8a4b0aae8b1bfe478dd7"
+    },
+    "outcome": {
+      "status": "verified-and-pushed",
+      "tests": "python -m pytest -q tests/test_environment_rpc.py: passed",
+      "lint": "ruff check src/mncs_control_mcp/environment_rpc.py tests/test_environment_rpc.py: passed",
+      "patch_check": "git diff --check: passed",
+      "delivery": "feature commit 2f4e6e043df94395d577a7ecd638f218fa2b6012 merged to main and pushed to origin/main as 703b201072f3cec4a18e8a4b0aae8b1bfe478dd7",
+      "interpretation": "Regression coverage now includes option-first claims, scope grants, claim recovery, transfer-to requester selection, and full claim-acquisition RPC dispatch."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "campaign_objective": "Implement MNCS environmental capability intelligence: connect authentic agent-session, diagnostics, resource, and compiler evidence to provenance-aware queryable projections that reveal actionable recurring environmental pressures, then verify and improve the observation-to-action loop.",
+    "session_id": "ses_71fd38cce3a4ad5c",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "session_id": "ses_71fd38cce3a4ad5c"
+  },
+  "supporting_sources": [
+    {
+      "identity": "src_control_environment_rpc_session_order_parser_703b201",
+      "repository": "mncs-control-mcp",
+      "commit": "703b201072f3cec4a18e8a4b0aae8b1bfe478dd7",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "7d50501f59e2f0ab89876b553ab8979991b43039dcc5689e52aff3fcbda49367"
+    },
+    {
+      "identity": "src_control_environment_rpc_session_order_tests_703b201",
+      "repository": "mncs-control-mcp",
+      "commit": "703b201072f3cec4a18e8a4b0aae8b1bfe478dd7",
+      "path": "tests/test_environment_rpc.py",
+      "sha256": "fe4b19e1032ad4957a0d4d81314e88b8e6b0ac97a4953794ca88dcb7be7a76aa"
+    },
+    {
+      "kind": "verification-command",
+      "repository": "mncs-control-mcp",
+      "command": "python -m pytest -q tests/test_environment_rpc.py",
+      "result": "passed"
+    },
+    {
+      "kind": "verification-command",
+      "repository": "mncs-control-mcp",
+      "command": "ruff check src/mncs_control_mcp/environment_rpc.py tests/test_environment_rpc.py",
+      "result": "passed"
+    }
+  ]
+}

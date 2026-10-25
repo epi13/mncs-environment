@@ -1,0 +1,75 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_control_rpc_session_order_improvement_20261025",
+  "captured_at": "2026-10-25T18:01:59Z",
+  "measurement_basis": "Control parser fix merged to main and runtime-reported at the pushed source revision; focused tests and live protected claim exercise are linked separately.",
+  "not_measured": [
+    "recurrence across later sessions or other agents",
+    "all Environment commands with variable-arity arguments",
+    "whether the change improves unrelated branch or publication workflows",
+    "resource cost changes"
+  ],
+  "observation": {
+    "kind": "environment-control-rpc-session-binding-improvement",
+    "source_interface": "MNCS Control Environment RPC",
+    "request": {
+      "operation": "claims --acquire",
+      "argument_order": "options before the trailing positional session identity",
+      "repository": "mncs-environment"
+    },
+    "outcome": {
+      "status": "parser-correction-integrated",
+      "implementation_commit": "703b201072f3cec4a18e8a4b0aae8b1bfe478dd7",
+      "interpretation": "Control now identifies the session-shaped positional after accounting for option values; the authenticated continuation remains the authority for the selected session."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "pr_environment_control_rpc_session_order_20261025",
+    "title": "Control misbinds Environment sessions when options precede the positional identity",
+    "category": "tooling",
+    "subsystem": "Control Environment RPC argument parsing",
+    "owner": "mncs-control-mcp",
+    "actionable_recommendation": "Parse the documented CLI argument grammar, skip option values, and bind mutations to the exact session selected by the authenticated continuation."
+  },
+  "improvement_relation": {
+    "identity": "ir_environment_control_rpc_session_order_20261025",
+    "addresses_hypothesis_identity": "pr_environment_control_rpc_session_order_20261025",
+    "implementation_reference": {
+      "identity": "src_control_environment_rpc_session_order_parser_703b201",
+      "repository": "mncs-control-mcp",
+      "commit": "703b201072f3cec4a18e8a4b0aae8b1bfe478dd7",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "7d50501f59e2f0ab89876b553ab8979991b43039dcc5689e52aff3fcbda49367"
+    },
+    "verification_observation_identity": "ev_environment_control_rpc_session_order_verification_20261025",
+    "subsequent_observation_identity": "ev_environment_control_rpc_session_order_followup_20261025",
+    "basis": "The parser skips option values when identifying the requester session, preserves special command grammars, and uses the selected continuation session for authorization; the full RPC module tests and protected claim acquisition verify the path.",
+    "not_measured": [
+      "future recurrence or cross-agent improvement effect",
+      "native language or compiler adoption changes",
+      "resource overhead"
+    ]
+  },
+  "related_work": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "campaign_objective": "Implement MNCS environmental capability intelligence: connect authentic agent-session, diagnostics, resource, and compiler evidence to provenance-aware queryable projections that reveal actionable recurring environmental pressures, then verify and improve the observation-to-action loop.",
+    "session_id": "ses_71fd38cce3a4ad5c",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "session_id": "ses_71fd38cce3a4ad5c"
+  },
+  "supporting_sources": [
+    {
+      "identity": "src_control_environment_rpc_session_order_parser_703b201",
+      "repository": "mncs-control-mcp",
+      "commit": "703b201072f3cec4a18e8a4b0aae8b1bfe478dd7",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "7d50501f59e2f0ab89876b553ab8979991b43039dcc5689e52aff3fcbda49367"
+    }
+  ]
+}
