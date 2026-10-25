@@ -1844,16 +1844,26 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     )
     record["observation"]["outcome"]["bounded_context"] = "x" * 8_000
     session, _ = _session(tmp_path, [record])
-    session.snapshot["rpc_read_activity_count"] = 3
+    session.snapshot["rpc_read_activity_count"] = 4
+    session.snapshot["bindings"] = [{
+        "binding_id": "cap_projection_context_test",
+        "provider": "mncs-test",
+        "capability": "mncs-test:run",
+        "availability": {
+            "status": "available", "verification": "substrate",
+            "observed_at": "2026-10-24T01:00:00Z",
+        },
+    }]
     events = []
-    for sequence, outcome, exit_code, failure_code in (
-        (21, "failed", 2, "ENVIRONMENT_SESSION_MISSING"),
-        (22, "failed", None, "ENVIRONMENT_SESSION_MISSING"),
-        (23, "succeeded", 0, None),
+    for sequence, operation, outcome, exit_code, failure_code in (
+        (21, "session.inspect", "failed", 2, "ENVIRONMENT_SESSION_MISSING"),
+        (22, "session.inspect", "failed", None, "ENVIRONMENT_SESSION_MISSING"),
+        (23, "campaign.state", "succeeded", 0, None),
+        (24, "session.context", "succeeded", 0, None),
     ):
         payload = {
             "schema_version": "mncs.environment.rpc-read-activity/1",
-            "operation": "session.inspect" if sequence < 23 else "campaign.state",
+            "operation": operation,
             "outcome_status": outcome,
             "exit_code": exit_code,
             "failure_code": failure_code,
@@ -1909,7 +1919,7 @@ def test_session_activity_correlates_authenticated_control_read_operations(
         "authenticated_principal_id": "ctrl_" + "f" * 32,
     }
     events.append({
-        "identity": "evt_rpc_read_spoofed", "sequence": 24,
+        "identity": "evt_rpc_read_spoofed", "sequence": 25,
         "type": "environment.rpc.read_observed",
         "producer": "mncs-control-mcp", "payload": untrusted_payload,
     })
@@ -1922,7 +1932,7 @@ def test_session_activity_correlates_authenticated_control_read_operations(
 
     assert activity["context"]["work_intent_goal"] == "inspect current pressures"
     assert activity["status"] == "rpc-only-in-session-history"
-    assert activity["source"]["rpc_operation_capture_count"] == 3
+    assert activity["source"]["rpc_operation_capture_count"] == 4
     assert activity["source"]["rpc_operation_capture_limit"] == 256
     assert activity["source"]["rpc_operation_records_invalid"] == 1
     assert activity["source"]["rpc_operation_records_omitted"] == 0
@@ -1932,7 +1942,7 @@ def test_session_activity_correlates_authenticated_control_read_operations(
         "environment_campaign_and_work_intent": "session-snapshot",
         "live_repository_probe": False,
     }
-    assert activity["rpc_operation_count"] == 3
+    assert activity["rpc_operation_count"] == 4
     failed_operations = {
         item["event_reference"]["identity"]: item
         for item in activity["rpc_operations"]
@@ -1945,21 +1955,22 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     )
     summary = activity["rpc_operation_summary"]
     assert summary["scope"] == "authenticated-records-in-selected-event-window"
-    assert summary["record_count"] == 3
-    assert summary["group_count"] == 2
+    assert summary["record_count"] == 4
+    assert summary["group_count"] == 3
     assert summary["groups_omitted"] == 0
     assert [
         (group["operation"], group["outcome_status"], group["occurrence_count"])
         for group in summary["groups"]
     ] == [
         ("campaign.state", "succeeded", 1),
+        ("session.context", "succeeded", 1),
         ("session.inspect", "failed", 2),
     ]
-    assert [
-        event["identity"] for event in summary["groups"][1]["supporting_events"]
-    ] == ["evt_rpc_read_21", "evt_rpc_read_22"]
+    assert [event["identity"] for event in summary["groups"][2]["supporting_events"]] == [
+        "evt_rpc_read_21", "evt_rpc_read_22",
+    ]
     assert activity["rpc_operations"][0]["event_reference"]["identity"] == (
-        "evt_rpc_read_23"
+        "evt_rpc_read_24"
     )
     assert activity["rpc_operations"][0]["context"]["repository"] == (
         "mncs-control-mcp"
@@ -1976,6 +1987,16 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert activity["rpc_operations"][0]["measurements"][
         "control_dispatch_elapsed_ms"
     ] == 12.5
+    context_activity = activity["capability_delivery"]["context_operation_activity"]
+    assert context_activity["status"] == "observed"
+    assert context_activity["outcome_counts"] == {"succeeded": 1}
+    assert context_activity["supporting_events"][0]["identity"] == (
+        "evt_rpc_read_24"
+    )
+    assert context_activity["response_capability_list_status"] == (
+        "not-captured-in-rpc-event"
+    )
+    assert context_activity["agent_receipt_status"] == "not-established"
     assert len(activity["rpc_failure_candidates"]) == 1
     assert result["session_activity_pressure_candidate_count"] == 1
     candidate = activity["rpc_failure_candidates"][0]
@@ -1992,19 +2013,25 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     compact = capability_intelligence.project(session, max_result_bytes=6_000)
     compact_activity = compact["session_activity"]
     assert compact_activity["rpc_operations"][0]["event_reference"]["identity"] == (
-        "evt_rpc_read_23"
+        "evt_rpc_read_24"
     )
-    assert compact_activity["source"]["rpc_operation_events_considered"] == 4
-    assert compact_activity["source"]["rpc_operation_records_returned"] == 3
+    assert compact_activity["source"]["rpc_operation_events_considered"] == 5
+    assert compact_activity["source"]["rpc_operation_records_returned"] == 4
     assert compact_activity["source"]["rpc_operation_records_omitted"] == 0
     assert compact_activity["source"]["rpc_operation_records_invalid"] == 1
     compact_summary = compact_activity["rpc_operation_summary"]
-    assert compact_summary["record_count"] == 3
-    assert compact_summary["group_count"] == 2
+    assert compact_summary["record_count"] == 4
+    assert compact_summary["group_count"] == 3
     assert compact_summary["groups_omitted"] == 0
-    assert compact_summary["groups"][1]["supporting_events"][0]["identity"] == (
+    assert compact_summary["groups"][2]["supporting_events"][0]["identity"] == (
         "evt_rpc_read_21"
     )
+    compact_delivery = capability_intelligence._compact_projection(
+        result, 20_000, capability_intelligence.MAX_RESULT_BYTES,
+    )["session_activity"]["capability_delivery"]
+    assert compact_delivery["context_operation_activity"]["supporting_events"][0][
+        "identity"
+    ] == "evt_rpc_read_24"
     assert compact_activity["source"]["rpc_operation_context_basis"] == (
         "grant+session-snapshot; branch/head not live-probed"
     )

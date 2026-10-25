@@ -436,6 +436,13 @@ through external interfaces. These relationships make availability and use
 inspectable without treating an absent record as evidence of poor
 discoverability or usability.
 
+`context_operation_activity` also summarizes authenticated `session.context`
+RPC records. The Environment context implementation returns up to 20 available
+capabilities with total and truncation counts, so a successful operation is
+evidence that the orientation endpoint ran. The RPC event does not retain the
+response fields or establish that the consumer read or acted on them; the view
+keeps response capability-list capture and agent receipt explicitly unmeasured.
+
 When response compaction is needed, each pressure summary retains bounded exact
 evidence references (identity, repository, commit, path, and digest), so an
 agent can inspect the records supporting the hypothesis even when their full

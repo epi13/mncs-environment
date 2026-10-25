@@ -1603,6 +1603,44 @@ def _compact_projection(
             for item in outside_inventory[:8]
             if isinstance(item, dict) and isinstance(item.get("capability"), str)
         ]
+    context_activity = raw_capability_delivery.get("context_operation_activity")
+    if isinstance(context_activity, dict):
+        compact_context_activity = {
+            key: _short_text(context_activity[key], 128)
+            for key in (
+                "status", "scope", "response_capability_list_status",
+                "agent_receipt_status",
+            )
+            if isinstance(context_activity.get(key), str)
+        }
+        outcome_counts = context_activity.get("outcome_counts")
+        if isinstance(outcome_counts, dict):
+            compact_context_activity["outcome_counts"] = {
+                _short_text(key, 48): value
+                for key, value in sorted(outcome_counts.items())[:8]
+                if isinstance(key, str) and type(value) is int and value >= 0
+            }
+        references = context_activity.get("supporting_events")
+        if isinstance(references, list):
+            compact_context_activity["supporting_events"] = [
+                {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                }
+                for reference in references[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                if isinstance(reference, dict)
+            ]
+        context_limits = context_activity.get("measurement_limits")
+        if isinstance(context_limits, list):
+            compact_context_activity["measurement_limits"] = [
+                _short_text(item, 256)
+                for item in context_limits[:2]
+                if isinstance(item, str)
+            ]
+        compact_capability_delivery["context_operation_activity"] = (
+            compact_context_activity
+        )
     delivery_limits = raw_capability_delivery.get("measurement_limits")
     if isinstance(delivery_limits, list):
         compact_capability_delivery["measurement_limits"] = [
@@ -4037,20 +4075,79 @@ def _event_reference(event: dict[str, Any]) -> dict[str, Any] | None:
 
 def _capability_delivery_view(
     snapshot: dict[str, Any], capability_summaries: list[dict[str, Any]],
-    interactions: list[dict[str, Any]], events: list[dict[str, Any]], *,
+    interactions: list[dict[str, Any]], events: list[dict[str, Any]],
+    rpc_operation_summary: dict[str, Any], *,
     event_window_truncated: bool, event_page_scoped: bool,
     invocation_summaries_omitted: int,
 ) -> dict[str, Any]:
     """Relate this session's binding snapshot to bounded, observed capability use."""
+    complete_history = not event_window_truncated and not event_page_scoped
+    rpc_groups = rpc_operation_summary.get("groups")
+    rpc_groups = rpc_groups if isinstance(rpc_groups, list) else []
+    context_groups = [
+        item for item in rpc_groups
+        if isinstance(item, dict) and item.get("operation") == "session.context"
+    ]
+    context_outcome_counts: dict[str, int] = {}
+    context_supporting_events = []
+    for group in context_groups:
+        outcome = group.get("outcome_status")
+        count = group.get("occurrence_count")
+        if isinstance(outcome, str) and type(count) is int and count >= 0:
+            context_outcome_counts[outcome] = (
+                context_outcome_counts.get(outcome, 0) + count
+            )
+        references = group.get("supporting_events")
+        if isinstance(references, list):
+            context_supporting_events.extend(
+                reference for reference in references
+                if isinstance(reference, dict)
+            )
+    context_supporting_events = sorted(
+        context_supporting_events,
+        key=lambda item: (
+            item.get("sequence") if type(item.get("sequence")) is int else 0
+        ),
+        reverse=True,
+    )[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+    context_groups_omitted = rpc_operation_summary.get("groups_omitted", 0)
+    if context_groups:
+        context_activity_status = (
+            "partial" if type(context_groups_omitted) is int
+            and context_groups_omitted > 0 else "observed"
+        )
+    elif complete_history and context_groups_omitted == 0:
+        context_activity_status = "no-context-operation-in-session-history"
+    else:
+        context_activity_status = "not-observed-in-selected-event-window"
+    context_operation_activity = {
+        "status": context_activity_status,
+        "scope": "authenticated-Control-session.context-events-in-selected-window",
+        "outcome_counts": dict(sorted(context_outcome_counts.items())),
+        "supporting_events": [
+            {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in reference
+            }
+            for reference in context_supporting_events
+        ],
+        "response_capability_list_status": "not-captured-in-rpc-event",
+        "agent_receipt_status": "not-established",
+        "measurement_limits": [
+            "A successful session.context operation is evidence the orientation endpoint ran; its response capability list and the consumer's receipt or use are not recorded in this event.",
+        ],
+    }
     raw_bindings = snapshot.get("bindings")
     if not isinstance(raw_bindings, list):
-        if not capability_summaries:
+        if not capability_summaries and not context_groups:
             return {}
         return {
             "status": "unavailable",
             "inventory_source": "current-session-binding-snapshot",
             "binding_count": 0,
             "bindings": [],
+            "context_operation_activity": context_operation_activity,
             "discoverability_status": "not-measured",
             "measurement_limits": [
                 "The session binding snapshot is unavailable.",
@@ -4119,7 +4216,6 @@ def _capability_delivery_view(
                     if key in reference
                 })
 
-    complete_history = not event_window_truncated and not event_page_scoped
     for binding in binding_records:
         capability = binding["capability"]
         summary = summary_by_capability.get(capability)
@@ -4234,6 +4330,7 @@ def _capability_delivery_view(
         "capabilities_not_in_current_binding_snapshot_omitted": max(
             0, len(outside_inventory) - MAX_SESSION_ACTIVITY_CAPABILITIES,
         ),
+        "context_operation_activity": context_operation_activity,
         "discoverability_status": "not-measured",
         "use_event_window": {
             "scope": "selected-session-event-window",
@@ -5090,6 +5187,7 @@ def _session_activity(
             event_type_counts[event_type] = event_type_counts.get(event_type, 0) + 1
     capability_delivery = _capability_delivery_view(
         snapshot, all_capability_summaries, interactions, events,
+        rpc_operation_summary,
         event_window_truncated=event_window_truncated,
         event_page_scoped=event_before_sequence is not None,
         invocation_summaries_omitted=capabilities_omitted,
