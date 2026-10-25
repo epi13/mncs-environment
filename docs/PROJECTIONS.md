@@ -170,15 +170,17 @@ remaining host responsibilities, bounded source pointers, and proposed native
 slice. For the bounded `mncs.native-userland-audit/1` records from
 `mncs-actions` and `mncs-test`, it also reads the exact `native-userland-audit.json`
 pointer under the existing selected-checkout or complete workspace-read-only
-authority. The projection exposes the recorded host responsibility
-classifications, stated eliminating capabilities, remaining host paths, and
-verification-plan boundary alongside the source pointer. Unverified source
-records do not contribute these details. Source content integrity is reported
-separately from implementation ownership: a verified audit blob does not
-independently establish the owner's classification, repository coverage, or
-migration readiness. The projected systemwide ratio stays `not-measured`, and
-the candidate opportunity retains its readiness as `not-established` until
-independent implementation and verification evidence exists.
+authority. The projection exposes the recorded canonical MNCS surfaces,
+source-declared pressure identities, host responsibility classifications,
+stated eliminating capabilities, remaining host paths, and verification-plan
+boundary alongside the source pointer. These audit fields remain owner
+declarations. Unverified source records do not contribute these details. Source
+content integrity is reported separately from implementation ownership: a
+verified audit blob does not independently establish the owner's classification,
+repository coverage, or migration readiness. The projected systemwide ratio
+stays `not-measured`, and the candidate opportunity retains its readiness as
+`not-established` until independent implementation and verification evidence
+exists.
 
 When the selected session has a capability-delivery view, the sample also
 exposes `selected_session_delivery_observation`. It compares the proof's

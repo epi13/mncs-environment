@@ -3527,7 +3527,7 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
             "status": "native_canonical",
             "migration_order": 1,
             "next_native_slice": "native Commons pressure query materialization",
-            "existing_pressures": ["MNCS-TEST-P-006"],
+            "existing_pressures": ["MNCS-TEST-P-004", "MNCS-TEST-P-006"],
             "native_semantic_projection": {
                 "test": "mncs.test.assertions.project_test",
                 "suite": "mncs.test.suite.project",
@@ -3612,6 +3612,10 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
     assert actions["source_record_status"] == (
         "content-integrity-verified-owner-declaration"
     )
+    assert actions["canonical_mncs_surfaces"] == [
+        "typed receipts and evidence records"
+    ]
+    assert actions["existing_pressures"] == ["MNCS-TOOLING-146FB6F4BBC6"]
     assert accountability["owner_audit_evidence"][
         "implementation_ownership_status"
     ] == (
@@ -3631,6 +3635,9 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
         "remaining_host_responsibilities"
     ][0]["eliminating_capability"]
     test_audit = details["mncs-test"]
+    assert test_audit["existing_pressures"] == [
+        "MNCS-TEST-P-004", "MNCS-TEST-P-006",
+    ]
     assert test_audit["responsibilities"][0]["classification"] == (
         "already_naturally_expressible_in_mncs"
     )
@@ -3645,6 +3652,12 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
         "source_audit_details"
     ]
     compact_by_repository = {item["repository"]: item for item in compact_audits}
+    assert compact_by_repository["mncs-actions"][
+        "canonical_mncs_surfaces"
+    ] == actions["canonical_mncs_surfaces"]
+    assert compact_by_repository["mncs-actions"][
+        "existing_pressures"
+    ] == actions["existing_pressures"]
     assert compact_by_repository["mncs-actions"][
         "remaining_host_responsibilities"
     ][0]["eliminating_capability"] == actions[

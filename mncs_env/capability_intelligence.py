@@ -829,7 +829,6 @@ def _compact_owner_audit_evidence(value: Any) -> dict[str, Any] | None:
                 key: _short_text(source_audit.get(key), 192)
                 for key in (
                     "identity", "repository", "source_record_status",
-                    "owner_declared_status", "next_native_slice",
                     "native_entrypoint", "canonical_entrypoint",
                 )
                 if isinstance(source_audit.get(key), str)
@@ -838,7 +837,10 @@ def _compact_owner_audit_evidence(value: Any) -> dict[str, Any] | None:
                 compact_source_audit["migration_order"] = source_audit[
                     "migration_order"
                 ]
-            for key in ("rust_boundary_only",):
+            for key in (
+                "canonical_mncs_surfaces", "existing_pressures",
+                "rust_boundary_only",
+            ):
                 raw_values = source_audit.get(key)
                 if not isinstance(raw_values, list):
                     continue
@@ -4163,17 +4165,23 @@ def _native_userland_audit_source_view(
         "source_record_status": "content-integrity-verified-owner-declaration",
     })
     for source_key, output_key in (
-        ("status", "owner_declared_status"),
         ("native_entrypoint", "native_entrypoint"),
         ("canonical_entrypoint", "canonical_entrypoint"),
-        ("next_native_slice", "next_native_slice"),
     ):
         value = record.get(source_key)
         if isinstance(value, str):
+            if (source_key == "canonical_entrypoint"
+                    and value == record.get("native_entrypoint")):
+                continue
             result[output_key] = _short_text(value, 256)
     migration_order = record.get("migration_order")
     if type(migration_order) is int and migration_order >= 0:
         result["migration_order"] = migration_order
+    for key in ("canonical_mncs_surfaces", "existing_pressures"):
+        values, truncated = _bounded_source_strings(record.get(key))
+        if values or isinstance(record.get(key), list):
+            result[key] = values
+            result[f"{key}_truncated"] = truncated
     for source_key in ("remaining_host_responsibilities", "responsibilities"):
         records, truncated = _bounded_native_userland_responsibilities(
             record.get(source_key),
