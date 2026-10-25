@@ -49,6 +49,11 @@ class FakeSession:
             "workspace": {"root": str(workspace_root)},
             "lifecycle": "active",
             "consumer_id": "diagnostic-test",
+            "campaign": {"identity": "cmp_diagnostic_fixture"},
+            "intent": {"identity": "int_diagnostic_fixture",
+                       "goal": "verify diagnostic evidence context"},
+            "environment_id": "renv_diagnostic_fixture",
+            "provenance": {"definition_id": "env_diagnostic_fixture"},
             "toolchain": {"binary": "/bin/mncs", "revision": "rev-1",
                           "checkout": "/chk", "repository": "mncs-language"},
             "bindings": [
@@ -534,6 +539,36 @@ class LifecycleTests(DiagnosticsFixture):
         self.assertIsNotNone(payload["evidence"])
         self.assertEqual(payload["evidence"]["results"][0]["outcome"],
                          "captured")
+        self.assertEqual(payload["evidence"]["related_work"], {
+            "campaign_id": "cmp_diagnostic_fixture",
+            "session_id": "ses_diagnostic_fixture",
+            "work_intent_goal": "verify diagnostic evidence context",
+            "work_intent_id": "int_diagnostic_fixture",
+            "environment_id": "renv_diagnostic_fixture",
+        })
+        self.assertEqual(payload["evidence"]["recording_context"], {
+            "campaign_id": "cmp_diagnostic_fixture",
+            "consumer_id": "diagnostic-test",
+            "definition_id": "env_diagnostic_fixture",
+            "environment_id": "renv_diagnostic_fixture",
+            "session_id": "ses_diagnostic_fixture",
+        })
+
+    def test_diagnostic_evidence_omits_unavailable_context(self):
+        self.session.snapshot["campaign"] = None
+        self.session.snapshot["intent"] = {"identity": " ", "goal": 123}
+        self.session.snapshot["environment_id"] = None
+        self.session.snapshot["provenance"] = {}
+        self.session.snapshot["verification_state"] = {}
+        self.run_pass()
+        payload = diagnostics_module.read_evidence(self.session)
+        self.assertEqual(payload["evidence"]["related_work"], {
+            "session_id": "ses_diagnostic_fixture",
+        })
+        self.assertEqual(payload["evidence"]["recording_context"], {
+            "consumer_id": "diagnostic-test",
+            "session_id": "ses_diagnostic_fixture",
+        })
 
     def test_stale_row_for_removed_obligation_is_ignored(self):
         self.session.snapshot["verification_state"] = {

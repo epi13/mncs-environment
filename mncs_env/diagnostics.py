@@ -714,8 +714,44 @@ def _finish(session, started: str, clock_started: float,
     summary["capsule_ids"] = capsule[:MAX_CAPSULE_IDS]
     summary["blockers"] = summary["escalated"] + (
         1 if failure is not None else 0)
+    snapshot = session.snapshot
+    snapshot = snapshot if isinstance(snapshot, dict) else {}
+    campaign = snapshot.get("campaign")
+    campaign = campaign if isinstance(campaign, dict) else {}
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+    provenance = snapshot.get("provenance")
+    provenance = provenance if isinstance(provenance, dict) else {}
+
+    def context_value(value: Any, limit: int = 512) -> str | None:
+        return value if (isinstance(value, str) and value.strip()
+                         and len(value) <= limit) else None
+
+    related_work = {"session_id": session.session_id}
+    for key, value in (
+        ("campaign_id", campaign.get("identity")),
+        ("work_intent_id", intent.get("identity")),
+        ("work_intent_goal", intent.get("goal")),
+        ("environment_id", snapshot.get("environment_id")),
+    ):
+        selected = context_value(value, 512 if key == "work_intent_goal" else 160)
+        if selected is not None:
+            related_work[key] = selected
+    recording_context = {"session_id": session.session_id}
+    for key, value in (
+        ("campaign_id", campaign.get("identity")),
+        ("consumer_id", snapshot.get("consumer_id")),
+        ("environment_id", snapshot.get("environment_id")),
+        ("definition_id", provenance.get("definition_id")),
+        ("environment_version", snapshot.get("environment_version")),
+    ):
+        selected = context_value(value, 160)
+        if selected is not None:
+            recording_context[key] = selected
     evidence = {"schema_version": SCHEMA, "mode": mode, "depth": depth,
                 "started_at": started, "finished_at": utcnow(),
+                "related_work": related_work,
+                "recording_context": recording_context,
                 "summary": summary, "results": results,
                 "failure": failure,
                 "coherence_summary": dict(native)}
