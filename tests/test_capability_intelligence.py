@@ -319,6 +319,14 @@ def _add_compiler_source_context(
             "source_interface": "MNCS Environment supporting-source relation",
             "request": {},
             "outcome": {"source_pointer_content_integrity": "verified"},
+            "source_session_context": {
+                "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+                "session_id": "ses_164edc158d9b1637",
+                "work_intent_id": "int_compiler_native_readiness",
+                "work_intent_goal": work_intent_goal,
+                "environment_id": "renv_compiler_campaign",
+                "repository": "mncs-compiler",
+            },
         },
         "supporting_sources": [{
             "kind": "compiler-regression-source-record",
@@ -2739,6 +2747,70 @@ def test_compiler_regression_evidence_is_projected_with_verified_work_context(
     assert observation["evidence_reference"] == reference
 
 
+def test_unselected_compiler_regression_uses_read_only_workspace_authority(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema_version": capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA_V2,
+        "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+        "compiler_head": "a" * 40,
+        "language_head": "b" * 40,
+        "source_module_count": 4,
+        "language_effect_and_capability_dependencies_invalidated": True,
+        "stages": {
+            "cold": {
+                "cache_status": "miss",
+                "execution": {"output_equal_to_stage0": True},
+            },
+            "fresh_process": {
+                "cache_status": "hit",
+                "execution": {"output_equal_to_stage0": True},
+            },
+        },
+    }
+    session, state = _session(tmp_path, [])
+    reference = _add_compiler_regression_evidence(session, state, report)
+    compiler = Path(session.snapshot["workspace"]["root"]) / "mncs-compiler"
+    session.snapshot["selected_checkouts"] = {
+        "mncs-environment": session.snapshot["selected_checkouts"][
+            "mncs-environment"
+        ],
+    }
+    _register_workspace_source(
+        session, compiler, reference, include_source_record=True,
+    )
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 1
+    assert result["source"]["observation_records_verified"] == 1
+    observation = result["observations"][0]
+    assert observation["evidence_reference"] == reference
+    assert observation["observation"]["source_repository_read_basis"] == (
+        "workspace-read-only-checkout"
+    )
+    assert observation["observation"]["source_session_context_resolution"] == (
+        "no-matching-verified-supporting-observation"
+    )
+    assert observation["observation"]["outcome"][
+        "language_effect_and_capability_dependencies_invalidated"
+    ] is True
+    assert session.snapshot["selected_checkouts"].keys() == {"mncs-environment"}
+    assert session.snapshot["authority"]["writable"] == ["mncs-environment"]
+    assert _git(compiler, "status", "--porcelain") == ""
+    compact = capability_intelligence._compact_projection(
+        result,
+        capability_intelligence.MAX_RESULT_BYTES + 1,
+        capability_intelligence.MAX_RESULT_BYTES,
+    )
+    compact_observation = compact["observations"][0]["observation"]
+    assert compact_observation["details_omitted"] is True
+    assert compact_observation["source_repository_read_basis"] == (
+        "workspace-read-only-checkout"
+    )
+
+
 def test_compiler_regression_projects_source_verification_resource_measurements(
     tmp_path: Path,
 ) -> None:
@@ -3700,6 +3772,60 @@ def test_compiler_source_context_conflict_is_left_ambiguous(tmp_path: Path) -> N
     assert "source_session_context" not in compiler_observation["observation"]
     assert compiler_observation["observation"]["source_session_context_resolution"] == (
         "ambiguous-supporting-observations"
+    )
+
+
+def test_environment_related_work_does_not_masquerade_as_compiler_source_context(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema_version": capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA_V2,
+        "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+        "compiler_head": "a" * 40,
+        "language_head": "b" * 40,
+        "source_module_count": 4,
+        "language_effect_and_capability_dependencies_invalidated": True,
+        "stages": {"cold": {"cache_status": "miss"}},
+    }
+    session, state = _session(tmp_path, [])
+    compiler_reference = _add_compiler_regression_evidence(session, state, report)
+    reader_record = _observation(
+        "ev_environment_reader_with_compiler_pointer",
+        "ses_environment_reader",
+        "cmp_environment_reader",
+    )
+    reader_record["supporting_sources"] = [{
+        "kind": "compiler-regression-source-record",
+        **compiler_reference,
+    }]
+    environment_checkout = Path(
+        session.snapshot["selected_checkouts"]["mncs-environment"]["path"]
+    )
+    relative = "evidence/environmental-capability/compiler-reader-context.json"
+    raw = json.dumps(reader_record, sort_keys=True, separators=(",", ":")).encode()
+    support_path = environment_checkout / relative
+    support_path.parent.mkdir(parents=True, exist_ok=True)
+    support_path.write_bytes(raw)
+    _git(environment_checkout, "add", relative)
+    _git(environment_checkout, "commit", "--quiet", "-m", "reader context record")
+    state["evidence"].append({
+        "identity": reader_record["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(environment_checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    })
+    state["evidence_count"] = len(state["evidence"])
+
+    result = capability_intelligence.project(session)
+
+    compiler_observation = next(
+        item for item in result["observations"]
+        if item["identity"] == report["identity"]
+    )
+    assert "source_session_context" not in compiler_observation["observation"]
+    assert compiler_observation["observation"]["source_session_context_resolution"] == (
+        "no-matching-verified-supporting-observation"
     )
 
 

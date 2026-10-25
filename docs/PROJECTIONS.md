@@ -272,10 +272,13 @@ host facts; it never fills missing values with zero.
 ledger can inspect related environmental context in the same response. When
 the page leaves too little room, query the projection directly. The projection
 reads committed records using the
-`mncs.environment.environmental-observation/1` schema and the one bounded
-Compiler evidence adapter described below. It verifies each recorded SHA-256
-against the selected checkout and retains exact commit/path pointers. Evidence
-in an unselected repository is named but not opened. Results are computed when
+`mncs.environment.environmental-observation/1` schema and the bounded Compiler
+evidence adapters described below. It verifies each recorded SHA-256 against
+the selected checkout and retains exact commit/path pointers. For the exact
+allowlisted Compiler regression report families, it can also use the
+workspace-read-only repository root when the Environment authority permits
+workspace reads and its repository scan is complete. Other evidence in an
+unselected repository is named but not opened. Results are computed when
 requested; no transcript copy, separate telemetry store, or permanent dashboard
 is created.
 
@@ -306,9 +309,14 @@ The interface invalidation and generic specialization families use
 `evidence/language-module-interface-application-invalidation-compiler-*.json`
 and
 `evidence/language-module-generic-specialization-application-invalidation-compiler-*.json`
-paths. Each family requires the selected Compiler checkout, the campaign's
-exact commit and SHA-256, its matching identity and path prefixes, and its
-family's schema version. The projection selects stages that describe each
+paths. Each family requires the campaign's exact commit and SHA-256, its
+matching identity and path prefixes, and its family's schema version. A report
+is read from the selected Compiler checkout when present; otherwise, a complete
+workspace scan and the Environment's existing workspace-read authority permit
+a bounded read from the registered Compiler root. The projected observation
+identifies whether its repository read used the selected checkout or
+workspace-read-only checkout; this does not grant Compiler write access or
+change checkout selection. The projection selects stages that describe each
 family's behavior and includes only recorded fact-reuse counts, execution
 results, and per-build resource measurements. The v1 reports do not record the
 effect and capability invalidation result; the projection leaves it explicitly
@@ -318,17 +326,20 @@ campaign duration, model identity, token use, or resource use outside the
 recorded build requests.
 
 When another verified environmental observation links one of these Compiler
-records through the exact identity, repository, commit, path, and SHA-256, the
-projection can expose that record's source campaign and work intent separately
-from the current Environment campaign that is reading it. Context is included
-only when the source pointer is registered and content-verified in the selected
-campaign evidence window. Conflicting source contexts are reported as
-ambiguous; the projection does not choose one. Without a matching verified
-supporting observation, source session context remains unavailable. This
-preserves source-work attribution without treating the reading agent's session
-as the origin of historical Compiler measurements. Other Compiler evidence
-remains available through the normal campaign evidence page until a bounded
-adapter is justified for its schema.
+records through the exact identity, repository, commit, path, and SHA-256, and
+provides an explicit `observation.source_session_context`, the projection can
+expose that source campaign and work intent separately from the supporting
+observation's own `related_work` and recording context. A pointer-only analysis
+does not attribute its reader's work to the Compiler source. Context is
+included only when the source pointer is registered and content-verified in
+the selected campaign evidence window. Conflicting source contexts are
+reported as ambiguous; the projection does not choose one. Without a matching
+verified supporting observation with explicit source context, Compiler source
+session context remains unavailable. This preserves source-work attribution
+without treating the reading agent's session as the origin of historical
+Compiler measurements. Other Compiler evidence remains available through the
+normal campaign evidence page until a bounded adapter is justified for its
+schema.
 
 The projection also adapts the exact Compiler
 `mncs.compiler.language-dependency-summary-cache-evidence/2` workload at

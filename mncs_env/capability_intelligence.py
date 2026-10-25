@@ -1507,7 +1507,8 @@ def _compact_projection(
                 for key in (
                     "campaign_id", "session_id", "work_intent_id", "work_intent_goal",
                     "environment_id", "repository", "repository_branch", "repository_head",
-                    "repository_context_basis",
+                    "repository_context_basis", "repository_branch_capture_status",
+                    "repository_head_capture_status",
                 )
                 if isinstance(source_context.get(key), str)
             }
@@ -1529,6 +1530,13 @@ def _compact_projection(
             compact_observation["observation"][
                 "source_session_context_resolution"
             ] = _short_text(source_context_resolution, 96)
+        repository_read_basis = observation.get("source_repository_read_basis")
+        if repository_read_basis in {
+            "selected-checkout", "workspace-read-only-checkout",
+        }:
+            compact_observation["observation"]["source_repository_read_basis"] = (
+                repository_read_basis
+            )
         projection_summary = observation.get("projection_summary")
         if isinstance(projection_summary, dict):
             summary_fields = (
@@ -3422,8 +3430,9 @@ def _load_observation(
 ) -> tuple[dict[str, Any] | None, str]:
     checkout = _checkout(session, reference["repository"], root)
     repository_read_basis = "selected-checkout"
-    if (checkout is None
-            and _is_compiler_native_application_proof_reference(reference)):
+    if (checkout is None and (
+            _is_compiler_native_application_proof_reference(reference)
+            or _is_compiler_regression_reference(reference))):
         checkout = _workspace_read_only_checkout(
             session, reference["repository"], root, deadline,
         )
@@ -3469,6 +3478,11 @@ def _load_observation(
         adapted = _compiler_regression_observation(session, reference, record)
         if adapted is None:
             return None, "observation-contract-invalid"
+        adapted_observation = adapted.get("observation")
+        if isinstance(adapted_observation, dict):
+            adapted_observation["source_repository_read_basis"] = (
+                repository_read_basis
+            )
         return adapted, "verified"
     observation = record.get("observation")
     related_work = record.get("related_work")
@@ -6226,8 +6240,9 @@ def project(
     Environmental observations under ``evidence/environmental-capability/``
     and exact allowlisted Compiler evidence families are read. Their exact Git
     commit and SHA-256 must be present in the authenticated campaign ledger.
-    The native application proof may also be read through the Environment's
-    bounded workspace-read-only authority when Compiler is not selected.
+    Exact allowlisted Compiler regression reports and the native application
+    proof may also be read through the Environment's bounded
+    workspace-read-only authority when Compiler is not selected.
     """
     if (type(max_result_bytes) is not int
             or max_result_bytes < 1 or max_result_bytes > MAX_RESULT_BYTES):
@@ -6758,15 +6773,20 @@ def project(
         tuple[str, str, str, str, str], set[tuple[tuple[str, str], ...]],
     ] = {}
     for source_record, _ in projected_records:
-        work = source_record.get("related_work")
-        work = work if isinstance(work, dict) else {}
+        source_observation = source_record.get("observation")
+        source_observation = (
+            source_observation if isinstance(source_observation, dict) else {}
+        )
+        source_context = source_observation.get("source_session_context")
+        source_context = source_context if isinstance(source_context, dict) else {}
         supporting_sources = source_record.get("supporting_sources")
         if not isinstance(supporting_sources, list):
             continue
-        campaign_id = work.get("campaign_id")
-        session_id = work.get("session_id")
+        campaign_id = source_context.get("campaign_id")
+        session_id = source_context.get("session_id")
         if (not isinstance(campaign_id, str) or not campaign_id
-                or not isinstance(session_id, str) or not session_id):
+                or not isinstance(session_id, str) or not session_id
+                or source_context.get("repository") != "mncs-compiler"):
             continue
         for source in supporting_sources[:16]:
             pointer = _validate_source_pointer(source)
@@ -6796,9 +6816,11 @@ def project(
             }
             for key in (
                 "work_intent_id", "work_intent_goal", "environment_id",
-                "definition_id",
+                "definition_id", "repository_branch", "repository_head",
+                "repository_branch_capture_status",
+                "repository_head_capture_status",
             ):
-                value = work.get(key)
+                value = source_context.get(key)
                 if isinstance(value, str) and value:
                     context[key] = value
             source_context_candidates.setdefault(source_key, set()).add(
@@ -6883,6 +6905,13 @@ def project(
         if isinstance(source_context_resolution, str) and source_context_resolution:
             projected_observation["source_session_context_resolution"] = (
                 source_context_resolution[:96]
+            )
+        repository_read_basis = observation.get("source_repository_read_basis")
+        if repository_read_basis in {
+            "selected-checkout", "workspace-read-only-checkout",
+        }:
+            projected_observation["source_repository_read_basis"] = (
+                repository_read_basis
             )
         if _is_compiler_regression_reference(reference):
             pointer_key = tuple(
