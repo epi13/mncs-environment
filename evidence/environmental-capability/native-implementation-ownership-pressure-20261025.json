@@ -1,0 +1,77 @@
+{
+  "captured_at": "2026-10-25T05:33:23Z",
+  "identity": "ev_environment_native_ownership_projection_pressure_20261025",
+  "measurement_basis": "read-only-compiler-proof-and-baseline-environment-projection-source",
+  "not_measured": [
+    "agent impact, attempted usage, or cross-agent discoverability",
+    "systemwide native adoption ratio and its denominator",
+    "production host dependency ownership or migration readiness"
+  ],
+  "observation": {
+    "kind": "native-implementation-ownership-projection-coverage",
+    "outcome": {
+      "agent_impact": "not-established",
+      "baseline_projection_support": "The baseline capability-intelligence implementation has no adapter for the tracked Compiler native-application-proof/2 evidence family.",
+      "production_host_dependency_status": "not-established-by-source-proof",
+      "source_proof_scope": "One compiler-proven application with four MNCS module sources and three successful canonical VM cases."
+    },
+    "request": {
+      "baseline_environment_commit": "dc45fa93209c4a5fce678466ba363ff91a291264",
+      "compiler_proof_identity": "ev_compiler_native_application_proof_digest_app_20261018"
+    },
+    "source_interface": "MNCS Environment capability-intelligence projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Project the exact authenticated Compiler proof and verify its module source pointers; keep the adoption denominator and production host migration readiness unmeasured until complete inventory evidence exists.",
+    "basis": "The baseline Environment projection did not adapt the tracked Compiler native-application proof, leaving its source-backed native ownership unavailable through this projection. This establishes a projection coverage gap, not evidence that an agent was blocked.",
+    "category": "capability-accountability-and-discoverability",
+    "identity": "ph_native_implementation_ownership_projection_20261025",
+    "not_measured": [
+      "whether agents attempted or failed to discover this native capability before the projection change",
+      "the complete MNCS native-versus-host implementation inventory and denominator",
+      "production host-language dependency ownership or migration eligibility",
+      "recurrence of this projection gap across independent sessions or repositories"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "not-established",
+    "subsystem": "MNCS Environment capability-intelligence projection",
+    "title": "Compiler-proven native ownership is not exposed by the Environment projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 23,
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_ff8a1d27e75f0e6b",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "identity": "ev_compiler_native_application_proof_digest_app_20261018",
+      "kind": "compiler-native-application-proof",
+      "path": "evidence/native-app-readiness-test-digest-app.json",
+      "repository": "mncs-compiler",
+      "sha256": "f0b2117709a50be49a636aa6fe0505eff42bff78477c28a602664c75edf89140"
+    },
+    {
+      "commit": "dc45fa93209c4a5fce678466ba363ff91a291264",
+      "identity": "ev_environment_native_ownership_projection_baseline_20261025",
+      "kind": "baseline-environmental-projection-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "bab1308d95f20d0967533b09978b4cae68252f992652c7dd68622d16fa8d7328"
+    }
+  ]
+}

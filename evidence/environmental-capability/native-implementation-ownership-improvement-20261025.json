@@ -1,0 +1,92 @@
+{
+  "captured_at": "2026-10-25T05:33:23Z",
+  "identity": "ev_environment_native_ownership_projection_improvement_20261025",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_native_implementation_ownership_projection_20261025",
+    "basis": "The focused capability-intelligence suite verifies the exact proof contract, four source blobs, failed-case rejection, and bounded compaction. The authenticated campaign_state read then surfaced one source-integrity-verified sample from the tracked Compiler proof; longer-term usage and discoverability remain unmeasured.",
+    "identity": "im_native_implementation_ownership_projection_20261025",
+    "implementation_reference": {
+      "commit": "bf46781796aaed521d61018b744cec4067e3dc57",
+      "identity": "ev_environment_native_ownership_projection_impl_20261025",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "110f2c22f23122e09be088f0da27e57676e56b011b260bc96ca2d99ed960ba3f"
+    },
+    "not_measured": [
+      "whether the same native capability is discoverable to different agents and models",
+      "whether any production host implementation is eligible for native migration",
+      "systemwide adoption ratio or denominator",
+      "long-term recurrence or effectiveness after independent subsequent sessions"
+    ],
+    "subsequent_observation_identity": null,
+    "verification_observation_identity": "ev_environment_native_ownership_projection_verification_20261025"
+  },
+  "measurement_basis": "committed-projection-change-linked-to-independent-tests-and-live-source-backed-readback",
+  "not_measured": [
+    "whether the projection has reduced real agent work or repeated investigations",
+    "systemwide native adoption ratio and migration opportunity",
+    "cross-agent discoverability and long-term effectiveness"
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "analysis_limit": "This proves the evidence path works for one selected proof. It does not establish production host migration readiness, broad capability discoverability, systemwide adoption, or long-term effectiveness.",
+      "effectiveness_assessment": "not-assessed",
+      "implementation_change": "The existing campaign evidence projection now adapts one exact Compiler native-application-proof/2 record, verifies its four MNCS module source blobs by repository commit path and digest, and exposes a bounded implementation_accountability sample.",
+      "verified_capability": "The authenticated live campaign_state projection surfaced the sample with four of four module sources integrity-verified and three successful canonical VM cases."
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_native_implementation_ownership_projection_20261025",
+      "implementation_commit": "bf46781796aaed521d61018b744cec4067e3dc57",
+      "subsequent_observation_identity": null,
+      "verification_observation_identity": "ev_environment_native_ownership_projection_verification_20261025"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 23,
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_ff8a1d27e75f0e6b",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "bf46781796aaed521d61018b744cec4067e3dc57",
+      "identity": "ev_environment_native_ownership_projection_impl_20261025",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "110f2c22f23122e09be088f0da27e57676e56b011b260bc96ca2d99ed960ba3f"
+    },
+    {
+      "commit": "bf46781796aaed521d61018b744cec4067e3dc57",
+      "identity": "ev_environment_native_ownership_projection_tests_20261025",
+      "kind": "committed-verification-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "75b66140e9d89424a17e920d05743365b4cd60482a91fab4f9e4ef64f5de89d7"
+    },
+    {
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "identity": "ev_compiler_native_application_proof_digest_app_20261018",
+      "kind": "compiler-native-application-proof",
+      "path": "evidence/native-app-readiness-test-digest-app.json",
+      "repository": "mncs-compiler",
+      "sha256": "f0b2117709a50be49a636aa6fe0505eff42bff78477c28a602664c75edf89140"
+    }
+  ]
+}
