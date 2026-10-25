@@ -1516,6 +1516,14 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
              "type": "capability.invoked",
              "observed_at": "2026-10-24T01:00:00Z"},
         ],
+        "binding_identity_attribution": {
+            "status": "not-recorded",
+            "complete_identity_count": 0,
+            "identity_unavailable_count": 2,
+            "basis": (
+                "provider-binding-id-contract-revision-on-capability-invoked-event"
+            ),
+        },
     }]
     delivery = activity["capability_delivery"]
     assert delivery["status"] == "ready"
@@ -1566,6 +1574,143 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
     )
     assert "private-source-path" not in json.dumps(activity)
     assert any("token usage" in item for item in activity["measurement_limits"])
+
+
+def test_capability_use_is_attributed_to_the_exact_historical_binding(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_exact_capability_use",
+        "ses_exact_capability_use",
+        "cmp_exact_capability_use",
+    )
+    session, _ = _session(tmp_path, [record])
+    capability = "mncs-native:process-run"
+    session.snapshot["bindings"] = [
+        {
+            "binding_id": "cap_process_provider_one",
+            "provider": "mncs-process-provider-one",
+            "capability": capability,
+            "contract_revision": "2",
+            "availability": {"status": "available"},
+        },
+        {
+            "binding_id": "cap_process_provider_two",
+            "provider": "mncs-process-provider-two",
+            "capability": capability,
+            "contract_revision": "3",
+            "availability": {"status": "available"},
+        },
+    ]
+    request_id = "req_exact_process_binding"
+    events = [
+        {
+            "identity": "evt_exact_process_invoked", "sequence": 1,
+            "type": "capability.invoked", "producer": "local-agent",
+            "observed_at": "2026-10-25T01:00:00Z",
+            "payload": {
+                "capability": capability,
+                "provider": "mncs-process-provider-one",
+                "binding_id": "cap_process_provider_one",
+                "contract_revision": "2",
+                "provider_request_id": request_id,
+            },
+        },
+        {
+            "identity": "evt_exact_process_completed", "sequence": 2,
+            "type": "invocation.completed", "producer": "mncs-process-provider-one",
+            "observed_at": "2026-10-25T01:00:01Z",
+            "payload": {
+                "capability": capability,
+                "provider": "mncs-process-provider-one",
+                "binding_id": "cap_process_provider_one",
+                "contract_revision": "2",
+                "provider_request_id": request_id,
+                "status": "ok",
+                "returncode": 0,
+            },
+        },
+    ]
+    session.recent_events = lambda *, limit: {
+        "event_count": len(events), "events": events[-limit:], "truncated": False,
+    }
+
+    activity = capability_intelligence.project(session)["session_activity"]
+
+    interaction = activity["interactions"][0]
+    assert interaction["binding_identity"] == {
+        "status": "complete",
+        "provider": "mncs-process-provider-one",
+        "binding_id": "cap_process_provider_one",
+        "contract_revision": "2",
+    }
+    capability_summary = activity["capabilities"][0]
+    assert capability_summary["binding_identity_attribution"] == {
+        "status": "recorded-for-all-invocations",
+        "complete_identity_count": 1,
+        "identity_unavailable_count": 0,
+        "basis": "provider-binding-id-contract-revision-on-capability-invoked-event",
+    }
+    delivery = activity["capability_delivery"]
+    provider_one = next(
+        item for item in delivery["bindings"]
+        if item["provider"] == "mncs-process-provider-one"
+    )
+    provider_two = next(
+        item for item in delivery["bindings"]
+        if item["provider"] == "mncs-process-provider-two"
+    )
+    assert provider_one["contract_revision"] == "2"
+    assert provider_one["binding_attribution_status"] == (
+        "exact-session-binding-observed-in-selected-window"
+    )
+    assert provider_one["invocation_count_basis"] == (
+        "exact-session-binding-identity"
+    )
+    assert provider_one["invocation_count"] == 1
+    assert provider_one["provider_attribution"] == (
+        "exact-provider-binding-id-and-contract-revision"
+    )
+    assert provider_one["supporting_events"][0]["identity"] == (
+        "evt_exact_process_invoked"
+    )
+    assert provider_two["binding_attribution_status"] == (
+        "exact-invocations-do-not-match-current-binding"
+    )
+    assert provider_two["use_observation_status"] == (
+        "capability-invoked; no-exact-invocation-for-this-binding"
+    )
+    assert provider_two["invocation_count"] == 0
+    assert provider_two["supporting_events"] == []
+
+    compact = capability_intelligence._compact_projection(
+        capability_intelligence.project(session),
+        100_000,
+        capability_intelligence.MAX_RESULT_BYTES,
+    )
+    compact_interaction = compact["session_activity"]["interactions"][0]
+    assert compact_interaction["binding_identity"]["binding_id"] == (
+        "cap_process_provider_one"
+    )
+    compact_bindings = compact["session_activity"]["capability_delivery"][
+        "bindings"
+    ]
+    compact_provider_one = next(
+        item for item in compact_bindings
+        if item["provider"] == "mncs-process-provider-one"
+    )
+    assert compact_provider_one["binding_attribution_status"] == (
+        "exact-session-binding-observed-in-selected-window"
+    )
+
+    events[1]["payload"]["binding_id"] = "cap_wrong_provider"
+    inconsistent = capability_intelligence.project(session)["session_activity"]
+    inconsistent_interaction = inconsistent["interactions"][0]
+    assert inconsistent_interaction["correlation_status"] == (
+        "provider-request-id-binding-identity-mismatch"
+    )
+    assert inconsistent_interaction["completion_event"] is None
+    assert inconsistent_interaction["outcome_status"] is None
 
 
 def test_session_resource_sample_is_correlated_sanitized_and_compactable(

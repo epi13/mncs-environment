@@ -519,14 +519,18 @@ their source event references. The projection labels capability discoverability
 `not-measured`: a binding proves Environment discovery and availability state,
 not that the capability was presented to or understood by the agent.
 Availability probes establish substrate presence, not successful provider
-behavior. Invocation events do not record provider or binding identity, so a
-name match cannot establish the exact provider or contract revision used and
-is ambiguous when multiple current bindings share a capability name. A missing
-invocation means no Environment invocation record in the selected event window,
-unless complete session history is available; it does not account for use
-through external interfaces. These relationships make availability and use
-inspectable without treating an absent record as evidence of poor
-discoverability or usability.
+behavior. New invocation start and completion records include the selected
+provider, binding ID, and contract revision. When all three are present, the
+projection attributes the use and outcome to that exact session binding; a
+same-name binding from another provider receives no attributed invocation.
+If start and completion records disagree about the binding identity, the
+completion is not joined to the invocation. Older events retain their
+capability-name-only counts and are explicitly marked as lacking binding
+attribution. A missing invocation means no Environment invocation record in
+the selected event window, unless complete session history is available; it
+does not account for use through external interfaces. These relationships make
+availability and recorded use inspectable without treating an absent record
+as evidence of poor discoverability or usability.
 
 `context_operation_activity` also summarizes authenticated `session.context`
 RPC records. New `/2` records preserve a bounded summary of the returned

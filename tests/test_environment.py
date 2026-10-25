@@ -4344,6 +4344,25 @@ class SessionTests(unittest.TestCase):
                 invoked_event["payload"]["provider_request_id"],
                 child_request_ids[0],
             )
+            self.assertEqual(
+                invoked_event["payload"]["provider"], binding["provider"],
+            )
+            self.assertEqual(
+                invoked_event["payload"]["binding_id"], binding["binding_id"],
+            )
+            self.assertEqual(
+                invoked_event["payload"]["contract_revision"],
+                binding["contract_revision"],
+            )
+            completed_event = next(
+                event for event in reversed(session._log())
+                if event.get("type") == "invocation.completed"
+            )
+            for identity_field in ("provider", "binding_id", "contract_revision"):
+                self.assertEqual(
+                    completed_event["payload"][identity_field],
+                    binding[identity_field],
+                )
 
     def test_session_invoke_restores_store_artifacts_after_process_reopen(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

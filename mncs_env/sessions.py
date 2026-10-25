@@ -4971,6 +4971,13 @@ class Session:
             if effect_verdict["verdict"] == "escalate":
                 return self._pending(capability, argv, required, effect_verdict["reason"])
         prepared_inputs = self._read_provider_input_artifacts(input_artifacts)
+        binding_identity = {
+            key: binding[key]
+            for key in ("provider", "binding_id", "contract_revision")
+            if (isinstance(binding.get(key), str)
+                and 1 <= len(binding[key]) <= 160
+                and "\x00" not in binding[key])
+        }
         input_provenance = [
             {key: value for key, value in item.items() if key != "content"}
             for item in prepared_inputs
@@ -5005,6 +5012,7 @@ class Session:
                 invocation_env["MNCS_ENV_RPC_REQUEST_ID"] = provider_request_id
                 self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
                            {"capability": capability, "argv": argv, "executor": executor,
+                            **binding_identity,
                             "effect_target": admitted_effect_target,
                             "input_artifacts": input_provenance,
                             "parent_request_id": parent_request_id,
@@ -5025,6 +5033,8 @@ class Session:
         result["input_artifacts"] = input_provenance
         self.snapshot.setdefault("artifacts", []).append(
             {"kind": "invocation-result", "capability": capability,
+             **{key: value for key, value in binding_identity.items()
+                if key != "binding_id"},
              "binding_id": binding.get("binding_id"),
              "status": result["status"], "executor": executor,
              "effect_target": admitted_effect_target,
@@ -5035,6 +5045,7 @@ class Session:
         )
         self._emit("invocation.completed", binding.get("provider", "unknown"),
                    {"capability": capability, "status": result["status"],
+                    **binding_identity,
                     "returncode": result["returncode"],
                     "input_artifacts": input_provenance,
                     "parent_request_id": parent_request_id,

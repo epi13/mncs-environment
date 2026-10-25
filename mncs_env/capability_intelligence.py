@@ -1234,8 +1234,10 @@ def _compact_delivery_binding(value: Any) -> dict[str, Any] | None:
         key: _short_text(value[key], limit)
         for key, limit in (
             ("provider", 128), ("capability", 192),
+            ("binding_id", 160), ("contract_revision", 160),
             ("availability_status", 48), ("use_observation_status", 96),
-            ("provider_attribution", 96),
+            ("provider_attribution", 96), ("invocation_count_basis", 96),
+            ("binding_attribution_status", 96),
         )
         if isinstance(value.get(key), str)
     }
@@ -2123,6 +2125,13 @@ def _compact_projection(
             )
             if isinstance(item.get(key), str)
         }
+        binding_identity = item.get("binding_identity")
+        if isinstance(binding_identity, dict):
+            compact_item["binding_identity"] = {
+                key: _short_text(binding_identity[key], 160)
+                for key in ("status", "provider", "binding_id", "contract_revision")
+                if isinstance(binding_identity.get(key), str)
+            }
         if type(item.get("returncode")) is int:
             compact_item["returncode"] = item["returncode"]
         for key in ("invocation_event", "completion_event"):
@@ -2151,6 +2160,20 @@ def _compact_projection(
         for key in ("invocation_count", "completion_count"):
             if type(item.get(key)) is int and item[key] >= 0:
                 compact_item[key] = item[key]
+        binding_attribution = item.get("binding_identity_attribution")
+        if isinstance(binding_attribution, dict):
+            compact_item["binding_identity_attribution"] = {
+                key: _short_text(binding_attribution[key], 128)
+                if isinstance(binding_attribution.get(key), str)
+                else binding_attribution[key]
+                for key in (
+                    "status", "complete_identity_count",
+                    "identity_unavailable_count", "basis",
+                )
+                if (isinstance(binding_attribution.get(key), str)
+                    or (type(binding_attribution.get(key)) is int
+                        and binding_attribution[key] >= 0))
+            }
         status_counts = item.get("outcome_status_counts")
         if isinstance(status_counts, dict):
             compact_item["outcome_status_counts"] = {
@@ -2222,6 +2245,8 @@ def _compact_projection(
             key: _short_text(item.get(key), 160)
             for key in (
                 "provider", "capability", "availability_status", "binding_id",
+                "contract_revision", "invocation_count_basis",
+                "binding_attribution_status",
                 "availability_verification", "availability_observed_at",
                 "use_observation_status", "provider_attribution",
             )
@@ -5894,6 +5919,30 @@ def _current_context_binding_snapshot_summary(
     }
 
 
+def _invocation_binding_identity(value: Any) -> dict[str, Any]:
+    """Retain exact binding provenance when an invocation event carries it."""
+    fields = ("provider", "binding_id", "contract_revision")
+    if not isinstance(value, dict):
+        return {"status": "not-recorded"}
+    present = any(key in value for key in fields)
+    identity = {
+        key: _short_text(value[key], 160)
+        for key in fields
+        if isinstance(value.get(key), str)
+        and 1 <= len(value[key]) <= 160
+        and "\x00" not in value[key]
+    }
+    if not present:
+        status = "not-recorded"
+    elif len(identity) == len(fields):
+        status = "complete"
+    elif identity:
+        status = "partial"
+    else:
+        status = "invalid"
+    return {"status": status, **identity}
+
+
 def _capability_delivery_view(
     snapshot: dict[str, Any], capability_summaries: list[dict[str, Any]],
     interactions: list[dict[str, Any]], events: list[dict[str, Any]],
@@ -6142,6 +6191,10 @@ def _capability_delivery_view(
             "availability_status": status,
             **({"binding_id": _short_text(raw["binding_id"], 160)}
                if isinstance(raw.get("binding_id"), str) and raw["binding_id"] else {}),
+            **({"contract_revision": _short_text(
+                raw["contract_revision"], 160,
+            )} if isinstance(raw.get("contract_revision"), str)
+                and raw["contract_revision"] else {}),
             **({"availability_verification": _short_text(
                 availability["verification"], 64,
             )} if isinstance(availability.get("verification"), str) else {}),
@@ -6151,6 +6204,10 @@ def _capability_delivery_view(
         })
 
     interaction_references: dict[str, list[dict[str, Any]]] = {}
+    identified_interactions_by_capability: dict[str, list[dict[str, Any]]] = {}
+    identified_interactions_by_binding: dict[
+        tuple[str, str, str, str], list[dict[str, Any]]
+    ] = {}
     for interaction in interactions:
         capability = interaction.get("capability")
         reference = interaction.get("invocation_event")
@@ -6162,10 +6219,28 @@ def _capability_delivery_view(
                     for key in ("identity", "sequence", "type")
                     if key in reference
                 })
+            binding_identity = interaction.get("binding_identity")
+            if (isinstance(binding_identity, dict)
+                    and binding_identity.get("status") == "complete"):
+                identified_interactions_by_capability.setdefault(
+                    capability, [],
+                ).append(interaction)
+                binding_key = (
+                    binding_identity["provider"], capability,
+                    binding_identity["binding_id"],
+                    binding_identity["contract_revision"],
+                )
+                identified_interactions_by_binding.setdefault(
+                    binding_key, [],
+                ).append(interaction)
 
     for binding in binding_records:
         capability = binding["capability"]
         summary = summary_by_capability.get(capability)
+        binding_identity_complete = all(
+            isinstance(binding.get(key), str) and binding[key]
+            for key in ("provider", "binding_id", "contract_revision")
+        )
         if summary is None:
             use_status = (
                 "no-environment-invocation-record-in-session-history"
@@ -6177,12 +6252,86 @@ def _capability_delivery_view(
             binding["completion_count"] = 0
             binding["outcome_status_counts"] = {}
             binding["supporting_events"] = []
+            binding["invocation_count_basis"] = "no-invocation-record"
+            binding["binding_attribution_status"] = (
+                "no-exact-binding-use-in-session-history"
+                if complete_history and binding_identity_complete else (
+                    "not-observed-in-selected-window"
+                    if binding_identity_complete else "binding-identity-incomplete"
+                )
+            )
+            continue
+        exact_for_capability = identified_interactions_by_capability.get(
+            capability, [],
+        )
+        exact_for_binding = (
+            identified_interactions_by_binding.get((
+                binding["provider"], capability, binding["binding_id"],
+                binding["contract_revision"],
+            ), [])
+            if binding_identity_complete else []
+        )
+        if exact_for_capability:
+            if exact_for_binding:
+                exact_outcomes: dict[str, int] = {}
+                for item in exact_for_binding:
+                    outcome = item.get("outcome_status")
+                    if isinstance(outcome, str):
+                        exact_outcomes[outcome] = exact_outcomes.get(outcome, 0) + 1
+                binding["use_observation_status"] = (
+                    "invoked-for-exact-session-binding"
+                )
+                binding["invocation_count"] = len(exact_for_binding)
+                binding["completion_count"] = sum(
+                    item.get("completion_event") is not None
+                    for item in exact_for_binding
+                )
+                binding["outcome_status_counts"] = exact_outcomes
+                binding["supporting_events"] = [
+                    {
+                        key: item["invocation_event"][key]
+                        for key in ("identity", "sequence", "type")
+                        if key in item["invocation_event"]
+                    }
+                    for item in exact_for_binding[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                    if isinstance(item.get("invocation_event"), dict)
+                ]
+                binding["provider_attribution"] = (
+                    "exact-provider-binding-id-and-contract-revision"
+                )
+                binding["invocation_count_basis"] = (
+                    "exact-session-binding-identity"
+                )
+                binding["binding_attribution_status"] = (
+                    "exact-session-binding-observed-in-selected-window"
+                )
+            else:
+                binding["use_observation_status"] = (
+                    "capability-invoked; no-exact-invocation-for-this-binding"
+                )
+                binding["invocation_count"] = 0
+                binding["completion_count"] = 0
+                binding["outcome_status_counts"] = {}
+                binding["supporting_events"] = []
+                binding["provider_attribution"] = (
+                    "exact-capability-invocation-attributed-to-another-binding"
+                )
+                binding["invocation_count_basis"] = (
+                    "exact-session-binding-identity"
+                )
+                binding["binding_attribution_status"] = (
+                    "exact-invocations-do-not-match-current-binding"
+                )
             continue
         binding["use_observation_status"] = "invoked-in-selected-event-window"
         binding["invocation_count"] = summary["invocation_count"]
         binding["completion_count"] = summary["completion_count"]
         binding["outcome_status_counts"] = dict(summary["outcome_status_counts"])
         binding["supporting_events"] = interaction_references.get(capability, [])
+        binding["invocation_count_basis"] = "capability-name-only"
+        binding["binding_attribution_status"] = (
+            "invocation-identity-not-recorded-on-event"
+        )
         binding["provider_attribution"] = (
             "ambiguous-current-bindings"
             if bindings_by_capability.get(capability, 0) > 1
@@ -6865,8 +7014,25 @@ def _session_activity(
             completion_sequence = completion.get("sequence")
             if (type(start_sequence) is int and type(completion_sequence) is int
                     and completion_sequence > start_sequence):
+                start_identity = _invocation_binding_identity(
+                    start.get("payload"),
+                )
+                completion_identity = _invocation_binding_identity(
+                    completion.get("payload"),
+                )
+                identity_mismatch = (
+                    start_identity.get("status") == "complete"
+                    and completion_identity.get("status") == "complete"
+                    and any(start_identity.get(key) != completion_identity.get(key)
+                            for key in (
+                                "provider", "binding_id", "contract_revision",
+                            ))
+                )
                 paired_by_start[id(start)] = (
-                    completion, "matched-by-provider-request-id",
+                    (None, "provider-request-id-binding-identity-mismatch")
+                    if identity_mismatch else (
+                        completion, "matched-by-provider-request-id",
+                    )
                 )
             else:
                 paired_by_start[id(start)] = (None, "completion-precedes-invocation")
@@ -6920,6 +7086,7 @@ def _session_activity(
             ),
             "invocation_event": invocation_reference,
             "completion_event": completion_reference,
+            "binding_identity": _invocation_binding_identity(payload),
         }
         interactions.append(interaction)
         if len(interactions) >= MAX_SESSION_ACTIVITY_INTERACTIONS:
@@ -6937,6 +7104,11 @@ def _session_activity(
             status = item.get("outcome_status")
             if isinstance(status, str):
                 status_counts[status] = status_counts.get(status, 0) + 1
+        binding_identity_count = sum(
+            isinstance(item.get("binding_identity"), dict)
+            and item["binding_identity"].get("status") == "complete"
+            for item in group
+        )
         capabilities.append({
             "capability": capability or None,
             "invocation_count": len(group),
@@ -6949,6 +7121,20 @@ def _session_activity(
                 for item in group[:MAX_CAPABILITY_SUPPORTING_EVENTS]
                 if isinstance(item.get("invocation_event"), dict)
             ],
+            "binding_identity_attribution": {
+                "status": (
+                    "recorded-for-all-invocations"
+                    if binding_identity_count == len(group) else (
+                        "partially-recorded"
+                        if binding_identity_count else "not-recorded"
+                    )
+                ),
+                "complete_identity_count": binding_identity_count,
+                "identity_unavailable_count": len(group) - binding_identity_count,
+                "basis": (
+                    "provider-binding-id-contract-revision-on-capability-invoked-event"
+                ),
+            },
         })
     all_capability_summaries = capabilities
     capabilities_omitted = max(
