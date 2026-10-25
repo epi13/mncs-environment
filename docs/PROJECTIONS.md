@@ -195,6 +195,18 @@ stays `not-measured`, and the candidate opportunity retains its readiness as
 `not-established` until independent implementation and verification evidence
 exists.
 
+Each verified owner-audit detail also exposes `pressure_source_links`. These
+links match its source-declared pressure identities against exact supporting
+source pointers carried by the same accountability observation. A match retains
+the source identity, repository, commit, path, digest, source kind, and content
+integrity status; the compact response preserves the same bounded references.
+Ambiguous identities, non-pressure source kinds, unverified sources, and IDs not
+found in the bounded source window remain distinct. The projection verifies
+pointer content integrity but does not reinterpret the referenced record's
+schema. A link makes an owner-declared pressure record traceable; it does not
+establish that the pressure blocks a specific host responsibility or that
+native migration is ready. Systemwide adoption remains `not-measured`.
+
 When the selected session has a capability-delivery view, the sample also
 exposes `selected_session_delivery_observation`. It compares the proof's
 canonical capability identity with that session's current binding snapshot and

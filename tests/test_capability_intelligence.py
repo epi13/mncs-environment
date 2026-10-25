@@ -3599,7 +3599,9 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
             "status": "native_canonical",
             "migration_order": 1,
             "next_native_slice": "native Commons pressure query materialization",
-            "existing_pressures": ["MNCS-TEST-P-004", "MNCS-TEST-P-006"],
+            "existing_pressures": [
+                "MNCS-TEST-P-004", "MNCS-TEST-P-006", "MNCS-TEST-P-999",
+            ],
             "native_semantic_projection": {
                 "test": "mncs.test.assertions.project_test",
                 "suite": "mncs.test.suite.project",
@@ -3625,6 +3627,7 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
         },
     }
     audit_references = []
+    pressure_references = []
     workspace_repositories = []
     for repository, record in audit_records.items():
         checkout = root / repository
@@ -3636,6 +3639,24 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
         raw = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
         (checkout / relative).write_bytes(raw)
         _git(checkout, "add", relative)
+        if repository == "mncs-test":
+            for identity, kind in (
+                ("MNCS-TEST-P-004", "repository-owner-language-and-runtime-pressure"),
+                ("MNCS-TEST-P-006", "repository-owner-native-result-transport-pressure"),
+            ):
+                pressure_path = f"pressures/{identity}.json"
+                pressure_record = {
+                    "identity": identity,
+                    "kind": kind,
+                    "schema_version": "mncs.test.pressure/1",
+                }
+                pressure_raw = json.dumps(
+                    pressure_record, sort_keys=True, separators=(",", ":"),
+                ).encode()
+                target = checkout / pressure_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(pressure_raw)
+                _git(checkout, "add", pressure_path)
         _git(checkout, "commit", "--quiet", "-m", "owner audit")
         commit = _git(checkout, "rev-parse", "HEAD")
         audit_references.append({
@@ -3646,6 +3667,21 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
             "path": relative,
             "sha256": hashlib.sha256(raw).hexdigest(),
         })
+        if repository == "mncs-test":
+            for identity, kind in (
+                ("MNCS-TEST-P-004", "repository-owner-language-and-runtime-pressure"),
+                ("MNCS-TEST-P-006", "repository-owner-native-result-transport-pressure"),
+            ):
+                pressure_path = f"pressures/{identity}.json"
+                pressure_raw = (checkout / pressure_path).read_bytes()
+                pressure_references.append({
+                    "identity": identity,
+                    "kind": kind,
+                    "repository": repository,
+                    "commit": commit,
+                    "path": pressure_path,
+                    "sha256": hashlib.sha256(pressure_raw).hexdigest(),
+                })
         workspace_repositories.append({
             "name": repository,
             "path": str(checkout),
@@ -3659,7 +3695,7 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
         / "evidence/environmental-capability/native-userland-accountability-20261025.json"
     )
     report = json.loads(source_path.read_text(encoding="utf-8"))
-    report["supporting_sources"] = audit_references
+    report["supporting_sources"] = audit_references + pressure_references
     session, _state = _session(tmp_path, [report])
     session.snapshot["authority"] = {"readable": ["workspace"]}
     session.snapshot["workspace"].update({
@@ -3708,8 +3744,26 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
     ][0]["eliminating_capability"]
     test_audit = details["mncs-test"]
     assert test_audit["existing_pressures"] == [
-        "MNCS-TEST-P-004", "MNCS-TEST-P-006",
+        "MNCS-TEST-P-004", "MNCS-TEST-P-006", "MNCS-TEST-P-999",
     ]
+    pressure_links = test_audit["pressure_source_links"]
+    assert pressure_links["status"] == "partially-linked"
+    assert pressure_links["causal_relation_status"] == "not-established"
+    links = {item["identity"]: item for item in pressure_links["links"]}
+    assert links["MNCS-TEST-P-004"]["status"] == (
+        "linked-to-integrity-verified-pressure-source"
+    )
+    assert links["MNCS-TEST-P-004"]["source_reference"]["path"] == (
+        "pressures/MNCS-TEST-P-004.json"
+    )
+    assert links["MNCS-TEST-P-006"]["status"] == (
+        "linked-to-integrity-verified-pressure-source"
+    )
+    assert links["MNCS-TEST-P-999"]["status"] == (
+        "no-matching-supporting-source-reference"
+    )
+    assert all(item["causal_relation_status"] == "not-established"
+               for item in pressure_links["links"])
     assert test_audit["responsibilities"][0]["classification"] == (
         "already_naturally_expressible_in_mncs"
     )
@@ -3735,8 +3789,92 @@ def test_native_userland_audit_projection_retains_verified_owner_blockers(
     ][0]["eliminating_capability"] == actions[
         "remaining_host_responsibilities"
     ][0]["eliminating_capability"]
+    compact_pressure_links = compact_by_repository["mncs-test"][
+        "pressure_source_links"
+    ]
+    assert compact_pressure_links["links"][0]["source_reference"]["sha256"] == (
+        links["MNCS-TEST-P-004"]["source_reference"]["sha256"]
+    )
+    assert compact_pressure_links["links"][2]["status"] == (
+        "no-matching-supporting-source-reference"
+    )
     assert compact["systemwide_native_adoption_ratio"]["status"] == (
         "not-measured"
+    )
+
+
+def test_owner_declared_pressure_links_keep_ambiguity_and_bounded_absence_explicit(
+) -> None:
+    def source(identity: str, path: str, kind: str) -> dict[str, str]:
+        return {
+            "identity": identity,
+            "kind": kind,
+            "repository": "mncs-test",
+            "commit": "a" * 40,
+            "path": path,
+            "sha256": hashlib.sha256(path.encode()).hexdigest(),
+        }
+
+    duplicate_one = source(
+        "MNCS-TEST-P-DUP", "pressures/first.json",
+        "repository-owner-language-pressure",
+    )
+    duplicate_two = source(
+        "MNCS-TEST-P-DUP", "pressures/second.json",
+        "repository-owner-language-pressure",
+    )
+    non_pressure = source(
+        "audit_mncs_test_native_userland_20261025",
+        "native-userland-audit.json", "repository-owner-native-userland-audit",
+    )
+    same_pointer_pressure = source(
+        "MNCS-TEST-P-KIND", "pressures/kind.json",
+        "repository-owner-language-pressure",
+    )
+    same_pointer_audit = {
+        **same_pointer_pressure,
+        "kind": "repository-owner-native-userland-audit",
+    }
+    complete = capability_intelligence._owner_declared_pressure_links(
+        [
+            "MNCS-TEST-P-DUP", "audit_mncs_test_native_userland_20261025",
+            "MNCS-TEST-P-KIND", "MISSING",
+        ],
+        [
+            duplicate_one, duplicate_two, non_pressure,
+            same_pointer_pressure, same_pointer_audit,
+        ], {},
+    )
+    assert complete is not None
+    statuses = {item["identity"]: item["status"] for item in complete["links"]}
+    assert statuses["MNCS-TEST-P-DUP"] == (
+        "ambiguous-supporting-source-references"
+    )
+    assert statuses["audit_mncs_test_native_userland_20261025"] == (
+        "identity-matches-non-pressure-source"
+    )
+    assert statuses["MNCS-TEST-P-KIND"] == (
+        "ambiguous-supporting-source-kinds"
+    )
+    assert statuses["MISSING"] == "no-matching-supporting-source-reference"
+
+    bounded_sources = [
+        source(f"unrelated-{index}", f"records/{index}.json", "other-source")
+        for index in range(
+            capability_intelligence.MAX_SOURCE_POINTER_VERIFICATIONS + 1
+        )
+    ]
+    bounded_sources[-1] = source(
+        "MNCS-TEST-P-LATE", "pressures/late.json",
+        "repository-owner-language-pressure",
+    )
+    bounded = capability_intelligence._owner_declared_pressure_links(
+        ["MNCS-TEST-P-LATE"], bounded_sources, {},
+    )
+    assert bounded is not None
+    assert bounded["supporting_source_window_truncated"] is True
+    assert bounded["links"][0]["status"] == (
+        "not-found-in-bounded-supporting-source-window"
     )
 
 

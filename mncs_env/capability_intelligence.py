@@ -843,6 +843,10 @@ def _compact_owner_audit_evidence(value: Any) -> dict[str, Any] | None:
             for source in sources[:8]
             if isinstance(source, dict)
         ]
+        if type(audit.get("supporting_source_references_truncated")) is bool:
+            compact_audit["supporting_source_references_truncated"] = audit[
+                "supporting_source_references_truncated"
+            ]
         raw_source_audits = audit.get("source_audit_details")
         raw_source_audits = (
             raw_source_audits if isinstance(raw_source_audits, list) else []
@@ -932,6 +936,60 @@ def _compact_owner_audit_evidence(value: Any) -> dict[str, Any] | None:
                     key: _short_text(projection.get(key), 192)
                     for key in ("test", "suite", "obligation_selection")
                     if isinstance(projection.get(key), str)
+                }
+            pressure_links = source_audit.get("pressure_source_links")
+            if isinstance(pressure_links, dict):
+                raw_links = pressure_links.get("links")
+                raw_links = raw_links if isinstance(raw_links, list) else []
+                compact_links = []
+                for link in raw_links[:MAX_NATIVE_USERLAND_AUDIT_ITEMS]:
+                    if not isinstance(link, dict):
+                        continue
+                    compact_link = {
+                        key: _short_text(link.get(key), 192)
+                        for key in (
+                            "identity", "status", "causal_relation_status",
+                            "source_content_integrity_status", "source_kind",
+                        )
+                        if isinstance(link.get(key), str)
+                    }
+                    source_reference = _validate_reference(
+                        link.get("source_reference"),
+                    )
+                    if source_reference is not None:
+                        compact_link["source_reference"] = source_reference
+                    if compact_link:
+                        compact_links.append(compact_link)
+                compact_source_audit["pressure_source_links"] = {
+                    **{
+                        key: _short_text(pressure_links.get(key), 256)
+                        for key in (
+                            "status", "relationship_basis",
+                            "causal_relation_status", "interpretation_limit",
+                        )
+                        if isinstance(pressure_links.get(key), str)
+                    },
+                    **({
+                        "supporting_source_count_examined": pressure_links[
+                            "supporting_source_count_examined"
+                        ],
+                    } if type(pressure_links.get(
+                        "supporting_source_count_examined",
+                    )) is int and pressure_links[
+                        "supporting_source_count_examined"
+                    ] >= 0 else {}),
+                    **({
+                        "supporting_source_window_truncated": pressure_links[
+                            "supporting_source_window_truncated"
+                        ],
+                    } if type(pressure_links.get(
+                        "supporting_source_window_truncated",
+                    )) is bool else {}),
+                    "links": compact_links,
+                    "links_truncated": (
+                        pressure_links.get("links_truncated") is True
+                        or len(raw_links) > len(compact_links)
+                    ),
                 }
             if compact_source_audit:
                 source_audits.append(compact_source_audit)
@@ -4160,6 +4218,7 @@ def _bounded_native_userland_responsibilities(value: Any) -> tuple[list[dict[str
 def _native_userland_audit_source_view(
     source: Any, source_payloads: dict[tuple[str, str, str, str], bytes],
     source_integrity: dict[tuple[str, str, str, str], str],
+    supporting_sources: list[Any] | None = None,
 ) -> dict[str, Any] | None:
     pointer = _validate_source_pointer(source)
     if pointer is None or not _is_native_userland_audit_source_pointer(pointer):
@@ -4208,6 +4267,13 @@ def _native_userland_audit_source_view(
         if values or isinstance(record.get(key), list):
             result[key] = values
             result[f"{key}_truncated"] = truncated
+    pressure_links = _owner_declared_pressure_links(
+        result.get("existing_pressures"), supporting_sources or [],
+        source_integrity,
+        identities_truncated=result.get("existing_pressures_truncated") is True,
+    )
+    if pressure_links is not None:
+        result["pressure_source_links"] = pressure_links
     for source_key in ("remaining_host_responsibilities", "responsibilities"):
         records, truncated = _bounded_native_userland_responsibilities(
             record.get(source_key),
@@ -4256,6 +4322,123 @@ def _native_userland_audit_source_view(
             if type(verification.get(key)) is bool:
                 result["verification_plan_ingestion"][key] = verification[key]
     return result
+
+
+def _owner_declared_pressure_links(
+    identities: Any, supporting_sources: list[Any],
+    source_integrity: dict[tuple[str, str, str, str], str], *,
+    identities_truncated: bool = False,
+) -> dict[str, Any] | None:
+    """Join owner-declared pressure IDs to exact source pointers in one observation."""
+    if not isinstance(identities, list):
+        return None
+    source_window = supporting_sources[:MAX_SOURCE_POINTER_VERIFICATIONS]
+    source_window_truncated = len(supporting_sources) > len(source_window)
+    by_identity: dict[str, list[tuple[dict[str, str], dict[str, Any]]]] = {}
+    for source in source_window:
+        pointer = _validate_source_pointer(source)
+        identity = source.get("identity") if isinstance(source, dict) else None
+        if pointer is None or not isinstance(identity, str) or not identity:
+            continue
+        by_identity.setdefault(identity, []).append((pointer, source))
+
+    links: list[dict[str, Any]] = []
+    for identity in identities[:MAX_NATIVE_USERLAND_AUDIT_ITEMS]:
+        if (not isinstance(identity, str) or not identity or len(identity) > 160
+                or "\x00" in identity):
+            links.append({
+                "identity": _short_text(identity, 160),
+                "status": "invalid-owner-declared-pressure-identity",
+                "causal_relation_status": "not-established",
+            })
+            continue
+        matches = by_identity.get(identity, [])
+        unique_matches: dict[tuple[str, str, str, str], tuple[
+            dict[str, str], list[dict[str, Any]],
+        ]] = {}
+        for pointer, source in matches:
+            key = _source_pointer_key(pointer)
+            if key not in unique_matches:
+                unique_matches[key] = (pointer, [])
+            unique_matches[key][1].append(source)
+        if not unique_matches:
+            status = (
+                "not-found-in-bounded-supporting-source-window"
+                if source_window_truncated
+                else "no-matching-supporting-source-reference"
+            )
+            links.append({
+                "identity": identity,
+                "status": status,
+                "causal_relation_status": "not-established",
+            })
+            continue
+        if len(unique_matches) != 1:
+            links.append({
+                "identity": identity,
+                "status": "ambiguous-supporting-source-references",
+                "causal_relation_status": "not-established",
+            })
+            continue
+
+        pointer, matched_sources = next(iter(unique_matches.values()))
+        source_kinds = sorted({
+            source["kind"] for source in matched_sources
+            if isinstance(source.get("kind"), str)
+        })
+        source_kind = source_kinds[0] if len(source_kinds) == 1 else None
+        integrity = _source_integrity_status(matched_sources[0], source_integrity)
+        normalized_kind = source_kind.lower() if source_kind is not None else ""
+        if len(source_kinds) > 1:
+            status = "ambiguous-supporting-source-kinds"
+        elif "pressure" not in normalized_kind and "audit" in normalized_kind:
+            status = "identity-matches-non-pressure-source"
+        elif "pressure" not in normalized_kind:
+            status = "source-kind-does-not-identify-pressure"
+        elif integrity in SOURCE_INTEGRITY_VERIFIED:
+            status = "linked-to-integrity-verified-pressure-source"
+        else:
+            status = "linked-to-pressure-source-content-not-verified"
+        link: dict[str, Any] = {
+            "identity": identity,
+            "status": status,
+            "causal_relation_status": "not-established",
+            "source_content_integrity_status": integrity,
+        }
+        if isinstance(source_kind, str):
+            link["source_kind"] = _short_text(source_kind, 128)
+        link["source_reference"] = dict(pointer)
+        links.append(link)
+
+    verified_link_count = sum(
+        item.get("status") == "linked-to-integrity-verified-pressure-source"
+        for item in links
+    )
+    if not identities:
+        status = "no-pressure-identities-declared"
+    elif verified_link_count == len(links) and not identities_truncated:
+        status = "all-projected-pressure-links-integrity-verified"
+    elif verified_link_count:
+        status = "partially-linked"
+    else:
+        status = "links-unverified-or-unavailable"
+    return {
+        "status": status,
+        "relationship_basis": (
+            "owner-declared pressure identities matched to source pointers in the "
+            "same accountability observation"
+        ),
+        "causal_relation_status": "not-established",
+        "supporting_source_count_examined": len(source_window),
+        "supporting_source_window_truncated": source_window_truncated,
+        "links": links,
+        "links_truncated": len(identities) > len(links),
+        "interpretation_limit": (
+            "A matching, integrity-verified pointer makes an owner-declared pressure "
+            "record traceable; it does not establish that the pressure blocks a "
+            "specific host responsibility or that native migration is ready."
+        ),
+    }
 
 
 def _implementation_accountability_projection(
@@ -4317,6 +4500,7 @@ def _implementation_accountability_projection(
                     source,
                     owner_audit_source_payloads or {},
                     source_integrity or {},
+                    supporting_sources=source_pointers,
                 )) is not None
             ]
             verified_owner_audit_details = sum(
@@ -4383,6 +4567,7 @@ def _implementation_accountability_projection(
                     for source in source_pointers[:8]
                     if isinstance(source, dict)
                 ],
+                "supporting_source_references_truncated": len(source_pointers) > 8,
                 "source_audit_details": owner_audit_source_details,
                 "source_audit_details_status": owner_audit_detail_status,
                 "source_audit_details_content_integrity_verified_count": (
