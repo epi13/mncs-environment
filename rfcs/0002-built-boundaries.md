@@ -48,6 +48,11 @@ gates. They require declared writable intent and a current session claim that
 covers the exact destination checkout or narrower path. Selected-checkout
 resolution supplies that destination when the caller names only the
 repository; explicit scopes remain available for a separate merge target.
+An already-writable repository may bind a different Control-verified registered
+checkout without a second owner token. This changes the checkout selected for
+existing repository authority, not the repository set. New repository scope
+still requires an exact owner-approved grant. Claims continue to fence the
+selected destination, and overlapping foreign claims deny mutation.
 When an isolated campaign needs a destination outside its checkout directory,
 Environment accepts only a registered worktree anchored to the selected
 checkout's same Git common directory and repository manifest identity; it does

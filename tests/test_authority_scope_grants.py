@@ -995,6 +995,84 @@ def test_scope_grant_binds_an_owner_selected_checkout_for_an_already_writable_re
         session.close()
 
 
+def test_campaign_writable_checkout_binding_needs_no_second_owner_grant(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(
+        tmp_path / "state", workspace, acquire_environment_claim=False,
+    )
+    try:
+        repository = "mncs-environment"
+        assert repository in session.effective_authority()["writable"]
+        checkout, checkout_facts = _nested_target_checkout(
+            session,
+            workspace,
+            "campaign-writable-checkout",
+            "campaign/writable-checkout",
+            repository=repository,
+        )
+        reference = (
+            f"campaign-writable-checkout:{CAMPAIGN}:{repository}:{session.session_id}"
+        )
+
+        grant = session.grant_repository_scope(
+            repository=repository,
+            campaign_id=CAMPAIGN,
+            expected_authority_revision=session.effective_authority()["revision"],
+            approval_reference=reference,
+            owner_authorized_checkout=checkout_facts,
+            campaign_writable_checkout=True,
+            authenticated_principal_id=PRINCIPAL,
+            request_id="req_campaign_writable_checkout_binding",
+        )
+
+        assert grant["authorization_basis"] == "campaign-writable-checkout"
+        assert grant["repository_identity"]["path"] == str(checkout)
+        assert repository in session.effective_authority()["writable"]
+        claim = session.acquire_claim(
+            repository,
+            reason="claim the exact campaign-writable checkout",
+            request_id="req_campaign_writable_checkout_claim",
+        )
+        assert claim["scope"]["checkout"] == str(checkout)
+    finally:
+        session.close()
+
+
+def test_campaign_writable_checkout_binding_cannot_add_a_repository(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(
+        tmp_path / "state", workspace, acquire_environment_claim=False,
+    )
+    try:
+        repository = "mncs-control-mcp"
+        reference = (
+            f"campaign-writable-checkout:{CAMPAIGN}:{repository}:{session.session_id}"
+        )
+        with pytest.raises(
+            sessions.AuthorityDenied,
+            match="cannot add a repository to campaign write scope",
+        ):
+            session.grant_repository_scope(
+                repository=repository,
+                campaign_id=CAMPAIGN,
+                expected_authority_revision=session.effective_authority()["revision"],
+                approval_reference=reference,
+                owner_authorized_checkout={"path": "untrusted"},
+                campaign_writable_checkout=True,
+                authenticated_principal_id=PRINCIPAL,
+                request_id="req_campaign_writable_checkout_cannot_expand",
+            )
+        assert session.authority_scope_grants() == []
+    finally:
+        session.close()
+
+
 def test_owner_checkout_replaces_initial_repository_selection_on_first_grant(
     tmp_path: Path,
 ) -> None:

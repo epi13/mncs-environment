@@ -51,6 +51,14 @@ old execution, and atomically transfers the claim into the selected scope.
 Foreign owners, multiple overlapping claims, active executions, or incomplete
 host observations still fail closed.
 
+When a campaign already has write authority for a repository, Control may bind
+one exact registered checkout in that same repository without a second
+per-campaign approval token. Environment rechecks the campaign's existing
+writable scope and records the checkout selection; this cannot add another
+repository. Expanding a campaign to a new repository still requires an exact
+owner-approved scope grant. The selected checkout remains subject to the
+normal live-claim and Git-state checks for mutation.
+
 The authenticated project continuation capsule may select one Environment
 session for that short-lived grant. Control can then expose a narrow,
 read-only `artifact-read` operation for the System Monitor resource sample.

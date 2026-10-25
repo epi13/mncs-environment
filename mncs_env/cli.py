@@ -792,6 +792,7 @@ def cmd_scope_grant(args: argparse.Namespace) -> int:
             expected_authority_revision=args.expected_authority_revision,
             approval_reference=args.approval_reference,
             owner_authorized_checkout=owner_authorized_checkout,
+            campaign_writable_checkout=args.campaign_writable_checkout,
             authenticated_principal_id=os.environ.get("MNCS_ENV_AUTH_PRINCIPAL_ID"),
             request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"),
         )
@@ -2373,6 +2374,7 @@ def build_parser() -> argparse.ArgumentParser:
     scope_grant.add_argument("--expected-authority-revision", required=True)
     scope_grant.add_argument("--approval-reference", required=True)
     scope_grant.add_argument("--owner-authorized-checkout-json", default=None)
+    scope_grant.add_argument("--campaign-writable-checkout", action="store_true")
     scope_grant.set_defaults(func=cmd_scope_grant)
 
     invoke = session_parser("invoke", "invoke a bound capability")
