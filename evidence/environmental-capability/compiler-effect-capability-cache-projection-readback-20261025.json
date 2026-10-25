@@ -1,0 +1,141 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_cache_projection_readback_20261025",
+  "captured_at": "2026-10-25T14:07:46Z",
+  "measurement_basis": "bounded-live-environmental-capability-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent"
+  },
+  "observation": {
+    "kind": "compiler-regression-source-integrity-and-adaptation-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "command": "mncs-env projections ses_5530f63cd8293e03 --interpret environmental-capability --history-pages 1 --evidence-offset 4 --evidence-limit 4",
+      "campaign_evidence_offset": 4,
+      "campaign_evidence_limit": 4,
+      "campaign_evidence_count": 8,
+      "projection_checkpoint_id": "chk_a028984eea82f6ac"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "page_observations": {
+        "observation_count": 1,
+        "observation_records_verified": 1,
+        "observation_records_unavailable": 3,
+        "verified_environment_observation_identity": "ev_environment_compiler_cache_agent_context_gap_20261025"
+      },
+      "compiler_regression_records": {
+        "registered_count": 3,
+        "adapted_observation_count": 0,
+        "reference_verification_status": "outside-selected-session",
+        "identities": [
+          "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+          "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+          "ev_compiler_digest_application_interface_invalidation_20261023"
+        ],
+        "source_session_context_resolution": "not-produced-because-compiler-records-were-not-adapted"
+      },
+      "supporting_source_integrity": {
+        "source_pointer_count": 4,
+        "content_integrity_verified_count": 4,
+        "content_integrity_not_verified_count": 0,
+        "compiler_pointer_verification_basis": "workspace-read-only-content-integrity-verified",
+        "write_authority_added_for_mncs_compiler": false
+      },
+      "pressure_hypothesis_readback": {
+        "identity": "ph_compiler_regression_agent_context_20261025",
+        "appeared_in_projection": true,
+        "interpretation": "hypothesis",
+        "recurrence_status": "not-established",
+        "evidence_reference_identity": "ev_environment_compiler_cache_agent_context_gap_20261025"
+      },
+      "capability_accountability": {
+        "source_integrity": "verified-for-all-four-supporting-pointers",
+        "environmental_observation": "verified-and-queryable",
+        "compiler_report_adaptation": "not-available-for-these-references-without-a-compiler-selected-checkout",
+        "agent_discoverability_or_successful_use": "not-measured"
+      }
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_compiler_regression_readonly_projection_20261025",
+    "title": "Environment verifies Compiler blobs read-only but does not adapt the regression reports",
+    "category": "environmental-capability-integration",
+    "subsystem": "Environment cross-repository Compiler evidence projection",
+    "owner": "mncs-environment maintainers",
+    "basis": "The bounded projection verifies the exact content of all three Compiler report pointers through workspace read-only access, but returns each report as outside-selected-session and adapts zero Compiler observations. The same page verifies and exposes the Environmental pressure hypothesis. This establishes an integration boundary in this session, not recurrence across other agents or sessions.",
+    "actionable_recommendation": "Extend the existing allowlisted Compiler regression adapter to read exact digest-verified report blobs through the bounded workspace read-only checkout when Compiler is not selected; preserve the current write-authority boundary and live claim rules.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether other sessions encounter the same cross-repository projection boundary",
+      "whether Compiler agents can discover or successfully use the current Environmental analysis",
+      "whether adapting these reports changes Compiler development outcomes",
+      "whether any of the three records came from distinct Compiler sessions"
+    ]
+  },
+  "not_measured": [
+    "the originating Compiler agent, model, session, campaign, or work intent",
+    "cross-agent or cross-session recurrence",
+    "whether an authenticated read-only Compiler scope should be added to this Environment definition",
+    "causal improvement in agent capability from adapting the records",
+    "host-language implementation ownership or native migration readiness"
+  ],
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_626be396de28e0d8",
+      "session_id": "ses_5530f63cd8293e03",
+      "operation": "environmental-capability-projection-readback"
+    },
+    {
+      "kind": "environmental-observation",
+      "repository": "mncs-environment",
+      "commit": "10547332366a753e3e114b72b92d2824a6cd0d62",
+      "path": "evidence/environmental-capability/compiler-effect-capability-cache-provenance-20261025.json",
+      "identity": "ev_environment_compiler_cache_agent_context_gap_20261025",
+      "sha256": "a55f795b5f5c470d86e666f81b15ab9b49c02cd7f7260d0b9af34ec78b0ba495"
+    },
+    {
+      "kind": "committed-environment-capability-intelligence-adapter",
+      "repository": "mncs-environment",
+      "commit": "603839ee09b2ba2736e24a34036aeeee8be1d62c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "f7991c1b749676e08952d750694b2582834d033072b3f842072413d31f02003a"
+    },
+    {
+      "kind": "compiler-effect-capability-cache-regression",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    },
+    {
+      "kind": "compiler-generic-specialization-cache-regression",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+      "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e"
+    },
+    {
+      "kind": "compiler-interface-cache-regression",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/language-module-interface-application-invalidation-compiler-20261023.json",
+      "identity": "ev_compiler_digest_application_interface_invalidation_20261023",
+      "sha256": "ce67f0ff837bba0ff73301cb398198da5ff9125e8fe8cb75c45c5f26a1715177"
+    }
+  ]
+}
