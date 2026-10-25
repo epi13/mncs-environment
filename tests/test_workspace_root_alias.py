@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from mncs_env import sessions, workspace  # noqa: E402
+from mncs_env.session_store import open_store  # noqa: E402
 
 
 class ControlWorkspaceAliasTests(unittest.TestCase):
@@ -111,6 +112,70 @@ class ControlWorkspaceAliasTests(unittest.TestCase):
             identity["git_common_directory_identity"],
             campaign_facts["git_common_directory_identity"],
         )
+
+    def test_session_claim_can_target_registered_main_through_mount_alias(self) -> None:
+        state = self.base / "state"
+        store = open_store(state, "store", verify_on_open=False)
+        environment = sessions.resolve_environment(
+            definition={
+                "name": "workspace-alias-claim-test",
+                "intent": {
+                    "goal": "claim the registered main checkout from an isolated campaign",
+                    "repositories": ["mncs-environment"],
+                },
+            },
+            workspace_root=ROOT,
+            state_dir=state,
+            consumer_id="workspace-alias-test",
+            store=store,
+        )
+        session = sessions.Session.create(
+            state_dir=state,
+            environment=environment,
+            consumer_id="workspace-alias-test",
+            store=store,
+        )
+        self.addCleanup(session.close)
+        session.transition("resolving", "test")
+        session.transition("ready", "test")
+        session.transition("active", "test")
+
+        campaign_facts = workspace.verify_registered_checkout(
+            self.campaign,
+            repository="mncs-environment",
+            workspace_root=self.mount,
+            expected_branch="campaign/test",
+        )
+        session.snapshot["workspace"]["root"] = str(self.alias)
+        session.snapshot["selected_checkouts"] = {"mncs-environment": {
+            "repository": "mncs-environment",
+            "path": str(self.alias / "mncs-environment" / ".worktrees" / "campaign"),
+            "branch": "campaign/test",
+            "head": campaign_facts["head"],
+            "checkout_identity": campaign_facts["checkout_identity"],
+            "git_common_directory_identity": campaign_facts[
+                "git_common_directory_identity"
+            ],
+            "manifest_identity": campaign_facts["manifest_identity"],
+            "observed_path": campaign_facts["observed_path"],
+            "clean": True,
+        }}
+        session._save()
+
+        with self._control_mount():
+            claim = session.acquire_claim(
+                "mncs-environment",
+                scope={
+                    "kind": "worktree",
+                    "checkout": str(self.alias / "mncs-environment"),
+                    "branch": "main",
+                },
+                reason="claim registered main through the verified Control workspace mount alias",
+            )
+
+        self.assertEqual(claim["status"], "held")
+        self.assertEqual(claim["scope"]["checkout"], str(self.repository))
+        self.assertEqual(claim["scope"]["branch"], "main")
 
     def test_only_exact_control_mount_alias_is_accepted(self) -> None:
         with self._control_mount():
