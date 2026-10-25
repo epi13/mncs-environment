@@ -1,0 +1,74 @@
+{
+  "captured_at": "2026-10-25T14:56:44Z",
+  "identity": "ev_environment_checkout_workspace_mount_alias_verification_20261025",
+  "measurement_basis": "targeted regression tests, protected-runtime checkout verification, repository test suite, and vertical proof",
+  "not_measured": [
+    "authenticated Environment scope-grant RPC completion",
+    "cross-agent recurrence and improvement effect",
+    "post-change resource overhead"
+  ],
+  "observation": {
+    "kind": "environmental-checkout-authorization-verification",
+    "source_interface": "MNCS Environment targeted verification and MNCS Control protected runtime",
+    "request": {
+      "operation": "verify_control_workspace_mount_alias_resolution",
+      "authorized_repository": "mncs-environment"
+    },
+    "outcome": {
+      "status": "verified-with-one-unrelated-suite-failure",
+      "protected_runtime_resolution": "passed",
+      "new_workspace_alias_regressions": "2 passed",
+      "existing_registered_checkout_regressions": "2 passed",
+      "vertical_proof": "passed",
+      "full_suite": {
+        "passed": 930,
+        "skipped": 81,
+        "failed": 1,
+        "failure": "test_projection_cli_defaults_to_capability_page_limit expects the former page size 32 while the existing CLI default is 2"
+      },
+      "interpretation": "The authorization correction passed its focused tests and the integration proof. The full suite has one unrelated projection default expectation mismatch; no test in the changed checkout-verification code failed."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "consumer_id": "local-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_4179379f9332b176",
+    "session_id": "ses_5530f63cd8293e03"
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "identity": "src_environment_control_workspace_alias_regression_4427ed4",
+      "repository": "mncs-environment",
+      "commit": "4427ed4d7e7327b5df2def934d9a059a4516469d",
+      "path": "tests/test_workspace_root_alias.py",
+      "sha256": "5acaf616fb77aa085381268afb23d65ea0847318a782484d9f8009d7eed66bda"
+    },
+    {
+      "command": "python3 -m pytest tests/test_workspace_root_alias.py -q",
+      "kind": "verification-command",
+      "repository": "mncs-environment",
+      "result": "2 passed"
+    },
+    {
+      "command": "python3 scripts/vertical_proof.py",
+      "kind": "verification-command",
+      "repository": "mncs-environment",
+      "result": "VERTICAL PROOF: PASS"
+    },
+    {
+      "command": "python3 -m pytest tests/ -q",
+      "kind": "verification-command",
+      "repository": "mncs-environment",
+      "result": "930 passed, 81 skipped, 1 unrelated failure"
+    }
+  ]
+}

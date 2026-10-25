@@ -1,0 +1,76 @@
+{
+  "captured_at": "2026-10-25T14:56:44Z",
+  "identity": "ev_environment_checkout_workspace_mount_alias_improvement_20261025",
+  "measurement_basis": "protected-Control-runtime reproduction after the scoped workspace-alias resolver was integrated",
+  "not_measured": [
+    "completion of the authenticated Environment scope-grant RPC, whose provider transport was unavailable during this campaign turn",
+    "recurrence across future sessions and agents",
+    "whether the correction changes subsequent development outcomes",
+    "resource cost changes"
+  ],
+  "observation": {
+    "kind": "environmental-checkout-authorization-improvement",
+    "source_interface": "MNCS Control protected runtime invoking Environment selected-checkout verification",
+    "request": {
+      "operation": "_verified_scope_checkout",
+      "selected_checkout_branch": "main",
+      "authorized_anchor_branch": "campaign/environment-native-userland-projection-20261025",
+      "workspace_mount": "/workspace"
+    },
+    "outcome": {
+      "status": "selected-registered-checkout-resolved",
+      "selected_checkout_identity_matches": true,
+      "authorized_anchor_common_directory_matches": true,
+      "resolved_checkout": "/workspace/mncs-environment/.worktrees/campaign-main-checkout-20261025",
+      "interpretation": "The authenticated workspace alias is now normalized only when it resolves to the active /workspace mount; the selected main checkout and authorized feature-worktree anchor still pass independent Git identity checks."
+    }
+  },
+  "improvement_relation": {
+    "identity": "ir_environment_checkout_workspace_mount_alias_20261025",
+    "addresses_hypothesis_identity": "pr_environment_checkout_workspace_mount_alias_20261025",
+    "implementation_reference": {
+      "identity": "src_environment_control_workspace_alias_resolver_4427ed4",
+      "repository": "mncs-environment",
+      "commit": "4427ed4d7e7327b5df2def934d9a059a4516469d",
+      "path": "mncs_env/workspace.py",
+      "sha256": "2c0fd6699642162af46b4c60f79543d1f731765b5dde9b60dbf85a57ddc6840f"
+    },
+    "verification_observation_identity": "ev_environment_checkout_workspace_mount_alias_verification_20261025",
+    "subsequent_observation_identity": null,
+    "basis": "The resolver accepts only the verified Control /workspace mount alias, while the live protected-runtime check and regression tests confirm that registered branch and common-directory identities remain required.",
+    "not_measured": [
+      "end-to-end scope-grant RPC completion",
+      "future recurrence or cross-agent improvement effect"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "consumer_id": "local-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_4179379f9332b176",
+    "session_id": "ses_5530f63cd8293e03"
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "identity": "src_environment_control_workspace_alias_resolver_4427ed4",
+      "repository": "mncs-environment",
+      "commit": "4427ed4d7e7327b5df2def934d9a059a4516469d",
+      "path": "mncs_env/workspace.py",
+      "sha256": "2c0fd6699642162af46b4c60f79543d1f731765b5dde9b60dbf85a57ddc6840f"
+    },
+    {
+      "kind": "protected-runtime-probe",
+      "repository": "mncs-environment",
+      "sandbox_backend": "bwrap",
+      "tool": "MNCS Control terminal"
+    }
+  ]
+}

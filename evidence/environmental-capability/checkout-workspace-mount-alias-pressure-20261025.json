@@ -1,0 +1,57 @@
+{
+  "captured_at": "2026-10-25T14:56:44Z",
+  "identity": "ev_environment_checkout_workspace_mount_alias_pressure_20261025",
+  "measurement_basis": "protected-Control-runtime reproduction of selected registered checkout verification using the authenticated workspace path",
+  "not_measured": [
+    "frequency of this failure across other agent sessions",
+    "cross-agent discoverability or usability differences",
+    "whether the failure changed a completed development outcome",
+    "resource consumption attributable to checkout verification"
+  ],
+  "observation": {
+    "kind": "environmental-checkout-authorization-pressure",
+    "source_interface": "MNCS Control protected runtime invoking Environment selected-checkout verification",
+    "request": {
+      "operation": "_verified_scope_checkout",
+      "selected_checkout_branch": "main",
+      "authorized_anchor_branch": "campaign/environment-native-userland-projection-20261025",
+      "workspace_mount": "/workspace"
+    },
+    "outcome": {
+      "status": "blocked-before-git-identity-validation",
+      "error": "authorized Environment workspace root is not canonical",
+      "interpretation": "The Control sandbox's host-path symlink to its /workspace bind mount failed the Environment root equality check before Git registration and checkout identity could be verified."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "pr_environment_checkout_workspace_mount_alias_20261025",
+    "title": "Control workspace mount aliases block authorized branch checkout",
+    "category": "coordination",
+    "subsystem": "Environment checkout authorization",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Resolve the host-path alias only when it targets the verified active /workspace mount, then retain Git worktree registration, branch, and identity checks."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "consumer_id": "local-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_4179379f9332b176",
+    "session_id": "ses_5530f63cd8293e03"
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "kind": "protected-runtime-probe",
+      "repository": "mncs-environment",
+      "sandbox_backend": "bwrap",
+      "tool": "MNCS Control terminal"
+    }
+  ]
+}
