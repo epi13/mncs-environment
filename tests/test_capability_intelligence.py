@@ -3123,7 +3123,7 @@ def test_improvement_relation_without_followup_preserves_unassessed_status(
 
 
 def test_campaign_state_bootstrap_pressure_projects_live_events_and_unassessed_fix(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch,
 ) -> None:
     evidence_root = (
         Path(__file__).resolve().parents[1]
@@ -3139,8 +3139,42 @@ def test_campaign_state_bootstrap_pressure_projects_live_events_and_unassessed_f
         for path in identities
     ]
     session, _ = _session(tmp_path, records)
+    session.session_id = "ses_c6b0d153689d7388"
+    session.snapshot["campaign"]["identity"] = (
+        "cmp_environment_authorization_delivery_20261025"
+    )
+    session.snapshot["intent"] = {
+        "identity": "int_8475157f281c835f",
+        "goal": "exercise canonical Environment persistence through the Control socket",
+    }
+    event_identities = [
+        "evt_2d6c52f29a035119",
+        "evt_6d42a18434bf9eb3",
+        "evt_68d77c4ca086168b",
+    ]
+    activity = {
+        "status": "ready",
+        "source": {
+            "event_window_truncated": False,
+            "rpc_operation_records_omitted": 0,
+            "rpc_operation_records_invalid": 0,
+            "rpc_operation_capture_limit_reached": False,
+            "rpc_operation_events_considered": len(event_identities),
+            "rpc_operation_records_returned": len(event_identities),
+        },
+        "rpc_operations": [
+            {"event_reference": {"identity": identity}}
+            for identity in event_identities
+        ],
+    }
+    monkeypatch.setattr(
+        capability_intelligence,
+        "_session_activity",
+        lambda *_args, **_kwargs: activity,
+    )
 
     result = capability_intelligence.project(session)
+    compact = capability_intelligence.project(session, max_result_bytes=12_000)
 
     assert result["status"] == "ready"
     assert result["observation_count"] == 3
@@ -3158,6 +3192,12 @@ def test_campaign_state_bootstrap_pressure_projects_live_events_and_unassessed_f
         "evt_6d42a18434bf9eb3",
         "evt_68d77c4ca086168b",
     ]
+    assert event_source["event_reference_status"] == (
+        "all-referenced-events-present"
+    )
+    assert compact["observations"][0]["supporting_sources"][0][
+        "event_reference_status"
+    ] == "all-referenced-events-present"
 
     assert result["improvement_relation_count"] == 1
     relation = result["improvement_relations"][0]
@@ -3171,6 +3211,84 @@ def test_campaign_state_bootstrap_pressure_projects_live_events_and_unassessed_f
     )
     assert relation["subsequent_record_status"] == "not-recorded"
     assert relation["effectiveness_assessment"] == "not-assessed"
+
+
+def test_session_event_reference_status_preserves_selection_and_window_limits() -> None:
+    source = {
+        "kind": "authenticated-session-activity-projection",
+        "repository": "mncs-environment",
+        "campaign_id": "cmp_event_reference_status",
+        "session_id": "ses_event_reference_status",
+        "event_identities": ["evt_event_one", "evt_event_two"],
+    }
+    activity = {
+        "source": {
+            "event_window_truncated": False,
+            "rpc_operation_records_omitted": 0,
+            "rpc_operation_records_invalid": 0,
+            "rpc_operation_capture_limit_reached": False,
+            "rpc_operation_events_considered": 2,
+            "rpc_operation_records_returned": 2,
+        },
+        "rpc_operations": [
+            {"event_reference": {"identity": "evt_event_one"}},
+            {"event_reference": {"identity": "evt_event_two"}},
+        ],
+    }
+
+    assert capability_intelligence._authenticated_session_event_reference_status(
+        source, selected_session_id="ses_event_reference_status", activity=activity,
+    ) == "all-referenced-events-present"
+    assert capability_intelligence._authenticated_session_event_reference_status(
+        source, selected_session_id="ses_other", activity=activity,
+    ) == "source-session-not-selected"
+
+    partial_activity = {
+        **activity,
+        "rpc_operations": [
+            {"event_reference": {"identity": "evt_event_one"}},
+            {"event_reference": {"identity": "evt_unreferenced"}},
+        ],
+    }
+    assert capability_intelligence._authenticated_session_event_reference_status(
+        source,
+        selected_session_id="ses_event_reference_status",
+        activity=partial_activity,
+    ) == "some-referenced-events-present"
+
+    bounded_activity = {
+        "source": {"event_window_truncated": True},
+        "rpc_operations": [],
+    }
+    assert capability_intelligence._authenticated_session_event_reference_status(
+        source,
+        selected_session_id="ses_event_reference_status",
+        activity=bounded_activity,
+    ) == "unresolved-in-bounded-session-view"
+
+    incomplete_activity = {
+        "source": {
+            "event_window_truncated": False,
+            "rpc_operation_records_omitted": 0,
+            "rpc_operation_records_invalid": 0,
+            "rpc_operation_capture_limit_reached": False,
+            "rpc_operation_events_considered": 0,
+            "rpc_operation_records_returned": 0,
+        },
+        "rpc_operations": [],
+    }
+    assert capability_intelligence._authenticated_session_event_reference_status(
+        source,
+        selected_session_id="ses_event_reference_status",
+        activity=incomplete_activity,
+    ) == "no-referenced-events-in-selected-session-activity"
+
+    invalid_source = {**source, "event_identities": ["evt_event_one"] * 2}
+    assert capability_intelligence._authenticated_session_event_reference_status(
+        invalid_source,
+        selected_session_id="ses_event_reference_status",
+        activity=activity,
+    ) == "invalid-source-reference"
 
 
 def test_improvement_record_does_not_count_as_another_pressure_occurrence(

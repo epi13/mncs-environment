@@ -1116,7 +1116,7 @@ def _compact_projection(
                 key: _short_text(source.get(key), 128)
                 for key in ("kind", "campaign_evidence_identity", "campaign_id",
                             "session_id", "status", "registration_scope",
-                            "content_integrity_status")
+                            "content_integrity_status", "event_reference_status")
                 if isinstance(source.get(key), str)
             }
             event_identities = source.get("event_identities")
@@ -2825,6 +2825,45 @@ def _validate_captured_session_activity_reference(source: Any) -> bool:
     )
 
 
+def _authenticated_session_event_reference_status(
+    source: Any, *, selected_session_id: str, activity: dict[str, Any],
+) -> str:
+    """Resolve a captured event pointer only against the selected bounded view."""
+    if not _validate_captured_session_activity_reference(source):
+        return "invalid-source-reference"
+    if source["session_id"] != selected_session_id:
+        return "source-session-not-selected"
+    raw_operations = activity.get("rpc_operations")
+    raw_operations = raw_operations if isinstance(raw_operations, list) else []
+    visible_event_ids = {
+        reference.get("identity")
+        for operation in raw_operations
+        if isinstance(operation, dict)
+        and isinstance(reference := operation.get("event_reference"), dict)
+        and isinstance(reference.get("identity"), str)
+    }
+    expected_event_ids = set(source["event_identities"])
+    matched_event_ids = expected_event_ids & visible_event_ids
+    if matched_event_ids == expected_event_ids:
+        return "all-referenced-events-present"
+    if matched_event_ids:
+        return "some-referenced-events-present"
+    activity_source = activity.get("source")
+    activity_source = activity_source if isinstance(activity_source, dict) else {}
+    bounded = (
+        activity_source.get("event_window_truncated") is True
+        or activity_source.get("rpc_operation_records_omitted", 0) > 0
+        or activity_source.get("rpc_operation_records_invalid", 0) > 0
+        or activity_source.get("rpc_operation_capture_limit_reached") is True
+        or activity_source.get("rpc_operation_events_considered", 0)
+        > activity_source.get("rpc_operation_records_returned", 0)
+    )
+    return (
+        "unresolved-in-bounded-session-view"
+        if bounded else "no-referenced-events-in-selected-session-activity"
+    )
+
+
 def _validate_improvement_relation(value: Any) -> dict[str, Any] | None:
     """Validate explicit links from a pressure hypothesis to change evidence."""
     if not isinstance(value, dict):
@@ -4256,6 +4295,11 @@ def project(
         except (StoreIntegrityFailure, StoreUnavailable):
             campaign_state = None
     state = campaign_state if isinstance(campaign_state, dict) else {}
+    activity = _session_activity(
+        session, snapshot,
+        event_before_sequence=session_event_before_sequence,
+        event_limit=session_event_limit,
+    )
     page_truncated = bool(state.get("evidence_truncated", False))
     history_states = [state]
     history_truncated = False
@@ -4862,6 +4906,17 @@ def project(
                     "content_integrity_status": _source_integrity_status(
                         source, source_integrity,
                     ),
+                    **({
+                        "event_reference_status": (
+                            _authenticated_session_event_reference_status(
+                                source,
+                                selected_session_id=session.session_id,
+                                activity=activity,
+                            )
+                        ),
+                    } if isinstance(source, dict) and source.get("kind") == (
+                        "authenticated-session-activity-projection"
+                    ) else {}),
                 }
                 for source in effective_sources[:16]
             ],
@@ -4952,11 +5007,6 @@ def project(
     else:
         status = "no-observations"
     hypotheses = _recurrence(observations)
-    activity = _session_activity(
-        session, snapshot,
-        event_before_sequence=session_event_before_sequence,
-        event_limit=session_event_limit,
-    )
     if campaign_state is None:
         activity_samples = activity.get("resource_samples")
         activity_samples = (
@@ -5172,6 +5222,7 @@ def project(
                 "Context pressure candidates are derived hypotheses from declared repository and selected-checkout mismatch plus bounded source visibility; they do not establish impact or recurrence and do not authorize selecting an outside repository.",
             ] if context_pressure_candidates else []),
             "Session activity summarizes only the bounded recent event tail and exposes no raw invocation arguments or results.",
+            "Authenticated session-event source pointers are checked against the selected session's bounded RPC activity; other sessions are marked unselected and missing events in partial views remain unresolved.",
             "Session resource samples read the newest bounded Store-backed Monitor invocation per binding and preserve session, objective, event, and artifact provenance; a host snapshot does not attribute resource consumption to an agent.",
             "Authority denial activity exposes normalized action and reason classes with event references; raw targets and free-form reasons are omitted.",
             "Authenticated Control read-operation events include a measured Control-dispatch elapsed time, which includes session-queue wait and is not total agent execution duration; model identity, token usage, resource consumption, and cache accounting remain unavailable.",
