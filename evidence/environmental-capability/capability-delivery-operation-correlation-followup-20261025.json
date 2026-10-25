@@ -1,0 +1,72 @@
+{
+  "captured_at": "2026-10-25T13:38:10Z",
+  "identity": "ev_environment_capability_delivery_rpc_correlation_followup_20261025",
+  "measurement_basis": "authenticated-session-event-references-verified-through-environmental-capability-projection",
+  "not_measured": [
+    "whether the projection RPC operations were mediated by either named capability binding",
+    "cross-agent use or discoverability",
+    "cross-session recurrence",
+    "whether the capability-delivery evidence view changes an agent outcome",
+    "total agent execution duration, token/cache usage, and resource consumption"
+  ],
+  "observation": {
+    "kind": "capability-delivery-rpc-correlation-source-followup",
+    "outcome": {
+      "capability_binding_relationship": "not-established",
+      "event_identities": [
+        "evt_3084f43a1f595e5c",
+        "evt_9d89c5b8ebf8194a"
+      ],
+      "interpretation": "This follow-up republishes the same two authenticated session RPC events with the source kind recognized by the projection. It is a source-reference verification follow-up, not a new agent occurrence, new independent pressure sample, or evidence that the capability bindings mediated the calls.",
+      "same_event_observations_as": "ev_environment_capability_delivery_rpc_correlation_20261025",
+      "source_reference_contract": "authenticated-session-activity-projection",
+      "successful_operations": [
+        "environmental-capability.projection"
+      ]
+    },
+    "request": {
+      "event_identities": [
+        "evt_3084f43a1f595e5c",
+        "evt_9d89c5b8ebf8194a"
+      ],
+      "operation": "resolve_authenticated_projection_rpc_event_references",
+      "session_id": "ses_5530f63cd8293e03"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "consumer_id": "local-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_4179379f9332b176",
+    "session_id": "ses_5530f63cd8293e03"
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "campaign_id": "cmp_626be396de28e0d8",
+      "event_identities": [
+        "evt_3084f43a1f595e5c",
+        "evt_9d89c5b8ebf8194a"
+      ],
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "session_id": "ses_5530f63cd8293e03"
+    },
+    {
+      "commit": "579ef9a7267197f5b847617c98fc7fa5a641f7e9",
+      "identity": "ev_environment_capability_delivery_rpc_correlation_20261025",
+      "kind": "campaign-evidence-reference",
+      "path": "evidence/environmental-capability/capability-delivery-operation-correlation-20261025.json",
+      "repository": "mncs-environment",
+      "sha256": "39977514cfe355e36117eba7327907981e52d70e6d8154391e45ff0d031d02c9"
+    }
+  ]
+}
