@@ -749,6 +749,116 @@ def test_append_only_correction_requires_exact_verified_observation_pointer(
     ]
 
 
+def test_append_only_evidence_reference_correction_recovers_exact_record(
+    tmp_path: Path,
+) -> None:
+    def project_pointer_correction(root: Path, *, corrupt_target_digest: bool):
+        target = _observation(
+            "ev_environment_pointer_correctable",
+            "ses_environment_pointer_correction",
+            "cmp_environment_pointer_correction",
+        )
+        session, state = _session(root, [target])
+        original_reference = dict(state["evidence"][0])
+        unavailable_reference = {**original_reference, "commit": "f" * 40}
+        state["evidence"][0] = unavailable_reference
+
+        target_reference = dict(unavailable_reference)
+        replacement_reference = dict(original_reference)
+        if corrupt_target_digest:
+            target_reference["sha256"] = "e" * 64
+            replacement_reference["sha256"] = "e" * 64
+
+        correction = _observation(
+            "ev_environment_pointer_correction",
+            "ses_environment_pointer_correction",
+            "cmp_environment_pointer_correction",
+        )
+        correction.pop("pressure_hypothesis")
+        correction["observation"]["kind"] = "campaign-evidence-pointer-correction"
+        correction["evidence_reference_correction"] = {
+            "schema_version": (
+                capability_intelligence.EVIDENCE_REFERENCE_CORRECTION_SCHEMA
+            ),
+            "target_reference": target_reference,
+            "replacement_reference": replacement_reference,
+            "reason": "Correct the recorded commit while preserving exact observation bytes.",
+        }
+        relative = "evidence/environmental-capability/pointer-correction.json"
+        raw = json.dumps(
+            correction, sort_keys=True, separators=(",", ":"),
+        ).encode()
+        checkout = Path(session.snapshot["selected_checkouts"][
+            "mncs-environment"
+        ]["path"])
+        correction_path = checkout / relative
+        correction_path.write_bytes(raw)
+        _git(checkout, "add", relative)
+        _git(checkout, "commit", "--quiet", "-m", "append-only pointer correction")
+        state["evidence"].append({
+            "identity": correction["identity"],
+            "repository": "mncs-environment",
+            "commit": _git(checkout, "rev-parse", "HEAD"),
+            "path": relative,
+            "sha256": hashlib.sha256(raw).hexdigest(),
+        })
+        state["evidence_count"] = len(state["evidence"])
+        return capability_intelligence.project(session)
+
+    recovered = project_pointer_correction(
+        tmp_path / "recovered", corrupt_target_digest=False,
+    )
+    assert recovered["status"] == "ready"
+    assert recovered["source"]["observation_records_unavailable"] == 0
+    assert recovered["source"]["evidence_reference_correction_count"] == 1
+    assert recovered["source"]["evidence_reference_corrections_applied_count"] == 1
+    assert recovered["source"]["evidence_reference_corrections_unverified_count"] == 0
+    corrected_target = next(
+        item for item in recovered["observations"]
+        if item["identity"] == "ev_environment_pointer_correctable"
+    )
+    assert corrected_target["evidence_reference"]["commit"] != "f" * 40
+    assert corrected_target["evidence_reference_correction"]["status"] == (
+        "recovered-from-append-only-correction"
+    )
+    assert corrected_target["evidence_reference_correction"][
+        "recorded_reference"
+    ]["commit"] == "f" * 40
+    correction_view = next(
+        item for item in recovered["observations"]
+        if item["identity"] == "ev_environment_pointer_correction"
+    )
+    assert correction_view["evidence_reference_correction"]["status"] == (
+        "applied-to-exact-unavailable-target"
+    )
+    compact = capability_intelligence._compact_projection(
+        recovered, 100_000, 24_000,
+    )
+    compact_target = next(
+        item for item in compact["observations"]
+        if item["identity"] == "ev_environment_pointer_correctable"
+    )
+    assert compact_target["evidence_reference_correction"]["status"] == (
+        "recovered-from-append-only-correction"
+    )
+    assert compact["source"]["evidence_reference_corrections_applied_count"] == 1
+
+    mismatched = project_pointer_correction(
+        tmp_path / "mismatched", corrupt_target_digest=True,
+    )
+    assert mismatched["status"] == "partial"
+    assert mismatched["source"]["observation_records_unavailable"] == 1
+    assert mismatched["source"]["evidence_reference_corrections_applied_count"] == 0
+    assert mismatched["source"]["evidence_reference_corrections_unverified_count"] == 1
+    mismatched_correction = next(
+        item for item in mismatched["observations"]
+        if item["identity"] == "ev_environment_pointer_correction"
+    )
+    assert mismatched_correction["evidence_reference_correction"]["status"] == (
+        "target-reference-mismatch"
+    )
+
+
 def test_compact_projection_retains_newest_observation_tail(tmp_path: Path) -> None:
     identities = [f"ev_environment_compact_tail_{index:02d}" for index in range(10)]
     record = _observation(

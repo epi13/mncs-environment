@@ -29,6 +29,9 @@ from .store_backend import StoreIntegrityFailure, StoreUnavailable
 SCHEMA = "mncs.environment.capability-intelligence/1"
 OBSERVATION_SCHEMA = "mncs.environment.environmental-observation/1"
 OBSERVATION_CORRECTION_SCHEMA = "mncs.environment.observation-correction/1"
+EVIDENCE_REFERENCE_CORRECTION_SCHEMA = (
+    "mncs.environment.evidence-reference-correction/1"
+)
 CAMPAIGN_CHARTER_SCHEMA = "mncs.environment.campaign-charter/1"
 OBSERVATION_PATH_PREFIX = "evidence/environmental-capability/"
 COMPILER_CACHE_REGRESSION_SCHEMA_V1 = (
@@ -93,6 +96,7 @@ MAX_OBSERVATION_BYTES = 64 * 1024
 MAX_SOURCE_BYTES = 512 * 1024
 MAX_OBSERVATION_READ_SECONDS = 8.0
 MAX_SOURCE_POINTER_VERIFICATIONS = 32
+MAX_EVIDENCE_REFERENCE_CORRECTIONS = 8
 MAX_CAMPAIGN_CHARTER_CANDIDATES = 4
 MAX_CAMPAIGN_CHARTER_OBJECTIVE_CHARS = 4096
 MAX_RESULT_BYTES = 48 * 1024
@@ -652,7 +656,11 @@ def _compact_projection(
                     "observation_records_unavailable",
                     "record_correction_count",
                     "record_corrections_applied_count",
-                    "record_corrections_unverified_count")
+                    "record_corrections_unverified_count",
+                    "evidence_reference_correction_count",
+                    "evidence_reference_corrections_applied_count",
+                    "evidence_reference_corrections_unverified_count",
+                    "evidence_reference_correction_target_reads")
         if key in source and (
             key in {"previous_evidence_offset", "next_evidence_offset"}
             or source.get(key) is not None
@@ -692,6 +700,10 @@ def _compact_projection(
         "improvement_relations_unverified_count",
         "record_correction_count", "record_corrections_applied_count",
         "record_corrections_unverified_count",
+        "evidence_reference_correction_count",
+        "evidence_reference_corrections_applied_count",
+        "evidence_reference_corrections_unverified_count",
+        "evidence_reference_correction_target_reads",
     ):
         if type(source.get(key)) is int and source[key] > 0:
             compact_source[key] = source[key]
@@ -962,6 +974,25 @@ def _compact_projection(
             ] if isinstance(measurement_limits, list) else [],
             "evidence_reference": item["evidence_reference"],
         }
+        pointer_correction = item.get("evidence_reference_correction")
+        if isinstance(pointer_correction, dict):
+            compact_pointer_correction = {
+                key: _short_text(pointer_correction.get(key), 160)
+                for key in (
+                    "status", "correction_observation_identity",
+                    "target_identity", "reason", "replacement_verification",
+                )
+                if isinstance(pointer_correction.get(key), str)
+            }
+            for key in (
+                "target_reference", "replacement_reference", "recorded_reference",
+            ):
+                pointer = _validate_source_pointer(pointer_correction.get(key))
+                if pointer is not None:
+                    compact_pointer_correction[key] = pointer
+            compact_observation["evidence_reference_correction"] = (
+                compact_pointer_correction
+            )
         measurement_summary = _compact_measurement_summary(observation.get("outcome"))
         if measurement_summary is not None:
             compact_observation["observation"]["measurement_summary"] = (
@@ -2979,6 +3010,41 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
     }
 
 
+def _validate_evidence_reference_correction(
+    value: Any,
+) -> dict[str, Any] | None:
+    """Validate an append-only correction to one exact campaign source pointer.
+
+    A pointer correction may change only the commit. Identity, selected
+    repository, path, and content digest must remain identical so the
+    replacement can recover the same observation bytes from a verified commit.
+    """
+    if not isinstance(value, dict):
+        return None
+    target = _validate_reference(value.get("target_reference"))
+    replacement = _validate_reference(value.get("replacement_reference"))
+    reason = value.get("reason")
+    if (value.get("schema_version") != EVIDENCE_REFERENCE_CORRECTION_SCHEMA
+            or target is None or replacement is None
+            or "sha256" not in target or "sha256" not in replacement
+            or not _is_observation_reference(target)
+            or not _is_observation_reference(replacement)
+            or not target["identity"].startswith("ev_environment_")
+            or not target["path"].startswith(OBSERVATION_PATH_PREFIX)
+            or any(target.get(key) != replacement.get(key) for key in (
+                "identity", "repository", "path", "sha256",
+            ))
+            or target["commit"] == replacement["commit"]
+            or not isinstance(reason, str) or not reason or len(reason) > 512):
+        return None
+    return {
+        "schema_version": EVIDENCE_REFERENCE_CORRECTION_SCHEMA,
+        "target_reference": target,
+        "replacement_reference": replacement,
+        "reason": reason,
+    }
+
+
 def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for observation in observations:
@@ -4452,6 +4518,135 @@ def project(
     observations: list[dict[str, Any]] = []
     improvement_relations: list[dict[str, Any]] = []
     projected_records = verified_records[:MAX_OBSERVATIONS]
+    pointer_correction_status_by_record: dict[str, dict[str, Any]] = {}
+    pointer_correction_candidates: dict[
+        str, list[tuple[dict[str, Any], dict[str, Any], int, int]]
+    ] = {}
+    pointer_correction_unverified_count = 0
+    pointer_correction_read_count = 0
+    reference_positions = {
+        reference.get("identity"): position
+        for position, reference in enumerate(references)
+        if isinstance(reference.get("identity"), str)
+    }
+    references_by_identity = {
+        reference["identity"]: reference
+        for reference in references
+        if isinstance(reference.get("identity"), str)
+    }
+    for correction_record, _correction_record_reference in projected_records:
+        raw_pointer_correction = correction_record.get(
+            "evidence_reference_correction",
+        )
+        if raw_pointer_correction is None:
+            continue
+        correction = _validate_evidence_reference_correction(
+            raw_pointer_correction,
+        )
+        if correction is None:
+            pointer_correction_status_by_record[correction_record["identity"]] = {
+                "status": "recorded-but-contract-unverified",
+            }
+            pointer_correction_unverified_count += 1
+            continue
+        target = correction["target_reference"]
+        target_identity = target["identity"]
+        selected_target = references_by_identity.get(target_identity)
+        if selected_target is None:
+            status = "target-not-present-in-selected-pages"
+        elif any(selected_target.get(key) != target.get(key) for key in (
+            "identity", "repository", "commit", "path", "sha256",
+        )):
+            status = "target-reference-mismatch"
+        elif selected_target.get("verification") == (
+            "not-read-page-observation-budget"
+        ):
+            status = "target-not-read-page-budget"
+        elif selected_target.get("verification") == "verified":
+            status = "target-already-verified"
+        else:
+            status = None
+        if status is not None:
+            pointer_correction_status_by_record[correction_record["identity"]] = {
+                "status": status,
+                "target_identity": target_identity,
+                "target_reference": target,
+            }
+            pointer_correction_unverified_count += 1
+            continue
+        target_position = reference_positions.get(target_identity)
+        correction_position = reference_positions.get(correction_record["identity"])
+        if (target_position is None or correction_position is None
+                or target_position >= correction_position):
+            pointer_correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-prior-to-correction",
+                "target_identity": target_identity,
+                "target_reference": target,
+            }
+            pointer_correction_unverified_count += 1
+            continue
+        pointer_correction_candidates.setdefault(target_identity, []).append((
+            correction_record, correction, target_position, correction_position,
+        ))
+
+    recovered_records: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    pointer_corrections_applied_count = 0
+    for target_identity, candidates in pointer_correction_candidates.items():
+        if len(candidates) != 1:
+            pointer_correction_unverified_count += len(candidates)
+            for correction_record, _correction, _target_position, _ in candidates:
+                pointer_correction_status_by_record[correction_record["identity"]] = {
+                    "status": "conflicting-corrections-for-target",
+                    "target_identity": target_identity,
+                }
+            continue
+        correction_record, correction, target_position, _ = candidates[0]
+        if pointer_correction_read_count >= MAX_EVIDENCE_REFERENCE_CORRECTIONS:
+            pointer_correction_status_by_record[correction_record["identity"]] = {
+                "status": "correction-read-limit-reached",
+                "target_identity": target_identity,
+            }
+            pointer_correction_unverified_count += 1
+            continue
+        pointer_correction_read_count += 1
+        replacement = correction["replacement_reference"]
+        recovered_record, replacement_status = _load_observation(
+            session, replacement, root, deadline=read_deadline,
+        ) if root is not None else (None, "workspace-unavailable")
+        if recovered_record is None or replacement_status != "verified":
+            pointer_correction_status_by_record[correction_record["identity"]] = {
+                "status": "replacement-reference-not-verified",
+                "target_identity": target_identity,
+                "target_reference": correction["target_reference"],
+                "replacement_reference": replacement,
+                "replacement_verification": replacement_status,
+            }
+            pointer_correction_unverified_count += 1
+            continue
+        old_reference = dict(references[target_position])
+        corrected_reference = {
+            **replacement,
+            "verification": "verified",
+            "corrected_from_reference": {
+                key: old_reference[key]
+                for key in ("identity", "repository", "commit", "path", "sha256")
+                if old_reference.get(key) is not None
+            },
+            "correction_observation_identity": correction_record["identity"],
+        }
+        references[target_position] = corrected_reference
+        references_by_identity[target_identity] = corrected_reference
+        unavailable = max(0, unavailable - 1)
+        recovered_records.append((recovered_record, corrected_reference))
+        pointer_correction_status_by_record[correction_record["identity"]] = {
+            "status": "applied-to-exact-unavailable-target",
+            "target_identity": target_identity,
+            "target_reference": correction["target_reference"],
+            "replacement_reference": replacement,
+            "reason": correction["reason"],
+        }
+        pointer_corrections_applied_count += 1
+    projected_records = (projected_records + recovered_records)[:MAX_OBSERVATIONS]
     observation_reference_diagnostics = []
     for reference in references:
         if not _is_observation_reference(reference):
@@ -4961,6 +5156,47 @@ def project(
                 key: reference[key]
                 for key in ("identity", "repository", "commit", "path", "sha256")
             },
+            **({
+                "evidence_reference_correction": {
+                    **{
+                        key: value
+                        for key, value in pointer_correction_status_by_record[
+                            record["identity"]
+                        ].items()
+                        if key in {
+                            "status", "target_identity", "reason",
+                            "replacement_verification",
+                        }
+                    },
+                    **({
+                        "target_reference": pointer_correction_status_by_record[
+                            record["identity"]
+                        ]["target_reference"]
+                    } if pointer_correction_status_by_record[
+                        record["identity"]
+                    ].get("target_reference") is not None else {}),
+                    **({
+                        "replacement_reference": pointer_correction_status_by_record[
+                            record["identity"]
+                        ]["replacement_reference"]
+                    } if pointer_correction_status_by_record[
+                        record["identity"]
+                    ].get("replacement_reference") is not None else {}),
+                }
+            } if record["identity"] in pointer_correction_status_by_record else {}),
+            **({
+                "evidence_reference_correction": {
+                    "status": "recovered-from-append-only-correction",
+                    "correction_observation_identity": reference[
+                        "correction_observation_identity"
+                    ],
+                    "recorded_reference": reference[
+                        "corrected_from_reference"
+                    ],
+                }
+            } if isinstance(reference.get("corrected_from_reference"), dict)
+                and isinstance(reference.get("correction_observation_identity"), str)
+                else {}),
         })
         if improvement is not None:
             implementation_status = _source_status(
@@ -5031,6 +5267,7 @@ def project(
         unavailable or skipped_by_page_budget or history_truncated or not history_consistent
         or unverified_improvement_relation_count
         or unverified_record_correction_count
+        or pointer_correction_unverified_count
     ):
         status = "partial"
     elif observations:
@@ -5170,6 +5407,24 @@ def project(
                 ),
             } if any(
                 record.get("record_correction") is not None
+                for record, _ in projected_records
+            ) else {}),
+            **({
+                "evidence_reference_correction_count": sum(
+                    record.get("evidence_reference_correction") is not None
+                    for record, _ in projected_records
+                ),
+                "evidence_reference_corrections_applied_count": (
+                    pointer_corrections_applied_count
+                ),
+                "evidence_reference_corrections_unverified_count": (
+                    pointer_correction_unverified_count
+                ),
+                "evidence_reference_correction_target_reads": (
+                    pointer_correction_read_count
+                ),
+            } if any(
+                record.get("evidence_reference_correction") is not None
                 for record, _ in projected_records
             ) else {}),
             "observation_reference_diagnostics": (
