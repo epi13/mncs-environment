@@ -1,0 +1,92 @@
+{
+  "captured_at": "2026-10-25T05:44:00Z",
+  "identity": "ev_environment_capability_delivery_accountability_improvement_20261025",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_capability_delivery_accountability_20261025",
+    "basis": "The compact projection now joins the current Environment binding snapshot to bounded invocation outcomes and exact source event references. It distinguishes substrate availability from verified provider behavior and marks agent-facing discoverability not measured. Focused tests and an authenticated live campaign_state read verified the path; external tool usage and longer-term effectiveness remain unmeasured.",
+    "identity": "im_environment_capability_delivery_accountability_20261025",
+    "implementation_reference": {
+      "commit": "9503aa37ef81e4421c9ceb47afeb43bb7410fd42",
+      "identity": "ev_environment_capability_delivery_accountability_impl_20261025",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "a61a7c4efa6031924c91581325662bd823f86a189bd871a80f66eba2bbb99e8d"
+    },
+    "not_measured": [
+      "whether the join has improved capability discovery across agents or models",
+      "whether absent Environment invocation records indicate use through other interfaces",
+      "cross-session recurrence or long-term reduction in environmental friction"
+    ],
+    "subsequent_observation_identity": null,
+    "verification_observation_identity": "ev_environment_capability_delivery_accountability_verification_20261025"
+  },
+  "measurement_basis": "committed-capability-projection-change-linked-to-independent-tests-and-live-session-readback",
+  "not_measured": [
+    "whether agent-facing discoverability improved",
+    "whether capabilities were used through direct external interfaces",
+    "long-term effectiveness after subsequent independent sessions"
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "analysis_limit": "This establishes an inspectable availability-to-recorded-use path for the current Environment session. It does not measure agent discovery, external interface usage, provider correctness, or long-term effectiveness.",
+      "effectiveness_assessment": "not-assessed",
+      "implementation_change": "The existing Environmental Capability Intelligence projection now exposes a bounded capability binding and use view in compact responses, retaining availability and invocation source event references.",
+      "verified_capability": "An authenticated campaign_state read surfaced nine Environment bindings as substrate-available, preserved no Environment invocation record across the complete selected event history, and explicitly reported agent-facing discoverability as not-measured."
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_capability_delivery_accountability_20261025",
+      "implementation_commit": "9503aa37ef81e4421c9ceb47afeb43bb7410fd42",
+      "subsequent_observation_identity": null,
+      "verification_observation_identity": "ev_environment_capability_delivery_accountability_verification_20261025"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 26,
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_af2863204f16c110",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "9503aa37ef81e4421c9ceb47afeb43bb7410fd42",
+      "identity": "ev_environment_capability_delivery_accountability_impl_20261025",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "a61a7c4efa6031924c91581325662bd823f86a189bd871a80f66eba2bbb99e8d"
+    },
+    {
+      "commit": "9503aa37ef81e4421c9ceb47afeb43bb7410fd42",
+      "identity": "ev_environment_capability_delivery_accountability_tests_20261025",
+      "kind": "committed-verification-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "42a681c10b4a1d13a403c5490f97f765626ca7bd7a1e0ad3babd80021323f4fb"
+    },
+    {
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "event_identities": [
+        "evt_eac7988e7f202a27"
+      ],
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "session_id": "ses_c6b0d153689d7388"
+    }
+  ]
+}

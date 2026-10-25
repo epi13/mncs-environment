@@ -1,0 +1,70 @@
+{
+  "captured_at": "2026-10-25T05:44:00Z",
+  "identity": "ev_environment_capability_delivery_accountability_pressure_20261025",
+  "measurement_basis": "baseline-projection-source-review-and-authenticated-session-readback",
+  "not_measured": [
+    "whether any agent failed to discover or use an Environment capability because of this projection gap",
+    "capability usage through direct external tools or interfaces outside Environment session events",
+    "cross-agent capability discoverability or usability",
+    "whether substrate availability corresponds to successful provider behavior"
+  ],
+  "observation": {
+    "kind": "capability-delivery-accountability-projection-coverage",
+    "outcome": {
+      "baseline_projection_behavior": "The baseline projection summarized Environment capability invocation outcomes in its full session activity view but omitted those summaries from the compact response and did not relate use to the session binding availability snapshot.",
+      "agent_impact": "not-established",
+      "live_session_context": "The authenticated session contains a current Environment binding snapshot; invocation absence is limited to the Environment event stream and does not cover external interfaces."
+    },
+    "request": {
+      "baseline_environment_commit": "322815983ac7487004aabd28eae471f0fae267b7",
+      "campaign_state_checkpoint_id": "chk_af2863204f16c110",
+      "session_id": "ses_c6b0d153689d7388"
+    },
+    "source_interface": "MNCS Environment capability-intelligence projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Expose a bounded join between current Environment binding availability and observed capability invocation outcomes, with source event references and explicit limits on discovery and provider attribution.",
+    "basis": "Existing session records contained both capability binding availability and invocation outcomes, but the compact projection did not connect or expose them together. This establishes a projection coverage gap, not an agent failure.",
+    "category": "capability-accountability-and-discoverability",
+    "identity": "ph_environment_capability_delivery_accountability_20261025",
+    "not_measured": [
+      "agent impact, failed discovery, or repeated capability bypass",
+      "provider correctness from substrate availability probes",
+      "cross-session recurrence",
+      "usage through external interfaces"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "not-established",
+    "subsystem": "Environment capability discovery, availability, and session activity projection",
+    "title": "Capability availability and observed use are not joined in the compact Environment projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 26,
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_af2863204f16c110",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "322815983ac7487004aabd28eae471f0fae267b7",
+      "identity": "src_environment_baseline_capability_intelligence_20261025",
+      "kind": "baseline-projection-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "110f2c22f23122e09be088f0da27e57676e56b011b260bc96ca2d99ed960ba3f"
+    }
+  ]
+}
