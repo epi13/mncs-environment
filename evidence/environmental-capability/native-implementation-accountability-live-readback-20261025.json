@@ -1,0 +1,106 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_implementation_accountability_live_readback_20261025",
+  "captured_at": "2026-10-25T08:42:35Z",
+  "measurement_basis": "authenticated campaign_state projection readback over a content-addressed Compiler proof",
+  "observation": {
+    "kind": "native-implementation-accountability-projection-live-readback",
+    "source_interface": "MNCS Environment campaign_state projection",
+    "request": {
+      "operation": "campaign_state",
+      "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+      "checkpoint_id": "chk_c5bc1abd875e05b6",
+      "evidence_offset": 13,
+      "evidence_limit": 1
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_records_considered": 1,
+      "observation_records_verified": 1,
+      "source_pointer_count": 5,
+      "source_pointer_content_integrity_verified_count": 5,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "implementation_accountability": {
+        "sample_count": 1,
+        "sample_scope": "one Compiler-proven MNCS application and its four-module source closure",
+        "sample_identity": "ev_compiler_native_application_proof_digest_app_20261018",
+        "native_semantic_ownership": "verified-for-this-application-proof",
+        "ownership_status": "source-integrity-verified-for-sample",
+        "native_module_count": 4,
+        "source_integrity_verified_module_count": 4,
+        "compiler_front_end_outcome": "verified",
+        "canonical_vm_case_count": 3,
+        "canonical_vm_case_success_count": 3,
+        "native_migration_opportunity": "not-established",
+        "host_test_adapter_classification": "test-only-provider-adapter",
+        "systemwide_native_adoption_ratio": {
+          "status": "not-measured",
+          "reason": "A complete, ownership-verified inventory of MNCS functionality and its denominator is unavailable."
+        }
+      },
+      "selected_session_delivery_observation": {
+        "status": "not-present-in-selected-session-binding-snapshot",
+        "canonical_identity_match_count": 0,
+        "runtime_alias_match_count": 0,
+        "agent_receipt_status": "not-established",
+        "discoverability_status": "not-measured",
+        "scope": "selected-session current binding snapshot and event window"
+      },
+      "measurement_limits": [
+        "The Compiler proof establishes one admitted native application, not systemwide host dependency ownership or a migration opportunity.",
+        "The test-only provider adapter is not a production MNCS service provider.",
+        "No matching Environment capability binding in this session does not establish that other agents or external interfaces lack access.",
+        "Agent receipt, discoverability, systemwide native adoption, and its denominator remain unmeasured."
+      ]
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_native_capability_accountability_scope_20261025",
+    "title": "A verified native application does not establish systemwide adoption, migration readiness, or Environment delivery",
+    "category": "capability-accountability-and-discoverability",
+    "subsystem": "Environment implementation-accountability projection and Compiler proof-to-Environment delivery relationship",
+    "owner": "mncs-environment",
+    "basis": "The projection verifies one four-module native application proof and its compiler cases, while the systemwide denominator, production host dependencies, migration readiness, selected-session delivery, and agent discovery remain unestablished.",
+    "actionable_recommendation": "Extend the existing provenance projection with verified host implementation ownership and explicit language/compiler blockers, while keeping source ownership, Environment delivery, agent receipt, and any adoption ratio as separate claims.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "agent impact or failed discovery in this or another session",
+      "production host implementation ownership and migration opportunities",
+      "the complete native-versus-host functionality denominator",
+      "whether a matching capability is available through an external interface",
+      "longitudinal improvement after independent sessions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "compiler-native-application-proof",
+      "identity": "ev_compiler_native_application_proof_digest_app_20261018",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-test-digest-app.json",
+      "sha256": "f0b2117709a50be49a636aa6fe0505eff42bff78477c28a602664c75edf89140"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_compiler_capability_contract_implementation_20261025",
+      "repository": "mncs-environment",
+      "commit": "8e53ff753c6656456e7e4984600f29bc08905ddb",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8502f3e1e24ee9d246a9b65b0ca9a73db044203386267ab9af8eec3128772585"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
