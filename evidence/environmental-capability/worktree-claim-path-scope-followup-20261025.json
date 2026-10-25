@@ -1,0 +1,111 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_worktree_path_claim_followup_20261025",
+  "captured_at": "2026-10-25T09:05:09Z",
+  "measurement_basis": "authenticated claims acquire/release and campaign-state projection readback after the committed path-scope change",
+  "observation": {
+    "kind": "environmental-improvement-follow-up",
+    "source_interface": "MNCS Environment claims and campaign-state projection",
+    "request": {
+      "operation": "claims.acquire followed by campaign_state",
+      "campaign_checkpoint": "chk_a92bbc6bbb08f869",
+      "followed_observation_identity": "ev_environment_worktree_path_claim_live_readback_20261025"
+    },
+    "outcome": {
+      "narrow_claim": "One registered-worktree path subset claim on the campaign branch was acquired and later released successfully.",
+      "broad_checkout_selection": "The exact same-campaign checkout binding reached Environment but a whole-checkout scope grant was denied because another live claim covered the selected worktree; no claim was displaced and no publication occurred.",
+      "interpretation": "The path-scoped operation is available in one live interaction after implementation and focused tests. The separate broad-scope conflict remains enforced.",
+      "effectiveness_assessment": "not-assessed"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_worktree_claim_paths_20261025",
+    "title": "Worktree claims cannot express a disjoint file subset",
+    "category": "coordination-continuity",
+    "subsystem": "MNCS Environment claim scope normalization and overlap analysis",
+    "owner": "mncs-environment",
+    "basis": "The earlier code verification established path-subset behavior locally. This later authenticated readback exercised a narrow claim through the connected Environment service and separately confirmed that a conflicting whole-checkout grant remains guarded.",
+    "actionable_recommendation": "Keep narrow registered-worktree path claims directly available to the authenticated campaign interface while retaining live conflict checks for broader checkout selection.",
+    "recurrence": "repeated-within-session",
+    "not_measured": [
+      "whether a subsequent Git mutation is admitted while holding the narrow claim",
+      "long-term coordination effectiveness across agents or campaigns",
+      "whether a whole-checkout grant becomes available after other live claims are released"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_worktree_path_claim_live_followup_20261025",
+    "addresses_hypothesis_identity": "ph_environment_worktree_claim_paths_20261025",
+    "implementation_reference": {
+      "identity": "ev_environment_worktree_path_claim_implementation_20261025",
+      "repository": "mncs-environment",
+      "commit": "d18624cb06c164d43e12adce1fd2119ce91051d9",
+      "path": "mncs_env/claims.py",
+      "sha256": "cc7d0d93dd7a926ff979dd7d4bfcfb83fc2be7866d3070e6d041d236433541c5"
+    },
+    "verification_observation_identity": "ev_environment_worktree_path_claim_verification_20261025",
+    "subsequent_observation_identity": "ev_environment_worktree_path_claim_live_readback_20261025",
+    "basis": "The connected service acquired and released a narrow registered-worktree path claim after the implementation and focused verification were committed. The broad whole-checkout scope grant still correctly returned an active-claim conflict. This demonstrates one live narrow-scope success, not sustained coordination effectiveness or resolution of the broader conflict.",
+    "not_measured": [
+      "successful repository mutation under the acquired claim",
+      "effectiveness across independent agents and campaigns",
+      "recurrence after the conflicting live claim ends"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_worktree_path_claim_implementation_20261025",
+      "repository": "mncs-environment",
+      "commit": "d18624cb06c164d43e12adce1fd2119ce91051d9",
+      "path": "mncs_env/claims.py",
+      "sha256": "cc7d0d93dd7a926ff979dd7d4bfcfb83fc2be7866d3070e6d041d236433541c5"
+    },
+    {
+      "kind": "committed-verification-tests",
+      "identity": "ev_environment_worktree_path_claim_tests_20261025",
+      "repository": "mncs-environment",
+      "commit": "d18624cb06c164d43e12adce1fd2119ce91051d9",
+      "path": "tests/test_claim_scope_narrowing.py",
+      "sha256": "1cbe316f94aa45cfa66e9a26dd95101f969b2c5442e0e4296c427f11737df399"
+    },
+    {
+      "kind": "earlier-improvement-record",
+      "identity": "ev_environment_worktree_path_claim_improvement_20261025",
+      "repository": "mncs-environment",
+      "commit": "e364582c0d7e0d76604bc85db65c0078b7c8323b",
+      "path": "evidence/environmental-capability/worktree-claim-path-scope-improvement-20261025.json",
+      "sha256": "7cf342049bf363c06dee937c0ed4580c9015681f9263ae9f68d348348c3527fe"
+    },
+    {
+      "kind": "authenticated-live-readback",
+      "identity": "ev_environment_worktree_path_claim_live_readback_20261025",
+      "repository": "mncs-environment",
+      "commit": "6cf4ba030f4d636b47c62b0fc792c2d0d179ec91",
+      "path": "evidence/environmental-capability/worktree-claim-path-scope-live-readback-20261025.json",
+      "sha256": "1406ca195c2054c967a89587dcd60ade14665469ccb463c4eef827c10ddeedf3"
+    },
+    {
+      "kind": "Control-bridge-implementation",
+      "identity": "ev_environment_campaign_checkout_binding_control_implementation_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "1fba10757b688c7d4877f81636f52c595660d3a0",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "8fb78aef1b099b8237d3b7de9b74ac93e761c7a19164996f410910ff90a60597"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
