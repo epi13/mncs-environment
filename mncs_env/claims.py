@@ -169,7 +169,12 @@ def normalize_scope(scope: dict[str, Any] | None, repository: str) -> dict[str, 
         if not isinstance(paths, list) or not paths or not all(
             isinstance(p, str) and p and not p.startswith("/") for p in paths
         ):
-            raise ValueError("scoped claim paths need a non-empty list of repo-relative paths")
+            message = (
+                "paths scope needs a non-empty list of repo-relative paths"
+                if kind == "paths"
+                else "worktree path scope needs a non-empty list of repo-relative paths"
+            )
+            raise ValueError(message)
         paths = sorted({p.strip("/") for p in paths})
     else:
         paths = None
