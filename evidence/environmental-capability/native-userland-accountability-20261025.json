@@ -1,0 +1,149 @@
+{
+  "captured_at": "2026-10-25T13:21:49Z",
+  "identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+  "not_measured": [
+    "complete native and host implementation inventory across MNCS",
+    "verified systemwide adoption ratio or denominator",
+    "semantic correctness of repository-owner classifications beyond integrity of their referenced bytes",
+    "session-level agent interactions, models, configurations, or successful/failed use of the described capabilities",
+    "causal improvement or migration effectiveness after a native implementation change"
+  ],
+  "observation": {
+    "kind": "cross-project-native-userland-accountability",
+    "outcome": {
+      "actionable_opportunity": {
+        "candidate_boundary": "mncs-test typed TestResult/CheckResult and mncs-actions typed consumer/evidence records",
+        "current_observation": "The owner records describe native semantic values and typed projection contracts, but external JSON decoding/encoding and artifact ingress/publication remain host responsibilities.",
+        "readiness": "not-established; audit records alone do not prove a drop-in native replacement or parity",
+        "safe_next_step": "Trace the bounded compiler-owned projection ABI into one consumer path, preserve the host adapter, and require independently verified round-trip, failure, and artifact-integrity parity before transferring implementation responsibility.",
+        "title": "Connect typed compiler projection contracts to a reusable native application-level result and artifact protocol"
+      },
+      "agent_capability_delivery": {
+        "cross_agent_discoverability": "not-established",
+        "distinction": "Implementation and dependency statements in owner audits are not measurements of agent discovery, usability, or outcome.",
+        "successful_or_failed_agent_use": "not-observed-by-these-repository-audits"
+      },
+      "correlated_pressure": {
+        "basis": "Both project audits reference this shared pressure; mncs-test pressure P-006 describes typed native test results crossing a Rust bootstrap JSON/artifact boundary, while the Actions audit describes external JSON ingress and evidence packaging alongside compiler-owned typed projection contracts.",
+        "identity": "MNCS-TOOLING-146FB6F4BBC6",
+        "recurrence": "repeated owner-record reference only; recurrence across agent sessions or independent runtime observations is not established"
+      },
+      "evidence_basis": "Two project-maintained native-userland audit records and two mncs-test pressure records, addressed by immutable commit/path/content digests.",
+      "native_adoption": {
+        "denominator": "not-established",
+        "reason": "These two owner audits are not a complete inventory and use repository-specific classifications; source integrity of the audit files does not independently verify implementation ownership across MNCS.",
+        "systemwide_ratio": "not-measured"
+      },
+      "owner_audit_count": 2,
+      "projects": [
+        {
+          "owner_declared_native_surface": "typed family contracts, receipts, evidence records, and bounded consumer proof aggregation",
+          "owner_declared_next_native_slice": "native provider invocation and receipt/evidence artifact publication",
+          "owner_declared_status": "native_canonical",
+          "remaining_host_responsibilities": [
+            "external GitHub runner transport and artifact upload",
+            "provider invocation and source artifact acquisition",
+            "external evidence JSON decoding and receipt/evidence packaging",
+            "legacy manifest compatibility"
+          ],
+          "repository": "mncs-actions"
+        },
+        {
+          "owner_declared_native_surface": "test inventory selection, typed TestResult construction, test/suite projections, and retained-session aggregation",
+          "owner_declared_next_native_slice": "apply compiler-owned bounded structured projection to Commons pressure query materialization",
+          "owner_declared_status": "native_canonical",
+          "remaining_host_responsibilities": [
+            "external TestResult and CheckResult JSON envelopes",
+            "compiler inventory/run identity materialization",
+            "artifact publication and canonical JSON projection",
+            "external compatibility and host-process boundaries"
+          ],
+          "repository": "mncs-test"
+        }
+      ],
+      "related_test_pressure": {
+        "basis": "The project-owned record reports a retained typed session batch but does not identify a general application-level MNCS-to-MNCS call service; its remaining compiler/toolchain and external publication boundary is explicit in that record.",
+        "identity": "MNCS-TEST-P-004"
+      },
+      "source_interpretation": "repository-owner-declared; source blob integrity can be checked independently; implementation ownership and migration readiness are not independently established by these records"
+    },
+    "request": {
+      "operation": "correlate-owner-audits-and-pressure-records",
+      "repositories": [
+        "mncs-actions",
+        "mncs-test"
+      ],
+      "shared_pressure_identities": [
+        "MNCS-TOOLING-146FB6F4BBC6",
+        "MNCS-LANG-52A5E0C72A39"
+      ]
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Trace and verify one native application-level result/artifact path across mncs-test and mncs-actions while keeping existing compatibility adapters until correctness and reliability parity is independently established.",
+    "basis": "Two versioned repository-owner audits reference the same tooling pressure; mncs-test P-006 gives a concrete native-value to host-JSON boundary and Actions audit describes corresponding evidence-ingress responsibilities.",
+    "category": "native-language-and-tooling-integration",
+    "identity": "ph_native_result_transport_shared_tooling_pressure_20261025",
+    "not_measured": [
+      "independent recurrence across agent sessions or runtime events",
+      "whether agents attempted and failed to discover or use existing projection contracts",
+      "whether the candidate native path meets complete compatibility, failure, and reliability requirements",
+      "systemwide native-versus-host implementation ratio or denominator",
+      "production migration readiness of any host responsibility"
+    ],
+    "owner": "mncs-test, mncs-actions, and compiler/tooling maintainers",
+    "recurrence": "not-established",
+    "subsystem": "Compiler projection ABI, mncs-test result publication, and mncs-actions evidence ingress",
+    "title": "Typed native test and Actions records still depend on host JSON and artifact boundaries"
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "consumer_id": "local-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_4179379f9332b176",
+    "session_id": "ses_5530f63cd8293e03"
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "ca62f3d33ef9c3b5096bc4d39f6039adc445e579",
+      "identity": "audit_mncs_actions_native_userland_20261025",
+      "kind": "repository-owner-native-userland-audit",
+      "path": "native-userland-audit.json",
+      "repository": "mncs-actions",
+      "sha256": "76e5845b033c775f93bc3e821a069cf8bb21eb437784e505847db3c19446c48a"
+    },
+    {
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "identity": "audit_mncs_test_native_userland_20261025",
+      "kind": "repository-owner-native-userland-audit",
+      "path": "native-userland-audit.json",
+      "repository": "mncs-test",
+      "sha256": "cd4e760c250504cc62b5094769bedf07b73b2dd6d0765206c571290a27bb5560"
+    },
+    {
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "identity": "MNCS-TEST-P-004",
+      "kind": "repository-owner-language-and-runtime-pressure",
+      "path": "pressures/MNCS-TEST-P-004.json",
+      "repository": "mncs-test",
+      "sha256": "1b3a90dedc869f666e898450af81634aa27863a4c144b7d4b5d87caa992b42bf"
+    },
+    {
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "identity": "MNCS-TEST-P-006",
+      "kind": "repository-owner-native-result-transport-pressure",
+      "path": "pressures/MNCS-TEST-P-006.json",
+      "repository": "mncs-test",
+      "sha256": "26d0e4eae997127cad0b17ae8f0ebb733983ddb64162b72ae96fa319ac616f86"
+    }
+  ]
+}
