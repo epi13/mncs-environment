@@ -1,0 +1,86 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_regression_readonly_adaptation_improvement_20261025",
+  "captured_at": "2026-10-25T16:04:21Z",
+  "measurement_basis": "committed-bounded-adapter-and-explicit-source-context-join",
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recording_context": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "operation": "adapt-exact-Compiler-regression-references-and-resolve-source-context-only-from-explicit-support",
+      "pressure_identity": "ph_environment_compiler_regression_source_objective_context_20261025",
+      "implementation_commit": "d1e8241e12cfd9670ef6c1649db41666d5a591a3"
+    },
+    "outcome": {
+      "compiler_reports_adapted": 3,
+      "compiler_reports_unavailable": 0,
+      "source_repository_read_basis": "workspace-read-only-checkout",
+      "source_session_context_resolution": "unavailable-without-matching-explicit-verified-context",
+      "reader_context_used_as_source_attribution": false,
+      "compiler_checkout_selected_or_written": false,
+      "effectiveness_assessment": "not-assessed",
+      "implementation_change": "The existing Environment projection now adapts only the three exact allowlisted Compiler regression report families using complete workspace-read authority and bounded read-only checkout discovery. It retains the exact source pointers and reports the repository read basis. Source campaign, session, or Work Intent are exposed only through a verified supporting observation that carries explicit source_session_context and matches the exact Compiler pointer; related_work from the observing Environment session is not used as a proxy.",
+      "analysis_limit": "The change makes existing Compiler regression stages inspectable and protects attribution accuracy. It does not establish native implementation ownership, migration readiness, successful capability use by another agent, or subsequent pressure resolution."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_compiler_regression_readonly_adaptation_20261025",
+    "addresses_hypothesis_identity": "ph_environment_compiler_regression_source_objective_context_20261025",
+    "implementation_reference": {
+      "identity": "src_environment_compiler_regression_readonly_adapter_d1e8241",
+      "repository": "mncs-environment",
+      "commit": "d1e8241e12cfd9670ef6c1649db41666d5a591a3",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "a483991d6b1079a4270f2cdfa3f5f4e233ecfbf2b2f5fb23ce56d4952e30c1ee"
+    },
+    "verification_observation_identity": "ev_environment_compiler_regression_readonly_adaptation_verification_20261025",
+    "subsequent_observation_identity": null,
+    "basis": "The exact allowlisted source records are now represented in the existing projection with their recorded stage summaries and content-addressed pointers. The projection keeps source objective attribution unavailable where source evidence does not supply explicit context. This creates a durable read path for future Compiler and Environment agents while preserving the current read and write boundaries.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "whether future agents discover or use these projected observations",
+      "whether source-context capture improves across later Compiler sessions",
+      "whether these Compiler capabilities enable native migration opportunities",
+      "long-term projection overhead and effectiveness"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "environmental-pressure-observation",
+      "identity": "ev_environment_compiler_regression_readonly_adaptation_pressure_20261025",
+      "repository": "mncs-environment",
+      "commit": "f1071f96d0e8b21f5b46d8659b59dc00180d2de4",
+      "path": "evidence/environmental-capability/compiler-regression-readonly-adaptation-pressure-20261025.json",
+      "sha256": "14fc26bfba3ee7a01c34d9c147b9d4dff1320c146e8a6ffac2bdce63cf9311c1"
+    },
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    }
+  ],
+  "not_measured": [
+    "production use by an independent Compiler agent",
+    "whether the source-provenance limitation is resolved in Compiler evidence capture",
+    "effectiveness across agents, models, sessions, and environmental versions",
+    "native implementation displacement"
+  ]
+}

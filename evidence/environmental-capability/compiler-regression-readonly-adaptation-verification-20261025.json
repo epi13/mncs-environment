@@ -1,0 +1,115 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_regression_readonly_adaptation_verification_20261025",
+  "captured_at": "2026-10-25T16:04:21Z",
+  "measurement_basis": "focused-tests-static-checks-and-bounded-live-projection",
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recording_context": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "compiler-regression-readonly-adapter-verification",
+    "source_interface": "MNCS Environment tests and projections --interpret environmental-capability",
+    "request": {
+      "implementation_commit": "d1e8241e12cfd9670ef6c1649db41666d5a591a3",
+      "test_command": "python3 -m pytest tests/test_capability_intelligence.py tests/test_capability_projection_actions.py tests/test_capability_projection_cli.py -q",
+      "lint_command": "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+      "static_checks": [
+        "python3 -m py_compile mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "git diff --check"
+      ],
+      "live_projection_command": "./scripts/mncs-env projections ses_5530f63cd8293e03 --interpret environmental-capability --history-pages 1 --evidence-offset 4 --evidence-limit 5 --session-event-limit 1"
+    },
+    "outcome": {
+      "test_result": {
+        "passed": 102,
+        "failed": 0
+      },
+      "ruff": "passed",
+      "py_compile": "passed",
+      "diff_check": "passed",
+      "live_projection": {
+        "status": "partial",
+        "evidence_page_offset": 4,
+        "evidence_page_limit": 5,
+        "observation_records_considered": 5,
+        "observation_records_verified": 5,
+        "observation_records_unavailable": 0,
+        "source_pointer_content_integrity_verified_count": 5,
+        "response_truncated": true,
+        "compiler_report_count": 3,
+        "compiler_report_read_basis": "workspace-read-only-checkout",
+        "source_session_context_resolution_for_all_three": "no-matching-verified-supporting-observation",
+        "adapted_stage_families": [
+          "effect-and-capability-assumption-invalidation",
+          "generic-specialization-application-invalidation",
+          "interface-application-invalidation"
+        ]
+      },
+      "source_attribution_test": "reader related_work is not treated as Compiler source_session_context",
+      "compiler_checkout_write_scope": "not acquired",
+      "compiler_checkout_state": "unchanged by this Environment read-only projection",
+      "analysis_limit": "The bounded live response was partial and truncated. All five selected evidence references verified, but this query does not establish full campaign-history coverage, source-session attribution, cross-session recurrence, or future agent outcomes."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-environment-implementation",
+      "identity": "src_environment_compiler_regression_readonly_adapter_d1e8241",
+      "repository": "mncs-environment",
+      "commit": "d1e8241e12cfd9670ef6c1649db41666d5a591a3",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "a483991d6b1079a4270f2cdfa3f5f4e233ecfbf2b2f5fb23ce56d4952e30c1ee"
+    },
+    {
+      "kind": "committed-regression-tests",
+      "identity": "test_environment_compiler_regression_readonly_adapter_d1e8241",
+      "repository": "mncs-environment",
+      "commit": "d1e8241e12cfd9670ef6c1649db41666d5a591a3",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "e43909292866b9103b1636b0d1afb6739d7642be9313e9579f28f4842c252730"
+    },
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    },
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+      "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e"
+    },
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_interface_invalidation_20261023",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/language-module-interface-application-invalidation-compiler-20261023.json",
+      "sha256": "ce67f0ff837bba0ff73301cb398198da5ff9125e8fe8cb75c45c5f26a1715177"
+    }
+  ],
+  "not_measured": [
+    "full evidence-history completeness beyond the selected page",
+    "source Compiler session, model, token usage, and agent-attributed resources",
+    "whether future agents discover or benefit from the projection",
+    "native-versus-host implementation ownership and migration readiness",
+    "cross-session recurrence and long-term effectiveness"
+  ]
+}
