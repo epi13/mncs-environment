@@ -1,0 +1,70 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_control_host_checkout_path_improvement_20261025",
+  "captured_at": "2026-10-25T17:23:00Z",
+  "measurement_basis": "Merged Control source, focused tests, and an authenticated post-merge Environment claim using the absolute host checkout path.",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Control project-sandbox worktree claim path mapping",
+    "request": {
+      "pressure_identity": "ph_environment_control_host_checkout_path_20261025",
+      "implementation_commit": "7b631d704724520e05a956a8c58fe6a92c051c70",
+      "verification_observation_identity": "ev_environment_control_host_checkout_path_verification_20261025",
+      "subsequent_observation_identity": "ev_environment_control_host_checkout_path_followup_20261025"
+    },
+    "outcome": {
+      "implementation_change": "Control now maps an absolute host checkout path under the configured workspace to its /workspace form for claims --worktree. The mapping remains limited to a project grant with worktree authority and retains workspace containment, symbolic-link rejection, registered-checkout validation, and claim ownership checks.",
+      "effectiveness_assessment": "The focused verification passed, and one authenticated post-merge claim on a unique registered worktree succeeded through the host-path form. Broader recurrence and cross-agent usability remain unmeasured.",
+      "interpretation_limit": "The successful claim proves this exact project/worktree/path scope passed through the corrected adapter. It does not show that unrelated ownership conflicts should be bypassed or that every checkout form is covered."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "campaign_objective": "Implement MNCS environmental capability intelligence: connect authentic agent-session, diagnostics, resource, and compiler evidence to provenance-aware queryable projections that reveal actionable recurring environmental pressures, then verify and improve the observation-to-action loop.",
+    "session_id": "ses_71fd38cce3a4ad5c",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "session_id": "ses_71fd38cce3a4ad5c",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_34b61f992ea73519",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "improvement_relation": {
+    "identity": "ir_environment_control_host_checkout_path_20261025",
+    "addresses_hypothesis_identity": "ph_environment_control_host_checkout_path_20261025",
+    "implementation_reference": {
+      "identity": "src_control_environment_host_checkout_path_7b631d7",
+      "repository": "mncs-control-mcp",
+      "commit": "7b631d704724520e05a956a8c58fe6a92c051c70",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "719c616581757b1443b0ac98fc63f509cdc89538e04d7e1fc547e7a8460b12ab"
+    },
+    "verification_observation_identity": "ev_environment_control_host_checkout_path_verification_20261025",
+    "subsequent_observation_identity": "ev_environment_control_host_checkout_path_followup_20261025",
+    "basis": "The pressure record identifies a concrete adapter rejection before claim authority evaluation. Control main contains the path mapping and focused negative/positive tests. After that revision became active, Environment acquired the exact unique evidence-path claim from the absolute host checkout path, while the existing project grant and ownership checks remained in force.",
+    "not_measured": [
+      "whether independent agents encounter or benefit from the path mapping",
+      "cross-session recurrence or reduction in repeated checkout investigations",
+      "all worktree claim operations across every repository and checkout layout",
+      "the effectiveness of any unrelated authority or ownership policy"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-control-path-observation",
+      "identity": "ev_control_environment_host_checkout_claim_path_translation_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "5d06afa4b9d1af02ffb016d2de96abc170bb8f1a",
+      "path": "evidence/environment-host-checkout-claim-path-translation-20261025.json",
+      "sha256": "440b0dc445c3356da792d50ff085293e92ee3612e2b1623b4405bb4db791ee88"
+    }
+  ],
+  "not_measured": [
+    "cross-agent usability and discoverability",
+    "cross-session recurrence or causal effect on long-running development",
+    "claim behavior outside the verified project/worktree scope"
+  ]
+}

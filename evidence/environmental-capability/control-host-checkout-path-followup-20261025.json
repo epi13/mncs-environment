@@ -1,0 +1,52 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_control_host_checkout_path_followup_20261025",
+  "captured_at": "2026-10-25T17:22:04Z",
+  "measurement_basis": "Authenticated Environment claim response after Control main included the host-path mapper.",
+  "observation": {
+    "kind": "environment-host-checkout-path-claim-followup",
+    "source_interface": "MNCS Environment claims through the authenticated Control terminal",
+    "request": {
+      "operation": "claims --acquire mncs-environment --worktree <absolute-host-checkout> --paths <four exact evidence files>",
+      "repository": "mncs-environment",
+      "branch": "campaign/environment-control-checkout-path-observation-20261025",
+      "checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/environment-control-checkout-path-observation-20261025",
+      "paths": [
+        "evidence/environmental-capability/control-host-checkout-path-pressure-20261025.json",
+        "evidence/environmental-capability/control-host-checkout-path-improvement-20261025.json",
+        "evidence/environmental-capability/control-host-checkout-path-verification-20261025.json",
+        "evidence/environmental-capability/control-host-checkout-path-followup-20261025.json"
+      ]
+    },
+    "outcome": {
+      "status": "acquired",
+      "claim_identity": "claim:mncs-environment:worktree:ff3b7b04bed9",
+      "claim_record_identity": "clm_f399424fdc04f776",
+      "session_id": "ses_71fd38cce3a4ad5c",
+      "scope_kind": "worktree",
+      "scope_exclusive": false,
+      "scope_path_count": 4,
+      "control_main_revision": "5d06afa4b9d1af02ffb016d2de96abc170bb8f1a",
+      "interpretation_limit": "One unique project-granted worktree claim succeeded through the absolute host path. This does not test every repository or path shape. Existing overlapping active claims were left intact."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "campaign_objective": "Implement MNCS environmental capability intelligence: connect authentic agent-session, diagnostics, resource, and compiler evidence to provenance-aware queryable projections that reveal actionable recurring environmental pressures, then verify and improve the observation-to-action loop.",
+    "session_id": "ses_71fd38cce3a4ad5c",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "session_id": "ses_71fd38cce3a4ad5c",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_34b61f992ea73519",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "not_measured": [
+    "post-merge claim acquisition for unrelated repositories",
+    "cross-session or cross-model recurrence",
+    "whether another agent can discover the claim interface without this campaign's investigation"
+  ]
+}

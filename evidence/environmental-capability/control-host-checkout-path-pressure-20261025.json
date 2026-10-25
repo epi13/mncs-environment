@@ -1,0 +1,67 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_control_host_checkout_path_pressure_20261025",
+  "captured_at": "2026-10-25T17:10:39Z",
+  "measurement_basis": "One authenticated Control claim-path rejection, retained in the Control campaign evidence record; recurrence is not established.",
+  "observation": {
+    "kind": "environment-host-checkout-path-translation-pressure",
+    "source_interface": "MNCS Environment claims through the authenticated Control RPC",
+    "request": {
+      "operation": "claims --acquire --worktree",
+      "path_basis": "Environment-reported absolute host checkout path inside the configured Projects workspace",
+      "control_evidence_identity": "ev_control_environment_host_checkout_claim_path_translation_20261025"
+    },
+    "outcome": {
+      "observed_limitation": "Control rejected the host checkout path during project-sandbox translation before the Environment claim authority evaluated the requested registered checkout.",
+      "diagnostic": "client path escapes its scoped sandbox root",
+      "actionable_opportunity": "Map an in-workspace host checkout path through the existing /workspace model for worktree claims, then preserve project grant, containment, symlink, registered-checkout, and claim ownership checks.",
+      "interpretation_limit": "This was one path-interface failure. It does not establish a general claim-policy defect or justify bypassing a live overlapping owner."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "campaign_objective": "Implement MNCS environmental capability intelligence: connect authentic agent-session, diagnostics, resource, and compiler evidence to provenance-aware queryable projections that reveal actionable recurring environmental pressures, then verify and improve the observation-to-action loop.",
+    "session_id": "ses_71fd38cce3a4ad5c",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_capability_intelligence_continuation_20261025",
+    "session_id": "ses_71fd38cce3a4ad5c",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_34b61f992ea73519",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_control_host_checkout_path_20261025",
+    "title": "Environment-reported host checkout paths were rejected before claim evaluation",
+    "category": "environmental-capability-integration",
+    "subsystem": "Control project-sandbox path translation for Environment worktree claims",
+    "owner": "MNCS Control maintainers",
+    "basis": "A single authenticated claim attempt with an absolute checkout path reported by Environment failed in Control path translation. The corresponding /workspace path reached the separate claim-ownership decision. The evidence identifies an adapter mismatch, not a need to weaken ownership policy.",
+    "actionable_recommendation": "Accept an absolute host path only when it maps inside the configured workspace and the request already has project-scoped worktree authority; then run the existing checkout and ownership checks.",
+    "recurrence": "not-established-across-sessions",
+    "not_measured": [
+      "whether other agents or models encountered the same adapter mismatch",
+      "cross-session recurrence of host-path claim failures",
+      "claim behavior for every repository, checkout type, and symlink arrangement",
+      "any basis for bypassing an active overlapping claim"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-control-path-observation",
+      "identity": "ev_control_environment_host_checkout_claim_path_translation_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "5d06afa4b9d1af02ffb016d2de96abc170bb8f1a",
+      "path": "evidence/environment-host-checkout-claim-path-translation-20261025.json",
+      "sha256": "440b0dc445c3356da792d50ff085293e92ee3612e2b1623b4405bb4db791ee88"
+    }
+  ],
+  "not_measured": [
+    "independent agent or model discovery and use of the corrected interface",
+    "cross-session recurrence or causal impact on development throughput",
+    "claim success for other repositories or checkout arrangements",
+    "systemwide environmental capability or native-adoption metrics"
+  ]
+}
