@@ -1,0 +1,129 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_claim_owner_pagination_readback_20261025",
+  "captured_at": "2026-10-25T19:39:04Z",
+  "measurement_basis": "Authenticated Control claim-acquisition outcomes, bounded Environment claim pages, and read-only session/claim inspection. The claim ledger is Store state; the record preserves the exact identities and values observed at capture time.",
+  "not_measured": [
+    "whether the reported matching process belongs to an agent, a stale process, or a Control terminal request",
+    "whether other clients automatically follow claim-page cursors",
+    "whether the current claim-page byte cap is reached by every workspace",
+    "whether the active claim will be released after the owner's current work completes",
+    "whether the denied claim altered any branch, file, or Store record"
+  ],
+  "observation": {
+    "kind": "agent-ownership-and-authorization-observation",
+    "source_interface": "MNCS Control project-scoped terminal and MNCS Environment claims/inspect",
+    "request": {
+      "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+      "session_id": "ses_b6774545fb790bde",
+      "requested_claim_scope": {
+        "repository": "mncs-environment",
+        "kind": "paths",
+        "paths": [
+          "mncs_env/cli.py",
+          "tests/test_capability_projection_cli.py"
+        ]
+      },
+      "claims_page_before_owner_discovery": {
+        "offset": 0,
+        "requested_limit": 100,
+        "latest_claim_count": 112,
+        "returned_record_count": 41,
+        "next_offset": 41
+      },
+      "claims_page_with_owner": {
+        "offset": 41,
+        "requested_limit": 100,
+        "returned_record_count": 42,
+        "next_offset": 83,
+        "owner_record_page_index": 12
+      },
+      "claim_attempts": [
+        {
+          "started_at": "2026-10-25T19:26:10Z",
+          "completed_at": "2026-10-25T19:26:57Z",
+          "publication_completed": false,
+          "cause_code": "ENVIRONMENT_OWNER_EXECUTION_ACTIVE",
+          "active_jobs": 0,
+          "active_processes": 1,
+          "active_user_services": 0
+        },
+        {
+          "started_at": "2026-10-25T19:37:13Z",
+          "completed_at": "2026-10-25T19:38:01Z",
+          "publication_completed": false,
+          "cause_code": "ENVIRONMENT_OWNER_EXECUTION_ACTIVE",
+          "active_jobs": 0,
+          "active_processes": 1,
+          "active_user_services": 0
+        }
+      ]
+    },
+    "outcome": {
+      "claim_publication": "refused-before-publication",
+      "exact_conflicting_claim": {
+        "claim_id": "claim:mncs-environment:paths:c60f18bca6b3",
+        "claim_version": 3,
+        "owner_session_id": "ses_5530f63cd8293e03",
+        "owner_lifecycle": "active",
+        "owner_last_activity_at": "2026-10-25T19:10:10+00:00",
+        "claim_freshness": "idle",
+        "claim_reason": "Keep bounded environmental-capability projections within their documented transport byte limit after CLI JSON serialization.",
+        "scope": {
+          "kind": "paths",
+          "paths": [
+            "mncs_env/cli.py",
+            "tests/test_capability_projection_cli.py"
+          ]
+        }
+      },
+      "interpretation": "The requested files were already owned by a live same-repository claim. Following the bounded claim cursor identified the owner and matching work. Control refused transfer because its host-side liveness check still reported one matching process. This is an ownership conflict and a discoverability issue, not a request for fresh user approval; no source changes were made to the claimed files."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_claim_conflict_owner_not_visible_on_first_page_20261025",
+    "title": "A claim conflict requires additional pagination to discover its owner and active work",
+    "category": "coordination-and-authority-discoverability",
+    "owner": "mncs-environment-and-mncs-control-mcp",
+    "subsystem": "Environment claim query and Control conflict diagnostics",
+    "basis": "The first bounded claims response returned 41 of 112 latest records and provided next_offset=41. The exact claim blocking a path request appeared only on the following page, while the acquisition refusal exposed a process count but not the claim identity or scope. A subsequent exact-page read verified the match.",
+    "actionable_recommendation": "Make the exact conflicting claim identity, scope, owner freshness, and safe next action discoverable in the refusal response or a path-filtered conflict query. Keep ownership checks authoritative and preserve the response byte bound.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether the first page's ordering consistently omits active claims",
+      "whether the process-liveness refusal can be attributed to the former owner",
+      "whether the response shape prevented other agents from recovering work"
+    ]
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+    "campaign_objective": "Improve MNCS environmental capability intelligence and agent support, including machine-native adoption and capability accountability.",
+    "session_id": "ses_b6774545fb790bde",
+    "work_intent_id": "int_9bcac9814cef9e2c",
+    "work_intent_goal": "improve mncs-environment through a persistent, discoverable MNCS work context"
+  },
+  "recorder": {
+    "consumer_id": "local-agent",
+    "definition_id": "env_c19cbcbb6aa68f17",
+    "environment_id": "renv_ba1634bffb8954cd",
+    "session_id": "ses_b6774545fb790bde"
+  },
+  "supporting_sources": [
+    {
+      "identity": "src_environment_claim_scope_policy_20261025",
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "b74b898394057d28f2d9eb249b93f61222e95c06",
+      "path": "mncs_env/claims.py",
+      "sha256": "cc7d0d93dd7a926ff979dd7d4bfcfb83fc2be7866d3070e6d041d236433541c5"
+    },
+    {
+      "identity": "src_control_environment_claim_recovery_20261025",
+      "kind": "implementation-source",
+      "repository": "mncs-control-mcp",
+      "commit": "703b201072f3cec4a18e8a4b0aae8b1bfe478dd7",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "7d50501f59e2f0ab89876b553ab8979991b43039dcc5689e52aff3fcbda49367"
+    }
+  ]
+}
