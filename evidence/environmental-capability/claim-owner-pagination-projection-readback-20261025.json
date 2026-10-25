@@ -1,0 +1,65 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_claim_owner_pagination_projection_readback_20261025",
+  "captured_at": "2026-10-25T19:50:24Z",
+  "measurement_basis": "Authenticated MNCS Environment environmental-capability projection result for one evidence reference; returned status, counts, page coordinates, and source-integrity counts are direct measurements.",
+  "not_measured": [
+    "whether agents outside this campaign can discover and use the projection",
+    "whether the claim page ordering is a recurring source of ownership confusion",
+    "whether the matching process belongs to the former claim owner",
+    "whether the active claim will be transferred after the owner's work completes",
+    "whether a verified source record's interpretation is independently correct"
+  ],
+  "observation": {
+    "kind": "environmental-capability-projection-live-readback",
+    "source_interface": "MNCS Environment projections --interpret environmental-capability through authenticated project scope",
+    "request": {
+      "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+      "session_id": "ses_b6774545fb790bde",
+      "campaign_state_checkpoint_id": "chk_155e15ff8c0b8f55",
+      "history_pages": 1,
+      "evidence_offset": 4,
+      "evidence_limit": 1
+    },
+    "outcome": {
+      "projection_status": "ready",
+      "observation_count": 1,
+      "projected_observation_identity": "ev_environment_claim_owner_pagination_readback_20261025",
+      "pressure_hypothesis_count": 1,
+      "pressure_hypothesis_identity": "ph_claim_conflict_owner_not_visible_on_first_page_20261025",
+      "recurrence_status": "not-established",
+      "improvement_relation_count": 0,
+      "evidence_count": 5,
+      "source_page": {
+        "offset": 4,
+        "limit": 1
+      },
+      "source_pointer_count": 2,
+      "source_pointer_content_integrity_verified_count": 2,
+      "interpretation": "The existing projection exposes the claim-owner pagination observation and its traceable pressure hypothesis in a ready, single-reference response. Both source pointers pass content-integrity verification. No improvement relationship is present, and the projection preserves recurrence as unestablished."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+    "campaign_objective": "Improve MNCS environmental capability intelligence and agent support, including machine-native adoption and capability accountability.",
+    "session_id": "ses_b6774545fb790bde",
+    "work_intent_id": "int_9bcac9814cef9e2c",
+    "work_intent_goal": "improve mncs-environment through a persistent, discoverable MNCS work context"
+  },
+  "recorder": {
+    "consumer_id": "local-agent",
+    "definition_id": "env_c19cbcbb6aa68f17",
+    "environment_id": "renv_ba1634bffb8954cd",
+    "session_id": "ses_b6774545fb790bde"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_claim_owner_pagination_readback_20261025",
+      "kind": "environmental-observation-record",
+      "repository": "mncs-environment",
+      "commit": "4ad59905c7e116c02eb4b861cbda76e4a09f45a0",
+      "path": "evidence/environmental-capability/claim-owner-pagination-readback-20261025.json",
+      "sha256": "0a15496e00dd00d6b692af52f974678f84a80b0681bbf06140b13d4cc3d0ddd5"
+    }
+  ]
+}
