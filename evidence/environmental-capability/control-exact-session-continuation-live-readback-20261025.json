@@ -1,0 +1,92 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_control_exact_session_continuation_live_readback_20261025",
+  "captured_at": "2026-10-25T02:22:56Z",
+  "measurement_basis": "direct-live-mncs-environment-client-call",
+  "observation": {
+    "kind": "exact-session-continuation-live-readback",
+    "source_interface": "MNCS Environment MCP client connected to Control",
+    "request": {
+      "implementation_commit_on_control_main": "4023255dce631973601bcf8e3194827d8a52ebc6",
+      "calls": [
+        {
+          "project": "mncs-control-mcp",
+          "cwd": ".",
+          "operation": "continuation",
+          "arguments": {
+            "session_id": "ses_c98eb637e20a5c14"
+          }
+        },
+        {
+          "project": "mncs-control-mcp",
+          "cwd": ".",
+          "operation": "context",
+          "arguments": {
+            "session_id": "ses_c98eb637e20a5c14"
+          }
+        }
+      ]
+    },
+    "outcome": {
+      "continuation_call": {
+        "status": "failed",
+        "code": "ENVIRONMENT_LOCAL_BRIDGE_FAILED",
+        "message": "unsupported arguments for operation: session_id"
+      },
+      "session_context_call": {
+        "status": "selection-required",
+        "code": "ENVIRONMENT_SESSION_SELECTION_REQUIRED",
+        "continuation_status": "ambiguous-campaigns",
+        "campaigns_count": 3,
+        "continuations_count": 3
+      },
+      "analysis_limit": "The calls establish the behavior exposed by this connected client at capture time. They do not establish why that client rejected the selector or whether another client registration has the same behavior."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_control_exact_session_selection_after_context_reset_20261025",
+    "title": "A caller cannot reliably reselect an authenticated session after losing local context",
+    "category": "session-continuity",
+    "subsystem": "Control LocalEnvironmentMCP continuation and project-session selection",
+    "owner": "mncs-control-mcp",
+    "recurrence": "observed-in-one-live-campaign-context; cross-session recurrence not-established",
+    "basis": "The connected client rejected the exact-session argument on the direct continuation route and returned three campaign choices on a session-scoped context request, even though the requested session identity was known.",
+    "actionable_recommendation": "Refresh or otherwise align the active client adapter with the merged exact-session continuation contract, then repeat this readback before assessing whether the pressure is relieved.",
+    "not_measured": [
+      "the cause of the connected client's argument rejection",
+      "whether the same behavior affects other clients, repositories, or campaigns",
+      "whether this limitation has caused repeated work or lost development time"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "merged-control-continuation-contract",
+      "identity": "ev_control_exact_session_continuation_implementation_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "4023255dce631973601bcf8e3194827d8a52ebc6",
+      "path": "src/mncs_control_mcp/local_environment_mcp.py",
+      "sha256": "19b6d956f1b6a911e58667372270f736a50f17c1228f11e3b768909deef08e24"
+    }
+  ],
+  "not_measured": [
+    "the active client's source revision or refresh state",
+    "the effect of the merged code on a refreshed client",
+    "token usage, execution duration, cache accounting, and resource consumption"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
