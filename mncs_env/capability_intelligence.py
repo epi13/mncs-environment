@@ -675,6 +675,13 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
         )
         if capability_contract is not None:
             compact_sample["compiler_capability_contract"] = capability_contract
+        delivery_observation = _compact_selected_session_delivery_observation(
+            sample.get("selected_session_delivery_observation"),
+        )
+        if delivery_observation is not None:
+            compact_sample["selected_session_delivery_observation"] = (
+                delivery_observation
+            )
         evidence_reference = _validate_reference(sample.get("evidence_reference"))
         if evidence_reference is not None:
             compact_sample["evidence_reference"] = evidence_reference
@@ -753,6 +760,169 @@ def _compiler_capability_contract_view(value: Any) -> dict[str, Any] | None:
         "proof_relationship": proof_relationship,
         "canonical_execution_relationship": canonical_execution_relationship,
         "environment_delivery": environment_delivery,
+    }
+
+
+def _compact_delivery_binding(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    result = {
+        key: _short_text(value[key], limit)
+        for key, limit in (
+            ("provider", 128), ("capability", 192),
+            ("availability_status", 48), ("use_observation_status", 96),
+            ("provider_attribution", 96),
+        )
+        if isinstance(value.get(key), str)
+    }
+    for key in ("invocation_count", "completion_count"):
+        if type(value.get(key)) is int and value[key] >= 0:
+            result[key] = value[key]
+    outcomes = value.get("outcome_status_counts")
+    if isinstance(outcomes, dict):
+        result["outcome_status_counts"] = {
+            _short_text(name, 48): count
+            for name, count in sorted(
+                ((name, count) for name, count in outcomes.items()
+                 if isinstance(name, str)), key=lambda item: item[0],
+            )[:8]
+            if type(count) is int and count >= 0
+        }
+    references = value.get("supporting_events")
+    if isinstance(references, list):
+        result["supporting_events"] = [
+            {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if (key in reference and (
+                    isinstance(reference[key], str)
+                    or (key == "sequence" and type(reference[key]) is int
+                        and reference[key] >= 0)
+                ))
+            }
+            for reference in references[:3]
+            if isinstance(reference, dict)
+        ]
+    return result
+
+
+def _selected_session_delivery_observation(
+    contract: Any, delivery: Any, *, session_id: str,
+) -> dict[str, Any] | None:
+    """Join a compiler contract to selected-session delivery without alias inference."""
+    contract_view = _compiler_capability_contract_view(contract)
+    if contract_view is None:
+        return None
+    required_identity = contract_view["required_identity"]
+    dispatch_alias = contract_view["runtime_dispatch_alias"]
+    delivery_view = delivery if isinstance(delivery, dict) else {}
+    raw_bindings = delivery_view.get("bindings")
+    raw_bindings = raw_bindings if isinstance(raw_bindings, list) else []
+    exact_matches = [
+        item for item in raw_bindings
+        if isinstance(item, dict) and item.get("capability") == required_identity
+    ]
+    alias_matches = [
+        item for item in raw_bindings
+        if isinstance(item, dict) and item.get("capability") == dispatch_alias
+    ]
+    delivery_status = delivery_view.get("status")
+    complete = (
+        delivery_status == "ready"
+        and delivery_view.get("bindings_omitted", 0) == 0
+        and delivery_view.get("binding_records_not_examined", 0) == 0
+    )
+    if exact_matches:
+        status, match_kind = "canonical-identity-match", "canonical-identity"
+    elif alias_matches:
+        status = "ambiguous-runtime-alias" if len(alias_matches) > 1 else "runtime-alias-only-match"
+        match_kind = "runtime-alias-only"
+    elif delivery_status == "unavailable" or not delivery_view:
+        status, match_kind = "session-delivery-view-unavailable", "none"
+    elif complete:
+        status, match_kind = "not-present-in-selected-session-binding-snapshot", "none"
+    else:
+        status, match_kind = "not-observed-in-incomplete-session-binding-snapshot", "none"
+    matches = exact_matches or alias_matches
+    return {
+        "status": status,
+        "scope": "selected-session-current-binding-snapshot-and-event-window",
+        "session_id": _short_text(session_id, 160),
+        "required_identity": required_identity,
+        "runtime_dispatch_alias": dispatch_alias,
+        "match_kind": match_kind,
+        "canonical_identity_match_count": len(exact_matches),
+        "runtime_alias_match_count": len(alias_matches),
+        "binding_matches": [
+            compact for item in matches[:4]
+            if (compact := _compact_delivery_binding(item)) is not None
+        ],
+        "discoverability_status": "not-measured",
+        "agent_receipt_status": "not-established",
+        "measurement_limits": [
+            "The Compiler proof establishes its admitted artifact contract, not Environment delivery.",
+            "A runtime alias match does not establish canonical identity or provider attribution.",
+            "Selected-session availability and invocation do not establish agent receipt or discovery.",
+            "Use observations cover only this session's bounded event window.",
+        ],
+    }
+
+
+def _compact_selected_session_delivery_observation(
+    value: Any,
+) -> dict[str, Any] | None:
+    statuses = {
+        "canonical-identity-match", "runtime-alias-only-match",
+        "ambiguous-runtime-alias",
+        "not-present-in-selected-session-binding-snapshot",
+        "not-observed-in-incomplete-session-binding-snapshot",
+        "session-delivery-view-unavailable",
+    }
+    if not isinstance(value, dict) or not isinstance(value.get("status"), str):
+        return None
+    status = value["status"]
+    if status not in statuses:
+        return None
+    required_identity = value.get("required_identity")
+    dispatch_alias = value.get("runtime_dispatch_alias")
+    session_id = value.get("session_id")
+    if not all(
+        isinstance(item, str) and item and len(item) <= limit
+        for item, limit in (
+            (required_identity, 256), (dispatch_alias, 128), (session_id, 160),
+        )
+    ):
+        return None
+    raw_matches = value.get("binding_matches")
+    raw_matches = raw_matches if isinstance(raw_matches, list) else []
+    limits = value.get("measurement_limits")
+    return {
+        "status": status,
+        "scope": "selected-session-current-binding-snapshot-and-event-window",
+        "session_id": session_id,
+        "required_identity": required_identity,
+        "runtime_dispatch_alias": dispatch_alias,
+        "match_kind": value.get("match_kind")
+        if value.get("match_kind") in {
+            "canonical-identity", "runtime-alias-only", "none",
+        } else "none",
+        "canonical_identity_match_count": value.get(
+            "canonical_identity_match_count", 0,
+        ) if type(value.get("canonical_identity_match_count")) is int else 0,
+        "runtime_alias_match_count": value.get(
+            "runtime_alias_match_count", 0,
+        ) if type(value.get("runtime_alias_match_count")) is int else 0,
+        "binding_matches": [
+            compact for item in raw_matches[:4]
+            if (compact := _compact_delivery_binding(item)) is not None
+        ],
+        "discoverability_status": "not-measured",
+        "agent_receipt_status": "not-established",
+        "measurement_limits": [
+            _short_text(item, 192)
+            for item in limits[:4]
+            if isinstance(item, str)
+        ] if isinstance(limits, list) else [],
     }
 
 
@@ -3652,6 +3822,8 @@ def _source_integrity_status(source: Any, cache: dict[tuple[str, str, str, str],
 
 def _implementation_accountability_projection(
     observations: list[dict[str, Any]], *, native_proof_reference_present: bool,
+    selected_session_capability_delivery: Any = None,
+    selected_session_id: str = "",
 ) -> dict[str, Any] | None:
     """Summarize verified native-ownership samples without asserting coverage."""
     samples: list[dict[str, Any]] = []
@@ -3696,7 +3868,7 @@ def _implementation_accountability_projection(
         capability_contract = _compiler_capability_contract_view(
             accountability.get("compiler_capability_contract"),
         )
-        samples.append({
+        sample = {
             "identity": observation_record.get("identity"),
             "application_entry": accountability.get("application_entry"),
             "sample_scope": accountability.get("sample_scope"),
@@ -3749,7 +3921,14 @@ def _implementation_accountability_projection(
                 "evidence_relationship_basis",
             ),
             "evidence_reference": observation_record.get("evidence_reference"),
-        })
+        }
+        delivery_observation = _selected_session_delivery_observation(
+            capability_contract, selected_session_capability_delivery,
+            session_id=selected_session_id,
+        )
+        if delivery_observation is not None:
+            sample["selected_session_delivery_observation"] = delivery_observation
+        samples.append(sample)
     if not samples:
         if not native_proof_reference_present:
             return None
@@ -3775,7 +3954,7 @@ def _implementation_accountability_projection(
             "Verified samples establish implementation ownership only for the referenced application and source closure.",
             "The Compiler proof does not inventory production host-language dependencies or establish native migration opportunities.",
             "Source campaign and agent identity are unavailable unless recorded in the source proof.",
-            "This projection does not measure whether different agents can discover or use the demonstrated capability.",
+            "Compiler proof and selected-session delivery observations are separate; neither establishes cross-agent discoverability.",
         ],
     }
 
@@ -6771,6 +6950,10 @@ def project(
             _is_compiler_native_application_proof_reference(reference)
             for reference in references
         ),
+        selected_session_capability_delivery=activity.get(
+            "capability_delivery",
+        ),
+        selected_session_id=session.session_id,
     )
     if workspace_alignment["status"] in {
         "declared-repositories-not-selected",
@@ -6799,6 +6982,11 @@ def project(
             "session_activity_digest": (
                 activity.get("source", {}).get("event_window_identity_digest")
                 if isinstance(activity.get("source"), dict) else None
+            ),
+            "session_capability_delivery_digest": (
+                digest_hex(activity["capability_delivery"])
+                if isinstance(activity.get("capability_delivery"), dict)
+                else None
             ),
             "session_resource_sample_digest": (
                 activity.get("source", {}).get("resource_sample_identity_digest")
@@ -6847,6 +7035,11 @@ def project(
             "source_pointer_content_integrity_not_verified_count": sum(
                 status not in SOURCE_INTEGRITY_VERIFIED
                 for status in source_integrity.values()
+            ),
+            "session_capability_delivery_digest": (
+                digest_hex(activity["capability_delivery"])
+                if isinstance(activity.get("capability_delivery"), dict)
+                else None
             ),
             "observation_records_considered": len(references),
             "observation_records_verified": len(observations),

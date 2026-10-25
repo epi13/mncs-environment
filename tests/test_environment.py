@@ -2578,6 +2578,104 @@ class CapabilityTests(unittest.TestCase):
             self.assertEqual(result["status"], "ok")
             self.assertEqual(result["stdout"].splitlines(), ["impact", "source.mncs"])
 
+    def test_unaddressed_manifest_declaration_coalesces_with_matching_semantic_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repo = root / "mncs-control-mcp"
+            (repo / ".mncs").mkdir(parents=True)
+            (repo / "worktree_cli.py").write_text("pass\n", encoding="utf-8")
+            manifest = {
+                "repository": "mncs-control-mcp",
+                "contracts": {"provides": [{
+                    "contract": "workspace.worktree.prepare",
+                    "version": "1",
+                    "kind": "mcp-server-capability",
+                    "stability": "experimental",
+                }]},
+            }
+            (repo / ".mncs" / "project.json").write_text(
+                json.dumps(manifest), encoding="utf-8",
+            )
+            semantic_contracts = {
+                "repository_id": "mncs-control-mcp",
+                "provides": [{
+                    "contract_identity": "mncs-control-mcp:workspace.worktree.prepare",
+                    "contract_revision": "1",
+                    "canonical_entrypoint": "mncs-control-worktrees prepare",
+                    "effects": ["read"],
+                    "invocation": {
+                        "kind": "python", "path": "worktree_cli.py",
+                    },
+                }],
+            }
+            (repo / "family-semantic-contracts-v1.json").write_text(
+                json.dumps(semantic_contracts), encoding="utf-8",
+            )
+
+            bindings = capabilities.discover_capabilities(
+                root, repository_roots={"mncs-control-mcp": repo},
+            )
+            matches = [
+                item for item in bindings
+                if item["capability"] == (
+                    "mncs-control-mcp:workspace.worktree.prepare"
+                )
+            ]
+
+            self.assertEqual(len(matches), 1)
+            binding = matches[0]
+            self.assertTrue(binding["address"])
+            self.assertEqual(binding["entrypoint"], "mncs-control-worktrees prepare")
+            self.assertEqual(binding["provenance"]["coalesced_declaration_count"], 2)
+            self.assertEqual(
+                {item["source"] for item in binding["provenance"][
+                    "coalesced_declarations"
+                ]},
+                {
+                    "mncs-control-mcp/.mncs/project.json",
+                    "mncs-control-mcp/family-semantic-contracts-v1.json",
+                },
+            )
+
+            manifest["contracts"]["provides"][0]["effects"] = ["write"]
+            (repo / ".mncs" / "project.json").write_text(
+                json.dumps(manifest), encoding="utf-8",
+            )
+            conflicting = capabilities.discover_capabilities(
+                root, repository_roots={"mncs-control-mcp": repo},
+            )
+            conflicting_matches = [
+                item for item in conflicting
+                if item["capability"] == (
+                    "mncs-control-mcp:workspace.worktree.prepare"
+                )
+            ]
+            self.assertEqual(len(conflicting_matches), 2)
+
+            manifest["contracts"]["provides"][0].pop("effects")
+            manifest["contracts"]["provides"][0]["invocation"] = {
+                "kind": "python", "path": "worktree_cli.py",
+            }
+            semantic_contracts["provides"][0]["invocation"]["path"] = (
+                "missing_worktree_cli.py"
+            )
+            (repo / ".mncs" / "project.json").write_text(
+                json.dumps(manifest), encoding="utf-8",
+            )
+            (repo / "family-semantic-contracts-v1.json").write_text(
+                json.dumps(semantic_contracts), encoding="utf-8",
+            )
+            unresolved = capabilities.discover_capabilities(
+                root, repository_roots={"mncs-control-mcp": repo},
+            )
+            unresolved_matches = [
+                item for item in unresolved
+                if item["capability"] == (
+                    "mncs-control-mcp:workspace.worktree.prepare"
+                )
+            ]
+            self.assertEqual(len(unresolved_matches), 2)
+
     def test_manifest_test_binds_fixed_command_to_selected_checkout(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

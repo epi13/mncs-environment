@@ -711,9 +711,91 @@ def discover_capabilities(
                 binding.setdefault("provenance", {})[
                     "toolchain_checkouts"
                 ] = selected_dependencies
-        bindings.extend(discovered)
+        bindings.extend(_coalesce_addressed_binding_declarations(discovered))
     bindings.sort(key=lambda item: (item["provider"], item["capability"]))
     return bindings
+
+
+def _coalesce_addressed_binding_declarations(
+    bindings: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Use one callable binding when declarations for one contract complement each other."""
+    groups: dict[str, list[dict[str, Any]]] = {}
+    ungrouped: list[dict[str, Any]] = []
+    for binding in bindings:
+        binding_id = binding.get("binding_id")
+        if not isinstance(binding_id, str) or not binding_id:
+            ungrouped.append(binding)
+            continue
+        groups.setdefault(binding_id, []).append(binding)
+
+    semantic_fields = (
+        "provider", "capability", "contract_revision", "provider_root",
+        "effects", "event_types", "shareable_artifacts", "output_limit_bytes",
+    )
+    result = list(ungrouped)
+    for group in groups.values():
+        if len(group) < 2:
+            result.extend(group)
+            continue
+        addressed = [
+            item for item in group
+            if isinstance(item.get("address"), str) and item["address"]
+            and isinstance(item.get("provenance"), dict)
+            and item["provenance"].get("addressing") in {"descriptor", "bootstrap"}
+        ]
+        if len(addressed) != 1:
+            result.extend(group)
+            continue
+        has_unaddressed_invocation = any(
+            item is not addressed[0]
+            and isinstance(item.get("provenance"), dict)
+            and item["provenance"].get("declared_invocation") is not False
+            for item in group
+        )
+        if has_unaddressed_invocation:
+            result.extend(group)
+            continue
+        baseline = tuple(
+            json.dumps(group[0].get(key), sort_keys=True, separators=(",", ":"))
+            for key in semantic_fields
+        )
+        if any(
+            tuple(json.dumps(item.get(key), sort_keys=True, separators=(",", ":"))
+                  for key in semantic_fields) != baseline
+            for item in group[1:]
+        ):
+            result.extend(group)
+            continue
+
+        selected = dict(addressed[0])
+        selected_provenance = selected.get("provenance")
+        selected_provenance = (
+            dict(selected_provenance)
+            if isinstance(selected_provenance, dict) else {}
+        )
+        declarations = []
+        seen_declarations: set[str] = set()
+        for item in group:
+            provenance = item.get("provenance")
+            provenance = provenance if isinstance(provenance, dict) else {}
+            declaration = {
+                "source": provenance.get("source"),
+                "addressing": provenance.get("addressing"),
+                "declared_invocation": provenance.get("declared_invocation"),
+                "address_present": bool(item.get("address")),
+            }
+            declaration_key = json.dumps(
+                declaration, sort_keys=True, separators=(",", ":"),
+            )
+            if declaration_key not in seen_declarations:
+                seen_declarations.add(declaration_key)
+                declarations.append(declaration)
+        selected_provenance["coalesced_declaration_count"] = len(group)
+        selected_provenance["coalesced_declarations"] = declarations[:8]
+        selected["provenance"] = selected_provenance
+        result.append(selected)
+    return result
 
 
 def _from_verification_inventory(repo: Path) -> list[dict[str, Any]]:
@@ -939,6 +1021,9 @@ def _from_semantic_contracts(
             output_limit_bytes=output_limit_bytes,
             provenance={"source": f"{repo.name}/family-semantic-contracts-v1.json",
                         "status": entry.get("status"), "addressing": addressing,
+                        "declared_invocation": isinstance(
+                            entry.get("invocation"), dict,
+                        ),
                         "adapter_library_paths": declared["adapter_library_paths"]},
             provider_root=str(repo),
         )
@@ -1028,7 +1113,11 @@ def _from_manifest(
             output_limit_bytes=output_limit_bytes,
             provenance={"source": f"{repo.name}/.mncs/project.json",
                         "kind": entry.get("kind"), "stability": entry.get("stability"),
-                        "addressing": addressing, "manifest_tests": declared_tests,
+                        "addressing": addressing,
+                        "declared_invocation": isinstance(
+                            entry.get("invocation"), dict,
+                        ),
+                        "manifest_tests": declared_tests,
                         "addressing_detail": declared.get("detail"),
                         "artifact_contract": entry.get("artifact_contract")},
             provider_root=str(repo),

@@ -164,6 +164,17 @@ implementation inventory and denominator exist. Missing source campaign or
 agent identity remains unavailable rather than being attributed to the
 Environment projection session.
 
+When the selected session has a capability-delivery view, the sample also
+exposes `selected_session_delivery_observation`. It compares the proof's
+canonical capability identity with that session's current binding snapshot and
+bounded invocation events. An exact identity match is distinct from a match on
+the compiler's runtime alias; an alias-only match does not establish provider
+or contract identity. Absence is reported only when the binding snapshot is
+complete; partial snapshots remain unobserved. This relationship describes one
+selected session, and does not establish agent receipt, discoverability, or
+cross-agent usability. The compiler proof's own
+`environment_delivery: not-measured-by-this-compiler-proof` remains unchanged.
+
 When Work Intent declares a repository that is not selected, the projection may
 also emit `context_pressure_candidates`. These candidates join the declared
 repository gap with bounded source-visibility diagnostics for that repository.

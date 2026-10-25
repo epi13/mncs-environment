@@ -3170,6 +3170,45 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
 ) -> None:
     session, state = _session(tmp_path, [])
     reference = _add_compiler_native_application_proof_evidence(session, state)
+    session.snapshot["bindings"] = [{
+        "binding_id": "binding_test_artifact",
+        "provider": "mncs-test",
+        "capability": "test_artifact",
+        "availability": {"status": "available"},
+    }]
+    events = [
+        {
+            "identity": "evt_test_artifact_invoked",
+            "sequence": 1,
+            "type": "capability.invoked",
+            "producer": "local-agent",
+            "observed_at": "2026-10-25T00:00:00Z",
+            "payload": {
+                "capability": "test_artifact",
+                "provider_request_id": "req_test_artifact",
+                "argv": ["private-test-argument"],
+            },
+        },
+        {
+            "identity": "evt_test_artifact_completed",
+            "sequence": 2,
+            "type": "invocation.completed",
+            "producer": "mncs-test",
+            "observed_at": "2026-10-25T00:00:01Z",
+            "payload": {
+                "capability": "test_artifact",
+                "status": "succeeded",
+                "returncode": 0,
+                "provider_request_id": "req_test_artifact",
+            },
+        },
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events),
+        "events": events[-limit:],
+        "truncated": False,
+        "next_before_sequence": None,
+    }
     root = Path(session.snapshot["workspace"]["root"])
     session.snapshot["selected_checkouts"] = {
         "mncs-environment": session.snapshot["selected_checkouts"][
@@ -3267,6 +3306,25 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
     assert projected_contract["effect_contract"] == capability_contract[
         "effect_contract"
     ]
+    delivery = projected_accountability["samples"][0][
+        "selected_session_delivery_observation"
+    ]
+    assert delivery["status"] == "runtime-alias-only-match"
+    assert delivery["match_kind"] == "runtime-alias-only"
+    assert delivery["session_id"] == session.session_id
+    assert delivery["required_identity"] == capability_contract[
+        "required_identity"
+    ]
+    assert delivery["runtime_alias_match_count"] == 1
+    assert delivery["canonical_identity_match_count"] == 0
+    assert delivery["binding_matches"][0]["availability_status"] == "available"
+    assert delivery["binding_matches"][0]["invocation_count"] == 1
+    assert delivery["binding_matches"][0]["completion_count"] == 1
+    assert delivery["binding_matches"][0]["supporting_events"][0]["identity"] == (
+        "evt_test_artifact_invoked"
+    )
+    assert delivery["discoverability_status"] == "not-measured"
+    assert delivery["agent_receipt_status"] == "not-established"
 
     encoded = json.dumps(result, ensure_ascii=False, sort_keys=True).encode()
     compact = capability_intelligence._compact_projection(
@@ -3283,6 +3341,152 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
     assert compact_accountability["samples"][0]["compiler_capability_contract"][
         "environment_delivery"
     ] == "not-measured-by-this-compiler-proof"
+    compact_delivery = compact_accountability["samples"][0][
+        "selected_session_delivery_observation"
+    ]
+    assert compact_delivery["status"] == "runtime-alias-only-match"
+    assert compact_delivery["binding_matches"][0]["supporting_events"][0][
+        "identity"
+    ] == "evt_test_artifact_invoked"
+
+
+def test_compiler_capability_delivery_requires_exact_identity_for_exact_match() -> None:
+    contract = {
+        "required_identity": (
+            "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact"
+        ),
+        "runtime_dispatch_alias": "test_artifact",
+        "effect_contract": [
+            {
+                "capability": "test_artifact",
+                "kind": "structured_read",
+                "target": "digest_app",
+            },
+            {
+                "capability": "test_artifact",
+                "kind": "structured_write",
+                "target": "digest_app",
+            },
+        ],
+        "proof_relationship": "compiler-artifact-admission-matches",
+        "canonical_execution_relationship": (
+            "declared-effects-matched-across-proof-cases"
+        ),
+        "environment_delivery": "not-measured-by-this-compiler-proof",
+    }
+    binding = {
+        "provider": "mncs-test",
+        "capability": contract["required_identity"],
+        "availability_status": "available",
+        "use_observation_status": "invoked-in-selected-event-window",
+        "invocation_count": 1,
+        "completion_count": 1,
+        "outcome_status_counts": {"succeeded": 1},
+        "supporting_events": [{
+            "identity": "evt_exact_capability_invocation",
+            "sequence": 8,
+            "type": "capability.invoked",
+        }],
+    }
+    delivery = {
+        "status": "ready",
+        "bindings_omitted": 0,
+        "binding_records_not_examined": 0,
+        "bindings": [binding],
+    }
+
+    result = capability_intelligence._selected_session_delivery_observation(
+        contract, delivery, session_id="ses_delivery_reader",
+    )
+
+    assert result is not None
+    assert result["status"] == "canonical-identity-match"
+    assert result["match_kind"] == "canonical-identity"
+    assert result["canonical_identity_match_count"] == 1
+    assert result["runtime_alias_match_count"] == 0
+    compact = capability_intelligence._compact_selected_session_delivery_observation(
+        result,
+    )
+    assert compact is not None
+    assert compact["binding_matches"][0]["supporting_events"][0]["identity"] == (
+        "evt_exact_capability_invocation"
+    )
+
+
+def test_compiler_capability_delivery_marks_incomplete_absence_as_unobserved() -> None:
+    contract = {
+        "required_identity": "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact",
+        "runtime_dispatch_alias": "test_artifact",
+        "effect_contract": [
+            {"capability": "test_artifact", "kind": "structured_read", "target": "digest_app"},
+            {"capability": "test_artifact", "kind": "structured_write", "target": "digest_app"},
+        ],
+        "proof_relationship": "compiler-artifact-admission-matches",
+        "canonical_execution_relationship": "declared-effects-matched-across-proof-cases",
+        "environment_delivery": "not-measured-by-this-compiler-proof",
+    }
+
+    result = capability_intelligence._selected_session_delivery_observation(
+        contract,
+        {
+            "status": "partial",
+            "bindings_omitted": 1,
+            "binding_records_not_examined": 2,
+            "bindings": [],
+        },
+        session_id="ses_partial_delivery_reader",
+    )
+
+    assert result is not None
+    assert result["status"] == (
+        "not-observed-in-incomplete-session-binding-snapshot"
+    )
+
+
+def test_compiler_capability_delivery_distinguishes_complete_absence_and_alias_ambiguity() -> None:
+    contract = {
+        "required_identity": "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact",
+        "runtime_dispatch_alias": "test_artifact",
+        "effect_contract": [
+            {"capability": "test_artifact", "kind": "structured_read", "target": "digest_app"},
+            {"capability": "test_artifact", "kind": "structured_write", "target": "digest_app"},
+        ],
+        "proof_relationship": "compiler-artifact-admission-matches",
+        "canonical_execution_relationship": "declared-effects-matched-across-proof-cases",
+        "environment_delivery": "not-measured-by-this-compiler-proof",
+    }
+    complete_absence = capability_intelligence._selected_session_delivery_observation(
+        contract,
+        {
+            "status": "ready",
+            "bindings_omitted": 0,
+            "binding_records_not_examined": 0,
+            "bindings": [],
+        },
+        session_id="ses_complete_delivery_reader",
+    )
+    ambiguous_alias = capability_intelligence._selected_session_delivery_observation(
+        contract,
+        {
+            "status": "ready",
+            "bindings_omitted": 0,
+            "binding_records_not_examined": 0,
+            "bindings": [
+                {"provider": "mncs-test", "capability": "test_artifact"},
+                {"provider": "mncs-compiler", "capability": "test_artifact"},
+            ],
+        },
+        session_id="ses_ambiguous_delivery_reader",
+    )
+
+    assert complete_absence is not None
+    assert complete_absence["status"] == (
+        "not-present-in-selected-session-binding-snapshot"
+    )
+    assert ambiguous_alias is not None
+    assert ambiguous_alias["status"] == "ambiguous-runtime-alias"
+    assert ambiguous_alias["runtime_alias_match_count"] == 2
+    assert len(ambiguous_alias["binding_matches"]) == 2
 
 
 def test_compiler_native_application_proof_rejects_failed_canonical_case(
