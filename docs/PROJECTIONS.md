@@ -164,6 +164,19 @@ implementation inventory and denominator exist. Missing source campaign or
 agent identity remains unavailable rather than being attributed to the
 Environment projection session.
 
+For this exact proof, `scoped_native_module_ownership` reports a bounded
+module-source measure: the number of source-integrity-verified modules in its
+four-module application closure. It is `measured` only when the proof blob and
+all four module blobs are verified, the proof establishes native semantic
+ownership and a verified compiler front end, and all three canonical VM cases
+succeed. Incomplete source evidence is `partial` with the verified module
+count retained. This is a source-module ownership measure for one application,
+not a functionality-weighted or systemwide native-adoption ratio. The
+test-only host adapter is excluded from the module denominator, while the
+number of host semantic implementations remains `not-measured` because this
+proof does not inventory them. The compact projection preserves this scoped
+measure and its limits.
+
 When the selected evidence window also contains a cross-project native-userland
 audit, the same view exposes its owner-declared project classifications,
 remaining host responsibilities, bounded source pointers, and proposed native

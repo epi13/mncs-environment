@@ -3360,12 +3360,81 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
 
     projected_accountability = result["implementation_accountability"]
     assert projected_accountability["sample_count"] == 1
-    assert projected_accountability["samples"][0]["ownership_status"] == (
+    projected_sample = projected_accountability["samples"][0]
+    assert projected_sample["ownership_status"] == (
         "source-integrity-verified-for-sample"
+    )
+    scoped_ownership = projected_sample["scoped_native_module_ownership"]
+    assert scoped_ownership["status"] == "measured"
+    assert scoped_ownership["verified_native_module_count"] == 4
+    assert scoped_ownership["module_denominator"] == 4
+    assert scoped_ownership["host_semantic_implementation_count"]["status"] == (
+        "not-measured"
+    )
+    assert scoped_ownership["host_test_adapter_included_in_denominator"] is False
+    assert "not a functionality-weighted or systemwide adoption ratio" in (
+        scoped_ownership["interpretation_limit"]
     )
     ratio = projected_accountability["systemwide_native_adoption_ratio"]
     assert ratio["status"] == "not-measured"
     assert "denominator" in ratio["reason"]
+
+    unverified_module = module_sources[0]["module"]
+    partial_observation = {
+        **observation,
+        "supporting_sources": [
+            {
+                **source,
+                **({"content_integrity_status": "source-content-not-verified"}
+                   if source.get("kind") == "native-language-module-source"
+                   and source.get("module") == unverified_module else {}),
+            }
+            for source in observation["supporting_sources"]
+        ],
+    }
+    partial_projection = (
+        capability_intelligence._implementation_accountability_projection(
+            [partial_observation],
+            native_proof_reference_present=True,
+        )
+    )
+    assert partial_projection is not None
+    partial_scope = partial_projection["samples"][0][
+        "scoped_native_module_ownership"
+    ]
+    assert partial_scope["status"] == "partial"
+    assert partial_scope["verified_native_module_count"] == 3
+    assert partial_scope["module_denominator"] == 4
+
+    duplicate_source_module = module_sources[1]["module"]
+    duplicate_observation = {
+        **observation,
+        "supporting_sources": [
+            {
+                **source,
+                **({"module": duplicate_source_module}
+                   if source.get("kind") == "native-language-module-source"
+                   and source.get("module") == module_sources[0]["module"] else {}),
+            }
+            for source in observation["supporting_sources"]
+        ],
+    }
+    duplicate_projection = (
+        capability_intelligence._implementation_accountability_projection(
+            [duplicate_observation],
+            native_proof_reference_present=True,
+        )
+    )
+    assert duplicate_projection is not None
+    duplicate_scope = duplicate_projection["samples"][0][
+        "scoped_native_module_ownership"
+    ]
+    assert duplicate_scope["status"] == "partial"
+    assert duplicate_scope["verified_native_module_count"] == 3
+    assert all(source["content_integrity_status"] in (
+        capability_intelligence.SOURCE_INTEGRITY_VERIFIED
+    ) for source in duplicate_observation["supporting_sources"]
+               if source.get("kind") == "native-language-module-source")
     assert projected_accountability["samples"][0][
         "native_migration_opportunity"
     ] == "not-established"
@@ -3407,6 +3476,9 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
         "status"
     ] == "not-measured"
     assert compact_accountability["samples"][0]["native_module_count"] == 4
+    assert compact_accountability["samples"][0][
+        "scoped_native_module_ownership"
+    ] == scoped_ownership
     assert compact_accountability["samples"][0]["compiler_proof_reference"][
         "identity"
     ] == reference["identity"]

@@ -682,6 +682,32 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
                 for key in ("classification", "limitation", "harness_limitation")
                 if isinstance(host_adapter.get(key), str)
             }
+        scoped_ownership = sample.get("scoped_native_module_ownership")
+        if isinstance(scoped_ownership, dict):
+            compact_scope = {
+                key: _short_text(scoped_ownership.get(key), 192)
+                for key in ("status", "scope", "unit", "interpretation_limit")
+                if isinstance(scoped_ownership.get(key), str)
+            }
+            for key in ("verified_native_module_count", "module_denominator"):
+                if type(scoped_ownership.get(key)) is int:
+                    compact_scope[key] = scoped_ownership[key]
+            if type(scoped_ownership.get(
+                "host_test_adapter_included_in_denominator",
+            )) is bool:
+                compact_scope["host_test_adapter_included_in_denominator"] = (
+                    scoped_ownership["host_test_adapter_included_in_denominator"]
+                )
+            host_semantics = scoped_ownership.get(
+                "host_semantic_implementation_count",
+            )
+            if isinstance(host_semantics, dict):
+                compact_scope["host_semantic_implementation_count"] = {
+                    key: _short_text(host_semantics.get(key), 192)
+                    for key in ("status", "reason")
+                    if isinstance(host_semantics.get(key), str)
+                }
+            compact_sample["scoped_native_module_ownership"] = compact_scope
         capability_contract = _compiler_capability_contract_view(
             sample.get("compiler_capability_contract"),
         )
@@ -4395,10 +4421,19 @@ def _implementation_accountability_projection(
             if isinstance(source, dict)
             and source.get("kind") == "native-language-module-source"
         ]
-        module_integrity_count = sum(
-            source.get("content_integrity_status") in SOURCE_INTEGRITY_VERIFIED
+        expected_module_names = {
+            module for module, _repository, _path, _revision_field
+            in COMPILER_NATIVE_APPLICATION_MODULES
+        }
+        verified_module_names = {
+            source.get("module")
             for source in module_sources
-        )
+            if isinstance(source.get("module"), str)
+            and source.get("module") in expected_module_names
+            and isinstance(source.get("content_integrity_status"), str)
+            and source.get("content_integrity_status") in SOURCE_INTEGRITY_VERIFIED
+        }
+        module_integrity_count = len(verified_module_names)
         proof_source = next((source for source in sources
                              if isinstance(source, dict)
                              and source.get("kind") == (
@@ -4470,6 +4505,52 @@ def _implementation_accountability_projection(
                 "evidence_relationship_basis",
             ),
             "evidence_reference": observation_record.get("evidence_reference"),
+        }
+        expected_module_count = len(COMPILER_NATIVE_APPLICATION_MODULES)
+        proof_integrity_verified = (
+            isinstance(proof_source, dict)
+            and proof_source.get("content_integrity_status")
+            in SOURCE_INTEGRITY_VERIFIED
+        )
+        canonical_case_count = accountability.get("canonical_vm_case_count")
+        canonical_case_success_count = accountability.get(
+            "canonical_vm_case_success_count",
+        )
+        scoped_measurement_complete = (
+            ownership_status == "source-integrity-verified-for-sample"
+            and declared_module_count == expected_module_count
+            and len(module_sources) == expected_module_count
+            and verified_module_names == expected_module_names
+            and module_integrity_count == expected_module_count
+            and proof_integrity_verified
+            and accountability.get("native_semantic_ownership")
+            == "verified-for-this-application-proof"
+            and accountability.get("compiler_front_end_outcome") == "verified"
+            and canonical_case_count == 3
+            and canonical_case_success_count == canonical_case_count
+        )
+        sample["scoped_native_module_ownership"] = {
+            "status": (
+                "measured" if scoped_measurement_complete else (
+                    "partial" if module_sources or proof_source else "not-measured"
+                )
+            ),
+            "scope": "one compiler-proven MNCS application source closure",
+            "unit": "resolved application source module",
+            "verified_native_module_count": module_integrity_count,
+            "module_denominator": expected_module_count,
+            "host_semantic_implementation_count": {
+                "status": "not-measured",
+                "reason": (
+                    "The proof identifies a test-only host adapter but does not "
+                    "inventory host implementations outside this application closure."
+                ),
+            },
+            "host_test_adapter_included_in_denominator": False,
+            "interpretation_limit": (
+                "This source-module closure is specific to one verified application "
+                "proof; it is not a functionality-weighted or systemwide adoption ratio."
+            ),
         }
         delivery_observation = _selected_session_delivery_observation(
             capability_contract, selected_session_capability_delivery,
