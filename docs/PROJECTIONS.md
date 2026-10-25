@@ -571,15 +571,20 @@ Published observation records are content-addressed and are not rewritten when
 a transcription or relation needs correction. A later record can use the
 `mncs.environment.observation-correction/1` contract to point to the exact
 target evidence reference, name corrected fields, and provide their replacement
-values. The first supported fields are `supporting_sources` (which must point
-to selected, integrity-verified evidence) and `not_measured`. The projection
+values. The first supported fields are `supporting_sources` and `not_measured`.
+Each replacement source must appear in the selected campaign evidence window
+and have verified content integrity. A non-observation source in another
+workspace repository may remain `outside-selected-session` when the bounded,
+read-only workspace lookup verifies its exact commit, path, and digest; this
+does not select or claim that repository. An environmental-observation source
+outside the selected session is not accepted as a replacement. The projection
 applies a correction only when the exact target pointer and target record are
-verified, the replacement values differ from the target, and every replacement
-source is verified. It keeps the original record inspectable through its
-evidence reference and exposes the effective values with a link to the
-correction record. A target outside the selected pages remains explicitly
-unresolved; an invalid or conflicting correction is not applied. Corrections
-do not change an improvement relation or effectiveness assessment.
+verified and the replacement values differ from the target. It keeps the
+original record inspectable through its evidence reference and exposes the
+effective values with a link to the correction record. A target outside the
+selected pages remains explicitly unresolved; an invalid or conflicting
+correction is not applied. Corrections do not change an improvement relation
+or effectiveness assessment.
 
 The query considers at most 32 campaign evidence references, reads at most 16
 observation records of 64 KiB each within one 8 second Git-read budget, and
