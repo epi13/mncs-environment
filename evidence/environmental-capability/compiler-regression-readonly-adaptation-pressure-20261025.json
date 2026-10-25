@@ -1,0 +1,111 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_regression_readonly_adaptation_pressure_20261025",
+  "captured_at": "2026-10-25T16:04:21Z",
+  "measurement_basis": "bounded-live-environmental-capability-projection-over-content-addressed-compiler-reports",
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recording_context": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51",
+    "environment_identity_capture_status": "captured-in-record",
+    "environment_version_capture_status": "not-captured-in-record"
+  },
+  "observation": {
+    "kind": "compiler-regression-source-objective-context-gap",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "operation": "projections --interpret environmental-capability",
+      "campaign_state_checkpoint_id": "chk_82a3273f3758f27a",
+      "evidence_page_offset": 4,
+      "evidence_page_limit": 5,
+      "session_event_limit": 1,
+      "compiler_source_identities": [
+        "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+        "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+        "ev_compiler_digest_application_interface_invalidation_20261023"
+      ]
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "selected_page_observation_records_considered": 5,
+      "selected_page_observation_records_verified": 5,
+      "selected_page_observation_records_unavailable": 0,
+      "selected_page_source_pointers_content_integrity_verified": 5,
+      "response_truncated": true,
+      "compiler_reports_adapted": 3,
+      "compiler_report_read_basis": "workspace-read-only-checkout",
+      "compiler_source_session_context_resolution": "no-matching-verified-supporting-observation",
+      "compiler_report_stage_details": "available as bounded derived observations",
+      "interpretation": "Three exact Compiler regression report references are now readable as bounded derived observations. Their recorded cache stages and output-equivalence fields are exposed, but no verified source_session_context links them to an originating Compiler objective. The Environment reader's related_work is not source attribution and is not used as a substitute. The projection remains partial because this is a bounded historical page and the response was truncated; the five selected references themselves verified with no unavailable records."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_compiler_regression_source_objective_context_20261025",
+    "title": "Verified Compiler regression stages are detached from their originating objective in the environmental projection",
+    "category": "cross-repository-provenance",
+    "subsystem": "MNCS Environment capability-intelligence projection and Compiler regression evidence capture",
+    "owner": "mncs-environment and mncs-compiler maintainers",
+    "basis": "On one selected evidence page, three distinct content-addressed Compiler regression reports were adapted and their recorded stage details became visible. None matched a verified supporting observation with explicit source_session_context. The current Environment reader's campaign and work intent are known, but cannot establish which Compiler session or objective produced those reports.",
+    "recurrence": "observed in three report records on one bounded campaign page; cross-session recurrence not established",
+    "actionable_recommendation": "Preserve the current read-only report access and make future Compiler evidence joinable through an explicit, authenticated source-context observation tied to the exact repository, commit, path, identity, and digest. Until such evidence exists, retain source-session attribution as unavailable.",
+    "not_measured": [
+      "whether the three reports came from different Compiler sessions",
+      "whether missing source context impeded the Compiler campaign",
+      "cross-session or cross-agent recurrence",
+      "whether the exposed cache behavior enables any native migration",
+      "agent discovery, use, or outcomes after this projection change"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+      "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12"
+    },
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+      "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e"
+    },
+    {
+      "kind": "compiler-regression-source-record",
+      "identity": "ev_compiler_digest_application_interface_invalidation_20261023",
+      "repository": "mncs-compiler",
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "path": "evidence/language-module-interface-application-invalidation-compiler-20261023.json",
+      "sha256": "ce67f0ff837bba0ff73301cb398198da5ff9125e8fe8cb75c45c5f26a1715177"
+    },
+    {
+      "kind": "prior-environmental-context-gap-observation",
+      "identity": "ev_environment_compiler_cache_agent_context_gap_20261025",
+      "repository": "mncs-environment",
+      "commit": "10547332366a753e3e114b72b92d2824a6cd0d62",
+      "path": "evidence/environmental-capability/compiler-effect-capability-cache-provenance-20261025.json",
+      "sha256": "a55f795b5f5c470d86e666f81b15ab9b49c02cd7f7260d0b9af34ec78b0ba495"
+    }
+  ],
+  "not_measured": [
+    "source Compiler session and objective for these three report records",
+    "model identity, token use, and agent-attributed resource use",
+    "cross-session recurrence of the provenance gap",
+    "native-versus-host implementation ownership or migration readiness",
+    "whether the report adapter changes later agent decisions or outcomes"
+  ]
+}
