@@ -1,0 +1,99 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_owner_audit_source_details_pressure_20261025",
+  "captured_at": "2026-10-25T16:21:11Z",
+  "measurement_basis": "committed baseline inspection and authenticated project-owner audit sources",
+  "observation": {
+    "kind": "native-owner-audit-detail-discoverability-gap",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "baseline_commit": "78471a216a7732c1b9b0c6d696e3cfbeef8f2e1f",
+      "campaign_evidence_identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+      "query": "projections --interpret environmental-capability --history-pages 1 --evidence-offset 0 --evidence-limit 1 --session-event-limit 1"
+    },
+    "outcome": {
+      "baseline_projection_capability": "The existing implementation-accountability projection exposed repository-owner audit summaries, source references, and plain host-responsibility labels. It did not project the verified audit records' structured responsibility classifications, stated eliminating capabilities, entrypoints, verification-plan boundaries, or exact remaining host paths.",
+      "source_evidence": "Two immutable owner-audit pointers in the campaign's cross-project native-userland observation identify exact native-userland-audit.json blobs for mncs-actions and mncs-test. Their classifications and proposed capabilities remain repository-owner declarations.",
+      "actionable_opportunity": "Read only the exact allowlisted audit records after content-integrity verification under existing selected-checkout or workspace-read-only authority, then expose bounded source details through the existing projection.",
+      "native_adoption": {
+        "systemwide_ratio": "not-measured",
+        "denominator": "not-established",
+        "implementation_ownership": "owner-declared; not independently verified",
+        "migration_readiness": "not-established"
+      },
+      "recurrence": "One campaign evidence path; repeated agent difficulty or cross-session recurrence is not established."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_native_owner_audit_source_details_20261025",
+    "title": "Native owner-audit capability dependencies were hidden behind summary strings",
+    "category": "environmental-capability-integration",
+    "subsystem": "Environment implementation accountability and native-userland projection",
+    "owner": "mncs-environment maintainers",
+    "basis": "The committed 78471a baseline projects owner-audit counts, summaries, and plain host-responsibility strings. The authenticated campaign observation references exact owner audit files containing more specific classifications, eliminating-capability statements, verification-plan details, and host paths. This establishes a projection coverage gap, not failed discovery by another agent or independently verified implementation ownership.",
+    "actionable_recommendation": "Extend the existing bounded projection to parse only the exact allowlisted audit schema after hash verification under established repository read authority; expose source details and preserve owner-declared, not independently verified status.",
+    "recurrence": "not-established-across-sessions",
+    "not_measured": [
+      "whether agents previously failed to discover or use these records",
+      "systemwide native-versus-host implementation ownership, inventory, ratio, or denominator",
+      "semantic correctness of repository-owner classifications",
+      "whether an eliminating capability suffices for behaviorally equivalent native migration",
+      "whether projection changes improve agent use across agents, models, or sessions"
+    ]
+  },
+  "not_measured": [
+    "cross-agent discoverability or successful use before implementation",
+    "systemwide native adoption ratio or denominator",
+    "independent verification of repository-owner implementation classifications",
+    "readiness or effectiveness of replacing any host responsibility"
+  ],
+  "supporting_sources": [
+    {
+      "kind": "committed-baseline-source",
+      "identity": "src_environment_capability_intelligence_baseline_78471a2",
+      "repository": "mncs-environment",
+      "commit": "78471a216a7732c1b9b0c6d696e3cfbeef8f2e1f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "a483991d6b1079a4270f2cdfa3f5f4e233ecfbf2b2f5fb23ce56d4952e30c1ee"
+    },
+    {
+      "kind": "authenticated-campaign-owner-audit-observation",
+      "identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+      "repository": "mncs-environment",
+      "commit": "fa06cc9d56648c48d17594d7af65f0babd2c35c8",
+      "path": "evidence/environmental-capability/native-userland-accountability-20261025.json",
+      "sha256": "14af1e6885b24b324491af644f7a9a4bb589e60d391d4649b9c93c49832b6b66",
+      "status": "content-integrity-verified; audit classifications remain owner-declared"
+    },
+    {
+      "kind": "repository-owner-native-userland-audit",
+      "identity": "audit_mncs_actions_native_userland_20261025",
+      "repository": "mncs-actions",
+      "commit": "ca62f3d33ef9c3b5096bc4d39f6039adc445e579",
+      "path": "native-userland-audit.json",
+      "sha256": "76e5845b033c775f93bc3e821a069cf8bb21eb437784e505847db3c19446c48a"
+    },
+    {
+      "kind": "repository-owner-native-userland-audit",
+      "identity": "audit_mncs_test_native_userland_20261025",
+      "repository": "mncs-test",
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "path": "native-userland-audit.json",
+      "sha256": "cd4e760c250504cc62b5094769bedf07b73b2dd6d0765206c571290a27bb5560"
+    }
+  ]
+}
