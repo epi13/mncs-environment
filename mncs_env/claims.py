@@ -591,7 +591,11 @@ def _validate_owner_recovery_authorization(
     }
     if set(authorization) != required:
         raise ValueError("owner recovery authorization fields are invalid")
-    if authorization.get("schema_version") != "mncs.environment.control-owner-claim-recovery/2":
+    authorization_schema = authorization.get("schema_version")
+    if authorization_schema not in {
+        "mncs.environment.control-owner-claim-recovery/2",
+        "mncs.environment.control-owner-claim-recovery/3",
+    }:
         raise ValueError("owner recovery authorization schema is unsupported")
     if (authorization.get("repository") != repository
             or authorization.get("claim_id") != claim_id
@@ -636,9 +640,16 @@ def _validate_owner_recovery_authorization(
         "current_request_processes_excluded", "matching_processes",
         "matching_user_services", "resident_services", "complete",
     }
+    if authorization_schema == "mncs.environment.control-owner-claim-recovery/3":
+        observation_fields.add("operator_approved_resident_agent_hosts")
     if set(observation) != observation_fields:
         raise ValueError("owner recovery host observation fields are invalid")
-    if (observation.get("schema_version") != "mncs.control.host-execution-liveness/2"
+    expected_observation_schema = (
+        "mncs.control.host-execution-liveness/3"
+        if authorization_schema == "mncs.environment.control-owner-claim-recovery/3"
+        else "mncs.control.host-execution-liveness/2"
+    )
+    if (observation.get("schema_version") != expected_observation_schema
             or observation.get("process_view") != "host-procfs"
             or observation.get("complete") is not True
             or observation.get("active_jobs") != 0
@@ -671,6 +682,26 @@ def _validate_owner_recovery_authorization(
                    or type(item.get("environment_readable")) is not bool
                    for item in resident_services)):
         raise ValueError("owner recovery resident integration service identities are invalid")
+    resident_agent_hosts = observation.get(
+        "operator_approved_resident_agent_hosts", [],
+    )
+    if (not isinstance(resident_agent_hosts, list)
+            or len(resident_agent_hosts) > 32
+            or any(not isinstance(item, dict)
+                   or set(item) != {"pid", "start_ticks", "process_kind"}
+                   or type(item.get("pid")) is not int or item["pid"] <= 0
+                   or not isinstance(item.get("start_ticks"), str)
+                   or not item["start_ticks"]
+                   or item.get("process_kind") != "managed-codex-app-server"
+                   for item in resident_agent_hosts)
+            or len({(item["pid"], item["start_ticks"])
+                    for item in resident_agent_hosts}) != len(resident_agent_hosts)):
+        raise ValueError("owner recovery resident agent host identities are invalid")
+    if (resident_agent_hosts
+            and authorization.get("recovery_basis") != "operator-approved-config"):
+        raise ValueError(
+            "only operator-approved claim recovery may exclude a shared agent host"
+        )
     if (type(observation.get("control_owner_pid")) is not int
             or observation["control_owner_pid"] <= 0
             or not isinstance(observation.get("control_owner_start_ticks"), str)

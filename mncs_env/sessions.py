@@ -3389,9 +3389,10 @@ class Session:
             or type(expected_version) is not int
             or expected_version < 1
             or record.get("version") != expected_version + 2
-            or recovery.get("schema_version") != (
-                "mncs.environment.control-owner-claim-recovery/2"
-            )
+            or recovery.get("schema_version") not in {
+                "mncs.environment.control-owner-claim-recovery/2",
+                "mncs.environment.control-owner-claim-recovery/3",
+            }
             or recovery.get("campaign_id") != campaign_id
             or recovery.get("claim_id") != record.get("claim_id")
             or recovery.get("repository") != repository

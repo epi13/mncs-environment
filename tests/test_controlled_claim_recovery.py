@@ -16,7 +16,7 @@ def owner_authorization(*, owner: dict, requester_session: str,
                         target_scope: dict | None = None,
                         recovery_basis: str = "operator-approved-config") -> dict:
     observation = {
-        "schema_version": "mncs.control.host-execution-liveness/2",
+        "schema_version": "mncs.control.host-execution-liveness/3",
         "observed_at": claims.utcnow(),
         "host_boot_id": "00000000-0000-0000-0000-000000000000",
         "control_owner_pid": 12,
@@ -33,10 +33,11 @@ def owner_authorization(*, owner: dict, requester_session: str,
         "matching_processes": [],
         "matching_user_services": [],
         "resident_services": [],
+        "operator_approved_resident_agent_hosts": [],
         "complete": True,
     }
     authorization = {
-        "schema_version": "mncs.environment.control-owner-claim-recovery/2",
+        "schema_version": "mncs.environment.control-owner-claim-recovery/3",
         "campaign_id": "cmp_recovery_fixture",
         "requester_session_id": requester_session,
         "requester_principal_id": "ctrl_fixture",
@@ -116,6 +117,86 @@ class ControlledClaimRecoveryTests(unittest.TestCase):
         self.assertEqual([item["status"] for item in history],
                          ["held", "superseded", "held"])
         self.assertEqual(history[1]["provenance"]["owner_recovery"], proof)
+
+    def test_resident_managed_agent_host_exception_requires_operator_approval(self) -> None:
+        owner = self.owner()
+        approved = owner_authorization(
+            owner=owner,
+            requester_session="ses_new_owner",
+        )
+        approved["host_observation"]["operator_approved_resident_agent_hosts"] = [{
+            "pid": 9123,
+            "start_ticks": "25234",
+            "process_kind": "managed-codex-app-server",
+        }]
+        approved["host_observation_digest"] = claims.digest_hex(
+            approved["host_observation"], length=64,
+        )
+        claims._validate_owner_recovery_authorization(
+            approved,
+            repository=owner["repository"],
+            claim_id=owner["claim_id"],
+            owner_session_id=owner["session_id"],
+            requester_session_id="ses_new_owner",
+            target_scope=owner["scope"],
+        )
+
+        automatic = owner_authorization(
+            owner=owner,
+            requester_session="ses_new_owner",
+            recovery_basis="same-principal-host-liveness",
+        )
+        automatic["host_observation"]["operator_approved_resident_agent_hosts"] = [{
+            "pid": 9123,
+            "start_ticks": "25234",
+            "process_kind": "managed-codex-app-server",
+        }]
+        automatic["host_observation_digest"] = claims.digest_hex(
+            automatic["host_observation"], length=64,
+        )
+        with self.assertRaisesRegex(ValueError, "only operator-approved"):
+            claims._validate_owner_recovery_authorization(
+                automatic,
+                repository=owner["repository"],
+                claim_id=owner["claim_id"],
+                owner_session_id=owner["session_id"],
+                requester_session_id="ses_new_owner",
+                target_scope=owner["scope"],
+            )
+
+    def test_legacy_v2_owner_recovery_attestation_remains_accepted(self) -> None:
+        owner = self.owner()
+        legacy = owner_authorization(
+            owner=owner,
+            requester_session="ses_new_owner",
+        )
+        legacy["schema_version"] = "mncs.environment.control-owner-claim-recovery/2"
+        legacy["host_observation"]["schema_version"] = (
+            "mncs.control.host-execution-liveness/2"
+        )
+        legacy["host_observation"].pop("operator_approved_resident_agent_hosts")
+        legacy["host_observation_digest"] = claims.digest_hex(
+            legacy["host_observation"], length=64,
+        )
+        stable_fields = (
+            "schema_version", "campaign_id", "requester_session_id",
+            "requester_principal_id", "recovery_basis",
+            "operator_approval_reference", "owner_scope", "target_scope",
+            "claim_id", "repository", "expected_claim_version",
+            "owner_session_id", "owner_consumer_id",
+        )
+        legacy["authorization_id"] = claims.digest_hex(
+            {field: legacy[field] for field in stable_fields}, length=64,
+        )
+
+        recovered = self.recover(
+            owner, "ses_new_owner", "req-legacy-owner-recovery", legacy,
+        )
+        self.assertEqual(recovered["version"], owner["version"] + 2)
+        self.assertEqual(
+            recovered["provenance"]["owner_recovery"]["schema_version"],
+            "mncs.environment.control-owner-claim-recovery/2",
+        )
 
     def test_orphan_repository_scope_narrows_atomically_to_selected_worktree(self) -> None:
         owner = self.owner()

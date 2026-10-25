@@ -366,7 +366,7 @@ def _recovered_claim(
     requester_session = requester_session or claim_session
     owner_session = "ses_fixture_former_owner"
     authorization = {
-        "schema_version": "mncs.environment.control-owner-claim-recovery/2",
+        "schema_version": "mncs.environment.control-owner-claim-recovery/3",
         "campaign_id": CAMPAIGN,
         "requester_session_id": requester_session,
         "requester_principal_id": PRINCIPAL,
