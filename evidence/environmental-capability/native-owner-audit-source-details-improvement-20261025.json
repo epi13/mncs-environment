@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_owner_audit_source_details_improvement_20261025",
+  "captured_at": "2026-10-25T16:21:11Z",
+  "measurement_basis": "committed projection extension, focused verification, and bounded live projection readback",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "pressure_identity": "ph_environment_native_owner_audit_source_details_20261025",
+      "implementation_commit": "01e8e7257eef819c0068e0447ebf95d1a606fa3d",
+      "verification_observation_identity": "ev_environment_native_owner_audit_source_details_verification_20261025",
+      "subsequent_observation_identity": "ev_environment_native_owner_audit_source_details_followup_20261025"
+    },
+    "outcome": {
+      "implementation_change": "The existing implementation-accountability projection now reads up to four exact native-userland-audit.json blobs from the allowlisted mncs-actions and mncs-test owner audit identities, only after source content-integrity verification under existing selected-checkout or workspace-read-only authority. It parses the versioned audit schema and exposes bounded responsibility classifications, stated eliminating capabilities, entrypoints, verification-plan boundaries, and remaining host paths. Unverified content remains unavailable in the details view; parsed records remain owner declarations.",
+      "resource_bounds": "Uses the existing source-pointer verification budget and source-object size bound; retains at most four audit payloads transiently for one projection and does not persist duplicate source blobs.",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The projection establishes what two owner audit files state and where their referenced content was read. It does not independently establish implementation ownership, a systemwide denominator, agent discoverability, parity, or readiness to migrate host code."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "improvement_relation": {
+    "identity": "ir_environment_native_owner_audit_source_details_20261025",
+    "addresses_hypothesis_identity": "ph_environment_native_owner_audit_source_details_20261025",
+    "implementation_reference": {
+      "identity": "src_environment_native_owner_audit_source_details_01e8e72",
+      "repository": "mncs-environment",
+      "commit": "01e8e7257eef819c0068e0447ebf95d1a606fa3d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "3528382166b063e72e813081bd1c5a7c7d2b71708887f7f20d17484a59720046"
+    },
+    "verification_observation_identity": "ev_environment_native_owner_audit_source_details_verification_20261025",
+    "subsequent_observation_identity": "ev_environment_native_owner_audit_source_details_followup_20261025",
+    "basis": "The baseline projection exposed summary strings for owner audits but omitted the structured source classifications and capabilities. The committed extension verifies exact audit source bytes before parsing and projects bounded details from the existing owner records. Focused tests cover verified and unverified sources; a live projection read confirms both audit files are available as content-integrity-verified owner declarations. This makes the implementation opportunity inspectable; it does not verify the declarations or show that any host implementation has been displaced.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "whether another agent discovers or uses the newly projected details",
+      "whether native replacements preserve behavior, reliability, and compatibility",
+      "systemwide native adoption ratio or denominator",
+      "cross-session effect on native implementation work"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "environmental-pressure-observation",
+      "identity": "ev_environment_native_owner_audit_source_details_pressure_20261025",
+      "repository": "mncs-environment",
+      "commit": "cd12b751046e609c757b7e4b379470ad640aa45a",
+      "path": "evidence/environmental-capability/native-owner-audit-source-details-pressure-20261025.json",
+      "sha256": "90909ed967b27cfbdda5b219d8daaf3a28f8687734ab555239077a84ceb35641"
+    },
+    {
+      "identity": "src_environment_native_owner_audit_source_details_01e8e72",
+      "repository": "mncs-environment",
+      "commit": "01e8e7257eef819c0068e0447ebf95d1a606fa3d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "3528382166b063e72e813081bd1c5a7c7d2b71708887f7f20d17484a59720046"
+    },
+    {
+      "kind": "committed-test-source",
+      "identity": "test_native_userland_audit_projection_retains_verified_owner_blockers",
+      "repository": "mncs-environment",
+      "commit": "01e8e7257eef819c0068e0447ebf95d1a606fa3d",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "6f87bcc72334c5cf778419583e1adefc6ad4ec26a40e1b26545bd9c7bfad62d8"
+    },
+    {
+      "kind": "committed-documentation-source",
+      "identity": "docs_environment_projection_native_owner_audit_details_01e8e72",
+      "repository": "mncs-environment",
+      "commit": "01e8e7257eef819c0068e0447ebf95d1a606fa3d",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "b9f5fc3d25dcf1a2e8aaf57b7f5fc152a30afbcff985d906cca6bc98452ed3da"
+    }
+  ],
+  "not_measured": [
+    "long-term use and effectiveness across different agents, models, and sessions",
+    "verified displacement of host-language functionality",
+    "native adoption ratio or complete denominator"
+  ]
+}

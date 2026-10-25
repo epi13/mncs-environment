@@ -1,0 +1,118 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_owner_audit_source_details_verification_20261025",
+  "captured_at": "2026-10-25T16:21:11Z",
+  "measurement_basis": "focused automated verification and bounded live environmental-capability projection",
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment implementation-accountability and environmental-capability projection",
+    "request": {
+      "implementation_commit": "01e8e7257eef819c0068e0447ebf95d1a606fa3d",
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py tests/test_capability_projection_actions.py tests/test_capability_projection_cli.py -q",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "python3 -m py_compile mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "git diff --check",
+        "./scripts/mncs-env projections ses_5530f63cd8293e03 --interpret environmental-capability --history-pages 1 --evidence-offset 0 --evidence-limit 1 --session-event-limit 1"
+      ]
+    },
+    "outcome": {
+      "status": "passed",
+      "results": [
+        {
+          "command_index": 0,
+          "passed": 103
+        },
+        {
+          "command_index": 1,
+          "status": "passed"
+        },
+        {
+          "command_index": 2,
+          "status": "passed"
+        },
+        {
+          "command_index": 3,
+          "status": "passed"
+        },
+        {
+          "command_index": 4,
+          "exit_code": 0,
+          "projection_status": "ready",
+          "observation_records_verified": 1,
+          "source_pointer_count": 4,
+          "source_pointer_content_integrity_verified_count": 4,
+          "owner_audit_records_parsed": 2,
+          "owner_audit_declaration_status": "owner-declared; not independently verified",
+          "systemwide_native_adoption_ratio": "not-measured"
+        }
+      ],
+      "coverage": "Focused tests verify extraction of responsibility classifications, eliminating capabilities, native/verification-plan details, and remaining host paths only from exact hash-verified allowed owner-audit sources. They also verify that source details remain unavailable when content is not integrity-verified and preserve the distinction between blob integrity and implementation ownership. The live bounded projection parsed both authentic audit records and returned a ready page with four of four source pointers content-integrity verified.",
+      "live_projection": {
+        "page_offset": 0,
+        "page_limit": 1,
+        "source_read_basis": "workspace-read-only",
+        "parsed_repositories": [
+          "mncs-actions",
+          "mncs-test"
+        ],
+        "systemwide_native_adoption_ratio": "not-measured",
+        "implementation_ownership_status": "owner-declared; not independently verified"
+      }
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "supporting_sources": [
+    {
+      "identity": "src_environment_native_owner_audit_source_details_01e8e72",
+      "repository": "mncs-environment",
+      "commit": "01e8e7257eef819c0068e0447ebf95d1a606fa3d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "3528382166b063e72e813081bd1c5a7c7d2b71708887f7f20d17484a59720046"
+    },
+    {
+      "kind": "committed-verification-test",
+      "identity": "test_native_userland_audit_projection_retains_verified_owner_blockers",
+      "repository": "mncs-environment",
+      "commit": "01e8e7257eef819c0068e0447ebf95d1a606fa3d",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "6f87bcc72334c5cf778419583e1adefc6ad4ec26a40e1b26545bd9c7bfad62d8"
+    },
+    {
+      "kind": "committed-verification-test",
+      "identity": "test_capability_projection_cli",
+      "repository": "mncs-environment",
+      "commit": "01e8e7257eef819c0068e0447ebf95d1a606fa3d",
+      "path": "tests/test_capability_projection_cli.py",
+      "sha256": "88b5a476e0b9d28876e8ce27dfd997832e2a1433fdb9686933feda2fd04b497f",
+      "status": "test file included in focused 103-test run"
+    },
+    {
+      "kind": "committed-verification-test",
+      "identity": "test_capability_projection_actions",
+      "repository": "mncs-environment",
+      "commit": "01e8e7257eef819c0068e0447ebf95d1a606fa3d",
+      "path": "tests/test_capability_projection_actions.py",
+      "sha256": "f18381aa7b14ad5349e614ce61ac620653af5a77655ec2d4b099dbcccad2e433",
+      "status": "test file included in focused 103-test run"
+    }
+  ],
+  "not_measured": [
+    "cross-agent discovery or usability of the newly projected source fields",
+    "native implementation migration or behavior parity",
+    "effectiveness across later sessions and environmental versions"
+  ]
+}
