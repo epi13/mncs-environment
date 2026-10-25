@@ -3195,9 +3195,14 @@ def test_campaign_state_bootstrap_pressure_projects_live_events_and_unassessed_f
     assert event_source["event_reference_status"] == (
         "all-referenced-events-present"
     )
+    assert event_source["event_reference_count"] == 3
+    assert event_source["event_reference_matched_count"] == 3
     assert compact["observations"][0]["supporting_sources"][0][
         "event_reference_status"
     ] == "all-referenced-events-present"
+    assert compact["observations"][0]["supporting_sources"][0][
+        "event_reference_matched_count"
+    ] == 3
 
     assert result["improvement_relation_count"] == 1
     relation = result["improvement_relations"][0]
@@ -3236,12 +3241,16 @@ def test_session_event_reference_status_preserves_selection_and_window_limits() 
         ],
     }
 
-    assert capability_intelligence._authenticated_session_event_reference_status(
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
         source, selected_session_id="ses_event_reference_status", activity=activity,
-    ) == "all-referenced-events-present"
-    assert capability_intelligence._authenticated_session_event_reference_status(
+    )["event_reference_status"] == "all-referenced-events-present"
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
         source, selected_session_id="ses_other", activity=activity,
-    ) == "source-session-not-selected"
+    ) == {
+        "event_reference_status": "source-session-not-selected",
+        "event_reference_count": 2,
+        "event_reference_matched_count": 0,
+    }
 
     partial_activity = {
         **activity,
@@ -3250,21 +3259,62 @@ def test_session_event_reference_status_preserves_selection_and_window_limits() 
             {"event_reference": {"identity": "evt_unreferenced"}},
         ],
     }
-    assert capability_intelligence._authenticated_session_event_reference_status(
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
         source,
         selected_session_id="ses_event_reference_status",
         activity=partial_activity,
-    ) == "some-referenced-events-present"
+    )["event_reference_status"] == (
+        "some-present-others-not-found-in-complete-view"
+    )
+    capped_activity = {
+        "source": {
+            "event_window_truncated": False,
+            "rpc_operation_records_omitted": 6,
+            "rpc_operation_records_invalid": 0,
+            "rpc_operation_capture_limit_reached": False,
+            "rpc_operation_events_considered": 38,
+            "rpc_operation_records_returned": 32,
+        },
+        "rpc_operations": [
+            {"event_reference": {"identity": "evt_event_one"}},
+            *(
+                {"event_reference": {"identity": f"evt_extra_{index}"}}
+                for index in range(31)
+            ),
+        ],
+    }
+    capped_resolution = (
+        capability_intelligence._authenticated_session_event_reference_resolution(
+            source,
+            selected_session_id="ses_event_reference_status",
+            activity=capped_activity,
+        )
+    )
+    assert capped_resolution == {
+        "event_reference_status": "some-present-others-unresolved-in-bounded-view",
+        "event_reference_count": 2,
+        "event_reference_matched_count": 1,
+    }
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
+        source,
+        selected_session_id="ses_event_reference_status",
+        activity={
+            **partial_activity,
+            "source": {**activity["source"], "event_window_truncated": True},
+        },
+    )["event_reference_status"] == (
+        "some-present-others-unresolved-in-bounded-view"
+    )
 
     bounded_activity = {
         "source": {"event_window_truncated": True},
         "rpc_operations": [],
     }
-    assert capability_intelligence._authenticated_session_event_reference_status(
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
         source,
         selected_session_id="ses_event_reference_status",
         activity=bounded_activity,
-    ) == "unresolved-in-bounded-session-view"
+    )["event_reference_status"] == "unresolved-in-bounded-session-view"
 
     incomplete_activity = {
         "source": {
@@ -3277,18 +3327,20 @@ def test_session_event_reference_status_preserves_selection_and_window_limits() 
         },
         "rpc_operations": [],
     }
-    assert capability_intelligence._authenticated_session_event_reference_status(
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
         source,
         selected_session_id="ses_event_reference_status",
         activity=incomplete_activity,
-    ) == "no-referenced-events-in-selected-session-activity"
+    )["event_reference_status"] == (
+        "no-referenced-events-in-selected-session-activity"
+    )
 
     invalid_source = {**source, "event_identities": ["evt_event_one"] * 2}
-    assert capability_intelligence._authenticated_session_event_reference_status(
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
         invalid_source,
         selected_session_id="ses_event_reference_status",
         activity=activity,
-    ) == "invalid-source-reference"
+    )["event_reference_status"] == "invalid-source-reference"
 
 
 def test_improvement_record_does_not_count_as_another_pressure_occurrence(

@@ -1119,6 +1119,11 @@ def _compact_projection(
                             "content_integrity_status", "event_reference_status")
                 if isinstance(source.get(key), str)
             }
+            for key in (
+                "event_reference_count", "event_reference_matched_count",
+            ):
+                if type(source.get(key)) is int and source[key] >= 0:
+                    compact_supporting_source[key] = source[key]
             event_identities = source.get("event_identities")
             if isinstance(event_identities, list):
                 compact_supporting_source["event_identities"] = [
@@ -2825,14 +2830,19 @@ def _validate_captured_session_activity_reference(source: Any) -> bool:
     )
 
 
-def _authenticated_session_event_reference_status(
+def _authenticated_session_event_reference_resolution(
     source: Any, *, selected_session_id: str, activity: dict[str, Any],
-) -> str:
+) -> dict[str, Any]:
     """Resolve a captured event pointer only against the selected bounded view."""
     if not _validate_captured_session_activity_reference(source):
-        return "invalid-source-reference"
+        return {"event_reference_status": "invalid-source-reference"}
+    expected_event_ids = set(source["event_identities"])
     if source["session_id"] != selected_session_id:
-        return "source-session-not-selected"
+        return {
+            "event_reference_status": "source-session-not-selected",
+            "event_reference_count": len(expected_event_ids),
+            "event_reference_matched_count": 0,
+        }
     raw_operations = activity.get("rpc_operations")
     raw_operations = raw_operations if isinstance(raw_operations, list) else []
     visible_event_ids = {
@@ -2842,26 +2852,53 @@ def _authenticated_session_event_reference_status(
         and isinstance(reference := operation.get("event_reference"), dict)
         and isinstance(reference.get("identity"), str)
     }
-    expected_event_ids = set(source["event_identities"])
     matched_event_ids = expected_event_ids & visible_event_ids
-    if matched_event_ids == expected_event_ids:
-        return "all-referenced-events-present"
-    if matched_event_ids:
-        return "some-referenced-events-present"
     activity_source = activity.get("source")
-    activity_source = activity_source if isinstance(activity_source, dict) else {}
+    activity_source = activity_source if isinstance(activity_source, dict) else None
+    records_omitted = (
+        activity_source.get("rpc_operation_records_omitted")
+        if activity_source is not None else None
+    )
+    records_invalid = (
+        activity_source.get("rpc_operation_records_invalid")
+        if activity_source is not None else None
+    )
+    events_considered = (
+        activity_source.get("rpc_operation_events_considered")
+        if activity_source is not None else None
+    )
+    records_returned = (
+        activity_source.get("rpc_operation_records_returned")
+        if activity_source is not None else None
+    )
     bounded = (
-        activity_source.get("event_window_truncated") is True
-        or activity_source.get("rpc_operation_records_omitted", 0) > 0
-        or activity_source.get("rpc_operation_records_invalid", 0) > 0
-        or activity_source.get("rpc_operation_capture_limit_reached") is True
-        or activity_source.get("rpc_operation_events_considered", 0)
-        > activity_source.get("rpc_operation_records_returned", 0)
+        activity_source is None
+        or activity_source.get("event_window_truncated") is not False
+        or type(records_omitted) is not int
+        or records_omitted > 0
+        or type(records_invalid) is not int
+        or records_invalid > 0
+        or activity_source.get("rpc_operation_capture_limit_reached") is not False
+        or type(events_considered) is not int
+        or type(records_returned) is not int
+        or events_considered != records_returned
+        or records_returned != len(raw_operations)
     )
-    return (
-        "unresolved-in-bounded-session-view"
-        if bounded else "no-referenced-events-in-selected-session-activity"
-    )
+    if matched_event_ids == expected_event_ids:
+        status = "all-referenced-events-present"
+    elif matched_event_ids and bounded:
+        status = "some-present-others-unresolved-in-bounded-view"
+    elif matched_event_ids:
+        status = "some-present-others-not-found-in-complete-view"
+    elif bounded:
+        status = "unresolved-in-bounded-session-view"
+    else:
+        status = "no-referenced-events-in-selected-session-activity"
+    return {
+        "event_reference_status": status,
+        "event_reference_count": len(expected_event_ids),
+        "event_reference_matched_count": len(matched_event_ids),
+    }
 
 
 def _validate_improvement_relation(value: Any) -> dict[str, Any] | None:
@@ -4906,15 +4943,11 @@ def project(
                     "content_integrity_status": _source_integrity_status(
                         source, source_integrity,
                     ),
-                    **({
-                        "event_reference_status": (
-                            _authenticated_session_event_reference_status(
-                                source,
-                                selected_session_id=session.session_id,
-                                activity=activity,
-                            )
-                        ),
-                    } if isinstance(source, dict) and source.get("kind") == (
+                    **(_authenticated_session_event_reference_resolution(
+                        source,
+                        selected_session_id=session.session_id,
+                        activity=activity,
+                    ) if isinstance(source, dict) and source.get("kind") == (
                         "authenticated-session-activity-projection"
                     ) else {}),
                 }
