@@ -546,12 +546,19 @@ For an untruncated complete response, the projection compares its count and
 identity digest with the current session binding snapshot. The comparison is
 made against projection-time state because the RPC event does not carry a
 binding revision. A difference is therefore evidence to investigate, not
-proof that the endpoint returned an incorrect response. These records show
-that Control observed the endpoint's response shape; they do not establish
-that the consumer received, discovered, understood, or used a capability.
-Agent receipt and discoverability remain unmeasured. This delivery evidence is
-separate from `implementation_accountability`: an available capability does
-not establish native implementation ownership or migration readiness.
+proof that the endpoint returned an incorrect response. For each currently
+available binding, `context_response_inclusion` reports when its
+capability/provider/contract-revision tuple belongs to a complete response
+whose full identity set matches the current session snapshot. This is a
+server-observed response relationship at projection time. The response
+summary does not carry the binding ID, so it does not distinguish duplicate
+bindings with the same tuple. A response mismatch or missing digest leaves
+inclusion unestablished; it is not evidence that the capability was omitted.
+These records do not establish that the consumer received, discovered,
+understood, or used a capability. Agent receipt and discoverability remain
+unmeasured. This delivery evidence is separate from
+`implementation_accountability`: an available capability does not establish
+native implementation ownership or migration readiness.
 
 When response compaction is needed, each pressure summary retains bounded exact
 evidence references (identity, repository, commit, path, and digest), so an

@@ -2284,6 +2284,31 @@ def _compact_projection(
                 for reference in availability_references[:3]
                 if isinstance(reference, dict)
             ]
+        context_inclusion = item.get("context_response_inclusion")
+        if isinstance(context_inclusion, dict):
+            compact_context_inclusion = {
+                key: _short_text(context_inclusion[key], 160)
+                for key in (
+                    "status", "reason", "basis", "identity_basis",
+                    "binding_id_attribution_status", "comparison_time_basis",
+                    "scope", "event_window_status",
+                )
+                if isinstance(context_inclusion.get(key), str)
+            }
+            references = context_inclusion.get("supporting_events")
+            if isinstance(references, list):
+                compact_context_inclusion["supporting_events"] = [
+                    {
+                        key: reference[key]
+                        for key in ("identity", "sequence", "type")
+                        if key in reference
+                    }
+                    for reference in references[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                    if isinstance(reference, dict)
+                ]
+            compact_item["context_response_inclusion"] = (
+                compact_context_inclusion
+            )
         compact_capability_bindings.append(compact_item)
     if compact_capability_bindings:
         compact_capability_delivery["bindings"] = compact_capability_bindings
@@ -5943,6 +5968,97 @@ def _invocation_binding_identity(value: Any) -> dict[str, Any]:
     return {"status": status, **identity}
 
 
+def _context_response_binding_inclusion(
+    binding: dict[str, Any], response_summaries: list[dict[str, Any]],
+    context_supporting_events: list[dict[str, Any]], *,
+    context_operation_count: int, complete_history: bool,
+) -> dict[str, Any]:
+    """Relate a current binding to a captured context response without implying receipt."""
+    event_window_status = "complete" if complete_history else "partial"
+    if binding.get("availability_status") != "available":
+        return {
+            "status": "not-applicable-not-currently-available",
+            "reason": "the context response list contains available bindings only",
+            "scope": "authenticated-session.context-events-in-selected-window",
+            "event_window_status": event_window_status,
+        }
+
+    identity_fields = ("capability", "provider", "contract_revision")
+    if any(
+        not isinstance(binding.get(key), str) or not binding[key]
+        for key in identity_fields
+    ):
+        return {
+            "status": "not-comparable",
+            "reason": "binding-identity-incomplete",
+            "scope": "authenticated-session.context-events-in-selected-window",
+            "event_window_status": event_window_status,
+        }
+
+    matching_responses = [
+        summary for summary in response_summaries
+        if (isinstance(summary, dict)
+            and summary.get("capture_status") == "captured"
+            and summary.get("identity_digest_status") == "complete"
+            and summary.get("capabilities_truncated") is False
+            and (summary.get("binding_snapshot_comparison") or {}).get("status")
+            == "matches-current-session-binding-snapshot")
+    ]
+    if matching_responses:
+        return {
+            "status": "identity-tuple-in-matched-response",
+            "basis": (
+                "complete-response-identity-set-matches-current-session-snapshot"
+            ),
+            "identity_basis": "capability-provider-contract-revision",
+            "binding_id_attribution_status": "not-carried-by-context-response-summary",
+            "comparison_time_basis": "current-session-binding-snapshot-at-projection-time",
+            "scope": "authenticated-session.context-events-in-selected-window",
+            "event_window_status": event_window_status,
+            "supporting_events": [
+                summary["event_reference"]
+                for summary in matching_responses[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                if isinstance(summary.get("event_reference"), dict)
+            ],
+        }
+
+    if context_operation_count == 0:
+        status = (
+            "not-observed-in-session-history" if complete_history
+            else "not-observed-in-selected-window"
+        )
+        reason = status
+    else:
+        status = "not-established"
+        comparisons = [
+            (summary.get("binding_snapshot_comparison") or {}).get("status")
+            for summary in response_summaries
+            if isinstance(summary, dict)
+        ]
+        if "differs-from-current-session-binding-snapshot" in comparisons:
+            reason = "captured-response-differs-from-current-snapshot"
+        elif "not-comparable" in comparisons:
+            reason = "current-session-binding-snapshot-not-comparable"
+        else:
+            reason = "complete-response-identity-digest-not-captured"
+
+    references = [
+        summary["event_reference"]
+        for summary in response_summaries
+        if (isinstance(summary, dict)
+            and isinstance(summary.get("event_reference"), dict))
+    ]
+    if not references:
+        references = context_supporting_events
+    return {
+        "status": status,
+        "reason": reason,
+        "scope": "authenticated-session.context-events-in-selected-window",
+        "event_window_status": event_window_status,
+        "supporting_events": references[:MAX_CAPABILITY_SUPPORTING_EVENTS],
+    }
+
+
 def _capability_delivery_view(
     snapshot: dict[str, Any], capability_summaries: list[dict[str, Any]],
     interactions: list[dict[str, Any]], events: list[dict[str, Any]],
@@ -6202,6 +6318,15 @@ def _capability_delivery_view(
                 availability["observed_at"], 96,
             )} if isinstance(availability.get("observed_at"), str) else {}),
         })
+
+    for binding in binding_records:
+        binding["context_response_inclusion"] = (
+            _context_response_binding_inclusion(
+                binding, response_summaries, context_supporting_events,
+                context_operation_count=context_operation_count,
+                complete_history=complete_history,
+            )
+        )
 
     interaction_references: dict[str, list[dict[str, Any]]] = {}
     identified_interactions_by_capability: dict[str, list[dict[str, Any]]] = {}

@@ -2302,6 +2302,21 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert comparison["unavailable_count_matches"] is True
     assert comparison["unknown_count_matches"] is True
     assert comparison["available_identity_digest_matches"] is True
+    binding_context_inclusion = activity["capability_delivery"]["bindings"][0][
+        "context_response_inclusion"
+    ]
+    assert binding_context_inclusion["status"] == (
+        "identity-tuple-in-matched-response"
+    )
+    assert binding_context_inclusion["identity_basis"] == (
+        "capability-provider-contract-revision"
+    )
+    assert binding_context_inclusion["binding_id_attribution_status"] == (
+        "not-carried-by-context-response-summary"
+    )
+    assert binding_context_inclusion["supporting_events"][0]["identity"] == (
+        "evt_rpc_read_24"
+    )
     assert context_activity["agent_receipt_status"] == "not-established"
     assert len(activity["rpc_failure_candidates"]) == 1
     assert result["session_activity_pressure_candidate_count"] == 1
@@ -2351,6 +2366,15 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     ]
     assert compact_comparison["unavailable_count_matches"] is True
     assert compact_comparison["unknown_count_matches"] is True
+    compact_binding_inclusion = compact_delivery["bindings"][0][
+        "context_response_inclusion"
+    ]
+    assert compact_binding_inclusion["status"] == (
+        "identity-tuple-in-matched-response"
+    )
+    assert compact_binding_inclusion["supporting_events"][0]["identity"] == (
+        "evt_rpc_read_24"
+    )
     assert any(
         "no binding revision" in limit
         for limit in compact_context_activity["measurement_limits"]
@@ -2381,6 +2405,13 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert unknown_comparison["available_count_matches"] is True
     assert unknown_comparison["unavailable_count_matches"] is True
     assert unknown_comparison["unknown_count_matches"] is False
+    unknown_inclusion = unknown_mismatch["capability_delivery"]["bindings"][0][
+        "context_response_inclusion"
+    ]
+    assert unknown_inclusion["status"] == "not-established"
+    assert unknown_inclusion["reason"] == (
+        "captured-response-differs-from-current-snapshot"
+    )
 
     context_event["payload"]["context_response_summary"]["unknown_count"] = 0
     context_event["payload"]["context_response_summary"][
@@ -2395,6 +2426,13 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     )
     assert mismatch_comparison["available_count_matches"] is True
     assert mismatch_comparison["available_identity_digest_matches"] is False
+    digest_mismatch_inclusion = mismatch["capability_delivery"]["bindings"][0][
+        "context_response_inclusion"
+    ]
+    assert digest_mismatch_inclusion["status"] == "not-established"
+    assert digest_mismatch_inclusion["reason"] == (
+        "captured-response-differs-from-current-snapshot"
+    )
 
     session.snapshot["bindings"][0]["contract_revision"] = None
     incomplete = capability_intelligence.project(session)["session_activity"]
@@ -2403,6 +2441,22 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     ]["response_summaries"][0]["binding_snapshot_comparison"]
     assert incomplete_comparison["status"] == "not-comparable"
     assert incomplete_comparison["reason"] == "binding-identity-incomplete"
+    incomplete_binding_inclusion = incomplete["capability_delivery"]["bindings"][0][
+        "context_response_inclusion"
+    ]
+    assert incomplete_binding_inclusion["status"] == "not-comparable"
+    assert incomplete_binding_inclusion["reason"] == "binding-identity-incomplete"
+
+    session.snapshot["bindings"][0]["contract_revision"] = "r1"
+    events.remove(context_event)
+    unobserved = capability_intelligence.project(session)["session_activity"]
+    unobserved_inclusion = unobserved["capability_delivery"]["bindings"][0][
+        "context_response_inclusion"
+    ]
+    assert unobserved_inclusion["status"] == "not-observed-in-session-history"
+    assert unobserved["capability_delivery"]["discoverability_status"] == (
+        "not-measured"
+    )
 
 
 def test_session_activity_marks_truncated_authenticated_rpc_only_history_partial(
