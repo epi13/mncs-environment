@@ -2035,6 +2035,8 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     ]
     assert comparison["status"] == "matches-current-session-binding-snapshot"
     assert comparison["available_count_matches"] is True
+    assert comparison["unavailable_count_matches"] is True
+    assert comparison["unknown_count_matches"] is True
     assert comparison["available_identity_digest_matches"] is True
     assert context_activity["agent_receipt_status"] == "not-established"
     assert len(activity["rpc_failure_candidates"]) == 1
@@ -2080,6 +2082,11 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert compact_context_activity["response_summaries"][0][
         "binding_snapshot_comparison"
     ]["status"] == "matches-current-session-binding-snapshot"
+    compact_comparison = compact_context_activity["response_summaries"][0][
+        "binding_snapshot_comparison"
+    ]
+    assert compact_comparison["unavailable_count_matches"] is True
+    assert compact_comparison["unknown_count_matches"] is True
     assert any(
         "no binding revision" in limit
         for limit in compact_context_activity["measurement_limits"]
@@ -2097,9 +2104,21 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert compact_activity["rpc_failure_candidates"][0]["distinct_session_count"] == 1
 
     context_event = next(
-        event for event in events
-        if event["sequence"] == 24
+        event for event in events if event["sequence"] == 24
     )
+    context_event["payload"]["context_response_summary"]["unknown_count"] = 1
+    unknown_mismatch = capability_intelligence.project(session)["session_activity"]
+    unknown_comparison = unknown_mismatch["capability_delivery"][
+        "context_operation_activity"
+    ]["response_summaries"][0]["binding_snapshot_comparison"]
+    assert unknown_comparison["status"] == (
+        "differs-from-current-session-binding-snapshot"
+    )
+    assert unknown_comparison["available_count_matches"] is True
+    assert unknown_comparison["unavailable_count_matches"] is True
+    assert unknown_comparison["unknown_count_matches"] is False
+
+    context_event["payload"]["context_response_summary"]["unknown_count"] = 0
     context_event["payload"]["context_response_summary"][
         "available_identity_digest"
     ] = "f" * 64

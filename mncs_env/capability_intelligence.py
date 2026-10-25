@@ -1677,6 +1677,8 @@ def _compact_projection(
                 }
                 for key in (
                     "available_count_matches",
+                    "unavailable_count_matches",
+                    "unknown_count_matches",
                     "available_identity_digest_matches",
                 ):
                     if type(comparison.get(key)) is bool:
@@ -4173,13 +4175,20 @@ def _current_context_binding_snapshot_summary(
         return {"status": "partial", "reason": "binding-scan-limit"}
 
     identities: list[dict[str, str]] = []
+    unavailable_count = 0
+    unknown_count = 0
     for binding in bindings:
         if not isinstance(binding, dict):
             return {"status": "partial", "reason": "binding-record-invalid"}
         availability = binding.get("availability") or {}
         if not isinstance(availability, dict):
             return {"status": "partial", "reason": "binding-availability-invalid"}
-        if availability.get("status") != "available":
+        availability_status = availability.get("status")
+        if availability_status == "unknown":
+            unknown_count += 1
+            continue
+        if availability_status != "available":
+            unavailable_count += 1
             continue
         identity = {
             "capability": binding.get("capability"),
@@ -4206,6 +4215,8 @@ def _current_context_binding_snapshot_summary(
     return {
         "status": "ready",
         "available_count": len(identities),
+        "unavailable_count": unavailable_count,
+        "unknown_count": unknown_count,
         "available_identity_digest": digest,
     }
 
@@ -4275,6 +4286,14 @@ def _capability_delivery_view(
                     response_summary["available_count"]
                     == binding_snapshot_summary["available_count"]
                 )
+                unavailable_count_matches = (
+                    response_summary["unavailable_count"]
+                    == binding_snapshot_summary["unavailable_count"]
+                )
+                unknown_count_matches = (
+                    response_summary["unknown_count"]
+                    == binding_snapshot_summary["unknown_count"]
+                )
                 digest_matches = (
                     response_summary["available_identity_digest"]
                     == binding_snapshot_summary["available_identity_digest"]
@@ -4282,11 +4301,14 @@ def _capability_delivery_view(
                 comparison = {
                     "status": (
                         "matches-current-session-binding-snapshot"
-                        if count_matches and digest_matches
+                        if (count_matches and unavailable_count_matches
+                            and unknown_count_matches and digest_matches)
                         else "differs-from-current-session-binding-snapshot"
                     ),
                     "basis": "current-session-binding-snapshot-at-projection-time",
                     "available_count_matches": count_matches,
+                    "unavailable_count_matches": unavailable_count_matches,
+                    "unknown_count_matches": unknown_count_matches,
                     "available_identity_digest_matches": digest_matches,
                 }
             response_summaries.append({
