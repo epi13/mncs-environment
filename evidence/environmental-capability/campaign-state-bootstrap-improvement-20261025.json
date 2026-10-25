@@ -1,0 +1,99 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_campaign_state_bootstrap_improvement_20261025",
+  "captured_at": "2026-10-25T03:36:29+00:00",
+  "measurement_basis": "committed-implementation-focused-test-and-authenticated-session-evidence-link",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:paths:73735cb3d3a7"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "session_id": "ses_c6b0d153689d7388",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection over committed campaign evidence",
+    "request": {
+      "addresses_hypothesis_identity": "ph_campaign_state_bootstrap_20261025",
+      "implementation_commit": "1d198c5bdf58ea314ec8bd58d0b9f656d960e528",
+      "verification_observation_identity": "ev_environment_campaign_state_bootstrap_verification_20261025",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "When campaign-state history is absent, the Environment CLI now explains the first checkpoint initialization fields and retry step.",
+      "verification_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The observed failures motivate the initialization-guidance link, but do not establish that every failure had this cause. The focused test verifies the diagnostic; no later independent first-use observation establishes whether the pressure recurs less often."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_campaign_state_bootstrap_20261025",
+    "addresses_hypothesis_identity": "ph_campaign_state_bootstrap_20261025",
+    "implementation_reference": {
+      "identity": "ev_environment_campaign_state_bootstrap_cli_20261025",
+      "repository": "mncs-environment",
+      "commit": "1d198c5bdf58ea314ec8bd58d0b9f656d960e528",
+      "path": "mncs_env/cli.py",
+      "sha256": "6260809292679cfe3d1ee5e17599012ebc27faa6a9341d79bfdac50a0277c36d"
+    },
+    "verification_observation_identity": "ev_environment_campaign_state_bootstrap_verification_20261025",
+    "subsequent_observation_identity": null,
+    "basis": "The implementation and focused test establish that missing campaign-state history now has an actionable first-checkpoint diagnostic. The three session failures are evidence for investigating this pressure, not proof they all shared its cause; no independent post-change first-use session is available to assess effectiveness.",
+    "not_measured": [
+      "whether each recorded RPC failure was caused by missing campaign-state initialization guidance",
+      "whether the pressure recurs less often in later independent sessions",
+      "agent time, token use, or resource impact"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "session_id": "ses_c6b0d153689d7388",
+      "event_identities": [
+        "evt_2d6c52f29a035119",
+        "evt_6d42a18434bf9eb3",
+        "evt_68d77c4ca086168b"
+      ]
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_campaign_state_bootstrap_cli_20261025",
+      "repository": "mncs-environment",
+      "commit": "1d198c5bdf58ea314ec8bd58d0b9f656d960e528",
+      "path": "mncs_env/cli.py",
+      "sha256": "6260809292679cfe3d1ee5e17599012ebc27faa6a9341d79bfdac50a0277c36d"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "identity": "ev_environment_campaign_state_bootstrap_test_20261025",
+      "repository": "mncs-environment",
+      "commit": "1d198c5bdf58ea314ec8bd58d0b9f656d960e528",
+      "path": "tests/test_environment.py",
+      "sha256": "5004aa8d785344ed705a3de8a96f4431dd9ad9c367a6ccd39d70625e9f514213",
+      "measured_fields": [
+        "status",
+        "passed",
+        "failed"
+      ]
+    }
+  ],
+  "not_measured": [
+    "whether initialization guidance improves future first-use outcomes",
+    "long-term cross-session recurrence or resolution",
+    "token, execution, or resource impact"
+  ]
+}

@@ -3122,6 +3122,57 @@ def test_improvement_relation_without_followup_preserves_unassessed_status(
     )
 
 
+def test_campaign_state_bootstrap_pressure_projects_live_events_and_unassessed_fix(
+    tmp_path: Path,
+) -> None:
+    evidence_root = (
+        Path(__file__).resolve().parents[1]
+        / "evidence/environmental-capability"
+    )
+    identities = (
+        "campaign-state-bootstrap-pressure-20261025.json",
+        "campaign-state-bootstrap-verification-20261025.json",
+        "campaign-state-bootstrap-improvement-20261025.json",
+    )
+    records = [
+        json.loads((evidence_root / path).read_text(encoding="utf-8"))
+        for path in identities
+    ]
+    session, _ = _session(tmp_path, records)
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 3
+    assert result["pressure_hypothesis_count"] == 1
+    hypothesis = result["pressure_hypotheses"][0]
+    assert hypothesis["identity"] == "ph_campaign_state_bootstrap_20261025"
+    assert hypothesis["recurrence_status"] == "not-established"
+    pressure = result["observations"][0]
+    event_source = pressure["supporting_sources"][0]
+    assert event_source["content_integrity_status"] == (
+        "captured-in-observation-record"
+    )
+    assert event_source["event_identities"] == [
+        "evt_2d6c52f29a035119",
+        "evt_6d42a18434bf9eb3",
+        "evt_68d77c4ca086168b",
+    ]
+
+    assert result["improvement_relation_count"] == 1
+    relation = result["improvement_relations"][0]
+    assert relation["addresses_hypothesis_identity"] == hypothesis["identity"]
+    assert relation["pressure_hypothesis_status"] == "present-in-projection"
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["verification_evidence_reference"]["identity"] == (
+        "ev_environment_campaign_state_bootstrap_verification_20261025"
+    )
+    assert relation["subsequent_record_status"] == "not-recorded"
+    assert relation["effectiveness_assessment"] == "not-assessed"
+
+
 def test_improvement_record_does_not_count_as_another_pressure_occurrence(
     tmp_path: Path,
 ) -> None:
