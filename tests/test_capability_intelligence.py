@@ -213,10 +213,7 @@ def _add_compiler_native_application_proof_evidence(
     required_capability = (
         "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact"
     )
-    contract_capability = (
-        "mncs:0.2:capability:mncs.test.digest::digest_app::wrong"
-        if invalid_effect_contract else required_capability
-    )
+    contract_capability = "wrong_alias" if invalid_effect_contract else "test_artifact"
     report = {
         "schema_version": capability_intelligence.COMPILER_NATIVE_APPLICATION_PROOF_SCHEMA,
         "created_at": "2026-10-18T10:28:51.441053+00:00",
@@ -238,7 +235,7 @@ def _add_compiler_native_application_proof_evidence(
                     "target": "digest_app",
                 },
                 {
-                    "capability": required_capability,
+                    "capability": contract_capability,
                     "kind": "structured_write",
                     "target": "digest_app",
                 },
@@ -3221,6 +3218,10 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
     assert [effect["kind"] for effect in capability_contract["effect_contract"]] == [
         "structured_read", "structured_write",
     ]
+    assert {
+        effect["capability"]
+        for effect in capability_contract["effect_contract"]
+    } == {"test_artifact"}
     assert capability_contract["proof_relationship"] == (
         "compiler-artifact-admission-matches"
     )

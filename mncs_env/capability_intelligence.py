@@ -732,7 +732,7 @@ def _compiler_capability_contract_view(value: Any) -> dict[str, Any] | None:
         capability = raw_effect.get("capability")
         kind = raw_effect.get("kind")
         target = raw_effect.get("target")
-        if (capability != required_identity
+        if (capability != dispatch_alias
                 or not isinstance(kind, str)
                 or kind not in {"structured_read", "structured_write"}
                 or not isinstance(target, str) or not target or len(target) > 128):
