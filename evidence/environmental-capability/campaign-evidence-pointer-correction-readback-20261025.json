@@ -1,0 +1,181 @@
+{
+  "captured_at": "2026-10-25T04:20:14Z",
+  "identity": "ev_environment_capability_projection_delivery_readback_20261025",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_evidence_reference_correction_20261025",
+    "basis": "The focused capability suite passed 87 tests. The authenticated live campaign projection then applied three exact append-only pointer corrections, verified zero corrections as unverified, and reported zero observation records unavailable. This verifies the demonstrated recovery operation; subsequent recurrence and long-term effectiveness remain unassessed.",
+    "identity": "im_environment_evidence_reference_correction_20261025",
+    "implementation_reference": {
+      "commit": "559237a469324c8c925664a8a6210719b54b6a13",
+      "identity": "ev_environment_pointer_correction_implementation_20261025",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "bab1308d95f20d0967533b09978b4cae68252f992652c7dd68622d16fa8d7328"
+    },
+    "not_measured": [
+      "whether pointer-correction recovery recurs across campaigns",
+      "whether correction records remain useful across independent Environment versions",
+      "whether the direct environmental-capability operation mismatch has the same cause"
+    ],
+    "subsequent_observation_identity": null,
+    "verification_observation_identity": "ev_environment_pointer_correction_verification_20261025"
+  },
+  "measurement_basis": "authenticated-environment-operation-results-and-committed-control-contracts",
+  "not_measured": [
+    "long-term recurrence or effectiveness of append-only evidence pointer repair",
+    "whether the direct projection rejection recurs through an independently selected Control bridge",
+    "whether the rejection originates in the active MCP contract, Control dispatch, or owner deployment",
+    "whether agents reliably discover the campaign_state projection fallback"
+  ],
+  "observation": {
+    "kind": "environmental-capability-interface-usability-readback",
+    "outcome": {
+      "campaign_state_fallback_projection": {
+        "campaign_state_checkpoint_id": "chk_3c45bc0879891424",
+        "evidence_reference_corrections_applied_count": 3,
+        "evidence_reference_corrections_unverified_count": 0,
+        "observation_records_unavailable": 0,
+        "remaining_limit": "The projection remains partial because session RPC activity is bounded; unmatched event references remain unresolved, not absent.",
+        "status": "partial"
+      },
+      "direct_environmental_capability_operation": {
+        "error_code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+        "interpretation_limit": "Do not attribute the live rejection to stale deployment without identifying the active tool and owner dispatch versions.",
+        "message": "unknown stable Environment operation",
+        "reported_supported_operations": [
+          "artifact_read",
+          "campaign_state",
+          "capabilities",
+          "checkpoint",
+          "claims",
+          "complete",
+          "context",
+          "continuation",
+          "enter",
+          "handoff",
+          "health",
+          "inspect",
+          "invoke",
+          "resume",
+          "scope_grant",
+          "store_generation",
+          "verify"
+        ],
+        "source_code_context": "The checked-in Control bridge maps environmental_capability to the bounded projections command, and its tests cover that mapping; the current authenticated operation request still returned unknown stable operation.",
+        "status": "rejected"
+      },
+      "interpretation": "The checked-in Control bridge maps the bounded environmental-capability route to the existing projections command and its tests cover that mapping. The authenticated Environment operation request still fails as an unknown stable operation, while campaign_state exposes the same ECI projection. This establishes one interface-delivery mismatch; the responsible deployment or dispatch layer is not established.",
+      "pointer_correction_readback": {
+        "campaign_state_checkpoint_id": "chk_3c45bc0879891424",
+        "corrections_applied": 3,
+        "corrections_unverified": 0,
+        "evidence_count": 17,
+        "observation_records_unavailable": 0,
+        "verification": "passed"
+      }
+    },
+    "request": {
+      "direct_operation": "environmental_capability",
+      "fallback_operation": "campaign_state",
+      "session_id": "ses_c6b0d153689d7388"
+    },
+    "source_interface": "MNCS Environment operation interface and campaign-state capability projection",
+    "source_session_context": {
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "environment_id": "renv_84f0b2e6a29fe1e2",
+      "repository": "mncs-environment",
+      "repository_context_basis": "authenticated-session-campaign-context",
+      "session_id": "ses_c6b0d153689d7388",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "work_intent_id": "int_8475157f281c835f"
+    }
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Retain exact append-only references while allowing a replacement commit pointer only when identity, selected repository, path, and content digest match and the replacement observation is independently verified.",
+    "basis": "One campaign-state read contained three unavailable observation references after a mistyped full commit. This is an observed publication error and a recovery limitation; it does not establish recurrence or attribute the original typo to an environmental cause.",
+    "category": "evidence-provenance-and-continuity",
+    "identity": "ph_environment_evidence_reference_correction_20261025",
+    "not_measured": [
+      "recurrence of pointer publication errors across campaigns",
+      "whether other agents encounter similar append-only recovery limits",
+      "agent time or resource cost of this recovery",
+      "long-term operational effectiveness of pointer corrections"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "not-established",
+    "subsystem": "MNCS Environment campaign evidence projection",
+    "title": "Append-only campaign evidence lacked a verified repair path for commit pointers"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "claim_ids": [
+      "claim:mncs-environment:paths:a721da98fd6b",
+      "claim:mncs-environment:paths:680ca64adc34",
+      "claim:mncs-environment:paths:ec4e90650238"
+    ],
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "559237a469324c8c925664a8a6210719b54b6a13",
+      "identity": "ev_environment_pointer_correction_implementation_20261025",
+      "kind": "committed-environment-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "bab1308d95f20d0967533b09978b4cae68252f992652c7dd68622d16fa8d7328"
+    },
+    {
+      "commit": "559237a469324c8c925664a8a6210719b54b6a13",
+      "identity": "ev_environment_pointer_correction_tests_20261025",
+      "kind": "committed-environment-regression-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "3ad482155324e9cda476f7258b92ad5c617a9cbcc63b19f5bd5d6a211acbbf72"
+    },
+    {
+      "commit": "48d0dd33ee9af9432dee259fb4cbff1e19b574cf",
+      "identity": "ev_control_environmental_capability_bridge_20261025",
+      "kind": "committed-bridge-operation",
+      "path": "src/mncs_control_mcp/local_environment_mcp.py",
+      "repository": "mncs-control-mcp",
+      "sha256": "19b6d956f1b6a911e58667372270f736a50f17c1228f11e3b768909deef08e24"
+    },
+    {
+      "commit": "48d0dd33ee9af9432dee259fb4cbff1e19b574cf",
+      "identity": "ev_control_environmental_capability_bridge_tests_20261025",
+      "kind": "committed-bridge-route-tests",
+      "path": "tests/test_local_environment_mcp.py",
+      "repository": "mncs-control-mcp",
+      "sha256": "2df5b9bf9b1ae1699b7091af94f3391c9097f66cf2f3fa6b24d875cde7fffe61"
+    },
+    {
+      "commit": "48d0dd33ee9af9432dee259fb4cbff1e19b574cf",
+      "identity": "ev_control_environmental_capability_gateway_20261025",
+      "kind": "committed-control-projection-gateway",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "repository": "mncs-control-mcp",
+      "sha256": "b349f430d4a3dcffca2cdb68691cda5b82b1c2d593b922666fb9cba022bc0d8a"
+    },
+    {
+      "commit": "48d0dd33ee9af9432dee259fb4cbff1e19b574cf",
+      "identity": "ev_control_environmental_capability_gateway_tests_20261025",
+      "kind": "committed-control-projection-gateway-tests",
+      "path": "tests/test_environment_rpc.py",
+      "repository": "mncs-control-mcp",
+      "sha256": "ed36104bcbfca34ad2cf594abf08e384426a251630aafdc620eddeafb76e19f0"
+    }
+  ]
+}
