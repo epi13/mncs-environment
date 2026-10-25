@@ -3218,6 +3218,80 @@ def test_campaign_state_bootstrap_pressure_projects_live_events_and_unassessed_f
     assert relation["effectiveness_assessment"] == "not-assessed"
 
 
+def test_bounded_event_reference_coverage_records_project_matched_counts_and_limits(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    evidence_root = (
+        Path(__file__).resolve().parents[1]
+        / "evidence/environmental-capability"
+    )
+    identities = (
+        "session-event-reference-coverage-pressure-20261025.json",
+        "session-event-reference-coverage-verification-20261025.json",
+        "session-event-reference-coverage-improvement-20261025.json",
+    )
+    records = [
+        json.loads((evidence_root / path).read_text(encoding="utf-8"))
+        for path in identities
+    ]
+    session, _ = _session(tmp_path, records)
+    session.session_id = "ses_c6b0d153689d7388"
+    session.snapshot["campaign"]["identity"] = (
+        "cmp_environment_authorization_delivery_20261025"
+    )
+    session.snapshot["intent"] = {
+        "identity": "int_8475157f281c835f",
+        "goal": "exercise canonical Environment persistence through the Control socket",
+    }
+    event_identities = records[0]["supporting_sources"][0]["event_identities"]
+    activity = {
+        "status": "partial-rpc-only-in-selected-window",
+        "source": {
+            "event_window_truncated": False,
+            "rpc_operation_records_omitted": 7,
+            "rpc_operation_records_invalid": 0,
+            "rpc_operation_capture_limit_reached": False,
+            "rpc_operation_events_considered": 39,
+            "rpc_operation_records_returned": 32,
+        },
+        "rpc_operations": [
+            {"event_reference": {"identity": event_identities[0]}},
+            *(
+                {"event_reference": {"identity": f"evt_projection_{index}"}}
+                for index in range(31)
+            ),
+        ],
+    }
+    monkeypatch.setattr(
+        capability_intelligence,
+        "_session_activity",
+        lambda *_args, **_kwargs: activity,
+    )
+
+    result = capability_intelligence.project(session)
+
+    assert result["observation_count"] == 3
+    assert result["pressure_hypothesis_count"] == 1
+    hypothesis = result["pressure_hypotheses"][0]
+    assert hypothesis["identity"] == "ph_session_event_reference_coverage_20261025"
+    assert hypothesis["recurrence_status"] == "not-established"
+    pressure = result["observations"][0]
+    source = pressure["supporting_sources"][0]
+    assert source["event_reference_status"] == (
+        "some-present-others-unresolved-in-bounded-view"
+    )
+    assert source["event_reference_count"] == 3
+    assert source["event_reference_matched_count"] == 1
+    assert result["improvement_relation_count"] == 1
+    relation = result["improvement_relations"][0]
+    assert relation["addresses_hypothesis_identity"] == hypothesis["identity"]
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["subsequent_record_status"] == "not-recorded"
+    assert relation["effectiveness_assessment"] == "not-assessed"
+
+
 def test_session_event_reference_status_preserves_selection_and_window_limits() -> None:
     source = {
         "kind": "authenticated-session-activity-projection",
