@@ -51,6 +51,13 @@ old execution, and atomically transfers the claim into the selected scope.
 Foreign owners, multiple overlapping claims, active executions, or incomplete
 host observations still fail closed.
 
+A worktree claim may be narrowed to repo-relative paths with `--paths`; the
+registered checkout and branch remain part of its identity. This lets separate
+branches claim disjoint files while preserving conflicts for overlapping files
+on the same checkout or shared branch. A path claim without a worktree anchor
+remains repository-relative and conservatively conflicts with an overlapping
+worktree claim because it does not identify a branch.
+
 When a campaign already has write authority for a repository, Control may bind
 one exact registered checkout in that same repository without a second
 per-campaign approval token. Environment rechecks the campaign's existing

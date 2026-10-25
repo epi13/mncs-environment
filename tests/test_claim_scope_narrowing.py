@@ -1,0 +1,124 @@
+from __future__ import annotations
+
+from mncs_env import claims
+
+REPOSITORY = "mncs-environment"
+
+
+def _scope(
+    kind: str,
+    *,
+    checkout: str | None = None,
+    branch: str | None = None,
+    paths: list[str] | None = None,
+) -> dict:
+    return claims.normalize_scope(
+        {
+            "kind": kind,
+            "checkout": checkout,
+            "branch": branch,
+            "paths": paths,
+        },
+        REPOSITORY,
+    )
+
+
+def test_worktree_claim_can_be_narrowed_to_repo_relative_paths() -> None:
+    scope = _scope(
+        "worktree",
+        checkout="/workspace/mncs-environment/.worktrees/feature",
+        branch="campaign/feature",
+        paths=["evidence/z.json", "evidence/a.json", "evidence/z.json"],
+    )
+
+    assert scope["paths"] == ["evidence/a.json", "evidence/z.json"]
+    assert claims.claim_identity(REPOSITORY, scope) != claims.claim_identity(
+        REPOSITORY,
+        _scope(
+            "worktree",
+            checkout="/workspace/mncs-environment/.worktrees/feature",
+            branch="campaign/feature",
+        ),
+    )
+
+
+def test_narrow_worktree_claim_coexists_with_disjoint_active_branch_claims() -> None:
+    active_worktree = _scope(
+        "worktree",
+        checkout=(
+            "/workspace/mncs-environment/.worktrees/"
+            "environment-native-accountability"
+        ),
+        branch="campaign/environment-native-accountability",
+    )
+    active_paths = _scope(
+        "paths",
+        paths=["mncs_env/sessions.py", "tests/test_event_sequence_retry.py"],
+    )
+    campaign_paths = _scope(
+        "worktree",
+        checkout=(
+            "/workspace/mncs-environment/.worktrees/"
+            "campaign-charter-observation"
+        ),
+        branch="campaign/campaign-charter-observation",
+        paths=["evidence/campaign-charters/objective.json"],
+    )
+
+    assert claims.scopes_conflict(campaign_paths, active_worktree) is None
+    assert claims.scopes_conflict(campaign_paths, active_paths) is None
+
+
+def test_repo_relative_claim_keeps_conservative_cross_checkout_conflict() -> None:
+    broad_paths = _scope("paths", paths=["evidence/campaign-charters/objective.json"])
+    active_worktree = _scope(
+        "worktree",
+        checkout="/workspace/mncs-environment/.worktrees/active",
+        branch="campaign/active",
+    )
+
+    assert claims.scopes_conflict(broad_paths, active_worktree) == (
+        "repository-relative paths overlap"
+    )
+
+
+def test_narrow_worktree_paths_conflict_on_same_checkout_or_shared_branch() -> None:
+    first = _scope(
+        "worktree",
+        checkout="/workspace/mncs-environment/.worktrees/first",
+        branch="campaign/shared",
+        paths=["evidence/campaign-charters/objective.json"],
+    )
+    same_checkout_overlap = _scope(
+        "worktree",
+        checkout="/workspace/mncs-environment/.worktrees/first",
+        branch="campaign/shared",
+        paths=["evidence/campaign-charters/objective.json/child"],
+    )
+    shared_branch_overlap = _scope(
+        "worktree",
+        checkout="/workspace/mncs-environment/.worktrees/second",
+        branch="campaign/shared",
+        paths=["evidence/campaign-charters/objective.json"],
+    )
+    shared_branch_disjoint = _scope(
+        "worktree",
+        checkout="/workspace/mncs-environment/.worktrees/second",
+        branch="campaign/shared",
+        paths=["mncs_env/claims.py"],
+    )
+    other_branch_overlap = _scope(
+        "worktree",
+        checkout="/workspace/mncs-environment/.worktrees/second",
+        branch="campaign/other",
+        paths=["evidence/campaign-charters/objective.json"],
+    )
+
+    assert claims.scopes_conflict(first, same_checkout_overlap) == (
+        "same checkout with overlapping paths"
+    )
+    assert claims.scopes_conflict(first, shared_branch_overlap) == (
+        "shared branch with overlapping paths across checkouts"
+    )
+    assert claims.scopes_conflict(first, shared_branch_disjoint) is None
+    assert claims.scopes_conflict(first, other_branch_overlap) is None
