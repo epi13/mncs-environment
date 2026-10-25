@@ -2213,6 +2213,36 @@ def test_session_activity_correlates_authenticated_control_read_operations(
         "type": "environment.rpc.read_observed",
         "producer": "mncs-control-mcp", "payload": untrusted_payload,
     })
+    events.extend([
+        {
+            "identity": "evt_rpc_capability_invoked_after_context",
+            "sequence": 26,
+            "type": "capability.invoked",
+            "producer": "local-agent",
+            "payload": {
+                "capability": "mncs-test:run",
+                "provider": "mncs-test",
+                "binding_id": "cap_projection_context_test",
+                "contract_revision": "r1",
+                "provider_request_id": "req_rpc_capability_after_context",
+            },
+        },
+        {
+            "identity": "evt_rpc_capability_completed_after_context",
+            "sequence": 27,
+            "type": "invocation.completed",
+            "producer": "mncs-test",
+            "payload": {
+                "capability": "mncs-test:run",
+                "provider": "mncs-test",
+                "binding_id": "cap_projection_context_test",
+                "contract_revision": "r1",
+                "provider_request_id": "req_rpc_capability_after_context",
+                "status": "succeeded",
+                "returncode": 0,
+            },
+        },
+    ])
     session.recent_events = lambda *, limit: {
         "event_count": len(events), "events": events[-limit:], "truncated": False,
     }
@@ -2221,7 +2251,8 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     activity = result["session_activity"]
 
     assert activity["context"]["work_intent_goal"] == "inspect current pressures"
-    assert activity["status"] == "rpc-only-in-session-history"
+    assert activity["status"] == "ready"
+    assert activity["interaction_count"] == 1
     assert activity["source"]["rpc_operation_capture_count"] == 4
     assert activity["source"]["rpc_operation_capture_limit"] == 256
     assert activity["source"]["rpc_operation_records_invalid"] == 1
@@ -2317,6 +2348,19 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert binding_context_inclusion["supporting_events"][0]["identity"] == (
         "evt_rpc_read_24"
     )
+    sequence_relation = activity["capability_delivery"]["bindings"][0][
+        "context_response_use_sequence_relation"
+    ]
+    assert sequence_relation["status"] == (
+        "invocation-observed-after-context-response"
+    )
+    assert sequence_relation["causal_claim"] == "not-established"
+    assert sequence_relation["observed_pairs"][0][
+        "context_response_event"
+    ]["identity"] == "evt_rpc_read_24"
+    assert sequence_relation["observed_pairs"][0]["invocation_event"][
+        "identity"
+    ] == "evt_rpc_capability_invoked_after_context"
     assert context_activity["agent_receipt_status"] == "not-established"
     assert len(activity["rpc_failure_candidates"]) == 1
     assert result["session_activity_pressure_candidate_count"] == 1
@@ -2375,6 +2419,16 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert compact_binding_inclusion["supporting_events"][0]["identity"] == (
         "evt_rpc_read_24"
     )
+    compact_sequence_relation = compact_delivery["bindings"][0][
+        "context_response_use_sequence_relation"
+    ]
+    assert compact_sequence_relation["status"] == (
+        "invocation-observed-after-context-response"
+    )
+    assert compact_sequence_relation["causal_claim"] == "not-established"
+    assert compact_sequence_relation["observed_pairs"][0][
+        "invocation_event"
+    ]["identity"] == "evt_rpc_capability_invoked_after_context"
     assert any(
         "no binding revision" in limit
         for limit in compact_context_activity["measurement_limits"]
@@ -2412,6 +2466,9 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert unknown_inclusion["reason"] == (
         "captured-response-differs-from-current-snapshot"
     )
+    assert unknown_mismatch["capability_delivery"]["bindings"][0][
+        "context_response_use_sequence_relation"
+    ]["status"] == "not-comparable"
 
     context_event["payload"]["context_response_summary"]["unknown_count"] = 0
     context_event["payload"]["context_response_summary"][
@@ -2456,6 +2513,110 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert unobserved_inclusion["status"] == "not-observed-in-session-history"
     assert unobserved["capability_delivery"]["discoverability_status"] == (
         "not-measured"
+    )
+    assert unobserved["capability_delivery"]["bindings"][0][
+        "context_response_use_sequence_relation"
+    ]["status"] == "not-comparable"
+
+
+def test_context_response_use_relation_preserves_temporal_and_missing_use_limits() -> None:
+    inclusion = {
+        "status": "identity-tuple-in-matched-response",
+        "supporting_events": [{
+            "identity": "evt_context_response",
+            "sequence": 10,
+            "type": "environment.rpc.read_observed",
+        }],
+    }
+    invocation = {
+        "invocation_event": {
+            "identity": "evt_capability_invoked",
+            "sequence": 12,
+            "type": "capability.invoked",
+        },
+    }
+
+    after = capability_intelligence._context_response_use_sequence_relation(
+        inclusion, [invocation], complete_history=True,
+    )
+    assert after["status"] == "invocation-observed-after-context-response"
+    assert after["causal_claim"] == "not-established"
+    assert after["observed_pairs"][0]["relation"] == (
+        "context-response-sequence-precedes-invocation"
+    )
+
+    before_invocation = {
+        "invocation_event": {**invocation["invocation_event"], "sequence": 8},
+    }
+    before = capability_intelligence._context_response_use_sequence_relation(
+        inclusion, [before_invocation], complete_history=True,
+    )
+    assert before["status"] == "invocation-observed-before-context-response"
+    assert before["observed_pairs"][0]["relation"] == (
+        "invocation-sequence-precedes-context-response"
+    )
+
+    no_use = capability_intelligence._context_response_use_sequence_relation(
+        inclusion, [], complete_history=True,
+    )
+    assert no_use["status"] == (
+        "no-exact-binding-invocation-record-in-session-history"
+    )
+    assert no_use["reason"] == "this does not account for use through external interfaces"
+
+    partial_no_use = capability_intelligence._context_response_use_sequence_relation(
+        inclusion, [], complete_history=False,
+    )
+    assert partial_no_use["status"] == (
+        "no-exact-binding-invocation-observed-in-selected-window"
+    )
+
+    omitted_use = capability_intelligence._context_response_use_sequence_relation(
+        inclusion, [], complete_history=True, invocation_summaries_omitted=1,
+    )
+    assert omitted_use["status"] == "not-observed-in-interaction-window"
+    assert omitted_use["invocation_summaries_omitted"] == 1
+
+    before_with_omitted_response = (
+        capability_intelligence._context_response_use_sequence_relation(
+            inclusion, [before_invocation], complete_history=True,
+            response_summaries_omitted=1,
+        )
+    )
+    assert before_with_omitted_response["status"] == "not-comparable"
+    assert before_with_omitted_response["reason"] == (
+        "context-response-summaries-omitted"
+    )
+
+    binding = {
+        "availability_status": "available",
+        "capability": "mncs-test:run",
+        "provider": "mncs-test",
+        "contract_revision": "r1",
+    }
+    differing_response = {
+        "capture_status": "captured",
+        "identity_digest_status": "complete",
+        "capabilities_truncated": False,
+        "binding_snapshot_comparison": {
+            "status": "differs-from-current-session-binding-snapshot",
+        },
+        "event_reference": {
+            "identity": "evt_mismatched_context_response",
+            "sequence": 8,
+            "type": "environment.rpc.read_observed",
+        },
+    }
+    omitted_response_inclusion = (
+        capability_intelligence._context_response_binding_inclusion(
+            binding, [differing_response], [differing_response["event_reference"]],
+            context_operation_count=2, complete_history=True,
+            response_summaries_omitted=1,
+        )
+    )
+    assert omitted_response_inclusion["status"] == "not-established"
+    assert omitted_response_inclusion["reason"] == (
+        "context-response-summaries-omitted"
     )
 
 
