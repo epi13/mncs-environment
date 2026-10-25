@@ -228,11 +228,21 @@ def cmd_campaign_state(args: argparse.Namespace) -> int:
                     ).encode("utf-8")
                 sys.stdout.write(encoded.decode("utf-8") + "\n")
             except sessions_module.LifecycleError as error:
+                next_step = (
+                    "read the authenticated continuation capsule and inspect its "
+                    "campaign state status"
+                )
+                if str(error) == "campaign has no persisted state checkpoint":
+                    next_step = (
+                        "initialize campaign metadata with a checkpoint using "
+                        "campaign_base_checkpoint='none' and campaign_evidence=[], "
+                        "then retry the campaign-state read"
+                    )
                 return fail(
                     str(error),
                     diagnostics={
                         "code": "campaign-state-unavailable",
-                        "next": "read the authenticated continuation capsule and inspect its campaign state status",
+                        "next": next_step,
                     },
                 )
         return 0
@@ -782,6 +792,7 @@ def cmd_scope_grant(args: argparse.Namespace) -> int:
             expected_authority_revision=args.expected_authority_revision,
             approval_reference=args.approval_reference,
             owner_authorized_checkout=owner_authorized_checkout,
+            campaign_writable_checkout=args.campaign_writable_checkout,
             authenticated_principal_id=os.environ.get("MNCS_ENV_AUTH_PRINCIPAL_ID"),
             request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"),
         )
@@ -2363,6 +2374,7 @@ def build_parser() -> argparse.ArgumentParser:
     scope_grant.add_argument("--expected-authority-revision", required=True)
     scope_grant.add_argument("--approval-reference", required=True)
     scope_grant.add_argument("--owner-authorized-checkout-json", default=None)
+    scope_grant.add_argument("--campaign-writable-checkout", action="store_true")
     scope_grant.set_defaults(func=cmd_scope_grant)
 
     invoke = session_parser("invoke", "invoke a bound capability")
@@ -2653,8 +2665,36 @@ def main(argv: list[str] | None = None) -> int:
                                            "transport": "direct-filesystem",
                                            "next": next_step})
     except (OSError, ValueError, sessions_module.LifecycleError) as error:
-        return fail(str(error), diagnostics={"code": "environment-command-failed", "command": args.command,
-                                           "state_dir": str(args.state_dir), "next": "check configuration and session state; retry entry"})
+        message = str(error)
+        code = "environment-command-failed"
+        next_step = "check configuration and session state; retry entry"
+        if (
+            message.startswith("declared provider checkout ")
+            and message.endswith(" changed")
+        ):
+            code = "declared-provider-checkout-changed"
+            session_id = getattr(args, "session", None)
+            if isinstance(session_id, str) and session_id:
+                next_step = (
+                    "inspect the current and declared provider checkout; if the "
+                    "change is intended, run `mncs-env reconcile "
+                    f"{session_id}` to refresh the session's declared provider "
+                    "binding, then retry; if unexpected, restore or review the "
+                    "provider checkout before reconciling"
+                )
+            else:
+                next_step = (
+                    "inspect the current and declared provider checkout; if the "
+                    "change is intended, reconcile the affected session to "
+                    "refresh its declared provider binding before retrying; if "
+                    "unexpected, restore or review the provider checkout first"
+                )
+        return fail(message, diagnostics={
+            "code": code,
+            "command": args.command,
+            "state_dir": str(args.state_dir),
+            "next": next_step,
+        })
 
 
 if __name__ == "__main__":

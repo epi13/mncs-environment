@@ -50,6 +50,19 @@ def test_development_definition_tracks_the_current_linked_worktree():
     assert checkout["path"] == str(ROOT.resolve())
 
 
+def test_capability_observation_definition_has_bounded_scope_and_no_services():
+    definition = json.loads(
+        (ROOT / ".mncs" / "environment-observation.json").read_text()
+    )
+
+    assert definition["working_checkout"] == "current"
+    assert definition["workspace_scope"]["repositories"] == [
+        "mncs-environment", "mncs-store", "mncs-rights-provenance",
+        "mncs-system-monitor",
+    ]
+    assert definition["services"] == []
+    assert definition["intent"]["repositories"] == ["mncs-environment"]
+
 class EntryContractTests(unittest.TestCase):
     def test_project_definition_symlink_is_rejected(self):
         alias = self.project / ".mncs" / "environment-alias.json"
@@ -2091,3 +2104,28 @@ def test_cli_snapshot_conflict_reports_possible_completed_effects(monkeypatch, c
     assert result["diagnostics"]["code"] == "session-snapshot-conflict"
     assert result["diagnostics"]["capability_may_have_run"] is True
     assert result["diagnostics"]["snapshot_saved"] is False
+
+
+def test_cli_stale_provider_checkout_guides_reconciliation(monkeypatch, capsys):
+    from types import SimpleNamespace
+
+    from mncs_env import cli
+
+    def stale_provider_checkout(args):
+        raise ValueError("declared provider checkout head changed")
+
+    args = SimpleNamespace(
+        state_dir=Path("/tmp/state"),
+        command="claims",
+        session="ses_stale_provider",
+        func=stale_provider_checkout,
+    )
+    monkeypatch.setattr(
+        cli, "build_parser", lambda: SimpleNamespace(parse_args=lambda argv: args)
+    )
+
+    assert cli.main([]) == 2
+    result = json.loads(capsys.readouterr().err)
+    assert result["diagnostics"]["code"] == "declared-provider-checkout-changed"
+    assert "mncs-env reconcile ses_stale_provider" in result["diagnostics"]["next"]
+    assert "if unexpected" in result["diagnostics"]["next"]

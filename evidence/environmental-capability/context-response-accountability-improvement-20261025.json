@@ -1,0 +1,94 @@
+{
+  "captured_at": "2026-10-25T05:54:00Z",
+  "identity": "ev_environment_context_response_accountability_improvement_20261025",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_context_response_accountability_20261025",
+    "basis": "The existing capability projection now relates authenticated session.context RPC outcomes to current capability availability, retains event references in the RPC summary, and explicitly distinguishes successful orientation calls from response capture and agent receipt. Focused verification and a live campaign_state read demonstrated five successful context calls alongside nine currently substrate-available bindings; compaction retained aggregate counts while marking binding rows truncated.",
+    "identity": "im_environment_context_response_accountability_20261025",
+    "implementation_reference": {
+      "commit": "2c8e3fb5db0cd911852bb01b106fd1dbbeeba812",
+      "identity": "ev_environment_context_capability_projection_impl_20261025",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "2c2e2fd87fba2a3848a6329cf59e0f625fc8c51ad1408e86ac16fce5db009d8a"
+    },
+    "not_measured": [
+      "whether the agent read or used any returned capability list",
+      "whether the successful context reads improved discoverability",
+      "whether response-shape evidence reduces recurring orientation work"
+    ],
+    "subsequent_observation_identity": null,
+    "verification_observation_identity": "ev_environment_context_response_accountability_verification_20261025"
+  },
+  "measurement_basis": "committed-capability-context-correlation-linked-to-authenticated-session-events-and-focused-tests",
+  "not_measured": [
+    "actual agent receipt or use of context responses",
+    "cross-agent capability discovery and long-term effectiveness",
+    "whether response-shape telemetry would change subsequent implementation activity"
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "analysis_limit": "This makes context-operation activity and its missing response evidence visible. It does not establish that the agent received, understood, or used the capability list.",
+      "effectiveness_assessment": "not-assessed",
+      "implementation_change": "The Environmental Capability Intelligence projection now correlates authenticated session.context operation outcomes with capability availability, while compacting source event references through the existing RPC summary.",
+      "verified_capability": "The live projection reported five successful authenticated session.context operations, nine currently substrate-available bindings, response capability-list capture as not recorded, and agent receipt as not established."
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_context_response_accountability_20261025",
+      "implementation_commit": "2c8e3fb5db0cd911852bb01b106fd1dbbeeba812",
+      "subsequent_observation_identity": null,
+      "verification_observation_identity": "ev_environment_context_response_accountability_verification_20261025"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 29,
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_8ca7061e53df84ff",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "2c8e3fb5db0cd911852bb01b106fd1dbbeeba812",
+      "identity": "ev_environment_context_capability_projection_impl_20261025",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "2c2e2fd87fba2a3848a6329cf59e0f625fc8c51ad1408e86ac16fce5db009d8a"
+    },
+    {
+      "commit": "2c8e3fb5db0cd911852bb01b106fd1dbbeeba812",
+      "identity": "ev_environment_context_capability_projection_tests_20261025",
+      "kind": "committed-verification-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "f976f08d94cec27419d8e7536bfd2a2f29575fc80a4969d9a2bc181959704ddd"
+    },
+    {
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "event_identities": [
+        "evt_55afcb4336342bc9",
+        "evt_02e01eb9b51885e5",
+        "evt_026ee3ae639d193c"
+      ],
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "session_id": "ses_c6b0d153689d7388"
+    }
+  ]
+}

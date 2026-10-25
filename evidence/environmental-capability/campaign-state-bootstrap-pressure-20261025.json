@@ -1,0 +1,121 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_campaign_state_bootstrap_pressure_20261025",
+  "captured_at": "2026-10-25T03:19:04+00:00",
+  "measurement_basis": "authenticated-store-session-activity-projection",
+  "observation": {
+    "kind": "campaign-state-bootstrap-pressure-observation",
+    "source_interface": "MNCS Environment environmental-capability projection over authenticated Store session events",
+    "request": {
+      "session_id": "ses_c6b0d153689d7388",
+      "event_page_before_sequence": null,
+      "event_limit": 256
+    },
+    "outcome": {
+      "event_count": 40,
+      "selected_event_sequence_start": 1,
+      "selected_event_sequence_end": 40,
+      "selected_event_window_truncated": false,
+      "authenticated_read_operation_count": 24,
+      "campaign_state_failure_count": 3,
+      "campaign_state_failure_pattern": {
+        "operation": "campaign.state",
+        "failure_code": "campaign-state-unavailable",
+        "provider_exit_code": 2,
+        "occurrence_count": 3,
+        "distinct_session_count": 1,
+        "recurrence_scope": "same-session-selected-event-window",
+        "causal_claim": "not-established"
+      },
+      "supporting_events": [
+        {
+          "identity": "evt_2d6c52f29a035119",
+          "sequence": 3,
+          "operation": "campaign.state",
+          "failure_code": "campaign-state-unavailable",
+          "exit_code": 2
+        },
+        {
+          "identity": "evt_6d42a18434bf9eb3",
+          "sequence": 9,
+          "operation": "campaign.state",
+          "failure_code": "campaign-state-unavailable",
+          "exit_code": 2
+        },
+        {
+          "identity": "evt_68d77c4ca086168b",
+          "sequence": 16,
+          "operation": "campaign.state",
+          "failure_code": "campaign-state-unavailable",
+          "exit_code": 2
+        }
+      ],
+      "interpretation": "Three authenticated campaign-state read failures in one session, before its first campaign-state checkpoint, form an investigation candidate about first-use initialization and guidance. A later read succeeded after state was initialized, but the event sequence does not establish that the code change caused that success or that all three failures had the same underlying cause.",
+      "analysis_limit": "The evidence covers one session and one bounded event window. It does not establish recurrence across sessions, the root cause of each provider failure, or the effect of a later implementation change."
+    },
+    "source_session_context": {
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "session_id": "ses_c6b0d153689d7388",
+      "work_intent_id": "int_8475157f281c835f",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "environment_id": "renv_84f0b2e6a29fe1e2",
+      "repository": "mncs-environment",
+      "repository_context_basis": "authenticated-session-campaign-context"
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_8ba165e717364381",
+    "campaign_evidence_count_before_recording": 6,
+    "claim_ids": [
+      "claim:mncs-environment:paths:73735cb3d3a7"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_campaign_state_bootstrap_20261025",
+    "title": "First campaign-state reads need discoverable initialization guidance",
+    "category": "session-continuity-and-orientation",
+    "subsystem": "MNCS Environment campaign-state initialization and CLI guidance",
+    "owner": "mncs-environment",
+    "recurrence": "same-session-candidate",
+    "basis": "Three authenticated failures for campaign.state with failure code campaign-state-unavailable appear before the first campaign-state checkpoint in one session.",
+    "actionable_recommendation": "When campaign-state history is absent, expose the exact first-checkpoint initialization fields and the next command so an agent can establish continuity and retry.",
+    "not_measured": [
+      "whether the same limitation occurs in independent sessions",
+      "whether all three failures share one underlying cause",
+      "whether later success was caused by the diagnostic change rather than state initialization",
+      "agent time, token use, or resource impact"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "session_id": "ses_c6b0d153689d7388",
+      "event_identities": [
+        "evt_2d6c52f29a035119",
+        "evt_6d42a18434bf9eb3",
+        "evt_68d77c4ca086168b"
+      ]
+    }
+  ],
+  "not_measured": [
+    "root cause and appropriateness of each historical campaign-state failure",
+    "cross-session recurrence",
+    "whether the improvement changes future first-use outcomes"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "session_id": "ses_c6b0d153689d7388",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

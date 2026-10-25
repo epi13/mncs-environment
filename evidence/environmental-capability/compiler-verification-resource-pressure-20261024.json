@@ -1,0 +1,105 @@
+{
+  "captured_at": "2026-10-24T23:46:23Z",
+  "identity": "ev_environment_compiler_verification_resource_measurements_pressure_20261024",
+  "measurement_basis": "digest-checked read-only compiler evidence and bounded Environment projection analysis",
+  "not_measured": [
+    "compiler agent token or cache usage",
+    "resource attribution to the Compiler agent session",
+    "whether this bootstrap phase is repeated by later work",
+    "effectiveness after a later Compiler session consumes the projection"
+  ],
+  "observation": {
+    "kind": "compiler-regression-verification-resource-measurement-readback",
+    "outcome": {
+      "measurement_summary": {
+        "direct_measurements": {
+          "harness_process_peak_rss_kib": 98644,
+          "harness_process_system_seconds": 3.0,
+          "harness_process_user_seconds": 8.23,
+          "harness_process_wall_seconds": 11.11,
+          "stage0_bootstrap_cpu_percent": 185,
+          "stage0_bootstrap_peak_rss_kib": 1369204,
+          "stage0_bootstrap_system_seconds": 6.1,
+          "stage0_bootstrap_user_seconds": 420.77,
+          "stage0_bootstrap_wall_seconds": 230.6
+        },
+        "measurement_availability": {
+          "harness_process_peak_cgroup_memory_bytes": "null-in-source-record"
+        },
+        "observed_counts": {
+          "stage0_bootstrap_cargo_build_jobs": 2
+        },
+        "qualifications": [
+          "stage0_bootstrap: one-time isolated target compilation; excluded from this warm harness run",
+          "These verification-process measurements are not measurements of resource use attributable to the Compiler agent session."
+        ]
+      },
+      "resource_measurement_scope": "compiler harness process and one-time isolated bootstrap; not agent-session resource use",
+      "source_object_sha256_matched": true,
+      "source_projection_access_status": "outside-selected-session"
+    },
+    "request": {
+      "projection_scope": "the Environment campaign session does not select mncs-compiler",
+      "read_basis": "read-only Git object at the source commit; SHA-256 matched the recorded pointer",
+      "source_compiler_head": "c9d54cdfcf8c03fce0a1a904d32e147d7f287a9d",
+      "source_language_head": "9505d3f557701f072b5803a5bad046389b84cb3b",
+      "source_record_identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "source_schema_version": "mncs.compiler.language-module-elaboration-cache-regression/1"
+    },
+    "source_interface": "mncs-environment capability-intelligence compiler regression adapter"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Project bounded, phase-named source verification measurements with the source qualification and availability state, while keeping them separate from per-build and agent-session resource use.",
+    "basis": "The pre-change adapter projected allowlisted cache stages but not the source report verification measurements. This committed Compiler report records an 11.11 second harness process and a separately identified 230.6 second one-time stage0 bootstrap with 1,369,204 KiB peak RSS; the source explicitly excludes the bootstrap from the warm harness. The cgroup peak is null. One report documents this projection gap; recurrence is not established.",
+    "category": "resource-and-operational-observation",
+    "identity": "ph_environment_compiler_verification_resource_measurements_hidden_20261024",
+    "not_measured": [
+      "resource consumption attributable to the Compiler agent session",
+      "whether the one-time bootstrap recurs in normal work",
+      "cgroup memory peak when the source records null",
+      "recurrence across independent sessions",
+      "whether exposing these measurements changes a subsequent agent decision"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "not-established",
+    "subsystem": "mncs-environment capability-intelligence Compiler regression adapter",
+    "title": "Compiler regression projection omits recorded verification-phase resource measurements"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_92932f7be5cedb75",
+    "session_id": "ses_c01ca32d0af155c1"
+  },
+  "related_work": {
+    "campaign_evidence_count": 693,
+    "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+    "campaign_objective": "Advance native application development and verified compiler self-consumption",
+    "environment_version": "71379b1211f9a96b38580614a106111bedc3c257",
+    "latest_checkpoint": {
+      "identity": "chk_691079cfe830f05d",
+      "sequence": 649
+    },
+    "session_id": "ses_164edc158d9b1637",
+    "work_intent_goal": "Mature mncs-compiler for reliable native multi-module application development while advancing verified self-consumption",
+    "work_intent_id": "int_8fb697d8987722d5"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "commit": "e874669dbd110c5a5f808249c20a086013d7e2be",
+      "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+      "kind": "committed-campaign-evidence",
+      "measured_fields": [
+        "verification.harness_process_measurement",
+        "verification.stage0_bootstrap_measurement"
+      ],
+      "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+      "repository": "mncs-compiler",
+      "session_id": "ses_164edc158d9b1637",
+      "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e"
+    }
+  ]
+}

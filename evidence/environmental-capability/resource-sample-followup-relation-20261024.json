@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_resource_sample_followup_relation_20261024",
+  "captured_at": "2026-10-24T22:36:39Z",
+  "measurement_basis": "derived-link-between-verified-implementation-and-later-session-observation",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "resource-sample-follow-up-improvement-link",
+    "source_interface": "MNCS Environmental Capability Intelligence campaign evidence",
+    "request": {
+      "operation": "relate-resource-sample-projection-to-later-session-observation",
+      "pressure_identity": "ph_environment_monitor_resource_samples_not_exposed_20261024"
+    },
+    "outcome": {
+      "follow_up_record_identity": "ev_environment_resource_sample_session_linked_followup_20261024",
+      "follow_up_session_id": "ses_c01ca32d0af155c1",
+      "prior_verification_session_id": "ses_ac2a1c952b857f40",
+      "follow_up_session_differs_from_verification_session": true,
+      "effectiveness_assessment": "not-assessed",
+      "interpretation": "A later session's Store-backed Monitor invocation was correlated by provider request identity to its own objective and exact events. This extends operational evidence for the projection path, but both observations were collected by the same campaign agent for verification. It does not establish independent adoption, resource-pressure reduction, or empirical effectiveness."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_monitor_resource_samples_followup_20261024",
+    "addresses_hypothesis_identity": "ph_environment_monitor_resource_samples_not_exposed_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_resource_sample_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "ba3dfe9c30b54c4a8755ee4c7af8bb3df4bfb33b",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8ae124d6c90636cff66485ead6a304241786b288c37c07e72190df93b05b771d"
+    },
+    "verification_observation_identity": "ev_environment_resource_sample_live_readback_20261024",
+    "subsequent_observation_identity": "ev_environment_resource_sample_session_linked_followup_20261024",
+    "basis": "The original implementation and readback were recorded in a separate verification session. A later Environment campaign session invoked the read-only Monitor and the projection recovered one matching Store artifact, exact invocation/completion events, Work Intent, campaign, and Environment context. This verifies a later operational readback only; the observations were gathered by the same campaign agent and effectiveness remains unassessed.",
+    "not_measured": [
+      "independent adoption by another agent",
+      "agent-attributed CPU or memory consumption",
+      "CPU utilization in the follow-up sample",
+      "recurrence or reduction of resource pressure",
+      "whether the projection changes subsequent development outcomes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_resource_sample_live_readback_20261024",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_resource_sample_session_linked_followup_20261024",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_resource_sample_projection_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "ba3dfe9c30b54c4a8755ee4c7af8bb3df4bfb33b",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8ae124d6c90636cff66485ead6a304241786b288c37c07e72190df93b05b771d"
+    }
+  ],
+  "not_measured": [
+    "whether independent agents use the capability projection",
+    "whether resource conditions improve or degrade over time",
+    "whether the reported sample values change subsequent work outcomes",
+    "empirical elimination of the original evidence visibility pressure"
+  ]
+}

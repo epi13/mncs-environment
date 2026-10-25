@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_control_exact_session_continuation_improvement_20261025",
+  "captured_at": "2026-10-25T02:22:56Z",
+  "measurement_basis": "verified-control-change-linked-to-live-client-follow-up",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": null,
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Control exact-session continuation contract and MNCS Environment live readback",
+    "request": {
+      "addresses_hypothesis_identity": "ph_control_exact_session_selection_after_context_reset_20261025",
+      "implementation_commit": "4023255dce631973601bcf8e3194827d8a52ebc6",
+      "verification_observation_identity": "ev_control_exact_session_continuation_verification_20261025",
+      "subsequent_observation_identity": "ev_control_exact_session_continuation_live_readback_20261025"
+    },
+    "outcome": {
+      "implementation_change": "Control can select an exact session through its local continuation adapter, derive the campaign only from a canonical same-principal session, and preserve project, checkout, lifecycle, and claim-conflict checks. The direct continuation operation now accepts the same exact session selector.",
+      "verification_recorded": true,
+      "effectiveness_assessment": "not-confirmed",
+      "analysis_limit": "The targeted Control suites passed, but the subsequent call through the currently connected Environment client still rejected the direct session_id argument and returned an ambiguous campaign inventory for a context request. The live readback does not establish the cause or the behavior after client refresh."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_control_exact_session_continuation_20261025",
+    "addresses_hypothesis_identity": "ph_control_exact_session_selection_after_context_reset_20261025",
+    "implementation_reference": {
+      "identity": "ev_control_exact_session_continuation_adapter_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "4023255dce631973601bcf8e3194827d8a52ebc6",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "b9c5be15883a8cd212f22a13fccd2fbdb454294fa420e0afb84d43fdeb9b63ea"
+    },
+    "verification_observation_identity": "ev_control_exact_session_continuation_verification_20261025",
+    "subsequent_observation_identity": "ev_control_exact_session_continuation_live_readback_20261025",
+    "basis": "An exact-session continuation path was implemented and its project, ownership, and foreign-session protections passed targeted regression suites. The subsequent live client still exposed the previous unsupported-argument and ambiguous-campaign behavior, so this change is verified in Control but its effect on that client remains unconfirmed.",
+    "not_measured": [
+      "whether the connected client has refreshed the merged Control source",
+      "whether exact session selection now succeeds through a refreshed client",
+      "recurrence of the observed selection pressure across independent sessions",
+      "agent outcome changes after the client and Control path are both aligned"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-control-implementation-and-tests",
+      "identity": "ev_control_exact_session_continuation_verification_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "4023255dce631973601bcf8e3194827d8a52ebc6",
+      "path": "tests/test_environment_sessions.py",
+      "sha256": "2abbb304b92538f5c0bbe923fabfd6cab38ade35dd2a55d26792757acf69b549"
+    },
+    {
+      "kind": "authenticated-live-client-readback",
+      "identity": "ev_control_exact_session_continuation_live_readback_20261025",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/control-exact-session-continuation-live-readback-20261025.json"
+    }
+  ],
+  "not_measured": [
+    "the reason the active client rejects the new selector",
+    "long-term recurrence or elimination of the selection pressure",
+    "token usage, cache accounting, execution duration, and resource consumption"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

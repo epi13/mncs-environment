@@ -1,0 +1,72 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_provider_binding_reconcile_verification_20261024",
+  "captured_at": "2026-10-24T23:20:10Z",
+  "measurement_basis": "targeted-regression-test-of-inspection-first-provider-reconcile-guidance",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "stale-provider-checkout-diagnostic-regression-verification",
+    "source_interface": "mncs-environment CLI regression tests",
+    "request": {
+      "command": "PYTHONPATH=. pytest -q tests/test_entry.py -k 'cli_stale_provider_checkout_guides_reconciliation or cli_snapshot_conflict_reports_possible_completed_effects'",
+      "scope": "stale declared-provider checkout diagnostic and existing snapshot-conflict diagnostic"
+    },
+    "outcome": {
+      "status": "passed",
+      "passed_test_count": 2,
+      "deselected_test_count": 63,
+      "tested_error": "declared provider checkout head changed",
+      "diagnostic_code": "declared-provider-checkout-changed",
+      "inspection_first_reconcile_guidance_present": true,
+      "unexpected_change_review_guidance_present": true,
+      "automatic_reconciliation_performed": false,
+      "interpretation": "The CLI now classifies this stale provider-binding failure and directs the agent to inspect the checkout, reconcile the affected session only when the change is intended, and review or restore unexpected changes before reconciling. The provider consistency check and explicit recovery boundary remain in place. This targeted verification covers the diagnostic response, not recovery outcomes across other providers or an entire environment suite."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_provider_binding_reconcile_pressure_20261024",
+      "repository": "mncs-environment",
+      "commit": "4d14660bf809172cc66a0ba550d43b685c0b2e11",
+      "path": "evidence/environmental-capability/provider-binding-reconcile-pressure-20261024.json",
+      "sha256": "2f91065d78d843bfe52b39146517f19d289f4f029a575c29edd895429755f4c5"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_stale_provider_checkout_guidance_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "4d14660bf809172cc66a0ba550d43b685c0b2e11",
+      "path": "mncs_env/cli.py",
+      "sha256": "76b2180d949f03c5d0ab8e6767db55c5c6f4486254d68d189b22ac83b81bb044"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_stale_provider_checkout_guidance_regression_test_20261024",
+      "repository": "mncs-environment",
+      "commit": "4d14660bf809172cc66a0ba550d43b685c0b2e11",
+      "path": "tests/test_entry.py",
+      "sha256": "a65a289f41eac863ffe6c117341b22e0f181bc6d336108e5ca758872852375b1"
+    }
+  ],
+  "not_measured": [
+    "whether the diagnostic prevents recurrence of stale provider bindings",
+    "whether other provider-change errors need a distinct recovery path",
+    "effects on external authorization prompts or other agent outcomes"
+  ]
+}

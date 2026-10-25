@@ -1,0 +1,102 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compact_projection_recency_verification_20261024",
+  "captured_at": "2026-10-24T23:07:04Z",
+  "measurement_basis": "live-environmental-capability-projection-readback-after-published-compaction-fix",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "compact-projection-recency-fix-live-verification",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_c01ca32d0af155c1",
+      "campaign_state_checkpoint_id": "chk_2c72c698f6d6ff5d",
+      "campaign_evidence_count": 15,
+      "evidence_limit": 32,
+      "response_limit_bytes": 49152
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_byte_count": 77389,
+      "response_truncated": true,
+      "compacted_projection_bytes": 47391,
+      "compacted_projection_within_limit": true,
+      "observation_records_verified": 9,
+      "observation_records_compacted_out_count": 1,
+      "observation_records_unavailable": 0,
+      "record_correction_count": 1,
+      "record_corrections_applied_count": 1,
+      "record_corrections_unverified_count": 0,
+      "source_pointer_content_integrity_verified_count": 10,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "returned_observation_identities": [
+        "ev_environment_workspace_scope_visibility_pressure_20261024",
+        "ev_environment_workspace_scope_visibility_live_readback_20261024",
+        "ev_environment_workspace_scope_visibility_improvement_20261024",
+        "ev_environment_workspace_scope_campaign_projection_readback_20261024",
+        "ev_environment_resource_sample_session_linked_followup_20261024",
+        "ev_environment_resource_sample_followup_relation_20261024",
+        "ev_environment_resource_sample_followup_relation_correction_20261024",
+        "ev_environment_resource_sample_correction_live_readback_20261024"
+      ],
+      "latest_correction_readback_in_compact_view": true,
+      "corrected_target_identity": "ev_environment_resource_sample_followup_relation_20261024",
+      "corrected_target_status": "corrected-by-verified-record",
+      "corrected_target_measurement_limits": [
+        "resource consumption attributable to this agent or its child processes",
+        "CPU utilization for this sample",
+        "whether any other samples differ across this session or campaign",
+        "Btrfs data or metadata allocation headroom",
+        "whether the host conditions constrained any development operation"
+      ],
+      "improvement_relation_identity": "im_environment_monitor_resource_samples_followup_20261024",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation": "The compact view now retains the latest verified correction readback and the corrected resource-sample relation while disclosing one older summary as compacted out. The correction remains applied with zero unverified corrections; the original observation is addressable by its exact pointer. The relation remains not assessed for empirical effectiveness."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_resource_sample_followup_relation_20261024",
+      "repository": "mncs-environment",
+      "commit": "7741e481c26f86e9838adffa34753eaa43d2ecea",
+      "path": "evidence/environmental-capability/resource-sample-followup-relation-20261024.json",
+      "sha256": "ca65a13325cfddb120505740045696f131a4f051c7497eaad72d63d9f13bc09f"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_resource_sample_followup_relation_correction_20261024",
+      "repository": "mncs-environment",
+      "commit": "3f7d22196213ef0b7eb07203fb2b429d896785fd",
+      "path": "evidence/environmental-capability/resource-sample-followup-relation-correction-20261024.json",
+      "sha256": "da53b085730e2ec7809e4b966524e25453befe628fc58636ccc23dda04a343cd"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_compact_projection_recency_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "0caf69cd317be76bcc87c31ea185b358a6eaacc2",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "48083755f6b90dff1746ab8d3c9e309dc15b9afca7af9b95cf7cb1cfaade8085"
+    }
+  ],
+  "not_measured": [
+    "whether another agent independently uses the compact view",
+    "whether inclusion of the latest readback changes development decisions",
+    "recurrence of compacted-record omissions across longer or multi-session history"
+  ]
+}

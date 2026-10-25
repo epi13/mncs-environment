@@ -1,0 +1,75 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_campaign_state_bootstrap_verification_20261025",
+  "captured_at": "2026-10-25T03:36:29+00:00",
+  "measurement_basis": "focused-pytest-result-and-committed-source-integrity",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:paths:73735cb3d3a7"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "session_id": "ses_c6b0d153689d7388",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "campaign-state-bootstrap-diagnostic-verification",
+    "source_interface": "pytest",
+    "request": {
+      "repository": "mncs-environment",
+      "implementation_commit": "1d198c5bdf58ea314ec8bd58d0b9f656d960e528",
+      "test": "tests/test_environment.py::EntryFrictionTests::test_uninitialized_campaign_state_read_explains_first_checkpoint",
+      "command": "python3 -m pytest tests/test_environment.py::EntryFrictionTests::test_uninitialized_campaign_state_read_explains_first_checkpoint -q"
+    },
+    "outcome": {
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "diagnostic_fields_verified": [
+        "campaign_base_checkpoint='none'",
+        "campaign_evidence=[]",
+        "retry guidance"
+      ],
+      "analysis_limit": "This focused test verifies the missing-history diagnostic contract; it does not establish future agent behavior or recurrence reduction."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_campaign_state_bootstrap_cli_20261025",
+      "repository": "mncs-environment",
+      "commit": "1d198c5bdf58ea314ec8bd58d0b9f656d960e528",
+      "path": "mncs_env/cli.py",
+      "sha256": "6260809292679cfe3d1ee5e17599012ebc27faa6a9341d79bfdac50a0277c36d"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "identity": "ev_environment_campaign_state_bootstrap_test_20261025",
+      "repository": "mncs-environment",
+      "commit": "1d198c5bdf58ea314ec8bd58d0b9f656d960e528",
+      "path": "tests/test_environment.py",
+      "sha256": "5004aa8d785344ed705a3de8a96f4431dd9ad9c367a6ccd39d70625e9f514213",
+      "measured_fields": [
+        "status",
+        "passed",
+        "failed",
+        "diagnostic_fields_verified"
+      ]
+    }
+  ],
+  "not_measured": [
+    "future first-use agent behavior",
+    "cross-session recurrence after the change",
+    "token, execution, or resource cost of using the diagnostic"
+  ]
+}

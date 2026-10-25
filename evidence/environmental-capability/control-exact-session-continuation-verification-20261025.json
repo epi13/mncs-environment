@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_control_exact_session_continuation_verification_20261025",
+  "captured_at": "2026-10-25T02:22:56Z",
+  "measurement_basis": "focused-control-regression-suites-and-static-analysis",
+  "observation": {
+    "kind": "control-exact-session-continuation-verification",
+    "source_interface": "MNCS Control pytest and Ruff",
+    "request": {
+      "implementation_commit": "4023255dce631973601bcf8e3194827d8a52ebc6",
+      "test_command": "python3 -m pytest tests/test_local_environment_mcp.py tests/test_environment_sessions.py tests/test_environment_rpc.py -q",
+      "test_files": [
+        "tests/test_local_environment_mcp.py",
+        "tests/test_environment_sessions.py",
+        "tests/test_environment_rpc.py"
+      ],
+      "lint_command": "python3 -m ruff check --select E4,E7,E9,F src/mncs_control_mcp/environment_rpc.py src/mncs_control_mcp/environment_sessions.py src/mncs_control_mcp/local_environment_mcp.py src/mncs_control_mcp/server.py tests/test_environment_rpc.py tests/test_environment_sessions.py tests/test_local_environment_mcp.py"
+    },
+    "outcome": {
+      "regression_suites": "passed",
+      "ruff": "passed",
+      "git_diff_check": "passed",
+      "verified_contract": "An exact session selector narrows continuation only after Control verifies the authenticated principal, campaign identity, project link, checkout, lifecycle, and overlapping claims. Foreign sessions and campaign/session mismatches remain denied.",
+      "analysis_limit": "Repository tests establish the Control implementation contract; they do not establish that every already-running client has refreshed its captured MCP tool surface."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_control_exact_session_selection_after_context_reset_20261025",
+    "title": "A caller cannot reliably reselect an authenticated session after losing local context",
+    "category": "session-continuity",
+    "subsystem": "Control LocalEnvironmentMCP continuation and project-session selection",
+    "owner": "mncs-control-mcp",
+    "recurrence": "observed-in-one-live-campaign-context; cross-session recurrence not-established",
+    "basis": "The live Environment client reported an ambiguous campaign inventory when asked to use an exact session identity. Control now carries that selector through its continuation route and applies the existing principal, campaign, project-link, checkout, and claim checks.",
+    "actionable_recommendation": "Carry an exact session selector through the client continuation adapter and Control's authenticated project-link validation; inspect the active client surface after integration before assessing effectiveness.",
+    "not_measured": [
+      "recurrence across independent clients, sessions, or campaigns",
+      "whether the selector mismatch caused lost or duplicated development work",
+      "client registration refresh behavior after the Control source update"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-control-implementation",
+      "identity": "ev_control_exact_session_continuation_implementation_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "4023255dce631973601bcf8e3194827d8a52ebc6",
+      "path": "src/mncs_control_mcp/environment_sessions.py",
+      "sha256": "0fc7491a2c3ddfd03d028532153b878c1905fd628299273d1934ab9c7443d902"
+    },
+    {
+      "kind": "committed-control-continuation-adapter",
+      "identity": "ev_control_exact_session_continuation_adapter_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "4023255dce631973601bcf8e3194827d8a52ebc6",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "b9c5be15883a8cd212f22a13fccd2fbdb454294fa420e0afb84d43fdeb9b63ea"
+    },
+    {
+      "kind": "committed-local-environment-selector-and-regressions",
+      "identity": "ev_control_exact_session_continuation_tests_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "4023255dce631973601bcf8e3194827d8a52ebc6",
+      "path": "tests/test_local_environment_mcp.py",
+      "sha256": "2df5b9bf9b1ae1699b7091af94f3391c9097f66cf2f3fa6b24d875cde7fffe61"
+    }
+  ],
+  "not_measured": [
+    "effectiveness on the active client MCP registration",
+    "whether the session-selection pressure recurs in other campaigns",
+    "token use, cache accounting, execution duration, and resource consumption"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

@@ -28,6 +28,10 @@ from .store_backend import StoreIntegrityFailure, StoreUnavailable
 
 SCHEMA = "mncs.environment.capability-intelligence/1"
 OBSERVATION_SCHEMA = "mncs.environment.environmental-observation/1"
+OBSERVATION_CORRECTION_SCHEMA = "mncs.environment.observation-correction/1"
+EVIDENCE_REFERENCE_CORRECTION_SCHEMA = (
+    "mncs.environment.evidence-reference-correction/1"
+)
 CAMPAIGN_CHARTER_SCHEMA = "mncs.environment.campaign-charter/1"
 OBSERVATION_PATH_PREFIX = "evidence/environmental-capability/"
 COMPILER_CACHE_REGRESSION_SCHEMA_V1 = (
@@ -85,6 +89,37 @@ COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_STAGES = (
     "fresh_process_comment_edit", "invalid_source",
     "reachable_imported_body_edit", "unchanged", "unreachable_body_edit",
 )
+COMPILER_NATIVE_APPLICATION_PROOF_SCHEMA = (
+    "mncs.compiler.native-application-proof/2"
+)
+COMPILER_NATIVE_APPLICATION_PROOF_IDENTITY = (
+    "ev_compiler_native_application_proof_digest_app_20261018"
+)
+COMPILER_NATIVE_APPLICATION_PROOF_PATH = (
+    "evidence/native-app-readiness-test-digest-app.json"
+)
+COMPILER_NATIVE_APPLICATION_ENTRY = "mncs.test.digest::digest_app"
+COMPILER_NATIVE_APPLICATION_MODULES = (
+    (
+        "mncs.std.application.v1", "mncs-stdlib",
+        "library/std/application.mncs", "stdlib_revision",
+    ),
+    (
+        "mncs.test.assertions", "mncs-test",
+        "native/mncs/test/assertions.mncs", "test_revision",
+    ),
+    (
+        "mncs.test.suite", "mncs-test",
+        "native/mncs/test/suite.mncs", "test_revision",
+    ),
+    (
+        "mncs.test.digest", "mncs-test",
+        "native/mncs/test/digest.mncs", "test_revision",
+    ),
+)
+IMPLEMENTATION_ACCOUNTABILITY_SCHEMA = (
+    "mncs.environment.implementation-accountability/1"
+)
 MAX_EVIDENCE_REFS = 32
 MAX_EVIDENCE_HISTORY_PAGES = 4
 MAX_OBSERVATIONS = 16
@@ -92,6 +127,7 @@ MAX_OBSERVATION_BYTES = 64 * 1024
 MAX_SOURCE_BYTES = 512 * 1024
 MAX_OBSERVATION_READ_SECONDS = 8.0
 MAX_SOURCE_POINTER_VERIFICATIONS = 32
+MAX_EVIDENCE_REFERENCE_CORRECTIONS = 8
 MAX_CAMPAIGN_CHARTER_CANDIDATES = 4
 MAX_CAMPAIGN_CHARTER_OBJECTIVE_CHARS = 4096
 MAX_RESULT_BYTES = 48 * 1024
@@ -112,8 +148,14 @@ SYSTEM_RESOURCE_SAMPLE_STATUSES = frozenset({
 })
 MAX_SESSION_ACTIVITY_INTERACTIONS = 32
 MAX_SESSION_ACTIVITY_CAPABILITIES = 16
+MAX_SESSION_ACTIVITY_BINDINGS = 32
+MAX_SESSION_ACTIVITY_BINDING_SCAN = 512
+MAX_SESSION_ACTIVITY_CAPABILITY_EVENTS = 12
+MAX_CAPABILITY_SUPPORTING_EVENTS = 3
 MAX_SESSION_ACTIVITY_RPC_OPERATIONS = 32
 MAX_SESSION_ACTIVITY_RPC_PRESSURE_CANDIDATES = 8
+MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS = 32
+MAX_SESSION_ACTIVITY_RPC_SUMMARY_REFERENCES = 3
 MAX_SESSION_ACTIVITY_AUTHORITY_DENIALS = 16
 MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES = 8
 SOURCE_INTEGRITY_VERIFIED = frozenset({
@@ -554,6 +596,102 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
     return result or None
 
 
+def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
+    if (not isinstance(value, dict)
+            or value.get("schema_version") != IMPLEMENTATION_ACCOUNTABILITY_SCHEMA):
+        return None
+    raw_samples = value.get("samples")
+    raw_samples = raw_samples if isinstance(raw_samples, list) else []
+    if not raw_samples:
+        return {
+            "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
+            "sample_count": 0,
+            "samples": [],
+            "systemwide_native_adoption_ratio": {
+                "status": "not-measured",
+                "reason": "A complete, ownership-verified MNCS implementation inventory is unavailable.",
+            },
+        }
+    samples = []
+    for sample in raw_samples[:4]:
+        if not isinstance(sample, dict):
+            continue
+        compact_sample = {
+            key: _short_text(sample.get(key), 192 if key == "sample_scope" else 160)
+            for key in (
+                "identity", "application_entry", "sample_scope",
+                "native_semantic_ownership", "ownership_status",
+                "artifact_identity", "compiler_front_end_outcome",
+                "native_migration_opportunity", "source_campaign_context",
+                "evidence_relationship_basis",
+            )
+            if isinstance(sample.get(key), str)
+        }
+        for key in (
+            "native_module_count", "source_integrity_verified_module_count",
+            "canonical_vm_case_count", "canonical_vm_case_success_count",
+        ):
+            if type(sample.get(key)) is int and sample[key] >= 0:
+                compact_sample[key] = sample[key]
+        compact_modules = []
+        raw_modules = sample.get("native_modules")
+        raw_modules = raw_modules if isinstance(raw_modules, list) else []
+        for module in raw_modules[:4]:
+            if not isinstance(module, dict):
+                continue
+            compact_modules.append({
+                key: _short_text(module.get(key), 192 if key == "path" else 160)
+                for key in (
+                    "module", "repository", "commit", "path", "sha256",
+                    "status", "content_integrity_status",
+                )
+                if isinstance(module.get(key), str)
+            })
+        compact_sample["native_modules"] = compact_modules
+        proof_reference = sample.get("compiler_proof_reference")
+        if isinstance(proof_reference, dict):
+            compact_sample["compiler_proof_reference"] = {
+                key: _short_text(proof_reference.get(key), 192 if key == "path" else 160)
+                for key in (
+                    "identity", "repository", "commit", "path", "sha256",
+                    "status", "content_integrity_status",
+                )
+                if isinstance(proof_reference.get(key), str)
+            }
+        host_adapter = sample.get("host_test_adapter")
+        if isinstance(host_adapter, dict):
+            compact_sample["host_test_adapter"] = {
+                key: _short_text(host_adapter.get(key), 256)
+                for key in ("classification", "limitation", "harness_limitation")
+                if isinstance(host_adapter.get(key), str)
+            }
+        evidence_reference = _validate_reference(sample.get("evidence_reference"))
+        if evidence_reference is not None:
+            compact_sample["evidence_reference"] = evidence_reference
+        samples.append(compact_sample)
+    ratio = value.get("systemwide_native_adoption_ratio")
+    compact_ratio = {
+        "status": "not-measured",
+        "reason": "A complete, ownership-verified inventory of MNCS functionality and its denominator is unavailable.",
+    }
+    if isinstance(ratio, dict) and isinstance(ratio.get("reason"), str):
+        compact_ratio["reason"] = _short_text(ratio["reason"], 256) or compact_ratio["reason"]
+    measurement_limits = value.get("measurement_limits")
+    return {
+        "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
+        "scope": _short_text(value.get("scope"), 192),
+        "sample_count": value.get("sample_count", len(raw_samples)),
+        "samples": samples,
+        "samples_truncated": len(raw_samples) > len(samples),
+        "systemwide_native_adoption_ratio": compact_ratio,
+        "measurement_limits": [
+            _short_text(item, 192)
+            for item in measurement_limits[:4]
+            if isinstance(item, str)
+        ] if isinstance(measurement_limits, list) else [],
+    }
+
+
 def _compact_projection(
     projection: dict[str, Any], original_size: int, max_result_bytes: int,
 ) -> dict[str, Any]:
@@ -576,6 +714,35 @@ def _compact_projection(
         for key in ("identity", "goal")
         if intent.get(key) is not None
     }
+    intent_repositories = intent.get("repositories")
+    if isinstance(intent_repositories, list):
+        compact_subject["work_intent"]["repositories"] = [
+            _short_text(value, 128)
+            for value in intent_repositories[:16]
+            if isinstance(value, str) and value
+        ]
+        if len(intent_repositories) > 16:
+            compact_subject["work_intent"]["repositories_truncated"] = True
+    workspace_alignment = subject.get("workspace_alignment")
+    if isinstance(workspace_alignment, dict):
+        compact_alignment = {
+            "status": _short_text(workspace_alignment.get("status"), 96),
+            "basis": _short_text(workspace_alignment.get("basis"), 160),
+        }
+        for key in (
+            "declared_repositories", "selected_repositories",
+            "unselected_declared_repositories",
+        ):
+            value = workspace_alignment.get(key)
+            if isinstance(value, list):
+                compact_alignment[key] = [
+                    _short_text(item, 128)
+                    for item in value[:16]
+                    if isinstance(item, str) and item
+                ]
+                if len(value) > 16:
+                    compact_alignment[f"{key}_truncated"] = True
+        compact_subject["workspace_alignment"] = compact_alignment
     charter = subject.get("campaign_charter")
     if isinstance(charter, dict):
         compact_charter = {
@@ -617,17 +784,57 @@ def _compact_projection(
                     "source_pointer_content_integrity_not_verified_count",
                     "observation_records_considered",
                     "observation_records_verified",
-                    "observation_records_unavailable")
+                    "observation_records_unavailable",
+                    "record_correction_count",
+                    "record_corrections_applied_count",
+                    "record_corrections_unverified_count",
+                    "evidence_reference_correction_count",
+                    "evidence_reference_corrections_applied_count",
+                    "evidence_reference_corrections_unverified_count",
+                    "evidence_reference_correction_target_reads")
         if key in source and (
             key in {"previous_evidence_offset", "next_evidence_offset"}
             or source.get(key) is not None
         )
     }
+    evidence_visibility = source.get("evidence_visibility")
+    if isinstance(evidence_visibility, dict):
+        compact_visibility = {
+            "status": _short_text(evidence_visibility.get("status"), 128),
+            "verification_diagnostic_count": evidence_visibility.get(
+                "verification_diagnostic_count"
+            ),
+            "outside_selected_reference_diagnostic_count": evidence_visibility.get(
+                "outside_selected_reference_diagnostic_count", 0
+            ),
+            "diagnostics_truncated": evidence_visibility.get(
+                "diagnostics_truncated"
+            ),
+            "basis": _short_text(evidence_visibility.get("basis"), 160),
+            "outside_selected_repositories": [
+                {
+                    "repository": _short_text(item.get("repository"), 128),
+                    "diagnostic_count": item.get("diagnostic_count", 0),
+                }
+                for item in evidence_visibility.get(
+                    "outside_selected_repositories", []
+                )[:16]
+                if isinstance(item, dict)
+                and isinstance(item.get("repository"), str)
+            ],
+        }
+        compact_source["evidence_visibility"] = compact_visibility
     raw_diagnostics = source.get("observation_reference_diagnostics")
     raw_diagnostics = raw_diagnostics if isinstance(raw_diagnostics, list) else []
     for key in (
         "observation_reference_diagnostic_count",
         "improvement_relations_unverified_count",
+        "record_correction_count", "record_corrections_applied_count",
+        "record_corrections_unverified_count",
+        "evidence_reference_correction_count",
+        "evidence_reference_corrections_applied_count",
+        "evidence_reference_corrections_unverified_count",
+        "evidence_reference_correction_target_reads",
     ):
         if type(source.get(key)) is int and source[key] > 0:
             compact_source[key] = source[key]
@@ -657,8 +864,106 @@ def _compact_projection(
     compact_source["response_truncated"] = True
     compact_source["response_byte_count"] = original_size
 
+    compact_context_candidates = []
+    raw_context_candidates = projection.get("context_pressure_candidates")
+    raw_context_candidates = (
+        raw_context_candidates if isinstance(raw_context_candidates, list) else []
+    )
+    for candidate in raw_context_candidates[:8]:
+        if not isinstance(candidate, dict):
+            continue
+        compact_candidate = {
+            key: _short_text(
+                candidate.get(key),
+                256 if key in ("title", "recommendation") else 160,
+            )
+            for key in (
+                "identity", "kind", "interpretation", "status", "title",
+                "affected_repository", "recurrence_status", "recommendation",
+            )
+            if isinstance(candidate.get(key), str)
+        }
+        work_context = candidate.get("affected_work_context")
+        if isinstance(work_context, dict):
+            compact_candidate["affected_work_context"] = {
+                key: _short_text(value, 160)
+                for key, value in work_context.items()
+                if isinstance(value, str)
+            }
+        basis = candidate.get("basis")
+        if isinstance(basis, dict):
+            compact_candidate["basis"] = {
+                key: (
+                    [_short_text(value, 128) for value in values[:MAX_OBSERVATIONS]
+                     if isinstance(value, str)]
+                    if isinstance(values, list)
+                    else values
+                )
+                for key, values in basis.items()
+                if isinstance(values, (str, int, bool, list))
+            }
+        references = candidate.get("evidence_references")
+        references = references if isinstance(references, list) else []
+        compact_references = []
+        for reference in references[:MAX_OBSERVATIONS]:
+            if not isinstance(reference, dict):
+                continue
+            compact_references.append({
+                key: _short_text(reference[key], 192 if key == "path" else 160)
+                for key in (
+                    "identity", "repository", "commit", "path", "sha256",
+                    "verification",
+                )
+                if isinstance(reference.get(key), str)
+            })
+        compact_candidate["evidence_references"] = compact_references
+        compact_candidate["evidence_references_truncated"] = (
+            candidate.get("evidence_references_truncated") is True
+            or len(references) > len(compact_references)
+        )
+        not_measured = candidate.get("not_measured")
+        if isinstance(not_measured, list):
+            compact_candidate["not_measured"] = [
+                _short_text(value, 192)
+                for value in not_measured[:4]
+                if isinstance(value, str)
+            ]
+        compact_context_candidates.append(compact_candidate)
+
     compact_hypotheses = []
     observations = projection["observations"]
+    observation_order_by_identity: dict[str, tuple[int, int, int]] = {}
+    evidence_pages = source.get("evidence_history_observation_budgets_by_page")
+    evidence_pages = evidence_pages if isinstance(evidence_pages, list) else []
+    for page_index, page in enumerate(evidence_pages):
+        if not isinstance(page, dict):
+            continue
+        offset = page.get("offset")
+        offset = offset if type(offset) is int and offset >= 0 else page_index
+        identities = page.get("selected_observation_reference_identities")
+        if not isinstance(identities, list):
+            continue
+        for position, identity in enumerate(identities):
+            if isinstance(identity, str):
+                observation_order_by_identity[identity] = (
+                    offset, position, page_index,
+                )
+
+    def ordered_records(items, identity_for_item):
+        return [
+            item for _position, item in sorted(
+                enumerate(items),
+                key=lambda positioned: (
+                    observation_order_by_identity.get(
+                        identity_for_item(positioned[1]),
+                        (0, positioned[0], 0),
+                    ),
+                    positioned[0],
+                ),
+            )
+        ]
+
+    observations = ordered_records(observations, lambda item: item.get("identity"))
     for hypothesis in projection["pressure_hypotheses"][:8]:
         summary = {
             key: _short_text(hypothesis.get(key), 256 if key in ("title", "recommendation") else 160)
@@ -728,11 +1033,11 @@ def _compact_projection(
             item["identity"] for item in observations
             if isinstance(item.get("pressure_hypothesis"), dict)
             and item["pressure_hypothesis"].get("identity") == hypothesis.get("identity")
-        ][:8]
+        ][-8:]
         compact_hypotheses.append(summary)
 
     compact_observations = []
-    for item in observations[:8]:
+    for item in observations[-8:]:
         observation = item.get("observation") or {}
         observation_bytes = json.dumps(
             observation, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
@@ -800,6 +1105,25 @@ def _compact_projection(
             ] if isinstance(measurement_limits, list) else [],
             "evidence_reference": item["evidence_reference"],
         }
+        pointer_correction = item.get("evidence_reference_correction")
+        if isinstance(pointer_correction, dict):
+            compact_pointer_correction = {
+                key: _short_text(pointer_correction.get(key), 160)
+                for key in (
+                    "status", "correction_observation_identity",
+                    "target_identity", "reason", "replacement_verification",
+                )
+                if isinstance(pointer_correction.get(key), str)
+            }
+            for key in (
+                "target_reference", "replacement_reference", "recorded_reference",
+            ):
+                pointer = _validate_source_pointer(pointer_correction.get(key))
+                if pointer is not None:
+                    compact_pointer_correction[key] = pointer
+            compact_observation["evidence_reference_correction"] = (
+                compact_pointer_correction
+            )
         measurement_summary = _compact_measurement_summary(observation.get("outcome"))
         if measurement_summary is not None:
             compact_observation["observation"]["measurement_summary"] = (
@@ -899,6 +1223,51 @@ def _compact_projection(
             compact_observation["improvement_relation_status"] = _short_text(
                 item["improvement_relation_status"], 96,
             )
+        record_correction = item.get("record_correction")
+        if isinstance(record_correction, dict):
+            compact_correction = {
+                key: _short_text(record_correction.get(key), 160)
+                for key in (
+                    "status", "correction_observation_identity", "target_identity",
+                    "reason",
+                )
+                if isinstance(record_correction.get(key), str)
+            }
+            fields = record_correction.get("corrected_field_paths")
+            if isinstance(fields, list):
+                compact_correction["corrected_field_paths"] = [
+                    _short_text(field, 160)
+                    for field in fields[:8]
+                    if isinstance(field, str)
+                ]
+                compact_correction["corrected_field_paths_truncated"] = (
+                    len(fields) > 8
+                )
+            for source_key, output_key in (
+                ("target_reference", "target_reference"),
+                ("correction_evidence_reference", "correction_evidence_reference"),
+            ):
+                pointer = _validate_source_pointer(record_correction.get(source_key))
+                if pointer is not None:
+                    compact_correction[output_key] = pointer
+            replacement_values = record_correction.get("replacement_values")
+            if isinstance(replacement_values, dict):
+                compact_replacements = {}
+                replacement_sources = replacement_values.get("supporting_sources")
+                if isinstance(replacement_sources, list):
+                    compact_replacements["supporting_sources"] = [
+                        pointer for source in replacement_sources[:16]
+                        if (pointer := _validate_source_pointer(source)) is not None
+                    ]
+                replacement_limits = replacement_values.get("not_measured")
+                if isinstance(replacement_limits, list):
+                    compact_replacements["not_measured"] = [
+                        _short_text(value, 512)
+                        for value in replacement_limits[:16]
+                        if isinstance(value, str)
+                    ]
+                compact_correction["replacement_values"] = compact_replacements
+            compact_observation["record_correction"] = compact_correction
         compact_sources = []
         raw_sources = item.get("supporting_sources")
         raw_sources = raw_sources if isinstance(raw_sources, list) else []
@@ -908,10 +1277,15 @@ def _compact_projection(
             compact_supporting_source = {
                 key: _short_text(source.get(key), 128)
                 for key in ("kind", "campaign_evidence_identity", "campaign_id",
-                            "session_id", "status", "registration_scope",
-                            "content_integrity_status")
+                            "session_id", "module", "status", "registration_scope",
+                            "content_integrity_status", "event_reference_status")
                 if isinstance(source.get(key), str)
             }
+            for key in (
+                "event_reference_count", "event_reference_matched_count",
+            ):
+                if type(source.get(key)) is int and source[key] >= 0:
+                    compact_supporting_source[key] = source[key]
             event_identities = source.get("event_identities")
             if isinstance(event_identities, list):
                 compact_supporting_source["event_identities"] = [
@@ -939,7 +1313,11 @@ def _compact_projection(
         compact_observations.append(compact_observation)
 
     compact_improvements = []
-    for relation in projection["improvement_relations"][:8]:
+    improvement_relations = ordered_records(
+        projection["improvement_relations"],
+        lambda item: item.get("recorded_by_observation_identity"),
+    )
+    for relation in improvement_relations[-8:]:
         summary = {
             key: _short_text(relation.get(key), 256 if key == "basis" else 160)
             for key in (
@@ -998,14 +1376,21 @@ def _compact_projection(
             )
             if key in activity_source
         })
+    if activity_source.get("rpc_operation_events_considered", 0):
+        compact_activity_source.update({
+            key: activity_source[key]
+            for key in (
+                "rpc_operation_events_considered",
+                "rpc_operation_records_returned",
+                "rpc_operation_records_omitted",
+                "rpc_operation_records_invalid",
+            )
+            if key in activity_source
+        })
     rpc_context_basis = activity_source.get("rpc_operation_context_basis")
     if isinstance(rpc_context_basis, dict):
         compact_activity_source["rpc_operation_context_basis"] = (
             "grant+session-snapshot; branch/head not live-probed"
-        )
-    if activity_source.get("rpc_operation_records_omitted", 0):
-        compact_activity_source["rpc_operation_records_omitted"] = (
-            activity_source["rpc_operation_records_omitted"]
         )
     if activity_source.get("authority_denial_events_considered", 0):
         compact_activity_source.update({
@@ -1043,6 +1428,215 @@ def _compact_projection(
                     if item_key in reference
                 }
         compact_activity_interactions.append(compact_item)
+    raw_activity_capabilities = activity.get("capabilities")
+    raw_activity_capabilities = (
+        raw_activity_capabilities
+        if isinstance(raw_activity_capabilities, list) else []
+    )
+    compact_activity_capabilities = []
+    for item in raw_activity_capabilities[:MAX_SESSION_ACTIVITY_CAPABILITIES]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in ("capability",)
+            if isinstance(item.get(key), str)
+        }
+        for key in ("invocation_count", "completion_count"):
+            if type(item.get(key)) is int and item[key] >= 0:
+                compact_item[key] = item[key]
+        status_counts = item.get("outcome_status_counts")
+        if isinstance(status_counts, dict):
+            compact_item["outcome_status_counts"] = {
+                _short_text(key, 64): value
+                for key, value in sorted(status_counts.items())[:8]
+                if isinstance(key, str) and type(value) is int and value >= 0
+            }
+        references = item.get("supporting_events")
+        if isinstance(references, list):
+            compact_item["supporting_events"] = [
+                {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                }
+                for reference in references[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                if isinstance(reference, dict)
+            ]
+        compact_activity_capabilities.append(compact_item)
+
+    raw_capability_delivery = activity.get("capability_delivery")
+    raw_capability_delivery = (
+        raw_capability_delivery
+        if isinstance(raw_capability_delivery, dict) else {}
+    )
+    compact_capability_delivery: dict[str, Any] = {}
+    for key in (
+        "status", "inventory_source", "discoverability_status",
+    ):
+        if isinstance(raw_capability_delivery.get(key), str):
+            compact_capability_delivery[key] = _short_text(
+                raw_capability_delivery[key], 96,
+            )
+    for key in (
+        "binding_count", "binding_records_examined",
+        "binding_records_not_examined", "binding_records_invalid", "bindings_omitted",
+        "availability_transition_event_count",
+        "availability_transition_events_omitted",
+        "capabilities_not_in_current_binding_snapshot_omitted",
+    ):
+        if type(raw_capability_delivery.get(key)) is int:
+            compact_capability_delivery[key] = raw_capability_delivery[key]
+    availability_counts = raw_capability_delivery.get("availability_counts")
+    if isinstance(availability_counts, dict):
+        compact_capability_delivery["availability_counts"] = {
+            _short_text(key, 48): value
+            for key, value in sorted(availability_counts.items())[:8]
+            if isinstance(key, str) and type(value) is int and value >= 0
+        }
+    use_event_window = raw_capability_delivery.get("use_event_window")
+    if isinstance(use_event_window, dict):
+        compact_capability_delivery["use_event_window"] = {
+            key: use_event_window[key]
+            for key in (
+                "scope", "truncated", "complete_history",
+                "invocation_summaries_omitted",
+            )
+            if key in use_event_window
+        }
+    compact_capability_bindings = []
+    raw_capability_bindings = raw_capability_delivery.get("bindings")
+    raw_capability_bindings = (
+        raw_capability_bindings if isinstance(raw_capability_bindings, list) else []
+    )
+    for item in raw_capability_bindings[:16]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in (
+                "provider", "capability", "availability_status", "binding_id",
+                "availability_verification", "availability_observed_at",
+                "use_observation_status", "provider_attribution",
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in ("invocation_count", "completion_count"):
+            if type(item.get(key)) is int and item[key] >= 0:
+                compact_item[key] = item[key]
+        status_counts = item.get("outcome_status_counts")
+        if isinstance(status_counts, dict):
+            compact_item["outcome_status_counts"] = {
+                _short_text(key, 64): value
+                for key, value in sorted(status_counts.items())[:8]
+                if isinstance(key, str) and type(value) is int and value >= 0
+            }
+        references = item.get("supporting_events")
+        if isinstance(references, list):
+            compact_item["supporting_events"] = [
+                {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                }
+                for reference in references[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                if isinstance(reference, dict)
+            ]
+        availability_references = item.get("availability_event_references")
+        if isinstance(availability_references, list):
+            compact_item["availability_event_references"] = [
+                {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                }
+                for reference in availability_references[:3]
+                if isinstance(reference, dict)
+            ]
+        compact_capability_bindings.append(compact_item)
+    if compact_capability_bindings:
+        compact_capability_delivery["bindings"] = compact_capability_bindings
+        if len(raw_capability_bindings) > len(compact_capability_bindings):
+            compact_capability_delivery["bindings_truncated"] = True
+    transition_events = raw_capability_delivery.get("availability_transition_events")
+    if isinstance(transition_events, list):
+        compact_capability_delivery["availability_transition_events"] = [
+            {
+                **({"capability": _short_text(item["capability"], 160)}
+                   if isinstance(item.get("capability"), str) else {}),
+                **({"provider": _short_text(item["provider"], 128)}
+                   if isinstance(item.get("provider"), str) else {}),
+                **({"previous_availability_status": _short_text(
+                    item["previous_availability_status"], 64,
+                )} if isinstance(item.get("previous_availability_status"), str) else {}),
+                **({"event_reference": {
+                    key: item["event_reference"][key]
+                    for key in ("identity", "sequence", "type")
+                    if key in item["event_reference"]
+                }} if isinstance(item.get("event_reference"), dict) else {}),
+            }
+            for item in transition_events[:8]
+            if isinstance(item, dict)
+        ]
+    outside_inventory = raw_capability_delivery.get(
+        "capabilities_not_in_current_binding_snapshot",
+    )
+    if isinstance(outside_inventory, list):
+        compact_capability_delivery[
+            "capabilities_not_in_current_binding_snapshot"
+        ] = [
+            {
+                "capability": _short_text(item["capability"], 160),
+                "invocation_count": item.get("invocation_count", 0),
+                "outcome_status_counts": dict(item.get("outcome_status_counts", {})),
+                "interpretation": _short_text(item.get("interpretation"), 128),
+                "supporting_events": [
+                    {
+                        key: reference[key]
+                        for key in ("identity", "sequence", "type")
+                        if key in reference
+                    }
+                    for reference in item.get("supporting_events", [])[:2]
+                    if isinstance(reference, dict)
+                ],
+            }
+            for item in outside_inventory[:8]
+            if isinstance(item, dict) and isinstance(item.get("capability"), str)
+        ]
+    context_activity = raw_capability_delivery.get("context_operation_activity")
+    if isinstance(context_activity, dict):
+        compact_context_activity = {
+            key: _short_text(context_activity[key], 128)
+            for key in (
+                "status", "scope", "response_capability_list_status",
+                "agent_receipt_status",
+            )
+            if isinstance(context_activity.get(key), str)
+        }
+        outcome_counts = context_activity.get("outcome_counts")
+        if isinstance(outcome_counts, dict):
+            compact_context_activity["outcome_counts"] = {
+                _short_text(key, 48): value
+                for key, value in sorted(outcome_counts.items())[:8]
+                if isinstance(key, str) and type(value) is int and value >= 0
+            }
+        context_limits = context_activity.get("measurement_limits")
+        if isinstance(context_limits, list):
+            compact_context_activity["measurement_limits"] = [
+                _short_text(item, 256)
+                for item in context_limits[:2]
+                if isinstance(item, str)
+            ]
+        compact_capability_delivery["context_operation_activity"] = (
+            compact_context_activity
+        )
+    delivery_limits = raw_capability_delivery.get("measurement_limits")
+    if isinstance(delivery_limits, list):
+        compact_capability_delivery["measurement_limits"] = [
+            _short_text(item, 256)
+            for item in delivery_limits[:4]
+            if isinstance(item, str)
+        ]
     compact_rpc_operations = []
     raw_rpc_operations = activity.get("rpc_operations")
     raw_rpc_operations = raw_rpc_operations if isinstance(raw_rpc_operations, list) else []
@@ -1082,6 +1676,68 @@ def _compact_projection(
         if isinstance(measured_values, dict):
             compact_item["measurements"] = dict(measured_values)
         compact_rpc_operations.append(compact_item)
+    raw_rpc_summary = activity.get("rpc_operation_summary")
+    raw_rpc_summary = raw_rpc_summary if isinstance(raw_rpc_summary, dict) else {}
+    raw_rpc_summary_groups = raw_rpc_summary.get("groups")
+    raw_rpc_summary_groups = (
+        raw_rpc_summary_groups if isinstance(raw_rpc_summary_groups, list) else []
+    )
+    compact_rpc_summary_groups = []
+    for group in raw_rpc_summary_groups[:16]:
+        if not isinstance(group, dict):
+            continue
+        compact_group = {
+            key: _short_text(group.get(key), 128)
+            for key in ("operation", "outcome_status")
+            if isinstance(group.get(key), str)
+        }
+        if type(group.get("occurrence_count")) is int:
+            compact_group["occurrence_count"] = group["occurrence_count"]
+        references = group.get("supporting_events")
+        if isinstance(references, list):
+            compact_group["supporting_events"] = [
+                {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                }
+                for reference in references[:2]
+                if isinstance(reference, dict)
+            ]
+        compact_rpc_summary_groups.append(compact_group)
+    compact_rpc_summary: dict[str, Any] = {}
+    if raw_rpc_summary:
+        raw_summary_omitted_groups = raw_rpc_summary.get("groups_omitted", 0)
+        raw_summary_omitted_records = raw_rpc_summary.get("omitted_record_count", 0)
+        raw_reference_limit = raw_rpc_summary.get(
+            "supporting_event_limit_per_group", 2,
+        )
+        if type(raw_summary_omitted_groups) is not int:
+            raw_summary_omitted_groups = 0
+        if type(raw_summary_omitted_records) is not int:
+            raw_summary_omitted_records = 0
+        if type(raw_reference_limit) is not int:
+            raw_reference_limit = 2
+        compact_rpc_summary = {
+            "scope": _short_text(raw_rpc_summary.get("scope"), 128),
+            "record_count": raw_rpc_summary.get("record_count", 0),
+            "group_count": raw_rpc_summary.get("group_count", 0),
+            "groups_omitted": raw_summary_omitted_groups + max(
+                0, len(raw_rpc_summary_groups) - len(compact_rpc_summary_groups),
+            ),
+            "omitted_record_count": raw_summary_omitted_records + sum(
+                group.get("occurrence_count", 0)
+                for group in raw_rpc_summary_groups[
+                    len(compact_rpc_summary_groups):
+                ]
+                if isinstance(group, dict)
+                and type(group.get("occurrence_count")) is int
+            ),
+            "supporting_event_limit_per_group": min(
+                2, raw_reference_limit,
+            ),
+            "groups": compact_rpc_summary_groups,
+        }
     compact_rpc_pressure = []
     raw_rpc_pressure = activity.get("rpc_failure_candidates")
     raw_rpc_pressure = raw_rpc_pressure if isinstance(raw_rpc_pressure, list) else []
@@ -1188,14 +1844,28 @@ def _compact_projection(
             len(raw_interactions) > len(compact_activity_interactions)
         ),
     }
+    if compact_activity_capabilities:
+        compact_activity["capabilities"] = compact_activity_capabilities
+        if activity.get("source", {}).get("capability_summaries_omitted", 0):
+            compact_activity["capabilities_omitted"] = activity["source"][
+                "capability_summaries_omitted"
+            ]
+    if compact_capability_delivery:
+        compact_activity["capability_delivery"] = compact_capability_delivery
     if (activity_source.get("rpc_operation_capture_count") is not None
-            or raw_rpc_operations):
+            or raw_rpc_operations or raw_rpc_summary):
         compact_activity["rpc_operation_count"] = activity.get(
             "rpc_operation_count", 0,
         )
         compact_activity["rpc_operations"] = compact_rpc_operations
         if len(raw_rpc_operations) > len(compact_rpc_operations):
             compact_activity["rpc_operations_truncated"] = True
+        if compact_rpc_summary:
+            compact_activity["rpc_operation_summary"] = compact_rpc_summary
+            if compact_rpc_summary["groups_omitted"]:
+                compact_activity["rpc_operation_summary"][
+                    "groups_truncated"
+                ] = True
     if raw_rpc_pressure:
         compact_activity["rpc_failure_candidates"] = compact_rpc_pressure
         if len(raw_rpc_pressure) > len(compact_rpc_pressure):
@@ -1313,7 +1983,8 @@ def _compact_projection(
                         compact_host[key] = host[key]
                 for key in ("cpu_utilization",):
                     if key in host and (
-                        type(host.get(key)) in (int, float) or host.get(key) is None
+                        type(host.get(key)) in (int, float)
+                        or host.get(key) is None
                     ):
                         compact_host[key] = host[key]
                 load_average = host.get("load_average")
@@ -1372,11 +2043,54 @@ def _compact_projection(
             "The bounded read selects the newest observation references in each page; older skipped references may contain additional evidence.",
         ],
     }
+    compact_accountability = _compact_implementation_accountability(
+        projection.get("implementation_accountability"),
+    )
+    if compact_accountability is not None:
+        result["implementation_accountability"] = compact_accountability
+    if compact_context_candidates:
+        result["context_pressure_candidate_count"] = projection.get(
+            "context_pressure_candidate_count", len(compact_context_candidates),
+        )
+        result["context_pressure_candidates"] = compact_context_candidates
     # The selected fields are individually bounded. This final reduction also
     # accounts for unusual but valid identifiers and reference paths.
     while len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")) > max_result_bytes:
+        activity_result = result["session_activity"]
+        delivery_result = activity_result.get("capability_delivery")
+        if isinstance(delivery_result, dict):
+            if delivery_result.get("measurement_limits"):
+                delivery_result["measurement_limits"].pop()
+                continue
+            elif delivery_result.get("bindings"):
+                delivery_result["bindings"].pop()
+                delivery_result["bindings_truncated"] = True
+                continue
+            elif delivery_result.get("availability_transition_events"):
+                delivery_result["availability_transition_events"].pop()
+                delivery_result["availability_transition_events_truncated"] = True
+                continue
+            elif delivery_result.get("capabilities_not_in_current_binding_snapshot"):
+                delivery_result["capabilities_not_in_current_binding_snapshot"].pop()
+                delivery_result[
+                    "capabilities_not_in_current_binding_snapshot_truncated"
+                ] = True
+                continue
+            context_activity = delivery_result.get("context_operation_activity")
+            if isinstance(context_activity, dict):
+                if context_activity.get("measurement_limits"):
+                    context_activity["measurement_limits"].pop()
+                    continue
+                if context_activity.get("supporting_events"):
+                    context_activity["supporting_events"].pop()
+                    context_activity["supporting_events_truncated"] = True
+                    continue
+        if activity_result.get("capabilities"):
+            activity_result["capabilities"].pop()
+            activity_result["capabilities_truncated"] = True
+            continue
         if result["observations"]:
-            result["observations"].pop()
+            result["observations"].pop(0)
         elif any(
             isinstance(hypothesis.get("evidence_references"), list)
             and len(hypothesis["evidence_references"]) > 1
@@ -1395,13 +2109,30 @@ def _compact_projection(
         elif result["pressure_hypotheses"]:
             result["pressure_hypotheses"].pop()
         elif result["improvement_relations"]:
-            result["improvement_relations"].pop()
+            result["improvement_relations"].pop(0)
+        elif result.get("context_pressure_candidates"):
+            result["context_pressure_candidates"].pop(0)
+        elif isinstance(
+            result["session_activity"].get("capability_delivery"), dict,
+        ):
+            result["session_activity"].pop("capability_delivery")
+        elif result["session_activity"].get("capabilities"):
+            result["session_activity"]["capabilities"].pop()
+            result["session_activity"]["capabilities_truncated"] = True
         elif result["session_activity"]["interactions"]:
             result["session_activity"]["interactions"].pop()
             result["session_activity"]["interactions_truncated"] = True
         elif result["session_activity"].get("rpc_operations"):
             result["session_activity"]["rpc_operations"].pop()
             result["session_activity"]["rpc_operations_truncated"] = True
+        elif result["session_activity"].get("rpc_operation_summary", {}).get("groups"):
+            summary = result["session_activity"]["rpc_operation_summary"]
+            removed_group = summary["groups"].pop()
+            summary["groups_omitted"] += 1
+            summary["omitted_record_count"] += removed_group.get(
+                "occurrence_count", 0,
+            )
+            summary["groups_truncated"] = True
         elif result["session_activity"].get("rpc_failure_candidates"):
             result["session_activity"]["rpc_failure_candidates"].pop()
             result["session_activity"]["rpc_failure_candidates_truncated"] = True
@@ -1414,8 +2145,53 @@ def _compact_projection(
         elif result["session_activity"].get("resource_samples", {}).get("observations"):
             result["session_activity"]["resource_samples"]["observations"].pop()
             result["session_activity"]["resource_samples"]["observations_truncated"] = True
+        elif (isinstance(result.get("implementation_accountability"), dict)
+              and result["implementation_accountability"].get("samples")):
+            accountability = result["implementation_accountability"]
+            sample = accountability["samples"][-1]
+            if sample.get("native_modules"):
+                sample["native_modules"].pop()
+                accountability["samples_truncated"] = True
+            elif len(accountability["samples"]) > 1:
+                accountability["samples"].pop()
+                accountability["samples_truncated"] = True
+            else:
+                sample = accountability["samples"][0]
+                optional_fields = (
+                    "host_test_adapter", "sample_scope", "artifact_identity",
+                    "compiler_front_end_outcome", "canonical_vm_case_count",
+                    "canonical_vm_case_success_count", "native_semantic_ownership",
+                )
+                removable = next(
+                    (key for key in optional_fields if key in sample), None,
+                )
+                if removable is None:
+                    if isinstance(
+                        result["session_activity"].get("capability_delivery"), dict,
+                    ):
+                        result["session_activity"].pop("capability_delivery")
+                        continue
+                    break
+                sample.pop(removable)
+                accountability["samples_truncated"] = True
+        elif isinstance(
+            result["session_activity"].get("capability_delivery"), dict,
+        ):
+            result["session_activity"].pop("capability_delivery")
         else:
             break
+    projection_source = projection.get("source")
+    projection_source = (
+        projection_source if isinstance(projection_source, dict) else {}
+    )
+    verified_observation_count = projection_source.get(
+        "observation_records_verified",
+    )
+    if (type(verified_observation_count) is int
+            and verified_observation_count > len(result["observations"])):
+        result["source"]["observation_records_compacted_out_count"] = (
+            verified_observation_count - len(result["observations"])
+        )
     return result
 
 
@@ -1432,6 +2208,76 @@ def _compiler_regression_reference_family(
                 and reference["path"].endswith(".json")):
             return family, schema, stage_names
     return None
+
+
+def _compiler_regression_measurement_summary(
+    source: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Expose bounded verification-process measurements without agent attribution."""
+    verification = source.get("verification")
+    if not isinstance(verification, dict):
+        return None
+
+    direct: dict[str, int | float] = {}
+    observed_counts: dict[str, int] = {}
+    availability: dict[str, str] = {}
+    qualifications: list[str] = []
+    measurement_blocks = (
+        ("harness_process_measurement", "harness_process"),
+        ("stage0_bootstrap_measurement", "stage0_bootstrap"),
+    )
+    numeric_fields = (
+        "wall_seconds", "cpu_seconds", "user_seconds", "system_seconds",
+        "cpu_percent", "peak_rss_kib", "peak_rss_bytes",
+    )
+    for source_name, measurement_name in measurement_blocks:
+        block = verification.get(source_name)
+        if not isinstance(block, dict):
+            continue
+        for field in numeric_fields:
+            value = block.get(field)
+            if (type(value) is int and 0 <= value <= 10**18
+                    or type(value) is float and math.isfinite(value)
+                    and 0 <= value <= 10**18):
+                direct[f"{measurement_name}_{field}"] = value
+        jobs = block.get("cargo_build_jobs")
+        if type(jobs) is int and 0 <= jobs <= 10**6:
+            observed_counts[f"{measurement_name}_cargo_build_jobs"] = jobs
+        if "peak_cgroup_memory_bytes" in block:
+            cgroup_peak = block.get("peak_cgroup_memory_bytes")
+            if type(cgroup_peak) is int and 0 <= cgroup_peak <= 10**18:
+                direct[f"{measurement_name}_peak_cgroup_memory_bytes"] = cgroup_peak
+            elif cgroup_peak is None:
+                availability[
+                    f"{measurement_name}_peak_cgroup_memory_bytes"
+                ] = "null-in-source-record"
+        note = block.get("note")
+        if isinstance(note, str) and note:
+            qualifications.append(
+                f"{measurement_name}: {_short_text(note, 256)}"
+            )
+
+    measurement_notes = source.get("measurement_notes")
+    if isinstance(measurement_notes, str) and measurement_notes:
+        qualifications.append(_short_text(measurement_notes, 384) or "")
+    if direct or observed_counts or availability:
+        qualifications.append(
+            "These verification-process measurements are not measurements of "
+            "resource use attributable to the Compiler agent session."
+        )
+    if not (direct or observed_counts or availability):
+        return None
+
+    summary: dict[str, Any] = {}
+    if direct:
+        summary["direct_measurements"] = direct
+    if observed_counts:
+        summary["observed_counts"] = observed_counts
+    if availability:
+        summary["measurement_availability"] = availability
+    if qualifications:
+        summary["qualifications"] = qualifications[:8]
+    return summary
 
 
 def _is_compiler_regression_reference(reference: dict[str, str]) -> bool:
@@ -1451,6 +2297,16 @@ def _is_compiler_dependency_summary_reference(reference: dict[str, str]) -> bool
     )
 
 
+def _is_compiler_native_application_proof_reference(
+    reference: dict[str, str],
+) -> bool:
+    return (
+        reference["repository"] == "mncs-compiler"
+        and reference["identity"] == COMPILER_NATIVE_APPLICATION_PROOF_IDENTITY
+        and reference["path"] == COMPILER_NATIVE_APPLICATION_PROOF_PATH
+    )
+
+
 def _is_observation_reference(reference: dict[str, str]) -> bool:
     if (reference["identity"].startswith("ev_environment_")
             and reference["path"].startswith(OBSERVATION_PATH_PREFIX)):
@@ -1458,6 +2314,7 @@ def _is_observation_reference(reference: dict[str, str]) -> bool:
     return (
         _is_compiler_regression_reference(reference)
         or _is_compiler_dependency_summary_reference(reference)
+        or _is_compiler_native_application_proof_reference(reference)
     )
 
 
@@ -1595,12 +2452,18 @@ def _compiler_regression_observation(
 
     outcome: dict[str, Any] = {
         "stage_summaries": stage_summaries,
-        "resource_measurement_scope": "per-build metrics from the source report",
+        "resource_measurement_scope": (
+            "per-build and source-reported verification-process metrics; "
+            "not Compiler agent session use"
+        ),
         "duration_measurement_scope": (
             "individual build requests, not campaign or agent duration"
         ),
         "source_capture_time": "unavailable",
     }
+    resource_measurements = _compiler_regression_measurement_summary(source)
+    if resource_measurements is not None:
+        outcome["measurement_summary"] = resource_measurements
     if type(invalidation) is bool:
         outcome["language_effect_and_capability_dependencies_invalidated"] = invalidation
     else:
@@ -1634,7 +2497,10 @@ def _compiler_regression_observation(
                 "model_identity": "not-recorded-in-source",
                 "token_usage": "not-recorded-in-source",
                 "control_dispatch_elapsed_ms": "not-recorded-in-source",
-                "resource_consumption": "per-build-metrics",
+                "resource_consumption": (
+                    "per-build + verification-process metrics; "
+                    "not agent-attributed"
+                ),
                 "cache_accounting": "status-and-fact-counts",
             },
         },
@@ -1643,6 +2509,7 @@ def _compiler_regression_observation(
             "source capture timestamp",
             "model identity and token usage",
             "total compiler campaign duration",
+            "resource consumption attributable to the Compiler agent session",
             "resource use outside the selected regression build requests",
             "whether the observed cache behavior recurs in other campaigns",
         ],
@@ -1903,10 +2770,213 @@ def _compiler_dependency_summary_observation(
     }
 
 
+def _compiler_native_application_proof_observation(
+    reference: dict[str, str], source: dict[str, Any],
+    root: Path, *, repository_read_basis: str,
+) -> dict[str, Any] | None:
+    """Adapt one source-backed Compiler proof without inferring a codebase ratio."""
+    if source.get("schema_version") != COMPILER_NATIVE_APPLICATION_PROOF_SCHEMA:
+        return None
+    if source.get("identity") not in (None, reference["identity"]):
+        return None
+    application = source.get("application")
+    producer = source.get("producer")
+    build = source.get("build")
+    execution = source.get("execution")
+    if (not isinstance(application, dict)
+            or application.get("entry") != COMPILER_NATIVE_APPLICATION_ENTRY
+            or not isinstance(producer, dict)
+            or not isinstance(build, dict)
+            or not isinstance(execution, dict)):
+        return None
+
+    revisions: dict[str, str] = {}
+    for field in (
+        "compiler_revision", "language_revision", "stdlib_revision",
+        "test_revision",
+    ):
+        value = producer.get(field)
+        if not isinstance(value, str) or not _COMMIT.fullmatch(value):
+            return None
+        revisions[field] = value
+
+    try:
+        workspace_root = root.resolve(strict=True)
+    except (OSError, RuntimeError):
+        return None
+    raw_modules = application.get("module_sources")
+    expected_modules = {
+        module: (repository, path, revision_field)
+        for module, repository, path, revision_field
+        in COMPILER_NATIVE_APPLICATION_MODULES
+    }
+    if not isinstance(raw_modules, list) or len(raw_modules) != len(expected_modules):
+        return None
+    source_pointers: list[dict[str, str]] = []
+    seen_modules: set[str] = set()
+    for raw_module in raw_modules:
+        if not isinstance(raw_module, dict):
+            return None
+        module_name = raw_module.get("module")
+        expected = expected_modules.get(module_name)
+        raw_path = raw_module.get("path")
+        source_digest = raw_module.get("sha256")
+        if (expected is None or module_name in seen_modules
+                or not isinstance(raw_path, str) or not Path(raw_path).is_absolute()
+                or not isinstance(source_digest, str)
+                or not _SHA256.fullmatch(source_digest)):
+            return None
+        repository, expected_path, revision_field = expected
+        try:
+            resolved_source_path = Path(raw_path).resolve(strict=False)
+            relative_source_path = resolved_source_path.relative_to(workspace_root)
+        except (OSError, RuntimeError, ValueError):
+            return None
+        if relative_source_path.as_posix() != f"{repository}/{expected_path}":
+            return None
+        seen_modules.add(module_name)
+        source_pointers.append({
+            "kind": "native-language-module-source",
+            "identity": "src_" + module_name.replace(".", "_"),
+            "module": module_name,
+            "repository": repository,
+            "commit": revisions[revision_field],
+            "path": expected_path,
+            "sha256": source_digest,
+        })
+    if seen_modules != set(expected_modules):
+        return None
+
+    artifact_identity = build.get("artifact_identity")
+    if (not isinstance(artifact_identity, str)
+            or not artifact_identity.startswith("sha256:")
+            or not _SHA256.fullmatch(artifact_identity.removeprefix("sha256:"))):
+        return None
+    cache = build.get("cache")
+    verification_work = cache.get("verification_work") if isinstance(cache, dict) else None
+    if (not isinstance(verification_work, dict)
+            or verification_work.get("front_end_outcome") != "verified"
+            or verification_work.get("resolved_module_count") != len(expected_modules)):
+        return None
+    canonical_cases = execution.get("canonical_vm_cases")
+    if (not isinstance(canonical_cases, list) or len(canonical_cases) != 3
+            or execution.get("exact_result_agreement") is not True):
+        return None
+    for index, case in enumerate(canonical_cases):
+        if not isinstance(case, dict):
+            return None
+        application_exit = case.get("application_exit")
+        output_digest = case.get("output_sha256")
+        if (case.get("case_index") != index
+                or case.get("artifact_identity") != artifact_identity
+                or not isinstance(application_exit, dict)
+                or application_exit.get("exit_code") != 0
+                or case.get("effect_outcomes") != ["completed", "completed"]
+                or case.get("effect_operations") != ["structured_read", "structured_write"]
+                or not isinstance(output_digest, str)
+                or not _SHA256.fullmatch(output_digest)
+                or case.get("stage0_output_sha256") != output_digest):
+            return None
+    capability_admission = execution.get("capability_admission")
+    if (not isinstance(capability_admission, dict)
+            or capability_admission.get("authorized_capability_identity")
+            != application.get("required_capability")
+            or capability_admission.get("runtime_dispatch_alias")
+            != application.get("runtime_dispatch_alias")):
+        return None
+
+    raw_limitations = source.get("limitations")
+    if (not isinstance(raw_limitations, list)
+            or any(not isinstance(item, str) for item in raw_limitations)):
+        return None
+    test_adapter_limit = next((item for item in raw_limitations
+                               if "bounded test adapter" in item
+                               and "not a production MNCS service provider" in item), None)
+    rust_harness_limit = next((item for item in raw_limitations
+                               if "separate Rust test program" in item), None)
+    if test_adapter_limit is None or rust_harness_limit is None:
+        return None
+
+    proof_source = {
+        "kind": "compiler-native-application-proof",
+        **reference,
+    }
+    created_at = source.get("created_at")
+    return {
+        "schema_version": OBSERVATION_SCHEMA,
+        "identity": reference["identity"],
+        "captured_at": created_at if isinstance(created_at, str)
+        else "unavailable-in-source-record",
+        "measurement_basis": (
+            "bounded-derived-view-of-compiler-native-application-proof/2"
+            f";{repository_read_basis}"
+        ),
+        "observation": {
+            "kind": "compiler-native-application-implementation-ownership",
+            "source_interface": "MNCS Environment capability projection",
+            "request": {
+                "source_schema_version": COMPILER_NATIVE_APPLICATION_PROOF_SCHEMA,
+                "application_entry": COMPILER_NATIVE_APPLICATION_ENTRY,
+                "compiler_revision": revisions["compiler_revision"],
+                "language_revision": revisions["language_revision"],
+            },
+            "outcome": {
+                "implementation_accountability": {
+                    "sample_scope": "one compiler-proven MNCS application and its four-module source closure",
+                    "application_entry": COMPILER_NATIVE_APPLICATION_ENTRY,
+                    "native_semantic_ownership": "verified-for-this-application-proof",
+                    "native_module_count": len(source_pointers),
+                    "source_integrity_basis": "module commit, repository path, and SHA-256 from proof; rechecked through Environment source-pointer verification",
+                    "artifact_identity": artifact_identity,
+                    "compiler_front_end_outcome": "verified",
+                    "canonical_vm_case_count": len(canonical_cases),
+                    "canonical_vm_case_success_count": len(canonical_cases),
+                    "stage0_result_agreement": "verified-in-source-proof",
+                    "host_test_adapter": {
+                        "classification": "test-only-provider-adapter",
+                        "limitation": test_adapter_limit[:512],
+                        "harness_limitation": rust_harness_limit[:512],
+                    },
+                    "native_migration_opportunity": "not-established",
+                    "source_campaign_context": "not-recorded-in-source-proof",
+                    "evidence_relationship_basis": "authenticated-campaign-ledger-pointer; source proof production is not attributed to the Environment projection session",
+                    "systemwide_native_adoption_ratio": {
+                        "status": "not-measured",
+                        "reason": "This single application proof is not a complete, ownership-verified inventory of MNCS functionality.",
+                    },
+                },
+                "source_repository_read_basis": repository_read_basis,
+            },
+            "measurement_availability": {
+                "source_campaign_identity": "not-recorded-in-source-proof",
+                "agent_model_identity": "not-recorded-in-source-proof",
+                "agent_token_usage": "not-recorded-in-source-proof",
+                "production_host_dependency_inventory": "not-established-by-this-proof",
+            },
+        },
+        "supporting_sources": [proof_source, *source_pointers],
+        "not_measured": [
+            "systemwide native-versus-host functionality ratio and its denominator",
+            "production host-language dependency ownership or migration readiness",
+            "the Compiler campaign or agent session that produced this proof",
+            "whether other agents can discover or use the same native capability reliably",
+            "whether this implementation pattern recurs across other applications",
+        ],
+    }
+
+
 def _load_observation(
     session: Any, reference: dict[str, str], root: Path, *, deadline: float,
 ) -> tuple[dict[str, Any] | None, str]:
     checkout = _checkout(session, reference["repository"], root)
+    repository_read_basis = "selected-checkout"
+    if (checkout is None
+            and _is_compiler_native_application_proof_reference(reference)):
+        checkout = _workspace_read_only_checkout(
+            session, reference["repository"], root, deadline,
+        )
+        if checkout is not None:
+            repository_read_basis = "workspace-read-only-checkout"
     if checkout is None:
         return None, "outside-selected-session"
     raw, status = _git_blob(
@@ -1927,6 +2997,17 @@ def _load_observation(
         if source_identity is not None and source_identity != reference["identity"]:
             return record, "observation-identity-mismatch"
         adapted = _compiler_dependency_summary_observation(session, reference, record)
+        if adapted is None:
+            return None, "observation-contract-invalid"
+        return adapted, "verified"
+    if _is_compiler_native_application_proof_reference(reference):
+        source_identity = record.get("identity")
+        if source_identity is not None and source_identity != reference["identity"]:
+            return record, "observation-identity-mismatch"
+        adapted = _compiler_native_application_proof_observation(
+            reference, record, root,
+            repository_read_basis=repository_read_basis,
+        )
         if adapted is None:
             return None, "observation-contract-invalid"
         return adapted, "verified"
@@ -2104,6 +3185,9 @@ def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, A
                     "campaign_id", "session_id")
         if source.get(key) is not None
     }
+    module = source.get("module")
+    if isinstance(module, str) and module and len(module) <= 160 and "\x00" not in module:
+        summary["module"] = module
     if source.get("kind") in CAPTURED_OPERATION_RESULT_SOURCE_KINDS:
         summary["status"] = "captured-in-observation-record"
         return summary
@@ -2125,6 +3209,210 @@ def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, A
         summary["status"] = match.get("verification", "unverified")
         summary["campaign_evidence_identity"] = match.get("identity")
     return summary
+
+
+def _work_intent_workspace_alignment(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Compare declared WorkIntent repositories with selected checkout identities."""
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+    raw_declared = intent.get("repositories")
+    raw_selected = snapshot.get("selected_checkouts")
+    if raw_declared is None:
+        return {
+            "status": "not-declared",
+            "declared_repositories": [],
+            "selected_repositories": sorted(
+                key for key in raw_selected
+                if isinstance(key, str) and _is_repository_identity(key)
+            ) if isinstance(raw_selected, dict) else [],
+            "unselected_declared_repositories": [],
+            "basis": "session-work-intent-and-selected-checkout-identities",
+        }
+    if (not isinstance(raw_declared, list)
+            or any(not _is_repository_identity(item) for item in raw_declared)):
+        return {
+            "status": "unavailable",
+            "declared_repositories": [],
+            "selected_repositories": [],
+            "unselected_declared_repositories": [],
+            "basis": "session-work-intent-and-selected-checkout-identities",
+        }
+    if not isinstance(raw_selected, dict):
+        return {
+            "status": "workspace-selection-unavailable",
+            "declared_repositories": sorted(set(raw_declared)),
+            "selected_repositories": [],
+            "unselected_declared_repositories": [],
+            "basis": "session-work-intent-and-selected-checkout-identities",
+        }
+    declared = sorted(set(raw_declared))
+    selected = sorted(
+        key for key in raw_selected if isinstance(key, str)
+        and _is_repository_identity(key)
+    )
+    unselected = sorted(set(declared) - set(selected))
+    if not declared:
+        status = "no-repositories-declared"
+    elif unselected:
+        status = "declared-repositories-not-selected"
+    else:
+        status = "all-declared-repositories-selected"
+    return {
+        "status": status,
+        "declared_repositories": declared,
+        "selected_repositories": selected,
+        "unselected_declared_repositories": unselected,
+        "basis": "session-work-intent-and-selected-checkout-identities",
+    }
+
+
+def _is_repository_identity(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", value) is not None
+    )
+
+
+def _evidence_visibility_summary(
+    diagnostics: Any, diagnostic_count: Any, diagnostics_truncated: Any,
+) -> dict[str, Any]:
+    """Summarize bounded source-scope gaps without treating them as bad content."""
+    if not isinstance(diagnostics, list) or type(diagnostic_count) is not int:
+        return {
+            "status": "unavailable",
+            "verification_diagnostic_count": None,
+            "outside_selected_reference_diagnostic_count": 0,
+            "outside_selected_repositories": [],
+            "diagnostics_truncated": None,
+            "basis": "bounded-campaign-evidence-source-verification-diagnostics",
+        }
+    outside = [
+        item for item in diagnostics
+        if isinstance(item, dict)
+        and item.get("verification") == "outside-selected-session"
+    ]
+    counts: dict[str, int] = {}
+    for item in outside:
+        repository = item.get("repository")
+        if _is_repository_identity(repository):
+            counts[repository] = counts.get(repository, 0) + 1
+    truncated = diagnostics_truncated if type(diagnostics_truncated) is bool else None
+    if outside:
+        status = "outside-selected-session-references-observed"
+    elif diagnostic_count:
+        status = "other-source-verification-gaps-observed"
+    elif truncated:
+        status = "diagnostics-truncated"
+    else:
+        status = "no-source-verification-gaps-observed"
+    if truncated and outside:
+        status = "outside-selected-session-references-observed-with-truncated-diagnostics"
+    return {
+        "status": status,
+        "verification_diagnostic_count": diagnostic_count,
+        "outside_selected_reference_diagnostic_count": len(outside),
+        "outside_selected_repositories": [
+            {"repository": repository, "diagnostic_count": counts[repository]}
+            for repository in sorted(counts)[:16]
+        ],
+        "diagnostics_truncated": truncated,
+        "basis": "bounded-campaign-evidence-source-verification-diagnostics",
+    }
+
+
+def _context_pressure_candidates(
+    *,
+    session_id: str,
+    campaign_id: Any,
+    work_intent_id: Any,
+    workspace_alignment: dict[str, Any],
+    evidence_visibility: dict[str, Any],
+    observation_reference_diagnostics: Any,
+    diagnostics_truncated: bool,
+) -> list[dict[str, Any]]:
+    """Derive bounded, explicitly hypothetical candidates from session scope."""
+    unselected = workspace_alignment.get("unselected_declared_repositories")
+    if not isinstance(unselected, list):
+        return []
+    diagnostics = (
+        observation_reference_diagnostics
+        if isinstance(observation_reference_diagnostics, list) else []
+    )
+    selected = workspace_alignment.get("selected_repositories")
+    selected = selected if isinstance(selected, list) else []
+    candidates: list[dict[str, Any]] = []
+    for repository in unselected[:MAX_OBSERVATIONS]:
+        if not _is_repository_identity(repository):
+            continue
+        references: list[dict[str, str]] = []
+        for diagnostic in diagnostics:
+            if (
+                not isinstance(diagnostic, dict)
+                or diagnostic.get("verification") != "outside-selected-session"
+                or diagnostic.get("repository") != repository
+            ):
+                continue
+            reference = {
+                key: diagnostic[key]
+                for key in ("identity", "repository", "commit", "path", "sha256")
+                if isinstance(diagnostic.get(key), str)
+            }
+            reference["verification"] = "outside-selected-session"
+            references.append(reference)
+        visible_references = references[:MAX_OBSERVATIONS]
+        candidate_identity = "cpc_" + digest_hex({
+            "session_id": session_id,
+            "campaign_id": campaign_id,
+            "work_intent_id": work_intent_id,
+            "repository": repository,
+            "evidence_reference_identities": [
+                reference.get("identity") for reference in visible_references
+            ],
+        }, length=16)
+        candidates.append({
+            "identity": candidate_identity,
+            "kind": "declared-repository-selection-gap",
+            "interpretation": "hypothesis",
+            "status": "candidate",
+            "title": "A Work Intent repository is not selected in this session",
+            "affected_repository": repository,
+            "affected_work_context": {
+                "campaign_id": _short_text(campaign_id, 160),
+                "session_id": _short_text(session_id, 160),
+                "work_intent_id": _short_text(work_intent_id, 160),
+            },
+            "recurrence_status": "not-established",
+            "basis": {
+                "measurement": "session-work-intent-and-selected-checkout-identities",
+                "workspace_alignment_status": _short_text(
+                    workspace_alignment.get("status"), 96,
+                ),
+                "evidence_visibility_status": _short_text(
+                    evidence_visibility.get("status"), 96,
+                ),
+                "selected_repositories": [
+                    _short_text(value, 128) for value in selected[:MAX_OBSERVATIONS]
+                    if _is_repository_identity(value)
+                ],
+                "selected_repositories_truncated": len(selected) > MAX_OBSERVATIONS,
+                "outside_selected_reference_count": len(references),
+            },
+            "evidence_references": visible_references,
+            "evidence_references_truncated": (
+                len(references) > len(visible_references) or diagnostics_truncated
+            ),
+            "recommendation": (
+                "Confirm whether this repository is needed for the declared objective; "
+                "if so, use an authorized session that selects its exact checkout. "
+                "Keep its sources outside-selected until then."
+            ),
+            "not_measured": [
+                "whether the selection gap blocks or delays the declared objective",
+                "why the repository is absent from the selected checkout set",
+                "whether the same gap recurs in another session",
+            ],
+        })
+    return candidates
 
 
 def _source_pointer_key(pointer: dict[str, str]) -> tuple[str, str, str, str]:
@@ -2209,6 +3497,131 @@ def _source_integrity_status(source: Any, cache: dict[tuple[str, str, str, str],
     return cache.get(_source_pointer_key(pointer), "not-checked")
 
 
+def _implementation_accountability_projection(
+    observations: list[dict[str, Any]], *, native_proof_reference_present: bool,
+) -> dict[str, Any] | None:
+    """Summarize verified native-ownership samples without asserting coverage."""
+    samples: list[dict[str, Any]] = []
+    for observation_record in observations:
+        observation = observation_record.get("observation")
+        observation = observation if isinstance(observation, dict) else {}
+        if observation.get("kind") != (
+            "compiler-native-application-implementation-ownership"
+        ):
+            continue
+        outcome = observation.get("outcome")
+        outcome = outcome if isinstance(outcome, dict) else {}
+        accountability = outcome.get("implementation_accountability")
+        if not isinstance(accountability, dict):
+            continue
+        sources = observation_record.get("supporting_sources")
+        sources = sources if isinstance(sources, list) else []
+        module_sources = [
+            source for source in sources
+            if isinstance(source, dict)
+            and source.get("kind") == "native-language-module-source"
+        ]
+        module_integrity_count = sum(
+            source.get("content_integrity_status") in SOURCE_INTEGRITY_VERIFIED
+            for source in module_sources
+        )
+        proof_source = next((source for source in sources
+                             if isinstance(source, dict)
+                             and source.get("kind") == (
+                                 "compiler-native-application-proof"
+                             )), None)
+        declared_module_count = accountability.get("native_module_count")
+        if type(declared_module_count) is not int or declared_module_count < 0:
+            declared_module_count = len(module_sources)
+        if (len(module_sources) == declared_module_count
+                and module_integrity_count == declared_module_count):
+            ownership_status = "source-integrity-verified-for-sample"
+        elif module_integrity_count:
+            ownership_status = "partially-source-integrity-verified"
+        else:
+            ownership_status = "source-integrity-not-established"
+        samples.append({
+            "identity": observation_record.get("identity"),
+            "application_entry": accountability.get("application_entry"),
+            "sample_scope": accountability.get("sample_scope"),
+            "native_semantic_ownership": accountability.get(
+                "native_semantic_ownership",
+            ),
+            "ownership_status": ownership_status,
+            "native_module_count": declared_module_count,
+            "source_integrity_verified_module_count": module_integrity_count,
+            "native_modules": [
+                {
+                    key: source[key]
+                    for key in (
+                        "module", "repository", "commit", "path", "sha256",
+                        "status", "content_integrity_status",
+                    )
+                    if isinstance(source.get(key), str)
+                }
+                for source in module_sources[:len(COMPILER_NATIVE_APPLICATION_MODULES)]
+            ],
+            "compiler_proof_reference": {
+                key: proof_source[key]
+                for key in (
+                    "identity", "repository", "commit", "path", "sha256",
+                    "status", "content_integrity_status",
+                )
+                if isinstance(proof_source, dict)
+                and isinstance(proof_source.get(key), str)
+            },
+            "artifact_identity": accountability.get("artifact_identity"),
+            "compiler_front_end_outcome": accountability.get(
+                "compiler_front_end_outcome",
+            ),
+            "canonical_vm_case_count": accountability.get(
+                "canonical_vm_case_count",
+            ),
+            "canonical_vm_case_success_count": accountability.get(
+                "canonical_vm_case_success_count",
+            ),
+            "host_test_adapter": accountability.get("host_test_adapter"),
+            "native_migration_opportunity": accountability.get(
+                "native_migration_opportunity", "not-established",
+            ),
+            "source_campaign_context": accountability.get(
+                "source_campaign_context", "not-recorded-in-source-proof",
+            ),
+            "evidence_relationship_basis": accountability.get(
+                "evidence_relationship_basis",
+            ),
+            "evidence_reference": observation_record.get("evidence_reference"),
+        })
+    if not samples:
+        if not native_proof_reference_present:
+            return None
+        return {
+            "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
+            "sample_count": 0,
+            "samples": [],
+            "systemwide_native_adoption_ratio": {
+                "status": "not-measured",
+                "reason": "A complete, ownership-verified MNCS implementation inventory is unavailable.",
+            },
+        }
+    return {
+        "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
+        "scope": "source-backed implementation samples linked from the selected campaign evidence",
+        "sample_count": len(samples),
+        "samples": samples[:8],
+        "systemwide_native_adoption_ratio": {
+            "status": "not-measured",
+            "reason": "A complete, ownership-verified inventory of MNCS functionality and its denominator is unavailable.",
+        },
+        "measurement_limits": [
+            "Verified samples establish implementation ownership only for the referenced application and source closure.",
+            "The Compiler proof does not inventory production host-language dependencies or establish native migration opportunities.",
+            "Source campaign and agent identity are unavailable unless recorded in the source proof.",
+            "This projection does not measure whether different agents can discover or use the demonstrated capability.",
+        ],
+    }
+
+
 def _validate_captured_session_activity_reference(source: Any) -> bool:
     """Validate a bounded session-event pointer stored in an observation."""
     if not isinstance(source, dict):
@@ -2229,6 +3642,77 @@ def _validate_captured_session_activity_reference(source: Any) -> bool:
         )
         and len(set(event_ids)) == len(event_ids)
     )
+
+
+def _authenticated_session_event_reference_resolution(
+    source: Any, *, selected_session_id: str, activity: dict[str, Any],
+) -> dict[str, Any]:
+    """Resolve a captured event pointer only against the selected bounded view."""
+    if not _validate_captured_session_activity_reference(source):
+        return {"event_reference_status": "invalid-source-reference"}
+    expected_event_ids = set(source["event_identities"])
+    if source["session_id"] != selected_session_id:
+        return {
+            "event_reference_status": "source-session-not-selected",
+            "event_reference_count": len(expected_event_ids),
+            "event_reference_matched_count": 0,
+        }
+    raw_operations = activity.get("rpc_operations")
+    raw_operations = raw_operations if isinstance(raw_operations, list) else []
+    visible_event_ids = {
+        reference.get("identity")
+        for operation in raw_operations
+        if isinstance(operation, dict)
+        and isinstance(reference := operation.get("event_reference"), dict)
+        and isinstance(reference.get("identity"), str)
+    }
+    matched_event_ids = expected_event_ids & visible_event_ids
+    activity_source = activity.get("source")
+    activity_source = activity_source if isinstance(activity_source, dict) else None
+    records_omitted = (
+        activity_source.get("rpc_operation_records_omitted")
+        if activity_source is not None else None
+    )
+    records_invalid = (
+        activity_source.get("rpc_operation_records_invalid")
+        if activity_source is not None else None
+    )
+    events_considered = (
+        activity_source.get("rpc_operation_events_considered")
+        if activity_source is not None else None
+    )
+    records_returned = (
+        activity_source.get("rpc_operation_records_returned")
+        if activity_source is not None else None
+    )
+    bounded = (
+        activity_source is None
+        or activity_source.get("event_window_truncated") is not False
+        or type(records_omitted) is not int
+        or records_omitted > 0
+        or type(records_invalid) is not int
+        or records_invalid > 0
+        or activity_source.get("rpc_operation_capture_limit_reached") is not False
+        or type(events_considered) is not int
+        or type(records_returned) is not int
+        or events_considered != records_returned
+        or records_returned != len(raw_operations)
+    )
+    if matched_event_ids == expected_event_ids:
+        status = "all-referenced-events-present"
+    elif matched_event_ids and bounded:
+        status = "some-present-others-unresolved-in-bounded-view"
+    elif matched_event_ids:
+        status = "some-present-others-not-found-in-complete-view"
+    elif bounded:
+        status = "unresolved-in-bounded-session-view"
+    else:
+        status = "no-referenced-events-in-selected-session-activity"
+    return {
+        "event_reference_status": status,
+        "event_reference_count": len(expected_event_ids),
+        "event_reference_matched_count": len(matched_event_ids),
+    }
 
 
 def _validate_improvement_relation(value: Any) -> dict[str, Any] | None:
@@ -2260,6 +3744,87 @@ def _validate_improvement_relation(value: Any) -> dict[str, Any] | None:
         "subsequent_observation_identity": subsequent_identity,
         "basis": basis,
         "not_measured": list(limits),
+    }
+
+
+def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
+    """Validate an append-only correction that targets an exact observation."""
+    if not isinstance(value, dict):
+        return None
+    target = _validate_reference(value.get("target_reference"))
+    fields = value.get("corrected_field_paths")
+    replacements = value.get("replacement_values")
+    reason = value.get("reason")
+    if (value.get("schema_version") != OBSERVATION_CORRECTION_SCHEMA
+            or target is None or "sha256" not in target
+            or not _is_observation_reference(target)
+            or not isinstance(fields, list) or not 1 <= len(fields) <= 2
+            or any(
+                not isinstance(field, str)
+                or field not in {"supporting_sources", "not_measured"}
+                for field in fields
+            )
+            or len(set(fields)) != len(fields)
+            or not isinstance(replacements, dict)
+            or set(replacements) != set(fields)
+            or not isinstance(reason, str) or not reason or len(reason) > 512):
+        return None
+    if "supporting_sources" in fields:
+        sources = replacements["supporting_sources"]
+        if (not isinstance(sources, list) or not 1 <= len(sources) <= 16
+                or any(
+                    (pointer := _validate_source_pointer(source)) is None
+                    or "sha256" not in pointer
+                    for source in sources
+                )):
+            return None
+    if "not_measured" in fields:
+        limits = replacements["not_measured"]
+        if (not isinstance(limits, list) or not 1 <= len(limits) <= 16
+                or any(not isinstance(item, str) or not item or len(item) > 512
+                       for item in limits)):
+            return None
+    return {
+        "schema_version": OBSERVATION_CORRECTION_SCHEMA,
+        "target_reference": target,
+        "corrected_field_paths": list(fields),
+        "replacement_values": replacements,
+        "reason": reason,
+    }
+
+
+def _validate_evidence_reference_correction(
+    value: Any,
+) -> dict[str, Any] | None:
+    """Validate an append-only correction to one exact campaign source pointer.
+
+    A pointer correction may change only the commit. Identity, selected
+    repository, path, and content digest must remain identical so the
+    replacement can recover the same observation bytes from a verified commit.
+    """
+    if not isinstance(value, dict):
+        return None
+    target = _validate_reference(value.get("target_reference"))
+    replacement = _validate_reference(value.get("replacement_reference"))
+    reason = value.get("reason")
+    if (value.get("schema_version") != EVIDENCE_REFERENCE_CORRECTION_SCHEMA
+            or target is None or replacement is None
+            or "sha256" not in target or "sha256" not in replacement
+            or not _is_observation_reference(target)
+            or not _is_observation_reference(replacement)
+            or not target["identity"].startswith("ev_environment_")
+            or not target["path"].startswith(OBSERVATION_PATH_PREFIX)
+            or any(target.get(key) != replacement.get(key) for key in (
+                "identity", "repository", "path", "sha256",
+            ))
+            or target["commit"] == replacement["commit"]
+            or not isinstance(reason, str) or not reason or len(reason) > 512):
+        return None
+    return {
+        "schema_version": EVIDENCE_REFERENCE_CORRECTION_SCHEMA,
+        "target_reference": target,
+        "replacement_reference": replacement,
+        "reason": reason,
     }
 
 
@@ -2521,6 +4086,280 @@ def _event_reference(event: dict[str, Any]) -> dict[str, Any] | None:
     if isinstance(observed_at, str) and observed_at and len(observed_at) <= 96:
         reference["observed_at"] = observed_at
     return reference
+
+
+def _capability_delivery_view(
+    snapshot: dict[str, Any], capability_summaries: list[dict[str, Any]],
+    interactions: list[dict[str, Any]], events: list[dict[str, Any]],
+    rpc_operation_summary: dict[str, Any], *,
+    event_window_truncated: bool, event_page_scoped: bool,
+    invocation_summaries_omitted: int,
+) -> dict[str, Any]:
+    """Relate this session's binding snapshot to bounded, observed capability use."""
+    complete_history = not event_window_truncated and not event_page_scoped
+    rpc_groups = rpc_operation_summary.get("groups")
+    rpc_groups = rpc_groups if isinstance(rpc_groups, list) else []
+    context_groups = [
+        item for item in rpc_groups
+        if isinstance(item, dict) and item.get("operation") == "session.context"
+    ]
+    context_outcome_counts: dict[str, int] = {}
+    context_supporting_events = []
+    for group in context_groups:
+        outcome = group.get("outcome_status")
+        count = group.get("occurrence_count")
+        if isinstance(outcome, str) and type(count) is int and count >= 0:
+            context_outcome_counts[outcome] = (
+                context_outcome_counts.get(outcome, 0) + count
+            )
+        references = group.get("supporting_events")
+        if isinstance(references, list):
+            context_supporting_events.extend(
+                reference for reference in references
+                if isinstance(reference, dict)
+            )
+    context_supporting_events = sorted(
+        context_supporting_events,
+        key=lambda item: (
+            item.get("sequence") if type(item.get("sequence")) is int else 0
+        ),
+        reverse=True,
+    )[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+    context_groups_omitted = rpc_operation_summary.get("groups_omitted", 0)
+    if context_groups:
+        context_activity_status = (
+            "partial" if type(context_groups_omitted) is int
+            and context_groups_omitted > 0 else "observed"
+        )
+    elif complete_history and context_groups_omitted == 0:
+        context_activity_status = "no-context-operation-in-session-history"
+    else:
+        context_activity_status = "not-observed-in-selected-event-window"
+    context_operation_activity = {
+        "status": context_activity_status,
+        "scope": "authenticated-Control-session.context-events-in-selected-window",
+        "outcome_counts": dict(sorted(context_outcome_counts.items())),
+        "supporting_events": [
+            {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in reference
+            }
+            for reference in context_supporting_events
+        ],
+        "response_capability_list_status": "not-captured-in-rpc-event",
+        "agent_receipt_status": "not-established",
+        "measurement_limits": [
+            "A successful session.context operation is evidence the orientation endpoint ran; its response capability list and the consumer's receipt or use are not recorded in this event.",
+        ],
+    }
+    raw_bindings = snapshot.get("bindings")
+    if not isinstance(raw_bindings, list):
+        if not capability_summaries and not context_groups:
+            return {}
+        return {
+            "status": "unavailable",
+            "inventory_source": "current-session-binding-snapshot",
+            "binding_count": 0,
+            "bindings": [],
+            "context_operation_activity": context_operation_activity,
+            "discoverability_status": "not-measured",
+            "measurement_limits": [
+                "The session binding snapshot is unavailable.",
+                "Environment bindings do not establish that a capability was presented to or discovered by the agent.",
+            ],
+        }
+
+    summary_by_capability = {
+        item["capability"]: item
+        for item in capability_summaries
+        if isinstance(item.get("capability"), str)
+    }
+    binding_records: list[dict[str, Any]] = []
+    seen_bindings: set[tuple[str, str]] = set()
+    invalid_binding_count = 0
+    availability_counts: dict[str, int] = {}
+    bindings_by_capability: dict[str, int] = {}
+    examined_bindings = raw_bindings[:MAX_SESSION_ACTIVITY_BINDING_SCAN]
+    for raw in examined_bindings:
+        if not isinstance(raw, dict):
+            invalid_binding_count += 1
+            continue
+        capability = raw.get("capability")
+        provider = raw.get("provider")
+        if (not isinstance(capability, str) or not capability or len(capability) > 256
+                or not isinstance(provider, str) or not provider or len(provider) > 160):
+            invalid_binding_count += 1
+            continue
+        binding_key = (provider, capability)
+        if binding_key in seen_bindings:
+            invalid_binding_count += 1
+            continue
+        seen_bindings.add(binding_key)
+        availability = raw.get("availability")
+        availability = availability if isinstance(availability, dict) else {}
+        status = availability.get("status")
+        if (not isinstance(status, str)
+                or status not in {"available", "unavailable", "unknown"}):
+            status = "unrecorded"
+        availability_counts[status] = availability_counts.get(status, 0) + 1
+        bindings_by_capability[capability] = bindings_by_capability.get(capability, 0) + 1
+        binding_records.append({
+            "provider": provider,
+            "capability": capability,
+            "availability_status": status,
+            **({"binding_id": _short_text(raw["binding_id"], 160)}
+               if isinstance(raw.get("binding_id"), str) and raw["binding_id"] else {}),
+            **({"availability_verification": _short_text(
+                availability["verification"], 64,
+            )} if isinstance(availability.get("verification"), str) else {}),
+            **({"availability_observed_at": _short_text(
+                availability["observed_at"], 96,
+            )} if isinstance(availability.get("observed_at"), str) else {}),
+        })
+
+    interaction_references: dict[str, list[dict[str, Any]]] = {}
+    for interaction in interactions:
+        capability = interaction.get("capability")
+        reference = interaction.get("invocation_event")
+        if isinstance(capability, str) and isinstance(reference, dict):
+            refs = interaction_references.setdefault(capability, [])
+            if len(refs) < MAX_CAPABILITY_SUPPORTING_EVENTS:
+                refs.append({
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                })
+
+    for binding in binding_records:
+        capability = binding["capability"]
+        summary = summary_by_capability.get(capability)
+        if summary is None:
+            use_status = (
+                "no-environment-invocation-record-in-session-history"
+                if complete_history
+                else "no-environment-invocation-record-in-selected-window"
+            )
+            binding["use_observation_status"] = use_status
+            binding["invocation_count"] = 0
+            binding["completion_count"] = 0
+            binding["outcome_status_counts"] = {}
+            binding["supporting_events"] = []
+            continue
+        binding["use_observation_status"] = "invoked-in-selected-event-window"
+        binding["invocation_count"] = summary["invocation_count"]
+        binding["completion_count"] = summary["completion_count"]
+        binding["outcome_status_counts"] = dict(summary["outcome_status_counts"])
+        binding["supporting_events"] = interaction_references.get(capability, [])
+        binding["provider_attribution"] = (
+            "ambiguous-current-bindings"
+            if bindings_by_capability.get(capability, 0) > 1
+            else "capability-name-match-only; provider-and-binding-identity-unavailable"
+        )
+
+    outside_inventory = [
+        {
+            "capability": item["capability"],
+            "invocation_count": item["invocation_count"],
+            "outcome_status_counts": dict(item["outcome_status_counts"]),
+            "supporting_events": interaction_references.get(item["capability"], []),
+            "interpretation": "observed-invocation-not-in-current-session-binding-snapshot",
+        }
+        for item in capability_summaries
+        if isinstance(item.get("capability"), str)
+        and item["capability"] not in bindings_by_capability
+    ]
+    transition_events: list[dict[str, Any]] = []
+    transition_count = 0
+    transition_types = {
+        "capability.bound", "capability.changed", "capability.unbound",
+        "capability.available", "capability.unavailable", "capability.unknown",
+    }
+    for event in reversed(events):
+        if event.get("type") not in transition_types:
+            continue
+        payload = event.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        reference = _event_reference(event)
+        capability = payload.get("capability")
+        if reference is None or not isinstance(capability, str) or not capability:
+            continue
+        transition_count += 1
+        if len(transition_events) >= MAX_SESSION_ACTIVITY_CAPABILITY_EVENTS:
+            continue
+        provider = payload.get("provider")
+        item = {
+            "capability": _short_text(capability, 160),
+            "event_reference": reference,
+        }
+        if isinstance(provider, str) and provider:
+            item["provider"] = _short_text(provider, 128)
+        if isinstance(payload.get("previous"), str):
+            item["previous_availability_status"] = _short_text(
+                payload["previous"], 64,
+            )
+        transition_events.append(item)
+
+    for binding in binding_records:
+        matching_events = [
+            item for item in transition_events
+            if item.get("capability") == binding["capability"]
+            and item.get("provider") in {None, binding["provider"]}
+            and item["event_reference"].get("type") in {
+                "capability.available", "capability.unavailable",
+                "capability.unknown", "capability.bound", "capability.changed",
+            }
+        ]
+        if matching_events:
+            binding["availability_event_references"] = [
+                item["event_reference"] for item in matching_events[:3]
+            ]
+
+    binding_records.sort(key=lambda item: (item["capability"], item["provider"]))
+    binding_count = len(binding_records)
+    omitted_bindings = max(0, binding_count - MAX_SESSION_ACTIVITY_BINDINGS)
+    binding_records_not_examined = max(
+        0, len(raw_bindings) - len(examined_bindings),
+    )
+    outside_inventory.sort(key=lambda item: item["capability"])
+    return {
+        "status": (
+            "partial"
+            if invalid_binding_count or omitted_bindings or binding_records_not_examined
+            else "ready"
+        ),
+        "inventory_source": "current-session-binding-snapshot",
+        "binding_count": binding_count,
+        "binding_records_examined": len(examined_bindings),
+        "binding_records_not_examined": binding_records_not_examined,
+        "binding_records_invalid": invalid_binding_count,
+        "availability_counts": dict(sorted(availability_counts.items())),
+        "bindings_omitted": omitted_bindings,
+        "bindings": binding_records[:MAX_SESSION_ACTIVITY_BINDINGS],
+        "availability_transition_event_count": transition_count,
+        "availability_transition_events_omitted": max(
+            0, transition_count - len(transition_events),
+        ),
+        "availability_transition_events": transition_events,
+        "capabilities_not_in_current_binding_snapshot": outside_inventory[:MAX_SESSION_ACTIVITY_CAPABILITIES],
+        "capabilities_not_in_current_binding_snapshot_omitted": max(
+            0, len(outside_inventory) - MAX_SESSION_ACTIVITY_CAPABILITIES,
+        ),
+        "context_operation_activity": context_operation_activity,
+        "discoverability_status": "not-measured",
+        "use_event_window": {
+            "scope": "selected-session-event-window",
+            "truncated": event_window_truncated,
+            "complete_history": complete_history,
+            "invocation_summaries_omitted": invocation_summaries_omitted,
+        },
+        "measurement_limits": [
+            "Environment bindings do not establish that a capability was presented to or discovered by the agent.",
+            "Availability records a substrate probe, not verified provider behavior.",
+            "Invocation events do not record provider or binding identity; capability-name matches cannot establish a contract revision and are ambiguous when multiple current bindings expose the same name.",
+            "No observed invocation is scoped to the selected event window unless complete session history is explicitly available.",
+        ],
+    }
 
 
 def _authenticated_rpc_read_event(
@@ -3137,14 +4976,22 @@ def _session_activity(
                 item.get("completion_event") is not None for item in group
             ),
             "outcome_status_counts": status_counts,
+            "supporting_events": [
+                item["invocation_event"]
+                for item in group[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                if isinstance(item.get("invocation_event"), dict)
+            ],
         })
+    all_capability_summaries = capabilities
     capabilities_omitted = max(
         0, len(capabilities) - MAX_SESSION_ACTIVITY_CAPABILITIES,
     )
     capabilities = capabilities[:MAX_SESSION_ACTIVITY_CAPABILITIES]
 
     rpc_operations: list[dict[str, Any]] = []
+    rpc_operation_groups: dict[tuple[str, str], dict[str, Any]] = {}
     invalid_rpc_event_count = 0
+    valid_rpc_event_count = 0
     for event in reversed(rpc_events):
         payload = event.get("payload")
         payload = payload if isinstance(payload, dict) else {}
@@ -3158,6 +5005,23 @@ def _session_activity(
                 or not isinstance(caller, dict)
                 or not isinstance(context_value, dict)):
             invalid_rpc_event_count += 1
+            continue
+        valid_rpc_event_count += 1
+        group_key = (operation, outcome)
+        summary_group = rpc_operation_groups.setdefault(
+            group_key,
+            {
+                "operation": operation,
+                "outcome_status": outcome,
+                "occurrence_count": 0,
+                "supporting_events": [],
+            },
+        )
+        summary_group["occurrence_count"] += 1
+        if (len(summary_group["supporting_events"])
+                < MAX_SESSION_ACTIVITY_RPC_SUMMARY_REFERENCES):
+            summary_group["supporting_events"].append(reference)
+        if len(rpc_operations) >= MAX_SESSION_ACTIVITY_RPC_OPERATIONS:
             continue
         caller_projection = {
             key: _short_text(caller.get(key), 128)
@@ -3218,10 +5082,33 @@ def _session_activity(
             if (type(elapsed) in {int, float} and 0 <= elapsed <= 600_000):
                 item["measurements"] = {"control_dispatch_elapsed_ms": elapsed}
         rpc_operations.append(item)
-        if len(rpc_operations) >= MAX_SESSION_ACTIVITY_RPC_OPERATIONS:
-            break
 
-    rpc_operations_omitted = max(0, len(rpc_events) - len(rpc_operations))
+    rpc_operations_omitted = max(0, valid_rpc_event_count - len(rpc_operations))
+    ordered_rpc_groups = [
+        {
+            **group,
+            "supporting_events": sorted(
+                group["supporting_events"],
+                key=lambda item: item["sequence"],
+            ),
+        }
+        for _, group in sorted(rpc_operation_groups.items())
+    ]
+    rpc_summary_groups = ordered_rpc_groups[:MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS]
+    rpc_summary_omitted_groups = ordered_rpc_groups[
+        MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS:
+    ]
+    rpc_operation_summary = {
+        "scope": "authenticated-records-in-selected-event-window",
+        "record_count": valid_rpc_event_count,
+        "group_count": len(ordered_rpc_groups),
+        "groups_omitted": len(rpc_summary_omitted_groups),
+        "omitted_record_count": sum(
+            group["occurrence_count"] for group in rpc_summary_omitted_groups
+        ),
+        "supporting_event_limit_per_group": MAX_SESSION_ACTIVITY_RPC_SUMMARY_REFERENCES,
+        "groups": rpc_summary_groups,
+    }
     failures_by_identity: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for item in rpc_operations:
         if item.get("outcome_status") != "failed":
@@ -3271,16 +5158,26 @@ def _session_activity(
         or adapter_window_overflow
     )
     invocations_omitted = max(0, len(invocation_events) - len(interactions))
+    rpc_capture_limit_reached = (
+        snapshot.get("rpc_read_activity_limit_reached") is True
+    )
     partial = (
         event_window_truncated or event_before_sequence is not None
-        or invocations_omitted > 0
+        or invocations_omitted > 0 or rpc_operations_omitted > 0
+        or rpc_capture_limit_reached
     )
     if partial and not invocation_events:
-        status = "partial-no-invocations-in-selected-window"
+        status = (
+            "partial-rpc-only-in-selected-window"
+            if rpc_operations else "partial-no-invocations-in-selected-window"
+        )
     elif partial:
         status = "partial"
     elif not invocation_events:
-        status = "no-capability-invocations-in-session-history"
+        status = (
+            "rpc-only-in-session-history"
+            if rpc_operations else "no-capability-invocations-in-session-history"
+        )
     else:
         status = "ready"
     window_references = [
@@ -3303,6 +5200,13 @@ def _session_activity(
         event_type = event.get("type")
         if isinstance(event_type, str) and event_type and len(event_type) <= 96:
             event_type_counts[event_type] = event_type_counts.get(event_type, 0) + 1
+    capability_delivery = _capability_delivery_view(
+        snapshot, all_capability_summaries, interactions, events,
+        rpc_operation_summary,
+        event_window_truncated=event_window_truncated,
+        event_page_scoped=event_before_sequence is not None,
+        invocation_summaries_omitted=capabilities_omitted,
+    )
     denial_events = [
         event for event in events if event.get("type") == "authority.denied"
     ]
@@ -3489,11 +5393,13 @@ def _session_activity(
         "interactions": interactions,
         "rpc_operation_count": len(rpc_operations),
         "rpc_operations": rpc_operations,
+        **({"rpc_operation_summary": rpc_operation_summary} if rpc_events else {}),
         "rpc_failure_candidates": rpc_failure_candidates,
         "authority_denial_count": len(authority_denials),
         "authority_denials": authority_denials,
         "authority_denial_candidates": authority_denial_candidates,
         "capabilities": capabilities,
+        "capability_delivery": capability_delivery,
         "measurement_limits": limits,
     }
 
@@ -3509,9 +5415,10 @@ def project(
     """Build a bounded read-only relationship view from campaign evidence.
 
     Environmental observations under ``evidence/environmental-capability/``
-    and one allowlisted Compiler regression schema are read. Their exact Git
-    commit and SHA-256 must be present in the authenticated campaign ledger,
-    and the repository must be selected by this Environment session.
+    and exact allowlisted Compiler evidence families are read. Their exact Git
+    commit and SHA-256 must be present in the authenticated campaign ledger.
+    The native application proof may also be read through the Environment's
+    bounded workspace-read-only authority when Compiler is not selected.
     """
     if (type(max_result_bytes) is not int
             or max_result_bytes < 1 or max_result_bytes > MAX_RESULT_BYTES):
@@ -3563,6 +5470,11 @@ def project(
         except (StoreIntegrityFailure, StoreUnavailable):
             campaign_state = None
     state = campaign_state if isinstance(campaign_state, dict) else {}
+    activity = _session_activity(
+        session, snapshot,
+        event_before_sequence=session_event_before_sequence,
+        event_limit=session_event_limit,
+    )
     page_truncated = bool(state.get("evidence_truncated", False))
     history_states = [state]
     history_truncated = False
@@ -3678,11 +5590,135 @@ def project(
     observations: list[dict[str, Any]] = []
     improvement_relations: list[dict[str, Any]] = []
     projected_records = verified_records[:MAX_OBSERVATIONS]
-    unverified_improvement_relation_count = sum(
-        record.get("improvement_relation") is not None
-        and _validate_improvement_relation(record.get("improvement_relation")) is None
-        for record, _ in projected_records
-    )
+    pointer_correction_status_by_record: dict[str, dict[str, Any]] = {}
+    pointer_correction_candidates: dict[
+        str, list[tuple[dict[str, Any], dict[str, Any], int, int]]
+    ] = {}
+    pointer_correction_unverified_count = 0
+    pointer_correction_read_count = 0
+    reference_positions = {
+        reference.get("identity"): position
+        for position, reference in enumerate(references)
+        if isinstance(reference.get("identity"), str)
+    }
+    references_by_identity = {
+        reference["identity"]: reference
+        for reference in references
+        if isinstance(reference.get("identity"), str)
+    }
+    for correction_record, _correction_record_reference in projected_records:
+        raw_pointer_correction = correction_record.get(
+            "evidence_reference_correction",
+        )
+        if raw_pointer_correction is None:
+            continue
+        correction = _validate_evidence_reference_correction(
+            raw_pointer_correction,
+        )
+        if correction is None:
+            pointer_correction_status_by_record[correction_record["identity"]] = {
+                "status": "recorded-but-contract-unverified",
+            }
+            pointer_correction_unverified_count += 1
+            continue
+        target = correction["target_reference"]
+        target_identity = target["identity"]
+        selected_target = references_by_identity.get(target_identity)
+        if selected_target is None:
+            status = "target-not-present-in-selected-pages"
+        elif any(selected_target.get(key) != target.get(key) for key in (
+            "identity", "repository", "commit", "path", "sha256",
+        )):
+            status = "target-reference-mismatch"
+        elif selected_target.get("verification") == (
+            "not-read-page-observation-budget"
+        ):
+            status = "target-not-read-page-budget"
+        elif selected_target.get("verification") == "verified":
+            status = "target-already-verified"
+        else:
+            status = None
+        if status is not None:
+            pointer_correction_status_by_record[correction_record["identity"]] = {
+                "status": status,
+                "target_identity": target_identity,
+                "target_reference": target,
+            }
+            pointer_correction_unverified_count += 1
+            continue
+        target_position = reference_positions.get(target_identity)
+        correction_position = reference_positions.get(correction_record["identity"])
+        if (target_position is None or correction_position is None
+                or target_position >= correction_position):
+            pointer_correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-prior-to-correction",
+                "target_identity": target_identity,
+                "target_reference": target,
+            }
+            pointer_correction_unverified_count += 1
+            continue
+        pointer_correction_candidates.setdefault(target_identity, []).append((
+            correction_record, correction, target_position, correction_position,
+        ))
+
+    recovered_records: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    pointer_corrections_applied_count = 0
+    for target_identity, candidates in pointer_correction_candidates.items():
+        if len(candidates) != 1:
+            pointer_correction_unverified_count += len(candidates)
+            for correction_record, _correction, _target_position, _ in candidates:
+                pointer_correction_status_by_record[correction_record["identity"]] = {
+                    "status": "conflicting-corrections-for-target",
+                    "target_identity": target_identity,
+                }
+            continue
+        correction_record, correction, target_position, _ = candidates[0]
+        if pointer_correction_read_count >= MAX_EVIDENCE_REFERENCE_CORRECTIONS:
+            pointer_correction_status_by_record[correction_record["identity"]] = {
+                "status": "correction-read-limit-reached",
+                "target_identity": target_identity,
+            }
+            pointer_correction_unverified_count += 1
+            continue
+        pointer_correction_read_count += 1
+        replacement = correction["replacement_reference"]
+        recovered_record, replacement_status = _load_observation(
+            session, replacement, root, deadline=read_deadline,
+        ) if root is not None else (None, "workspace-unavailable")
+        if recovered_record is None or replacement_status != "verified":
+            pointer_correction_status_by_record[correction_record["identity"]] = {
+                "status": "replacement-reference-not-verified",
+                "target_identity": target_identity,
+                "target_reference": correction["target_reference"],
+                "replacement_reference": replacement,
+                "replacement_verification": replacement_status,
+            }
+            pointer_correction_unverified_count += 1
+            continue
+        old_reference = dict(references[target_position])
+        corrected_reference = {
+            **replacement,
+            "verification": "verified",
+            "corrected_from_reference": {
+                key: old_reference[key]
+                for key in ("identity", "repository", "commit", "path", "sha256")
+                if old_reference.get(key) is not None
+            },
+            "correction_observation_identity": correction_record["identity"],
+        }
+        references[target_position] = corrected_reference
+        references_by_identity[target_identity] = corrected_reference
+        unavailable = max(0, unavailable - 1)
+        recovered_records.append((recovered_record, corrected_reference))
+        pointer_correction_status_by_record[correction_record["identity"]] = {
+            "status": "applied-to-exact-unavailable-target",
+            "target_identity": target_identity,
+            "target_reference": correction["target_reference"],
+            "replacement_reference": replacement,
+            "reason": correction["reason"],
+        }
+        pointer_corrections_applied_count += 1
+    projected_records = (projected_records + recovered_records)[:MAX_OBSERVATIONS]
     observation_reference_diagnostics = []
     for reference in references:
         if not _is_observation_reference(reference):
@@ -3723,6 +5759,192 @@ def project(
                 attempted=attempted_sources,
                 workspace_checkouts=workspace_checkouts,
             )
+        correction = _validate_observation_correction(
+            record.get("record_correction"),
+        )
+        if correction is not None:
+            _verify_source_pointer(
+                session, correction["target_reference"], references, root,
+                deadline=read_deadline, cache=source_integrity,
+                attempted=attempted_sources,
+                workspace_checkouts=workspace_checkouts,
+            )
+            for source in correction["replacement_values"].get(
+                "supporting_sources", [],
+            ):
+                _verify_source_pointer(
+                    session, source, references, root,
+                    deadline=read_deadline, cache=source_integrity,
+                    attempted=attempted_sources,
+                    workspace_checkouts=workspace_checkouts,
+                )
+    projected_records_by_identity = {
+        record["identity"]: record for record, _ in projected_records
+    }
+    page_references_by_identity = {
+        reference["identity"]: reference
+        for reference in references
+        if isinstance(reference.get("identity"), str)
+    }
+    page_reference_positions = {
+        reference["identity"]: index
+        for index, reference in enumerate(references)
+        if isinstance(reference.get("identity"), str)
+    }
+    correction_candidates: dict[
+        str, list[tuple[dict[str, Any], dict[str, Any], dict[str, str]]],
+    ] = {}
+    correction_status_by_record: dict[str, dict[str, Any]] = {}
+    unverified_record_correction_count = 0
+    for correction_record, correction_reference in projected_records:
+        raw_correction = correction_record.get("record_correction")
+        if raw_correction is None:
+            continue
+        correction = _validate_observation_correction(raw_correction)
+        if correction is None:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "recorded-but-contract-unverified",
+            }
+            unverified_record_correction_count += 1
+            continue
+        target_reference = correction["target_reference"]
+        target_identity = target_reference["identity"]
+        selected_reference = page_references_by_identity.get(target_identity)
+        if selected_reference is None:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-present-in-selected-pages",
+                "target_identity": target_identity,
+            }
+            unverified_record_correction_count += 1
+            continue
+        pointer_fields = ("identity", "repository", "commit", "path", "sha256")
+        if any(
+            selected_reference.get(key) != target_reference.get(key)
+            for key in pointer_fields
+        ):
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-reference-mismatch",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+            }
+            unverified_record_correction_count += 1
+            continue
+        verification = selected_reference.get("verification")
+        if verification == "not-read-page-observation-budget":
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-read-page-budget",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+            }
+            unverified_record_correction_count += 1
+            continue
+        if verification != "verified":
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-verified-in-projection",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+                "target_verification": verification,
+            }
+            unverified_record_correction_count += 1
+            continue
+        correction_position = page_reference_positions.get(
+            correction_record["identity"],
+        )
+        target_position = page_reference_positions.get(target_identity)
+        if (correction_position is not None and target_position is not None
+                and target_position >= correction_position):
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-prior-to-correction",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+            }
+            unverified_record_correction_count += 1
+            continue
+        target_record = projected_records_by_identity.get(target_identity)
+        if target_record is None:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-projected",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+            }
+            unverified_record_correction_count += 1
+            continue
+        target_integrity = source_integrity.get(
+            _source_pointer_key(target_reference), "not-checked",
+        )
+        if target_integrity not in SOURCE_INTEGRITY_VERIFIED:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-content-integrity-unverified",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+                "target_content_integrity_status": target_integrity,
+            }
+            unverified_record_correction_count += 1
+            continue
+        replacements_verified = True
+        replacement_values = correction["replacement_values"]
+        for field in correction["corrected_field_paths"]:
+            replacement = replacement_values[field]
+            if target_record.get(field) == replacement:
+                replacements_verified = False
+                break
+            if field != "supporting_sources":
+                continue
+            replacement_sources = replacement
+            replacement_sources_valid = (
+                isinstance(replacement_sources, list)
+                and 0 < len(replacement_sources) <= 16
+                and all(
+                    (pointer := _validate_source_pointer(source)) is not None
+                    and "sha256" in pointer
+                    and _source_status(source, references).get("status") in {
+                        "verified", "not-an-environmental-observation",
+                    }
+                    and _source_integrity_status(source, source_integrity)
+                    in SOURCE_INTEGRITY_VERIFIED
+                    for source in replacement_sources
+                )
+            )
+            if not replacement_sources_valid:
+                replacements_verified = False
+                break
+        if not replacements_verified:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "replacement-values-unverified-or-unchanged",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+            }
+            unverified_record_correction_count += 1
+            continue
+        correction_status_by_record[correction_record["identity"]] = {
+            "status": "applied-to-verified-target",
+            "target_identity": target_identity,
+            "target_reference": target_reference,
+            "corrected_field_paths": correction["corrected_field_paths"],
+            "replacement_values": replacement_values,
+            "reason": correction["reason"],
+        }
+        correction_candidates.setdefault(target_identity, []).append((
+            correction_record, correction, correction_reference,
+        ))
+
+    correction_by_target: dict[str, tuple[dict[str, Any], dict[str, Any], dict[str, str]]] = {}
+    for target_identity, candidates in correction_candidates.items():
+        if len(candidates) == 1:
+            correction_by_target[target_identity] = candidates[0]
+            continue
+        unverified_record_correction_count += len(candidates)
+        for correction_record, _correction, _reference in candidates:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "conflicting-corrections-for-target",
+                "target_identity": target_identity,
+            }
+
+    unverified_improvement_relation_count = sum(
+        record.get("improvement_relation") is not None
+        and _validate_improvement_relation(record.get("improvement_relation")) is None
+        for record, _ in projected_records
+    )
     source_context_candidates: dict[
         tuple[str, str, str, str, str], set[tuple[tuple[str, str], ...]],
     ] = {}
@@ -3810,7 +6032,37 @@ def project(
         ) if source_session_context is not None else False
         sources = record.get("supporting_sources")
         sources = sources if isinstance(sources, list) else []
-        improvement = _validate_improvement_relation(record.get("improvement_relation"))
+        raw_improvement = _validate_improvement_relation(
+            record.get("improvement_relation"),
+        )
+        correction_for_target = correction_by_target.get(record["identity"])
+        record_correction_summary = correction_status_by_record.get(
+            record["identity"],
+        )
+        effective_sources = sources
+        effective_measurement_limits = record.get("not_measured", [])
+        if correction_for_target is not None:
+            correction_record, correction, correction_reference = correction_for_target
+            corrected_fields = correction["corrected_field_paths"]
+            replacement_values = correction["replacement_values"]
+            if "supporting_sources" in corrected_fields:
+                effective_sources = replacement_values["supporting_sources"]
+            if "not_measured" in corrected_fields:
+                effective_measurement_limits = replacement_values["not_measured"]
+            if record_correction_summary is None:
+                record_correction_summary = {
+                    "status": "corrected-by-verified-record",
+                    "correction_observation_identity": correction_record["identity"],
+                    "corrected_field_paths": corrected_fields,
+                    "replacement_values": replacement_values,
+                    "reason": correction["reason"],
+                    "correction_evidence_reference": {
+                        key: correction_reference[key]
+                        for key in ("identity", "repository", "commit", "path", "sha256")
+                        if correction_reference.get(key) is not None
+                    },
+                }
+        improvement = raw_improvement
         projected_observation = {
             "kind": observation.get("kind"),
             "source_interface": observation.get("source_interface"),
@@ -3933,7 +6185,7 @@ def project(
             },
             "recording_context": _recording_context(recorder),
             "improvement_relation_identity": (
-                improvement["identity"] if improvement is not None else None
+                raw_improvement["identity"] if raw_improvement is not None else None
             ),
             "improvement_relation_status": (
                 "not-recorded"
@@ -3943,6 +6195,8 @@ def project(
                     else "recorded-but-contract-unverified"
                 )
             ),
+            **({"record_correction": record_correction_summary}
+               if record_correction_summary is not None else {}),
             "pressure_hypothesis": ({
                 key: hypothesis.get(key)
                 for key in ("identity", "title", "category", "subsystem", "owner",
@@ -3956,17 +6210,65 @@ def project(
                     "content_integrity_status": _source_integrity_status(
                         source, source_integrity,
                     ),
+                    **(_authenticated_session_event_reference_resolution(
+                        source,
+                        selected_session_id=session.session_id,
+                        activity=activity,
+                    ) if isinstance(source, dict) and source.get("kind") == (
+                        "authenticated-session-activity-projection"
+                    ) else {}),
                 }
-                for source in sources[:16]
+                for source in effective_sources[:16]
             ],
             "measurement_limits": [
-                value[:512] for value in record.get("not_measured", [])[:16]
+                value[:512] for value in effective_measurement_limits[:16]
                 if isinstance(value, str)
-            ] if isinstance(record.get("not_measured"), list) else [],
+            ] if isinstance(effective_measurement_limits, list) else [],
             "evidence_reference": {
                 key: reference[key]
                 for key in ("identity", "repository", "commit", "path", "sha256")
             },
+            **({
+                "evidence_reference_correction": {
+                    **{
+                        key: value
+                        for key, value in pointer_correction_status_by_record[
+                            record["identity"]
+                        ].items()
+                        if key in {
+                            "status", "target_identity", "reason",
+                            "replacement_verification",
+                        }
+                    },
+                    **({
+                        "target_reference": pointer_correction_status_by_record[
+                            record["identity"]
+                        ]["target_reference"]
+                    } if pointer_correction_status_by_record[
+                        record["identity"]
+                    ].get("target_reference") is not None else {}),
+                    **({
+                        "replacement_reference": pointer_correction_status_by_record[
+                            record["identity"]
+                        ]["replacement_reference"]
+                    } if pointer_correction_status_by_record[
+                        record["identity"]
+                    ].get("replacement_reference") is not None else {}),
+                }
+            } if record["identity"] in pointer_correction_status_by_record else {}),
+            **({
+                "evidence_reference_correction": {
+                    "status": "recovered-from-append-only-correction",
+                    "correction_observation_identity": reference[
+                        "correction_observation_identity"
+                    ],
+                    "recorded_reference": reference[
+                        "corrected_from_reference"
+                    ],
+                }
+            } if isinstance(reference.get("corrected_from_reference"), dict)
+                and isinstance(reference.get("correction_observation_identity"), str)
+                else {}),
         })
         if improvement is not None:
             implementation_status = _source_status(
@@ -4036,6 +6338,8 @@ def project(
     elif observations and (
         unavailable or skipped_by_page_budget or history_truncated or not history_consistent
         or unverified_improvement_relation_count
+        or unverified_record_correction_count
+        or pointer_correction_unverified_count
     ):
         status = "partial"
     elif observations:
@@ -4045,11 +6349,6 @@ def project(
     else:
         status = "no-observations"
     hypotheses = _recurrence(observations)
-    activity = _session_activity(
-        session, snapshot,
-        event_before_sequence=session_event_before_sequence,
-        event_limit=session_event_limit,
-    )
     if campaign_state is None:
         activity_samples = activity.get("resource_samples")
         activity_samples = (
@@ -4073,6 +6372,36 @@ def project(
             "goal": intent.get("goal"),
         },
     }
+    workspace_alignment = _work_intent_workspace_alignment(snapshot)
+    evidence_visibility = _evidence_visibility_summary(
+        observation_reference_diagnostics,
+        len(observation_reference_diagnostics),
+        len(observation_reference_diagnostics) > MAX_OBSERVATIONS,
+    )
+    context_pressure_candidates = _context_pressure_candidates(
+        session_id=session.session_id,
+        campaign_id=campaign.get("identity"),
+        work_intent_id=intent.get("identity"),
+        workspace_alignment=workspace_alignment,
+        evidence_visibility=evidence_visibility,
+        observation_reference_diagnostics=observation_reference_diagnostics,
+        diagnostics_truncated=(
+            len(observation_reference_diagnostics) > MAX_OBSERVATIONS
+        ),
+    )
+    implementation_accountability = _implementation_accountability_projection(
+        observations,
+        native_proof_reference_present=any(
+            _is_compiler_native_application_proof_reference(reference)
+            for reference in references
+        ),
+    )
+    if workspace_alignment["status"] in {
+        "declared-repositories-not-selected",
+        "workspace-selection-unavailable",
+        "unavailable",
+    }:
+        subject["workspace_alignment"] = workspace_alignment
     if isinstance(campaign_charter, dict):
         subject["campaign_charter"] = campaign_charter
     projection: dict[str, Any] = {
@@ -4080,6 +6409,8 @@ def project(
         "identity": "eci_" + digest_hex({
             "session_id": session.session_id,
             "campaign_id": campaign.get("identity"),
+            "work_intent_identity": intent.get("identity"),
+            "workspace_alignment": workspace_alignment,
             "evidence": [item["identity"] for item in references],
             "campaign_charter_reference": (
                 campaign_charter.get("evidence_reference")
@@ -4144,6 +6475,37 @@ def project(
             "observation_records_considered": len(references),
             "observation_records_verified": len(observations),
             "observation_records_unavailable": unavailable,
+            **({
+                "record_correction_count": sum(
+                    record.get("record_correction") is not None
+                    for record, _ in projected_records
+                ),
+                "record_corrections_applied_count": len(correction_by_target),
+                "record_corrections_unverified_count": (
+                    unverified_record_correction_count
+                ),
+            } if any(
+                record.get("record_correction") is not None
+                for record, _ in projected_records
+            ) else {}),
+            **({
+                "evidence_reference_correction_count": sum(
+                    record.get("evidence_reference_correction") is not None
+                    for record, _ in projected_records
+                ),
+                "evidence_reference_corrections_applied_count": (
+                    pointer_corrections_applied_count
+                ),
+                "evidence_reference_corrections_unverified_count": (
+                    pointer_correction_unverified_count
+                ),
+                "evidence_reference_correction_target_reads": (
+                    pointer_correction_read_count
+                ),
+            } if any(
+                record.get("evidence_reference_correction") is not None
+                for record, _ in projected_records
+            ) else {}),
             "observation_reference_diagnostics": (
                 observation_reference_diagnostics[:MAX_OBSERVATIONS]
             ),
@@ -4153,6 +6515,11 @@ def project(
             "observation_reference_diagnostics_truncated": (
                 len(observation_reference_diagnostics) > MAX_OBSERVATIONS
             ),
+            **({"evidence_visibility": evidence_visibility} if (
+                evidence_visibility.get(
+                    "outside_selected_reference_diagnostic_count", 0
+                ) > 0
+            ) else {}),
             "improvement_relations_unverified_count": (
                 unverified_improvement_relation_count
             ),
@@ -4218,7 +6585,11 @@ def project(
             "A missing subsequent-observation identity is exposed as not-recorded; the projection does not infer follow-up.",
             "A linked verification record establishes that evidence is present and integrity checked; effectiveness still requires independent follow-up.",
             "Optional improvement relations that do not meet the current contract are surfaced as unverified and excluded from improvement claims.",
+            *([
+                "Context pressure candidates are derived hypotheses from declared repository and selected-checkout mismatch plus bounded source visibility; they do not establish impact or recurrence and do not authorize selecting an outside repository.",
+            ] if context_pressure_candidates else []),
             "Session activity summarizes only the bounded recent event tail and exposes no raw invocation arguments or results.",
+            "Authenticated session-event source pointers are checked against the selected session's bounded RPC activity; other sessions are marked unselected and missing events in partial views remain unresolved.",
             "Session resource samples read the newest bounded Store-backed Monitor invocation per binding and preserve session, objective, event, and artifact provenance; a host snapshot does not attribute resource consumption to an agent.",
             "Authority denial activity exposes normalized action and reason classes with event references; raw targets and free-form reasons are omitted.",
             "Authenticated Control read-operation events include a measured Control-dispatch elapsed time, which includes session-queue wait and is not total agent execution duration; model identity, token usage, resource consumption, and cache accounting remain unavailable.",
@@ -4226,11 +6597,27 @@ def project(
             "Read-operation recurrence candidates cover only the selected tail of this session; cross-session recurrence is unavailable in this projection.",
             "Repeated read-operation failures are investigation candidates, not causal findings or proof of an environmental defect.",
             "Session capability events do not establish duration, token usage, resource consumption, or activity performed outside observed Environment or Control operations.",
+            *(["Append-only observation corrections apply only when their exact target pointer and replacement source evidence are verified in the selected evidence pages; older record bytes remain inspectable."] if any(
+                record.get("record_correction") is not None
+                for record, _ in projected_records
+            ) else []),
             *([
                 "Multi-page recurrence covers only the selected bounded page window; source metadata reports page offsets, checkpoint consistency, and budget omissions.",
             ] if history_pages > 1 else []),
         ],
     }
+    if implementation_accountability is not None:
+        projection["implementation_accountability"] = implementation_accountability
+    if context_pressure_candidates:
+        projection["context_pressure_candidate_count"] = len(
+            context_pressure_candidates
+        )
+        projection["context_pressure_candidates"] = context_pressure_candidates
+        projection["correlation"]["relationship"] += (
+            " Context pressure candidates separately relate declared repositories, "
+            "selected checkouts, and bounded source-visibility diagnostics without "
+            "treating a candidate as a recorded pressure or granting access."
+        )
     encoded = json.dumps(projection, ensure_ascii=False, sort_keys=True).encode("utf-8")
     if len(encoded) > max_result_bytes:
         return _compact_projection(projection, len(encoded), max_result_bytes)

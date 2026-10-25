@@ -1,0 +1,90 @@
+{
+  "captured_at": "2026-10-25T05:54:00Z",
+  "identity": "ev_environment_context_response_accountability_pressure_20261025",
+  "measurement_basis": "authenticated-context-operation-history-and-environment-context-contract-review",
+  "not_measured": [
+    "the exact capability list returned by each historical session.context operation",
+    "whether the agent read, understood, or used a returned capability list",
+    "whether the current binding snapshot matches the historical session.context response",
+    "whether the missing response detail caused agent friction"
+  ],
+  "observation": {
+    "kind": "context-capability-response-observability-gap",
+    "outcome": {
+      "authenticated_context_operation_outcome_counts": {
+        "succeeded": 5
+      },
+      "current_binding_snapshot": {
+        "binding_count": 9,
+        "available_count": 9,
+        "availability_verification": "substrate",
+        "temporal_relation_to_historical_context_reads": "not-established"
+      },
+      "response_capability_list_status": "not-captured-in-rpc-event",
+      "agent_receipt_status": "not-established",
+      "projection_compaction": "Aggregate availability and context-operation outcomes remained visible; individual binding rows were explicitly truncated."
+    },
+    "request": {
+      "baseline_environment_projection_commit": "9503aa37ef81e4421c9ceb47afeb43bb7410fd42",
+      "campaign_state_checkpoint_id": "chk_8ca7061e53df84ff",
+      "projection_identity": "eci_34033b3ea2a44532",
+      "session_id": "ses_c6b0d153689d7388"
+    },
+    "source_interface": "MNCS Environment capability-intelligence projection and authenticated Control session.context reads"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Consider recording a bounded response-shape summary for authenticated session.context reads, such as the returned available-capability count and truncation state, while preserving exact response contents and agent receipt as unmeasured unless they are independently observed.",
+    "basis": "The Environment context method returns a bounded available-capability list and counts. Authenticated Control events establish five successful session.context operations, but their event payloads do not capture the response fields. The new projection makes this boundary inspectable; the missing detail is an evidence gap, not proof that agents failed to discover capabilities.",
+    "category": "capability-accountability-and-discoverability",
+    "identity": "ph_environment_context_response_accountability_20261025",
+    "not_measured": [
+      "agent impact or discovery failure",
+      "the capability list returned by each historical context call",
+      "receipt or use of the returned context",
+      "cross-session recurrence or the benefit of response-shape telemetry"
+    ],
+    "owner": "mncs-control-mcp-and-mncs-environment",
+    "recurrence": "not-established",
+    "subsystem": "Environment context delivery and authenticated Control RPC observations",
+    "title": "Successful context reads do not record which capability summary was returned or received"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 29,
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_8ca7061e53df84ff",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "2c8e3fb5db0cd911852bb01b106fd1dbbeeba812",
+      "identity": "src_environment_context_capability_listing_contract_20261025",
+      "kind": "environment-context-source",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "8c0fc6acae75b1e84102d70fe1c6aa411a47251b94b90b758b634d87c23f926e"
+    },
+    {
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "event_identities": [
+        "evt_02e01eb9b51885e5",
+        "evt_026ee3ae639d193c"
+      ],
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "session_id": "ses_c6b0d153689d7388"
+    }
+  ]
+}

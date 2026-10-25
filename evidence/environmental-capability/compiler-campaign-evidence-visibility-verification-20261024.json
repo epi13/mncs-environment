@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compiler_campaign_evidence_visibility_verification_20261024",
+  "captured_at": "2026-10-24T23:30:44Z",
+  "measurement_basis": "post-commit-live-compiler-projection-and-focused-capability-intelligence-test-suite",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "compiler-session-context-pressure-candidate-live-verification",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "subject_campaign_id": "cmp_mncs_native_application_readiness_compiler_20261013",
+      "subject_session_id": "ses_164edc158d9b1637",
+      "campaign_state_checkpoint_id": "chk_691079cfe830f05d",
+      "campaign_evidence_count": 693,
+      "evidence_page_offset": 661,
+      "evidence_page_limit": 32,
+      "implementation_commit": "fb85a7ade2875849464b19ae0f154b5bffb4f97b"
+    },
+    "outcome": {
+      "projection_identity": "eci_e7aa2152b0db282c",
+      "projection_status": "partial",
+      "persisted_pressure_hypothesis_count": 0,
+      "context_pressure_candidate_count": 1,
+      "candidate_identity": "cpc_f634de21ee12a235",
+      "candidate_kind": "declared-repository-selection-gap",
+      "candidate_interpretation": "hypothesis",
+      "candidate_status": "candidate",
+      "candidate_recurrence_status": "not-established",
+      "affected_repository": "mncs-compiler",
+      "work_intent_declared_repository_not_selected": true,
+      "outside_selected_reference_count": 4,
+      "candidate_reference_verifications": [
+        "outside-selected-session",
+        "outside-selected-session",
+        "outside-selected-session",
+        "outside-selected-session"
+      ],
+      "observation_records_verified": 0,
+      "observation_records_unavailable": 4,
+      "all_four_compiler_evidence_hashes_match_read_only_git_object_reads": true,
+      "access_boundary_preserved": true,
+      "test_command": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py",
+      "test_status": "passed",
+      "passed_test_count": 80,
+      "interpretation": "The committed projection now joins the active compiler session's declared-versus-selected repository facts with its four outside-selected evidence diagnostics. It presents an explicitly hypothetical, single-session candidate and exact pointers while leaving the source records unverified in that session. The change does not read the outside repository, add a checkout, or claim that the compiler agent was blocked."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_compiler_campaign_evidence_visibility_pressure_20261024",
+      "repository": "mncs-environment",
+      "commit": "fb85a7ade2875849464b19ae0f154b5bffb4f97b",
+      "path": "evidence/environmental-capability/compiler-campaign-evidence-visibility-pressure-20261024.json",
+      "sha256": "92ef37c6f167d9c10dda20cb0f2c56dcbf52ada5142747096d254d89d78340b3"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_workspace_context_pressure_candidate_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "fb85a7ade2875849464b19ae0f154b5bffb4f97b",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "4febd4cc0a5252917e367db089717857e3eefc23dea7a041cd525c18ecb0dba5"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_workspace_context_pressure_candidate_tests_20261024",
+      "repository": "mncs-environment",
+      "commit": "fb85a7ade2875849464b19ae0f154b5bffb4f97b",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "2cefacb5de6f645b2e8a1b681ed659833782d7d6cabd017c71348a208a282ffe"
+    }
+  ],
+  "not_measured": [
+    "whether the repository-selection gap blocked compiler progress",
+    "why mncs-compiler was not selected in this session",
+    "whether the candidate changes later agent actions or outcomes",
+    "recurrence across compiler sessions"
+  ]
+}

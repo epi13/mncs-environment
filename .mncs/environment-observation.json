@@ -1,0 +1,40 @@
+{
+  "name": "mncs-environment-capability-observation",
+  "working_checkout": "current",
+  "workspace_root": "../..",
+  "workspace_scope": {
+    "kind": "workspace",
+    "repositories": [
+      "mncs-environment",
+      "mncs-store",
+      "mncs-rights-provenance",
+      "mncs-system-monitor"
+    ]
+  },
+  "required_capabilities": [],
+  "services": [],
+  "intent": {
+    "goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "repositories": [
+      "mncs-environment"
+    ],
+    "constraints": [
+      "preserve foreign branches and uncommitted work; acquire explicit claims before provider writes",
+      "sample resources only through declared read-only capabilities"
+    ]
+  },
+  "rights_context": {
+    "schema_version": "mncs.environment.rights-context-binding/1",
+    "manifest": "mncs-rights-provenance/RIGHTS.json",
+    "governance_profile": "mncs-rights-provenance/governance/agent-governance.json",
+    "profile_id": "mncs-rights-provenance/native-open@0.1.0",
+    "authority": {
+      "identity": "mncs-environment",
+      "basis": "explicit-environment-owner-binding",
+      "source_ref": ".mncs/environment-observation.json#/rights_context",
+      "scope": ["workspace"]
+    },
+    "external_metadata_authoritative": false,
+    "context_budget_bytes": 8192
+  }
+}

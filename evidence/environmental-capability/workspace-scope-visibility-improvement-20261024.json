@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_workspace_scope_visibility_improvement_20261024",
+  "captured_at": "2026-10-24T22:30:08Z",
+  "measurement_basis": "derived-improvement-link-from-committed-change-and-independent-readback",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-improvement-link-record",
+    "source_interface": "mncs-environment campaign evidence",
+    "request": {
+      "operation": "relate-pressure-implementation-and-verification",
+      "pressure_identity": "ph_environment_workspace_scope_visibility_20261024"
+    },
+    "outcome": {
+      "relationship_recorded": true,
+      "effectiveness_assessment": "not-assessed",
+      "subsequent_observation_status": "not-recorded",
+      "basis": "The projection tests preserve the conditional workspace-alignment diagnostic and bounded outside-selected repository summary; the vertical proof passes; and a read-only query of the active Compiler session shows mncs-compiler declared but not selected alongside four exact source diagnostics. This verifies that the new relationship is observable, not that it reduced work or that the session was blocked."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_workspace_scope_visibility_20261024",
+    "addresses_hypothesis_identity": "ph_environment_workspace_scope_visibility_20261024",
+    "implementation_reference": {
+      "identity": "ev_environment_workspace_scope_visibility_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "ce37e0642b920870df2e827e6755465f669803ce",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "7ec30dbf1258f179aa11762963b86e50cb0255d55ee880044d8c8aac5d2eb2ac"
+    },
+    "verification_observation_identity": "ev_environment_workspace_scope_visibility_live_readback_20261024",
+    "subsequent_observation_identity": null,
+    "basis": "The independently recorded focused test result, Environment vertical proof, and live read-only Compiler projection verify the implementation's behavior. The original scope-discovery gap is exposed with source provenance and explicit uncertainty. Later use is required before judging whether the change improves outcomes.",
+    "not_measured": [
+      "whether future agents use the new scope and evidence-visibility fields",
+      "whether the selected workspace mismatch obstructed the Compiler session",
+      "recurrence across other sessions",
+      "whether this change reduces repeated investigation or enables new compiler work"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_workspace_scope_visibility_pressure_20261024",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_workspace_scope_visibility_live_readback_20261024",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_workspace_scope_visibility_implementation_20261024",
+      "repository": "mncs-environment",
+      "commit": "ce37e0642b920870df2e827e6755465f669803ce",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "7ec30dbf1258f179aa11762963b86e50cb0255d55ee880044d8c8aac5d2eb2ac"
+    }
+  ],
+  "not_measured": [
+    "subsequent environmental effectiveness",
+    "pressure elimination",
+    "independent later-use evidence"
+  ]
+}

@@ -138,6 +138,41 @@ Recurrence describes the selected window;
 `evidence_history_truncated` indicates when it does not cover all available
 history.
 
+When the selected workspace includes a committed Compiler cache-regression
+record, the projection preserves its bounded per-build metrics and separately
+classifies any source-recorded harness or bootstrap measurements under
+`observation.outcome.measurement_summary`. Direct measurements retain their
+phase-specific names; build-job counts remain observed counts; a null cgroup
+peak remains explicitly unavailable in the source record. The source note is
+carried as a qualification, and these process measurements are not attributed
+to the Compiler agent session. Missing token, model, and session resource data
+remain unavailable. This view reports measurements; it creates no resource
+pressure hypothesis by itself.
+
+The same projection exposes a bounded `implementation_accountability` view
+when the authenticated campaign ledger links the exact Compiler
+`native-application-proof/2` digest application record. It resolves the
+recorded source revisions and module paths, then checks each source blob by
+repository, commit, path, and SHA-256 through selected or workspace-read-only
+checkouts. The sample reports the four-module MNCS source closure, the
+compiler-verified build, and successful canonical VM cases. It identifies the
+Rust file-provider harness only as a test adapter because that is how the proof
+describes it. This sample does not inventory production host dependencies or
+establish a migration opportunity. The systemwide native-adoption ratio
+therefore remains `not-measured` until a complete, ownership-verified
+implementation inventory and denominator exist. Missing source campaign or
+agent identity remains unavailable rather than being attributed to the
+Environment projection session.
+
+When Work Intent declares a repository that is not selected, the projection may
+also emit `context_pressure_candidates`. These candidates join the declared
+repository gap with bounded source-visibility diagnostics for that repository.
+They are labeled hypotheses, remain separate from recorded
+`pressure_hypotheses`, and do not establish that work was blocked or that the
+condition recurs. A candidate points to outside-selected sources but does not
+read them or authorize adding the repository; use an authorized session that
+selects the exact checkout when that evidence is needed.
+
 Session activity uses a separate bounded event page. To inspect older events,
 pass the `next_event_before_sequence` cursor from the projection source and
 optionally lower the page size:
@@ -156,6 +191,26 @@ page does not establish absence from the session. Canonical Store reads scan
 the current generation's binding metadata but materialize only the selected
 verified event payloads. Event page reads are on demand and do not copy the
 session transcript.
+
+Session activity keeps authenticated Control read observations distinct from
+Environment-bound capability invocations. If valid Control reads are present
+without Environment invocations, status is `rpc-only-in-session-history`; a
+bounded or incomplete read page uses `partial-rpc-only-in-selected-window`.
+`rpc_operation_records_omitted` counts authenticated valid records beyond the
+projection limit, while invalid events are counted separately and do not imply
+activity or omitted records. A reached capture limit also marks the activity
+view partial. Compact responses retain the per-window considered, returned,
+omitted, and invalid counts so this accounting remains inspectable when the
+projection is size-bounded. These statuses describe the available Environment
+evidence; they do not claim that no other agent or tool activity occurred.
+
+`session_activity.rpc_operation_summary` groups every authenticated valid read
+record in the selected event window by Control operation and outcome, even when
+the detailed event list is capped. Each group keeps a small set of source event
+references; excess groups and their record counts remain explicit. The summary
+is descriptive of the selected window, not a whole-session frequency score, an
+efficiency measure, or a pressure diagnosis. Invalid records are excluded and
+remain visible in the separate invalid count.
 
 The selected page can also expose bounded `authority_denials`: action,
 observed repository when resolvable, normalized reason class, and the exact
@@ -202,6 +257,16 @@ against the selected checkout and retains exact commit/path pointers. Evidence
 in an unselected repository is named but not opened. Results are computed when
 requested; no transcript copy, separate telemetry store, or permanent dashboard
 is created.
+
+The projection compares repository identities in the session Work Intent with
+the selected workspace checkouts and reports declared repositories that are
+not selected. It also summarizes campaign evidence pointers whose source
+repository falls outside the selected session. `outside-selected-session`
+means Environment did not open that source; it does not mean the source is
+missing or corrupt, and it does not prove the agent was blocked. The bounded
+source diagnostics retain exact identities and revisions so an agent can
+decide whether to add read-only context or leave the source outside the current
+environment.
 
 Campaign evidence and current session activity have independent availability.
 If the campaign ledger cannot be read but the session contains authenticated
@@ -351,6 +416,35 @@ another authoritative source records those measurements. An empty truncated
 window is reported as `partial-no-invocations-in-selected-window`; it does not
 assert that the full session history contains no capability calls.
 
+The compact view also relates the current session binding snapshot to observed
+capability calls. `capability_delivery.bindings` reports each bounded binding's
+recorded substrate availability, verification class, observed invocations and
+outcome counts, with exact invocation event references.
+`capabilities_not_in_current_binding_snapshot` preserves calls whose capability
+name is absent from the current snapshot; this may reflect binding changes or
+provider scope and is not itself a failure. Availability transitions retain
+their source event references. The projection labels capability discoverability
+`not-measured`: a binding proves Environment discovery and availability state,
+not that the capability was presented to or understood by the agent.
+Availability probes establish substrate presence, not successful provider
+behavior. Invocation events do not record provider or binding identity, so a
+name match cannot establish the exact provider or contract revision used and
+is ambiguous when multiple current bindings share a capability name. A missing
+invocation means no Environment invocation record in the selected event window,
+unless complete session history is available; it does not account for use
+through external interfaces. These relationships make availability and use
+inspectable without treating an absent record as evidence of poor
+discoverability or usability.
+
+`context_operation_activity` also summarizes authenticated `session.context`
+RPC records. The Environment context implementation returns up to 20 available
+capabilities with total and truncation counts, so a successful operation is
+evidence that the orientation endpoint ran. The RPC event does not retain the
+response fields or establish that the consumer read or acted on them; the view
+keeps response capability-list capture and agent receipt explicitly unmeasured.
+Supporting event references for these counts remain in the adjacent
+`rpc_operation_summary` groups.
+
 When response compaction is needed, each pressure summary retains bounded exact
 evidence references (identity, repository, commit, path, and digest), so an
 agent can inspect the records supporting the hypothesis even when their full
@@ -388,11 +482,28 @@ independent later evidence supports an assessment. A passing test record proves
 that its evidence blob was preserved intact, while its command results remain
 reported evidence rather than an Environment-generated attestation.
 
+Published observation records are content-addressed and are not rewritten when
+a transcription or relation needs correction. A later record can use the
+`mncs.environment.observation-correction/1` contract to point to the exact
+target evidence reference, name corrected fields, and provide their replacement
+values. The first supported fields are `supporting_sources` (which must point
+to selected, integrity-verified evidence) and `not_measured`. The projection
+applies a correction only when the exact target pointer and target record are
+verified, the replacement values differ from the target, and every replacement
+source is verified. It keeps the original record inspectable through its
+evidence reference and exposes the effective values with a link to the
+correction record. A target outside the selected pages remains explicitly
+unresolved; an invalid or conflicting correction is not applied. Corrections
+do not change an improvement relation or effectiveness assessment.
+
 The query considers at most 32 campaign evidence references, reads at most 16
 observation records of 64 KiB each within one 8 second Git-read budget, and
 caps its response at 48 KiB. If a response reaches that bound, operation
 payloads are summarized by digest and the exact evidence pointers remain
-available for inspection.
+available for inspection. Compacted views retain the newest observation and
+improvement-relation records by ledger offset, including when history pages are
+read newest-page-first. `observation_records_compacted_out_count` reports how
+many verified observation summaries did not fit the compact view.
 
 ## What the ambient pass refuses
 

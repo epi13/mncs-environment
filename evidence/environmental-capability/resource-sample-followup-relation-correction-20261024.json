@@ -1,0 +1,104 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_resource_sample_followup_relation_correction_20261024",
+  "captured_at": "2026-10-24T22:54:39Z",
+  "measurement_basis": "append-only-correction-of-verified-environmental-observation",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "append-only-resource-sample-follow-up-record-correction",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "operation": "correct_verified_resource_sample_followup_observation",
+      "target_identity": "ev_environment_resource_sample_followup_relation_20261024",
+      "corrected_field_paths": [
+        "supporting_sources",
+        "not_measured"
+      ]
+    },
+    "outcome": {
+      "status": "correction-recorded",
+      "original_evidence_preserved": true,
+      "improvement_relation_preserved": true,
+      "effectiveness_assessment": "not-assessed",
+      "interpretation": "The immutable relation record contained incomplete source pointers and an unrelated top-level measurement limit. The projection can now expose complete verified citations and the resource sample's actual measurement limits while retaining the original record and relation. This does not establish resource-pressure reduction or empirical effectiveness."
+    }
+  },
+  "not_measured": [
+    "whether independent agent use validates this correction",
+    "whether future resource observations indicate pressure or constrain development",
+    "whether the projection changes subsequent development outcomes"
+  ],
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_resource_sample_followup_relation_20261024",
+      "repository": "mncs-environment",
+      "commit": "7741e481c26f86e9838adffa34753eaa43d2ecea",
+      "path": "evidence/environmental-capability/resource-sample-followup-relation-20261024.json",
+      "sha256": "ca65a13325cfddb120505740045696f131a4f051c7497eaad72d63d9f13bc09f"
+    },
+    "corrected_field_paths": [
+      "supporting_sources",
+      "not_measured"
+    ],
+    "replacement_values": {
+      "supporting_sources": [
+        {
+          "kind": "campaign-evidence-reference",
+          "identity": "ev_environment_resource_sample_live_readback_20261024",
+          "repository": "mncs-environment",
+          "commit": "a5e0debe5f3f9c32446c765d9002c973fe35ed3f",
+          "path": "evidence/environmental-capability/resource-sample-live-readback-20261024.json",
+          "sha256": "b2152e96a01b448da5668f06481237c48bb39261a17259f6e230d673f5086222"
+        },
+        {
+          "kind": "campaign-evidence-reference",
+          "identity": "ev_environment_resource_sample_session_linked_followup_20261024",
+          "repository": "mncs-environment",
+          "commit": "7741e481c26f86e9838adffa34753eaa43d2ecea",
+          "path": "evidence/environmental-capability/resource-sample-session-linked-followup-20261024.json",
+          "sha256": "0cb1741955f975192a3ec286b1bc20c3b0ee9b1af9b5cd97add3cee2f1e2fd7c"
+        },
+        {
+          "kind": "campaign-evidence-reference",
+          "identity": "ev_environment_resource_sample_projection_implementation_20261024",
+          "repository": "mncs-environment",
+          "commit": "ba3dfe9c30b54c4a8755ee4c7af8bb3df4bfb33b",
+          "path": "mncs_env/capability_intelligence.py",
+          "sha256": "8ae124d6c90636cff66485ead6a304241786b288c37c07e72190df93b05b771d"
+        },
+        {
+          "kind": "campaign-evidence-reference",
+          "identity": "ev_environment_observation_correction_projection_implementation_20261024",
+          "repository": "mncs-environment",
+          "commit": "bad8448abdd06fba02f941e6723898fb035d77c9",
+          "path": "mncs_env/capability_intelligence.py",
+          "sha256": "070b032bf203aab888be15a1f88cbe25b5775b65efa293feba7ea04465e89ce4"
+        }
+      ],
+      "not_measured": [
+        "resource consumption attributable to this agent or its child processes",
+        "CPU utilization for this sample",
+        "whether any other samples differ across this session or campaign",
+        "Btrfs data or metadata allocation headroom",
+        "whether the host conditions constrained any development operation"
+      ]
+    },
+    "reason": "The original record is content-addressed and remains unchanged; this correction adds complete evidence pointers and replaces an unrelated workstream completion phrase with the resource sample's stated measurement limits."
+  }
+}

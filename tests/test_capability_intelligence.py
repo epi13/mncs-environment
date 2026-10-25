@@ -165,6 +165,119 @@ def _add_compiler_dependency_summary_evidence(
     return reference
 
 
+def _add_compiler_native_application_proof_evidence(
+    session, state: dict, *, failed_case: bool = False,
+) -> dict[str, str]:
+    root = Path(session.snapshot["workspace"]["root"])
+    sources = []
+    revisions = {}
+    for module, repository, relative, revision_field in (
+        capability_intelligence.COMPILER_NATIVE_APPLICATION_MODULES
+    ):
+        checkout = root / repository
+        if not checkout.exists():
+            checkout.mkdir()
+            _git(checkout, "init", "--quiet")
+            _git(checkout, "config", "user.name", "test")
+            _git(checkout, "config", "user.email", "test@example.invalid")
+        path = checkout / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"module {module}\n", encoding="utf-8")
+        _git(checkout, "add", relative)
+        _git(checkout, "commit", "--quiet", "-m", f"add {module} source")
+        revision = _git(checkout, "rev-parse", "HEAD")
+        revisions[revision_field] = revision
+        sources.append({
+            "module": module,
+            "path": str(path),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        })
+        session.snapshot["selected_checkouts"][repository] = {
+            "path": str(checkout),
+        }
+
+    artifact_identity = "sha256:" + "e" * 64
+    cases = []
+    for index in range(3):
+        output_digest = f"{index + 1:x}" * 64
+        cases.append({
+            "case_index": index,
+            "artifact_identity": artifact_identity,
+            "application_exit": {"exit_code": 1 if failed_case and index == 0 else 0},
+            "effect_operations": ["structured_read", "structured_write"],
+            "effect_outcomes": ["completed", "completed"],
+            "output_sha256": output_digest,
+            "stage0_output_sha256": output_digest,
+        })
+    report = {
+        "schema_version": capability_intelligence.COMPILER_NATIVE_APPLICATION_PROOF_SCHEMA,
+        "created_at": "2026-10-18T10:28:51.441053+00:00",
+        "objective": "Execute the real MNCS test digest application through the canonical VM provider boundary",
+        "producer": {
+            "compiler_revision": "a" * 40,
+            "language_revision": "b" * 40,
+            "stdlib_revision": revisions["stdlib_revision"],
+            "test_revision": revisions["test_revision"],
+        },
+        "application": {
+            "entry": capability_intelligence.COMPILER_NATIVE_APPLICATION_ENTRY,
+            "required_capability": "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact",
+            "runtime_dispatch_alias": "test_artifact",
+            "module_sources": sources,
+        },
+        "build": {
+            "artifact_identity": artifact_identity,
+            "cache": {
+                "publication": "stored",
+                "verification_work": {
+                    "front_end_outcome": "verified",
+                    "resolved_module_count": len(sources),
+                },
+            },
+        },
+        "execution": {
+            "exact_result_agreement": True,
+            "capability_admission": {
+                "authorized_capability_identity": (
+                    "mncs:0.2:capability:mncs.test.digest::digest_app::test_artifact"
+                ),
+                "runtime_dispatch_alias": "test_artifact",
+            },
+            "canonical_vm_cases": cases,
+        },
+        "limitations": [
+            "The file provider is a bounded test adapter for the canonical VM Provider API; it is not a production MNCS service provider.",
+            "The provider harness is a separate Rust test program in the Compiler repository; it performs bounded structured file transport.",
+        ],
+    }
+    compiler = root / "mncs-compiler"
+    if not compiler.exists():
+        compiler.mkdir()
+        _git(compiler, "init", "--quiet")
+        _git(compiler, "config", "user.name", "test")
+        _git(compiler, "config", "user.email", "test@example.invalid")
+    relative_proof = capability_intelligence.COMPILER_NATIVE_APPLICATION_PROOF_PATH
+    proof_path = compiler / relative_proof
+    proof_path.parent.mkdir(parents=True, exist_ok=True)
+    raw = json.dumps(report, sort_keys=True, separators=(",", ":")).encode()
+    proof_path.write_bytes(raw)
+    _git(compiler, "add", relative_proof)
+    _git(compiler, "commit", "--quiet", "-m", "compiler native application proof")
+    reference = {
+        "identity": capability_intelligence.COMPILER_NATIVE_APPLICATION_PROOF_IDENTITY,
+        "repository": "mncs-compiler",
+        "commit": _git(compiler, "rev-parse", "HEAD"),
+        "path": relative_proof,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+    session.snapshot["selected_checkouts"]["mncs-compiler"] = {
+        "path": str(compiler),
+    }
+    state["evidence"].append(reference)
+    state["evidence_count"] = len(state["evidence"])
+    return reference
+
+
 def _add_compiler_source_context(
     session, state: dict, source_reference: dict[str, str], *,
     identity: str = "ev_environment_compiler_source_context",
@@ -343,6 +456,579 @@ def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_
     assert result["observations"][0]["supporting_sources"][1][
         "content_integrity_status"
     ] == "captured-in-observation-record"
+
+
+def test_project_links_unselected_work_intent_repository_to_evidence_visibility(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_work_scope_alignment",
+        "ses_compiler_scope_alignment",
+        "cmp_compiler_scope_alignment",
+    )
+    outside_reference = {
+        "identity": "ev_environment_compiler_source_outside_selection",
+        "repository": "mncs-compiler",
+        "commit": "a" * 40,
+        "path": "evidence/environmental-capability/compiler-observation.json",
+        "sha256": "b" * 64,
+    }
+    session, _state = _session(
+        tmp_path, [record], extra_refs=[outside_reference],
+    )
+    session.snapshot["intent"]["repositories"] = ["mncs-compiler"]
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["subject"]["workspace_alignment"] == {
+        "status": "declared-repositories-not-selected",
+        "declared_repositories": ["mncs-compiler"],
+        "selected_repositories": ["mncs-environment"],
+        "unselected_declared_repositories": ["mncs-compiler"],
+        "basis": "session-work-intent-and-selected-checkout-identities",
+    }
+    assert result["source"]["evidence_visibility"] == {
+        "status": "outside-selected-session-references-observed",
+        "verification_diagnostic_count": 1,
+        "outside_selected_reference_diagnostic_count": 1,
+        "outside_selected_repositories": [
+            {"repository": "mncs-compiler", "diagnostic_count": 1},
+        ],
+        "diagnostics_truncated": False,
+        "basis": "bounded-campaign-evidence-source-verification-diagnostics",
+    }
+    assert result["source"]["observation_reference_diagnostics"][0][
+        "verification"
+    ] == "outside-selected-session"
+    assert result["context_pressure_candidate_count"] == 1
+    candidate = result["context_pressure_candidates"][0]
+    assert candidate["kind"] == "declared-repository-selection-gap"
+    assert candidate["interpretation"] == "hypothesis"
+    assert candidate["recurrence_status"] == "not-established"
+    assert candidate["affected_repository"] == "mncs-compiler"
+    assert candidate["basis"]["outside_selected_reference_count"] == 1
+    assert candidate["evidence_references"][0]["identity"] == (
+        "ev_environment_compiler_source_outside_selection"
+    )
+    assert candidate["evidence_references"][0]["verification"] == (
+        "outside-selected-session"
+    )
+    assert "authorized session" in candidate["recommendation"]
+
+    compact = capability_intelligence.project(session, max_result_bytes=6_000)
+    assert compact["subject"]["workspace_alignment"][
+        "unselected_declared_repositories"
+    ] == ["mncs-compiler"]
+    assert compact["source"]["evidence_visibility"][
+        "outside_selected_repositories"
+    ] == [{"repository": "mncs-compiler", "diagnostic_count": 1}]
+    assert compact["context_pressure_candidate_count"] == 1
+    assert compact["context_pressure_candidates"][0]["evidence_references"][0][
+        "identity"
+    ] == "ev_environment_compiler_source_outside_selection"
+
+
+def test_project_omits_diagnostics_when_work_intent_repositories_are_aligned(
+    tmp_path: Path,
+) -> None:
+    session, _state = _session(tmp_path, [])
+    session.snapshot["intent"]["repositories"] = ["mncs-environment"]
+
+    result = capability_intelligence.project(session)
+
+    assert "workspace_alignment" not in result["subject"]
+    assert "evidence_visibility" not in result["source"]
+    assert result.get("context_pressure_candidate_count", 0) == 0
+    assert result.get("context_pressure_candidates", []) == []
+
+
+def test_live_compiler_scope_records_link_evidence_and_preserve_uncertainty(
+    tmp_path: Path,
+) -> None:
+    evidence_dir = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability"
+    )
+    identities = (
+        "workspace-scope-visibility-pressure-20261024",
+        "workspace-scope-visibility-live-readback-20261024",
+        "workspace-scope-visibility-improvement-20261024",
+        "workspace-scope-campaign-projection-readback-20261024",
+    )
+    records = [
+        json.loads((evidence_dir / f"{identity}.json").read_text(encoding="utf-8"))
+        for identity in identities
+    ]
+    outside_refs = [
+        {
+            "identity": "ev_compiler_language_fact_reuse_workload_20261023",
+            "repository": "mncs-compiler",
+            "commit": "e2924f6d602a122de1121aa273eb24f9795784bc",
+            "path": "evidence/language-verification-dependency-summary-cache-20261023T064052.991817Z.json",
+            "sha256": "128d4115ddb614cbe249523f162ae711bba5ca990e98dc21ac3b96cd78f1185d",
+        },
+        {
+            "identity": "ev_compiler_digest_application_interface_invalidation_20261023",
+            "repository": "mncs-compiler",
+            "commit": "c9d54cdfcf8c03fce0a1a904d32e147d7f287a9d",
+            "path": "evidence/language-module-interface-application-invalidation-compiler-20261023.json",
+            "sha256": "ce67f0ff837bba0ff73301cb398198da5ff9125e8fe8cb75c45c5f26a1715177",
+        },
+        {
+            "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+            "repository": "mncs-compiler",
+            "commit": "e874669dbd110c5a5f808249c20a086013d7e2be",
+            "path": "evidence/language-module-generic-specialization-application-invalidation-compiler-20261023.json",
+            "sha256": "54472426b85dd4cc4a1d2c327faf783490c96826a5d2876067344dff22324b4e",
+        },
+        {
+            "identity": "ev_compiler_digest_application_effect_capability_invalidation_20261024",
+            "repository": "mncs-compiler",
+            "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+            "path": "evidence/native-app-readiness-effect-capability-fact-invalidation-20261024.json",
+            "sha256": "8d3c3ec91b9166a88b2a5e3c98c8631b3f0a098dfa7028c095cf3a8769dc9f12",
+        },
+    ]
+    session, _state = _session(tmp_path, records, extra_refs=outside_refs)
+    session.snapshot["intent"]["repositories"] = ["mncs-compiler"]
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["source"]["observation_records_verified"] == 4
+    assert result["subject"]["workspace_alignment"][
+        "unselected_declared_repositories"
+    ] == ["mncs-compiler"]
+    assert result["source"]["evidence_visibility"][
+        "outside_selected_reference_diagnostic_count"
+    ] == 4
+    hypothesis = next(
+        item for item in result["pressure_hypotheses"]
+        if item["identity"] == "ph_environment_workspace_scope_visibility_20261024"
+    )
+    assert hypothesis["observation_count"] == 1
+    relation = next(
+        item for item in result["improvement_relations"]
+        if item["identity"] == "im_environment_workspace_scope_visibility_20261024"
+    )
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["effectiveness_assessment"] == "not-assessed"
+    assert relation["subsequent_record_status"] == "not-recorded"
+
+
+def test_resource_sample_followup_links_distinct_session_without_claiming_effectiveness(
+    tmp_path: Path,
+) -> None:
+    evidence_dir = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability"
+    )
+    names = (
+        "resource-sample-live-readback-20261024",
+        "resource-sample-session-linked-followup-20261024",
+        "resource-sample-followup-relation-20261024",
+    )
+    records = [
+        json.loads((evidence_dir / f"{name}.json").read_text(encoding="utf-8"))
+        for name in names
+    ]
+    session, _state = _session(tmp_path, records)
+
+    result = capability_intelligence.project(session)
+
+    assert result["source"]["observation_records_verified"] == 3
+    followup = next(
+        item for item in result["observations"]
+        if item["identity"] == "ev_environment_resource_sample_session_linked_followup_20261024"
+    )
+    assert followup["observation"]["outcome"]["event_correlation_status"] == (
+        "matched-by-provider-request-id"
+    )
+    relation = next(
+        item for item in result["improvement_relations"]
+        if item["identity"] == "im_environment_monitor_resource_samples_followup_20261024"
+    )
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["subsequent_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["effectiveness_assessment"] == "not-assessed"
+
+
+def test_append_only_correction_requires_exact_verified_observation_pointer(
+    tmp_path: Path,
+) -> None:
+    def project_correction(root: Path, *, corrupt_target_digest: bool):
+        target = _observation(
+            "ev_environment_correctable_followup_relation",
+            "ses_environment_followup",
+            "cmp_environment_followup",
+        )
+        target["pressure_hypothesis"]["identity"] = "ph_environment_correctable_record"
+        implementation = {
+            "identity": "ev_environment_correctable_implementation",
+            "repository": "mncs-environment",
+            "commit": "c" * 40,
+            "path": "mncs_env/capability_intelligence.py",
+            "sha256": "d" * 64,
+        }
+        target["improvement_relation"] = {
+            "identity": "im_environment_relation_original",
+            "addresses_hypothesis_identity": "ph_environment_correctable_record",
+            "implementation_reference": implementation,
+            "verification_observation_identity": "ev_environment_correction_verification",
+            "subsequent_observation_identity": "ev_environment_correction_followup",
+            "basis": "Original relation with incomplete source metadata.",
+            "not_measured": ["original measurement limitation"],
+        }
+        target["supporting_sources"] = [{
+            "kind": "campaign-evidence-reference",
+            "identity": "ev_environment_identity_only_source",
+            "repository": "mncs-environment",
+        }]
+        target["not_measured"] = [
+            "empirical elimination of an unrelated evidence visibility pressure",
+        ]
+        verification = _observation(
+            "ev_environment_correction_verification",
+            "ses_environment_followup",
+            "cmp_environment_followup",
+        )
+        verification.pop("pressure_hypothesis")
+        followup = _observation(
+            "ev_environment_correction_followup",
+            "ses_environment_followup",
+            "cmp_environment_followup",
+        )
+        followup.pop("pressure_hypothesis")
+        session, state = _session(root, [target, verification, followup])
+        checkout = Path(session.snapshot["selected_checkouts"][
+            "mncs-environment"
+        ]["path"])
+        implementation_path = checkout / "mncs_env/capability_intelligence.py"
+        implementation_path.parent.mkdir(parents=True, exist_ok=True)
+        implementation_bytes = b"verified environmental projection implementation\n"
+        implementation_path.write_bytes(implementation_bytes)
+        _git(checkout, "add", "mncs_env/capability_intelligence.py")
+        _git(checkout, "commit", "--quiet", "-m", "implementation source")
+        implementation_source = {
+            "identity": "ev_environment_correction_implementation_source",
+            "repository": "mncs-environment",
+            "commit": _git(checkout, "rev-parse", "HEAD"),
+            "path": "mncs_env/capability_intelligence.py",
+            "sha256": hashlib.sha256(implementation_bytes).hexdigest(),
+        }
+        state["evidence"].append(implementation_source)
+        state["evidence_count"] = len(state["evidence"])
+        target_reference = dict(state["evidence"][0])
+        if corrupt_target_digest:
+            target_reference["sha256"] = "e" * 64
+
+        correction = _observation(
+            "ev_environment_corrected_followup_relation",
+            "ses_environment_correction",
+            "cmp_environment_followup",
+        )
+        correction.pop("pressure_hypothesis")
+        correction["record_correction"] = {
+            "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+            "target_reference": target_reference,
+            "corrected_field_paths": [
+                "supporting_sources",
+                "not_measured",
+            ],
+            "replacement_values": {
+                "supporting_sources": [
+                    {"kind": "campaign-evidence-reference", **state["evidence"][1]},
+                    {"kind": "campaign-evidence-reference", **state["evidence"][2]},
+                    {"kind": "campaign-evidence-reference", **state["evidence"][3]},
+                ],
+                "not_measured": [
+                    "resource consumption attributable to this agent or child processes",
+                    "CPU utilization for this sample",
+                    "whether samples differ across this session or campaign",
+                    "whether host conditions constrained a development operation",
+                ],
+            },
+            "reason": "Replace incomplete source identities and a copied measurement limit.",
+        }
+        relative = "evidence/environmental-capability/correction.json"
+        raw = json.dumps(
+            correction, sort_keys=True, separators=(",", ":"),
+        ).encode()
+        correction_path = Path(session.snapshot["selected_checkouts"][
+            "mncs-environment"
+        ]["path"]) / relative
+        correction_path.write_bytes(raw)
+        _git(correction_path.parents[2], "add", relative)
+        _git(correction_path.parents[2], "commit", "--quiet", "-m", "correction record")
+        correction_reference = {
+            "identity": correction["identity"],
+            "repository": "mncs-environment",
+            "commit": _git(correction_path.parents[2], "rev-parse", "HEAD"),
+            "path": relative,
+            "sha256": hashlib.sha256(raw).hexdigest(),
+        }
+        state["evidence"].append(correction_reference)
+        state["evidence_count"] = len(state["evidence"])
+        return capability_intelligence.project(session)
+
+    verified = project_correction(tmp_path / "verified", corrupt_target_digest=False)
+
+    assert verified["status"] == "ready"
+    assert verified["source"]["record_corrections_applied_count"] == 1
+    assert verified["source"]["record_corrections_unverified_count"] == 0
+    corrected = next(
+        item for item in verified["observations"]
+        if item["identity"] == "ev_environment_corrected_followup_relation"
+    )
+    assert corrected["record_correction"]["status"] == (
+        "applied-to-verified-target"
+    )
+    original = next(
+        item for item in verified["observations"]
+        if item["identity"] == "ev_environment_correctable_followup_relation"
+    )
+    assert original["record_correction"]["status"] == (
+        "corrected-by-verified-record"
+    )
+    assert original["improvement_relation_status"] == "validated"
+    assert original["measurement_limits"] == [
+        "resource consumption attributable to this agent or child processes",
+        "CPU utilization for this sample",
+        "whether samples differ across this session or campaign",
+        "whether host conditions constrained a development operation",
+    ]
+    assert [item["status"] for item in original["supporting_sources"]] == [
+        "verified", "verified", "not-an-environmental-observation",
+    ]
+    assert all(
+        item["content_integrity_status"]
+        in capability_intelligence.SOURCE_INTEGRITY_VERIFIED
+        for item in original["supporting_sources"]
+    )
+    assert [item["identity"] for item in verified["improvement_relations"]] == [
+        "im_environment_relation_original",
+    ]
+    relation = verified["improvement_relations"][0]
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["subsequent_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["effectiveness_assessment"] == "not-assessed"
+    compact = capability_intelligence._compact_projection(
+        verified, 100_000, 24_000,
+    )
+    compact_original = next(
+        item for item in compact["observations"]
+        if item["identity"] == "ev_environment_correctable_followup_relation"
+    )
+    assert compact_original["record_correction"]["replacement_values"][
+        "not_measured"
+    ] == original["measurement_limits"]
+    assert compact_original["record_correction"][
+        "correction_evidence_reference"
+    ]["identity"] == "ev_environment_corrected_followup_relation"
+
+    mismatched = project_correction(
+        tmp_path / "mismatched", corrupt_target_digest=True,
+    )
+
+    assert mismatched["status"] == "partial"
+    assert mismatched["source"]["record_corrections_applied_count"] == 0
+    assert mismatched["source"]["record_corrections_unverified_count"] == 1
+    rejected = next(
+        item for item in mismatched["observations"]
+        if item["identity"] == "ev_environment_corrected_followup_relation"
+    )
+    assert rejected["record_correction"]["status"] == "target-reference-mismatch"
+    mismatched_original = next(
+        item for item in mismatched["observations"]
+        if item["identity"] == "ev_environment_correctable_followup_relation"
+    )
+    assert mismatched_original["measurement_limits"] == [
+        "empirical elimination of an unrelated evidence visibility pressure",
+    ]
+    assert mismatched_original["supporting_sources"][0][
+        "content_integrity_status"
+    ] == "source-reference-invalid"
+    assert [item["identity"] for item in mismatched["improvement_relations"]] == [
+        "im_environment_relation_original",
+    ]
+
+
+def test_append_only_evidence_reference_correction_recovers_exact_record(
+    tmp_path: Path,
+) -> None:
+    def project_pointer_correction(root: Path, *, corrupt_target_digest: bool):
+        target = _observation(
+            "ev_environment_pointer_correctable",
+            "ses_environment_pointer_correction",
+            "cmp_environment_pointer_correction",
+        )
+        session, state = _session(root, [target])
+        original_reference = dict(state["evidence"][0])
+        unavailable_reference = {**original_reference, "commit": "f" * 40}
+        state["evidence"][0] = unavailable_reference
+
+        target_reference = dict(unavailable_reference)
+        replacement_reference = dict(original_reference)
+        if corrupt_target_digest:
+            target_reference["sha256"] = "e" * 64
+            replacement_reference["sha256"] = "e" * 64
+
+        correction = _observation(
+            "ev_environment_pointer_correction",
+            "ses_environment_pointer_correction",
+            "cmp_environment_pointer_correction",
+        )
+        correction.pop("pressure_hypothesis")
+        correction["observation"]["kind"] = "campaign-evidence-pointer-correction"
+        correction["evidence_reference_correction"] = {
+            "schema_version": (
+                capability_intelligence.EVIDENCE_REFERENCE_CORRECTION_SCHEMA
+            ),
+            "target_reference": target_reference,
+            "replacement_reference": replacement_reference,
+            "reason": "Correct the recorded commit while preserving exact observation bytes.",
+        }
+        relative = "evidence/environmental-capability/pointer-correction.json"
+        raw = json.dumps(
+            correction, sort_keys=True, separators=(",", ":"),
+        ).encode()
+        checkout = Path(session.snapshot["selected_checkouts"][
+            "mncs-environment"
+        ]["path"])
+        correction_path = checkout / relative
+        correction_path.write_bytes(raw)
+        _git(checkout, "add", relative)
+        _git(checkout, "commit", "--quiet", "-m", "append-only pointer correction")
+        state["evidence"].append({
+            "identity": correction["identity"],
+            "repository": "mncs-environment",
+            "commit": _git(checkout, "rev-parse", "HEAD"),
+            "path": relative,
+            "sha256": hashlib.sha256(raw).hexdigest(),
+        })
+        state["evidence_count"] = len(state["evidence"])
+        return capability_intelligence.project(session)
+
+    recovered = project_pointer_correction(
+        tmp_path / "recovered", corrupt_target_digest=False,
+    )
+    assert recovered["status"] == "ready"
+    assert recovered["source"]["observation_records_unavailable"] == 0
+    assert recovered["source"]["evidence_reference_correction_count"] == 1
+    assert recovered["source"]["evidence_reference_corrections_applied_count"] == 1
+    assert recovered["source"]["evidence_reference_corrections_unverified_count"] == 0
+    corrected_target = next(
+        item for item in recovered["observations"]
+        if item["identity"] == "ev_environment_pointer_correctable"
+    )
+    assert corrected_target["evidence_reference"]["commit"] != "f" * 40
+    assert corrected_target["evidence_reference_correction"]["status"] == (
+        "recovered-from-append-only-correction"
+    )
+    assert corrected_target["evidence_reference_correction"][
+        "recorded_reference"
+    ]["commit"] == "f" * 40
+    correction_view = next(
+        item for item in recovered["observations"]
+        if item["identity"] == "ev_environment_pointer_correction"
+    )
+    assert correction_view["evidence_reference_correction"]["status"] == (
+        "applied-to-exact-unavailable-target"
+    )
+    compact = capability_intelligence._compact_projection(
+        recovered, 100_000, 24_000,
+    )
+    compact_target = next(
+        item for item in compact["observations"]
+        if item["identity"] == "ev_environment_pointer_correctable"
+    )
+    assert compact_target["evidence_reference_correction"]["status"] == (
+        "recovered-from-append-only-correction"
+    )
+    assert compact["source"]["evidence_reference_corrections_applied_count"] == 1
+
+    mismatched = project_pointer_correction(
+        tmp_path / "mismatched", corrupt_target_digest=True,
+    )
+    assert mismatched["status"] == "partial"
+    assert mismatched["source"]["observation_records_unavailable"] == 1
+    assert mismatched["source"]["evidence_reference_corrections_applied_count"] == 0
+    assert mismatched["source"]["evidence_reference_corrections_unverified_count"] == 1
+    mismatched_correction = next(
+        item for item in mismatched["observations"]
+        if item["identity"] == "ev_environment_pointer_correction"
+    )
+    assert mismatched_correction["evidence_reference_correction"]["status"] == (
+        "target-reference-mismatch"
+    )
+
+
+def test_compact_projection_retains_newest_observation_tail(tmp_path: Path) -> None:
+    identities = [f"ev_environment_compact_tail_{index:02d}" for index in range(10)]
+    record = _observation(
+        identities[0], "ses_compact_tail", "cmp_compact_tail",
+    )
+    session, _state = _session(tmp_path, [record])
+
+    full = capability_intelligence.project(
+        session, max_result_bytes=capability_intelligence.MAX_RESULT_BYTES,
+    )
+    base_observation = full["observations"][0]
+    full["observations"] = [
+        {
+            **base_observation,
+            "identity": identity,
+            "evidence_reference": {
+                **base_observation["evidence_reference"],
+                "identity": identity,
+                "path": f"evidence/environmental-capability/compact-tail-{index}.json",
+            },
+        }
+        for index, identity in enumerate(identities)
+    ]
+    full["observation_count"] = len(identities)
+    full["source"]["observation_records_considered"] = len(identities)
+    full["source"]["observation_records_verified"] = len(identities)
+    # Multi-page reads visit the newest page before older pages. Compacting
+    # must still rank records by their absolute ledger offsets.
+    full["observations"] = full["observations"][5:] + full["observations"][:5]
+    full["source"]["evidence_history_observation_budgets_by_page"] = [
+        {
+            "offset": 5,
+            "selected_observation_reference_identities": identities[5:],
+        },
+        {
+            "offset": 0,
+            "selected_observation_reference_identities": identities[:5],
+        },
+    ]
+    compact = capability_intelligence._compact_projection(
+        full, 100_000, 100_000,
+    )
+    compact_identities = [item["identity"] for item in compact["observations"]]
+
+    assert compact_identities == identities[-8:]
+    assert compact["source"]["observation_records_compacted_out_count"] == 2
+
+    compact_bytes = len(json.dumps(compact, ensure_ascii=False, sort_keys=True).encode())
+    tight = capability_intelligence._compact_projection(
+        full, 100_000, compact_bytes - 1,
+    )
+    tight_identities = [item["identity"] for item in tight["observations"]]
+
+    assert tight_identities[-1] == identities[-1]
+    assert tight["source"]["observation_records_compacted_out_count"] == (
+        len(identities) - len(tight_identities)
+    )
 
 
 def test_project_exposes_verified_campaign_objective_separately_from_work_intent(
@@ -616,8 +1302,37 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
         "cmp_compiler_activity",
     )
     session, _ = _session(tmp_path, [record])
+    session.snapshot["bindings"] = [
+        {
+            "binding_id": "cap_compiler_build",
+            "provider": "mncs-compiler",
+            "capability": "mncs-compiler:build",
+            "availability": {
+                "status": "available", "verification": "substrate",
+                "observed_at": "2026-10-24T01:00:00Z",
+            },
+        },
+        {
+            "binding_id": "cap_compiler_inspect",
+            "provider": "mncs-compiler",
+            "capability": "mncs-compiler:inspect",
+            "availability": {
+                "status": "unavailable", "verification": "substrate",
+                "observed_at": "2026-10-24T01:00:00Z",
+            },
+        },
+    ]
     request_id = "req_compiler_activity"
     events = [
+        {
+            "identity": "evt_capability_available_1", "sequence": 10,
+            "type": "capability.available", "producer": "environment",
+            "observed_at": "2026-10-24T00:59:59Z",
+            "payload": {
+                "capability": "mncs-compiler:build",
+                "provider": "mncs-compiler", "previous": "unknown",
+            },
+        },
         {
             "identity": "evt_capability_invoked_1", "sequence": 11,
             "type": "capability.invoked", "producer": "local-agent",
@@ -674,7 +1389,62 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
         "invocation_count": 2,
         "completion_count": 1,
         "outcome_status_counts": {"failed": 1},
+        "supporting_events": [
+            {"identity": "evt_capability_invoked_2", "sequence": 13,
+             "type": "capability.invoked",
+             "observed_at": "2026-10-24T01:01:00Z"},
+            {"identity": "evt_capability_invoked_1", "sequence": 11,
+             "type": "capability.invoked",
+             "observed_at": "2026-10-24T01:00:00Z"},
+        ],
     }]
+    delivery = activity["capability_delivery"]
+    assert delivery["status"] == "ready"
+    assert delivery["binding_count"] == 2
+    assert delivery["availability_counts"] == {"available": 1, "unavailable": 1}
+    assert delivery["discoverability_status"] == "not-measured"
+    build = next(
+        item for item in delivery["bindings"]
+        if item["capability"] == "mncs-compiler:build"
+    )
+    assert build["availability_status"] == "available"
+    assert build["use_observation_status"] == "invoked-in-selected-event-window"
+    assert build["invocation_count"] == 2
+    assert build["outcome_status_counts"] == {"failed": 1}
+    assert build["provider_attribution"] == (
+        "capability-name-match-only; provider-and-binding-identity-unavailable"
+    )
+    assert build["supporting_events"][0]["identity"] == "evt_capability_invoked_2"
+    assert build["availability_event_references"][0]["identity"] == (
+        "evt_capability_available_1"
+    )
+    assert delivery["availability_transition_events"][0]["event_reference"][
+        "identity"
+    ] == "evt_capability_available_1"
+    inspect = next(
+        item for item in delivery["bindings"]
+        if item["capability"] == "mncs-compiler:inspect"
+    )
+    assert inspect["availability_status"] == "unavailable"
+    assert inspect["use_observation_status"] == (
+        "no-environment-invocation-record-in-session-history"
+    )
+    compact = capability_intelligence._compact_projection(
+        result, 100_000, capability_intelligence.MAX_RESULT_BYTES,
+    )
+    assert compact["session_activity"]["capabilities"][0]["supporting_events"][0][
+        "identity"
+    ] == "evt_capability_invoked_2"
+    assert compact["session_activity"]["capability_delivery"][
+        "discoverability_status"
+    ] == "not-measured"
+    compact_build = next(
+        item for item in compact["session_activity"]["capability_delivery"]["bindings"]
+        if item["capability"] == "mncs-compiler:build"
+    )
+    assert compact_build["availability_event_references"][0]["identity"] == (
+        "evt_capability_available_1"
+    )
     assert "private-source-path" not in json.dumps(activity)
     assert any("token usage" in item for item in activity["measurement_limits"])
 
@@ -1074,15 +1844,29 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     )
     record["observation"]["outcome"]["bounded_context"] = "x" * 8_000
     session, _ = _session(tmp_path, [record])
-    session.snapshot["rpc_read_activity_count"] = 3
+    session.snapshot["rpc_read_activity_count"] = 4
+    session.snapshot["bindings"] = [{
+        "binding_id": "cap_projection_context_test",
+        "provider": "mncs-test",
+        "capability": "mncs-test:run",
+        "availability": {
+            "status": "available", "verification": "substrate",
+            "observed_at": "2026-10-24T01:00:00Z",
+        },
+    }]
     events = []
-    for sequence, outcome in ((21, "failed"), (22, "failed"), (23, "succeeded")):
+    for sequence, operation, outcome, exit_code, failure_code in (
+        (21, "session.inspect", "failed", 2, "ENVIRONMENT_SESSION_MISSING"),
+        (22, "session.inspect", "failed", None, "ENVIRONMENT_SESSION_MISSING"),
+        (23, "campaign.state", "succeeded", 0, None),
+        (24, "session.context", "succeeded", 0, None),
+    ):
         payload = {
             "schema_version": "mncs.environment.rpc-read-activity/1",
-            "operation": "session.inspect" if sequence < 23 else "campaign.state",
+            "operation": operation,
             "outcome_status": outcome,
-            "exit_code": 2 if outcome == "failed" else 0,
-            "failure_code": "ENVIRONMENT_SESSION_MISSING" if outcome == "failed" else None,
+            "exit_code": exit_code,
+            "failure_code": failure_code,
             "observation_ordinal": sequence - 20,
             "request_id": f"req_rpc_read_{sequence}",
             "request_digest": hashlib.sha256(
@@ -1135,7 +1919,7 @@ def test_session_activity_correlates_authenticated_control_read_operations(
         "authenticated_principal_id": "ctrl_" + "f" * 32,
     }
     events.append({
-        "identity": "evt_rpc_read_spoofed", "sequence": 24,
+        "identity": "evt_rpc_read_spoofed", "sequence": 25,
         "type": "environment.rpc.read_observed",
         "producer": "mncs-control-mcp", "payload": untrusted_payload,
     })
@@ -1147,18 +1931,46 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     activity = result["session_activity"]
 
     assert activity["context"]["work_intent_goal"] == "inspect current pressures"
-    assert activity["source"]["rpc_operation_capture_count"] == 3
+    assert activity["status"] == "rpc-only-in-session-history"
+    assert activity["source"]["rpc_operation_capture_count"] == 4
     assert activity["source"]["rpc_operation_capture_limit"] == 256
     assert activity["source"]["rpc_operation_records_invalid"] == 1
+    assert activity["source"]["rpc_operation_records_omitted"] == 0
     assert activity["source"]["rpc_operation_context_basis"] == {
         "repository_identity": "control-project-grant",
         "repository_branch_and_head": "session-selected-checkout",
         "environment_campaign_and_work_intent": "session-snapshot",
         "live_repository_probe": False,
     }
-    assert activity["rpc_operation_count"] == 3
+    assert activity["rpc_operation_count"] == 4
+    failed_operations = {
+        item["event_reference"]["identity"]: item
+        for item in activity["rpc_operations"]
+        if item["outcome_status"] == "failed"
+    }
+    assert failed_operations["evt_rpc_read_21"]["exit_code"] == 2
+    assert "exit_code" not in failed_operations["evt_rpc_read_22"]
+    assert failed_operations["evt_rpc_read_22"]["failure_code"] == (
+        "ENVIRONMENT_SESSION_MISSING"
+    )
+    summary = activity["rpc_operation_summary"]
+    assert summary["scope"] == "authenticated-records-in-selected-event-window"
+    assert summary["record_count"] == 4
+    assert summary["group_count"] == 3
+    assert summary["groups_omitted"] == 0
+    assert [
+        (group["operation"], group["outcome_status"], group["occurrence_count"])
+        for group in summary["groups"]
+    ] == [
+        ("campaign.state", "succeeded", 1),
+        ("session.context", "succeeded", 1),
+        ("session.inspect", "failed", 2),
+    ]
+    assert [event["identity"] for event in summary["groups"][2]["supporting_events"]] == [
+        "evt_rpc_read_21", "evt_rpc_read_22",
+    ]
     assert activity["rpc_operations"][0]["event_reference"]["identity"] == (
-        "evt_rpc_read_23"
+        "evt_rpc_read_24"
     )
     assert activity["rpc_operations"][0]["context"]["repository"] == (
         "mncs-control-mcp"
@@ -1175,6 +1987,16 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert activity["rpc_operations"][0]["measurements"][
         "control_dispatch_elapsed_ms"
     ] == 12.5
+    context_activity = activity["capability_delivery"]["context_operation_activity"]
+    assert context_activity["status"] == "observed"
+    assert context_activity["outcome_counts"] == {"succeeded": 1}
+    assert context_activity["supporting_events"][0]["identity"] == (
+        "evt_rpc_read_24"
+    )
+    assert context_activity["response_capability_list_status"] == (
+        "not-captured-in-rpc-event"
+    )
+    assert context_activity["agent_receipt_status"] == "not-established"
     assert len(activity["rpc_failure_candidates"]) == 1
     assert result["session_activity_pressure_candidate_count"] == 1
     candidate = activity["rpc_failure_candidates"][0]
@@ -1188,10 +2010,33 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert "private-argument" not in json.dumps(result)
     assert "private-response" not in json.dumps(result)
 
-    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+    compact = capability_intelligence.project(session, max_result_bytes=6_000)
     compact_activity = compact["session_activity"]
     assert compact_activity["rpc_operations"][0]["event_reference"]["identity"] == (
-        "evt_rpc_read_23"
+        "evt_rpc_read_24"
+    )
+    assert compact_activity["source"]["rpc_operation_events_considered"] == 5
+    assert compact_activity["source"]["rpc_operation_records_returned"] == 4
+    assert compact_activity["source"]["rpc_operation_records_omitted"] == 0
+    assert compact_activity["source"]["rpc_operation_records_invalid"] == 1
+    compact_summary = compact_activity["rpc_operation_summary"]
+    assert compact_summary["record_count"] == 4
+    assert compact_summary["group_count"] == 3
+    assert compact_summary["groups_omitted"] == 0
+    assert compact_summary["groups"][2]["supporting_events"][0]["identity"] == (
+        "evt_rpc_read_21"
+    )
+    compact_delivery = capability_intelligence._compact_projection(
+        result, 20_000, capability_intelligence.MAX_RESULT_BYTES,
+    )["session_activity"]["capability_delivery"]
+    assert compact_delivery["context_operation_activity"]["outcome_counts"] == {
+        "succeeded": 1,
+    }
+    assert compact_delivery["context_operation_activity"][
+        "response_capability_list_status"
+    ] == "not-captured-in-rpc-event"
+    assert compact_summary["groups"][1]["supporting_events"][0]["identity"] == (
+        "evt_rpc_read_24"
     )
     assert compact_activity["source"]["rpc_operation_context_basis"] == (
         "grant+session-snapshot; branch/head not live-probed"
@@ -1200,6 +2045,182 @@ def test_session_activity_correlates_authenticated_control_read_operations(
         "identity"
     ] == "evt_rpc_read_21"
     assert compact_activity["rpc_failure_candidates"][0]["distinct_session_count"] == 1
+
+
+def test_session_activity_marks_truncated_authenticated_rpc_only_history_partial(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_rpc_activity_truncated_observation",
+        "ses_compiler_rpc_activity_truncated",
+        "cmp_compiler_rpc_activity_truncated",
+    )
+    session, _ = _session(tmp_path, [record])
+    event_count = capability_intelligence.MAX_SESSION_ACTIVITY_RPC_OPERATIONS + 1
+    session.snapshot["rpc_read_activity_count"] = event_count
+    events = []
+    principal_id = session.snapshot["authenticated_principal_id"]
+    for sequence in range(1, event_count + 1):
+        request_digest = hashlib.sha256(
+            f"rpc-truncated-request-{sequence}".encode(),
+        ).hexdigest()
+        events.append({
+            "identity": f"evt_rpc_truncated_{sequence}",
+            "sequence": sequence,
+            "type": "environment.rpc.read_observed",
+            "producer": "mncs-control-mcp",
+            "payload": {
+                "schema_version": "mncs.environment.rpc-read-activity/1",
+                "operation": "session.inspect",
+                "outcome_status": "succeeded",
+                "exit_code": 0,
+                "failure_code": None,
+                "observation_ordinal": sequence,
+                "request_id": f"req_rpc_truncated_{sequence}",
+                "request_digest": request_digest,
+                "request_operation_digest": request_digest,
+                "request_event_digest": hashlib.sha256(
+                    f"rpc-truncated-event-{sequence}".encode(),
+                ).hexdigest()[:16],
+                "caller": {
+                    "authenticated_principal_id": principal_id,
+                    "control_grant_id": "b" * 32,
+                    "process_identity": "proc_" + "c" * 32,
+                },
+                "context": {
+                    "repository": "mncs-control-mcp",
+                    "environment_id": session.snapshot["environment_id"],
+                    "campaign_id": session.snapshot["campaign"]["identity"],
+                    "work_intent_id": session.snapshot["intent"]["identity"],
+                },
+                "measurement_availability": {
+                    "model_identity": "unavailable",
+                    "token_usage": "unavailable",
+                    "control_dispatch_elapsed_ms": "measured",
+                    "resource_consumption": "unavailable",
+                    "cache_accounting": "unavailable",
+                },
+                "measurements": {"control_dispatch_elapsed_ms": 1.0},
+            },
+        })
+    session.recent_events = lambda *, limit: {
+        "event_count": len(events), "events": events[-limit:], "truncated": False,
+    }
+
+    result = capability_intelligence.project(session)
+    activity = result["session_activity"]
+
+    assert activity["status"] == "partial-rpc-only-in-selected-window"
+    assert activity["interaction_count"] == 0
+    assert activity["rpc_operation_count"] == (
+        capability_intelligence.MAX_SESSION_ACTIVITY_RPC_OPERATIONS
+    )
+    assert activity["source"]["rpc_operation_records_omitted"] == 1
+    assert activity["source"]["rpc_operation_records_invalid"] == 0
+    assert activity["rpc_operations"][0]["event_reference"]["sequence"] == event_count
+    summary = activity["rpc_operation_summary"]
+    assert summary["record_count"] == event_count
+    assert summary["group_count"] == 1
+    assert summary["groups"][0]["occurrence_count"] == event_count
+
+    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+    compact_activity = compact["session_activity"]
+    assert compact_activity["status"] == "partial-rpc-only-in-selected-window"
+    assert compact_activity["source"]["rpc_operation_events_considered"] == event_count
+    assert compact_activity["source"]["rpc_operation_records_returned"] == (
+        capability_intelligence.MAX_SESSION_ACTIVITY_RPC_OPERATIONS
+    )
+    assert compact_activity["source"]["rpc_operation_records_omitted"] == 1
+    assert compact_activity["source"]["rpc_operation_records_invalid"] == 0
+    assert compact_activity["rpc_operation_summary"]["record_count"] == event_count
+    assert compact_activity["rpc_operation_summary"]["groups"][0][
+        "occurrence_count"
+    ] == event_count
+
+
+def test_session_activity_bounds_authenticated_rpc_operation_summary_groups(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_rpc_activity_summary_bounds",
+        "ses_compiler_rpc_activity_summary_bounds",
+        "cmp_compiler_rpc_activity_summary_bounds",
+    )
+    session, _ = _session(tmp_path, [record])
+    event_count = capability_intelligence.MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS + 2
+    session.snapshot["rpc_read_activity_count"] = event_count
+    principal_id = session.snapshot["authenticated_principal_id"]
+    events = []
+    for sequence in range(1, event_count + 1):
+        request_digest = hashlib.sha256(
+            f"rpc-summary-request-{sequence}".encode(),
+        ).hexdigest()
+        events.append({
+            "identity": f"evt_rpc_summary_{sequence}",
+            "sequence": sequence,
+            "type": "environment.rpc.read_observed",
+            "producer": "mncs-control-mcp",
+            "payload": {
+                "schema_version": "mncs.environment.rpc-read-activity/1",
+                "operation": f"session.read-{sequence:03d}",
+                "outcome_status": "succeeded",
+                "exit_code": 0,
+                "failure_code": None,
+                "observation_ordinal": sequence,
+                "request_id": f"req_rpc_summary_{sequence}",
+                "request_digest": request_digest,
+                "request_operation_digest": request_digest,
+                "request_event_digest": hashlib.sha256(
+                    f"rpc-summary-event-{sequence}".encode(),
+                ).hexdigest()[:16],
+                "caller": {
+                    "authenticated_principal_id": principal_id,
+                    "control_grant_id": "b" * 32,
+                    "process_identity": None,
+                },
+                "context": {
+                    "repository": "mncs-environment",
+                    "environment_id": session.snapshot["environment_id"],
+                    "campaign_id": session.snapshot["campaign"]["identity"],
+                    "work_intent_id": session.snapshot["intent"]["identity"],
+                },
+                "measurement_availability": {
+                    "model_identity": "unavailable",
+                    "token_usage": "unavailable",
+                    "control_dispatch_elapsed_ms": "measured",
+                    "resource_consumption": "unavailable",
+                    "cache_accounting": "unavailable",
+                },
+                "measurements": {"control_dispatch_elapsed_ms": 1.0},
+            },
+        })
+    session.recent_events = lambda *, limit: {
+        "event_count": len(events), "events": events[-limit:], "truncated": False,
+    }
+
+    activity = capability_intelligence.project(session)["session_activity"]
+    summary = activity["rpc_operation_summary"]
+
+    assert summary["record_count"] == event_count
+    assert summary["group_count"] == event_count
+    assert len(summary["groups"]) == capability_intelligence.MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS
+    assert summary["groups_omitted"] == 2
+    assert summary["omitted_record_count"] == 2
+    assert sum(group["occurrence_count"] for group in summary["groups"]) + (
+        summary["omitted_record_count"]
+    ) == summary["record_count"]
+
+    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+    compact_summary = compact["session_activity"]["rpc_operation_summary"]
+    assert compact_summary["record_count"] == event_count
+    assert compact_summary["group_count"] == event_count
+    assert len(compact_summary["groups"]) <= 16
+    assert compact_summary["groups_omitted"] == event_count - len(
+        compact_summary["groups"],
+    )
+    assert sum(group["occurrence_count"] for group in compact_summary["groups"]) + (
+        compact_summary["omitted_record_count"]
+    ) == compact_summary["record_count"]
 
 
 def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path) -> None:
@@ -1607,6 +2628,99 @@ def test_compiler_regression_evidence_is_projected_with_verified_work_context(
     assert observation["evidence_reference"] == reference
 
 
+def test_compiler_regression_projects_source_verification_resource_measurements(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema_version": capability_intelligence.COMPILER_CACHE_REGRESSION_SCHEMA_V1,
+        "identity": "ev_compiler_digest_application_generic_specialization_invalidation_20261023",
+        "compiler_head": "c" * 40,
+        "language_head": "d" * 40,
+        "source_module_count": 4,
+        "actual_language_modules_reused": True,
+        "stages": {
+            "cold": {"cache_status": "miss"},
+            "generic_specialization_cold": {"cache_status": "miss"},
+            "generic_summarize_body_edit": {"cache_status": "miss"},
+            "imported_body_edit": {"cache_status": "hit"},
+            "fresh_process": {"cache_status": "hit"},
+        },
+        "verification": {
+            "harness_process_measurement": {
+                "wall_seconds": 11.11,
+                "user_seconds": 8.23,
+                "system_seconds": 3.0,
+                "peak_rss_kib": 98644,
+                "peak_cgroup_memory_bytes": None,
+            },
+            "stage0_bootstrap_measurement": {
+                "cargo_build_jobs": 2,
+                "cpu_percent": 185,
+                "wall_seconds": 230.6,
+                "user_seconds": 420.77,
+                "system_seconds": 6.1,
+                "peak_rss_kib": 1369204,
+                "note": (
+                    "one-time isolated target compilation; "
+                    "excluded from this warm harness run"
+                ),
+            },
+        },
+    }
+    session, state = _session(tmp_path, [])
+    _add_compiler_regression_evidence(session, state, report)
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["pressure_hypothesis_count"] == 0
+    observation = result["observations"][0]
+    assert observation["observation"]["measurement_availability"][
+        "resource_consumption"
+    ] == (
+        "per-build + verification-process metrics; not agent-attributed"
+    )
+    measurement_summary = observation["observation"]["outcome"][
+        "measurement_summary"
+    ]
+    assert measurement_summary["direct_measurements"] == {
+        "harness_process_peak_rss_kib": 98644,
+        "harness_process_system_seconds": 3.0,
+        "harness_process_user_seconds": 8.23,
+        "harness_process_wall_seconds": 11.11,
+        "stage0_bootstrap_cpu_percent": 185,
+        "stage0_bootstrap_peak_rss_kib": 1369204,
+        "stage0_bootstrap_system_seconds": 6.1,
+        "stage0_bootstrap_user_seconds": 420.77,
+        "stage0_bootstrap_wall_seconds": 230.6,
+    }
+    assert measurement_summary["observed_counts"] == {
+        "stage0_bootstrap_cargo_build_jobs": 2,
+    }
+    assert measurement_summary["measurement_availability"] == {
+        "harness_process_peak_cgroup_memory_bytes": "null-in-source-record",
+    }
+    assert "derived_measurements" not in measurement_summary
+    assert any(
+        "excluded from this warm harness run" in item
+        for item in measurement_summary["qualifications"]
+    )
+    assert any(
+        "not measurements of resource use attributable to the Compiler agent session"
+        in item
+        for item in measurement_summary["qualifications"]
+    )
+
+    full_size = len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode())
+    compact = capability_intelligence.project(
+        session, max_result_bytes=full_size - 1,
+    )
+    assert compact["source"]["response_truncated"] is True
+    assert compact["observations"][0]["observation"]["measurement_summary"] == (
+        measurement_summary
+    )
+
+
 def test_compiler_regression_schema_one_projects_without_inventing_effect_data(
     tmp_path: Path,
 ) -> None:
@@ -1938,6 +3052,117 @@ def test_compiler_language_dependency_summary_rejects_internal_identity_mismatch
     assert result["source"]["observation_reference_diagnostics"][0]["verification"] == (
         "observation-identity-mismatch"
     )
+
+
+def test_compiler_native_application_proof_projects_scoped_implementation_ownership(
+    tmp_path: Path,
+) -> None:
+    session, state = _session(tmp_path, [])
+    reference = _add_compiler_native_application_proof_evidence(session, state)
+    root = Path(session.snapshot["workspace"]["root"])
+    session.snapshot["selected_checkouts"] = {
+        "mncs-environment": session.snapshot["selected_checkouts"][
+            "mncs-environment"
+        ],
+    }
+    session.snapshot["authority"] = {"readable": ["workspace"]}
+    session.snapshot["workspace"].update({
+        "scan": {"status": "complete"},
+        "repositories": [
+            {
+                "name": repository,
+                "path": str(root / repository),
+                "head": _git(root / repository, "rev-parse", "HEAD"),
+                "worktree_of": None,
+                "git_error": None,
+            }
+            for repository in ("mncs-compiler", "mncs-stdlib", "mncs-test")
+        ],
+    })
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 1
+    observation = result["observations"][0]
+    assert observation["identity"] == reference["identity"]
+    assert observation["observation"]["kind"] == (
+        "compiler-native-application-implementation-ownership"
+    )
+    assert observation["related_work"] == {}
+    accountability = observation["observation"]["outcome"][
+        "implementation_accountability"
+    ]
+    assert accountability["native_semantic_ownership"] == (
+        "verified-for-this-application-proof"
+    )
+    assert accountability["native_module_count"] == 4
+    assert accountability["canonical_vm_case_success_count"] == 3
+    assert accountability["native_migration_opportunity"] == "not-established"
+    assert "not attributed" in accountability["evidence_relationship_basis"]
+    assert accountability["host_test_adapter"]["classification"] == (
+        "test-only-provider-adapter"
+    )
+    assert observation["measurement_basis"].endswith(
+        "workspace-read-only-checkout"
+    )
+    module_sources = [
+        source for source in observation["supporting_sources"]
+        if source.get("kind") == "native-language-module-source"
+    ]
+    assert {source["module"] for source in module_sources} == {
+        module for module, _repository, _path, _revision_field
+        in capability_intelligence.COMPILER_NATIVE_APPLICATION_MODULES
+    }
+    assert all(source["content_integrity_status"] == (
+        "workspace-read-only-content-integrity-verified"
+    ) for source in module_sources)
+
+    projected_accountability = result["implementation_accountability"]
+    assert projected_accountability["sample_count"] == 1
+    assert projected_accountability["samples"][0]["ownership_status"] == (
+        "source-integrity-verified-for-sample"
+    )
+    ratio = projected_accountability["systemwide_native_adoption_ratio"]
+    assert ratio["status"] == "not-measured"
+    assert "denominator" in ratio["reason"]
+    assert projected_accountability["samples"][0][
+        "native_migration_opportunity"
+    ] == "not-established"
+
+    encoded = json.dumps(result, ensure_ascii=False, sort_keys=True).encode()
+    compact = capability_intelligence._compact_projection(
+        result, len(encoded), 4096,
+    )
+    compact_accountability = compact["implementation_accountability"]
+    assert compact_accountability["systemwide_native_adoption_ratio"][
+        "status"
+    ] == "not-measured"
+    assert compact_accountability["samples"][0]["native_module_count"] == 4
+    assert compact_accountability["samples"][0]["compiler_proof_reference"][
+        "identity"
+    ] == reference["identity"]
+
+
+def test_compiler_native_application_proof_rejects_failed_canonical_case(
+    tmp_path: Path,
+) -> None:
+    session, state = _session(tmp_path, [])
+    _add_compiler_native_application_proof_evidence(
+        session, state, failed_case=True,
+    )
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["implementation_accountability"]["sample_count"] == 0
+    assert result["implementation_accountability"][
+        "systemwide_native_adoption_ratio"
+    ]["status"] == "not-measured"
+    assert result["source"]["observation_reference_diagnostics"][0][
+        "verification"
+    ] == "observation-contract-invalid"
 
 
 def test_compiler_source_context_is_correlated_only_through_verified_pointer(
@@ -2346,6 +3571,301 @@ def test_improvement_relation_without_followup_preserves_unassessed_status(
     assert compact["improvement_relations"][0]["effectiveness_assessment"] == (
         "not-assessed"
     )
+
+
+def test_campaign_state_bootstrap_pressure_projects_live_events_and_unassessed_fix(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    evidence_root = (
+        Path(__file__).resolve().parents[1]
+        / "evidence/environmental-capability"
+    )
+    identities = (
+        "campaign-state-bootstrap-pressure-20261025.json",
+        "campaign-state-bootstrap-verification-20261025.json",
+        "campaign-state-bootstrap-improvement-20261025.json",
+    )
+    records = [
+        json.loads((evidence_root / path).read_text(encoding="utf-8"))
+        for path in identities
+    ]
+    session, _ = _session(tmp_path, records)
+    session.session_id = "ses_c6b0d153689d7388"
+    session.snapshot["campaign"]["identity"] = (
+        "cmp_environment_authorization_delivery_20261025"
+    )
+    session.snapshot["intent"] = {
+        "identity": "int_8475157f281c835f",
+        "goal": "exercise canonical Environment persistence through the Control socket",
+    }
+    event_identities = [
+        "evt_2d6c52f29a035119",
+        "evt_6d42a18434bf9eb3",
+        "evt_68d77c4ca086168b",
+    ]
+    activity = {
+        "status": "ready",
+        "source": {
+            "event_window_truncated": False,
+            "rpc_operation_records_omitted": 0,
+            "rpc_operation_records_invalid": 0,
+            "rpc_operation_capture_limit_reached": False,
+            "rpc_operation_events_considered": len(event_identities),
+            "rpc_operation_records_returned": len(event_identities),
+        },
+        "rpc_operations": [
+            {"event_reference": {"identity": identity}}
+            for identity in event_identities
+        ],
+    }
+    monkeypatch.setattr(
+        capability_intelligence,
+        "_session_activity",
+        lambda *_args, **_kwargs: activity,
+    )
+
+    result = capability_intelligence.project(session)
+    compact = capability_intelligence.project(session, max_result_bytes=12_000)
+
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 3
+    assert result["pressure_hypothesis_count"] == 1
+    hypothesis = result["pressure_hypotheses"][0]
+    assert hypothesis["identity"] == "ph_campaign_state_bootstrap_20261025"
+    assert hypothesis["recurrence_status"] == "not-established"
+    pressure = result["observations"][0]
+    event_source = pressure["supporting_sources"][0]
+    assert event_source["content_integrity_status"] == (
+        "captured-in-observation-record"
+    )
+    assert event_source["event_identities"] == [
+        "evt_2d6c52f29a035119",
+        "evt_6d42a18434bf9eb3",
+        "evt_68d77c4ca086168b",
+    ]
+    assert event_source["event_reference_status"] == (
+        "all-referenced-events-present"
+    )
+    assert event_source["event_reference_count"] == 3
+    assert event_source["event_reference_matched_count"] == 3
+    assert compact["observations"][0]["supporting_sources"][0][
+        "event_reference_status"
+    ] == "all-referenced-events-present"
+    assert compact["observations"][0]["supporting_sources"][0][
+        "event_reference_matched_count"
+    ] == 3
+
+    assert result["improvement_relation_count"] == 1
+    relation = result["improvement_relations"][0]
+    assert relation["addresses_hypothesis_identity"] == hypothesis["identity"]
+    assert relation["pressure_hypothesis_status"] == "present-in-projection"
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["verification_evidence_reference"]["identity"] == (
+        "ev_environment_campaign_state_bootstrap_verification_20261025"
+    )
+    assert relation["subsequent_record_status"] == "not-recorded"
+    assert relation["effectiveness_assessment"] == "not-assessed"
+
+
+def test_bounded_event_reference_coverage_records_project_matched_counts_and_limits(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    evidence_root = (
+        Path(__file__).resolve().parents[1]
+        / "evidence/environmental-capability"
+    )
+    identities = (
+        "session-event-reference-coverage-pressure-20261025.json",
+        "session-event-reference-coverage-verification-20261025.json",
+        "session-event-reference-coverage-improvement-20261025.json",
+    )
+    records = [
+        json.loads((evidence_root / path).read_text(encoding="utf-8"))
+        for path in identities
+    ]
+    session, _ = _session(tmp_path, records)
+    session.session_id = "ses_c6b0d153689d7388"
+    session.snapshot["campaign"]["identity"] = (
+        "cmp_environment_authorization_delivery_20261025"
+    )
+    session.snapshot["intent"] = {
+        "identity": "int_8475157f281c835f",
+        "goal": "exercise canonical Environment persistence through the Control socket",
+    }
+    event_identities = records[0]["supporting_sources"][0]["event_identities"]
+    activity = {
+        "status": "partial-rpc-only-in-selected-window",
+        "source": {
+            "event_window_truncated": False,
+            "rpc_operation_records_omitted": 7,
+            "rpc_operation_records_invalid": 0,
+            "rpc_operation_capture_limit_reached": False,
+            "rpc_operation_events_considered": 39,
+            "rpc_operation_records_returned": 32,
+        },
+        "rpc_operations": [
+            {"event_reference": {"identity": event_identities[0]}},
+            *(
+                {"event_reference": {"identity": f"evt_projection_{index}"}}
+                for index in range(31)
+            ),
+        ],
+    }
+    monkeypatch.setattr(
+        capability_intelligence,
+        "_session_activity",
+        lambda *_args, **_kwargs: activity,
+    )
+
+    result = capability_intelligence.project(session)
+
+    assert result["observation_count"] == 3
+    assert result["pressure_hypothesis_count"] == 1
+    hypothesis = result["pressure_hypotheses"][0]
+    assert hypothesis["identity"] == "ph_session_event_reference_coverage_20261025"
+    assert hypothesis["recurrence_status"] == "not-established"
+    pressure = result["observations"][0]
+    source = pressure["supporting_sources"][0]
+    assert source["event_reference_status"] == (
+        "some-present-others-unresolved-in-bounded-view"
+    )
+    assert source["event_reference_count"] == 3
+    assert source["event_reference_matched_count"] == 1
+    assert result["improvement_relation_count"] == 1
+    relation = result["improvement_relations"][0]
+    assert relation["addresses_hypothesis_identity"] == hypothesis["identity"]
+    assert relation["verification_record_status"] == (
+        "record-integrity-verified-in-projection"
+    )
+    assert relation["subsequent_record_status"] == "not-recorded"
+    assert relation["effectiveness_assessment"] == "not-assessed"
+
+
+def test_session_event_reference_status_preserves_selection_and_window_limits() -> None:
+    source = {
+        "kind": "authenticated-session-activity-projection",
+        "repository": "mncs-environment",
+        "campaign_id": "cmp_event_reference_status",
+        "session_id": "ses_event_reference_status",
+        "event_identities": ["evt_event_one", "evt_event_two"],
+    }
+    activity = {
+        "source": {
+            "event_window_truncated": False,
+            "rpc_operation_records_omitted": 0,
+            "rpc_operation_records_invalid": 0,
+            "rpc_operation_capture_limit_reached": False,
+            "rpc_operation_events_considered": 2,
+            "rpc_operation_records_returned": 2,
+        },
+        "rpc_operations": [
+            {"event_reference": {"identity": "evt_event_one"}},
+            {"event_reference": {"identity": "evt_event_two"}},
+        ],
+    }
+
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
+        source, selected_session_id="ses_event_reference_status", activity=activity,
+    )["event_reference_status"] == "all-referenced-events-present"
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
+        source, selected_session_id="ses_other", activity=activity,
+    ) == {
+        "event_reference_status": "source-session-not-selected",
+        "event_reference_count": 2,
+        "event_reference_matched_count": 0,
+    }
+
+    partial_activity = {
+        **activity,
+        "rpc_operations": [
+            {"event_reference": {"identity": "evt_event_one"}},
+            {"event_reference": {"identity": "evt_unreferenced"}},
+        ],
+    }
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
+        source,
+        selected_session_id="ses_event_reference_status",
+        activity=partial_activity,
+    )["event_reference_status"] == (
+        "some-present-others-not-found-in-complete-view"
+    )
+    capped_activity = {
+        "source": {
+            "event_window_truncated": False,
+            "rpc_operation_records_omitted": 6,
+            "rpc_operation_records_invalid": 0,
+            "rpc_operation_capture_limit_reached": False,
+            "rpc_operation_events_considered": 38,
+            "rpc_operation_records_returned": 32,
+        },
+        "rpc_operations": [
+            {"event_reference": {"identity": "evt_event_one"}},
+            *(
+                {"event_reference": {"identity": f"evt_extra_{index}"}}
+                for index in range(31)
+            ),
+        ],
+    }
+    capped_resolution = (
+        capability_intelligence._authenticated_session_event_reference_resolution(
+            source,
+            selected_session_id="ses_event_reference_status",
+            activity=capped_activity,
+        )
+    )
+    assert capped_resolution == {
+        "event_reference_status": "some-present-others-unresolved-in-bounded-view",
+        "event_reference_count": 2,
+        "event_reference_matched_count": 1,
+    }
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
+        source,
+        selected_session_id="ses_event_reference_status",
+        activity={
+            **partial_activity,
+            "source": {**activity["source"], "event_window_truncated": True},
+        },
+    )["event_reference_status"] == (
+        "some-present-others-unresolved-in-bounded-view"
+    )
+
+    bounded_activity = {
+        "source": {"event_window_truncated": True},
+        "rpc_operations": [],
+    }
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
+        source,
+        selected_session_id="ses_event_reference_status",
+        activity=bounded_activity,
+    )["event_reference_status"] == "unresolved-in-bounded-session-view"
+
+    incomplete_activity = {
+        "source": {
+            "event_window_truncated": False,
+            "rpc_operation_records_omitted": 0,
+            "rpc_operation_records_invalid": 0,
+            "rpc_operation_capture_limit_reached": False,
+            "rpc_operation_events_considered": 0,
+            "rpc_operation_records_returned": 0,
+        },
+        "rpc_operations": [],
+    }
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
+        source,
+        selected_session_id="ses_event_reference_status",
+        activity=incomplete_activity,
+    )["event_reference_status"] == (
+        "no-referenced-events-in-selected-session-activity"
+    )
+
+    invalid_source = {**source, "event_identities": ["evt_event_one"] * 2}
+    assert capability_intelligence._authenticated_session_event_reference_resolution(
+        invalid_source,
+        selected_session_id="ses_event_reference_status",
+        activity=activity,
+    )["event_reference_status"] == "invalid-source-reference"
 
 
 def test_improvement_record_does_not_count_as_another_pressure_occurrence(

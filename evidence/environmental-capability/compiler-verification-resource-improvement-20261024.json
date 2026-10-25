@@ -1,0 +1,60 @@
+{
+  "captured_at": "2026-10-24T23:46:23Z",
+  "identity": "ev_environment_compiler_verification_resource_measurements_improvement_20261024",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_compiler_verification_resource_measurements_hidden_20261024",
+    "basis": "The verified change connects source-recorded verification-process resources to the existing bounded Compiler projection. Source measurements remain phase-specific and provenance-linked; compact projections retain the classified measurement summary. No later independent Compiler use has been observed, so effectiveness remains unassessed.",
+    "identity": "im_environment_compiler_verification_resource_measurements_20261024",
+    "implementation_reference": {
+      "commit": "71379b1211f9a96b38580614a106111bedc3c257",
+      "identity": "ev_environment_compiler_verification_resource_measurements_implementation_20261024",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "e1e7c51d6b4cbcf4d321f054b63e23fbe28726586a05fe9378e777b68864ce8c"
+    },
+    "not_measured": [
+      "independent Compiler-session use",
+      "recurrence of missing verification measurements across new reports",
+      "whether later agents act on the newly exposed resource breakdown"
+    ],
+    "subsequent_observation_identity": null,
+    "verification_observation_identity": "ev_environment_compiler_verification_resource_measurements_verification_20261024"
+  },
+  "measurement_basis": "implementation and verification relationship; later effectiveness not assessed",
+  "not_measured": [
+    "empirical elimination of the projection gap in a later independent session",
+    "whether the newly exposed measurements improve a subsequent compiler decision",
+    "long-term effectiveness"
+  ],
+  "observation": {
+    "kind": "environmental-capability-improvement-link-record",
+    "outcome": {
+      "basis": "The adapter now extracts allowlisted harness and bootstrap measurements from the committed Compiler regression schema, preserves the one-time bootstrap note and null cgroup status, and disclaims Compiler agent-session attribution. The complete ECI test module and Environment vertical proof pass. A later Compiler projection read is needed before assessing whether the environment makes this evidence more useful in practice.",
+      "effectiveness_assessment": "not-assessed",
+      "relationship_recorded": true,
+      "subsequent_observation_status": "not-recorded"
+    },
+    "request": {
+      "operation": "relate compiler verification resource projection to recorded pressure",
+      "pressure_identity": "ph_environment_compiler_verification_resource_measurements_hidden_20261024"
+    },
+    "source_interface": "mncs-environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_92932f7be5cedb75",
+    "session_id": "ses_c01ca32d0af155c1"
+  },
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_92932f7be5cedb75",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1"
+}

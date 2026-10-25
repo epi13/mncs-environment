@@ -2786,16 +2786,18 @@ class Session:
         expected_authority_revision: str,
         approval_reference: str,
         owner_authorized_checkout: dict[str, Any] | None = None,
+        campaign_writable_checkout: bool = False,
         authenticated_principal_id: str | None,
         request_id: str | None,
     ) -> dict[str, Any]:
-        """Record one owner-admitted repository write scope for this campaign.
+        """Record one repository scope or an exact writable-checkout binding.
 
-        The authenticated Control transport allowlists the campaign, repository,
-        and approval reference before calling this Environment-owned operation.
-        Environment independently checks the session owner, campaign, authority
-        revision, workspace boundary, clean Git identity, and competing claims.
-        The immutable event is the source of truth; retries reconcile by request
+        Control may admit a configured owner-approved repository scope. For a
+        repository already writable in this exact campaign, it may instead
+        bind one Control-verified registered checkout without expanding the
+        repository set. Environment independently checks session ownership,
+        campaign authority, checkout identity, and competing claims. The
+        immutable event is the source of truth; retries reconcile by request
         identity, even if the process stopped after Store publication.
         """
         if not isinstance(repository, str) or not _CAMPAIGN_REPOSITORY_PATTERN.fullmatch(repository):
@@ -2819,8 +2821,21 @@ class Session:
                 or len(approval_reference) > 256 or "\x00" in approval_reference):
             raise AuthorityScopeConflict(
                 "authority-scope-invalid", "approval reference must be bounded nonempty text",
-                next_step="supply the owner-recorded approval reference for this repository scope",
+                next_step="use the authenticated owner grant or campaign-writable checkout binding",
             )
+        if type(campaign_writable_checkout) is not bool:
+            raise AuthorityScopeConflict(
+                "authority-scope-invalid", "campaign-writable checkout selector must be boolean",
+            )
+        if campaign_writable_checkout:
+            expected_reference = (
+                f"campaign-writable-checkout:{campaign_id}:{repository}:{self.session_id}"
+            )
+            if (approval_reference != expected_reference
+                    or owner_authorized_checkout is None):
+                raise AuthorityDenied(
+                    "campaign-writable checkout binding requires Control's exact registered checkout"
+                )
         if (not isinstance(request_id, str)
                 or not re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", request_id)):
             raise AuthorityScopeConflict(
@@ -2843,6 +2858,7 @@ class Session:
             "expected_authority_revision": expected_authority_revision,
             "approval_reference": approval_reference,
             "owner_authorized_checkout": owner_authorized_checkout,
+            "campaign_writable_checkout": campaign_writable_checkout,
             "authenticated_principal_id": authenticated_principal_id,
         }, length=64)
         for event in self._log():
@@ -2882,6 +2898,10 @@ class Session:
                 "Environment authority changed since the scope grant was requested",
                 next_step="read the current authority revision and retry with explicit owner approval",
             )
+        if campaign_writable_checkout and repository not in current.get("writable", []):
+            raise AuthorityDenied(
+                "campaign-writable checkout binding cannot add a repository to campaign write scope"
+            )
         if repository in current.get("protected_repositories", []):
             raise AuthorityDenied(f"repository scope is protected for this campaign: {repository}")
         existing_grants = [
@@ -2911,7 +2931,8 @@ class Session:
             )
         if prior_grant is not None and (
             prior_grant.get("authorized_by_principal_id") != authenticated_principal_id
-            or prior_grant.get("approval_reference") != approval_reference
+            or (prior_grant.get("approval_reference") != approval_reference
+                and not campaign_writable_checkout)
             or prior_grant.get("scope") != {
                 "kind": "repository", "repository": repository,
             }
@@ -2958,19 +2979,18 @@ class Session:
             prior_grant is not None
             and owner_authorized_checkout is not None
             and isinstance(selected, dict)
-            and isinstance(prior_identity, dict)
             and isinstance(selected.get("path"), str)
-            and isinstance(prior_identity.get("path"), str)
-            and Path(os.path.abspath(selected["path"]))
-            == Path(os.path.abspath(prior_identity["path"]))
             and isinstance(owner_authorized_checkout.get("path"), str)
-            and Path(os.path.abspath(owner_authorized_checkout["path"]))
-            != Path(os.path.abspath(prior_identity["path"]))
+            and Path(os.path.abspath(selected["path"]))
+            != Path(os.path.abspath(owner_authorized_checkout["path"]))
         ):
-            # A Control-verified owner grant can move this repository's
-            # selected checkout. The prior selection is only a projection of
-            # the grant being refreshed, so it must not make that exact,
-            # authenticated rebind look like a competing selection.
+            # A Control-verified owner grant is authoritative for this
+            # repository's checkout selection. The snapshot may still contain
+            # the campaign's entry-time checkout even after an earlier grant
+            # selected a linked worktree, so that stale projection must not
+            # veto an exact, authenticated refresh. The owner checkout is
+            # independently verified below, and claim conflicts are checked
+            # against its registered path before the grant is recorded.
             selected_for_verification = None
         try:
             resolved_checkout, checkout_facts = _verified_scope_checkout(
@@ -3196,6 +3216,10 @@ class Session:
             "authorized_by_principal_id": authenticated_principal_id,
             "requested_by_consumer_id": str(self.snapshot.get("consumer_id", "unknown")),
             "approval_reference": approval_reference,
+            "authorization_basis": (
+                "campaign-writable-checkout"
+                if campaign_writable_checkout else "control-owner-approved"
+            ),
             "authority_revision_before": current_revision,
             "admitted_by": "mncs-environment",
             "admitted_at": utcnow(),

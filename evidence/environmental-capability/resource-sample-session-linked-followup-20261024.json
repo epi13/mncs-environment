@@ -1,0 +1,115 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_resource_sample_session_linked_followup_20261024",
+  "captured_at": "2026-10-24T22:36:39Z",
+  "measurement_basis": "live-store-backed-system-monitor-sample-projected-against-current-session",
+  "related_work": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_0455376a5481eacd",
+    "session_id": "ses_c01ca32d0af155c1",
+    "consumer_id": "environment-capability-intelligence-agent",
+    "environment_id": "renv_92932f7be5cedb75",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "session-linked-system-resource-sample-projection-readback",
+    "source_interface": "mncs-system-monitor:system-resource-sample via mncs-env projections",
+    "request": {
+      "session_id": "ses_c01ca32d0af155c1",
+      "capability": "mncs-system-monitor:system-resource-sample",
+      "binding_id": "cap_9a39cbc2cdf18f11",
+      "contract_revision": "1",
+      "read_mode": "read-only"
+    },
+    "outcome": {
+      "projection_status": "ready",
+      "session_resource_samples_status": "available",
+      "sample_count": 1,
+      "event_correlation_status": "matched-by-provider-request-id",
+      "provider_request_id": "req_410e7f536f4fa060aeabfcc266d72a4d90cdb2e3e1afb74d",
+      "source_events": [
+        {
+          "identity": "evt_3ea1214ee4c491cb",
+          "sequence": 34,
+          "type": "capability.invoked",
+          "observed_at": "2026-10-24T22:36:04+00:00"
+        },
+        {
+          "identity": "evt_e62a239e0c009a5f",
+          "sequence": 35,
+          "type": "invocation.completed",
+          "observed_at": "2026-10-24T22:36:06+00:00"
+        }
+      ],
+      "sample": {
+        "schema": "mncs.system-monitor.resource-sample.v1",
+        "observed_at_unix_ms": 1792881365430,
+        "host": {
+          "cpu_count": 8,
+          "cpu_utilization": null,
+          "load_average": [1.65, 1.31, 1.23],
+          "memory_available_bytes": 24117059584,
+          "memory_total_bytes": 33411571712
+        },
+        "measurement_availability": {
+          "host.cpu_count": "measured",
+          "host.cpu_utilization": "unavailable",
+          "host.load_average": "measured",
+          "host.memory_available_bytes": "measured",
+          "host.memory_total_bytes": "measured"
+        }
+      },
+      "artifact_reference": {
+        "store_reference": "mncs-store:ses_c01ca32d0af155c1:capability-invocation-artifacts:b1b2a18aab48c4236fc51bf1242cc7ae70b35eb4bc0b2f697ef5a171c94006a3",
+        "path": "system-resource-sample.json",
+        "byte_count": 461,
+        "sha256": "15a03eb5c67512a2cbb6c8f0ec893ad272d3062de7acf75676eaf1593e9d5129"
+      },
+      "session_context": {
+        "campaign_id": "cmp_0455376a5481eacd",
+        "session_id": "ses_c01ca32d0af155c1",
+        "work_intent_id": "int_e9a2959ffe2e952c",
+        "environment_id": "renv_92932f7be5cedb75",
+        "definition_id": "env_712fb160746dea51"
+      },
+      "interpretation": "The Monitor sample is linked to this Environment session, campaign objective, Work Intent, Store artifact, and exact invocation/completion events. It measures host CPU count, load average, and memory facts; CPU utilization is unavailable. This single host snapshot is not agent-attributed consumption and does not establish resource pressure or system-wide headroom over time."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "invoke",
+      "capability": "mncs-system-monitor:system-resource-sample",
+      "session_id": "ses_c01ca32d0af155c1",
+      "binding_id": "cap_9a39cbc2cdf18f11",
+      "returncode": 0,
+      "artifact_store_reference": "mncs-store:ses_c01ca32d0af155c1:capability-invocation-artifacts:b1b2a18aab48c4236fc51bf1242cc7ae70b35eb4bc0b2f697ef5a171c94006a3"
+    },
+    {
+      "kind": "direct-cli-projection-result",
+      "repository": "mncs-environment",
+      "operation": "projections",
+      "session_id": "ses_c01ca32d0af155c1",
+      "campaign_id": "cmp_0455376a5481eacd",
+      "sample_count": 1,
+      "event_correlation_status": "matched-by-provider-request-id",
+      "artifact_sha256": "15a03eb5c67512a2cbb6c8f0ec893ad272d3062de7acf75676eaf1593e9d5129"
+    }
+  ],
+  "not_measured": [
+    "resource consumption attributable to this agent or its child processes",
+    "CPU utilization for this sample",
+    "whether any other samples differ across this session or campaign",
+    "Btrfs data or metadata allocation headroom",
+    "whether the host conditions constrained any development operation"
+  ]
+}

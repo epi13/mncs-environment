@@ -1,0 +1,82 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_control_client_session_selector_refresh_readback_20261025",
+  "captured_at": "2026-10-25T02:28:36Z",
+  "measurement_basis": "control-runtime-status-and-connected-client-readback",
+  "observation": {
+    "kind": "client-session-selector-refresh-readback",
+    "source_interface": "MNCS Control system_status and connected MNCS Environment MCP tool",
+    "request": {
+      "control_system_status": {
+        "runtime_revision": "4023255dce631973601bcf8e3194827d8a52ebc6",
+        "source_revision": "4023255dce631973601bcf8e3194827d8a52ebc6",
+        "restart_required": false,
+        "client_surface_observed": false
+      },
+      "environment_client_call": {
+        "project": "mncs-control-mcp",
+        "cwd": ".",
+        "operation": "continuation",
+        "arguments": {
+          "session_id": "ses_c98eb637e20a5c14"
+        }
+      }
+    },
+    "outcome": {
+      "control_runtime": "The Control runtime and checked-out source report the same merged revision; Control reports no process restart required.",
+      "client_call": {
+        "status": "failed",
+        "code": "ENVIRONMENT_LOCAL_BRIDGE_FAILED",
+        "message": "unsupported arguments for operation: session_id"
+      },
+      "interpretation": "The remaining mismatch is not explained by a stale Control server process. Control explicitly reports that its status cannot observe the caller's captured MCP tool surface. The current evidence does not distinguish a stale caller registration from another adapter boundary.",
+      "analysis_limit": "The caller-side adapter revision and registration refresh state are unavailable through the exposed status interface."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_control_exact_session_selection_after_context_reset_20261025",
+    "title": "A caller cannot reliably reselect an authenticated session after losing local context",
+    "category": "session-continuity",
+    "subsystem": "Control LocalEnvironmentMCP continuation and project-session selection",
+    "owner": "mncs-control-mcp",
+    "recurrence": "observed-in-one-live-campaign-context; cross-session recurrence not-established",
+    "basis": "Control's current process reports the merged source revision, but the connected Environment tool still rejects the exact session selector.",
+    "actionable_recommendation": "Refresh or identify the caller-side Environment adapter that owns the captured operation argument contract, then repeat the exact-session readback through that same client.",
+    "not_measured": [
+      "the caller-side adapter source revision or process identity",
+      "whether a fresh client registration accepts the merged contract",
+      "recurrence across other clients, sessions, or campaigns"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-exact-session-client-contract",
+      "identity": "ev_control_exact_session_continuation_adapter_20261025",
+      "repository": "mncs-control-mcp",
+      "commit": "4023255dce631973601bcf8e3194827d8a52ebc6",
+      "path": "src/mncs_control_mcp/local_environment_mcp.py",
+      "sha256": "19b6d956f1b6a911e58667372270f736a50f17c1228f11e3b768909deef08e24"
+    }
+  ],
+  "not_measured": [
+    "the connected Environment adapter source and runtime revisions",
+    "why the connected client does not expose the merged selector",
+    "whether the limitation has affected other development campaigns"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environmental_capability_intelligence_followup_20261024",
+    "session_id": "ses_c98eb637e20a5c14",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_1991cffb20bdf206",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "captured_at": "2026-10-25T05:33:23Z",
+  "identity": "ev_environment_native_ownership_projection_verification_20261025",
+  "measurement_basis": "authenticated-live-campaign-state-projection-and-focused-verification",
+  "not_measured": [
+    "complete historical campaign coverage from this page-offset-20 projection",
+    "source proof producing campaign or agent identity",
+    "whether other agents can discover or use this native capability reliably",
+    "systemwide native adoption ratio and production host-language migration opportunities",
+    "long-term effectiveness after subsequent independent sessions"
+  ],
+  "observation": {
+    "kind": "native-implementation-ownership-projection-verification",
+    "outcome": {
+      "application_entry": "mncs.test.digest::digest_app",
+      "canonical_vm_case_success_count": 3,
+      "host_test_adapter_classification": "test-only-provider-adapter",
+      "implementation_sample_count": 1,
+      "native_migration_opportunity": "not-established",
+      "native_module_count": 4,
+      "observation_count": 1,
+      "projection_status": "partial",
+      "projection_status_basis": "The projection covers the selected ledger page at offset 20; earlier campaign history is outside this one-page read.",
+      "source_campaign_context": "not-recorded-in-source-proof",
+      "source_integrity_verified_module_count": 4,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "source_pointer_content_integrity_verified_count": 5,
+      "systemwide_native_adoption_ratio": "not-measured",
+      "verification_commands": {
+        "capability_intelligence_suite": "python -m pytest tests/test_capability_intelligence.py -q",
+        "capability_intelligence_suite_result": "89 passed",
+        "py_compile": "passed for mncs_env/capability_intelligence.py and tests/test_capability_intelligence.py",
+        "ruff": "passed for mncs_env/capability_intelligence.py and tests/test_capability_intelligence.py"
+      }
+    },
+    "request": {
+      "checkpoint_id": "chk_ff8a1d27e75f0e6b",
+      "evidence_limit": 20,
+      "evidence_offset": 20,
+      "source_campaign_state_event": {
+        "identity": "evt_1f773c39c1da015d",
+        "sequence": 134,
+        "type": "environment.rpc.read_observed"
+      }
+    },
+    "source_interface": "MNCS Environment campaign_state environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 23,
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_ff8a1d27e75f0e6b",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "f4f65919f4389af4f60f37aa8d36cc1ae161962d",
+      "identity": "ev_compiler_native_application_proof_digest_app_20261018",
+      "kind": "compiler-native-application-proof",
+      "path": "evidence/native-app-readiness-test-digest-app.json",
+      "repository": "mncs-compiler",
+      "sha256": "f0b2117709a50be49a636aa6fe0505eff42bff78477c28a602664c75edf89140"
+    },
+    {
+      "commit": "6aa443cacf8c80a8ccb0fe6586b1f8c68575bf6c",
+      "identity": "src_mncs_std_application_v1",
+      "kind": "native-language-module-source",
+      "module": "mncs.std.application.v1",
+      "path": "library/std/application.mncs",
+      "repository": "mncs-stdlib",
+      "sha256": "5669f67e921e71c0f54742325f06fddfe3b11692c1fe3d27ee515f8a3fd30c7e"
+    },
+    {
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "identity": "src_mncs_test_assertions",
+      "kind": "native-language-module-source",
+      "module": "mncs.test.assertions",
+      "path": "native/mncs/test/assertions.mncs",
+      "repository": "mncs-test",
+      "sha256": "9456ccc069591b3dc2a53af64d3a196e98162d2f8d640410ae50f5487570919b"
+    },
+    {
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "identity": "src_mncs_test_suite",
+      "kind": "native-language-module-source",
+      "module": "mncs.test.suite",
+      "path": "native/mncs/test/suite.mncs",
+      "repository": "mncs-test",
+      "sha256": "86019047090fd28f2ec29a51bc08b36c6ad39d16cbf03961d6586ea2fe4dc2d5"
+    },
+    {
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "identity": "src_mncs_test_digest",
+      "kind": "native-language-module-source",
+      "module": "mncs.test.digest",
+      "path": "native/mncs/test/digest.mncs",
+      "repository": "mncs-test",
+      "sha256": "fa45534cdebb4de683675bfb70eed15cfa177a5198f036c0e3b7fcab68b91c30"
+    },
+    {
+      "commit": "bf46781796aaed521d61018b744cec4067e3dc57",
+      "identity": "ev_environment_native_ownership_projection_impl_20261025",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "110f2c22f23122e09be088f0da27e57676e56b011b260bc96ca2d99ed960ba3f"
+    },
+    {
+      "commit": "bf46781796aaed521d61018b744cec4067e3dc57",
+      "identity": "ev_environment_native_ownership_projection_tests_20261025",
+      "kind": "committed-verification-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "75b66140e9d89424a17e920d05743365b4cd60482a91fab4f9e4ef64f5de89d7"
+    },
+    {
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "event_identities": [
+        "evt_1f773c39c1da015d"
+      ],
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "session_id": "ses_c6b0d153689d7388"
+    }
+  ]
+}

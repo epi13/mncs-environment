@@ -118,11 +118,15 @@ The session should distinguish between:
 - explicitly prohibited actions.
 
 Control-admitted repository scopes are recorded as immutable Store events. A
-continuing session may refresh the checkout observation after its worktree
-advances or becomes dirty only under the same authenticated owner and approval,
-for the same registered checkout, while one live session claim still covers
-that exact worktree. The refreshed event links to the prior grant; an expired
-claim, changed checkout, or overlapping foreign claim cannot refresh it.
+session that already has repository write authority may bind an exact
+Control-verified registered checkout in that same repository; this records
+where existing authority applies and does not add repositories to the writable
+set. Adding a new repository still requires its exact owner-approved scope
+grant. A continuing session may refresh the checkout observation after its
+worktree advances or becomes dirty only under the same authenticated owner and
+current repository authority, while one live session claim still covers that
+exact worktree. The refreshed event links to the prior grant; an expired claim,
+changed repository identity, or overlapping foreign claim cannot refresh it.
 
 ### 5. Event connection
 

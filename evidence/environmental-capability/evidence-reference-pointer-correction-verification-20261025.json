@@ -1,0 +1,98 @@
+{
+  "captured_at": "2026-10-25T04:13:40Z",
+  "evidence_reference_correction": {
+    "reason": "The append-only campaign ledger recorded a mistyped full commit. The replacement points to the pushed commit containing the exact same observation bytes; identity, repository, path, and SHA-256 remain unchanged.",
+    "replacement_reference": {
+      "commit": "7d39363b42b0c19abbf4d9fc0ac3b72105ab0378",
+      "identity": "ev_environment_session_event_reference_coverage_verification_20261025",
+      "path": "evidence/environmental-capability/session-event-reference-coverage-verification-20261025.json",
+      "repository": "mncs-environment",
+      "sha256": "2ff85c5d83e28e58103f03d139a5e35499f6d0d9af561700e6243a916a153df5"
+    },
+    "schema_version": "mncs.environment.evidence-reference-correction/1",
+    "target_reference": {
+      "commit": "7d39363b811c2354a8d9756617332d9e34469547",
+      "identity": "ev_environment_session_event_reference_coverage_verification_20261025",
+      "path": "evidence/environmental-capability/session-event-reference-coverage-verification-20261025.json",
+      "repository": "mncs-environment",
+      "sha256": "2ff85c5d83e28e58103f03d139a5e35499f6d0d9af561700e6243a916a153df5"
+    }
+  },
+  "identity": "ev_environment_pointer_correction_verification_20261025",
+  "measurement_basis": "exact-git-object-and-focused-test-verification",
+  "not_measured": [
+    "whether the live projection accepts and applies the correction",
+    "whether any other campaign evidence pointers contain errors",
+    "longer-term effect of append-only pointer correction on campaign recovery"
+  ],
+  "observation": {
+    "kind": "campaign-evidence-reference-pointer-correction",
+    "outcome": {
+      "analysis_limit": "This record documents the pointer correction and code verification. Successful application remains pending a live campaign-state append and projection readback.",
+      "correction_phase": "record prepared; campaign-ledger append and live readback pending",
+      "focused_capability_tests": {
+        "command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "failed": 0,
+        "passed": 87,
+        "status": "passed"
+      },
+      "identity_repository_path_and_sha256_preserved": true,
+      "live_projection_application": "pending-campaign-ledger-append-and-readback"
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_0e9a704af57d94d3",
+      "recorded_commit": "7d39363b811c2354a8d9756617332d9e34469547",
+      "target_observation_identity": "ev_environment_session_event_reference_coverage_verification_20261025",
+      "verified_replacement_commit": "7d39363b42b0c19abbf4d9fc0ac3b72105ab0378"
+    },
+    "source_interface": "MNCS Environment append-only capability evidence projection",
+    "source_session_context": {
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "environment_id": "renv_84f0b2e6a29fe1e2",
+      "repository": "mncs-environment",
+      "repository_context_basis": "authenticated-session-campaign-context",
+      "session_id": "ses_c6b0d153689d7388",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "work_intent_id": "int_8475157f281c835f"
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "claim_ids": [
+      "claim:mncs-environment:paths:680ca64adc34",
+      "claim:mncs-environment:paths:ec4e90650238"
+    ],
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "559237a469324c8c925664a8a6210719b54b6a13",
+      "identity": "ev_environment_pointer_correction_implementation_20261025",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "bab1308d95f20d0967533b09978b4cae68252f992652c7dd68622d16fa8d7328"
+    },
+    {
+      "commit": "559237a469324c8c925664a8a6210719b54b6a13",
+      "identity": "ev_environment_pointer_correction_tests_20261025",
+      "kind": "committed-focused-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "3ad482155324e9cda476f7258b92ad5c617a9cbcc63b19f5bd5d6a211acbbf72"
+    }
+  ]
+}

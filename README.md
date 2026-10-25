@@ -233,6 +233,18 @@ inspecting unselected repositories. Only Environment is in its writable intent;
 provider mutations still pass through claims and authority. Availability and
 readiness are observations, not permission to modify a checkout.
 
+For the focused environmental capability campaign, use
+`.mncs/environment-observation.json`. It selects Environment, Store,
+Rights/Provenance, and the read-only System Monitor sample capability, binds the
+Environment checkout containing the definition, and starts no background
+services. Readiness can be checked separately when needed:
+
+```bash
+./scripts/mncs-env enter \
+  --definition .mncs/environment-observation.json \
+  --consumer my-agent --new-session
+```
+
 ```bash
 ./scripts/mncs-env enter --consumer my-agent
 ./scripts/mncs-env status <session>       # historical, read-only context

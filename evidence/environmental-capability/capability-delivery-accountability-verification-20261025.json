@@ -1,0 +1,101 @@
+{
+  "captured_at": "2026-10-25T05:44:00Z",
+  "identity": "ev_environment_capability_delivery_accountability_verification_20261025",
+  "measurement_basis": "focused-verification-and-authenticated-live-campaign-state-projection",
+  "not_measured": [
+    "whether agents were shown or discovered each Environment capability",
+    "capability use through tools outside the Environment session event stream",
+    "provider behavior beyond the recorded substrate availability check",
+    "cross-agent discoverability, recurrence, or long-term effectiveness"
+  ],
+  "observation": {
+    "kind": "capability-delivery-accountability-projection-verification",
+    "outcome": {
+      "binding_count": 9,
+      "availability_counts": {
+        "available": 9
+      },
+      "availability_verification": "substrate",
+      "environment_invocation_records": 0,
+      "environment_invocation_record_scope": "No capability.invoked record appears in the complete 141-event session history; this does not account for direct external tool use.",
+      "invocation_use_status": "no-environment-invocation-record-in-session-history",
+      "capability_discoverability": "not-measured",
+      "event_window_truncated": false,
+      "projection_identity": "eci_f48f62ff49952c22",
+      "projection_status": "partial",
+      "session_activity_status": "partial-rpc-only-in-selected-window",
+      "verification_commands": {
+        "capability_intelligence_suite": "python -m pytest tests/test_capability_intelligence.py -q",
+        "capability_intelligence_suite_result": "89 passed",
+        "py_compile": "passed for mncs_env/capability_intelligence.py and tests/test_capability_intelligence.py",
+        "ruff": "passed for mncs_env/capability_intelligence.py and tests/test_capability_intelligence.py",
+        "git_diff_check": "passed"
+      }
+    },
+    "request": {
+      "checkpoint_id": "chk_af2863204f16c110",
+      "evidence_limit": 20,
+      "evidence_offset": 20,
+      "source_campaign_state_event": {
+        "identity": "evt_eac7988e7f202a27",
+        "sequence": 141,
+        "type": "environment.rpc.read_observed"
+      }
+    },
+    "source_interface": "MNCS Environment campaign_state environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 26,
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_af2863204f16c110",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "9503aa37ef81e4421c9ceb47afeb43bb7410fd42",
+      "identity": "ev_environment_capability_delivery_accountability_impl_20261025",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "a61a7c4efa6031924c91581325662bd823f86a189bd871a80f66eba2bbb99e8d"
+    },
+    {
+      "commit": "9503aa37ef81e4421c9ceb47afeb43bb7410fd42",
+      "identity": "ev_environment_capability_delivery_accountability_tests_20261025",
+      "kind": "committed-verification-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "42a681c10b4a1d13a403c5490f97f765626ca7bd7a1e0ad3babd80021323f4fb"
+    },
+    {
+      "commit": "9503aa37ef81e4421c9ceb47afeb43bb7410fd42",
+      "identity": "ev_environment_capability_delivery_accountability_docs_20261025",
+      "kind": "committed-projection-documentation",
+      "path": "docs/PROJECTIONS.md",
+      "repository": "mncs-environment",
+      "sha256": "d84d65200d503a6aa687c55fddb6334103a282dc69f2783c16c69f01f2384ddc"
+    },
+    {
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "event_identities": [
+        "evt_eac7988e7f202a27"
+      ],
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "session_id": "ses_c6b0d153689d7388"
+    }
+  ]
+}
