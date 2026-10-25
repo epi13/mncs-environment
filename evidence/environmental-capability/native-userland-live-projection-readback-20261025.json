@@ -1,0 +1,152 @@
+{
+  "captured_at": "2026-10-25T19:05:46.367665Z",
+  "identity": "ev_environment_native_userland_live_projection_readback_20261025",
+  "measurement_basis": "Authenticated MNCS Environment environmental-capability projection; the selected counts, verification statuses, and response-size fields were copied from the live projection result.",
+  "not_measured": [
+    "complete implementation ownership inventory across MNCS",
+    "systemwide native-versus-host adoption denominator or ratio",
+    "independent semantic verification of owner audit classifications",
+    "native migration readiness or production parity for any host responsibility",
+    "successful or failed use of these capabilities by other agent sessions",
+    "whether projection compaction changes improve agent outcomes"
+  ],
+  "observation": {
+    "kind": "native-userland-accountability-live-projection-readback",
+    "outcome": {
+      "actionable_opportunity": {
+        "readiness": "not-established; audit records do not prove a drop-in native replacement or parity",
+        "safe_next_step": "Trace the bounded compiler-owned projection ABI into one consumer path, keep the host adapter, and verify round-trip, failure, and artifact-integrity parity before transferring implementation responsibility.",
+        "title": "Connect typed compiler projection contracts to a reusable native application-level result and artifact protocol"
+      },
+      "agent_capability_delivery": {
+        "cross_agent_discoverability": "not-established",
+        "successful_or_failed_agent_use": "not-observed-by-the-source-audits"
+      },
+      "campaign_evidence_count": 3,
+      "campaign_state_checkpoint_id": "chk_f6bb2aac94e6da69",
+      "implementation_accountability": {
+        "implementation_ownership_status": "owner-declared; not independently verified",
+        "owner_audit_count": 1,
+        "sample_count": 0,
+        "source_audit_details_content_integrity_verified_count": 2,
+        "source_audit_details_status": "content-integrity-verified-owner-declarations-available",
+        "systemwide_native_adoption_ratio": {
+          "denominator": "not-established",
+          "status": "not-measured"
+        }
+      },
+      "observation_records_considered": 3,
+      "observation_records_verified": 1,
+      "pressure_hypothesis_reference": {
+        "identity": "ph_native_result_transport_shared_tooling_pressure_20261025",
+        "interpretation": "one owner-audit observation; not runtime recurrence",
+        "observation_count": 1,
+        "recurrence_status": "not-established"
+      },
+      "projected_observation_identities": [
+        "ev_environment_native_userland_owner_audit_correlation_20261025"
+      ],
+      "projection_status": "partial",
+      "response_byte_count": 54688,
+      "response_byte_limit": 49152,
+      "response_truncated": true,
+      "source_pointer_content_integrity_verified_count": 4,
+      "source_pointer_count": 4
+    },
+    "request": {
+      "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+      "evidence_limit": 4,
+      "evidence_offset": 0,
+      "history_pages": 1,
+      "operation": "environmental-capability",
+      "session_id": "ses_b6774545fb790bde"
+    },
+    "source_interface": "MNCS Environment projections --interpret environmental-capability through the explicit mncs-environment project scope",
+    "source_session_context": {
+      "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+      "environment_id": "renv_ba1634bffb8954cd",
+      "session_id": "ses_b6774545fb790bde",
+      "work_intent_goal": "improve mncs-environment through a persistent, discoverable MNCS work context",
+      "work_intent_id": "int_9bcac9814cef9e2c"
+    }
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Reduce or page detailed owner-audit payloads on demand while preserving provenance, verified-source status, host blockers, and explicit native-adoption uncertainty.",
+    "basis": "One authenticated projection returned partial status and response_truncated=true at 54,688 reported bytes against the 48 KiB response limit, while all four source pointers were content-integrity verified.",
+    "category": "environmental-discoverability-and-projection",
+    "identity": "ph_environmental_capability_projection_response_budget_20261025",
+    "not_measured": [
+      "whether a narrower evidence window keeps this result within the response limit",
+      "recurrence across independent campaigns or projection clients",
+      "whether agents can inspect the source details through another interface",
+      "whether a compaction change preserves all relevant owner blockers"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "not-established",
+    "subsystem": "MNCS Environment capability-intelligence output compaction",
+    "title": "Native accountability detail exceeds the environmental capability projection response budget"
+  },
+  "recorder": {
+    "consumer_id": "local-agent",
+    "definition_id": "env_c19cbcbb6aa68f17",
+    "environment_id": "renv_ba1634bffb8954cd",
+    "session_id": "ses_b6774545fb790bde",
+    "source_interface": "mncs-env projections --interpret environmental-capability"
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+    "campaign_objective": "Improve MNCS environmental capability intelligence and agent support, including machine-native adoption and capability accountability.",
+    "definition_id": "env_c19cbcbb6aa68f17",
+    "environment_id": "renv_ba1634bffb8954cd",
+    "session_id": "ses_b6774545fb790bde",
+    "work_intent_goal": "improve mncs-environment through a persistent, discoverable MNCS work context",
+    "work_intent_id": "int_9bcac9814cef9e2c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "e223e89ea429abd3a206e06195f9b8cc1098d90a",
+      "identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+      "kind": "environmental-observation-record",
+      "path": "evidence/environmental-capability/native-userland-accountability-20261025.json",
+      "repository": "mncs-environment",
+      "sha256": "14af1e6885b24b324491af644f7a9a4bb589e60d391d4649b9c93c49832b6b66"
+    },
+    {
+      "commit": "ca62f3d33ef9c3b5096bc4d39f6039adc445e579",
+      "content_integrity_status": "workspace-read-only-content-integrity-verified",
+      "identity": "audit_mncs_actions_native_userland_20261025",
+      "kind": "repository-owner-native-userland-audit",
+      "path": "native-userland-audit.json",
+      "repository": "mncs-actions",
+      "sha256": "76e5845b033c775f93bc3e821a069cf8bb21eb437784e505847db3c19446c48a"
+    },
+    {
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "content_integrity_status": "content-integrity-verified",
+      "identity": "audit_mncs_test_native_userland_20261025",
+      "kind": "repository-owner-native-userland-audit",
+      "path": "native-userland-audit.json",
+      "repository": "mncs-test",
+      "sha256": "cd4e760c250504cc62b5094769bedf07b73b2dd6d0765206c571290a27bb5560"
+    },
+    {
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "content_integrity_status": "content-integrity-verified",
+      "identity": "MNCS-TEST-P-004",
+      "kind": "repository-owner-language-and-runtime-pressure",
+      "path": "pressures/MNCS-TEST-P-004.json",
+      "repository": "mncs-test",
+      "sha256": "1b3a90dedc869f666e898450af81634aa27863a4c144b7d4b5d87caa992b42bf"
+    },
+    {
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "content_integrity_status": "content-integrity-verified",
+      "identity": "MNCS-TEST-P-006",
+      "kind": "repository-owner-native-result-transport-pressure",
+      "path": "pressures/MNCS-TEST-P-006.json",
+      "repository": "mncs-test",
+      "sha256": "26d0e4eae997127cad0b17ae8f0ebb733983ddb64162b72ae96fa319ac616f86"
+    }
+  ]
+}
