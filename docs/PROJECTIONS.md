@@ -164,6 +164,16 @@ implementation inventory and denominator exist. Missing source campaign or
 agent identity remains unavailable rather than being attributed to the
 Environment projection session.
 
+When the selected evidence window also contains a cross-project native-userland
+audit, the same view exposes its owner-declared project classifications,
+remaining host responsibilities, bounded source pointers, and proposed native
+slice. Source content integrity is reported separately from implementation
+ownership: a verified audit blob does not independently establish the owner's
+classification, repository coverage, or migration readiness. The projected
+systemwide ratio stays `not-measured`, and the candidate opportunity retains
+its readiness as `not-established` until independent implementation and
+verification evidence exists.
+
 When the selected session has a capability-delivery view, the sample also
 exposes `selected_session_delivery_observation`. It compares the proof's
 canonical capability identity with that session's current binding snapshot and
@@ -526,7 +536,10 @@ payloads are summarized by digest and the exact evidence pointers remain
 available for inspection. Compacted views retain the newest observation and
 improvement-relation records by ledger offset, including when history pages are
 read newest-page-first. `observation_records_compacted_out_count` reports how
-many verified observation summaries did not fit the compact view.
+many verified observation summaries did not fit the compact view. The CLI
+keeps environmental-capability JSON within the same byte limit; it omits
+indentation when pretty formatting would exceed the bound and refuses a
+compact payload that still exceeds it.
 
 ## What the ambient pass refuses
 

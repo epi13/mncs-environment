@@ -394,6 +394,8 @@ def evaluate(
         if not owned:
             return {
                 "verdict": "escalate",
+                "required_authorization": "session-claim",
+                "next_step": "acquire-exact-claim",
                 "reason": (
                     f"{action} requires a current session claim covering the "
                     "exact destination scope"
@@ -422,6 +424,8 @@ def evaluate(
             return {"verdict": "allow",
                     "reason": f"{target} retirement by scoped claim"}
         return {"verdict": "escalate",
+                "required_authorization": "session-claim",
+                "next_step": "acquire-exact-claim",
                 "reason": f"{target} retirement requires a current claim covering the requested scope"}
     if action in MUTATING_ACTIONS:
         facts = (repo_facts or {}).get(repo, {})
@@ -437,8 +441,12 @@ def evaluate(
         if not owned and not pristine:
             if not facts:
                 return {"verdict": "escalate",
+                        "required_authorization": "session-claim",
+                        "next_step": "acquire-exact-claim",
                         "reason": f"{repo} has no observed workspace facts; claim it first"}
             return {"verdict": "escalate",
+                    "required_authorization": "session-claim",
+                    "next_step": "acquire-exact-claim",
                     "reason": f"{repo} is not owned scope (dirty/foreign/off-branch); claim it first"}
         return {"verdict": "allow",
                 "reason": f"{target} mutation by claim" if owned else f"{target} is owned clean scope"}
@@ -447,7 +455,12 @@ def evaluate(
                 "reason": f"{target} verification permitted; "
                           "repo writes must stay within declared ephemeral roots"}
     if action in context.get("escalation_required", []):
-        return {"verdict": "escalate", "reason": f"{action} requires escalation"}
+        return {
+            "verdict": "escalate",
+            "required_authorization": "owner-approval",
+            "next_step": "request-owner-approval",
+            "reason": f"{action} requires escalation",
+        }
     if action == "invoke":
         return {"verdict": "allow", "reason": "invocation permitted; effects checked per call"}
     if action in ("read", "subscribe"):

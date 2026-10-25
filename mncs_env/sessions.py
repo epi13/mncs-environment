@@ -8233,6 +8233,14 @@ class Session:
                 "--interpret", "environmental-capability",
             ],
         }
+        actions["environmental_capability_history_projection"] = {
+            "argv": [
+                *prefix, "projections", self.session_id,
+                "--interpret", "environmental-capability",
+                "--history-pages", "4",
+                "--evidence-limit", "8",
+            ],
+        }
         return actions
 
     def health(self, *, live: bool = False) -> dict[str, Any]:

@@ -234,6 +234,16 @@ the referenced artifact or remote state. A subsequent entry reconstructs the
 campaign projection from that checkpoint if the session snapshot was not
 updated before a process interruption.
 
+The entry context exposes `actions.environmental_capability_projection.argv`
+for the newest transport-bounded page and
+`actions.environmental_capability_history_projection.argv` for an on-demand
+historical scan. The latter reads at most four pages of eight campaign
+references each (32 references total); the projection still bounds observation
+reads and response size. The CLI uses compact JSON if indentation would exceed
+that response bound. Use its page cursors and coverage fields to determine what
+history was actually examined. A missing pressure in a bounded view does not
+establish that it is absent from older campaign evidence.
+
 ## Environmental capability intelligence
 
 The read-only `campaign-state-inspection/2` capability also includes an
@@ -307,6 +317,16 @@ do not establish that a denial was inappropriate or that the environment
 caused it. Absolute checkout targets are attributed only through observed
 checkout paths, and merge or publish still requires a live claim covering the
 resolved checkout scope.
+
+Authority decisions distinguish the lease needed to continue from an owner
+approval. A missing exact claim for merge, publish, retire, or another scoped
+mutation reports `required_authorization: session-claim` and
+`next_step: acquire-exact-claim`; acquire the available scope through the
+normal claims operation, then re-evaluate authority. This does not request a
+second user approval. Foreign overlapping claims, protected repositories, or
+scope outside the campaign's writable repositories remain blocking conditions.
+Decisions that actually require owner approval identify that separately as
+`required_authorization: owner-approval`.
 
 Observation source summaries keep registration status separate from
 `content_integrity_status`. A selected source blob is marked

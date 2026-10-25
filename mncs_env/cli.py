@@ -53,8 +53,22 @@ DEFAULT_ECI_EVIDENCE_PAGE_SIZE = 2
 DEFAULT_ECI_SESSION_EVENT_LIMIT = 4
 
 
-def out(value: object) -> None:
-    print(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True))
+def out(value: object, *, max_bytes: int | None = None) -> None:
+    if max_bytes is None:
+        print(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True))
+        return
+    if type(max_bytes) is not int or max_bytes < 1:
+        raise ValueError("output byte limit must be a positive integer")
+    pretty = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True)
+    if len(pretty.encode("utf-8")) <= max_bytes:
+        print(pretty)
+        return
+    compact = json.dumps(
+        value, ensure_ascii=False, separators=(",", ":"), sort_keys=True,
+    )
+    if len(compact.encode("utf-8")) > max_bytes:
+        raise ValueError(f"serialized projection exceeds {max_bytes} byte output limit")
+    print(compact)
 
 
 def fail(
@@ -423,14 +437,21 @@ def cmd_projections(args: argparse.Namespace) -> int:
             session_event_limit = capability_intelligence_module.MAX_SESSION_EVENT_WINDOW
         with closing(_open(args)) as session:
             try:
-                out(projections_module.interpretation(
+                interpretation = projections_module.interpretation(
                     session, args.repository, args.interpret,
                     history_pages=args.history_pages,
                     evidence_offset=args.evidence_offset,
                     evidence_limit=evidence_limit,
                     session_event_before_sequence=args.session_event_before_sequence,
                     session_event_limit=session_event_limit,
-                ))
+                )
+                if args.interpret == "environmental-capability":
+                    out(
+                        interpretation,
+                        max_bytes=capability_intelligence_module.MAX_RESULT_BYTES,
+                    )
+                else:
+                    out(interpretation)
             except ValueError as error:
                 return fail(str(error))
         return 0

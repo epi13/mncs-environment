@@ -3350,6 +3350,74 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
     ] == "evt_test_artifact_invoked"
 
 
+def test_native_userland_owner_audit_is_actionable_without_claiming_verified_ownership(
+    tmp_path: Path,
+) -> None:
+    source_path = (
+        Path(__file__).resolve().parent.parent
+        / "evidence/environmental-capability/native-userland-accountability-20261025.json"
+    )
+    report = json.loads(source_path.read_text(encoding="utf-8"))
+    session, _state = _session(tmp_path, [report])
+
+    result = capability_intelligence.project(session)
+
+    accountability = result["implementation_accountability"]
+    assert accountability["sample_count"] == 0
+    assert accountability["systemwide_native_adoption_ratio"]["status"] == (
+        "not-measured"
+    )
+    owner_evidence = accountability["owner_audit_evidence"]
+    assert owner_evidence["observed_audit_record_count"] == 1
+    assert owner_evidence["implementation_ownership_status"] == (
+        "owner-declared; not independently verified"
+    )
+    assert owner_evidence["systemwide_native_adoption_ratio"]["status"] == (
+        "not-measured"
+    )
+
+    audit = owner_evidence["audits"][0]
+    assert audit["identity"] == report["identity"]
+    assert audit["source_declared_audit_count"] == 2
+    assert audit["systemwide_native_adoption_ratio"]["denominator"] == (
+        "not-established"
+    )
+    assert audit["source_interpretation"].startswith("repository-owner-declared")
+    assert {project["repository"] for project in audit["projects"]} == {
+        "mncs-actions", "mncs-test",
+    }
+    assert all(project["owner_declared_status"] == "native_canonical"
+               for project in audit["projects"])
+    assert audit["actionable_opportunity"]["readiness"].startswith(
+        "not-established"
+    )
+    assert "preserve the host adapter" in audit["actionable_opportunity"][
+        "safe_next_step"
+    ]
+    assert audit["evidence_reference"]["identity"] == report["identity"]
+    assert audit["supporting_source_references"][0]["identity"] == (
+        "audit_mncs_actions_native_userland_20261025"
+    )
+    assert audit["supporting_source_references"][0][
+        "content_integrity_status"
+    ] != "content-integrity-verified"
+
+    compact = capability_intelligence._compact_implementation_accountability(
+        accountability,
+    )
+    compact_audit = compact["owner_audit_evidence"]["audits"][0]
+    assert compact["systemwide_native_adoption_ratio"]["status"] == (
+        "not-measured"
+    )
+    assert compact_audit["evidence_reference"]["identity"] == report["identity"]
+    assert compact_audit["source_interpretation"].startswith(
+        "repository-owner-declared"
+    )
+    assert compact_audit["actionable_opportunity"]["readiness"].startswith(
+        "not-established"
+    )
+
+
 def test_compiler_capability_delivery_requires_exact_identity_for_exact_match() -> None:
     contract = {
         "required_identity": (
@@ -5007,7 +5075,7 @@ def test_targeted_small_evidence_segment_reads_its_complete_observation_set(
     ]
 
 
-def test_projection_cli_defaults_to_capability_page_limit(
+def test_projection_cli_explicitly_supports_capability_page_limit(
     tmp_path: Path, monkeypatch,
 ) -> None:
     record = _observation(
@@ -5036,6 +5104,7 @@ def test_projection_cli_defaults_to_capability_page_limit(
         status = cli.main([
             "--state-dir", str(tmp_path), "--persistence", "file",
             "projections", session.session_id, "--interpret", "environmental-capability",
+            "--evidence-limit", str(capability_intelligence.MAX_EVIDENCE_REFS),
         ])
 
     projection = json.loads(output.getvalue())

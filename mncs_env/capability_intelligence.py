@@ -607,8 +607,11 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
         return None
     raw_samples = value.get("samples")
     raw_samples = raw_samples if isinstance(raw_samples, list) else []
+    owner_audit_evidence = _compact_owner_audit_evidence(
+        value.get("owner_audit_evidence"),
+    )
     if not raw_samples:
-        return {
+        result = {
             "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
             "sample_count": 0,
             "samples": [],
@@ -617,6 +620,9 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
                 "reason": "A complete, ownership-verified MNCS implementation inventory is unavailable.",
             },
         }
+        if owner_audit_evidence is not None:
+            result["owner_audit_evidence"] = owner_audit_evidence
+        return result
     samples = []
     for sample in raw_samples[:4]:
         if not isinstance(sample, dict):
@@ -694,7 +700,7 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
     if isinstance(ratio, dict) and isinstance(ratio.get("reason"), str):
         compact_ratio["reason"] = _short_text(ratio["reason"], 256) or compact_ratio["reason"]
     measurement_limits = value.get("measurement_limits")
-    return {
+    result = {
         "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
         "scope": _short_text(value.get("scope"), 192),
         "sample_count": value.get("sample_count", len(raw_samples)),
@@ -706,6 +712,129 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
             for item in measurement_limits[:4]
             if isinstance(item, str)
         ] if isinstance(measurement_limits, list) else [],
+    }
+    if owner_audit_evidence is not None:
+        result["owner_audit_evidence"] = owner_audit_evidence
+    return result
+
+
+def _compact_owner_audit_evidence(value: Any) -> dict[str, Any] | None:
+    """Retain bounded owner declarations without upgrading them to verification."""
+    if not isinstance(value, dict):
+        return None
+    audits = value.get("audits")
+    audits = audits if isinstance(audits, list) else []
+    compact_audits = []
+    for audit in audits[:4]:
+        if not isinstance(audit, dict):
+            continue
+        compact_audit = {
+            key: _short_text(audit.get(key), 256 if key in {
+                "source_interpretation", "interpretation_limit",
+            } else 160)
+            for key in (
+                "identity", "source_interpretation", "interpretation_limit",
+            )
+            if isinstance(audit.get(key), str)
+        }
+        for key in ("source_declared_audit_count", "projected_audit_record_count"):
+            if type(audit.get(key)) is int and audit[key] >= 0:
+                compact_audit[key] = audit[key]
+        adoption = audit.get("systemwide_native_adoption_ratio")
+        if isinstance(adoption, dict):
+            compact_audit["systemwide_native_adoption_ratio"] = {
+                "status": "not-measured",
+                **({"denominator": _short_text(adoption["denominator"], 96)}
+                   if isinstance(adoption.get("denominator"), str) else {}),
+                **({"reason": _short_text(adoption["reason"], 256)}
+                   if isinstance(adoption.get("reason"), str) else {}),
+            }
+        raw_projects = audit.get("projects")
+        raw_projects = raw_projects if isinstance(raw_projects, list) else []
+        projects = []
+        for project in raw_projects[:4]:
+            if not isinstance(project, dict):
+                continue
+            compact_project = {
+                key: _short_text(project.get(key), 192)
+                for key in (
+                    "repository", "owner_declared_status",
+                    "owner_declared_native_surface",
+                    "owner_declared_next_native_slice",
+                )
+                if isinstance(project.get(key), str)
+            }
+            responsibilities = project.get("remaining_host_responsibilities")
+            if isinstance(responsibilities, list):
+                compact_project["remaining_host_responsibilities"] = [
+                    _short_text(item, 160)
+                    for item in responsibilities[:8]
+                    if isinstance(item, str)
+                ]
+                compact_project["remaining_host_responsibilities_truncated"] = (
+                    len(responsibilities) > 8
+                )
+            if compact_project:
+                projects.append(compact_project)
+        compact_audit["projects"] = projects
+        opportunity = audit.get("actionable_opportunity")
+        if isinstance(opportunity, dict):
+            compact_audit["actionable_opportunity"] = {
+                key: _short_text(opportunity.get(key), 256)
+                for key in (
+                    "title", "candidate_boundary", "current_observation",
+                    "readiness", "safe_next_step",
+                )
+                if isinstance(opportunity.get(key), str)
+            }
+        pressure = audit.get("pressure_hypothesis")
+        if isinstance(pressure, dict):
+            compact_audit["pressure_hypothesis"] = {
+                key: _short_text(pressure.get(key), 192)
+                for key in ("identity", "title", "category", "recurrence")
+                if isinstance(pressure.get(key), str)
+            }
+        sources = audit.get("supporting_source_references")
+        sources = sources if isinstance(sources, list) else []
+        compact_audit["supporting_source_references"] = [
+            {
+                key: _short_text(source.get(key), 192 if key == "path" else 160)
+                for key in (
+                    "identity", "kind", "repository", "commit", "path", "sha256",
+                    "status", "content_integrity_status",
+                )
+                if isinstance(source.get(key), str)
+            }
+            for source in sources[:8]
+            if isinstance(source, dict)
+        ]
+        reference = _validate_reference(audit.get("evidence_reference"))
+        if reference is not None:
+            compact_audit["evidence_reference"] = reference
+        raw_measurement_limits = audit.get("measurement_limits")
+        raw_measurement_limits = (
+            raw_measurement_limits
+            if isinstance(raw_measurement_limits, list) else []
+        )
+        compact_audit["measurement_limits"] = [
+            _short_text(item, 192)
+            for item in raw_measurement_limits[:8]
+            if isinstance(item, str)
+        ]
+        compact_audits.append(compact_audit)
+    if not compact_audits:
+        return None
+    return {
+        "observed_audit_record_count": value.get(
+            "observed_audit_record_count", len(audits),
+        ),
+        "audits_truncated": len(audits) > len(compact_audits),
+        "audits": compact_audits,
+        "implementation_ownership_status": "owner-declared; not independently verified",
+        "systemwide_native_adoption_ratio": {
+            "status": "not-measured",
+            "reason": "Owner audit samples do not establish a complete implementation inventory or denominator.",
+        },
     }
 
 
@@ -3825,11 +3954,113 @@ def _implementation_accountability_projection(
     selected_session_capability_delivery: Any = None,
     selected_session_id: str = "",
 ) -> dict[str, Any] | None:
-    """Summarize verified native-ownership samples without asserting coverage."""
+    """Summarize source-verified proofs and separate owner-declared audit evidence."""
     samples: list[dict[str, Any]] = []
+    owner_audits: list[dict[str, Any]] = []
     for observation_record in observations:
         observation = observation_record.get("observation")
         observation = observation if isinstance(observation, dict) else {}
+        if observation.get("kind") == "cross-project-native-userland-accountability":
+            outcome = observation.get("outcome")
+            outcome = outcome if isinstance(outcome, dict) else {}
+            raw_projects = outcome.get("projects")
+            raw_projects = raw_projects if isinstance(raw_projects, list) else []
+            projects = []
+            for project in raw_projects[:8]:
+                if not isinstance(project, dict):
+                    continue
+                projected_project = {
+                    key: _short_text(project.get(key), 256)
+                    for key in (
+                        "repository", "owner_declared_status",
+                        "owner_declared_native_surface",
+                        "owner_declared_next_native_slice",
+                    )
+                    if isinstance(project.get(key), str)
+                }
+                responsibilities = project.get("remaining_host_responsibilities")
+                if isinstance(responsibilities, list):
+                    projected_project["remaining_host_responsibilities"] = [
+                        _short_text(item, 192)
+                        for item in responsibilities[:8]
+                        if isinstance(item, str)
+                    ]
+                    projected_project["remaining_host_responsibilities_truncated"] = (
+                        len(responsibilities) > 8
+                    )
+                if projected_project:
+                    projects.append(projected_project)
+            native_adoption = outcome.get("native_adoption")
+            native_adoption = (
+                native_adoption if isinstance(native_adoption, dict) else {}
+            )
+            declared_count = outcome.get("owner_audit_count")
+            source_pointers = observation_record.get("supporting_sources")
+            source_pointers = source_pointers if isinstance(source_pointers, list) else []
+            actionable = outcome.get("actionable_opportunity")
+            actionable = actionable if isinstance(actionable, dict) else {}
+            pressure = observation_record.get("pressure_hypothesis")
+            pressure = pressure if isinstance(pressure, dict) else {}
+            evidence_reference = observation_record.get("evidence_reference")
+            evidence_reference = (
+                evidence_reference if isinstance(evidence_reference, dict) else None
+            )
+            owner_audits.append({
+                "identity": observation_record.get("identity"),
+                "projected_audit_record_count": 1,
+                **({"source_declared_audit_count": declared_count}
+                   if type(declared_count) is int and declared_count >= 0 else {}),
+                "source_interpretation": _short_text(outcome.get(
+                    "source_interpretation",
+                    "repository-owner-declared; implementation ownership not independently verified",
+                ), 512),
+                "projects": projects,
+                "actionable_opportunity": {
+                    key: _short_text(actionable.get(key), 512)
+                    for key in (
+                        "title", "candidate_boundary", "current_observation",
+                        "readiness", "safe_next_step",
+                    )
+                    if isinstance(actionable.get(key), str)
+                },
+                "systemwide_native_adoption_ratio": {
+                    "status": "not-measured",
+                    **({"denominator": _short_text(
+                        native_adoption.get("denominator"), 128,
+                    )} if isinstance(native_adoption.get("denominator"), str) else {}),
+                    **({"reason": _short_text(
+                        native_adoption.get("reason"), 512,
+                    )} if isinstance(native_adoption.get("reason"), str) else {}),
+                },
+                "supporting_source_references": [
+                    {
+                        key: source[key]
+                        for key in (
+                            "identity", "kind", "repository", "commit", "path",
+                            "sha256", "status", "content_integrity_status",
+                        )
+                        if isinstance(source.get(key), str)
+                    }
+                    for source in source_pointers[:8]
+                    if isinstance(source, dict)
+                ],
+                "pressure_hypothesis": {
+                    key: _short_text(pressure.get(key), 256)
+                    for key in ("identity", "title", "category", "recurrence")
+                    if isinstance(pressure.get(key), str)
+                },
+                "evidence_reference": evidence_reference,
+                "interpretation_limit": (
+                    "Source content integrity does not independently verify repository-owner classifications, "
+                    "implementation ownership, completeness, or migration readiness."
+                ),
+                "measurement_limits": [
+                    _short_text(item, 512)
+                    for item in observation_record.get("measurement_limits", [])[:16]
+                    if isinstance(item, str)
+                ] if isinstance(observation_record.get("measurement_limits"), list)
+                else [],
+            })
         if observation.get("kind") != (
             "compiler-native-application-implementation-ownership"
         ):
@@ -3929,10 +4160,27 @@ def _implementation_accountability_projection(
         if delivery_observation is not None:
             sample["selected_session_delivery_observation"] = delivery_observation
         samples.append(sample)
+    owner_audit_evidence = None
+    if owner_audits:
+        owner_audit_evidence = {
+            "observed_audit_record_count": len(owner_audits),
+            "audits": owner_audits[:4],
+            "audits_truncated": len(owner_audits) > 4,
+            "implementation_ownership_status": (
+                "owner-declared; not independently verified"
+            ),
+            "systemwide_native_adoption_ratio": {
+                "status": "not-measured",
+                "reason": (
+                    "Owner audit samples do not establish a complete implementation "
+                    "inventory or denominator."
+                ),
+            },
+        }
     if not samples:
-        if not native_proof_reference_present:
+        if not native_proof_reference_present and owner_audit_evidence is None:
             return None
-        return {
+        result = {
             "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
             "sample_count": 0,
             "samples": [],
@@ -3941,7 +4189,10 @@ def _implementation_accountability_projection(
                 "reason": "A complete, ownership-verified MNCS implementation inventory is unavailable.",
             },
         }
-    return {
+        if owner_audit_evidence is not None:
+            result["owner_audit_evidence"] = owner_audit_evidence
+        return result
+    result = {
         "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
         "scope": "source-backed implementation samples linked from the selected campaign evidence",
         "sample_count": len(samples),
@@ -3957,6 +4208,9 @@ def _implementation_accountability_projection(
             "Compiler proof and selected-session delivery observations are separate; neither establishes cross-agent discoverability.",
         ],
     }
+    if owner_audit_evidence is not None:
+        result["owner_audit_evidence"] = owner_audit_evidence
+    return result
 
 
 def _validate_captured_session_activity_reference(source: Any) -> bool:
