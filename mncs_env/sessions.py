@@ -1056,8 +1056,11 @@ def _verified_scope_checkout(
     identity; directory depth is not part of acceptance.
     """
     raw_root = Path(workspace_root)
-    root = raw_root.resolve(strict=True)
-    if Path(os.path.abspath(raw_root)) != root or not root.is_dir():
+    try:
+        root = workspace_module.resolve_control_workspace_alias(raw_root)
+    except (OSError, ValueError):
+        root = None
+    if root is None or not root.is_dir():
         raise ValueError("authorized Environment workspace root is not canonical")
     if owner_authorized_checkout is not None:
         # Cross-repository campaign scopes are admitted by the authenticated
@@ -1077,16 +1080,20 @@ def _verified_scope_checkout(
         if not repository_root.is_absolute() or not checkout_path.is_absolute():
             raise ValueError("owner-authorized checkout paths must be absolute")
         try:
-            absolute_repository_root = Path(os.path.abspath(repository_root))
-            repository_root = repository_root.resolve(strict=True)
-            absolute_checkout = Path(os.path.abspath(checkout_path))
-            checkout_path = checkout_path.resolve(strict=True)
+            repository_root = workspace_module.resolve_control_workspace_alias(
+                repository_root
+            )
+            checkout_path = workspace_module.resolve_control_workspace_alias(
+                checkout_path
+            )
         except OSError as error:
             raise ValueError("owner-authorized checkout is unavailable") from error
-        if absolute_repository_root != repository_root:
-            raise ValueError("owner-authorized repository root traverses a symbolic link")
-        if absolute_checkout != checkout_path:
-            raise ValueError("owner-authorized checkout path traverses a symbolic link")
+        except ValueError as error:
+            if "symbolic link" in str(error):
+                raise ValueError(
+                    "owner-authorized checkout path traverses a symbolic link"
+                ) from error
+            raise ValueError("owner-authorized checkout is unavailable") from error
         if repository_root.name != repository:
             raise ValueError("owner-authorized repository root names a different repository")
         if checkout_path == repository_root:
@@ -1188,6 +1195,12 @@ def _verified_scope_checkout(
         requested_path = Path(raw_path)
         if not requested_path.is_absolute():
             requested_path = root / requested_path
+        try:
+            requested_path = workspace_module.resolve_control_workspace_alias(
+                requested_path
+            )
+        except (OSError, ValueError) as error:
+            raise ValueError("selected checkout path is not canonical") from error
         expected_branch = selected.get("branch")
         if expected_branch is not None and not isinstance(expected_branch, str):
             raise ValueError("selected checkout branch is malformed")
@@ -1206,10 +1219,9 @@ def _verified_scope_checkout(
         if not anchor_path.is_absolute():
             anchor_path = root / anchor_path
         try:
-            absolute_anchor = Path(os.path.abspath(anchor_path))
-            anchor_path = absolute_anchor.resolve(strict=True)
-            if absolute_anchor != anchor_path:
-                raise ValueError("authorized checkout path traverses a symbolic link")
+            anchor_path = workspace_module.resolve_control_workspace_alias(
+                anchor_path
+            )
             anchor_relative = anchor_path.relative_to(root)
         except (OSError, ValueError) as error:
             if isinstance(error, ValueError) and "symbolic link" in str(error):
@@ -1298,20 +1310,19 @@ def _verified_declared_provider_checkout(
     """
     candidate_value = Path(checkout).expanduser()
     try:
-        absolute_candidate = Path(os.path.abspath(candidate_value))
-        candidate = absolute_candidate.resolve(strict=True)
-    except OSError as error:
+        candidate = workspace_module.resolve_control_workspace_alias(candidate_value)
+    except (OSError, ValueError) as error:
+        if "symbolic link" in str(error):
+            raise workspace_module.WorkspaceResolutionError(
+                "declared provider checkout traverses a symbolic link",
+                diagnostics={
+                    "code": "working-checkout-unavailable",
+                    "repository": repository,
+                    "path": str(candidate_value),
+                    "reason": "symbolic-link-escape",
+                },
+            ) from error
         raise ValueError("declared provider checkout is unavailable") from error
-    if absolute_candidate != candidate:
-        raise workspace_module.WorkspaceResolutionError(
-            "declared provider checkout traverses a symbolic link",
-            diagnostics={
-                "code": "working-checkout-unavailable",
-                "repository": repository,
-                "path": str(candidate_value),
-                "reason": "symbolic-link-escape",
-            },
-        )
 
     declared = []
     bindings = snapshot.get("bindings", [])
@@ -1324,8 +1335,10 @@ def _verified_declared_provider_checkout(
             if not isinstance(raw_root, str) or not raw_root:
                 continue
             try:
-                absolute_root = Path(os.path.abspath(Path(raw_root).expanduser()))
-            except OSError:
+                absolute_root = workspace_module.resolve_control_workspace_alias(
+                    Path(raw_root).expanduser()
+                )
+            except (OSError, ValueError):
                 continue
             if absolute_root == candidate:
                 declared.append(binding)
@@ -1336,12 +1349,11 @@ def _verified_declared_provider_checkout(
     if not isinstance(workspace_value, str) or not workspace_value:
         raise ValueError("session has no authorized workspace for its provider checkout")
     try:
-        absolute_workspace = Path(os.path.abspath(Path(workspace_value).expanduser()))
-        session_workspace = absolute_workspace.resolve(strict=True)
-    except OSError as error:
+        session_workspace = workspace_module.resolve_control_workspace_alias(
+            Path(workspace_value).expanduser()
+        )
+    except (OSError, ValueError) as error:
         raise ValueError("session workspace is unavailable") from error
-    if absolute_workspace != session_workspace:
-        raise ValueError("session workspace traverses a symbolic link")
 
     try:
         candidate.relative_to(session_workspace)

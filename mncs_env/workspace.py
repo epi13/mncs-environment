@@ -25,6 +25,13 @@ MAX_REPOS = 500
 MAX_ROOT_DIRECTORIES = 64
 WORKSPACE_SCAN_TIMEOUT_SECONDS = 10.0
 
+# MNCS Control bind-mounts the configured host workspace at /workspace and
+# exposes its host pathname inside the sandbox as a symlink to that mount.
+# Environment normally rejects symlinked workspaces and checkouts; this one
+# exact, verified mount alias is the exception needed to preserve the
+# authenticated host path across the sandbox boundary.
+CONTROL_WORKSPACE_MOUNT = Path("/workspace")
+
 # One git resolution per process: every spawn otherwise pays a full PATH
 # search of failed exec probes before reaching the real binary.
 _GIT_BINARY: str | None = None
@@ -69,6 +76,61 @@ class WorkspaceResolutionError(ValueError):
     def __init__(self, message: str, *, diagnostics: dict[str, Any] | None = None):
         super().__init__(message)
         self.diagnostics = diagnostics or {}
+
+
+def _is_control_workspace_mount(path: Path) -> bool:
+    """Return whether path is the active Control workspace mount point."""
+    try:
+        return (
+            path == CONTROL_WORKSPACE_MOUNT
+            and path.is_dir()
+            and path.is_mount()
+            and path.resolve(strict=True) == path
+        )
+    except OSError:
+        return False
+
+
+def resolve_control_workspace_alias(path: str | Path) -> Path:
+    """Resolve a canonical path or Control's exact mounted-workspace alias.
+
+    Control presents the authorized host workspace inside its sandbox through
+    a symlink to the bind mount at ``/workspace``. Accept that alias only when
+    its symlink target is exactly the active mount and every remaining path
+    component is canonical. All other symlink paths remain rejected.
+    """
+    absolute = Path(os.path.abspath(Path(path).expanduser()))
+    try:
+        resolved = absolute.resolve(strict=True)
+    except OSError as error:
+        raise ValueError("workspace path is unavailable") from error
+    if absolute == resolved:
+        return resolved
+
+    cursor = absolute
+    suffix: list[str] = []
+    while cursor != cursor.parent:
+        if cursor.is_symlink():
+            try:
+                target = Path(os.readlink(cursor))
+            except OSError as error:
+                raise ValueError("workspace path traverses a symbolic link") from error
+            if target != CONTROL_WORKSPACE_MOUNT:
+                raise ValueError("workspace path traverses a symbolic link")
+            mount = CONTROL_WORKSPACE_MOUNT
+            if not _is_control_workspace_mount(mount):
+                raise ValueError("Control workspace alias has no verified mount")
+            candidate = mount.joinpath(*reversed(suffix))
+            try:
+                canonical_candidate = candidate.resolve(strict=True)
+            except OSError as error:
+                raise ValueError("workspace alias target is unavailable") from error
+            if canonical_candidate != candidate or canonical_candidate != resolved:
+                raise ValueError("workspace alias target traverses a symbolic link")
+            return canonical_candidate
+        suffix.append(cursor.name)
+        cursor = cursor.parent
+    raise ValueError("workspace path is not canonical")
 
 
 def _git(
