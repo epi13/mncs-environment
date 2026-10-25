@@ -1,0 +1,99 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_resource_control_delivery_20261025T184837Z",
+  "captured_at": "2026-10-25T18:48:37.847915+00:00",
+  "measurement_basis": "authenticated-operation-result-and-session-context",
+  "observation": {
+    "kind": "environment-capability-delivery-result",
+    "source_interface": "MNCS Control protected terminal and Environment RPC",
+    "request": {
+      "operation": "resources",
+      "selected_session_id": "ses_b6774545fb790bde",
+      "selection_basis": "authenticated continuation in the same protected execution",
+      "command": "./scripts/mncs-env resources"
+    },
+    "outcome": {
+      "exit_code": 3,
+      "error": "Environment operation is not exposed by Control",
+      "diagnostics": {
+        "code": "operation-unavailable",
+        "transport": "mncs-control-environment-rpc",
+        "publication_completed": false,
+        "next": "use an exposed Environment operation or extend the Control operation contract",
+        "cause_code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+        "domain_details": {
+          "cause_code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+          "operation": "resources",
+          "status": "unknown"
+        }
+      }
+    },
+    "source_session_context": {
+      "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+      "session_id": "ses_b6774545fb790bde",
+      "work_intent_id": "int_9bcac9814cef9e2c",
+      "work_intent_goal": "improve mncs-environment through a persistent, discoverable MNCS work context",
+      "environment_id": "renv_ba1634bffb8954cd",
+      "repository": "mncs-environment",
+      "repository_branch": "main",
+      "repository_head": "75147ac6e760dd2c0fd1a7d8cd2940b2b4b93b90",
+      "repository_context_basis": "authenticated Environment continuation selected this session before the resource operation"
+    },
+    "advertised_action": {
+      "source_interface": "mncs-env context",
+      "session_id": "ses_b6774545fb790bde",
+      "action": "resources",
+      "argv_tail": ["resources"],
+      "captured_at": "2026-10-25T18:48:47.295191Z",
+      "path_details": "omitted"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+    "session_id": "ses_b6774545fb790bde",
+    "work_intent_id": "int_9bcac9814cef9e2c",
+    "work_intent_goal": "improve mncs-environment through a persistent, discoverable MNCS work context",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_ba1634bffb8954cd",
+    "definition_id": "env_c19cbcbb6aa68f17",
+    "environment_version": "75147ac6e760dd2c0fd1a7d8cd2940b2b4b93b90",
+    "lifecycle": "active"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_resource_observation_not_exposed_by_control_20261025",
+    "title": "Environment advertises a resource observation action that Control does not expose",
+    "category": "capability-delivery",
+    "subsystem": "MNCS Control Environment RPC operation contract",
+    "owner": "mncs-control-mcp",
+    "actionable_recommendation": "Expose a bounded authenticated resource observation through Control and preserve the distinction between the selected Environment session and the sampled process."
+  },
+  "not_measured": [
+    "whether other sessions encounter this operation-unavailable result",
+    "whether the Control operation omission is intentional or an integration defect",
+    "whether the advertised action succeeds through any other authenticated entry path"
+  ],
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+      "session_id": "ses_b6774545fb790bde",
+      "operation": "resources",
+      "cause_code": "ENVIRONMENT_OPERATION_UNAVAILABLE"
+    },
+    {
+      "kind": "authenticated-context-action",
+      "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+      "session_id": "ses_b6774545fb790bde",
+      "action": "resources",
+      "available": true
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+    "session_id": "ses_b6774545fb790bde",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_ba1634bffb8954cd",
+    "definition_id": "env_c19cbcbb6aa68f17",
+    "environment_version": "75147ac6e760dd2c0fd1a7d8cd2940b2b4b93b90"
+  }
+}

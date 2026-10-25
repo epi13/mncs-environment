@@ -1,0 +1,134 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_cgroup_resource_headroom_20261025T184744Z",
+  "captured_at": "2026-10-25T18:47:44.285392+00:00",
+  "measurement_basis": "direct-resource-observation",
+  "observation": {
+    "kind": "cgroup-v2-resource-headroom-snapshot",
+    "source_interface": "mncs-env resources",
+    "request": {
+      "command": "resources --pid 1908204",
+      "scope": "explicit-pids"
+    },
+    "outcome": {
+      "schema_version": "mncs.environment.resource-observation/1",
+      "observation": "live",
+      "observed_at": "2026-10-25T18:47:44.285392+00:00",
+      "scope": "explicit-pids",
+      "process_observation": {
+        "pid": 1908204,
+        "name": "bash",
+        "status": "observed",
+        "rss_bytes": 6864896,
+        "fd_count": 3,
+        "fd_headroom": 524285
+      },
+      "cgroup_resource_limits": {
+        "schema_version": "mncs.environment.cgroup-resource-observation/1",
+        "status": "observed",
+        "measurement_basis": "read-only-cgroup-v2-files",
+        "session_process_mapping": "not-asserted",
+        "memory": {
+          "current_bytes": 8404451328,
+          "current_status": "observed",
+          "max_bytes": null,
+          "max_status": "unbounded"
+        },
+        "cpu": {
+          "status": "observed",
+          "quota_us": null,
+          "quota_status": "unbounded",
+          "period_us": 100000,
+          "quota_cores": null,
+          "quota_cores_basis": "derived-from-cpu.max-quota-divided-by-period"
+        },
+        "pids": {
+          "current": 113,
+          "current_status": "observed",
+          "max": null,
+          "max_status": "unbounded"
+        }
+      },
+      "system": {
+        "status": "observed",
+        "memory_available_bytes": 24515821568,
+        "memory_total_bytes": 33411571712,
+        "file_handles_allocated": 20033,
+        "file_handles_unused": 0,
+        "file_handles_max": 9223372036854775807
+      },
+      "session_process_mapping": "not-asserted",
+      "measurement_summary": {
+        "direct_measurements": {
+          "cgroup_memory_current_bytes": 8404451328,
+          "process_rss_bytes": 6864896,
+          "system_memory_available_bytes": 24515821568,
+          "system_memory_total_bytes": 33411571712
+        },
+        "derived_measurements": {
+          "process_fd_headroom": 524285
+        },
+        "observed_counts": {
+          "cgroup_pids_current": 113,
+          "process_fd_count": 3,
+          "system_file_handles_allocated": 20033
+        },
+        "measurement_availability": {
+          "cgroup_cpu_quota": "unbounded",
+          "cgroup_memory_max_bytes": "unbounded",
+          "cgroup_pids_max": "unbounded",
+          "session_process_mapping": "not-asserted"
+        }
+      }
+    },
+    "source_session_context": {
+      "campaign_id": null,
+      "session_id": null,
+      "work_intent_id": null,
+      "work_intent_goal": null,
+      "repository": "mncs-environment",
+      "repository_branch": "campaign/cgroup-resource-evidence-20261025",
+      "repository_head": "75147ac6e760dd2c0fd1a7d8cd2940b2b4b93b90",
+      "repository_context_basis": "committed Environment resource observer revision; the sampled shell PID is not mapped to an Environment session"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+    "session_id": "ses_b6774545fb790bde",
+    "work_intent_id": "int_9bcac9814cef9e2c",
+    "work_intent_goal": "improve mncs-environment through a persistent, discoverable MNCS work context",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_ba1634bffb8954cd",
+    "definition_id": "env_c19cbcbb6aa68f17",
+    "environment_version": "75147ac6e760dd2c0fd1a7d8cd2940b2b4b93b90",
+    "lifecycle": "active",
+    "observation_relation": "recorded by this campaign; sampled process and cgroup are not attributed to the campaign session"
+  },
+  "not_measured": [
+    "mapping of sampled PID 1908204 to the Environment session",
+    "token and cache usage",
+    "resource use attributable to the Compiler campaign",
+    "Btrfs data and metadata allocation",
+    "per-agent or per-session cgroup resource use"
+  ],
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "source_interface": "mncs-env resources",
+      "measured_fields": [
+        "process_observation",
+        "cgroup_resource_limits",
+        "system",
+        "session_process_mapping"
+      ]
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_resource_observation_codex_20261025T1837",
+    "session_id": "ses_b6774545fb790bde",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_ba1634bffb8954cd",
+    "definition_id": "env_c19cbcbb6aa68f17",
+    "environment_version": "75147ac6e760dd2c0fd1a7d8cd2940b2b4b93b90"
+  }
+}
