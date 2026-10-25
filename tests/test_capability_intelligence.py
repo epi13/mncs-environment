@@ -1653,11 +1653,15 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert "private-argument" not in json.dumps(result)
     assert "private-response" not in json.dumps(result)
 
-    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+    compact = capability_intelligence.project(session, max_result_bytes=6_000)
     compact_activity = compact["session_activity"]
     assert compact_activity["rpc_operations"][0]["event_reference"]["identity"] == (
         "evt_rpc_read_23"
     )
+    assert compact_activity["source"]["rpc_operation_events_considered"] == 4
+    assert compact_activity["source"]["rpc_operation_records_returned"] == 3
+    assert compact_activity["source"]["rpc_operation_records_omitted"] == 0
+    assert compact_activity["source"]["rpc_operation_records_invalid"] == 1
     assert compact_activity["source"]["rpc_operation_context_basis"] == (
         "grant+session-snapshot; branch/head not live-probed"
     )
@@ -1742,7 +1746,12 @@ def test_session_activity_marks_truncated_authenticated_rpc_only_history_partial
     compact = capability_intelligence.project(session, max_result_bytes=5_000)
     compact_activity = compact["session_activity"]
     assert compact_activity["status"] == "partial-rpc-only-in-selected-window"
+    assert compact_activity["source"]["rpc_operation_events_considered"] == event_count
+    assert compact_activity["source"]["rpc_operation_records_returned"] == (
+        capability_intelligence.MAX_SESSION_ACTIVITY_RPC_OPERATIONS
+    )
     assert compact_activity["source"]["rpc_operation_records_omitted"] == 1
+    assert compact_activity["source"]["rpc_operation_records_invalid"] == 0
 
 
 def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path) -> None:

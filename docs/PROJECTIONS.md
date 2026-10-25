@@ -184,8 +184,10 @@ bounded or incomplete read page uses `partial-rpc-only-in-selected-window`.
 `rpc_operation_records_omitted` counts authenticated valid records beyond the
 projection limit, while invalid events are counted separately and do not imply
 activity or omitted records. A reached capture limit also marks the activity
-view partial. These statuses describe the available Environment evidence; they
-do not claim that no other agent or tool activity occurred.
+view partial. Compact responses retain the per-window considered, returned,
+omitted, and invalid counts so this accounting remains inspectable when the
+projection is size-bounded. These statuses describe the available Environment
+evidence; they do not claim that no other agent or tool activity occurred.
 
 The selected page can also expose bounded `authority_denials`: action,
 observed repository when resolvable, normalized reason class, and the exact

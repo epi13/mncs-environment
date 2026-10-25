@@ -1207,14 +1207,21 @@ def _compact_projection(
             )
             if key in activity_source
         })
+    if activity_source.get("rpc_operation_events_considered", 0):
+        compact_activity_source.update({
+            key: activity_source[key]
+            for key in (
+                "rpc_operation_events_considered",
+                "rpc_operation_records_returned",
+                "rpc_operation_records_omitted",
+                "rpc_operation_records_invalid",
+            )
+            if key in activity_source
+        })
     rpc_context_basis = activity_source.get("rpc_operation_context_basis")
     if isinstance(rpc_context_basis, dict):
         compact_activity_source["rpc_operation_context_basis"] = (
             "grant+session-snapshot; branch/head not live-probed"
-        )
-    if activity_source.get("rpc_operation_records_omitted", 0):
-        compact_activity_source["rpc_operation_records_omitted"] = (
-            activity_source["rpc_operation_records_omitted"]
         )
     if activity_source.get("authority_denial_events_considered", 0):
         compact_activity_source.update({
