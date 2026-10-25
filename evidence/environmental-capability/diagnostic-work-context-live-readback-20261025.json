@@ -1,0 +1,74 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_diagnostic_work_context_live_readback_20261025",
+  "captured_at": "2026-10-25T10:42:28Z",
+  "measurement_basis": "Canonical Store-backed minimal ambient diagnostic followed by readback through the existing diagnostic evidence interface",
+  "observation": {
+    "kind": "durable-diagnostic-work-context-live-readback",
+    "source_interface": "MNCS Environment diagnostic --evidence",
+    "request": {
+      "session_id": "ses_fa3a19fe06634f62",
+      "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+      "persistence": "canonical-store",
+      "mode": "ambient",
+      "depth": "minimal",
+      "diagnostic_evidence_reference": "mncs-store:ses_fa3a19fe06634f62:diagnostics:048e0b5b4dd0caeda70b529dbeebab9f6ae696f59dd5ca5b7ad4d5a86e2cee68"
+    },
+    "outcome": {
+      "status": "readback-verified",
+      "persisted": true,
+      "summary": {
+        "failures": 0,
+        "blockers": 0,
+        "captured": 0,
+        "observed": 0,
+        "depth": "minimal"
+      },
+      "related_work": {
+        "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+        "session_id": "ses_fa3a19fe06634f62",
+        "work_intent_id": "int_8475157f281c835f",
+        "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+        "environment_id": "renv_849f40f6d96383fa"
+      },
+      "recording_context": {
+        "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+        "session_id": "ses_fa3a19fe06634f62",
+        "consumer_id": "local-agent",
+        "environment_id": "renv_849f40f6d96383fa",
+        "definition_id": "env_d479727df8e9d3ef"
+      },
+      "unavailable_or_unrecorded": [
+        "environment version was not present in this diagnostic record",
+        "cross-agent discovery and subsequent use were not measured"
+      ]
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_diagnostic_context_implementation_20261025",
+      "repository": "mncs-environment",
+      "commit": "eed23371afaf8ed86f00f44168a17bf57a5b4504",
+      "path": "mncs_env/diagnostics.py",
+      "sha256": "5b5fce1c68361c16af881de9084f5f724aa1f1922b0067e84ba8f965966d29ec"
+    }
+  ],
+  "not_measured": [
+    "whether agents across independent sessions discover and use the added context",
+    "whether the context reduces repeated investigation or improves continuity"
+  ]
+}

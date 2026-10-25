@@ -1,0 +1,72 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_diagnostic_work_context_live_followup_20261025",
+  "captured_at": "2026-10-25T10:49:13Z",
+  "measurement_basis": "Follow-up analysis of a post-deployment canonical Store diagnostic readback",
+  "observation": {
+    "kind": "environmental-improvement-follow-up",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "live_readback_observation_identity": "ev_environment_diagnostic_work_context_live_readback_20261025",
+      "projection_interface": "projections --interpret environmental-capability"
+    },
+    "outcome": {
+      "runtime_exposure_status": "verified-for-selected-session",
+      "effectiveness_assessment": "not-assessed",
+      "analysis": "The updated diagnostics path emitted and returned durable work and recording context from a real minimal Store-backed diagnostic. The record remains correlated to its distinct campaign objective and its narrower session Work Intent. The readback establishes runtime exposure for this session; it does not establish discovery, use, or benefit across agents."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket"
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_diagnostic_context_implementation_20261025",
+      "repository": "mncs-environment",
+      "commit": "eed23371afaf8ed86f00f44168a17bf57a5b4504",
+      "path": "mncs_env/diagnostics.py",
+      "sha256": "5b5fce1c68361c16af881de9084f5f724aa1f1922b0067e84ba8f965966d29ec"
+    },
+    {
+      "identity": "ev_environment_diagnostic_work_context_verification_20261025",
+      "repository": "mncs-environment",
+      "commit": "86a674f65b7b106d884dd08f39e9183e3ec36c37",
+      "path": "evidence/environmental-capability/diagnostic-work-context-verification-20261025.json",
+      "sha256": "aa93e68f44065d85b6499097b488e06325aaa15ef42818aec3e2fe03dbc5e9c5"
+    }
+  ],
+  "improvement_relation": {
+    "identity": "im_environment_diagnostic_work_context_live_followup_20261025",
+    "addresses_hypothesis_identity": "ph_environment_diagnostic_work_context_20261025",
+    "implementation_reference": {
+      "identity": "ev_environment_diagnostic_context_implementation_20261025",
+      "repository": "mncs-environment",
+      "commit": "eed23371afaf8ed86f00f44168a17bf57a5b4504",
+      "path": "mncs_env/diagnostics.py",
+      "sha256": "5b5fce1c68361c16af881de9084f5f724aa1f1922b0067e84ba8f965966d29ec"
+    },
+    "verification_observation_identity": "ev_environment_diagnostic_work_context_verification_20261025",
+    "subsequent_observation_identity": "ev_environment_diagnostic_work_context_live_readback_20261025",
+    "basis": "The Store-backed diagnostic and its durable readback verified runtime exposure of related_work and recording_context for this selected session. This follow-up links that real observation to the implementation and its focused verification.",
+    "not_measured": [
+      "discoverability and use by independent agents",
+      "whether the context reduces repeated reconstruction",
+      "effectiveness across sessions and Environment versions"
+    ]
+  },
+  "not_measured": [
+    "cross-agent discovery or use",
+    "whether the relationship reduces repeated work"
+  ]
+}
