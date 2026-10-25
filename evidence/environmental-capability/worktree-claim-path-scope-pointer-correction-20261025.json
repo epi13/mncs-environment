@@ -1,0 +1,48 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_worktree_path_claim_followup_pointer_correction_20261025",
+  "captured_at": "2026-10-25T09:07:46Z",
+  "measurement_basis": "direct Git object resolution and SHA-256 comparison for the exact campaign evidence record",
+  "observation": {
+    "kind": "campaign-evidence-pointer-correction",
+    "source_interface": "MNCS Environment append-only evidence correction",
+    "outcome": {
+      "correction": "Correct only the recorded Git commit for the follow-up observation. The replacement keeps the same observation identity, repository, path, and verified file SHA-256.",
+      "cause": "The prior campaign checkpoint delta contained an incorrect full commit ID.",
+      "verified_commit": "de55174660461fbc1e640e05f43bf99cab9843e0",
+      "verified_sha256": "adfa806e88b9b7b066e60e23ed4b83b693c15d02c75149f59710e0a28a3ea8f8"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "evidence_reference_correction": {
+    "schema_version": "mncs.environment.evidence-reference-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_worktree_path_claim_followup_20261025",
+      "repository": "mncs-environment",
+      "commit": "de55174e0b74ea55be6b30e92f7201e4f6f2d3f4",
+      "path": "evidence/environmental-capability/worktree-claim-path-scope-followup-20261025.json",
+      "sha256": "adfa806e88b9b7b066e60e23ed4b83b693c15d02c75149f59710e0a28a3ea8f8"
+    },
+    "replacement_reference": {
+      "identity": "ev_environment_worktree_path_claim_followup_20261025",
+      "repository": "mncs-environment",
+      "commit": "de55174660461fbc1e640e05f43bf99cab9843e0",
+      "path": "evidence/environmental-capability/worktree-claim-path-scope-followup-20261025.json",
+      "sha256": "adfa806e88b9b7b066e60e23ed4b83b693c15d02c75149f59710e0a28a3ea8f8"
+    },
+    "reason": "The prior campaign evidence delta recorded an incorrect full Git commit ID. Correct only that commit pointer; preserve the same identity, repository, path, and verified file bytes."
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
