@@ -1,0 +1,100 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_event_reference_coverage_verification_20261025",
+  "captured_at": "2026-10-25T03:56:00+00:00",
+  "measurement_basis": "focused-capability-test-results-and-live-campaign-state-readback",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "definition_id": "env_d479727df8e9d3ef",
+    "claim_ids": [
+      "claim:mncs-environment:paths:ec4e90650238",
+      "claim:mncs-environment:paths:f5d5c366c00a"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "session_id": "ses_c6b0d153689d7388",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "session-event-reference-coverage-verification",
+    "source_interface": "pytest and live MNCS Environment campaign_state projection",
+    "request": {
+      "repository": "mncs-environment",
+      "implementation_commit": "b90db8ccd2a8572fb99ccd1327b63efc9eb9d3fe",
+      "test_commit": "ac39d6c71e77d997ff91f6b3d023eaa3a7d831b3",
+      "test_command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+      "live_projection_campaign_state_checkpoint_id": "chk_34846760aad65886"
+    },
+    "outcome": {
+      "focused_capability_tests": {
+        "status": "passed",
+        "passed": 86,
+        "failed": 0
+      },
+      "record_integration_test": {
+        "identity": "test_bounded_event_reference_coverage_records_project_matched_counts_and_limits",
+        "status": "passed"
+      },
+      "live_projection": {
+        "event_reference_status": "some-present-others-unresolved-in-bounded-view",
+        "event_reference_count": 3,
+        "event_reference_matched_count": 1,
+        "event_window_count": 62,
+        "event_window_sequence_start": 1,
+        "event_window_sequence_end": 62,
+        "event_window_truncated": false,
+        "rpc_events_considered": 39,
+        "rpc_records_returned": 32,
+        "rpc_records_omitted": 7,
+        "rpc_records_invalid": 0
+      },
+      "analysis_limit": "The projection now distinguishes a partial match with omitted RPC records from absence in a complete view. It does not retrieve the omitted records or prove that unmatched events are absent."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_session_event_reference_coverage_impl_20261025",
+      "repository": "mncs-environment",
+      "commit": "b90db8ccd2a8572fb99ccd1327b63efc9eb9d3fe",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "84ae36f59fa03f025ca8f1108fbe1641477a23a686d080f82a0674598f1e8102"
+    },
+    {
+      "kind": "direct-test-command-results",
+      "identity": "ev_environment_session_event_reference_coverage_test_20261025",
+      "repository": "mncs-environment",
+      "commit": "ac39d6c71e77d997ff91f6b3d023eaa3a7d831b3",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "050d3ef037743012366c81832239c0ab82c4f28635121dc35a4ea2ab91efac15",
+      "measured_fields": [
+        "focused_capability_tests",
+        "live_projection"
+      ]
+    },
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "session_id": "ses_c6b0d153689d7388",
+      "event_identities": [
+        "evt_2d6c52f29a035119",
+        "evt_6d42a18434bf9eb3",
+        "evt_68d77c4ca086168b"
+      ]
+    }
+  ],
+  "not_measured": [
+    "whether agents can inspect the omitted event records through a continuation query",
+    "cross-session recurrence or effectiveness",
+    "resource cost of later targeted event inspection"
+  ]
+}

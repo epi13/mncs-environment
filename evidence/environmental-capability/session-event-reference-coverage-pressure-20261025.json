@@ -1,0 +1,103 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_event_reference_coverage_pressure_20261025",
+  "captured_at": "2026-10-25T03:52:55+00:00",
+  "measurement_basis": "live-authenticated-campaign-state-capability-projection",
+  "observation": {
+    "kind": "authenticated-session-event-reference-coverage-observation",
+    "source_interface": "MNCS Environment environmental-capability projection over authenticated Store session events",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_34846760aad65886",
+      "session_id": "ses_c6b0d153689d7388",
+      "event_page_before_sequence": null,
+      "event_limit": 256
+    },
+    "outcome": {
+      "event_window": {
+        "event_count": 62,
+        "sequence_start": 1,
+        "sequence_end": 62,
+        "truncated": false
+      },
+      "rpc_activity_projection": {
+        "events_considered": 39,
+        "records_returned": 32,
+        "records_omitted": 7,
+        "invalid_records": 0
+      },
+      "source_event_reference_resolution": {
+        "reference_count": 3,
+        "matched_count": 1,
+        "status": "some-present-others-unresolved-in-bounded-view",
+        "unmatched_references_are_absent": false
+      },
+      "interpretation": "The selected session event window is complete through sequence 62, but the RPC activity projection returns only 32 of 39 considered operations. One of three cited source event identities is present in that bounded RPC list; the other two remain unresolved because seven RPC records were omitted. This does not establish that the underlying events are missing.",
+      "analysis_limit": "The projection does not identify which of the two unmatched source identities fell outside the selected RPC records. No cross-session recurrence or agent impact is established."
+    },
+    "source_session_context": {
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "session_id": "ses_c6b0d153689d7388",
+      "work_intent_id": "int_8475157f281c835f",
+      "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+      "environment_id": "renv_84f0b2e6a29fe1e2",
+      "repository": "mncs-environment",
+      "repository_context_basis": "authenticated-session-campaign-context"
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "session_id": "ses_c6b0d153689d7388",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_34846760aad65886",
+    "campaign_evidence_count_before_recording": 9,
+    "claim_ids": [
+      "claim:mncs-environment:paths:ec4e90650238",
+      "claim:mncs-environment:paths:f5d5c366c00a"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_session_event_reference_coverage_20261025",
+    "title": "Bounded RPC activity leaves some cited session events unresolved",
+    "category": "evidence-provenance-coverage",
+    "subsystem": "MNCS Environment capability-intelligence session RPC activity projection",
+    "owner": "mncs-environment",
+    "recurrence": "not-established",
+    "basis": "One live same-session projection contains a complete event window but omits seven of 39 RPC activity records; only one of three cited event identities is present in the selected RPC list.",
+    "actionable_recommendation": "Provide demand-driven continuation or targeted inspection for cited event identities beyond the bounded RPC list, while keeping ordinary projection output bounded.",
+    "not_measured": [
+      "which unmatched event identities are among the omitted RPC records",
+      "whether a targeted historical event query would resolve both references",
+      "recurrence across independent sessions",
+      "agent time, token use, or resource impact"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_environment_authorization_delivery_20261025",
+      "session_id": "ses_c6b0d153689d7388",
+      "event_identities": [
+        "evt_2d6c52f29a035119",
+        "evt_6d42a18434bf9eb3",
+        "evt_68d77c4ca086168b"
+      ]
+    }
+  ],
+  "not_measured": [
+    "identity of the unmatched events relative to the seven omitted activity records",
+    "long-term recurrence or impact",
+    "effectiveness of targeted event inspection"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_environment_authorization_delivery_20261025",
+    "session_id": "ses_c6b0d153689d7388",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_84f0b2e6a29fe1e2",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
