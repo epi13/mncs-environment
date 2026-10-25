@@ -1,0 +1,53 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_control_path_claim_recovery_pressure_pointer_correction_20261025",
+  "captured_at": "2026-10-25T10:08:41Z",
+  "measurement_basis": "direct Git object resolution and SHA-256 comparison for the exact campaign evidence record",
+  "observation": {
+    "kind": "campaign-evidence-pointer-correction",
+    "source_interface": "MNCS Environment append-only evidence correction",
+    "request": {
+      "target_identity": "ev_environment_control_path_claim_recovery_pressure_20261025",
+      "incorrect_commit": "e90366cae1d1e441a76e0f55c424b59e9f4495c1",
+      "verified_commit": "e90366cc6af198615772078739daa4dcfed1a587"
+    },
+    "outcome": {
+      "correction": "Correct only the recorded Git commit. Preserve the observation identity, repository, path, and verified file SHA-256.",
+      "cause": "The initial campaign evidence delta contained a mistyped full Git commit ID.",
+      "verified_commit": "e90366cc6af198615772078739daa4dcfed1a587",
+      "verified_sha256": "5ee7ffbbc9b1bcac4468e39218571dc8c2e6a687ba8cb3a4fef37be6f9934c50"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement, including capability accountability and machine-native adoption"
+  },
+  "evidence_reference_correction": {
+    "schema_version": "mncs.environment.evidence-reference-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_control_path_claim_recovery_pressure_20261025",
+      "repository": "mncs-environment",
+      "commit": "e90366cae1d1e441a76e0f55c424b59e9f4495c1",
+      "path": "evidence/environmental-capability/control-path-claim-recovery-pressure-20261025.json",
+      "sha256": "5ee7ffbbc9b1bcac4468e39218571dc8c2e6a687ba8cb3a4fef37be6f9934c50"
+    },
+    "replacement_reference": {
+      "identity": "ev_environment_control_path_claim_recovery_pressure_20261025",
+      "repository": "mncs-environment",
+      "commit": "e90366cc6af198615772078739daa4dcfed1a587",
+      "path": "evidence/environmental-capability/control-path-claim-recovery-pressure-20261025.json",
+      "sha256": "5ee7ffbbc9b1bcac4468e39218571dc8c2e6a687ba8cb3a4fef37be6f9934c50"
+    },
+    "reason": "The prior campaign evidence delta recorded an incorrect full Git commit ID. Correct only that commit pointer; preserve the same identity, repository, path, and verified file bytes."
+  },
+  "recorder": {
+    "campaign_id": "cmp_mncs_env_capability_intelligence_20261025",
+    "session_id": "ses_fa3a19fe06634f62",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_849f40f6d96383fa",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
