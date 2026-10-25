@@ -23,7 +23,11 @@ from . import authority as authority_module
 from . import invocation_artifacts as invocation_artifacts_module
 from . import workspace as workspace_module
 from .identity import digest_hex
-from .sessions import MAX_RPC_READ_ACTIVITY_OBSERVATIONS, LifecycleError
+from .sessions import (
+    MAX_RPC_READ_ACTIVITY_OBSERVATIONS,
+    LifecycleError,
+    is_valid_context_response_summary,
+)
 from .store_backend import StoreIntegrityFailure, StoreUnavailable
 
 SCHEMA = "mncs.environment.capability-intelligence/1"
@@ -1620,6 +1624,59 @@ def _compact_projection(
                 for key, value in sorted(outcome_counts.items())[:8]
                 if isinstance(key, str) and type(value) is int and value >= 0
             }
+        for count_key in (
+            "response_capture_status_counts",
+            "response_identity_digest_status_counts",
+        ):
+            counts = context_activity.get(count_key)
+            if isinstance(counts, dict):
+                compact_context_activity[count_key] = {
+                    _short_text(key, 48): value
+                    for key, value in sorted(counts.items())[:8]
+                    if isinstance(key, str) and type(value) is int and value >= 0
+                }
+        response_summaries = context_activity.get("response_summaries")
+        response_summaries = (
+            response_summaries if isinstance(response_summaries, list) else []
+        )
+        compact_response_summaries = []
+        for summary in response_summaries[:MAX_CAPABILITY_SUPPORTING_EVENTS]:
+            if not isinstance(summary, dict):
+                continue
+            compact_summary = {
+                key: _short_text(summary[key], 128)
+                for key in (
+                    "capture_status", "capture_reason", "context_schema_version",
+                    "identity_digest_status", "available_identity_digest",
+                )
+                if isinstance(summary.get(key), str)
+            }
+            for key in (
+                "available_count", "listed_available_count", "unavailable_count",
+                "unknown_count",
+            ):
+                if type(summary.get(key)) is int:
+                    compact_summary[key] = summary[key]
+            for key in ("capabilities_truncated",):
+                if type(summary.get(key)) is bool:
+                    compact_summary[key] = summary[key]
+            reference = summary.get("event_reference")
+            if isinstance(reference, dict):
+                compact_summary["event_reference"] = {
+                    item_key: reference[item_key]
+                    for item_key in ("identity", "sequence", "type")
+                    if item_key in reference
+                }
+            compact_response_summaries.append(compact_summary)
+        compact_context_activity["response_summaries"] = compact_response_summaries
+        if type(context_activity.get("response_summaries_omitted")) is int:
+            compact_context_activity["response_summaries_omitted"] = max(
+                0, context_activity["response_summaries_omitted"],
+            )
+        if isinstance(context_activity.get("response_summary_scope"), str):
+            compact_context_activity["response_summary_scope"] = _short_text(
+                context_activity["response_summary_scope"], 128,
+            )
         context_limits = context_activity.get("measurement_limits")
         if isinstance(context_limits, list):
             compact_context_activity["measurement_limits"] = [
@@ -4091,33 +4148,68 @@ def _event_reference(event: dict[str, Any]) -> dict[str, Any] | None:
 def _capability_delivery_view(
     snapshot: dict[str, Any], capability_summaries: list[dict[str, Any]],
     interactions: list[dict[str, Any]], events: list[dict[str, Any]],
-    rpc_operation_summary: dict[str, Any], *,
-    event_window_truncated: bool, event_page_scoped: bool,
+    *, event_window_truncated: bool, event_page_scoped: bool,
     invocation_summaries_omitted: int,
 ) -> dict[str, Any]:
     """Relate this session's binding snapshot to bounded, observed capability use."""
     complete_history = not event_window_truncated and not event_page_scoped
-    rpc_groups = rpc_operation_summary.get("groups")
-    rpc_groups = rpc_groups if isinstance(rpc_groups, list) else []
-    context_groups = [
-        item for item in rpc_groups
-        if isinstance(item, dict) and item.get("operation") == "session.context"
-    ]
     context_outcome_counts: dict[str, int] = {}
     context_supporting_events = []
-    for group in context_groups:
-        outcome = group.get("outcome_status")
-        count = group.get("occurrence_count")
-        if isinstance(outcome, str) and type(count) is int and count >= 0:
+    response_capture_status_counts: dict[str, int] = {}
+    response_identity_digest_status_counts: dict[str, int] = {}
+    response_summaries: list[dict[str, Any]] = []
+    context_operation_count = 0
+    context_response_summary_count = 0
+    for event in events:
+        payload = event.get("payload")
+        if (not isinstance(payload, dict)
+                or payload.get("operation") != "session.context"
+                or not _authenticated_rpc_read_event(event, snapshot)):
+            continue
+        context_operation_count += 1
+        reference = _event_reference(event)
+        outcome = payload.get("outcome_status")
+        if isinstance(outcome, str):
             context_outcome_counts[outcome] = (
-                context_outcome_counts.get(outcome, 0) + count
+                context_outcome_counts.get(outcome, 0) + 1
             )
-        references = group.get("supporting_events")
-        if isinstance(references, list):
-            context_supporting_events.extend(
-                reference for reference in references
-                if isinstance(reference, dict)
+        if reference is not None:
+            context_supporting_events.append(reference)
+        response_summary = payload.get("context_response_summary")
+        if not is_valid_context_response_summary(response_summary):
+            response_capture_status_counts["not-captured-in-rpc-event"] = (
+                response_capture_status_counts.get(
+                    "not-captured-in-rpc-event", 0,
+                ) + 1
             )
+            continue
+        context_response_summary_count += 1
+        capture_status = response_summary["capture_status"]
+        response_capture_status_counts[capture_status] = (
+            response_capture_status_counts.get(capture_status, 0) + 1
+        )
+        digest_status = response_summary["identity_digest_status"]
+        response_identity_digest_status_counts[digest_status] = (
+            response_identity_digest_status_counts.get(digest_status, 0) + 1
+        )
+        if reference is not None and len(response_summaries) < MAX_CAPABILITY_SUPPORTING_EVENTS:
+            response_summaries.append({
+                "event_reference": {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                },
+                **{
+                    key: response_summary[key]
+                    for key in (
+                        "capture_status", "capture_reason",
+                        "context_schema_version", "available_count",
+                        "listed_available_count", "unavailable_count",
+                        "unknown_count", "capabilities_truncated",
+                        "available_identity_digest", "identity_digest_status",
+                    )
+                },
+            })
     context_supporting_events = sorted(
         context_supporting_events,
         key=lambda item: (
@@ -4125,16 +4217,39 @@ def _capability_delivery_view(
         ),
         reverse=True,
     )[:MAX_CAPABILITY_SUPPORTING_EVENTS]
-    context_groups_omitted = rpc_operation_summary.get("groups_omitted", 0)
-    if context_groups:
+    response_summaries.sort(
+        key=lambda item: (
+            item.get("event_reference", {}).get("sequence")
+            if type(item.get("event_reference", {}).get("sequence")) is int
+            else 0
+        ),
+        reverse=True,
+    )
+    if context_operation_count:
         context_activity_status = (
-            "partial" if type(context_groups_omitted) is int
-            and context_groups_omitted > 0 else "observed"
+            "partial" if event_window_truncated or event_page_scoped
+            else "observed"
         )
-    elif complete_history and context_groups_omitted == 0:
+    elif complete_history:
         context_activity_status = "no-context-operation-in-session-history"
     else:
         context_activity_status = "not-observed-in-selected-event-window"
+    captured_response_count = response_capture_status_counts.get("captured", 0)
+    if captured_response_count and (
+        captured_response_count == context_response_summary_count
+        and context_response_summary_count == context_operation_count
+    ):
+        response_capability_list_status = "captured"
+    elif captured_response_count:
+        response_capability_list_status = "partially-captured"
+    elif response_capture_status_counts.get("unavailable", 0):
+        response_capability_list_status = "unavailable"
+    elif response_capture_status_counts.get("partial", 0):
+        response_capability_list_status = "partially-available"
+    elif response_capture_status_counts.get("not-captured-in-rpc-event", 0):
+        response_capability_list_status = "not-captured-in-rpc-event"
+    else:
+        response_capability_list_status = "not-observed"
     context_operation_activity = {
         "status": context_activity_status,
         "scope": "authenticated-Control-session.context-events-in-selected-window",
@@ -4147,15 +4262,27 @@ def _capability_delivery_view(
             }
             for reference in context_supporting_events
         ],
-        "response_capability_list_status": "not-captured-in-rpc-event",
+        "response_capability_list_status": response_capability_list_status,
+        "response_capture_status_counts": dict(
+            sorted(response_capture_status_counts.items()),
+        ),
+        "response_identity_digest_status_counts": dict(
+            sorted(response_identity_digest_status_counts.items()),
+        ),
+        "response_summaries": response_summaries,
+        "response_summaries_omitted": max(
+            0, context_response_summary_count - len(response_summaries),
+        ),
+        "response_summary_scope": "authenticated-session.context-events-in-selected-window",
         "agent_receipt_status": "not-established",
         "measurement_limits": [
-            "A successful session.context operation is evidence the orientation endpoint ran; its response capability list and the consumer's receipt or use are not recorded in this event.",
+            "Control records only a bounded capability-list shape and digest; it does not persist capability names or the full response body.",
+            "A successful session.context operation and captured response summary do not establish the consumer's receipt, discovery, or use of a capability.",
         ],
     }
     raw_bindings = snapshot.get("bindings")
     if not isinstance(raw_bindings, list):
-        if not capability_summaries and not context_groups:
+        if not capability_summaries and not context_operation_count:
             return {}
         return {
             "status": "unavailable",
@@ -4382,6 +4509,42 @@ def _authenticated_rpc_read_event(
     outcome = payload.get("outcome_status") if isinstance(payload, dict) else None
     exit_code = payload.get("exit_code") if isinstance(payload, dict) else None
     failure_code = payload.get("failure_code") if isinstance(payload, dict) else None
+    base_payload_keys = {
+        "schema_version", "operation", "outcome_status", "exit_code",
+        "failure_code", "request_digest", "caller", "context",
+        "measurement_availability", "measurements", "request_operation_digest",
+        "request_event_digest", "request_id",
+    }
+    payload_schema_version = (
+        payload.get("schema_version") if isinstance(payload, dict) else None
+    )
+    if payload_schema_version == "mncs.environment.rpc-read-activity/1":
+        payload_schema_valid = (
+            isinstance(payload, dict)
+            and base_payload_keys.issubset(payload)
+        )
+    elif payload_schema_version == "mncs.environment.rpc-read-activity/2":
+        payload_schema_valid = (
+            isinstance(payload, dict)
+            and base_payload_keys.issubset(payload)
+            and "context_response_summary" in payload
+            and payload.get("operation") == "session.context"
+            and is_valid_context_response_summary(
+                payload.get("context_response_summary"),
+            )
+            and (
+                (payload.get("outcome_status") == "failed"
+                 and payload["context_response_summary"].get("capture_status")
+                 == "unavailable"
+                 and payload["context_response_summary"].get("capture_reason")
+                 == "operation-failed")
+                or (payload.get("outcome_status") == "succeeded"
+                    and payload["context_response_summary"].get("capture_reason")
+                    != "operation-failed")
+            )
+        )
+    else:
+        payload_schema_valid = False
     expected_measurements = {
         "model_identity": "unavailable",
         "token_usage": "unavailable",
@@ -4393,7 +4556,7 @@ def _authenticated_rpc_read_event(
             event.get("type") != "environment.rpc.read_observed"
             or event.get("producer") != "mncs-control-mcp"
             or not isinstance(payload, dict)
-            or payload.get("schema_version") != "mncs.environment.rpc-read-activity/1"
+            or not payload_schema_valid
             or _event_reference(event) is None
             or not isinstance(payload.get("operation"), str)
             or not re.fullmatch(r"[a-z][a-z0-9.-]{0,95}", payload["operation"])
@@ -5202,7 +5365,6 @@ def _session_activity(
             event_type_counts[event_type] = event_type_counts.get(event_type, 0) + 1
     capability_delivery = _capability_delivery_view(
         snapshot, all_capability_summaries, interactions, events,
-        rpc_operation_summary,
         event_window_truncated=event_window_truncated,
         event_page_scoped=event_before_sequence is not None,
         invocation_summaries_omitted=capabilities_omitted,

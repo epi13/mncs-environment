@@ -106,6 +106,93 @@ def _rpc_activity_payload(
     }
 
 
+def _context_response_summary(**overrides: Any) -> dict[str, Any]:
+    return {
+        "schema_version": "mncs.environment.context-response-summary/1",
+        "capture_status": "captured",
+        "capture_reason": None,
+        "context_schema_version": "mncs.environment.entry-context/1",
+        "available_count": 1,
+        "listed_available_count": 1,
+        "unavailable_count": 0,
+        "unknown_count": 0,
+        "capabilities_truncated": False,
+        "available_identity_digest": "f" * 64,
+        "identity_digest_status": "complete",
+        **overrides,
+    }
+
+
+def test_context_response_activity_is_bounded_and_schema_scoped() -> None:
+    session_id = "ses_rpc_context_summary"
+    store = EventStore(session_id)
+    session = Session(store, session_id)
+    payload = _rpc_activity_payload("session.context", "a" * 64)
+    payload["schema_version"] = "mncs.environment.rpc-read-activity/2"
+    payload["context_response_summary"] = _context_response_summary()
+
+    recorded = session.record_rpc_read_activity(
+        payload, request_id="req_rpc_context_summary",
+        operation_digest="a" * 64,
+    )
+
+    assert recorded["status"] == "recorded"
+    assert recorded["event"]["payload"]["context_response_summary"] == (
+        payload["context_response_summary"]
+    )
+    malformed = _rpc_activity_payload("session.context", "b" * 64)
+    malformed["schema_version"] = "mncs.environment.rpc-read-activity/2"
+    malformed["context_response_summary"] = _context_response_summary(
+        available_count=2,
+    )
+    with pytest.raises(ValueError, match="observation is malformed"):
+        session.record_rpc_read_activity(
+            malformed, request_id="req_rpc_context_bad_summary",
+            operation_digest="b" * 64,
+        )
+    invalid_reason = _rpc_activity_payload("session.context", "d" * 64)
+    invalid_reason["schema_version"] = "mncs.environment.rpc-read-activity/2"
+    invalid_reason["context_response_summary"] = {
+        **_context_response_summary(),
+        "capture_status": "unavailable",
+        "capture_reason": [],
+        "context_schema_version": None,
+        "available_count": None,
+        "listed_available_count": None,
+        "unavailable_count": None,
+        "unknown_count": None,
+        "capabilities_truncated": None,
+        "available_identity_digest": None,
+        "identity_digest_status": "unavailable",
+    }
+    with pytest.raises(ValueError, match="observation is malformed"):
+        session.record_rpc_read_activity(
+            invalid_reason, request_id="req_rpc_context_bad_reason",
+            operation_digest="d" * 64,
+        )
+    failed_with_capture = _rpc_activity_payload("session.context", "e" * 64)
+    failed_with_capture.update({
+        "schema_version": "mncs.environment.rpc-read-activity/2",
+        "outcome_status": "failed",
+        "exit_code": 2,
+        "failure_code": "environment-operation-failed",
+        "context_response_summary": _context_response_summary(),
+    })
+    with pytest.raises(ValueError, match="observation is malformed"):
+        session.record_rpc_read_activity(
+            failed_with_capture, request_id="req_rpc_context_failed_capture",
+            operation_digest="e" * 64,
+        )
+    misplaced = _rpc_activity_payload("session.inspect", "c" * 64)
+    misplaced["schema_version"] = "mncs.environment.rpc-read-activity/2"
+    misplaced["context_response_summary"] = _context_response_summary()
+    with pytest.raises(ValueError, match="observation is malformed"):
+        session.record_rpc_read_activity(
+            misplaced, request_id="req_rpc_context_wrong_operation",
+            operation_digest="c" * 64,
+        )
+
+
 def test_rpc_read_activity_is_idempotent_and_capped(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

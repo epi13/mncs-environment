@@ -62,6 +62,74 @@ MAX_RPC_ACTIVITY_RECONCILIATION_EVENTS = 256
 MAX_RPC_READ_ACTIVITY_OBSERVATIONS = MAX_RPC_ACTIVITY_RECONCILIATION_EVENTS
 RPC_READ_ACTIVITY_EVENT = "environment.rpc.read_observed"
 RPC_READ_ACTIVITY_REQUEST_INDEX = "rpc_read_activity_request_index"
+CONTEXT_RESPONSE_SUMMARY_SCHEMA = "mncs.environment.context-response-summary/1"
+CONTEXT_RESPONSE_SCHEMA_VERSION = "mncs.environment.entry-context/1"
+_CONTEXT_RESPONSE_UNAVAILABLE_REASONS = frozenset({
+    "operation-failed", "stdout-unavailable", "response-too-large",
+    "invalid-json", "invalid-context-schema",
+})
+_CONTEXT_RESPONSE_PARTIAL_REASONS = frozenset({
+    "capability-summary-unavailable", "capability-summary-invalid",
+})
+
+
+def is_valid_context_response_summary(value: Any) -> bool:
+    """Validate the redacted, versioned shape summary for session.context."""
+    expected_keys = {
+        "schema_version", "capture_status", "capture_reason",
+        "context_schema_version", "available_count", "listed_available_count",
+        "unavailable_count", "unknown_count", "capabilities_truncated",
+        "available_identity_digest", "identity_digest_status",
+    }
+    if (not isinstance(value, dict) or set(value) != expected_keys
+            or value.get("schema_version") != CONTEXT_RESPONSE_SUMMARY_SCHEMA):
+        return False
+    capture_status = value.get("capture_status")
+    capture_reason = value.get("capture_reason")
+    context_schema_version = value.get("context_schema_version")
+    counts = (
+        value.get("available_count"), value.get("listed_available_count"),
+        value.get("unavailable_count"), value.get("unknown_count"),
+    )
+    truncated = value.get("capabilities_truncated")
+    identity_digest = value.get("available_identity_digest")
+    identity_digest_status = value.get("identity_digest_status")
+    if capture_status == "unavailable":
+        return (
+            isinstance(capture_reason, str)
+            and capture_reason in _CONTEXT_RESPONSE_UNAVAILABLE_REASONS
+            and context_schema_version is None
+            and all(item is None for item in counts)
+            and truncated is None
+            and identity_digest is None
+            and identity_digest_status == "unavailable"
+        )
+    if capture_status == "partial":
+        return (
+            isinstance(capture_reason, str)
+            and capture_reason in _CONTEXT_RESPONSE_PARTIAL_REASONS
+            and context_schema_version == CONTEXT_RESPONSE_SCHEMA_VERSION
+            and all(item is None for item in counts)
+            and truncated is None
+            and identity_digest is None
+            and identity_digest_status == "unavailable"
+        )
+    if (capture_status != "captured" or capture_reason is not None
+            or context_schema_version != CONTEXT_RESPONSE_SCHEMA_VERSION
+            or any(type(item) is not int or not 0 <= item <= 1_000_000
+                   for item in counts)
+            or type(truncated) is not bool
+            or counts[1] > 20 or counts[0] < counts[1]
+            or (not truncated and counts[0] != counts[1])):
+        return False
+    if identity_digest_status == "complete":
+        return (
+            not truncated
+            and counts[0] == counts[1]
+            and isinstance(identity_digest, str)
+            and re.fullmatch(r"[0-9a-f]{64}", identity_digest) is not None
+        )
+    return identity_digest_status == "partial" and identity_digest is None
 
 
 def _request_operation_digest(
@@ -5989,14 +6057,41 @@ class Session:
         measured_values = (
             payload.get("measurements") if isinstance(payload, dict) else None
         )
+        base_payload_keys = {
+            "schema_version", "operation", "outcome_status", "exit_code",
+            "failure_code", "request_digest", "caller", "context",
+            "measurement_availability", "measurements",
+        }
+        payload_schema_version = (
+            payload.get("schema_version") if isinstance(payload, dict) else None
+        )
+        if payload_schema_version == "mncs.environment.rpc-read-activity/1":
+            payload_schema_valid = (
+                isinstance(payload, dict) and set(payload) == base_payload_keys
+            )
+        elif payload_schema_version == "mncs.environment.rpc-read-activity/2":
+            payload_schema_valid = (
+                isinstance(payload, dict)
+                and set(payload) == base_payload_keys | {"context_response_summary"}
+                and payload.get("operation") == "session.context"
+                and is_valid_context_response_summary(
+                    payload.get("context_response_summary"),
+                )
+                and (
+                    (payload.get("outcome_status") == "failed"
+                     and payload["context_response_summary"].get("capture_status")
+                     == "unavailable"
+                     and payload["context_response_summary"].get("capture_reason")
+                     == "operation-failed")
+                    or (payload.get("outcome_status") == "succeeded"
+                        and payload["context_response_summary"].get("capture_reason")
+                        != "operation-failed")
+                )
+            )
+        else:
+            payload_schema_valid = False
         if (not isinstance(payload, dict)
-                or set(payload) != {
-                    "schema_version", "operation", "outcome_status", "exit_code",
-                    "failure_code", "request_digest", "caller", "context",
-                    "measurement_availability", "measurements",
-                }
-                or payload.get("schema_version")
-                != "mncs.environment.rpc-read-activity/1"
+                or not payload_schema_valid
                 or not isinstance(payload.get("operation"), str)
                 or not re.fullmatch(
                     r"[a-z][a-z0-9.-]{0,95}", payload["operation"],

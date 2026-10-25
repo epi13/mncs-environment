@@ -1905,6 +1905,23 @@ def test_session_activity_correlates_authenticated_control_read_operations(
             "argv": ["inspect", "private-argument"],
             "raw_response": "private-response",
         }
+        if operation == "session.context":
+            payload["schema_version"] = (
+                "mncs.environment.rpc-read-activity/2"
+            )
+            payload["context_response_summary"] = {
+                "schema_version": "mncs.environment.context-response-summary/1",
+                "capture_status": "captured",
+                "capture_reason": None,
+                "context_schema_version": "mncs.environment.entry-context/1",
+                "available_count": 1,
+                "listed_available_count": 1,
+                "unavailable_count": 0,
+                "unknown_count": 0,
+                "capabilities_truncated": False,
+                "available_identity_digest": "e" * 64,
+                "identity_digest_status": "complete",
+            }
         events.append({
             "identity": f"evt_rpc_read_{sequence}",
             "sequence": sequence,
@@ -1993,9 +2010,17 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert context_activity["supporting_events"][0]["identity"] == (
         "evt_rpc_read_24"
     )
-    assert context_activity["response_capability_list_status"] == (
-        "not-captured-in-rpc-event"
-    )
+    assert context_activity["response_capability_list_status"] == "captured"
+    assert context_activity["response_capture_status_counts"] == {"captured": 1}
+    assert context_activity["response_identity_digest_status_counts"] == {
+        "complete": 1,
+    }
+    assert context_activity["response_summaries"][0]["event_reference"][
+        "identity"
+    ] == "evt_rpc_read_24"
+    assert context_activity["response_summaries"][0][
+        "available_identity_digest"
+    ] == "e" * 64
     assert context_activity["agent_receipt_status"] == "not-established"
     assert len(activity["rpc_failure_candidates"]) == 1
     assert result["session_activity_pressure_candidate_count"] == 1
@@ -2032,9 +2057,12 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert compact_delivery["context_operation_activity"]["outcome_counts"] == {
         "succeeded": 1,
     }
-    assert compact_delivery["context_operation_activity"][
-        "response_capability_list_status"
-    ] == "not-captured-in-rpc-event"
+    compact_context_activity = compact_delivery["context_operation_activity"]
+    assert compact_context_activity["response_capability_list_status"] == "captured"
+    assert compact_context_activity["response_summaries"][0]["event_reference"][
+        "identity"
+    ] == "evt_rpc_read_24"
+    assert "mncs-test:run" not in json.dumps(compact_context_activity)
     assert compact_summary["groups"][1]["supporting_events"][0]["identity"] == (
         "evt_rpc_read_24"
     )
