@@ -1,0 +1,98 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_owner_audit_projection_followup_20261025",
+  "captured_at": "2026-10-25T15:50:47Z",
+  "measurement_basis": "post-implementation, post-checkpoint bounded projection readback over the selected campaign evidence window",
+  "observation": {
+    "kind": "environmental-improvement-follow-up",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "implementation_commit": "043dcd294bba0094f53f91b093d6f9b3b59bdd2b",
+      "projection_command": "projections ses_5530f63cd8293e03 --interpret environmental-capability --history-pages 1 --evidence-limit 3 --session-event-limit 1",
+      "campaign_state_checkpoint_id": "chk_89ebcd59fd584102",
+      "campaign_evidence_count": 22,
+      "selected_observation_identities": [
+        "ev_environment_native_owner_audit_projection_pressure_20261025",
+        "ev_environment_native_owner_audit_projection_improvement_20261025",
+        "ev_environment_native_owner_audit_projection_verification_20261025"
+      ]
+    },
+    "outcome": {
+      "projection_status": "ready",
+      "observation_count": 3,
+      "pressure_hypothesis_count": 1,
+      "improvement_relation_count": 1,
+      "pressure_hypothesis": {
+        "identity": "ph_environment_native_owner_audit_discoverability_20261025",
+        "appeared_in_projection": true,
+        "recurrence_status": "not-established"
+      },
+      "improvement_relation": {
+        "identity": "ir_environment_native_owner_audit_projection_20261025",
+        "pressure_hypothesis_status": "present-in-projection",
+        "verification_observation_identity": "ev_environment_native_owner_audit_projection_verification_20261025",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_observation_identity": "ev_environment_native_owner_audit_projection_followup_20261025",
+        "subsequent_record_status": "not-present-in-projection-at-read-time",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "source_integrity": {
+        "source_pointer_count": 5,
+        "content_integrity_verified_count": 5,
+        "content_integrity_not_verified_count": 0
+      },
+      "analysis": "The existing projection exposes a traceable pressure, its implementation reference, and a verified test/readback record together. This demonstrates the evidence path is usable through the established projection. The query occurred before this follow-up record was appended, so it cannot report its own registration; a later bounded read can confirm that link. It does not demonstrate cross-agent discoverability, migration of the host JSON/artifact boundary, or lower native pressure."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_5530f63cd8293e03",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_626be396de28e0d8",
+    "session_id": "ses_5530f63cd8293e03",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4179379f9332b176",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_native_owner_audit_projection_pressure_20261025",
+      "repository": "mncs-environment",
+      "commit": "fea47c4794cd078719fa72f7f78f06542f025e45",
+      "path": "evidence/environmental-capability/native-owner-audit-projection-pressure-20261025.json",
+      "sha256": "a71f11531bf51e444bb871d9a255965ed7af18c6bae09aa2ef4d639b376fce56"
+    },
+    {
+      "identity": "ev_environment_native_owner_audit_projection_improvement_20261025",
+      "repository": "mncs-environment",
+      "commit": "fea47c4794cd078719fa72f7f78f06542f025e45",
+      "path": "evidence/environmental-capability/native-owner-audit-projection-improvement-20261025.json",
+      "sha256": "2e969ddcc9fc7d5d161c352c84cd936e4524dec552067741b016d488a58f5594"
+    },
+    {
+      "identity": "ev_environment_native_owner_audit_projection_verification_20261025",
+      "repository": "mncs-environment",
+      "commit": "fea47c4794cd078719fa72f7f78f06542f025e45",
+      "path": "evidence/environmental-capability/native-owner-audit-projection-verification-20261025.json",
+      "sha256": "fd453b81ca9409ba15bde51155fd3de44b1ec7794eca84eb134065ba4e823013"
+    },
+    {
+      "kind": "authenticated-campaign-state-checkpoint",
+      "identity": "chk_89ebcd59fd584102",
+      "campaign_id": "cmp_626be396de28e0d8",
+      "session_id": "ses_5530f63cd8293e03",
+      "evidence_count": 22
+    }
+  ],
+  "not_measured": [
+    "whether agents outside this campaign discover or use this projection",
+    "whether the underlying shared native-result/host-JSON pressure was reduced",
+    "whether native migration is correct, reliable, or ready",
+    "systemwide native-versus-host implementation ratio or denominator",
+    "causal effect on objectives, agent time, resource use, or development outcomes"
+  ]
+}
