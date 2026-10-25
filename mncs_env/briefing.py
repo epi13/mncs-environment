@@ -14,6 +14,7 @@ never moves backward or jumps silently past the log end.
 
 from __future__ import annotations
 
+import math
 from datetime import datetime, timezone
 from typing import Any
 
@@ -53,6 +54,9 @@ EVENT_CLASSES = {
     "lease.transferred": ("ownership", "claim ownership changed"),
     "invocation.completed": ("verification", "a capability invocation finished"),
     "capability.invoked": ("progress", "work was invoked"),
+    "environment.rpc.read_observed": (
+        "progress", "an Environment read operation was observed",
+    ),
     "capability.bound": ("provider", "a capability was bound from a provider"),
     "capability.changed": ("diagnostics", "a bound capability changed"),
     "capability.unbound": ("diagnostics", "a bound capability was removed"),
@@ -81,22 +85,53 @@ def classify_event(event: dict[str, Any]) -> dict[str, Any] | None:
     payload = event.get("payload", {})
     if not isinstance(payload, dict):
         payload = {}
-    status = str(payload.get("status", ""))
+    status = str(payload.get("status", payload.get("outcome_status", "")))
     if kind == "invocation.completed" and status == "ok":
         category, reason = "progress", "an invocation succeeded"
+    subject = next((str(payload[key]) for key in
+                    ("capability", "operation", "repository", "claim_id", "action")
+                    if payload.get(key) is not None), "")
     item = {
         "id": f"{event.get('session_id')}:{event.get('sequence')}",
         "category": category,
         "priority": PRIORITY[category],
         "kind": kind,
-        "subject": str(payload.get("capability", payload.get("repository",
-                     payload.get("claim_id", payload.get("action", ""))))),
+        "subject": subject,
         "summary": str(payload.get("reason", payload.get("summary", kind))),
         "at": str(event.get("observed_at", "")),
         "relevance": reason,
         "ref": {"session_id": event.get("session_id"),
                 "sequence": event.get("sequence")},
     }
+    if kind == "environment.rpc.read_observed":
+        outcome = payload.get("outcome_status")
+        if outcome in ("succeeded", "failed"):
+            item["summary"] = f"Environment read operation {outcome}"
+        availability = payload.get("measurement_availability")
+        measurements = payload.get("measurements")
+        if isinstance(availability, dict):
+            elapsed_status = availability.get("control_dispatch_elapsed_ms")
+            if elapsed_status in ("measured", "unavailable"):
+                item["measurement_availability"] = {
+                    "control_dispatch_elapsed_ms": elapsed_status,
+                }
+            elapsed = (measurements.get("control_dispatch_elapsed_ms")
+                       if isinstance(measurements, dict) else None)
+            elapsed_value = None
+            if type(elapsed) in (int, float):
+                try:
+                    elapsed_value = float(elapsed)
+                except OverflowError:
+                    pass
+            if (elapsed_status == "measured"
+                    and elapsed_value is not None
+                    and math.isfinite(elapsed_value) and elapsed_value >= 0):
+                item["measurements"] = {
+                    "control_dispatch_elapsed_ms": round(elapsed_value, 3),
+                }
+                item["measurement_scope"] = (
+                    "includes Environment session queue wait; not total agent execution duration"
+                )
     if kind in ("authority.denied", "session.failed") or status == "failed":
         item["priority"] = PRIORITY["safety"] if kind == "authority.denied" else PRIORITY["diagnostics"]
         item["category"] = "safety" if kind == "authority.denied" else "diagnostics"
