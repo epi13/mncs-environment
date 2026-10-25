@@ -2029,9 +2029,15 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     compact_delivery = capability_intelligence._compact_projection(
         result, 20_000, capability_intelligence.MAX_RESULT_BYTES,
     )["session_activity"]["capability_delivery"]
-    assert compact_delivery["context_operation_activity"]["supporting_events"][0][
-        "identity"
-    ] == "evt_rpc_read_24"
+    assert compact_delivery["context_operation_activity"]["outcome_counts"] == {
+        "succeeded": 1,
+    }
+    assert compact_delivery["context_operation_activity"][
+        "response_capability_list_status"
+    ] == "not-captured-in-rpc-event"
+    assert compact_summary["groups"][1]["supporting_events"][0]["identity"] == (
+        "evt_rpc_read_24"
+    )
     assert compact_activity["source"]["rpc_operation_context_basis"] == (
         "grant+session-snapshot; branch/head not live-probed"
     )

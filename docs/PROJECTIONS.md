@@ -442,6 +442,8 @@ capabilities with total and truncation counts, so a successful operation is
 evidence that the orientation endpoint ran. The RPC event does not retain the
 response fields or establish that the consumer read or acted on them; the view
 keeps response capability-list capture and agent receipt explicitly unmeasured.
+Supporting event references for these counts remain in the adjacent
+`rpc_operation_summary` groups.
 
 When response compaction is needed, each pressure summary retains bounded exact
 evidence references (identity, repository, commit, path, and digest), so an

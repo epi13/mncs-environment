@@ -1620,17 +1620,6 @@ def _compact_projection(
                 for key, value in sorted(outcome_counts.items())[:8]
                 if isinstance(key, str) and type(value) is int and value >= 0
             }
-        references = context_activity.get("supporting_events")
-        if isinstance(references, list):
-            compact_context_activity["supporting_events"] = [
-                {
-                    key: reference[key]
-                    for key in ("identity", "sequence", "type")
-                    if key in reference
-                }
-                for reference in references[:MAX_CAPABILITY_SUPPORTING_EVENTS]
-                if isinstance(reference, dict)
-            ]
         context_limits = context_activity.get("measurement_limits")
         if isinstance(context_limits, list):
             compact_context_activity["measurement_limits"] = [
@@ -2072,20 +2061,30 @@ def _compact_projection(
         if isinstance(delivery_result, dict):
             if delivery_result.get("measurement_limits"):
                 delivery_result["measurement_limits"].pop()
+                continue
             elif delivery_result.get("bindings"):
                 delivery_result["bindings"].pop()
                 delivery_result["bindings_truncated"] = True
+                continue
             elif delivery_result.get("availability_transition_events"):
                 delivery_result["availability_transition_events"].pop()
                 delivery_result["availability_transition_events_truncated"] = True
+                continue
             elif delivery_result.get("capabilities_not_in_current_binding_snapshot"):
                 delivery_result["capabilities_not_in_current_binding_snapshot"].pop()
                 delivery_result[
                     "capabilities_not_in_current_binding_snapshot_truncated"
                 ] = True
-            else:
-                activity_result.pop("capability_delivery")
-            continue
+                continue
+            context_activity = delivery_result.get("context_operation_activity")
+            if isinstance(context_activity, dict):
+                if context_activity.get("measurement_limits"):
+                    context_activity["measurement_limits"].pop()
+                    continue
+                if context_activity.get("supporting_events"):
+                    context_activity["supporting_events"].pop()
+                    context_activity["supporting_events_truncated"] = True
+                    continue
         if activity_result.get("capabilities"):
             activity_result["capabilities"].pop()
             activity_result["capabilities_truncated"] = True
@@ -2113,6 +2112,13 @@ def _compact_projection(
             result["improvement_relations"].pop(0)
         elif result.get("context_pressure_candidates"):
             result["context_pressure_candidates"].pop(0)
+        elif isinstance(
+            result["session_activity"].get("capability_delivery"), dict,
+        ):
+            result["session_activity"].pop("capability_delivery")
+        elif result["session_activity"].get("capabilities"):
+            result["session_activity"]["capabilities"].pop()
+            result["session_activity"]["capabilities_truncated"] = True
         elif result["session_activity"]["interactions"]:
             result["session_activity"]["interactions"].pop()
             result["session_activity"]["interactions_truncated"] = True
@@ -2160,9 +2166,18 @@ def _compact_projection(
                     (key for key in optional_fields if key in sample), None,
                 )
                 if removable is None:
+                    if isinstance(
+                        result["session_activity"].get("capability_delivery"), dict,
+                    ):
+                        result["session_activity"].pop("capability_delivery")
+                        continue
                     break
                 sample.pop(removable)
                 accountability["samples_truncated"] = True
+        elif isinstance(
+            result["session_activity"].get("capability_delivery"), dict,
+        ):
+            result["session_activity"].pop("capability_delivery")
         else:
             break
     projection_source = projection.get("source")
