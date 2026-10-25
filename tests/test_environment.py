@@ -1895,7 +1895,7 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
         })
         self.assertNotIn("must not cross", json.dumps(result))
 
-    def test_rpc_client_projects_live_claim_conflict_counts_without_process_data(self) -> None:
+    def test_rpc_client_projects_live_claim_conflict_reasons_without_process_identity(self) -> None:
         from mncs_env import rpc_client
 
         projected = rpc_client._control_error_domain_details(
@@ -1904,7 +1904,19 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
                 "owner_session_id": "ses_owner",
                 "active_jobs": [{"job_id": "job_private"}],
                 "active_owner_requests": [],
-                "matching_processes": [{"pid": 100, "comm": "python"}],
+                "matching_processes": [
+                    {
+                        "pid": 100,
+                        "comm": "python",
+                        "reason": "selected-worktree-working-directory",
+                    },
+                    {
+                        "pid": 101,
+                        "comm": "bash",
+                        "reason": "former-session-authenticated-client",
+                        "argv": ["private", "command"],
+                    },
+                ],
                 "matching_user_services": ["private.service"],
             },
         )
@@ -1913,11 +1925,17 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
             "cause_code": "ENVIRONMENT_OWNER_EXECUTION_ACTIVE",
             "active_jobs": 1,
             "active_owner_requests": 0,
-            "active_processes": 1,
+            "active_processes": 2,
+            "active_processes_by_reason": [
+                {"reason": "former-session-authenticated-client", "count": 1},
+                {"reason": "selected-worktree-working-directory", "count": 1},
+            ],
             "active_user_services": 1,
         })
         self.assertNotIn("job_private", json.dumps(projected))
         self.assertNotIn("private.service", json.dumps(projected))
+        self.assertNotIn('"pid"', json.dumps(projected))
+        self.assertNotIn("private command", json.dumps(projected))
 
     def test_rpc_client_preserves_campaign_checkpoint_conflict_version(self) -> None:
         from mncs_env import rpc_client

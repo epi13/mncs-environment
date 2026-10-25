@@ -435,6 +435,37 @@ def _control_error_domain_details(
             value = details.get(source)
             if isinstance(value, list):
                 result[target] = len(value)
+        matching_processes = details.get("matching_processes")
+        if isinstance(matching_processes, list):
+            allowed_reasons = {
+                "former-session-environment",
+                "former-session-authenticated-client",
+                "selected-worktree-command-or-environment",
+                "selected-worktree-working-directory",
+                "selected-worktree-executable",
+                "repository-command-or-environment",
+                "repository-working-directory",
+                "repository-executable",
+            }
+            reason_counts: dict[str, int] = {}
+            unclassified = 0
+            for item in matching_processes:
+                reason = item.get("reason") if isinstance(item, dict) else None
+                if isinstance(reason, str) and reason in allowed_reasons:
+                    reason_counts[reason] = reason_counts.get(reason, 0) + 1
+                else:
+                    unclassified += 1
+            projected_reasons = [
+                {"reason": reason, "count": count}
+                for reason, count in sorted(reason_counts.items())
+            ]
+            if unclassified:
+                projected_reasons.append({
+                    "reason": "unclassified",
+                    "count": unclassified,
+                })
+            if projected_reasons:
+                result["active_processes_by_reason"] = projected_reasons[:8]
         return result
     return None
 
