@@ -1,0 +1,127 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_process_debug_consumer_projection_readback_20261026",
+  "captured_at": "2026-10-26T05:59:35Z",
+  "measurement_basis": "authenticated-bounded-live-eci-projection-readback-over-committed-observations",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_e36e837c19626b20",
+    "campaign_evidence_count_before_recording": 60
+  },
+  "observation": {
+    "kind": "native-capability-consumer-projection-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 1 --evidence-offset 57 --evidence-limit 3 --session-event-limit 256",
+      "projection_identity": "eci_4633ef8426bda1ea",
+      "evidence_offset": 57,
+      "evidence_limit": 3,
+      "history_pages": 1,
+      "session_event_limit": 256,
+      "pressure_identity": "ph_environment_eci_debug_process_duplicate_stdlib_root",
+      "improvement_relation_identity": "im_environment_eci_debug_process_duplicate_stdlib_root"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "projection_measurement_limits": [
+        "The response exceeded its byte limit; payload details are summarized by digest.",
+        "Exact observation records remain addressable through their evidence references.",
+        "The bounded read selects the newest observation references in each page; older skipped references may contain additional evidence."
+      ],
+      "observations_returned": 3,
+      "pressure_hypotheses_returned": 2,
+      "improvement_relations_returned": 1,
+      "resolver_pressure": {
+        "identity": "ph_environment_eci_debug_process_duplicate_stdlib_root",
+        "owner": "mncs-debug",
+        "observation_count": 1,
+        "recurrence_status": "not-established"
+      },
+      "runtime_pressure": {
+        "identity": "ph_environment_eci_process_result_success_cause_not_exposed",
+        "owner": "mncs-language",
+        "observation_count": 1,
+        "recurrence_status": "not-established"
+      },
+      "improvement_relation": {
+        "identity": "im_environment_eci_debug_process_duplicate_stdlib_root",
+        "addresses_hypothesis_identity": "ph_environment_eci_debug_process_duplicate_stdlib_root",
+        "projection_relation_status": "validated",
+        "pressure_hypothesis_status": "present-in-projection",
+        "verification_observation_identity": "ev_environment_native_process_debug_consumer_verification_20261026",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "not-recorded",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "source_integrity": {
+        "mncs_debug_implementation": "workspace-read-only-content-integrity-verified",
+        "mncs_debug_regression_test": "workspace-read-only-content-integrity-verified",
+        "mncs_language_process_runtime": "workspace-read-only-content-integrity-verified",
+        "source_registration_scope": "External Debug and Language pointers are content-integrity verified from read-only workspace checkouts; they are not registered as campaign evidence references in this selected page."
+      },
+      "interpretation": "The projection makes the actual Debug consumer pressure, its verified resolver change, the verification record, and a separate unresolved Language runtime pressure discoverable together. It verifies record and source content integrity but does not establish agent discovery, successful independent agent use, recurrence, causal attribution beyond the duplicate-root compile failure, or long-term effectiveness."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_native_process_debug_consumer_pressure_20261026",
+      "kind": "projected-pressure-observation",
+      "repository": "mncs-environment",
+      "commit": "a0ccdd958d01ce6edfb10b0bc47f99f51c29906e",
+      "path": "evidence/environmental-capability/native-process-debug-consumer-pressure-20261026.json",
+      "sha256": "60024fad830eeb8cbf85d345c13bbb7d9ba7069120aff939fe499f340675ea74"
+    },
+    {
+      "identity": "ev_environment_native_process_debug_consumer_improvement_20261026",
+      "kind": "projected-improvement-relation-observation",
+      "repository": "mncs-environment",
+      "commit": "a0ccdd958d01ce6edfb10b0bc47f99f51c29906e",
+      "path": "evidence/environmental-capability/native-process-debug-consumer-improvement-20261026.json",
+      "sha256": "bd8191005fc4e83b2f0e0009116d03e4a5c956d0e8fc3d6594a17a22e2a3c852"
+    },
+    {
+      "identity": "ev_environment_native_process_debug_consumer_verification_20261026",
+      "kind": "projected-verification-observation",
+      "repository": "mncs-environment",
+      "commit": "a0ccdd958d01ce6edfb10b0bc47f99f51c29906e",
+      "path": "evidence/environmental-capability/native-process-debug-consumer-verification-20261026.json",
+      "sha256": "9633f5b03d716362322841873226235addf97e3c5f43eb753ea9e0cb51c0916d"
+    },
+    {
+      "identity": "mncs_debug_prefer_extracted_stdlib_a036a004",
+      "kind": "committed-implementation",
+      "repository": "mncs-debug",
+      "commit": "a036a0042bd0529ef8401b952eb921146e01590d",
+      "path": "mncs_debug/native_core.py",
+      "sha256": "fc6d710ce868b37010acb89d4ddea4c2a52cb9b2f1693dfa3d90375b962ed518"
+    },
+    {
+      "identity": "mncs_language_process_success_predicate_6a3f6907",
+      "kind": "committed-runtime-implementation",
+      "repository": "mncs-language",
+      "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+      "path": "crates/mncs-model/src/ssa_execution.rs",
+      "sha256": "80f619468b65580258fbcf20a4b796f6adc1a762890a46057e14292fb0985434"
+    }
+  ],
+  "not_measured": [
+    "whether agents can discover or use these relationships without assistance",
+    "whether the duplicate-root pressure recurs in later independent work",
+    "whether the verified resolver change improves process-result correctness",
+    "whether the unresolved runtime pressure is causal, repeated, or present in other consumers",
+    "systemwide native-versus-host ownership, denominator, or migration readiness"
+  ]
+}
