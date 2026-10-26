@@ -822,12 +822,11 @@ a transcription or relation needs correction. A later record can use the
 target evidence reference, name corrected fields, and provide their replacement
 values. Supported fields include `supporting_sources`, `not_measured`,
 `pressure_hypothesis_role`, and
-`pressure_hypothesis.actionable_recommendation`. For an integrity-verified
-record whose observation contract is incomplete, a correction may also supply
-a missing or invalid
-`observation.request` or `observation.outcome`. These nested fields can only
-complete a contract-invalid target; they cannot rewrite fields on a valid
-observation. The projection reapplies the complete record contract before it
+`pressure_hypothesis.actionable_recommendation`. On an integrity-verified
+contract-invalid target, a correction may supply a missing or invalid
+actionable recommendation, `observation.request`, or `observation.outcome`.
+These fields can only complete a contract-invalid target; they cannot rewrite
+a valid observation. The projection reapplies the complete record contract before it
 includes the corrected record in pressure analysis. It retains the original
 contract diagnostic, exact target pointer, and correction identity so the
 corrected projection does not make the original record appear complete.

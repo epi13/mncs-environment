@@ -11403,6 +11403,14 @@ def project(
                     hypothesis.get(field.partition(".")[2])
                     if isinstance(hypothesis, dict) else None
                 )
+                invalid_pressure_value = (
+                    not isinstance(current, str)
+                    or not current
+                    or len(current) > 512
+                )
+                if not target_is_contract_invalid or not invalid_pressure_value:
+                    replacements_verified = False
+                    break
             else:
                 current = target_record.get(field)
             if current == replacement:

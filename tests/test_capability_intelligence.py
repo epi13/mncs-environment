@@ -1340,6 +1340,79 @@ def test_observation_contract_correction_can_restore_pressure_recommendation(
     }
 
 
+def test_observation_correction_cannot_rewrite_valid_pressure_recommendation(
+    tmp_path: Path,
+) -> None:
+    target = _observation(
+        "ev_environment_valid_pressure_recommendation",
+        "ses_pressure_recommendation_immutability",
+        "cmp_pressure_recommendation_immutability",
+    )
+    session, state = _session(tmp_path, [target])
+    correction = _observation(
+        "ev_environment_valid_pressure_recommendation_correction_attempt",
+        "ses_pressure_recommendation_immutability",
+        "cmp_pressure_recommendation_immutability",
+    )
+    correction.pop("pressure_hypothesis")
+    correction["observation"]["kind"] = "environmental-observation-correction"
+    correction["record_correction"] = {
+        "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+        "target_reference": dict(state["evidence"][0]),
+        "corrected_field_paths": [
+            "pressure_hypothesis.actionable_recommendation",
+        ],
+        "replacement_values": {
+            "pressure_hypothesis.actionable_recommendation": (
+                "Replace a valid recommendation."
+            ),
+        },
+        "reason": "A valid pressure recommendation cannot be rewritten.",
+    }
+    relative = (
+        "evidence/environmental-capability/"
+        "valid-pressure-recommendation-correction.json"
+    )
+    correction_bytes = json.dumps(
+        correction, sort_keys=True, separators=(",", ":"),
+    ).encode()
+    checkout = Path(session.snapshot["selected_checkouts"][
+        "mncs-environment"
+    ]["path"])
+    correction_path = checkout / relative
+    correction_path.parent.mkdir(parents=True, exist_ok=True)
+    correction_path.write_bytes(correction_bytes)
+    _git(checkout, "add", relative)
+    _git(checkout, "commit", "--quiet", "-m", "reject valid recommendation rewrite")
+    state["evidence"].append({
+        "identity": correction["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(correction_bytes).hexdigest(),
+    })
+    state["evidence_count"] = len(state["evidence"])
+
+    result = capability_intelligence.project(session)
+    unchanged_target = next(
+        item for item in result["observations"]
+        if item["identity"] == target["identity"]
+    )
+    correction_projection = next(
+        item for item in result["observations"]
+        if item["identity"] == correction["identity"]
+    )
+
+    assert result["source"]["record_corrections_applied_count"] == 0
+    assert result["source"]["record_corrections_unverified_count"] == 1
+    assert unchanged_target["pressure_hypothesis"][
+        "actionable_recommendation"
+    ] == target["pressure_hypothesis"]["actionable_recommendation"]
+    assert correction_projection["record_correction"]["status"] == (
+        "replacement-values-unverified-or-unchanged"
+    )
+
+
 def test_observation_contract_correction_cannot_rewrite_valid_observation(
     tmp_path: Path,
 ) -> None:
