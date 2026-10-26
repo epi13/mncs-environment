@@ -1,0 +1,119 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_git_push_ref_ambiguity_20261026",
+  "captured_at": "2026-10-26T14:25:13Z",
+  "measurement_basis": "direct Git operation results and read-only campaign-state reference verification",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-git-ref-ambiguity-resolution",
+    "source_interface": "Git CLI, repository refs, and MNCS Environment campaign-state projection",
+    "request": {
+      "failed_operation": {
+        "command": "git push origin main",
+        "exit_code": 1,
+        "stderr": "error: src refspec refs/heads/main matches more than one"
+      },
+      "read_only_ref_inspection": {
+        "local_ref": "refs/heads/refs/heads/main",
+        "target_commit": "bd85ba89916a853118f1282a26ad578970db2c92",
+        "target_subject": "Record cross-category event correlation improvement"
+      },
+      "preservation_check": {
+        "pushed_main": "f9e1d86393a4091cf868425e1eceb01ce78a8e26",
+        "target_commit_is_ancestor_of_main": true,
+        "historical_campaign_evidence_pointers_on_target_commit": 4
+      },
+      "bounded_recovery": {
+        "operation": "git update-ref -d refs/heads/refs/heads/main",
+        "selected_checkout_or_source_changes": "none"
+      },
+      "post_recovery_operation": {
+        "command": "git push origin main",
+        "exit_code": 0,
+        "stdout": "Everything up-to-date"
+      }
+    },
+    "outcome": {
+      "observed_failure_class": "local Git ref ambiguity",
+      "authorization_denial_observed": false,
+      "duplicate_ref_removed": true,
+      "referenced_commit_preserved_in_main_history": true,
+      "historical_campaign_evidence_references_remain_resolvable": true,
+      "normal_push_ref_resolution_restored": true,
+      "interpretation": "The attempted push failed because a local branch was itself named refs/heads/main. After removing only that redundant ref, a normal push succeeded. This establishes the cause of this push attempt, not of other historical authorization failures.",
+      "projection_status": "not-applicable"
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_git_push_ref_ambiguity_20261026",
+    "title": "A fully qualified local branch name makes a normal main push ambiguous",
+    "category": "tooling-interoperability",
+    "subsystem": "Git branch and ref handling in the MNCS workspace",
+    "owner": "mncs-environment",
+    "basis": "One normal push failed with a refspec ambiguity while a local branch named refs/heads/main pointed to an older commit. Removing that pointer restored ordinary push behavior, and the older commit remained reachable through main.",
+    "recurrence": "one-observed-push-failure;other-failures-not-attributed",
+    "actionable_recommendation": "Trace how fully qualified ref names become local branch names, reject duplicate refs/heads prefixes at branch creation boundaries, and preserve commits referenced by campaign evidence when cleaning stale local refs.",
+    "not_measured": [
+      "which earlier operation created the malformed branch name",
+      "whether other reported authorization failures had the same cause",
+      "whether a different session or repository contains the same ref collision",
+      "whether the push policy itself has any remaining independent failure"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "failed-main-push",
+      "command": "git push origin main",
+      "exit_code": 1,
+      "error": "src refspec refs/heads/main matches more than one"
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "local-ref-inspection",
+      "ref": "refs/heads/refs/heads/main",
+      "commit": "bd85ba89916a853118f1282a26ad578970db2c92",
+      "ancestor_of_pushed_main": true
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "successful-main-push-ref-resolution",
+      "command": "git push origin main",
+      "exit_code": 0,
+      "output": "Everything up-to-date"
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "historical-campaign-evidence-readback",
+      "checkpoint_id": "chk_d55083969e46d580",
+      "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "referenced_record_count": 4,
+      "referenced_commit": "bd85ba89916a853118f1282a26ad578970db2c92"
+    }
+  ],
+  "not_measured": [
+    "originating command or service that created the malformed local branch name",
+    "whether the same ref ambiguity occurred in any earlier reported push failure",
+    "whether other local or remote repositories contain duplicate fully qualified branch names",
+    "whether repository branch creation should reject all fully qualified names or only duplicated namespace prefixes"
+  ]
+}
