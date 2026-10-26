@@ -1,15 +1,29 @@
 {
   "schema_version": "mncs.environment.environmental-observation/1",
   "identity": "ev_environment_claimless_publish_invocation_verification_20261026",
-  "captured_at": "2026-10-26T23:30:18Z",
+  "captured_at": "2026-10-26T23:31:57Z",
   "measurement_basis": "targeted-Session.invoke-test-against-temporary-registered-linked-Git-worktree",
   "observation": {
     "kind": "claimless-publish-effect-dispatched-with-overlap-as-coordination",
     "source_interface": "MNCS Environment Session.invoke, integration preflight, and checkout operation lease",
     "request": {
       "implementation_commit": "ac1628b81920688065fd51e9977765c7dbb15ab0",
-      "verification_commit": "cb421424009af39ebd3ebfc5aad0080ff8d82f32",
+      "verification_commit": "696b45382b26135dbdca814ecdd1facb1d53fc90",
       "test": "SessionTests.test_provider_publish_runs_without_claim_and_keeps_overlap_advisory",
+      "projection_tests": [
+        "test_project_correlates_recent_capability_events_without_exposing_arguments",
+        "test_scoped_integration_preflight_projects_without_claim_or_success"
+      ],
+      "test_results": [
+        {
+          "command": "PYTHONPATH=.:tests python3 -m pytest -q tests/test_environment.py::SessionTests::test_provider_publish_runs_without_claim_and_keeps_overlap_advisory",
+          "result": "1 passed"
+        },
+        {
+          "command": "PYTHONPATH=.:tests python3 -m pytest -q tests/test_capability_intelligence.py::test_project_correlates_recent_capability_events_without_exposing_arguments tests/test_capability_intelligence.py::test_scoped_integration_preflight_projects_without_claim_or_success",
+          "result": "2 passed"
+        }
+      ],
       "fixture": "temporary registered linked worktree with a repository-scope coordination claim belonging to a different session identity",
       "effect": "publish"
     },
@@ -21,7 +35,10 @@
       "coordination_overlap_count": 1,
       "initiating_session_claim_acquired": false,
       "preflight_operation_executed": false,
-      "interpretation": "Session.invoke passed both the initial and locked publish eligibility checks without a claim for the initiating session. The foreign repository-scope claim remained visible as one coordination overlap. The provider was then dispatched while the operation-scoped checkout lease was held.",
+      "projected_preflight_resolved_to_one_eligibility_record": true,
+      "projected_operation_lease_acquisition_status": "recorded",
+      "projected_operation_lease_release_status": "released-after-completion",
+      "interpretation": "Session.invoke passed both the initial and locked publish eligibility checks without a claim for the initiating session. The foreign repository-scope claim remained visible as one coordination overlap. The provider was dispatched while the operation-scoped checkout lease was held. The ECI projection resolved the invocation's exact preflight reference to one eligibility record and correlated lease release with the completion event.",
       "verification_limit": "The provider was mocked. No remote push, Git ref update, independent live agent, or later coordination outcome was exercised."
     }
   },
@@ -47,11 +64,11 @@
   "pressure_hypothesis": null,
   "supporting_sources": [
     {
-      "identity": "mncs_environment_claimless_publish_invoke_test_cb42142",
+      "identity": "mncs_environment_claimless_publish_invoke_test_696b453",
       "repository": "mncs-environment",
-      "commit": "cb421424009af39ebd3ebfc5aad0080ff8d82f32",
+      "commit": "696b45382b26135dbdca814ecdd1facb1d53fc90",
       "path": "tests/test_environment.py",
-      "sha256": "2ce54eb08a7970cf758d8ce1325fd827afb0f89296c2bccc1c999722fccac34d",
+      "sha256": "21f8fcdcdd1cadd2f9f3cf33fed34e7405c119edcfb766db608a1ff33f91371a",
       "kind": "committed-provider-effect-and-coordination-verification"
     },
     {
