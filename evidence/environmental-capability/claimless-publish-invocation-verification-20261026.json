@@ -1,0 +1,72 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_claimless_publish_invocation_verification_20261026",
+  "captured_at": "2026-10-26T23:30:18Z",
+  "measurement_basis": "targeted-Session.invoke-test-against-temporary-registered-linked-Git-worktree",
+  "observation": {
+    "kind": "claimless-publish-effect-dispatched-with-overlap-as-coordination",
+    "source_interface": "MNCS Environment Session.invoke, integration preflight, and checkout operation lease",
+    "request": {
+      "implementation_commit": "ac1628b81920688065fd51e9977765c7dbb15ab0",
+      "verification_commit": "cb421424009af39ebd3ebfc5aad0080ff8d82f32",
+      "test": "SessionTests.test_provider_publish_runs_without_claim_and_keeps_overlap_advisory",
+      "fixture": "temporary registered linked worktree with a repository-scope coordination claim belonging to a different session identity",
+      "effect": "publish"
+    },
+    "outcome": {
+      "provider_result": "ok-from-test-double",
+      "provider_invocation_count": 1,
+      "integration_preflight_events": 2,
+      "persistent_claim_required": false,
+      "coordination_overlap_count": 1,
+      "initiating_session_claim_acquired": false,
+      "preflight_operation_executed": false,
+      "interpretation": "Session.invoke passed both the initial and locked publish eligibility checks without a claim for the initiating session. The foreign repository-scope claim remained visible as one coordination overlap. The provider was then dispatched while the operation-scoped checkout lease was held.",
+      "verification_limit": "The provider was mocked. No remote push, Git ref update, independent live agent, or later coordination outcome was exercised."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "last_confirmed_campaign_state_checkpoint_id": "chk_ea186dea95e4c1f5",
+    "last_confirmed_campaign_evidence_count": 97,
+    "current_campaign_state_read_status": "not-revalidated-control-transport-closed"
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_claimless_publish_invoke_test_cb42142",
+      "repository": "mncs-environment",
+      "commit": "cb421424009af39ebd3ebfc5aad0080ff8d82f32",
+      "path": "tests/test_environment.py",
+      "sha256": "2ce54eb08a7970cf758d8ce1325fd827afb0f89296c2bccc1c999722fccac34d",
+      "kind": "committed-provider-effect-and-coordination-verification"
+    },
+    {
+      "identity": "mncs_environment_claimless_publish_authority_implementation_ac1628b",
+      "repository": "mncs-environment",
+      "commit": "ac1628b81920688065fd51e9977765c7dbb15ab0",
+      "path": "mncs_env/authority.py",
+      "sha256": "c3576592721ed0892a70d8f199fbc54be8cb5ed3a827052ab26b88b76a3d7cb2",
+      "kind": "committed-claim-independent-integration-authority"
+    }
+  ],
+  "not_measured": [
+    "actual remote publication success",
+    "Git ref update under concurrent writers",
+    "live multi-agent use",
+    "long-term change in authorization-related coordination work"
+  ]
+}
