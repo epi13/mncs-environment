@@ -1,0 +1,107 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_claim_liveness_improvement_projection_readback_20261026",
+  "captured_at": "2026-10-26T07:51:54Z",
+  "measurement_basis": "bounded-two-page-environmental-capability-projection-over-committed-campaign-evidence",
+  "observation": {
+    "kind": "authority-claim-liveness-improvement-link-projection-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_identity": "eci_77d60ae0e957aa12",
+      "campaign_state_checkpoint_id": "chk_5889c8b55e03f955",
+      "campaign_evidence_count": 66,
+      "evidence_offset": 62,
+      "evidence_limit": 4,
+      "history_pages": 2,
+      "session_event_before_sequence": 215,
+      "session_event_limit": 4,
+      "pressure_identity": "ph_authority_claim_liveness_observability_20261026",
+      "improvement_relation_identity": "im_environment_claim_liveness_recovery_link_20261026"
+    },
+    "outcome": {
+      "projection_status": "partial-response-byte-limit",
+      "selected_evidence_pages": [
+        {
+          "offset": 62,
+          "identities": [
+            "ev_environment_claim_liveness_verification_20261026",
+            "ev_environment_claim_liveness_improvement_20261026",
+            "ev_environment_claim_liveness_readback_20261026",
+            "ev_environment_claim_liveness_improvement_link_20261026"
+          ]
+        },
+        {
+          "offset": 58,
+          "identities": [
+            "ev_environment_native_process_debug_consumer_improvement_20261026",
+            "ev_environment_native_process_debug_consumer_verification_20261026",
+            "ev_environment_native_process_debug_consumer_projection_readback_20261026",
+            "ev_environment_claim_liveness_pressure_20261026"
+          ]
+        }
+      ],
+      "pressure_hypothesis": {
+        "identity": "ph_authority_claim_liveness_observability_20261026",
+        "occurrence_count": 1,
+        "distinct_session_count": 1,
+        "recurrence_status": "not-established"
+      },
+      "initial_relation_status": "recorded-but-contract-unverified",
+      "append_only_full_commit_relation": {
+        "observation_identity": "ev_environment_claim_liveness_improvement_link_20261026",
+        "observation_status": "validated",
+        "relation_identity": "im_environment_claim_liveness_recovery_link_20261026",
+        "pressure_hypothesis_status": "present-in-projection",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "record-integrity-verified-in-projection",
+        "implementation_commit": "e57535e71fce3ddb4956865d392708249fafb885",
+        "implementation_content_integrity_status": "content-integrity-verified",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "relation_count_in_view": 2,
+      "unverified_relation_count_in_view": 1,
+      "interpretation_limit": "The second relation is from an unrelated earlier observation. The claim-liveness relation is validated and linked to its pressure, verification record, and follow-up readback; the original abbreviated-commit relation remains visible but unverified. Partial status reflects bounded response compaction and does not invalidate the explicit verified relation fields. No authentic later claim recovery or reduced coordination overhead has been observed."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_5889c8b55e03f955",
+    "campaign_evidence_count_before_recording": 66,
+    "claim_ids": [
+      "claim:mncs-environment:paths:120912fd0f77",
+      "claim:mncs-environment:paths:f69dc8630ed0",
+      "claim:mncs-environment:paths:6a84d4554472",
+      "claim:mncs-environment:paths:7d5c61149717"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_claim_liveness_improvement_link_20261026",
+      "repository": "mncs-environment",
+      "commit": "ce653224fedc445721f74f2d369af645674ad99b",
+      "path": "evidence/environmental-capability/claim-liveness-improvement-link-20261026.json",
+      "sha256": "1b9049fd6436372ebeaa2425345b3e4d501c628e452d2d8a3f0bcaffc5abd909"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence",
+    "authentic use of claim recovery after implementation",
+    "reduction in coordination steps or waiting",
+    "long-term effectiveness"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
