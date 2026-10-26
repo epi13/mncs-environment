@@ -259,6 +259,17 @@ projection's `status`, source counts, and exact evidence references before
 interpreting a result. `not-present-in-projection` means a record is outside
 the current evidence page, not that it is absent from campaign history.
 
+For the current session's capability delivery, use
+`actions.environmental_capability_projection.argv` and inspect
+`session_activity.capability_delivery.binding_evidence_summary` when
+`bindings_truncated` is true. The summary preserves bounded availability,
+context-response, use, and attribution counts when response compaction removes
+the per-binding rows. Check its event-window status: missing Environment
+invocation records do not account for activity through other interfaces, and
+context inclusion does not establish receipt or discoverability. See
+[`PROJECTIONS.md`](PROJECTIONS.md#environmental-capability-interpretation) for
+the field definitions and limits.
+
 Read the authorized session's evidence pages with `campaign-state`; follow
 `next_evidence_offset` until it is `null` when a complete campaign review is
 needed:
