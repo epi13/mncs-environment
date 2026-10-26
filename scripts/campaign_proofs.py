@@ -112,7 +112,17 @@ def proof_bypass() -> None:
             provider="proof-repo", capability="proof-write",
             contract_revision="1", entrypoint="e", address="/bin/sh",
             effects=["write"]))
-        session.snapshot["bindings"].append(binding)
+
+        def expose_proof_binding() -> None:
+            # Claim transitions refresh the session from authoritative
+            # environment inputs, so reattach this synthetic proof capability
+            # after each transition rather than relying on an in-memory edit.
+            session.snapshot["bindings"] = [
+                existing for existing in session.snapshot.get("bindings", [])
+                if existing.get("capability") != "proof-write"
+            ] + [binding]
+
+        expose_proof_binding()
         # No claim: escalation, nothing executes.
         outcome = session.invoke("proof-write", ["-c", f"echo planted > {canary}"])
         check("bypass.no-claim-no-exec",
@@ -120,6 +130,7 @@ def proof_bypass() -> None:
               f"no-claim invoke -> {outcome['status']}, canary exists: {canary.exists()}")
         # Live claim: the same invoke executes.
         session.acquire_claim("proof-repo", basis="explicit-claim", reason="proof")
+        expose_proof_binding()
         outcome2 = session.invoke("proof-write", ["-c", f"echo planted > {canary}"])
         check("bypass.claim-executes",
               outcome2["status"] == "ok" and canary.read_text().strip() == "planted",
@@ -127,6 +138,7 @@ def proof_bypass() -> None:
         # Released claim: authority fails closed again, nothing executes.
         canary.unlink()
         session.release_claim("proof-repo", reason="proof done")
+        expose_proof_binding()
         outcome3 = session.invoke("proof-write", ["-c", f"echo planted > {canary}"])
         check("bypass.release-revokes",
               outcome3["status"] == "pending-escalation" and not canary.exists(),
