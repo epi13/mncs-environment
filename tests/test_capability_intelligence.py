@@ -1931,7 +1931,7 @@ def test_capability_use_is_attributed_to_the_exact_historical_binding(
     assert provider_two["supporting_events"] == []
     evidence_summary = delivery["binding_evidence_summary"]
     assert evidence_summary["schema_version"] == (
-        "mncs.environment.capability-binding-evidence-summary/1"
+        "mncs.environment.capability-binding-evidence-summary/2"
     )
     assert evidence_summary["binding_count"] == 2
     assert evidence_summary["context_response_inclusion_status_counts"] == {
@@ -2035,7 +2035,17 @@ def test_capability_binding_summary_survives_response_budget_trimming(
             "outcome_status_counts": {"succeeded": 1} if exact_use else {},
             "supporting_events": references if exact_use else [],
             "context_response_inclusion": {
-                "status": "exact-binding-id-in-response",
+                "status": (
+                    "exact-binding-id-in-response" if exact_use else
+                    "identity-tuple-in-matched-response"
+                ),
+                "binding_id_attribution_status": (
+                    "exact-from-response" if exact_use else
+                    "binding-id-capture-incomplete"
+                ),
+                "response_binding_ids_status": (
+                    "complete" if exact_use else "partial"
+                ),
                 "supporting_events": references[:1],
             },
             "context_response_use_sequence_relation": {
@@ -2090,8 +2100,31 @@ def test_capability_binding_summary_survives_response_budget_trimming(
     assert summary["exact_binding_invocation_count"] == 2
     assert summary["exact_binding_completion_count"] == 1
     assert summary["context_response_inclusion_status_counts"] == {
-        "exact-binding-id-in-response": 9,
+        "exact-binding-id-in-response": 1,
+        "identity-tuple-in-matched-response": 8,
     }
+    assert summary[
+        "context_response_binding_id_attribution_status_counts"
+    ] == {
+        "binding-id-capture-incomplete": 8,
+        "exact-from-response": 1,
+    }
+    assert summary["context_response_binding_id_list_status_counts"] == {
+        "complete": 1,
+        "partial": 8,
+    }
+    assert len(summary["context_response_supporting_events"]) == (
+        capability_intelligence.MAX_CAPABILITY_SUPPORTING_EVENTS
+    )
+    assert summary["context_response_supporting_events_omitted"] == 6
+    assert summary["context_response_supporting_events"][0]["identity"].startswith(
+        "evt_8_"
+    )
+    assert summary["exact_binding_invocation_supporting_events_omitted"] == 0
+    assert [
+        item["identity"][:8]
+        for item in summary["exact_binding_invocation_supporting_events"]
+    ] == ["evt_0_2_", "evt_0_1_", "evt_0_0_"]
     assert summary["discoverability_status"] == "not-measured"
     assert summary["agent_receipt_status"] == "not-established"
     assert len(json.dumps(
@@ -2734,9 +2767,28 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert binding_context_inclusion["binding_id_attribution_status"] == (
         "exact-from-response"
     )
+    assert binding_context_inclusion["response_binding_ids_status"] == "complete"
     assert binding_context_inclusion["supporting_events"][0]["identity"] == (
         "evt_rpc_read_24"
     )
+    binding_evidence_summary = activity["capability_delivery"][
+        "binding_evidence_summary"
+    ]
+    assert binding_evidence_summary["schema_version"] == (
+        "mncs.environment.capability-binding-evidence-summary/2"
+    )
+    assert binding_evidence_summary[
+        "context_response_binding_id_attribution_status_counts"
+    ] == {"exact-from-response": 1}
+    assert binding_evidence_summary[
+        "context_response_binding_id_list_status_counts"
+    ] == {"complete": 1}
+    assert binding_evidence_summary["context_response_supporting_events"][0][
+        "identity"
+    ] == "evt_rpc_read_24"
+    assert binding_evidence_summary[
+        "exact_binding_invocation_supporting_events"
+    ][0]["identity"] == "evt_rpc_capability_invoked_after_context"
     sequence_relation = activity["capability_delivery"]["bindings"][0][
         "context_response_use_sequence_relation"
     ]
@@ -2806,9 +2858,19 @@ def test_session_activity_correlates_authenticated_control_read_operations(
         "context_response_inclusion"
     ]
     assert compact_binding_inclusion["status"] == "exact-binding-id-in-response"
+    assert compact_binding_inclusion["response_binding_ids_status"] == "complete"
     assert compact_binding_inclusion["supporting_events"][0]["identity"] == (
         "evt_rpc_read_24"
     )
+    compact_binding_evidence_summary = compact_delivery[
+        "binding_evidence_summary"
+    ]
+    assert compact_binding_evidence_summary[
+        "context_response_binding_id_attribution_status_counts"
+    ] == {"exact-from-response": 1}
+    assert compact_binding_evidence_summary[
+        "context_response_supporting_events"
+    ][0]["identity"] == "evt_rpc_read_24"
     compact_sequence_relation = compact_delivery["bindings"][0][
         "context_response_use_sequence_relation"
     ]
@@ -2843,6 +2905,23 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     context_event["payload"]["context_response_summary"][
         "binding_ids_status"
     ] = "partial"
+    partial_projection = capability_intelligence.project(session)[
+        "session_activity"]["capability_delivery"]
+    partial_inclusion = partial_projection["bindings"][0][
+        "context_response_inclusion"
+    ]
+    assert partial_inclusion["status"] == "identity-tuple-in-matched-response"
+    assert partial_inclusion["binding_id_attribution_status"] == (
+        "binding-id-capture-incomplete"
+    )
+    assert partial_inclusion["response_binding_ids_status"] == "partial"
+    partial_summary = partial_projection["binding_evidence_summary"]
+    assert partial_summary[
+        "context_response_binding_id_attribution_status_counts"
+    ] == {"binding-id-capture-incomplete": 1}
+    assert partial_summary[
+        "context_response_binding_id_list_status_counts"
+    ] == {"partial": 1}
     assert any(
         "no binding revision" in limit
         for limit in compact_context_activity["measurement_limits"]

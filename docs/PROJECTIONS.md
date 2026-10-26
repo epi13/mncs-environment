@@ -644,6 +644,22 @@ The summary reports the selected event-window scope and keeps agent receipt
 `not-established` and discoverability `not-measured` even when a context
 response and invocation are recorded.
 
+The `/2` binding evidence summary also retains counts for
+`context_response_binding_id_attribution_status_counts` and
+`context_response_binding_id_list_status_counts`. These distinguish an exact
+binding-ID match from tuple-only inclusion when the Control response did not
+capture a complete ID list. A per-binding `context_response_inclusion` also
+reports `response_binding_ids_status` (`complete`, `partial`, `unavailable`, or
+`mixed`) for its matched response evidence. The bounded
+`context_response_supporting_events` references identify the source context
+responses, while `exact_binding_invocation_supporting_events` identifies
+invocations counted for exact bindings. Their corresponding
+`*_omitted` counts disclose source references left out after deduplication and
+the projection bound. These references keep event identity, sequence when
+available, and type; inspect the selected source event window for full payloads.
+The summary and references remain evidence of server-side recording, not proof
+that an agent received or used a capability.
+
 When response compaction is needed, each pressure summary retains bounded exact
 evidence references (identity, repository, commit, path, and digest), so an
 agent can inspect the records supporting the hypothesis even when their full

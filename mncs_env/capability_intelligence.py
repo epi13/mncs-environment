@@ -1445,7 +1445,8 @@ def _compact_context_response_inclusion(value: Any) -> dict[str, Any] | None:
         key: _short_text(value[key], 160)
         for key in (
             "status", "reason", "basis", "identity_basis",
-            "binding_id_attribution_status", "comparison_time_basis",
+            "binding_id_attribution_status", "response_binding_ids_status",
+            "comparison_time_basis",
             "scope", "event_window_status",
         )
         if isinstance(value.get(key), str)
@@ -1565,6 +1566,8 @@ def _compact_binding_evidence_summary(value: Any) -> dict[str, Any] | None:
     for key in (
         "availability_status_counts",
         "context_response_inclusion_status_counts",
+        "context_response_binding_id_attribution_status_counts",
+        "context_response_binding_id_list_status_counts",
         "use_observation_status_counts",
         "binding_attribution_status_counts",
         "context_response_use_sequence_status_counts",
@@ -1573,6 +1576,28 @@ def _compact_binding_evidence_summary(value: Any) -> dict[str, Any] | None:
         counts = _compact_count_map(value.get(key))
         if counts:
             summary[key] = counts
+    for key in (
+        "context_response_supporting_events",
+        "exact_binding_invocation_supporting_events",
+    ):
+        references = value.get(key)
+        if isinstance(references, list):
+            summary[key] = [
+                {
+                    event_key: reference[event_key]
+                    for event_key in ("identity", "sequence", "type")
+                    if event_key in reference
+                }
+                for reference in references[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                if isinstance(reference, dict)
+            ]
+    for key in (
+        "context_response_supporting_events_omitted",
+        "exact_binding_invocation_supporting_events_omitted",
+    ):
+        count = value.get(key)
+        if type(count) is int and count >= 0:
+            summary[key] = count
     return summary
 
 
@@ -7050,6 +7075,18 @@ def _context_response_binding_inclusion(
             == "matches-current-session-binding-snapshot")
     ]
     if matching_responses:
+        binding_id_list_statuses = {
+            summary.get("binding_ids_status")
+            for summary in matching_responses
+            if summary.get("binding_ids_status")
+            in {"complete", "partial", "unavailable"}
+        }
+        response_binding_ids_status = (
+            next(iter(binding_id_list_statuses))
+            if len(binding_id_list_statuses) == 1 else (
+                "mixed" if binding_id_list_statuses else "unavailable"
+            )
+        )
         return {
             "status": "identity-tuple-in-matched-response",
             "basis": (
@@ -7063,6 +7100,7 @@ def _context_response_binding_inclusion(
                        for summary in matching_responses)
                 else "binding-id-capture-incomplete"
             ),
+            "response_binding_ids_status": response_binding_ids_status,
             "comparison_time_basis": "current-session-binding-snapshot-at-projection-time",
             "scope": "authenticated-session.context-events-in-selected-window",
             "event_window_status": event_window_status,
@@ -7293,8 +7331,61 @@ def _capability_binding_evidence_summary(
             if isinstance(outcome, str) and type(count) is int and count >= 0:
                 exact_outcomes[outcome] = exact_outcomes.get(outcome, 0) + count
 
+    def bounded_event_references(
+        source_bindings: list[dict[str, Any]], field: str,
+    ) -> tuple[list[dict[str, Any]], int]:
+        references_by_identity: dict[
+            tuple[str, int | None, str], dict[str, Any]
+        ] = {}
+        for binding in source_bindings:
+            source = binding.get(field)
+            if field == "context_response_inclusion":
+                source = source if isinstance(source, dict) else {}
+                source = source.get("supporting_events")
+            references = source if isinstance(source, list) else []
+            for reference in references:
+                if not isinstance(reference, dict):
+                    continue
+                identity = reference.get("identity")
+                event_type = reference.get("type")
+                sequence = reference.get("sequence")
+                sequence = (
+                    sequence if type(sequence) is int and sequence >= 0
+                    else None
+                )
+                if (not isinstance(identity, str) or not identity
+                        or not isinstance(event_type, str) or not event_type):
+                    continue
+                key = (identity, sequence, event_type)
+                compact_reference = {
+                    "identity": _short_text(identity, 160),
+                    "type": _short_text(event_type, 96),
+                }
+                if sequence is not None:
+                    compact_reference["sequence"] = sequence
+                references_by_identity[key] = compact_reference
+        ordered = sorted(
+            references_by_identity.values(),
+            key=lambda reference: (
+                reference.get("sequence", -1),
+                reference["identity"], reference["type"],
+            ),
+            reverse=True,
+        )
+        return (
+            ordered[:MAX_CAPABILITY_SUPPORTING_EVENTS],
+            max(0, len(ordered) - MAX_CAPABILITY_SUPPORTING_EVENTS),
+        )
+
+    context_response_events, context_response_events_omitted = (
+        bounded_event_references(bindings, "context_response_inclusion")
+    )
+    exact_invocation_events, exact_invocation_events_omitted = (
+        bounded_event_references(exact_bindings, "supporting_events")
+    )
+
     return {
-        "schema_version": "mncs.environment.capability-binding-evidence-summary/1",
+        "schema_version": "mncs.environment.capability-binding-evidence-summary/2",
         "source_basis": (
             "current-session-binding-snapshot-and-selected-session-event-window"
         ),
@@ -7302,6 +7393,16 @@ def _capability_binding_evidence_summary(
         "availability_status_counts": dict(sorted(availability_counts.items())[:8]),
         "context_response_inclusion_status_counts": status_counts(
             "context_response_inclusion", "status",
+        ),
+        "context_response_binding_id_attribution_status_counts": status_counts(
+            "context_response_inclusion", "binding_id_attribution_status",
+        ),
+        "context_response_binding_id_list_status_counts": status_counts(
+            "context_response_inclusion", "response_binding_ids_status",
+        ),
+        "context_response_supporting_events": context_response_events,
+        "context_response_supporting_events_omitted": (
+            context_response_events_omitted
         ),
         "use_observation_status_counts": status_counts(
             "use_observation_status",
@@ -7331,6 +7432,10 @@ def _capability_binding_evidence_summary(
         ),
         "exact_binding_outcome_status_counts": dict(
             sorted(exact_outcomes.items())[:8]
+        ),
+        "exact_binding_invocation_supporting_events": exact_invocation_events,
+        "exact_binding_invocation_supporting_events_omitted": (
+            exact_invocation_events_omitted
         ),
         "event_window_status": (
             "complete-session-history" if complete_history
