@@ -1,0 +1,137 @@
+{
+  "captured_at": "2026-10-26T02:36:08+00:00",
+  "identity": "ev_environment_observation_contract_diagnostics_readback_20261026",
+  "measurement_basis": "A live environmental-capability projection validated the pinned Commons process-capability consumer evidence and reported field-level contract omissions for two older campaign observations without admitting them into pressure analysis.",
+  "measurement_limits": [
+    "The two rejected records identify missing persisted fields; this does not explain why their producers omitted them or establish recurrence beyond these records.",
+    "The older observations remain immutable and unavailable to pressure analysis; this readback does not reconstruct their missing context.",
+    "The cross-consumer Commons source sample remains bounded and does not measure agent receipt, use, causality, or migration readiness."
+  ],
+  "observation": {
+    "kind": "environmental-observation-contract-diagnostics-readback",
+    "outcome": {
+      "campaign_checkpoint_id": "chk_42e86024f98220fc",
+      "consumer_observation_count": 3,
+      "consumer_repositories": [
+        "mncs-actions",
+        "mncs-debug",
+        "mncs-forge"
+      ],
+      "measurement_availability": {
+        "historical_agent_receipt_or_use": "not-measured",
+        "observation_record_contract_diagnostics": "measured-by-projection",
+        "producer_cause": "unavailable"
+      },
+      "observation_count": 5,
+      "projection_identity": "eci_da1418bfc0998965",
+      "projection_status": "partial",
+      "rejected_observation_count": 2,
+      "rejected_observations": [
+        {
+          "commit": "d327685abb4d4b269c2ccfccc2e17063fc9f1b60",
+          "contract_diagnostics": [
+            "missing-observation-source-interface",
+            "missing-observation-request"
+          ],
+          "identity": "ev_environment_native_pressure_identity_context_readback_20261026",
+          "path": "evidence/environmental-capability/pressure-identity-context-readback-20261026.json",
+          "path_truncated": false,
+          "repository": "mncs-environment",
+          "sha256": "005fc683dd0c810265a4837749ecbfdc75a65ae7b6f1b577d0f63a97f0815e93",
+          "verification": "observation-contract-invalid"
+        },
+        {
+          "commit": "919e490ba64f86643d33631c83765d77404cb5d7",
+          "contract_diagnostics": [
+            "missing-observation-source-interface",
+            "missing-observation-request",
+            "missing-observation-outcome-or-projection-summary",
+            "missing-related-work-session-id"
+          ],
+          "identity": "ev_environment_entry_store_serialization_pressure_readback_20261026",
+          "path": "evidence/environmental-capability/session-entry-store-serialization-pressure-20261026.json",
+          "path_truncated": false,
+          "repository": "mncs-environment",
+          "sha256": "92a4c878c5614468422017f1dfae27c5f210c31261e3e36ccbf44f8ef2e5f825",
+          "verification": "observation-contract-invalid"
+        }
+      ],
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "source_pointer_content_integrity_verified_count": 20,
+      "verified_observation_count": 5
+    },
+    "request": {
+      "evidence_limit": 16,
+      "history_pages": 4,
+      "interpretation": "environmental-capability",
+      "operation": "projections",
+      "session_event_limit": 4,
+      "session_id": "ses_9ad3efb63438cf3d"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Have observation producers validate source_interface, request, and related_work.session_id before checkpoint publication; retain the projection field diagnostics when repairing future records.",
+    "category": "environmental-observation-contract",
+    "identity": "ph_environment_observation_contract_context_gaps_20261026",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment campaign evidence ingestion",
+    "title": "Campaign observations can be dropped when required source and session context is absent"
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_4c126896d339c0ce",
+    "session_id": "ses_9ad3efb63438cf3d"
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "objective": "Connect authentic environmental and compiler evidence to provenance-aware, actionable projections.",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "1cac1f5868cf4cd3c3243c93b12d05d6ba2e25a1",
+      "identity": "mncs_environment_observation_contract_diagnostics_1cac1f5",
+      "kind": "committed-implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "8f847f56ee79c681280ad27e7dbf480569d19f00eba4453f912fe223759ca331"
+    },
+    {
+      "commit": "012252b130b87ee48f9ad84ee408728babbac3b1",
+      "identity": "ev_environment_commons_native_process_consumer_evidence_20261026",
+      "kind": "native-capability-consumer-evidence-source",
+      "path": "evidence/environmental-capability/commons-native-process-consumer-evidence-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "f5018508dae383ed64b237e94ad36c0a7bbb28acbb0b04407b3a7b2306dbda1b"
+    },
+    {
+      "commit": "1cac1f5868cf4cd3c3243c93b12d05d6ba2e25a1",
+      "identity": "ev_environment_commons_native_process_consumer_projection_readback_20261026",
+      "kind": "native-capability-consumer-projection-readback-source",
+      "path": "evidence/environmental-capability/commons-native-process-consumer-projection-readback-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "f9979c62917fc7a74ff703593c35f4f02f0a270326ec8ba2b3932f66b581ad4a"
+    },
+    {
+      "commit": "d327685abb4d4b269c2ccfccc2e17063fc9f1b60",
+      "identity": "ev_environment_native_pressure_identity_context_readback_20261026",
+      "kind": "historical-environmental-observation-source",
+      "path": "evidence/environmental-capability/pressure-identity-context-readback-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "005fc683dd0c810265a4837749ecbfdc75a65ae7b6f1b577d0f63a97f0815e93"
+    },
+    {
+      "commit": "919e490ba64f86643d33631c83765d77404cb5d7",
+      "identity": "ev_environment_entry_store_serialization_pressure_readback_20261026",
+      "kind": "historical-environmental-observation-source",
+      "path": "evidence/environmental-capability/session-entry-store-serialization-pressure-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "92a4c878c5614468422017f1dfae27c5f210c31261e3e36ccbf44f8ef2e5f825"
+    }
+  ]
+}
