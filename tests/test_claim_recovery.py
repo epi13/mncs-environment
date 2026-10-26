@@ -315,7 +315,7 @@ class AcquireRecoveryTests(RecoveryFixture):
         self.assertEqual([item["status"] for item in
                           sorted(history, key=lambda item: item["version"])],
                          ["held", "superseded", "held"])
-        superseded = [item for item in history if item["status"] == "superseded"][0]
+        superseded = next(item for item in history if item["status"] == "superseded")
         self.assertEqual(superseded["provenance"]["recovered_by"], "ses_new")
         holders = claims.holders(self.store.read_claims())["r"]
         self.assertEqual(holders[0]["session_id"], "ses_new")
@@ -611,6 +611,75 @@ class AcquireRecoveryTests(RecoveryFixture):
         verdict = printed.call_args[0][0]
         self.assertEqual(verdict["verdict"], "recoverable")
         self.assertIn("failed", verdict["reason"])
+
+    def test_repository_claim_page_exposes_liveness_and_recovery_operation(self):
+        now = datetime.now(timezone.utc).replace(microsecond=0)
+        self.seed_session("ses_quiet", "active", now - timedelta(hours=3))
+        self.acquire_paths("ses_quiet", ["out/quiet.json"])
+        self.seed_session("ses_recent", "active", now)
+        self.acquire_paths("ses_recent", ["out/recent.json"])
+
+        parsed = cli.build_parser().parse_args([
+            "claims", "ses_reader", "--repository", "r",
+        ])
+        parsed.state_dir = self.temp.name
+        parsed.persistence = "file"
+        with mock.patch.object(cli, "out") as printed:
+            self.assertEqual(cli.cmd_claims(parsed), 0)
+
+        page = printed.call_args.args[0]
+        rows = {item["session_id"]: item for item in page["claims"]}
+        quiet = rows["ses_quiet"]
+        recent = rows["ses_recent"]
+        self.assertTrue(quiet["live"])  # lease is unexpired, owner is stale
+        self.assertEqual(quiet["owner_liveness"]["freshness"], "stale")
+        self.assertEqual(
+            quiet["owner_liveness"]["recovery_eligibility"], "recoverable",
+        )
+        self.assertEqual(
+            quiet["owner_liveness"]["recommended_operation"],
+            "retry-exact-scoped-acquisition",
+        )
+        self.assertEqual(recent["owner_liveness"]["freshness"], "active")
+        self.assertEqual(recent["owner_liveness"]["recovery_eligibility"], "live")
+        self.assertEqual(
+            recent["owner_liveness"]["recommended_operation"],
+            "use-disjoint-scope-or-wait",
+        )
+        self.assertEqual(page["owner_liveness_inspection"]["claims_not_inspected"], 0)
+        self.assertEqual(page["owner_liveness_inspection"]["owner_sessions_inspected"], 2)
+        self.assertTrue(
+            page["owner_liveness_inspection"]["observed_at"].endswith("Z")
+        )
+
+    def test_repository_claim_liveness_query_caps_owner_session_reads(self):
+        now = datetime.now(timezone.utc).replace(microsecond=0)
+        for index in range(18):
+            session_id = f"ses_owner_{index:02d}"
+            self.seed_session(session_id, "active", now)
+            self.acquire_paths(session_id, [f"out/{index:02d}.json"])
+
+        parsed = cli.build_parser().parse_args([
+            "claims", "ses_reader", "--repository", "r", "--limit", "32",
+        ])
+        parsed.state_dir = self.temp.name
+        parsed.persistence = "file"
+        with mock.patch.object(cli, "out") as printed:
+            self.assertEqual(cli.cmd_claims(parsed), 0)
+
+        page = printed.call_args.args[0]
+        inspection = page["owner_liveness_inspection"]
+        self.assertEqual(inspection["owner_sessions_inspected"], 16)
+        self.assertEqual(inspection["claims_not_inspected"], 2)
+        self.assertEqual(inspection["owner_session_limit"], 16)
+        self.assertEqual(
+            sum(
+                item["owner_liveness"]["inspection_status"]
+                == "inspection-limit-reached"
+                for item in page["claims"]
+            ),
+            2,
+        )
 
     def test_claims_explain_unknown_id_fails(self):
         parsed = cli.build_parser().parse_args(

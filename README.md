@@ -185,6 +185,12 @@ append-only event log, so a different process or consumer resumes from
 state, not prose. The hardening campaign added:
 
 - versioned workspace claims replacing advisory leases (`mncs_env/claims.py`);
+- bounded `claims --repository` pages distinguish an unexpired lease from
+  owner freshness and recovery eligibility; a stale recoverable scope points
+  to retrying the exact acquisition, while live and unresolved scopes remain
+  protected (`mncs_env/cli.py`). The freshness summary is timestamped and
+  observational; normal scoped acquisition still revalidates and the summary
+  neither mutates a claim nor asserts that an arbitrary host process stopped.
 - ownership/acquisition authority with tri-state enforcement (`mncs_env/authority.py`);
 - verified local branch/worktree retirement gated by the session's exact live claim; general delete authority remains separate;
 - rights/provenance gate over `mncs-rights-provenance` (`mncs_env/rights.py`);

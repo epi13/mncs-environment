@@ -15,6 +15,7 @@ import os
 import re
 import sys
 from contextlib import closing
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +50,7 @@ CAMPAIGN_STATE_PROJECTION_MIN_BYTES = 4 * 1024
 # artifact while keeping artifact-read output explicitly bounded.
 MAX_ARTIFACT_READ_BYTES = 1_300_000
 MAX_CLAIM_PAGE_OUTPUT_BYTES = 48 * 1024
+MAX_CLAIM_PAGE_OWNER_SESSIONS = 16
 DEFAULT_ECI_EVIDENCE_PAGE_SIZE = 2
 DEFAULT_ECI_SESSION_EVENT_LIMIT = 4
 
@@ -1291,6 +1293,55 @@ def cmd_fail(args: argparse.Namespace) -> int:
     return 0
 
 
+def _claim_owner_liveness(
+    record: dict[str, Any],
+    store: Any,
+    owner_states: dict[str, dict[str, Any]],
+    *,
+    now: datetime,
+) -> dict[str, Any]:
+    """Project bounded owner freshness separately from lease expiry."""
+    if record.get("live") is not True:
+        explanation = claims_module.classify(record, {}, now=now)
+        return {
+            "inspection_status": "not-needed-nonblocking",
+            "freshness": explanation.get("freshness"),
+            "recovery_eligibility": explanation.get("verdict", "unknown"),
+            "recommended_operation": "refresh-scope-and-acquire",
+        }
+
+    session_id = str(record.get("session_id") or "")
+    if session_id not in owner_states:
+        if len(owner_states) >= MAX_CLAIM_PAGE_OWNER_SESSIONS:
+            return {
+                "inspection_status": "inspection-limit-reached",
+                "freshness": None,
+                "recovery_eligibility": "unknown",
+                "recommended_operation": "inspect-owner-state-before-acquiring",
+            }
+        owner_states[session_id] = claims_module.owner_state(store, session_id)
+    owner = owner_states[session_id]
+    explanation = claims_module.classify(record, owner, now=now)
+    if owner.get("error"):
+        inspection_status = "owner-state-unavailable"
+    elif owner.get("known") is not True:
+        inspection_status = "owner-unknown"
+    else:
+        inspection_status = "observed"
+    recovery = explanation.get("verdict", "unknown")
+    next_operation = {
+        "recoverable": "retry-exact-scoped-acquisition",
+        "live": "use-disjoint-scope-or-wait",
+        "not-recoverable": "preserve-scope-and-inspect-owner",
+    }.get(recovery, "refresh-scope-and-acquire")
+    return {
+        "inspection_status": inspection_status,
+        "freshness": explanation.get("freshness"),
+        "recovery_eligibility": recovery,
+        "recommended_operation": next_operation,
+    }
+
+
 def cmd_claims(args: argparse.Namespace) -> int:
     expected_generation = getattr(args, "expected_store_generation", None)
     if expected_generation is not None:
@@ -1512,13 +1563,42 @@ def cmd_claims(args: argparse.Namespace) -> int:
             offset = 0 if args.offset is None else args.offset
             limit = 100 if args.limit is None else args.limit
             page = annotated[offset:offset + limit]
+            owner_states: dict[str, dict[str, Any]] = {}
+            inspection_time = datetime.now(timezone.utc)
+            for record in page:
+                record["owner_liveness"] = _claim_owner_liveness(
+                    record, store, owner_states, now=inspection_time,
+                )
             while True:
+                owner_liveness_not_inspected = sum(
+                    1 for record in page
+                    if isinstance(record.get("owner_liveness"), dict)
+                    and record["owner_liveness"].get("inspection_status")
+                    == "inspection-limit-reached"
+                )
+                owner_liveness_inspected_sessions = {
+                    str(record.get("session_id") or "")
+                    for record in page
+                    if isinstance(record.get("owner_liveness"), dict)
+                    and record["owner_liveness"].get("inspection_status")
+                    in {"observed", "owner-unknown", "owner-state-unavailable"}
+                }
                 response = {
                     "schema_version": "mncs.environment.claim-page/1",
                     "repository": repository,
                     "offset": offset,
                     "limit": limit,
                     "total": len(annotated),
+                    "owner_liveness_inspection": {
+                        "observed_at": inspection_time.isoformat(
+                            timespec="seconds"
+                        ).replace("+00:00", "Z"),
+                        "owner_sessions_inspected": len(
+                            owner_liveness_inspected_sessions
+                        ),
+                        "claims_not_inspected": owner_liveness_not_inspected,
+                        "owner_session_limit": MAX_CLAIM_PAGE_OWNER_SESSIONS,
+                    },
                     "next_offset": (
                         offset + len(page)
                         if offset + len(page) < len(annotated) else None
