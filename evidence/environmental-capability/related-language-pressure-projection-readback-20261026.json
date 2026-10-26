@@ -1,0 +1,136 @@
+{
+  "captured_at": "2026-10-26T02:45:44+00:00",
+  "identity": "ev_environment_related_language_pressure_projection_readback_20261026",
+  "measurement_basis": "The authenticated environmental-capability projection read four backward campaign-evidence pages from one checkpoint and joined the native process correspondence, three pinned Commons consumer observations, Forge's exact language-pressure evidence ref, and the related pinned Commons language-pressure record.",
+  "measurement_limits": [
+    "The projection status is partial because two older campaign observations remain invalid under the observation contract; they were excluded from this relationship.",
+    "The projection response was truncated, but the capability correspondence and its complete bounded consumer-evidence section were retained in the returned view.",
+    "The joined evidence is a bounded source sample and does not establish that agents discovered or used the native capability.",
+    "The source records do not establish causality, recurrence, native migration readiness, or systemwide native adoption."
+  ],
+  "observation": {
+    "kind": "native-capability-consumer-evidence-readback",
+    "outcome": {
+      "causal_relation_status": "not-established",
+      "consumer_evidence": {
+        "consumer_repositories_observed": [
+          "mncs-actions",
+          "mncs-debug",
+          "mncs-forge"
+        ],
+        "consumer_status": "verified-commons-consumer-evidence-available",
+        "native_migration_readiness": "not-established",
+        "recurrence_status": "not-established",
+        "related_pressure_records": [
+          {
+            "affected_repositories": [
+              "mncs-forge",
+              "mncs-language"
+            ],
+            "causal_relation_status": "not-established",
+            "identity": "MNCS-LANG-64AD712CD2DE",
+            "recorded_status": "discovered",
+            "relation_basis": "exact-id-from-source-declared-language-pressure-evidence-ref",
+            "required_behavior": "Provide a compatible generic process/resource effect contract that accepts bounded memory, swap, process-count and deadline constraints, returns typed raw observations, and exposes an owned cancellable execution handle so MNCS decides stale cancellation and a provider/runtime interrupts the process tree and reports cleanup.",
+            "source_declaration_observation_identity": "MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41",
+            "source_record_status": "source-integrity-schema-and-pressure-identity-verified",
+            "source_record_title": "Process effects lack aggregate resource envelopes and in-flight cancellation handles"
+          }
+        ],
+        "source_observation_count": 3,
+        "unverified_source_count": 0
+      },
+      "evidence_window": {
+        "campaign_state_checkpoint_id": "chk_d1d34f8afff23c1e",
+        "checkpoint_consistent": true,
+        "evidence_count": 10,
+        "page_limits": [
+          3,
+          3,
+          3,
+          1
+        ],
+        "page_offsets": [
+          7,
+          4,
+          1,
+          0
+        ],
+        "pages_read": 4,
+        "source_pointer_content_integrity_not_verified_count": 0,
+        "source_pointer_content_integrity_verified_count": 28,
+        "unavailable_observation_count": 2,
+        "verified_observation_count": 8
+      },
+      "native_capability_identity": "mncs.std.process.v1",
+      "projection_identity": "eci_04518f32e479f99d",
+      "projection_status": "partial",
+      "target_pressure_identity": "MNCS-TOOLING-B665F138D324"
+    },
+    "request": {
+      "evidence_limit": 3,
+      "evidence_offset": 7,
+      "history_pages": 4,
+      "operation": "projections",
+      "session_event_limit": 1,
+      "session_id": "ses_9ad3efb63438cf3d"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_4c126896d339c0ce",
+    "session_id": "ses_9ad3efb63438cf3d"
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "objective": "Connect authentic environmental and compiler evidence to provenance-aware, actionable projections.",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "85648827af074366ad5b1e638286fe0bdbe9ecba",
+      "identity": "ev_environment_native_process_capability_correspondence_20261025",
+      "kind": "native-capability-correspondence-source",
+      "path": "evidence/environmental-capability/native-process-capability-correspondence-20261025.json",
+      "repository": "mncs-environment",
+      "sha256": "5ae1c4e92ddd250d2f9f567b991ab8c2b5bf400d3852cd02e550d8438b80270f"
+    },
+    {
+      "commit": "012252b130b87ee48f9ad84ee408728babbac3b1",
+      "identity": "ev_environment_commons_native_process_consumer_evidence_20261026",
+      "kind": "native-capability-consumer-evidence-source",
+      "path": "evidence/environmental-capability/commons-native-process-consumer-evidence-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "f5018508dae383ed64b237e94ad36c0a7bbb28acbb0b04407b3a7b2306dbda1b"
+    },
+    {
+      "commit": "4a708df3c6c8c764d57ffedf28971ffe5108da5b",
+      "identity": "ev_environment_commons_related_language_pressure_20261026",
+      "kind": "native-capability-related-pressure-source",
+      "path": "evidence/environmental-capability/related-language-pressure-source-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "d66a06032e43355b4388ab7637c3f550c8076d9a5cec96f54b89b0e0f9000537"
+    },
+    {
+      "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+      "identity": "MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41",
+      "kind": "commons-family-pressure-observation-source",
+      "path": "pressures/observations/MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41.json",
+      "repository": "mncs-commons",
+      "sha256": "1a4d54f1328475e4cfadfbfd62a8d19384b90eeba5816a2a771c3a209ebd8bf2"
+    },
+    {
+      "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+      "identity": "MNCS-LANG-64AD712CD2DE",
+      "kind": "commons-family-pressure-record-source",
+      "path": "pressures/records/MNCS-LANG-64AD712CD2DE.json",
+      "repository": "mncs-commons",
+      "sha256": "23203a6324b9f1092c598419a76a558c4d4432301dae3a980ac2e5f34e435c1b"
+    }
+  ]
+}
