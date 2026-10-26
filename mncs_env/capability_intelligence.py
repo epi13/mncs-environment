@@ -13931,8 +13931,8 @@ def project(
             page_references[-MAX_EVIDENCE_REFS:]
             if isinstance(page_references, list) else []
         )
-        for raw in page_references:
-            page_entries.append((raw, page_index))
+        for page_entry_index, raw in enumerate(page_references):
+            page_entries.append((raw, page_index, page_entry_index))
             pointer = _validate_reference(raw)
             if pointer is None or not _is_observation_reference(pointer):
                 continue
@@ -13945,6 +13945,16 @@ def project(
             capacity_seen.add(source_key)
             page_observation_capacities[page_index] += 1
             page_observation_references[page_index].append(pointer)
+    if len(history_states) > 1:
+        page_offsets = [page.get("evidence_offset") for page in history_states]
+        if all(type(offset) is int and offset >= 0 for offset in page_offsets):
+            # History pages are fetched newest-first, but append-only
+            # corrections must be evaluated after their earlier targets.
+            # Process the bounded selected references in ledger order while
+            # retaining each page's independent read-budget selection.
+            page_entries.sort(key=lambda entry: (
+                page_offsets[entry[1]] + entry[2], entry[1],
+            ))
     observation_read_budgets = _allocate_page_observation_budgets(
         page_observation_capacities, MAX_OBSERVATIONS,
     )
@@ -13978,7 +13988,7 @@ def project(
         campaign_identity=campaign.get("identity"),
         deadline=read_deadline,
     )
-    for raw, page_index in page_entries:
+    for raw, page_index, _page_entry_index in page_entries:
         pointer = _validate_reference(raw)
         if pointer is None:
             continue

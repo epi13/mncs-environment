@@ -1870,6 +1870,102 @@ def test_append_only_evidence_reference_correction_recovers_exact_record(
     )
 
 
+def test_append_only_evidence_reference_correction_crosses_history_pages(
+    tmp_path: Path,
+) -> None:
+    target = _observation(
+        "ev_environment_cross_page_pointer_correctable",
+        "ses_environment_pointer_correction",
+        "cmp_environment_pointer_correction",
+    )
+    session, _state = _session(tmp_path, [target])
+    target_reference = dict(_state["evidence"][0])
+    unavailable_reference = {**target_reference, "commit": "f" * 40}
+
+    correction = _observation(
+        "ev_environment_cross_page_pointer_correction",
+        "ses_environment_pointer_correction",
+        "cmp_environment_pointer_correction",
+    )
+    correction.pop("pressure_hypothesis")
+    correction["observation"]["kind"] = "campaign-evidence-pointer-correction"
+    correction["evidence_reference_correction"] = {
+        "schema_version": (
+            capability_intelligence.EVIDENCE_REFERENCE_CORRECTION_SCHEMA
+        ),
+        "target_reference": unavailable_reference,
+        "replacement_reference": target_reference,
+        "reason": "Correct the commit pointer while preserving exact observation bytes.",
+    }
+    relative = "evidence/environmental-capability/cross-page-pointer-correction.json"
+    raw = json.dumps(correction, sort_keys=True, separators=(",", ":")).encode()
+    checkout = Path(session.snapshot["selected_checkouts"][
+        "mncs-environment"
+    ]["path"])
+    correction_path = checkout / relative
+    correction_path.write_bytes(raw)
+    _git(checkout, "add", relative)
+    _git(checkout, "commit", "--quiet", "-m", "append cross-page pointer correction")
+    correction_reference = {
+        "identity": correction["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+
+    def campaign_state_page(*, evidence_offset: int, evidence_limit: int):
+        page = {
+            "checkpoint_id": "chk_cross_page_pointer_correction",
+            "recorded_at": "2026-10-24T00:00:00+00:00",
+            "recorded_by": {"consumer_id": "recorder", "principal_id": "ctrl_test"},
+            "evidence_count": 2,
+            "evidence_truncated": False,
+            "delivery": {"status": "pending"},
+            "evidence_offset": evidence_offset,
+            "evidence_limit": evidence_limit,
+        }
+        if evidence_offset == 1:
+            page.update({
+                "evidence": [correction_reference],
+                "previous_evidence_offset": 0,
+                "next_evidence_offset": None,
+            })
+        else:
+            page.update({
+                "evidence": [unavailable_reference],
+                "previous_evidence_offset": None,
+                "next_evidence_offset": 1,
+            })
+        return page
+
+    session.campaign_state = campaign_state_page
+    result = capability_intelligence.project(
+        session, history_pages=2, evidence_offset=1, evidence_limit=1,
+    )
+
+    assert result["source"]["evidence_history_page_offsets"] == [1, 0]
+    assert result["source"]["evidence_reference_correction_count"] == 1
+    assert result["source"]["evidence_reference_corrections_applied_count"] == 1
+    assert result["source"]["evidence_reference_corrections_unverified_count"] == 0
+    assert result["source"]["observation_records_unavailable"] == 0
+    recovered = next(
+        item for item in result["observations"]
+        if item["identity"] == target["identity"]
+    )
+    assert recovered["evidence_reference"]["commit"] == target_reference["commit"]
+    assert recovered["evidence_reference_correction"]["status"] == (
+        "recovered-from-append-only-correction"
+    )
+    correction_view = next(
+        item for item in result["observations"]
+        if item["identity"] == correction["identity"]
+    )
+    assert correction_view["evidence_reference_correction"]["status"] == (
+        "applied-to-exact-unavailable-target"
+    )
+
+
 def test_compact_projection_retains_newest_observation_tail(tmp_path: Path) -> None:
     identities = [f"ev_environment_compact_tail_{index:02d}" for index in range(10)]
     record = _observation(
