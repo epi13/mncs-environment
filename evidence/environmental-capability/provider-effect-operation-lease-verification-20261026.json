@@ -1,0 +1,200 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_provider_effect_operation_lease_verification_20261026",
+  "captured_at": "2026-10-26T22:17:00Z",
+  "measurement_basis": "committed-operation-scoped-checkout-lock-with-concurrency-interruption-and-projection-verification",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_alignment_status": "the persisted WorkIntent predates the current environmental capability campaign objective",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_d22b8e54809745b7",
+    "campaign_evidence_count_before_recording": 81
+  },
+  "observation": {
+    "kind": "environmental-provider-effect-operation-lease-verification",
+    "source_interface": "MNCS Environment Session.invoke, canonical event log, and environmental-capability session-activity projection",
+    "request": {
+      "prior_provider-effect_commit": "b4b417a2037a9e0a6b3c14078db52f34da3e409c",
+      "implementation_commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "operation_lease": {
+        "mechanism": "Linux directory flock",
+        "scope": "one provider invocation against one exact observed checkout",
+        "persistent_claim": false,
+        "wait_bound_seconds": 15,
+        "release": "after result publication or owner process exit"
+      },
+      "provider_invocation_fixture": "registered real Git worktree with the external provider executor mocked",
+      "deferral_fixture": "injected bounded busy result; provider executor not called"
+    },
+    "outcome": {
+      "same_checkout_concurrency": {
+        "independent_session_objects": 2,
+        "execution_context": "concurrent threads in one test process",
+        "same_selected_checkout": true,
+        "provider_maximum_concurrency": 1,
+        "provider_invocations_returned_ok": 2,
+        "persistent_claims_acquired": false
+      },
+      "interrupted_owner": {
+        "fixture": "child process acquired a directory flock then exited with os._exit",
+        "subsequent_zero_wait_acquisition": "succeeded",
+        "lock_file_created": false
+      },
+      "preflight_and_effect_provenance": {
+        "fresh_preflight_repeated_after_lock_acquisition": true,
+        "capability_invoked_event_links_to_locked_preflight": true,
+        "completion_event_records_release": true,
+        "checkout_path_exposed_by_projection": false
+      },
+      "busy_timeout": {
+        "canonical_event_type": "effect.operation-deferred",
+        "operation_executed": false,
+        "provider_executor_called": false,
+        "projection_exposes_event_reference_and_wait": true,
+        "fixture_limit": "busy status was injected; the 15-second timeout was not allowed to elapse"
+      },
+      "verification": {
+        "capability_intelligence": {
+          "command": "python3 -m pytest -q tests/test_capability_intelligence.py",
+          "status": "passed",
+          "passed": 127,
+          "failed": 0
+        },
+        "provider_and_effect_target_tests": {
+          "command": "python3 -m pytest -q tests/test_environment.py -k 'provider or effect_target or relative_worktree'",
+          "status": "passed",
+          "passed": 23,
+          "failed": 0
+        },
+        "authority_tests": {
+          "command": "PYTHONPATH=.:tests python3 -m unittest test_environment.AuthorityTests",
+          "status": "passed",
+          "passed": 33,
+          "failed": 0
+        },
+        "event_tests": {
+          "command": "PYTHONPATH=.:tests python3 -m unittest test_environment.EventTests",
+          "status": "passed",
+          "passed": 3,
+          "failed": 0
+        },
+        "campaign_proofs": {
+          "command": "python3 scripts/campaign_proofs.py",
+          "status": "passed",
+          "passed": 17,
+          "failed": 0
+        },
+        "vertical_proof": {
+          "command": "python3 scripts/vertical_proof.py",
+          "status": "passed"
+        },
+        "diff_check": "passed"
+      },
+      "delivery": {
+        "branch": "main",
+        "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+        "remote_ref": "refs/heads/main",
+        "remote_head": "311164ab446f72b40f5f0d52915c24ca29036179",
+        "status": "pushed"
+      },
+      "interpretation_limit": "The real Git worktree and operating-system lock were exercised, but provider side effects were mocked. The concurrency test ran two Environment sessions in one process; process exit recovery was separately verified against the kernel lock. The vertical proof exercised the real read provider and protected-write denial, not an external provider write. No independent agent used the new path during this session."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "prs_f117146a6f28e4dd",
+    "title": "Manifest verification commands cannot execute under session authority in dirty/foreign checkouts",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment provider effect eligibility and verification",
+    "owner": "mncs-environment",
+    "basis": "This uses the existing pressure identity from pressures/registry.json. Its source evidence records a dirty/off-branch mncs-automation test invocation that returned pending-escalation because the checkout had not first been claimed, followed by a direct host unittest workaround. The user also reports repeated authorization friction; broader recurrence and the causes of all reported failures remain unverified.",
+    "recurrence": "one prior session recorded in the source pressure registry plus user-reported repeated friction; cross-session system recurrence not established",
+    "actionable_recommendation": "For an exact session-selected non-main linked worktree, evaluate current writable rights and checkout identity without requiring a persistent owner claim, then serialize Environment-mediated effects with an automatically released operation-scoped lock. Preserve scoped requirements for shared main, destructive actions, and whole-tree remediation.",
+    "not_measured": [
+      "whether the prior registry event was resolved by the selected-worktree implementation",
+      "whether an independent agent can discover and use the new provider path",
+      "whether real provider tests or writes preserve their declared correctness contracts under this path",
+      "whether direct shell or Git operations contend with Environment-mediated provider calls",
+      "whether the change reduces administrative tool calls across sessions",
+      "whether operation lock contention recurs in real development",
+      "long-term effectiveness"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_provider_effect_lease_implementation_311164a",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "mncs_env/sessions.py",
+      "sha256": "6f68e6a5ffc5449c7aa6b93233747aa0102c38e4bae9c8095baff5db7b539f9d"
+    },
+    {
+      "identity": "mncs_environment_kernel_checkout_lease_311164a",
+      "kind": "committed-operation-lease-implementation",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "mncs_env/workspace.py",
+      "sha256": "2a1260fde28a43fcbb122e5a8026e426012998cb3337dd405438d90630f396f7"
+    },
+    {
+      "identity": "mncs_environment_operation_lease_and_deferral_projection_311164a",
+      "kind": "committed-environment-projection",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "aa048e91f82dc8ef2ccfb50a3c31ade87c2cdd2acb4232fb307c1208c41114ab"
+    },
+    {
+      "identity": "mncs_environment_effect_deferral_event_type_311164a",
+      "kind": "canonical-event-vocabulary",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "mncs_env/events.py",
+      "sha256": "d30a4236f2388b95e942d1e7d3c40560086b14b7e886105dee606700d548de7b"
+    },
+    {
+      "identity": "mncs_environment_operation_lease_tests_311164a",
+      "kind": "committed-concurrency-and-interruption-verification-tests",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "tests/test_environment.py",
+      "sha256": "ab33e09ac2802abccb6d2dfb6715eef82a3a342c531e1a752e216818ecb4ee3d"
+    },
+    {
+      "identity": "mncs_environment_effect_lease_projection_tests_311164a",
+      "kind": "committed-projection-verification-tests",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "7368a7e6fb3ac3cc20a998f0f2d019d21dadea09b9cac66f3fe3280c7380a652"
+    },
+    {
+    "identity": "prs_f117146a6f28e4dd",
+      "kind": "existing-pressure-registry-record",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "pressures/registry.json",
+      "sha256": "22eb64f1e897adfc521840c305b00ab5fe4c8aaa1cbc598ccbf9cce818091807"
+    }
+  ],
+  "not_measured": [
+    "actual external provider mutation through the new path",
+    "the 15-second wait timeout occurring under live contention",
+    "operation lock enforcement for direct shell or Git activity",
+    "operation deferral recurrence across independent sessions",
+    "effectiveness after a future agent uses the change"
+  ]
+}
