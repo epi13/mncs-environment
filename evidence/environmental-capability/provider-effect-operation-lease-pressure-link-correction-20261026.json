@@ -1,0 +1,113 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_provider_effect_operation_lease_pressure_link_correction_20261026",
+  "captured_at": "2026-10-26T22:28:16Z",
+  "measurement_basis": "append-only-correction-linking-improvement-to-authoritative-pressure-registry-identity",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_alignment_status": "the persisted WorkIntent predates the current environmental capability campaign objective",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_398db4c154218a29",
+    "campaign_evidence_count_before_recording": 84
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-correction",
+    "source_interface": "MNCS Environmental Capability projection improvement relation and committed pressure registry",
+    "request": {
+      "corrects_improvement_relation_identity": "im_environment_provider_effect_operation_lease_20261026",
+      "corrects_observation_identity": "ev_environment_provider_effect_operation_lease_improvement_20261026",
+      "authoritative_pressure_identity": "prs_f117146a6f28e4dd",
+      "basis": "The original improvement observation used a campaign-local pressure identity while its source registry pointer names prs_f117146a6f28e4dd. This append-only record links the same implementation and verification to the registry identity without changing the original record."
+    },
+    "outcome": {
+      "correction": "A second improvement relation uses the authoritative pressure registry identity. The original relation remains available with its unresolved projection status, preserving the evidence history and making the identity mismatch inspectable.",
+      "new_agent_encounter": false,
+      "new_implementation": false,
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "This corrects evidence linkage only. It does not establish that the historical test invocation now succeeds through Environment, that coordination overhead has declined, or that the pressure is resolved."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "prs_f117146a6f28e4dd",
+    "title": "Manifest verification commands cannot execute under session authority in dirty/foreign checkouts",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment provider effect eligibility and verification",
+    "owner": "mncs-environment (authority/verification effects); owning providers (test contracts)",
+    "basis": "This exact identity and title originate in pressures/registry.json. The relation below corrects a campaign evidence pointer; this record is supporting context, not another encounter.",
+    "recurrence": "one prior session in the source registry; cross-session system recurrence is not established",
+    "actionable_recommendation": "Use current writable rights, exact selected-worktree identity, fresh preflight, and bounded operation-scoped serialization for Environment-mediated effects without persistent component ownership.",
+    "not_measured": [
+      "whether the historical verification invocation now succeeds through Environment",
+      "whether independent agents can discover and use the path",
+      "whether coordination overhead changes after adoption",
+      "whether subsequent observations show the pressure recurring"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_provider_effect_operation_lease_registry_link_20261026",
+    "addresses_hypothesis_identity": "prs_f117146a6f28e4dd",
+    "implementation_reference": {
+      "identity": "mncs_environment_operation_scoped_provider_effect_lease_311164a",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "mncs_env/sessions.py",
+      "sha256": "6f68e6a5ffc5449c7aa6b93233747aa0102c38e4bae9c8095baff5db7b539f9d"
+    },
+    "verification_observation_identity": "ev_environment_provider_effect_operation_lease_verification_20261026",
+    "subsequent_observation_identity": null,
+    "basis": "This append-only relation corrects the identity used to connect the existing provider-effect implementation and its verified behavior to the authoritative pressure record. It does not assert pressure resolution.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "real external provider mutation through the new path",
+      "independent-agent adoption or discoverability",
+      "conflicting edits or direct shell/Git coordination",
+      "long-term recurrence or effectiveness"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_provider_effect_operation_lease_improvement_20261026",
+      "kind": "previous-improvement-observation-being-corrected",
+      "repository": "mncs-environment",
+      "commit": "dc286ad2443ec30d62634cc87fa430146408de24",
+      "path": "evidence/environmental-capability/provider-effect-operation-lease-improvement-20261026.json",
+      "sha256": "4d24f810f3759809a5213723e59753578770b8f9d9619edac1fcbe3bfbae1530"
+    },
+    {
+      "identity": "ev_environment_provider_effect_operation_lease_verification_20261026",
+      "kind": "verified-environmental-observation",
+      "repository": "mncs-environment",
+      "commit": "5e45b7b2cbf15926bdbcaaf95508c643956ae0bf",
+      "path": "evidence/environmental-capability/provider-effect-operation-lease-verification-20261026.json",
+      "sha256": "e35f8e1d607186f24a066f43316d42cbc22eae2c175c46b2b2b4791f746fba9b"
+    },
+    {
+      "identity": "prs_f117146a6f28e4dd",
+      "kind": "existing-pressure-registry-record",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "pressures/registry.json",
+      "sha256": "22eb64f1e897adfc521840c305b00ab5fe4c8aaa1cbc598ccbf9cce818091807"
+    }
+  ],
+  "not_measured": [
+    "empirical pressure resolution",
+    "actual agent discovery or adoption",
+    "behavior of external provider processes",
+    "long-term effect on authority and coordination overhead"
+  ]
+}
