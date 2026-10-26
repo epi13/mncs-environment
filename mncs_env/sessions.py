@@ -9470,6 +9470,10 @@ class Session:
     def reconcile(self) -> dict[str, Any]:
         """Refresh discovery and delegate declared service recovery, then verify."""
         from . import doctor as doctor_module
+        prior_repository_refs = list(
+            (self.snapshot.get("campaign") or {}).get("repository_refs", [])
+        )
+        event_count_before = len(self._log())
         previous_bindings = [dict(binding) for binding in self.snapshot.get("bindings", [])]
         previous_services = [dict(item) for item in self.snapshot.get("service_observations", [])]
         revalidation = self.revalidate()
@@ -9484,7 +9488,34 @@ class Session:
                               "detail": "explicit reconcile: full revalidation and service recovery",
                               "validated": True}],
             operations=result["operations"], revalidation=revalidation)
-        campaign_continuity = self.reconcile_campaign_continuity()
+        new_events = self._log()[event_count_before:]
+        observed_transitions = [
+            event.get("payload", {}) for event in new_events
+            if event.get("type") == "campaign.reconciled"
+            and isinstance(event.get("payload"), dict)
+            and isinstance(
+                event["payload"].get("repository_ref_transition_count"), int
+            )
+        ]
+        if observed_transitions:
+            repository_refs_before_continuity = list(
+                (self.snapshot.get("campaign") or {}).get("repository_refs", [])
+            )
+        else:
+            repository_refs_before_continuity = prior_repository_refs
+        campaign_continuity = self.reconcile_campaign_continuity(
+            prior_repository_refs=repository_refs_before_continuity,
+        )
+        if observed_transitions:
+            campaign_continuity["repository_ref_transition_count"] += sum(
+                payload.get("repository_ref_transition_count", 0)
+                for payload in observed_transitions
+            )
+            campaign_continuity["repository_ref_transitions_omitted"] += sum(
+                payload.get("repository_ref_transitions_omitted", 0)
+                for payload in observed_transitions
+            )
+            campaign_continuity["changed"] = True
         return {**self.context(), "reconciliation": {"revalidation": revalidation, **result},
                 "campaign_continuity": campaign_continuity,
                 "doctor": report}

@@ -2528,11 +2528,26 @@ class CampaignContinuityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory) / "state")
             try:
+                prior_refs = [{
+                    "repository": "mncs-environment", "observed_path": "mncs-environment",
+                    "branch": "main", "head": "a" * 40, "clean": True,
+                }]
+                refreshed_refs = [{**prior_refs[0], "head": "b" * 40}]
+                campaign = dict(session.snapshot.get("campaign") or {})
+                campaign["repository_refs"] = prior_refs
+                session.snapshot["campaign"] = campaign
                 call_order: list[str] = []
+
+                def revalidate() -> dict[str, bool]:
+                    call_order.append("revalidate")
+                    updated = dict(session.snapshot.get("campaign") or {})
+                    updated["repository_refs"] = refreshed_refs
+                    session.snapshot["campaign"] = updated
+                    return {"ok": True}
+
                 with (
                     mock.patch.object(
-                        session, "revalidate",
-                        side_effect=lambda: call_order.append("revalidate") or {"ok": True},
+                        session, "revalidate", side_effect=revalidate,
                     ),
                     mock.patch.object(
                         sessions.readiness_module, "reconcile_services",
@@ -2554,10 +2569,10 @@ class CampaignContinuityTests(unittest.TestCase):
                     ),
                     mock.patch.object(
                         session, "reconcile_campaign_continuity",
-                        side_effect=lambda: (
+                        side_effect=lambda **_kwargs: (
                             call_order.append("campaign") or {"changed": True}
                         ),
-                    ),
+                    ) as reconcile_campaign,
                 ):
                     result = session.reconcile()
 
@@ -2567,6 +2582,69 @@ class CampaignContinuityTests(unittest.TestCase):
                 )
                 self.assertEqual(result["campaign_continuity"], {"changed": True})
                 self.assertTrue(result["doctor"]["recorded"])
+                reconcile_campaign.assert_called_once_with(
+                    prior_repository_refs=prior_refs,
+                )
+            finally:
+                session.close()
+
+    def test_session_reconcile_reports_transitions_observed_during_revalidation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory) / "state")
+            try:
+                observed_refs = [{
+                    "repository": "mncs-environment", "observed_path": "mncs-environment",
+                    "branch": "main", "head": "b" * 40, "clean": True,
+                }]
+                campaign = dict(session.snapshot.get("campaign") or {})
+                campaign["repository_refs"] = observed_refs
+                session.snapshot["campaign"] = campaign
+                transition_event = {
+                    "type": "campaign.reconciled",
+                    "payload": {
+                        "repository_ref_transition_count": 2,
+                        "repository_ref_transitions_omitted": 1,
+                    },
+                }
+
+                def revalidate() -> dict[str, bool]:
+                    session._emit(
+                        "campaign.reconciled", "environment",
+                        transition_event["payload"],
+                    )
+                    return {"ok": True}
+
+                with (
+                    mock.patch.object(session, "revalidate", side_effect=revalidate),
+                    mock.patch.object(
+                        sessions.readiness_module, "reconcile_services",
+                        return_value={"operations": []},
+                    ),
+                    mock.patch("mncs_env.doctor.repair_delta", return_value=[]),
+                    mock.patch("mncs_env.doctor.record_epoch", return_value={}),
+                    mock.patch.object(
+                        session, "reconcile_campaign_continuity",
+                        return_value={
+                            "changed": False,
+                            "repository_ref_transition_count": 0,
+                            "repository_ref_transitions_omitted": 0,
+                        },
+                    ) as reconcile_campaign,
+                ):
+                    result = session.reconcile()
+
+                reconcile_campaign.assert_called_once_with(
+                    prior_repository_refs=observed_refs,
+                )
+                self.assertTrue(result["campaign_continuity"]["changed"])
+                self.assertEqual(
+                    result["campaign_continuity"]["repository_ref_transition_count"],
+                    2,
+                )
+                self.assertEqual(
+                    result["campaign_continuity"]["repository_ref_transitions_omitted"],
+                    1,
+                )
             finally:
                 session.close()
 
