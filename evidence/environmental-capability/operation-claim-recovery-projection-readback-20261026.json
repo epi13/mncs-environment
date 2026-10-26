@@ -1,0 +1,138 @@
+{
+  "captured_at": "2026-10-26T23:17:16Z",
+  "identity": "ev_environment_operation_claim_recovery_projection_readback_20261026",
+  "measurement_basis": "direct-canonical-environmental-capability-projection-readback",
+  "not_measured": [
+    "effectiveness after real provider-effect use",
+    "lower coordination overhead",
+    "recurrence across independent sessions",
+    "whether new language or compiler capabilities benefit from the accountability change"
+  ],
+  "observation": {
+    "kind": "environmental-capability-projection-readback",
+    "outcome": {
+      "improvement_relation": {
+        "effectiveness_assessment": "not-assessed",
+        "identity": "im_environment_operation_claim_recovery_20261026",
+        "pressure_hypothesis_status": "present-in-projection",
+        "subsequent_record_status": "not-recorded",
+        "verification_record_status": "record-integrity-verified-in-projection"
+      },
+      "interpretation_limit": "This readback establishes discoverability and source integrity for the bounded evidence page. It remains partial and truncated. The authentic denial is one event in one session; the projection does not establish a provider effect attempt, reduced coordination overhead, or long-term effectiveness.",
+      "observation_records_considered": 3,
+      "observation_records_unavailable": 0,
+      "observation_records_verified": 3,
+      "observed_authority_denial": {
+        "claim_liveness": "stale-and-recoverable",
+        "identity": "evt_dd80d70da3160b77",
+        "sequence": 373,
+        "status": "present-in-selected-session-activity"
+      },
+      "operation_recovery_activity": {
+        "interpretation_limit": "Absence from this bounded view does not establish that future operations will or will not use the recovery path. Controlled regressions verify the new event projection.",
+        "provider_invocation_events_considered": 0,
+        "status": "no-operation-recovery-event-in-selected-session-view"
+      },
+      "pressure_hypothesis": {
+        "evidence_reference_count": 1,
+        "identity": "ph_environment_operation_claim_recovery_20261026",
+        "interpretation": "hypothesis",
+        "observation_count": 1,
+        "recurrence_status": "not-established",
+        "status": "present-in-projection"
+      },
+      "response_byte_count": 60327,
+      "response_status": "partial",
+      "response_truncated": true,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "source_pointer_content_integrity_verified_count": 6,
+      "source_pointer_count": 6
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_b73787596a6659c5",
+      "command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 1 --evidence-offset 93 --evidence-limit 3 --session-event-limit 4",
+      "evidence_page_limit": 3,
+      "evidence_page_offset": 93,
+      "projection_identity": "eci_97f97678db9dfe69",
+      "session_event_window": {
+        "event_count": 376,
+        "sequence_end": 376,
+        "sequence_start": 373,
+        "truncated": true
+      }
+    },
+    "source_interface": "MNCS Environment campaign-state environmental-capability projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Keep denial, liveness, scoped recovery, verification, and later effectiveness evidence linked through the existing projection.",
+    "basis": "This projection readback verifies evidence availability and integrity; it is not another pressure occurrence.",
+    "category": "coordination-continuity",
+    "identity": "ph_environment_operation_claim_recovery_20261026",
+    "not_measured": [
+      "a live provider operation using the new recovery path",
+      "coordination operations avoided",
+      "cross-session recurrence"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "one directly projected denial; cross-session recurrence not established",
+    "subsystem": "MNCS Environment authority eligibility, workspace claims, and provider effects",
+    "title": "Recoverable stale claims still route provider work through a separate coordination step"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_4c126896d339c0ce",
+    "session_id": "ses_9ad3efb63438cf3d"
+  },
+  "related_work": {
+    "campaign_evidence_count": 96,
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "campaign_objective": "Improve MNCS’s ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Preserve evidence relating objectives, capabilities, coordination, environmental conditions, verification, and outcomes; do not turn usage or adoption into agent performance scores.",
+    "campaign_state_checkpoint_id": "chk_b73787596a6659c5",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_4c126896d339c0ce",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_alignment_status": "persisted WorkIntent predates the current environmental capability objective",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "event_identities": [
+        "evt_dd80d70da3160b77"
+      ],
+      "kind": "authenticated-session-activity-projection",
+      "projection_identity": "eci_97f97678db9dfe69",
+      "repository": "mncs-environment",
+      "session_id": "ses_9ad3efb63438cf3d"
+    },
+    {
+      "commit": "4c1fd19b0a618a7949c5dc73d007949d0b9abe37",
+      "identity": "ev_environment_operation_claim_recovery_pressure_20261026",
+      "kind": "verified-campaign-pressure-record",
+      "path": "evidence/environmental-capability/operation-claim-recovery-pressure-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "cd26edda4c91c04d80b86f5ebe258993c1ea2842030b35a3de275c84c9124a1e"
+    },
+    {
+      "commit": "4c1fd19b0a618a7949c5dc73d007949d0b9abe37",
+      "identity": "ev_environment_operation_claim_recovery_verification_20261026",
+      "kind": "verified-environmental-observation",
+      "path": "evidence/environmental-capability/operation-claim-recovery-verification-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "c99674eef9f542945d7744a42d30cb37a83e227d1420dd46eff52aac0dc5f92e"
+    },
+    {
+      "commit": "4c1fd19b0a618a7949c5dc73d007949d0b9abe37",
+      "identity": "ev_environment_operation_claim_recovery_improvement_20261026",
+      "kind": "improvement-relation-record",
+      "path": "evidence/environmental-capability/operation-claim-recovery-improvement-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "49397b27405119cbd4a62f27485231f77a5493fd868feaa77c4f90457dabc2d0"
+    }
+  ]
+}
