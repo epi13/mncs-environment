@@ -4868,6 +4868,131 @@ def test_unselected_compiler_regression_uses_read_only_workspace_authority(
     )
 
 
+def test_unselected_declared_campaign_repository_is_read_only_evidence_source(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_declared_campaign_observation",
+        "ses_declared_campaign_observation",
+        "cmp_declared_campaign_observation",
+    )
+    session, _state = _session(tmp_path, [record])
+    checkout = Path(session.snapshot["selected_checkouts"]["mncs-environment"]["path"])
+    head = _git(checkout, "rev-parse", "HEAD")
+    session.snapshot["selected_checkouts"] = {}
+    session.snapshot["intent"]["repositories"] = ["mncs-environment"]
+    session.snapshot["authority"] = {
+        "readable": ["workspace"],
+        "writable": [],
+    }
+    session.snapshot["workspace"].update({
+        "scan": {"status": "complete"},
+        "repositories": [{
+            "name": "mncs-environment",
+            "manifest_repository": "mncs-environment",
+            "path": str(checkout),
+            "head": head,
+            "worktree_of": None,
+            "git_error": None,
+        }],
+    })
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 1
+    assert result["source"]["observation_reference_diagnostic_count"] == 0
+    observation = result["observations"][0]
+    assert observation["identity"] == record["identity"]
+    assert observation["evidence_reference"]["identity"] == record["identity"]
+    assert observation["observation"]["source_repository_read_basis"] == (
+        "workspace-read-only-checkout"
+    )
+    candidate = result["context_pressure_candidates"][0]
+    assert candidate["basis"][
+        "workspace_read_only_observation_reference_count"
+    ] == 1
+    assert candidate["workspace_read_only_evidence_references"] == [{
+        "identity": record["identity"],
+        "repository": "mncs-environment",
+        "commit": observation["evidence_reference"]["commit"],
+        "path": observation["evidence_reference"]["path"],
+        "sha256": observation["evidence_reference"]["sha256"],
+        "verification": "verified",
+        "repository_read_basis": "workspace-read-only-checkout",
+    }]
+    assert "does not show that work is blocked" in candidate[
+        "recommendation"
+    ]
+    compact = capability_intelligence.project(session, max_result_bytes=6_000)
+    compact_candidate = compact["context_pressure_candidates"][0]
+    assert compact_candidate["workspace_read_only_evidence_references"][0][
+        "identity"
+    ] == record["identity"]
+    assert compact_candidate["workspace_read_only_evidence_references"][0][
+        "repository_read_basis"
+    ] == "workspace-read-only-checkout"
+    assert session.snapshot["selected_checkouts"] == {}
+    assert _git(checkout, "status", "--porcelain") == ""
+
+
+def test_unselected_campaign_repository_without_intent_stays_unread(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_undeclared_campaign_observation",
+        "ses_undeclared_campaign_observation",
+        "cmp_undeclared_campaign_observation",
+    )
+    session, _state = _session(tmp_path, [record])
+    checkout = Path(session.snapshot["selected_checkouts"]["mncs-environment"]["path"])
+    head = _git(checkout, "rev-parse", "HEAD")
+    session.snapshot["selected_checkouts"] = {}
+    session.snapshot["intent"]["repositories"] = []
+    session.snapshot["authority"] = {"readable": ["workspace"], "writable": []}
+    session.snapshot["workspace"].update({
+        "scan": {"status": "complete"},
+        "repositories": [{
+            "name": "mncs-environment",
+            "manifest_repository": "mncs-environment",
+            "path": str(checkout),
+            "head": head,
+            "worktree_of": None,
+            "git_error": None,
+        }],
+    })
+
+    result = capability_intelligence.project(session)
+
+    assert result["observation_count"] == 0
+    assert result["source"]["observation_reference_diagnostic_count"] == 1
+    diagnostic = result["source"]["observation_reference_diagnostics"][0]
+    assert diagnostic["identity"] == record["identity"]
+    assert diagnostic["verification"] == "outside-selected-session"
+    assert session.snapshot["selected_checkouts"] == {}
+
+
+def test_observation_cannot_self_assert_read_only_workspace_basis(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_untrusted_read_basis",
+        "ses_untrusted_read_basis",
+        "cmp_untrusted_read_basis",
+    )
+    record["observation"]["source_repository_read_basis"] = (
+        "workspace-read-only-checkout"
+    )
+    session, _state = _session(tmp_path, [record])
+
+    result = capability_intelligence.project(session)
+
+    assert result["observation_count"] == 1
+    assert "source_repository_read_basis" not in result["observations"][0][
+        "observation"
+    ]
+
+
 def test_compiler_regression_projects_source_verification_resource_measurements(
     tmp_path: Path,
 ) -> None:

@@ -304,15 +304,24 @@ also emit `context_pressure_candidates`. These candidates join the declared
 repository gap with bounded source-visibility diagnostics for that repository.
 They are labeled hypotheses, remain separate from recorded
 `pressure_hypotheses`, and do not establish that work was blocked or that the
-condition recurs. A candidate points to outside-selected sources but does not
-read them or authorize adding the repository. It may also link a validated,
-same-Work-Intent `authority.integration-eligible` event for that repository.
-That event records a scoped merge or publish preflight which required no
-persistent claim; it did not execute integration and does not establish
-ordinary repository access, source or remote state, or an integration outcome.
-The candidate keeps this evidence separate from the selection gap and reports
-the selected session-event window and omissions, so agents can inspect a narrow
-integration path without treating it as resolution of the broader gap.
+condition recurs. A content-addressed environmental-observation pointer in the
+selected campaign state may be read through the bounded, read-only workspace
+path when its repository is named by the authenticated Work Intent and
+workspace read authority is available. This verifies the referenced object;
+it neither adds a selected checkout nor grants mutation authority. Other
+outside-selected references remain unread and are reported as such. A
+selection-gap candidate carries verified read-only observation references
+separately from unresolved references, so its recommendation can distinguish
+evidence access from checkout binding. This does not establish that ordinary
+repository operations are available or that the objective is blocked. A
+candidate may also link a validated, same-Work-Intent
+`authority.integration-eligible` event for that repository. That event records
+a scoped merge or publish preflight which required no persistent claim; it did
+not execute integration and does not establish source or remote state, or an
+integration outcome. The candidate keeps this evidence separate from the
+selection gap and reports the selected session-event window and omissions, so
+agents can inspect a narrow integration path without treating it as resolution
+of the broader gap.
 
 Session activity uses a separate bounded event page. To inspect older events,
 pass the `next_event_before_sequence` cursor from the projection source and

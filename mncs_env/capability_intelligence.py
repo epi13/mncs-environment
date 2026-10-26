@@ -2026,6 +2026,32 @@ def _compact_projection(
             candidate.get("evidence_references_truncated") is True
             or len(references) > len(compact_references)
         )
+        read_only_references = candidate.get(
+            "workspace_read_only_evidence_references",
+        )
+        if isinstance(read_only_references, list) and read_only_references:
+            compact_candidate["workspace_read_only_evidence_references"] = [
+                {
+                    key: _short_text(
+                        reference[key], 192 if key == "path" else 160,
+                    )
+                    for key in (
+                        "identity", "repository", "commit", "path", "sha256",
+                        "verification", "repository_read_basis",
+                    )
+                    if isinstance(reference.get(key), str)
+                }
+                for reference in read_only_references[:4]
+                if isinstance(reference, dict)
+            ]
+            compact_candidate[
+                "workspace_read_only_evidence_references_truncated"
+            ] = (
+                candidate.get(
+                    "workspace_read_only_evidence_references_truncated",
+                ) is True
+                or len(read_only_references) > 4
+            )
         preflight_search = candidate.get("integration_preflight_search")
         if isinstance(preflight_search, dict):
             compact_candidate["integration_preflight_search"] = {
@@ -4835,9 +4861,17 @@ def _load_observation(
 ) -> tuple[dict[str, Any] | None, str]:
     checkout = _checkout(session, reference["repository"], root)
     repository_read_basis = "selected-checkout"
+    intent = session.snapshot.get("intent")
+    declared_repositories = intent.get("repositories") if isinstance(intent, dict) else None
+    declared_campaign_repository = (
+        _is_observation_reference(reference)
+        and isinstance(declared_repositories, list)
+        and reference["repository"] in declared_repositories
+    )
     if (checkout is None and (
             _is_compiler_native_application_proof_reference(reference)
-            or _is_compiler_regression_reference(reference))):
+            or _is_compiler_regression_reference(reference)
+            or declared_campaign_repository)):
         checkout = _workspace_read_only_checkout(
             session, reference["repository"], root, deadline,
         )
@@ -4865,6 +4899,8 @@ def _load_observation(
         adapted = _compiler_dependency_summary_observation(session, reference, record)
         if adapted is None:
             return None, "observation-contract-invalid"
+        if repository_read_basis == "workspace-read-only-checkout":
+            adapted["_projection_repository_read_basis"] = repository_read_basis
         return adapted, "verified"
     if _is_compiler_native_application_proof_reference(reference):
         source_identity = record.get("identity")
@@ -4876,6 +4912,8 @@ def _load_observation(
         )
         if adapted is None:
             return None, "observation-contract-invalid"
+        if repository_read_basis == "workspace-read-only-checkout":
+            adapted["_projection_repository_read_basis"] = repository_read_basis
         return adapted, "verified"
     if record.get("identity") != reference["identity"]:
         return record, "observation-identity-mismatch"
@@ -4888,6 +4926,8 @@ def _load_observation(
             adapted_observation["source_repository_read_basis"] = (
                 repository_read_basis
             )
+        if repository_read_basis == "workspace-read-only-checkout":
+            adapted["_projection_repository_read_basis"] = repository_read_basis
         return adapted, "verified"
     observation = record.get("observation")
     related_work = record.get("related_work")
@@ -4959,6 +4999,8 @@ def _load_observation(
             _observation_contract_diagnostics(record)
         )
         return record, "observation-contract-invalid"
+    if repository_read_basis == "workspace-read-only-checkout":
+        record["_projection_repository_read_basis"] = repository_read_basis
     return record, "verified"
 
 
@@ -5217,6 +5259,7 @@ def _context_pressure_candidates(
     workspace_alignment: dict[str, Any],
     evidence_visibility: dict[str, Any],
     observation_reference_diagnostics: Any,
+    workspace_read_only_observation_references: Any,
     diagnostics_truncated: bool,
     integration_eligibility: Any,
     activity_source: Any,
@@ -5229,6 +5272,10 @@ def _context_pressure_candidates(
         observation_reference_diagnostics
         if isinstance(observation_reference_diagnostics, list) else []
     )
+    read_only_references = (
+        workspace_read_only_observation_references
+        if isinstance(workspace_read_only_observation_references, list) else []
+    )
     selected = workspace_alignment.get("selected_repositories")
     selected = selected if isinstance(selected, list) else []
     eligibility_records = (
@@ -5237,6 +5284,27 @@ def _context_pressure_candidates(
     )
     activity_source = activity_source if isinstance(activity_source, dict) else {}
     matching_preflights_by_repository: dict[str, list[dict[str, Any]]] = {}
+    matching_read_only_evidence_by_repository: dict[str, list[dict[str, str]]] = {}
+    for reference in read_only_references:
+        if (
+            not isinstance(reference, dict)
+            or reference.get("verification") != "verified"
+            or reference.get("repository_read_basis")
+            != "workspace-read-only-checkout"
+            or not _is_repository_identity(reference.get("repository"))
+            or any(not isinstance(reference.get(key), str) or not reference[key]
+                   for key in ("identity", "commit", "path", "sha256"))
+        ):
+            continue
+        matching_read_only_evidence_by_repository.setdefault(
+            reference["repository"], [],
+        ).append({
+            key: reference[key]
+            for key in (
+                "identity", "repository", "commit", "path", "sha256",
+                "verification", "repository_read_basis",
+            )
+        })
     for item in eligibility_records:
         if not isinstance(item, dict):
             continue
@@ -5297,6 +5365,10 @@ def _context_pressure_candidates(
             repository, [],
         )
         visible_preflights = preflight_observations[:4]
+        read_only_evidence = matching_read_only_evidence_by_repository.get(
+            repository, [],
+        )
+        visible_read_only_evidence = read_only_evidence[:4]
         preflight_search = {
             "status": (
                 "matching-preflight-observed-in-selected-window"
@@ -5339,6 +5411,10 @@ def _context_pressure_candidates(
             "evidence_reference_identities": [
                 reference.get("identity") for reference in visible_references
             ],
+            "workspace_read_only_evidence_identities": [
+                reference["identity"]
+                for reference in visible_read_only_evidence
+            ],
             "integration_preflight_event_identities": [
                 item["event_reference"]["identity"]
                 for item in visible_preflights
@@ -5377,23 +5453,49 @@ def _context_pressure_candidates(
                 len(references) > len(visible_references) or diagnostics_truncated
             ),
             "recommendation": (
-                "A scoped preflight required no persistent claim but did not "
-                "execute integration. Check whether broader checkout selection "
-                "is needed."
-                if preflight_observations else
-                "Confirm broader repository access is needed. Select its exact "
-                "checkout or use a scoped integration preflight; this does not "
-                "establish ordinary read or write access."
+                "Read-only campaign evidence is available, and a same-intent "
+                "merge or publish preflight required no persistent claim but did "
+                "not execute. Keep checkout binding operation-scoped; bind or "
+                "claim only if a concrete mutation requires it."
+                if read_only_evidence and preflight_observations else (
+                    "Read-only campaign evidence is available; the selection gap "
+                    "alone does not show that work is blocked. Bind or claim only "
+                    "when a concrete operation requires this checkout."
+                    if read_only_evidence else (
+                        "A scoped preflight required no persistent claim but did "
+                        "not execute integration. Check whether broader checkout "
+                        "selection is needed."
+                        if preflight_observations else
+                        "Confirm broader repository access is needed. Select its "
+                        "exact checkout or use a scoped integration preflight; "
+                        "this does not establish ordinary read or write access."
+                    )
+                )
             ),
             "not_measured": [
                 "whether a preflight led to executed integration or a successful "
                 "outcome",
-                "whether ordinary repository read or write work was available",
+                (
+                    "whether read-only evidence access suffices for the objective "
+                    "or other read or write operations need checkout selection"
+                    if read_only_evidence else
+                    "whether ordinary repository read or write work was available"
+                ),
                 "whether the same gap recurs in another session",
                 "whether the selection gap blocks or delays the declared objective",
                 "why the repository is absent from the selected checkout set",
             ],
         }
+        if read_only_evidence:
+            candidate["basis"][
+                "workspace_read_only_observation_reference_count"
+            ] = len(read_only_evidence)
+            candidate["workspace_read_only_evidence_references"] = (
+                visible_read_only_evidence
+            )
+            candidate["workspace_read_only_evidence_references_truncated"] = (
+                len(read_only_evidence) > len(visible_read_only_evidence)
+            )
         if preflight_observations or omitted_preflight_records:
             candidate["integration_preflight_search"] = preflight_search
             candidate["integration_preflight_observations"] = visible_preflights
@@ -10906,6 +11008,15 @@ def project(
                 session, pointer, root, deadline=read_deadline,
             )
         reference = {**pointer, "verification": verification}
+        if (
+            verification == "verified"
+            and isinstance(record, dict)
+            and record.get("_projection_repository_read_basis")
+            == "workspace-read-only-checkout"
+        ):
+            reference["repository_read_basis"] = (
+                "workspace-read-only-checkout"
+            )
         if (verification == "observation-identity-mismatch"
                 and isinstance(record, dict)
                 and isinstance(record.get("identity"), str)
@@ -11555,7 +11666,7 @@ def project(
             projected_observation["source_session_context_resolution"] = (
                 source_context_resolution[:96]
             )
-        repository_read_basis = observation.get("source_repository_read_basis")
+        repository_read_basis = reference.get("repository_read_basis")
         if repository_read_basis in {
             "selected-checkout", "workspace-read-only-checkout",
         }:
@@ -11875,6 +11986,19 @@ def project(
         workspace_alignment=workspace_alignment,
         evidence_visibility=evidence_visibility,
         observation_reference_diagnostics=observation_reference_diagnostics,
+        workspace_read_only_observation_references=[
+            {
+                key: reference[key]
+                for key in (
+                    "identity", "repository", "commit", "path", "sha256",
+                    "verification", "repository_read_basis",
+                )
+            }
+            for reference in references
+            if reference.get("verification") == "verified"
+            and reference.get("repository_read_basis")
+            == "workspace-read-only-checkout"
+        ],
         diagnostics_truncated=(
             len(observation_reference_diagnostics) > MAX_OBSERVATIONS
         ),
