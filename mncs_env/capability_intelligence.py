@@ -215,6 +215,7 @@ MAX_SESSION_ACTIVITY_AUTHORITY_DENIALS = 16
 MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES = 8
 MAX_SESSION_ACTIVITY_INTEGRATION_ELIGIBILITY = 16
 MAX_SESSION_ACTIVITY_INTEGRATION_OVERLAPS = 8
+MAX_SESSION_ACTIVITY_PROPOSAL_ELIGIBILITY = 16
 MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES = 8
 MAX_SESSION_ACTIVITY_CLAIM_COORDINATION = 16
 MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 8
@@ -2618,6 +2619,11 @@ def _compact_projection(
             "claim_coordination_records_omitted",
             "claim_coordination_records_invalid",
             "claim_coordination_selection_policy",
+            "proposal_eligibility_events_considered",
+            "proposal_eligibility_records_returned",
+            "proposal_eligibility_records_omitted",
+            "proposal_eligibility_records_invalid",
+            "proposal_eligibility_selection_policy",
         )
         if key in activity_source
         and (key not in {"event_page_before_sequence", "next_event_before_sequence"}
@@ -3639,6 +3645,64 @@ def _compact_projection(
                 if key in reference
             }
         compact_integration_eligibility.append(compact_item)
+    raw_proposal_eligibility = activity.get("proposal_eligibility")
+    raw_proposal_eligibility = (
+        raw_proposal_eligibility
+        if isinstance(raw_proposal_eligibility, list) else []
+    )
+    compact_proposal_eligibility = []
+    for item in raw_proposal_eligibility[:8]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in (
+                "identity", "action", "repository", "authorization_basis",
+                "eligibility_basis", "campaign_id", "work_intent_id",
+                "work_intent_reference_status",
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in (
+            "persistent_claim_required", "operation_executed",
+            "coordination_only_claim_count", "coordination_only_claims_truncated",
+        ):
+            if key in item and type(item[key]) in {bool, int}:
+                compact_item[key] = item[key]
+        scope = _authority_conflict_scope(
+            item.get("scope"), item.get("repository"),
+        )
+        if scope is not None:
+            compact_item["scope"] = scope
+        compact_claims = []
+        raw_claims = item.get("coordination_only_claims")
+        raw_claims = raw_claims if isinstance(raw_claims, list) else []
+        for claim in raw_claims[:2]:
+            if not isinstance(claim, dict):
+                continue
+            compact_claim = {
+                key: _short_text(claim.get(key), 160)
+                for key in ("session_id", "claim_id", "disposition")
+                if isinstance(claim.get(key), str)
+            }
+            claim_scope = _authority_conflict_scope(
+                claim.get("scope"), item.get("repository"),
+            )
+            if claim_scope is not None:
+                compact_claim["scope"] = claim_scope
+            compact_claims.append(compact_claim)
+        if compact_claims:
+            compact_item["coordination_only_claims"] = compact_claims
+            if len(raw_claims) > len(compact_claims):
+                compact_item["coordination_only_claims_projection_truncated"] = True
+        reference = item.get("event_reference")
+        if isinstance(reference, dict):
+            compact_item["event_reference"] = {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in reference
+            }
+        compact_proposal_eligibility.append(compact_item)
     compact_authority_candidates = []
     raw_authority_candidates = activity.get("authority_denial_candidates")
     raw_authority_candidates = (
@@ -3848,6 +3912,15 @@ def _compact_projection(
         )
         if len(raw_integration_eligibility) > len(compact_integration_eligibility):
             compact_activity["integration_eligibility_truncated"] = True
+    if raw_proposal_eligibility or activity_source.get(
+        "proposal_eligibility_events_considered", 0,
+    ):
+        compact_activity["proposal_eligibility_count"] = activity.get(
+            "proposal_eligibility_count", len(raw_proposal_eligibility),
+        )
+        compact_activity["proposal_eligibility"] = compact_proposal_eligibility
+        if len(raw_proposal_eligibility) > len(compact_proposal_eligibility):
+            compact_activity["proposal_eligibility_truncated"] = True
     if raw_authority_candidates:
         compact_activity["authority_denial_candidates"] = compact_authority_candidates
         if len(raw_authority_candidates) > len(compact_authority_candidates):
@@ -11287,10 +11360,20 @@ def _session_activity(
         event for event in events
         if event.get("type") == "authority.integration-eligible"
     ]
+    proposal_eligibility_events = [
+        event for event in events
+        if event.get("type") == "authority.proposal-eligible"
+    ]
     if integration_eligibility_events:
         limits.append(
             "Integration eligibility records are preflight decisions; they do "
             "not establish that a Git merge or publication was executed or succeeded."
+        )
+    if proposal_eligibility_events:
+        limits.append(
+            "Proposal-worktree eligibility records show a writable-scope and "
+            "checkout decision only; they do not establish that an edit or "
+            "verification was executed, accepted, or beneficial."
         )
     if denial_events:
         limits.append(
@@ -11749,6 +11832,113 @@ def _session_activity(
         valid_integration_eligibility_count
         - len(integration_eligibility_records),
     )
+    proposal_eligibility_records: list[dict[str, Any]] = []
+    invalid_proposal_eligibility_event_count = 0
+    valid_proposal_eligibility_count = 0
+    for event in reversed(proposal_eligibility_events):
+        reference = _event_reference(event)
+        payload = event.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        action = payload.get("action")
+        repository = payload.get("repository")
+        scope = _authority_conflict_scope(payload.get("scope"), repository)
+        authorization_basis = payload.get("authorization_basis")
+        eligibility_basis = payload.get("eligibility_basis")
+        if (
+            reference is None
+            or action not in authority_module.PROPOSAL_WORKTREE_ACTIONS
+            or not _is_repository_identity(repository)
+            or scope is None
+            or scope.get("kind") != "worktree"
+            or scope.get("branch") in {None, "main", "master"}
+            or authorization_basis != "session-writable-scope"
+            or eligibility_basis != authority_module.PROPOSAL_WORKTREE_ELIGIBILITY
+            or payload.get("persistent_claim_required") is not False
+            or payload.get("operation_executed") is not False
+        ):
+            invalid_proposal_eligibility_event_count += 1
+            continue
+        raw_claim_count = payload.get("coordination_only_claim_count", 0)
+        raw_claims = payload.get("coordination_only_claims", [])
+        raw_claims_truncated = payload.get(
+            "coordination_only_claims_truncated", False,
+        )
+        if (
+            type(raw_claim_count) is not int
+            or not 0 <= raw_claim_count <= 100_000
+            or not isinstance(raw_claims, list)
+            or len(raw_claims) > MAX_SESSION_ACTIVITY_INTEGRATION_OVERLAPS
+            or raw_claim_count < len(raw_claims)
+            or type(raw_claims_truncated) is not bool
+            or raw_claims_truncated != (raw_claim_count > len(raw_claims))
+        ):
+            invalid_proposal_eligibility_event_count += 1
+            continue
+        coordination_claims = []
+        invalid_coordination_claim = False
+        for claim in raw_claims:
+            if not isinstance(claim, dict):
+                invalid_coordination_claim = True
+                break
+            session_id = claim.get("session_id")
+            claim_id = claim.get("claim_id")
+            claim_scope = _authority_conflict_scope(
+                claim.get("scope"), repository,
+            )
+            if (
+                not isinstance(session_id, str) or not session_id
+                or len(session_id) > 160
+                or (claim_id is not None and (
+                    not isinstance(claim_id, str) or not claim_id
+                    or len(claim_id) > 192
+                ))
+                or claim_scope is None
+                or claim_scope.get("kind") != "repository"
+                or claim.get("disposition") != "coordination-only-broad-claim"
+            ):
+                invalid_coordination_claim = True
+                break
+            coordination_claims.append({
+                "session_id": session_id,
+                **({"claim_id": claim_id} if claim_id is not None else {}),
+                "scope": claim_scope,
+                "disposition": "coordination-only-broad-claim",
+            })
+        if invalid_coordination_claim:
+            invalid_proposal_eligibility_event_count += 1
+            continue
+        valid_proposal_eligibility_count += 1
+        if len(proposal_eligibility_records) >= (
+            MAX_SESSION_ACTIVITY_PROPOSAL_ELIGIBILITY
+        ):
+            continue
+        proposal_eligibility_records.append({
+            "identity": "proposaleligible_" + digest_hex({
+                "session_id": session.session_id,
+                "event": reference["identity"],
+            }, length=16),
+            "action": action,
+            "repository": repository,
+            **_authority_event_objective_context(payload),
+            "authorization_basis": authorization_basis,
+            "eligibility_basis": eligibility_basis,
+            "persistent_claim_required": False,
+            "operation_executed": False,
+            "coordination_only_claim_count": raw_claim_count,
+            "coordination_only_claims": coordination_claims,
+            "coordination_only_claims_truncated": raw_claims_truncated,
+            "scope": scope,
+            "interpretation": (
+                "This preflight found local work eligible in an observed "
+                "non-main worktree without requiring a persistent claim. "
+                "It records neither an executed edit nor its outcome."
+            ),
+            "event_reference": reference,
+        })
+    proposal_eligibility_records_omitted = max(
+        0,
+        valid_proposal_eligibility_count - len(proposal_eligibility_records),
+    )
     claim_lifecycle_correlations, claim_lifecycle_correlation_source = (
         _session_claim_lifecycle_correlations(
             session,
@@ -12012,6 +12202,10 @@ def _session_activity(
          or invalid_integration_eligibility_event_count)
             and not status.startswith("partial")):
         status = "partial"
+    if ((proposal_eligibility_records_omitted
+         or invalid_proposal_eligibility_event_count)
+            and not status.startswith("partial")):
+        status = "partial"
     unpaired_completion_count = 0
     for event in completion_events:
         payload = event.get("payload")
@@ -12101,6 +12295,23 @@ def _session_activity(
                 ),
             } if integration_eligibility_events else {}),
             **({
+                "proposal_eligibility_events_considered": len(
+                    proposal_eligibility_events,
+                ),
+                "proposal_eligibility_records_returned": len(
+                    proposal_eligibility_records,
+                ),
+                "proposal_eligibility_records_omitted": (
+                    proposal_eligibility_records_omitted
+                ),
+                "proposal_eligibility_records_invalid": (
+                    invalid_proposal_eligibility_event_count
+                ),
+                "proposal_eligibility_selection_policy": (
+                    "newest-validated-proposal-preflights-in-selected-session-window"
+                ),
+            } if proposal_eligibility_events else {}),
+            **({
                 "authority_claim_state_lookup": claim_state_lookup,
             } if denial_events else {}),
             **({
@@ -12189,6 +12400,10 @@ def _session_activity(
             ),
             "integration_eligibility": integration_eligibility_records,
         } if integration_eligibility_events else {}),
+        **({
+            "proposal_eligibility_count": len(proposal_eligibility_records),
+            "proposal_eligibility": proposal_eligibility_records,
+        } if proposal_eligibility_events else {}),
         **({
             "claim_recovery_count": len(claim_recoveries),
             "claim_recoveries": claim_recoveries,

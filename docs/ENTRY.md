@@ -381,6 +381,18 @@ protection, such as a fast-forward-only merge and a non-forcing push. The
 preflight does not reserve the scope or guarantee that the operation will
 succeed.
 
+Local development and verification can also proceed without a persistent
+claim when the request identifies an exactly observed, attached non-main
+worktree separate from the repository root and the session has writable scope
+for its repository. This makes the linked worktree a proposal surface while
+keeping the repository root protected by its
+existing clean-state or claim requirements. A repository-wide claim remains
+visible as coordination context but does not reserve every proposal branch;
+claims naming the same checkout, overlapping paths, or the same attached
+branch still block. Retiring a checkout remains claim-gated. Each accepted
+proposal preflight is recorded as `authority.proposal-eligible`; it records
+eligibility, not an executed edit or its outcome.
+
 For up to four unique recorded blocker claim IDs, the projection also performs
 a bounded targeted read of current claim records and exposes a separate
 `current_claim_state` observation. Its `observed_at`, current claim version,

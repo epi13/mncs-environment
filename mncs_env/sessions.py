@@ -4611,6 +4611,7 @@ class Session:
                 and (
                     action in authority_module.MUTATING_ACTIONS
                     or integration_action
+                    or action == "verify"
                 )
             )
             explicit_worktree_checkout = (
@@ -4766,6 +4767,17 @@ class Session:
                 record["name"] = repository
                 fresh_facts = _repo_facts({"repositories": [record]})
                 fresh_facts[repository]["repository"] = repository
+                repository_root_path = (
+                    observed_facts.get(repository, {}).get(
+                        "repository_root_path",
+                    )
+                    if isinstance(observed_facts.get(repository), dict)
+                    else None
+                )
+                if isinstance(repository_root_path, str):
+                    fresh_facts[repository]["repository_root_path"] = (
+                        repository_root_path
+                    )
                 for key in (
                     "checkout_identity", "git_common_directory_identity",
                     "manifest_identity",
@@ -5026,6 +5038,41 @@ class Session:
             self._emit(
                 "authority.integration-eligible", "environment",
                 payload,
+            )
+        elif (
+            verdict.get("verdict") == "allow"
+            and action in authority_module.PROPOSAL_WORKTREE_ACTIONS
+            and verdict.get("eligibility_basis")
+            == authority_module.PROPOSAL_WORKTREE_ELIGIBILITY
+        ):
+            proposal_scope = authority_module._requested_scope(
+                repository, target, normalized_scope, observed_facts,
+            )
+            payload = {
+                "action": action,
+                "repository": repository,
+                "scope": authority_module._scope_evidence(
+                    proposal_scope, repository,
+                ),
+                "authorization_basis": verdict.get(
+                    "authorization_basis", "session-writable-scope",
+                ),
+                "eligibility_basis": authority_module.PROPOSAL_WORKTREE_ELIGIBILITY,
+                "persistent_claim_required": False,
+                "operation_executed": False,
+                "coordination_only_claim_count": verdict.get(
+                    "coordination_only_claim_count", 0,
+                ),
+                "coordination_only_claims": verdict.get(
+                    "coordination_only_claims", [],
+                ),
+                "coordination_only_claims_truncated": verdict.get(
+                    "coordination_only_claims_truncated", False,
+                ),
+                **self._authority_event_context(),
+            }
+            self._emit(
+                "authority.proposal-eligible", "environment", payload,
             )
         return verdict
 

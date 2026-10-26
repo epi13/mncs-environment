@@ -428,6 +428,19 @@ remote-ref state, subsequent execution, or integration outcome. Event records
 retain up to eight overlap references and the total
 observed count; compact responses retain up to four and mark any projection
 truncation separately from overlap records omitted at capture time.
+Local `write`, `mutate`, `execute`, and `verify` preflights are also eligible
+without an owned claim when they name a freshly observed attached non-main
+linked worktree separate from the repository root, under the session's writable
+repository scope. A broad repository
+claim is preserved as coordination evidence but is not treated as an exclusive
+right over isolated proposal branches. Exact worktree and same-branch path
+conflicts continue to block. Main-checkout mutations retain the existing
+clean-state or exact-claim checks, and checkout retirement remains claim-gated.
+The bounded `session_activity.proposal_eligibility` projection exposes
+validated `authority.proposal-eligible` records, their objective references,
+observed worktree scope, and any broad claims treated as coordination-only.
+These are preflight observations: they do not prove that an operation ran,
+that its changes were accepted, or that the change improved the environment.
 When an exact registered destination was refreshed before a merge or publish
 denial, that `authority.denied` event also carries its repository identity and
 the same bounded local preimage. The projection exposes it as

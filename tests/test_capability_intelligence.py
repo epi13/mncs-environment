@@ -2989,6 +2989,93 @@ def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Pat
     assert "private-reason-echo" not in json.dumps(compact)
 
 
+def test_claimless_proposal_worktree_preflight_is_projected_with_objective_context(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_proposal_worktree_preflight",
+        "ses_proposal_preflight",
+        "cmp_proposal_preflight",
+    )
+    session, _ = _session(tmp_path, [record])
+    campaign_id = session.snapshot["campaign"]["identity"]
+    work_intent_id = session.snapshot["intent"]["identity"]
+    repository = "mncs-environment"
+    event = {
+        "identity": "evt_proposal_eligible_7",
+        "sequence": 7,
+        "type": "authority.proposal-eligible",
+        "payload": {
+            "action": "write",
+            "repository": repository,
+            "scope": {
+                "kind": "worktree",
+                "repository": repository,
+                "branch": "campaign/proposal",
+                "checkout_identity": "checkout:proposal",
+                "paths": ["mncs_env/authority.py"],
+                "exclusive": False,
+            },
+            "authorization_basis": "session-writable-scope",
+            "eligibility_basis": (
+                capability_intelligence.authority_module.PROPOSAL_WORKTREE_ELIGIBILITY
+            ),
+            "persistent_claim_required": False,
+            "operation_executed": False,
+            "coordination_only_claim_count": 1,
+            "coordination_only_claims": [{
+                "session_id": "ses_repository_coordinator",
+                "claim_id": "claim:mncs-environment",
+                "scope": {
+                    "kind": "repository",
+                    "repository": repository,
+                    "exclusive": True,
+                },
+                "disposition": "coordination-only-broad-claim",
+            }],
+            "coordination_only_claims_truncated": False,
+            "campaign_id": campaign_id,
+            "work_intent_id": work_intent_id,
+        },
+    }
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": 1,
+        "events": [event][-limit:],
+        "truncated": False,
+        "next_before_sequence": None,
+    }
+
+    result = capability_intelligence.project(session)
+    activity = result["session_activity"]
+    assert activity["source"]["proposal_eligibility_records_returned"] == 1
+    assert activity["proposal_eligibility_count"] == 1
+    eligible = activity["proposal_eligibility"][0]
+    assert eligible["action"] == "write"
+    assert eligible["repository"] == repository
+    assert eligible["campaign_id"] == campaign_id
+    assert eligible["work_intent_id"] == work_intent_id
+    assert eligible["persistent_claim_required"] is False
+    assert eligible["operation_executed"] is False
+    assert eligible["coordination_only_claim_count"] == 1
+    assert eligible["coordination_only_claims"][0]["claim_id"] == (
+        "claim:mncs-environment"
+    )
+    assert eligible["event_reference"]["identity"] == "evt_proposal_eligible_7"
+    assert eligible["scope"]["branch"] == "campaign/proposal"
+
+    compact = capability_intelligence._compact_projection(
+        result, original_size=25_000, max_result_bytes=10_000,
+    )
+    compact_eligible = compact["session_activity"]["proposal_eligibility"][0]
+    assert compact_eligible["persistent_claim_required"] is False
+    assert compact_eligible["event_reference"]["identity"] == (
+        "evt_proposal_eligible_7"
+    )
+    assert compact_eligible["coordination_only_claims"][0]["claim_id"] == (
+        "claim:mncs-environment"
+    )
+
+
 def test_scoped_integration_preflight_projects_without_claim_or_success(
     tmp_path: Path,
 ) -> None:

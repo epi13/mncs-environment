@@ -51,6 +51,8 @@ EFFECT_ACTIONS = {
 
 
 MUTATING_ACTIONS = ("write", "mutate", "execute", "retire")
+PROPOSAL_WORKTREE_ACTIONS = frozenset({"write", "mutate", "execute", "verify"})
+PROPOSAL_WORKTREE_ELIGIBILITY = "registered-non-main-worktree-no-persistent-claim"
 
 # These are invariant user-approval gates. Claims remain coordination and
 # recovery evidence; they are not a persistent privilege required to integrate
@@ -201,6 +203,22 @@ def repository_facts_for_snapshot(
             })
             current["repository"] = str(checkout.get("repository") or alias)
             facts[alias] = current
+    workspace_roots: dict[str, str] = {}
+    if isinstance(rows, list):
+        for row in rows:
+            if (not isinstance(row, dict)
+                    or row.get("worktree_of") is not None
+                    or not isinstance(row.get("name"), str)
+                    or not isinstance(row.get("path"), str)):
+                continue
+            repository = row.get("manifest_repository") or row.get("repository")
+            if isinstance(repository, str) and repository:
+                workspace_roots.setdefault(repository, row["path"])
+    for current in facts.values():
+        repository = current.get("repository") or current.get("manifest_repository")
+        root_path = workspace_roots.get(str(repository))
+        if isinstance(root_path, str):
+            current.setdefault("repository_root_path", root_path)
     return facts
 
 
@@ -338,6 +356,46 @@ def _worktree_scope_matches_observation(
     return True
 
 
+def _is_proposal_worktree(
+    scope: dict[str, Any] | None,
+    repo: str,
+    target: str,
+    repo_facts: dict[str, dict[str, Any]] | None,
+) -> bool:
+    """Whether an operation names a currently observed, non-main checkout.
+
+    An exact worktree is an isolated proposal surface. Writable repository
+    scope plus a fresh checkout observation can make local development
+    eligible without turning a persistent claim into a required privilege.
+    Claims over the same checkout or attached branch are still checked
+    separately as concurrency evidence.
+    """
+    if (not isinstance(scope, dict) or scope.get("kind") != "worktree"
+            or not os.path.isabs(target)):
+        return False
+    branch = scope.get("branch")
+    if not isinstance(branch, str) or not branch or branch in {"main", "master"}:
+        return False
+    if not _worktree_scope_matches_observation(scope, repo, repo_facts):
+        return False
+    observed = checkout_facts_for_target(
+        str(scope.get("checkout", "")), repo_facts,
+    )
+    if observed is None or observed[0] != repo:
+        return False
+    observed_branch = observed[1].get("branch")
+    root_checkout = observed[1].get("repository_root_path")
+    return (
+        isinstance(observed_branch, str)
+        and bool(observed_branch)
+        and observed_branch not in {"main", "master"}
+        and isinstance(root_checkout, str)
+        and os.path.isabs(root_checkout)
+        and os.path.normpath(root_checkout)
+        != os.path.normpath(str(scope.get("checkout", "")))
+    )
+
+
 def evaluate(
     context: dict[str, Any],
     *,
@@ -358,9 +416,12 @@ def evaluate(
     operations must still use their native concurrency checks (for example,
     fast-forward-only merges and non-forcing reference updates). ``write``,
     ``mutate``, ``execute``, and ``retire`` require writable scope before their
-    existing claim or clean-main checks. Protected, forbidden, and fenced scope
-    denies. A claim overlap blocks ordinary mutations but is recorded
-    separately from authorization; for merge and publish it remains
+    existing claim or clean-main checks. An exact observed non-main worktree is
+    a proposal surface: its session-writable repository scope is sufficient
+    for local development, and repository-wide claims remain visible as
+    coordination context rather than reserving every proposal branch. Exact
+    checkout or same-branch claim overlaps still block. Protected, forbidden,
+    and fenced scope denies. For merge and publish, overlap remains
     coordination evidence while the repository-native update resolves actual
     conflicts. Escalate and deny never authorize execution.
     """
@@ -462,13 +523,37 @@ def evaluate(
         _requested_scope(repo, target, scope, repo_facts)
         if conflict_checked else None
     )
+    proposal_worktree = (
+        action in PROPOSAL_WORKTREE_ACTIONS
+        and _is_proposal_worktree(requested, repo, target, repo_facts)
+    )
+    nonblocking_coordination_claims: list[dict[str, Any]] = []
+    nonblocking_coordination_claim_count = 0
     integration_coordination_overlaps: list[dict[str, Any]] = []
     integration_coordination_overlap_count = 0
     for other in others:
         if not conflict_checked:
             continue
+        other_scope = other.get("scope") or {"kind": "repository"}
+        # A repository-wide claim does not identify which isolated worktree
+        # its holder is changing. It remains useful coordination evidence,
+        # but is too broad to reserve every exact non-main proposal checkout.
+        # Claims naming a worktree or paths retain their normal conflict rules.
+        if proposal_worktree and other_scope.get("kind") == "repository":
+            nonblocking_coordination_claim_count += 1
+            if len(nonblocking_coordination_claims) < MAX_INTEGRATION_COORDINATION_OVERLAPS:
+                observation: dict[str, Any] = {
+                    "session_id": other["session_id"],
+                    "scope": _scope_evidence(other_scope, repo),
+                    "disposition": "coordination-only-broad-claim",
+                }
+                claim_id = other.get("claim_id")
+                if isinstance(claim_id, str) and claim_id:
+                    observation["claim_id"] = claim_id
+                nonblocking_coordination_claims.append(observation)
+            continue
         conflict = claims_module.scopes_conflict(
-            requested or {}, other.get("scope") or {"kind": "repository"})
+            requested or {}, other_scope)
         if conflict is not None:
             blocking_claim: dict[str, Any] = {
                 "session_id": other["session_id"],
@@ -603,6 +688,28 @@ def evaluate(
         owned = any(
             _covers(h.get("scope") or {}, requested or {}) for h in own
         )
+        if proposal_worktree:
+            return {
+                "verdict": "allow",
+                "decision_domain": "eligibility",
+                "authorization_basis": "session-writable-scope",
+                "eligibility_basis": PROPOSAL_WORKTREE_ELIGIBILITY,
+                "coordination_status": "isolated-proposal-worktree",
+                "persistent_claim_required": False,
+                "operation_executed": False,
+                "coordination_only_claim_count": (
+                    nonblocking_coordination_claim_count
+                ),
+                "coordination_only_claims": nonblocking_coordination_claims,
+                "coordination_only_claims_truncated": (
+                    nonblocking_coordination_claim_count
+                    > len(nonblocking_coordination_claims)
+                ),
+                "reason": (
+                    f"{target} is eligible in its observed non-main worktree; "
+                    "claim overlaps remain coordination evidence"
+                ),
+            }
         pristine = bool(
             facts.get("clean")
             and facts.get("main_branch")
@@ -639,6 +746,28 @@ def evaluate(
                 "persistent_authority_required": False,
                 "reason": f"{target} mutation by claim" if owned else f"{target} is owned clean scope"}
     if action == "verify":
+        if proposal_worktree:
+            return {
+                "verdict": "allow",
+                "decision_domain": "eligibility",
+                "authorization_basis": "session-writable-scope",
+                "eligibility_basis": PROPOSAL_WORKTREE_ELIGIBILITY,
+                "coordination_status": "isolated-proposal-worktree",
+                "persistent_claim_required": False,
+                "operation_executed": False,
+                "coordination_only_claim_count": (
+                    nonblocking_coordination_claim_count
+                ),
+                "coordination_only_claims": nonblocking_coordination_claims,
+                "coordination_only_claims_truncated": (
+                    nonblocking_coordination_claim_count
+                    > len(nonblocking_coordination_claims)
+                ),
+                "reason": (
+                    f"{target} verification is eligible in its observed "
+                    "non-main worktree"
+                ),
+            }
         return {"verdict": "allow",
                 "reason": f"{target} verification permitted; "
                           "repo writes must stay within declared ephemeral roots"}

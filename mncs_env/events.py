@@ -51,6 +51,7 @@ TYPES = (
     "authority.denied",
     "authority.escalated",
     "authority.integration-eligible",
+    "authority.proposal-eligible",
     "authority.scope-granted",
     "lease.acquired",
     "lease.recovered-and-acquired",

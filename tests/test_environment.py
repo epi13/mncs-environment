@@ -198,6 +198,184 @@ class AuthorityTests(unittest.TestCase):
         self.assertIn("outside this session's writable authority", verdict["reason"])
         self.assertNotIn("claim_conflict", verdict)
 
+    def test_observed_proposal_worktree_is_mutable_without_claim(self) -> None:
+        checkout = "/workspace/mncs-atlas/.worktrees/proposal"
+        target = checkout + "/src/new.mn"
+        scope = {
+            "kind": "worktree",
+            "checkout": checkout,
+            "branch": "campaign/proposal",
+            "checkout_identity": "checkout:" + "a" * 64,
+            "exclusive": False,
+        }
+        facts = {"mncs-atlas": {
+            "repository": "mncs-atlas",
+            "path": checkout,
+            "repository_root_path": "/workspace/mncs-atlas",
+            "branch": "campaign/proposal",
+            "main_branch": False,
+            "clean": False,
+            "foreign_signals": ["dirty-tree"],
+            "checkout_identity": scope["checkout_identity"],
+        }}
+
+        verdict = authority.evaluate(
+            context_for(), action="write", target=target,
+            session_id="ses_proposer", claims={}, repo_facts=facts,
+            scope=scope,
+        )
+
+        self.assertEqual(verdict["verdict"], "allow", verdict)
+        self.assertEqual(
+            verdict["eligibility_basis"],
+            authority.PROPOSAL_WORKTREE_ELIGIBILITY,
+        )
+        self.assertFalse(verdict["persistent_claim_required"])
+        self.assertEqual(verdict["coordination_only_claim_count"], 0)
+
+    def test_selected_checkout_facts_keep_repository_root_identity(self) -> None:
+        root = "/workspace/mncs-atlas"
+        checkout = root + "/.worktrees/proposal"
+        snapshot = {
+            "workspace": {"repositories": [
+                {
+                    "name": "mncs-atlas",
+                    "path": root,
+                    "branch": "main",
+                    "manifest_repository": "mncs-atlas",
+                },
+                {
+                    "name": "mncs-atlas@proposal",
+                    "path": checkout,
+                    "branch": "campaign/proposal",
+                    "manifest_repository": "mncs-atlas",
+                    "worktree_of": "mncs-atlas",
+                },
+            ]},
+            "selected_checkouts": {"mncs-atlas": {
+                "repository": "mncs-atlas",
+                "path": checkout,
+                "branch": "campaign/proposal",
+            }},
+        }
+
+        facts = authority.repository_facts_for_snapshot(snapshot)
+
+        self.assertEqual(
+            facts["mncs-atlas"]["repository_root_path"], root,
+        )
+        self.assertEqual(facts["mncs-atlas"]["path"], checkout)
+
+    def test_repository_claim_is_coordination_only_for_isolated_proposal(self) -> None:
+        checkout = "/workspace/mncs-atlas/.worktrees/proposal"
+        target = checkout + "/src/new.mn"
+        scope = {
+            "kind": "worktree",
+            "checkout": checkout,
+            "branch": "campaign/proposal",
+            "checkout_identity": "checkout:" + "b" * 64,
+            "exclusive": False,
+        }
+        facts = {"mncs-atlas": {
+            "repository": "mncs-atlas",
+            "path": checkout,
+            "repository_root_path": "/workspace/mncs-atlas",
+            "branch": "campaign/proposal",
+            "main_branch": False,
+            "clean": True,
+            "foreign_signals": [],
+            "checkout_identity": scope["checkout_identity"],
+        }}
+
+        verdict = authority.evaluate(
+            context_for(), action="write", target=target,
+            session_id="ses_proposer",
+            claims={"mncs-atlas": [{
+                "claim_id": "claim:mncs-atlas",
+                "session_id": "ses_repository_coordinator",
+                "scope": {"kind": "repository", "repository": "mncs-atlas"},
+            }]},
+            repo_facts=facts, scope=scope,
+        )
+
+        self.assertEqual(verdict["verdict"], "allow", verdict)
+        self.assertEqual(verdict["coordination_only_claim_count"], 1)
+        self.assertEqual(
+            verdict["coordination_only_claims"][0]["disposition"],
+            "coordination-only-broad-claim",
+        )
+        self.assertEqual(
+            verdict["coordination_only_claims"][0]["claim_id"],
+            "claim:mncs-atlas",
+        )
+
+    def test_exact_worktree_claim_still_blocks_overlapping_proposal(self) -> None:
+        checkout = "/workspace/mncs-atlas/.worktrees/proposal"
+        target = checkout + "/src/new.mn"
+        scope = {
+            "kind": "worktree",
+            "checkout": checkout,
+            "branch": "campaign/proposal",
+            "checkout_identity": "checkout:" + "c" * 64,
+            "exclusive": False,
+        }
+        facts = {"mncs-atlas": {
+            "repository": "mncs-atlas",
+            "path": checkout,
+            "branch": "campaign/proposal",
+            "main_branch": False,
+            "clean": True,
+            "foreign_signals": [],
+            "checkout_identity": scope["checkout_identity"],
+        }}
+
+        verdict = authority.evaluate(
+            context_for(), action="write", target=target,
+            session_id="ses_proposer",
+            claims={"mncs-atlas": [{
+                "claim_id": "claim:mncs-atlas:worktree:proposal",
+                "session_id": "ses_current_editor",
+                "scope": scope,
+            }]},
+            repo_facts=facts, scope=scope,
+        )
+
+        self.assertEqual(verdict["verdict"], "deny", verdict)
+        self.assertEqual(
+            verdict["claim_conflict"]["conflict_reason"],
+            "same checkout with overlapping paths",
+        )
+
+    def test_non_main_branch_in_repository_root_still_requires_claim(self) -> None:
+        checkout = "/workspace/mncs-atlas"
+        target = checkout + "/src/shared.mn"
+        scope = {
+            "kind": "worktree",
+            "checkout": checkout,
+            "branch": "campaign/proposal",
+            "exclusive": False,
+        }
+        facts = {"mncs-atlas": {
+            "repository": "mncs-atlas",
+            "path": checkout,
+            "repository_root_path": checkout,
+            "branch": "campaign/proposal",
+            "main_branch": False,
+            "clean": False,
+            "foreign_signals": ["dirty-tree"],
+        }}
+
+        verdict = authority.evaluate(
+            context_for(), action="write", target=target,
+            session_id="ses_proposer",
+            claims={"mncs-atlas": "ses_repository_coordinator"},
+            repo_facts=facts, scope=scope,
+        )
+
+        self.assertEqual(verdict["verdict"], "deny", verdict)
+        self.assertEqual(verdict["claim_conflict"]["conflict_reason"],
+                         "repository-wide scope overlaps every checkout")
+
     def test_competing_claim_denies(self) -> None:
         verdict = authority.evaluate(
             context_for(), action="write", target="mncs-atlas", session_id="ses_mine",
@@ -333,6 +511,73 @@ class AuthorityTests(unittest.TestCase):
                     "authorization_status"
                 ],
                 "eligible",
+            )
+
+    def test_session_check_records_claimless_proposal_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(
+                Path(directory),
+                intent={
+                    "goal": "propose a compiler integration improvement",
+                    "repositories": ["mncs-atlas"],
+                },
+            )
+            proposal_scope = {
+                "kind": "worktree",
+                "repository": "mncs-atlas",
+                "checkout": "/workspace/mncs-atlas/.worktrees/proposal",
+                "branch": "campaign/proposal",
+                "checkout_identity": "checkout:" + "d" * 64,
+                "exclusive": False,
+            }
+            decision = {
+                "verdict": "allow",
+                "authorization_basis": "session-writable-scope",
+                "eligibility_basis": authority.PROPOSAL_WORKTREE_ELIGIBILITY,
+                "persistent_claim_required": False,
+                "operation_executed": False,
+                "coordination_only_claim_count": 1,
+                "coordination_only_claims": [{
+                    "session_id": "ses_broad_coordinator",
+                    "claim_id": "claim:mncs-atlas",
+                    "scope": {"kind": "repository", "repository": "mncs-atlas"},
+                    "disposition": "coordination-only-broad-claim",
+                }],
+                "coordination_only_claims_truncated": False,
+            }
+            with (
+                mock.patch.object(session, "_refresh_holders", return_value={}),
+                mock.patch.object(authority, "evaluate", return_value=decision),
+            ):
+                verdict = session.check(
+                    action="write",
+                    target="mncs-atlas/src/proposal.mn",
+                    scope=proposal_scope,
+                    repo_facts={"mncs-atlas": {
+                        "repository": "mncs-atlas",
+                        "path": proposal_scope["checkout"],
+                        "branch": proposal_scope["branch"],
+                        "main_branch": False,
+                        "clean": False,
+                        "foreign_signals": ["dirty-tree"],
+                        "checkout_identity": proposal_scope["checkout_identity"],
+                    }},
+                )
+
+            self.assertEqual(verdict["verdict"], "allow")
+            event = session._log()[-1]
+            self.assertEqual(event["type"], "authority.proposal-eligible")
+            self.assertEqual(event["payload"]["repository"], "mncs-atlas")
+            self.assertEqual(event["payload"]["scope"]["branch"],
+                             "campaign/proposal")
+            self.assertFalse(event["payload"]["persistent_claim_required"])
+            self.assertFalse(event["payload"]["operation_executed"])
+            self.assertEqual(
+                event["payload"]["coordination_only_claims"][0]["claim_id"],
+                "claim:mncs-atlas",
+            )
+            self.assertNotIn(
+                proposal_scope["checkout"], json.dumps(event["payload"]),
             )
 
     def test_session_check_explains_recoverable_claim_without_mutating_it(self) -> None:
