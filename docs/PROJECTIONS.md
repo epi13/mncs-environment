@@ -431,14 +431,15 @@ truncation separately from overlap records omitted at capture time.
 Local `write`, `mutate`, `execute`, and `verify` preflights are also eligible
 without an owned claim when they name a freshly observed attached non-main
 linked worktree separate from the repository root, under the session's writable
-repository scope. A broad repository
-claim is preserved as coordination evidence but is not treated as an exclusive
-right over isolated proposal branches. Exact worktree and same-branch path
-conflicts continue to block. Main-checkout mutations retain the existing
-clean-state or exact-claim checks, and checkout retirement remains claim-gated.
+repository scope. Repository-wide and repository-relative path claims are
+preserved as coordination evidence but do not reserve isolated proposal
+worktrees. Checkout-bound worktree claims still block same-checkout and
+same-branch overlaps. Main-checkout mutations retain the existing clean-state
+or exact-claim checks, and checkout retirement remains claim-gated.
 The bounded `session_activity.proposal_eligibility` projection exposes
 validated `authority.proposal-eligible` records, their objective references,
-observed worktree scope, and any broad claims treated as coordination-only.
+observed worktree scope, and repository-wide or repository-relative path
+claims treated as coordination-only.
 These are preflight observations: they do not prove that an operation ran,
 that its changes were accepted, or that the change improved the environment.
 When an exact registered destination was refreshed before a merge or publish
@@ -532,10 +533,11 @@ no recovery or ownership transfer; an eligible non-exclusive claim still
 requires a normal exact-scope acquisition to recheck current state atomically.
 
 `session_activity.claim_lifecycle_correlations` connects structured denial
-blockers and integration-preflight overlaps to claim transitions from the
-recorded owner session. A relation requires an exact repository, owner-session,
-and claim identity; denial blockers and preflight overlap rows carry the
-correlation identity. The projection reads at most four foreign session event
+blockers, integration-preflight overlaps, and proposal-eligibility claim
+observations to claim transitions from the recorded owner session. A relation
+requires an exact repository, owner-session, and claim identity; related denial,
+preflight, and proposal rows carry the correlation identity. The projection
+reads at most four foreign session event
 pages, with at most 32 events per page and four lifecycle events per relation.
 It uses the existing bounded page/tail interfaces and never falls back to an
 unbounded event log. Owner snapshot availability, truncated tails, invalid
@@ -544,8 +546,8 @@ the records refer to the same claim; it does not establish why a denial
 occurred, that a preflight followed because of that denial, the claim's current
 state, or a successful integration. Current claim state remains a separate
 point-in-time observation. The compact view retains the latest lifecycle event
-reference in one relation and reports when other relations or earlier matching
-transitions were omitted.
+reference and up to three related activity references in one relation, and
+reports when other relations or earlier matching transitions were omitted.
 
 Environmental observation sources that retain authenticated session event
 identities are resolved against the bounded RPC, authority-denial,

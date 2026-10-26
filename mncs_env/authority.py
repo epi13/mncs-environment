@@ -367,8 +367,8 @@ def _is_proposal_worktree(
     An exact worktree is an isolated proposal surface. Writable repository
     scope plus a fresh checkout observation can make local development
     eligible without turning a persistent claim into a required privilege.
-    Claims over the same checkout or attached branch are still checked
-    separately as concurrency evidence.
+    Checkout-bound claims for the same checkout or attached branch are still
+    checked separately as concurrency evidence.
     """
     if (not isinstance(scope, dict) or scope.get("kind") != "worktree"
             or not os.path.isabs(target)):
@@ -418,9 +418,10 @@ def evaluate(
     ``mutate``, ``execute``, and ``retire`` require writable scope before their
     existing claim or clean-main checks. An exact observed non-main worktree is
     a proposal surface: its session-writable repository scope is sufficient
-    for local development, and repository-wide claims remain visible as
-    coordination context rather than reserving every proposal branch. Exact
-    checkout or same-branch claim overlaps still block. Protected, forbidden,
+    for local development, and repository-wide or repository-relative path
+    claims remain visible as coordination context rather than reserving every
+    proposal branch. Checkout-scoped claims for the same checkout or attached
+    branch still block. Protected, forbidden,
     and fenced scope denies. For merge and publish, overlap remains
     coordination evidence while the repository-native update resolves actual
     conflicts. Escalate and deny never authorize execution.
@@ -535,17 +536,22 @@ def evaluate(
         if not conflict_checked:
             continue
         other_scope = other.get("scope") or {"kind": "repository"}
-        # A repository-wide claim does not identify which isolated worktree
-        # its holder is changing. It remains useful coordination evidence,
-        # but is too broad to reserve every exact non-main proposal checkout.
-        # Claims naming a worktree or paths retain their normal conflict rules.
-        if proposal_worktree and other_scope.get("kind") == "repository":
+        # Repository-wide and repository-relative path claims cannot identify
+        # which checkout their holder is changing. They remain useful
+        # coordination evidence, but cannot reserve every isolated proposal
+        # worktree. A `worktree` claim carries the checkout and branch identity
+        # needed to detect a real shared-checkout or shared-ref conflict.
+        if proposal_worktree and other_scope.get("kind") in {"repository", "paths"}:
             nonblocking_coordination_claim_count += 1
             if len(nonblocking_coordination_claims) < MAX_INTEGRATION_COORDINATION_OVERLAPS:
                 observation: dict[str, Any] = {
                     "session_id": other["session_id"],
                     "scope": _scope_evidence(other_scope, repo),
-                    "disposition": "coordination-only-broad-claim",
+                    "disposition": (
+                        "coordination-only-broad-claim"
+                        if other_scope.get("kind") == "repository"
+                        else "coordination-only-repository-path-claim"
+                    ),
                 }
                 claim_id = other.get("claim_id")
                 if isinstance(claim_id, str) and claim_id:

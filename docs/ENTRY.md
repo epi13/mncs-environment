@@ -64,9 +64,13 @@ the checkout and branch stay part of its identity. This lets independent
 branches claim the same files for isolated proposals while preserving conflicts
 for the same checkout or a shared attached branch. Use `--worktree` to select a
 different registered checkout. Use `--repository-paths --paths` when a
-repository-relative claim should intentionally conflict across every checkout.
-An unanchored path claim requires that explicit flag, so a missing checkout
-cannot silently create a repository-wide blocker.
+repository-relative claim should intentionally describe a path across every
+checkout. Such claims still coordinate with other claim requests, but do not
+reserve isolated proposal worktrees for local edits; preflight records them as
+coordination evidence. A checkout-bound worktree claim continues to protect an
+overlapping edit in the same checkout or attached branch. An unanchored path
+claim requires that explicit flag, so a missing checkout cannot silently
+create a repository-wide blocker.
 
 Before acquiring a claim from the session's selected checkout, Environment
 compares the live registered branch and HEAD with the session binding. If they

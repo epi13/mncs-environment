@@ -3022,7 +3022,7 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
             ),
             "persistent_claim_required": False,
             "operation_executed": False,
-            "coordination_only_claim_count": 1,
+            "coordination_only_claim_count": 2,
             "coordination_only_claims": [{
                 "session_id": "ses_repository_coordinator",
                 "claim_id": "claim:mncs-environment",
@@ -3032,6 +3032,16 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
                     "exclusive": True,
                 },
                 "disposition": "coordination-only-broad-claim",
+            }, {
+                "session_id": "ses_path_coordinator",
+                "claim_id": "claim:mncs-environment:paths:shared",
+                "scope": {
+                    "kind": "paths",
+                    "repository": repository,
+                    "paths": ["mncs_env/authority.py"],
+                    "exclusive": False,
+                },
+                "disposition": "coordination-only-repository-path-claim",
             }],
             "coordination_only_claims_truncated": False,
             "campaign_id": campaign_id,
@@ -3056,9 +3066,15 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
     assert eligible["work_intent_id"] == work_intent_id
     assert eligible["persistent_claim_required"] is False
     assert eligible["operation_executed"] is False
-    assert eligible["coordination_only_claim_count"] == 1
+    assert eligible["coordination_only_claim_count"] == 2
     assert eligible["coordination_only_claims"][0]["claim_id"] == (
         "claim:mncs-environment"
+    )
+    assert eligible["coordination_only_claims"][1]["scope"]["paths"] == [
+        "mncs_env/authority.py",
+    ]
+    assert eligible["coordination_only_claims"][1]["disposition"] == (
+        "coordination-only-repository-path-claim"
     )
     assert eligible["event_reference"]["identity"] == "evt_proposal_eligible_7"
     assert eligible["scope"]["branch"] == "campaign/proposal"
@@ -3073,6 +3089,9 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
     )
     assert compact_eligible["coordination_only_claims"][0]["claim_id"] == (
         "claim:mncs-environment"
+    )
+    assert compact_eligible["coordination_only_claims"][1]["claim_id"] == (
+        "claim:mncs-environment:paths:shared"
     )
 
 
@@ -3186,6 +3205,46 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
                     },
                 },
             },
+        },
+    })
+    events.append({
+        "identity": "evt_proposal_eligible_same_claim",
+        "sequence": 42,
+        "type": "authority.proposal-eligible",
+        "session_id": session.session_id,
+        "payload": {
+            "action": "write",
+            "repository": "mncs-environment",
+            "scope": {
+                "kind": "worktree",
+                "repository": "mncs-environment",
+                "branch": "campaign/proposal",
+                "checkout_identity": "checkout:proposal",
+                "paths": ["mncs_env/source_0.py"],
+                "exclusive": False,
+            },
+            "authorization_basis": "session-writable-scope",
+            "eligibility_basis": (
+                capability_intelligence.authority_module
+                .PROPOSAL_WORKTREE_ELIGIBILITY
+            ),
+            "persistent_claim_required": False,
+            "operation_executed": False,
+            "coordination_only_claim_count": 1,
+            "coordination_only_claims": [{
+                "session_id": "ses_other_coordinator_0",
+                "claim_id": "claim:mncs-environment:paths:sample0",
+                "scope": {
+                    "kind": "paths",
+                    "repository": "mncs-environment",
+                    "paths": ["mncs_env/source_0.py"],
+                    "exclusive": False,
+                },
+                "disposition": "coordination-only-repository-path-claim",
+            }],
+            "coordination_only_claims_truncated": False,
+            "campaign_id": session.snapshot["campaign"]["identity"],
+            "work_intent_id": session.snapshot["intent"]["identity"],
         },
     })
     sample_claim_id = "claim:mncs-environment:paths:sample0"
@@ -3368,13 +3427,23 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
     assert [
         item["kind"] for item in
         sample_zero_correlation["related_session_activity"]
-    ] == ["authority-denial", "integration-eligibility"]
+    ] == [
+        "authority-denial", "integration-eligibility", "proposal-eligibility",
+    ]
     assert denial["claim_conflict"]["blocking_claim"][
         "claim_lifecycle_correlation_identity"
     ] == sample_zero_correlation["identity"]
     assert eligibility["coordination_overlaps"][0][
         "claim_lifecycle_correlation_identity"
     ] == sample_zero_correlation["identity"]
+    proposal_eligibility = activity["proposal_eligibility"][0]
+    proposal_claim = proposal_eligibility["coordination_only_claims"][0]
+    assert proposal_claim["claim_lifecycle_correlation_identity"] == (
+        sample_zero_correlation["identity"]
+    )
+    assert proposal_eligibility["event_reference"]["identity"] == (
+        "evt_proposal_eligible_same_claim"
+    )
     assert owner_event_page_requests.count("ses_other_coordinator_0") == 1
     assert "must remain outside" not in json.dumps(sample_zero_correlation)
     assert activity["source"]["authority_claim_state_lookup"][
@@ -3406,7 +3475,7 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
         for limit in activity["measurement_limits"]
     )
 
-    compact = capability_intelligence.project(session, max_result_bytes=10_000)
+    compact = capability_intelligence.project(session, max_result_bytes=15_000)
     compact_eligibility = compact["session_activity"][
         "integration_eligibility"
     ][0]
@@ -3440,10 +3509,17 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
         "status": "read", "truncated": False,
         "limit": capability_intelligence.MAX_SESSION_CLAIM_OWNER_EVENT_PAGE,
     }
+    assert [item["kind"] for item in compact_correlation[
+        "related_session_activity"
+    ]] == ["authority-denial", "integration-eligibility", "proposal-eligibility"]
     assert compact["session_activity"]["integration_eligibility"][0][
         "coordination_overlaps"][0]["claim_lifecycle_correlation_identity"] == (
             compact_correlation["identity"]
         )
+    compact_proposal = compact["session_activity"]["proposal_eligibility"][0]
+    assert compact_proposal["coordination_only_claims"][0][
+        "claim_lifecycle_correlation_identity"
+    ] == compact_correlation["identity"]
     assert compact_eligibility["coordination_overlap_count"] == 5
     assert compact_eligibility["coordination_overlap_records_returned"] == 4
     assert compact_eligibility[
@@ -3476,7 +3552,7 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
         "lookup_omitted_count"
     ] == 1
     assert checkout not in json.dumps(compact)
-    assert len(json.dumps(compact, ensure_ascii=False).encode("utf-8")) <= 10_000
+    assert len(json.dumps(compact, ensure_ascii=False).encode("utf-8")) <= 15_000
 
 
 def test_claim_owner_history_uses_only_bounded_read_interfaces() -> None:
@@ -3884,8 +3960,15 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     assert compact_recorded_denial["claim_conflict"]["decision_basis"][
         "authorization_status"
     ] == "eligible"
-    assert "claim_lifecycle_correlation_identity" not in compact_recorded_denial[
-        "claim_conflict"]["blocking_claim"]
+    compact_correlations = compact_activity["claim_lifecycle_correlations"]
+    if compact_correlations:
+        assert compact_recorded_denial["claim_conflict"]["blocking_claim"][
+            "claim_lifecycle_correlation_identity"
+        ] == compact_correlations[0]["identity"]
+    else:
+        assert "claim_lifecycle_correlation_identity" not in (
+            compact_recorded_denial["claim_conflict"]["blocking_claim"]
+        )
     assert (
         compact_activity["claim_lifecycle_correlations_returned"]
         + compact_activity["claim_lifecycle_correlations_omitted_count"]

@@ -309,6 +309,53 @@ class AuthorityTests(unittest.TestCase):
             "claim:mncs-atlas",
         )
 
+    def test_repository_path_claim_is_coordination_only_for_isolated_proposal(self) -> None:
+        checkout = "/workspace/mncs-atlas/.worktrees/proposal"
+        target = checkout + "/src/shared.mn"
+        scope = {
+            "kind": "worktree",
+            "checkout": checkout,
+            "branch": "campaign/proposal",
+            "checkout_identity": "checkout:" + "e" * 64,
+            "exclusive": False,
+        }
+        facts = {"mncs-atlas": {
+            "repository": "mncs-atlas",
+            "path": checkout,
+            "repository_root_path": "/workspace/mncs-atlas",
+            "branch": "campaign/proposal",
+            "main_branch": False,
+            "clean": False,
+            "foreign_signals": ["dirty-tree"],
+            "checkout_identity": scope["checkout_identity"],
+        }}
+
+        verdict = authority.evaluate(
+            context_for(), action="write", target=target,
+            session_id="ses_proposer",
+            claims={"mncs-atlas": [{
+                "claim_id": "claim:mncs-atlas:paths:shared",
+                "session_id": "ses_repository_path_coordinator",
+                "scope": {
+                    "kind": "paths", "repository": "mncs-atlas",
+                    "paths": ["src/shared.mn"], "exclusive": False,
+                },
+            }]},
+            repo_facts=facts, scope=scope,
+        )
+
+        self.assertEqual(verdict["verdict"], "allow", verdict)
+        self.assertFalse(verdict["persistent_claim_required"])
+        self.assertEqual(verdict["coordination_only_claim_count"], 1)
+        observed_claim = verdict["coordination_only_claims"][0]
+        self.assertEqual(
+            observed_claim["disposition"],
+            "coordination-only-repository-path-claim",
+        )
+        self.assertEqual(
+            observed_claim["scope"]["paths"], ["src/shared.mn"],
+        )
+
     def test_exact_worktree_claim_still_blocks_overlapping_proposal(self) -> None:
         checkout = "/workspace/mncs-atlas/.worktrees/proposal"
         target = checkout + "/src/new.mn"
@@ -344,6 +391,44 @@ class AuthorityTests(unittest.TestCase):
         self.assertEqual(
             verdict["claim_conflict"]["conflict_reason"],
             "same checkout with overlapping paths",
+        )
+
+    def test_same_branch_worktree_claim_still_blocks_overlapping_proposal(self) -> None:
+        checkout = "/workspace/mncs-atlas/.worktrees/proposal"
+        target = checkout + "/src/shared.mn"
+        scope = {
+            "kind": "worktree", "checkout": checkout,
+            "branch": "campaign/proposal", "exclusive": False,
+        }
+        facts = {"mncs-atlas": {
+            "repository": "mncs-atlas", "path": checkout,
+            "repository_root_path": "/workspace/mncs-atlas",
+            "branch": "campaign/proposal", "main_branch": False,
+            "clean": True, "foreign_signals": [],
+        }}
+        other_checkout_scope = {
+            "kind": "worktree",
+            "checkout": "/workspace/mncs-atlas/.worktrees/other",
+            "branch": "campaign/proposal",
+            "paths": ["src/shared.mn"],
+            "exclusive": False,
+        }
+
+        verdict = authority.evaluate(
+            context_for(), action="write", target=target,
+            session_id="ses_proposer",
+            claims={"mncs-atlas": [{
+                "claim_id": "claim:mncs-atlas:worktree:shared-branch",
+                "session_id": "ses_same_branch_editor",
+                "scope": other_checkout_scope,
+            }]},
+            repo_facts=facts, scope=scope,
+        )
+
+        self.assertEqual(verdict["verdict"], "deny", verdict)
+        self.assertEqual(
+            verdict["claim_conflict"]["conflict_reason"],
+            "shared branch with overlapping paths across checkouts",
         )
 
     def test_non_main_branch_in_repository_root_still_requires_claim(self) -> None:
