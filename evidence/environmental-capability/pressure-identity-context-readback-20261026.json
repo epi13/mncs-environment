@@ -1,0 +1,91 @@
+{
+  "captured_at": "2026-10-26T02:05:26+00:00",
+  "identity": "ev_environment_native_pressure_identity_context_readback_20261026",
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "measurement_limits": [
+    "An exact declared pressure ID supports traceability only; responsibility correspondence and causality remain unestablished.",
+    "The MNCS-Actions audit has no supporting source pointer for the shared pressure ID. The pointer gap is visible and has not been filled by inference.",
+    "The responsibility candidate is lexical overlap with a source-declared capability description, not an established match or migration recommendation.",
+    "The source audit and pressure record are integrity-addressed at their recorded commits; this does not establish that the native API is integrated, discoverable, usable, or ready to replace host functionality.",
+    "The selected session context event reports a partial binding-ID summary. Agent receipt, target-capability attribution, and use remain unestablished."
+  ],
+  "observation": {
+    "kind": "native-capability-pressure-identity-context-readback",
+    "outcome": {
+      "projection_route": "mncs-env projections --interpret environmental-capability",
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 4 --session-event-before-sequence 42 --session-event-limit 1",
+      "implementation_commit": "9506bacab2a94becccd2963fa896f74acd325f47",
+      "projection_bytes": 46143,
+      "projection_limit_bytes": 49152,
+      "relationship_projection_bytes": 7456,
+      "relationship_projection_limit_bytes": 8192,
+      "overall_projection_status": "partial",
+      "relationship_status": "no-exact-shared-source-pointer",
+      "exact_shared_pointer_link_count": 0,
+      "pressure_identity_context": {
+        "status": "shared-pressure-identity-with-source-pointer-gap",
+        "match_count": 1,
+        "pressure_identity_match_status": "exact-declared-id-match",
+        "shared_pressure_identity": "MNCS-TOOLING-B665F138D324",
+        "native_capability_identity": "mncs.std.process.v1",
+        "owner_pressure_source_link_status": "no-matching-supporting-source-reference",
+        "owner_pressure_source_reference": null,
+        "source_pointer_match_status": "owner-pressure-source-pointer-unavailable",
+        "candidate_pressure_source_integrity_status": "workspace-read-only-content-integrity-verified",
+        "candidate_pressure_source_reference": {
+          "identity": "MNCS-TEST-P-001",
+          "repository": "mncs-test",
+          "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+          "path": "pressures/MNCS-TEST-P-001.json",
+          "sha256": "38cb0494d2362b9b9b760ab3c76a4f27c6bd6595ca337b15765564e8ad0975de"
+        },
+        "owner_source_audit_reference": {
+          "identity": "audit_mncs_actions_native_userland_20261025",
+          "repository": "mncs-actions",
+          "commit": "ca62f3d33ef9c3b5096bc4d39f6039adc445e579",
+          "path": "native-userland-audit.json",
+          "sha256": "76e5845b033c775f93bc3e821e069cf8bb21eb437784e505847db3c19446c48a",
+          "content_integrity_status": "workspace-read-only-content-integrity-verified"
+        },
+        "owner_responsibility_candidate": {
+          "status": "candidate-text-overlap-only",
+          "area": "selected consumer/provider invocation and source artifact acquisition",
+          "classification": "application_effect_orchestration_blocker",
+          "eliminating_capability": "native application entry context plus typed process/filesystem effects and provider artifact ingress",
+          "textual_match_field": "eliminating_capability"
+        },
+        "responsibility_match_status": "not-established",
+        "causal_relation_status": "not-established",
+        "native_migration_readiness": "not-established"
+      },
+      "session_context_event_reference": {
+        "session_id": "ses_9ad3efb63438cf3d",
+        "identity": "evt_de29b1e1b27f5e61",
+        "sequence": 41,
+        "binding_ids_status": "partial",
+        "target_capability_attribution_status": "not-established",
+        "agent_receipt_status": "not-established"
+      },
+      "verification": {
+        "command": "PYTHONPATH=. pytest -q tests/test_native_capability_relationships.py tests/test_capability_projection_cli.py",
+        "passed": 20,
+        "failed": 0,
+        "result": "passed",
+        "diff_check": "passed"
+      },
+      "source_pointer_digest_check": {
+        "mncs_actions_commit": "ca62f3d33ef9c3b5096bc4d39f6039adc445e579",
+        "mncs_actions_command": "sha256sum native-userland-audit.json",
+        "mncs_actions_digest": "76e5845b033c775f93bc3e821e069cf8bb21eb437784e505847db3c19446c48a",
+        "mncs_test_commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+        "mncs_test_command": "sha256sum pressures/MNCS-TEST-P-001.json pressures/MNCS-TEST-P-004.json pressures/MNCS-TEST-P-006.json",
+        "mncs_test_digests_matched_projection_references": true
+      }
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "prior_observation_identity": "ev_environment_unmatched_native_pressure_context_readback_20261026"
+  }
+}
