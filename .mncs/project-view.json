@@ -40,10 +40,77 @@
     },
     {
       "contract": "ambient-projection-coherence",
+      "effects": [
+        "read",
+        "write"
+      ],
+      "invocation": {
+        "fixed_argv": [
+          "projections",
+          "{session_id}"
+        ],
+        "kind": "executable",
+        "path": "scripts/mncs-env"
+      },
       "kind": "semantic-projection-lifecycle-and-interpretation",
       "output_scope": "explicit projection declarations; canonical subjects; Store provenance; native reconciliation",
       "stability": "experimental",
+      "version": "2"
+    },
+    {
+      "contract": "projection-evidence-inspection",
+      "effects": [
+        "read"
+      ],
+      "fingerprint_sources": [
+        "mncs_env/cli.py",
+        "mncs_env/projections.py",
+        "mncs_env/evidence_store.py",
+        "mncs_env/session_store.py",
+        "mncs_env/store_backend.py",
+        "mncs_env/rpc_client.py",
+        "scripts/mncs-env"
+      ],
+      "invocation": {
+        "fixed_argv": [
+          "projections",
+          "--evidence",
+          "{session_id}"
+        ],
+        "kind": "executable",
+        "path": "scripts/mncs-env"
+      },
+      "kind": "read-only-projection-evidence-inspection",
+      "output_scope": "read-only recorded projection evidence and history for the authorized Environment session",
+      "stability": "experimental",
       "version": "1"
+    },
+    {
+      "contract": "campaign-state-inspection",
+      "effects": [
+        "read"
+      ],
+      "fingerprint_sources": [
+        "mncs_env/cli.py",
+        "mncs_env/capabilities.py",
+        "mncs_env/sessions.py",
+        "mncs_env/session_store.py",
+        "mncs_env/store_backend.py",
+        "scripts/mncs-env"
+      ],
+      "invocation": {
+        "fixed_argv": [
+          "campaign-state",
+          "{session_id}"
+        ],
+        "kind": "executable",
+        "path": "scripts/mncs-env"
+      },
+      "kind": "read-only-campaign-state-and-environmental-capability-intelligence",
+      "output_limit_bytes": 131072,
+      "output_scope": "bounded page from immutable campaign evidence history and delivery state for the authorized Environment session; includes the on-demand environmental_capability projection with verified observations, pressure hypotheses, and implementation-verification-follow-up links when response budget permits; evidence offsets expose other pages",
+      "stability": "experimental",
+      "version": "2"
     }
   ],
   "dependencies": [
@@ -132,7 +199,7 @@
   "purpose": "mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration.",
   "repository": "mncs-environment",
   "schema_version": "mncs.project-view/1",
-  "source_identity": "sha256:46bd5353c0cdab36475c051d8c39629744a76022ce0ffc29f1410b2120028e18",
+  "source_identity": "sha256:4cc340f6c28d3c1a5341ce0a91e91403e9992560887599a81c5352678893a027",
   "structure": {
     "layout": "mncs.repository-layout/1",
     "surfaces": [

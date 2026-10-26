@@ -12,6 +12,13 @@ second telemetry store or capability registry.
   --session-event-limit 8
 ```
 
+The existing machine-facing capability catalog is the generated
+`.mncs/project-view.json`. It now exposes the ambient projection contract and
+the read-only projection-evidence and campaign-state inspection interfaces,
+including their effects, versions, and invocation paths. This establishes
+catalog presence and discoverability through the project view; it does not
+establish that an agent found or successfully used those interfaces.
+
 Inspect `capability_accountability_links` in the result. It reports exact
 repository, commit, path, and SHA-256 relationships, along with their source
 references, the owner audit's declared host responsibilities, the candidate
@@ -35,6 +42,16 @@ Even complete identifiers establish a delivered set only; agent receipt and
 use remain separate observations. When the selected event window has no
 context response, the projection labels that absence as window-scoped rather
 than concluding that the session received no context.
+
+## Entry and persistence observation
+
+The bounded readback
+[`session-entry-store-serialization-pressure-20261026.json`](../evidence/environmental-capability/session-entry-store-serialization-pressure-20261026.json)
+records two interrupted local entry attempts. One captured Python at roughly
+80% CPU and 502–515 MiB resident memory; the second traceback reached JSON
+serialization of a canonical Store snapshot during the ambient pass. The
+session identity and persistence outcome were not returned, and the snapshot
+size and cause of the serialization cost remain unmeasured.
 
 ## Current evidence path
 

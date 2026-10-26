@@ -1,0 +1,109 @@
+{
+  "captured_at": "2026-10-26T02:15:41+00:00",
+  "identity": "ev_environment_entry_store_serialization_pressure_readback_20261026",
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "measurement_limits": [
+    "The two commands were interrupted before returning their session IDs or final entry results; whether the persisted session was created, resumed, or left in an intermediate lifecycle state is not established.",
+    "CPU and resident-memory values are point-in-time ps samples, not total resource consumption or a profile of the full entry operation.",
+    "The traceback establishes that one Store request was being JSON-encoded while saving a session snapshot during the ambient pass. The serialized payload size and the underlying reason for the observed CPU and memory cost were not measured.",
+    "The selected Environment definition covers 16 repositories, but the observation does not establish that workspace breadth caused the serialization cost.",
+    "A Store generation value was observed after the interrupted attempts, but no pre-attempt baseline was captured and intervening read commands may also update state; no write count or session durability conclusion is inferred."
+  ],
+  "observation": {
+    "kind": "session-entry-store-serialization-pressure",
+    "context": {
+      "repository": "mncs-environment",
+      "branch": "main",
+      "repository_head": "d327685abb4d4b269c2ccfccc2e17063fc9f1b60",
+      "environment_definition_path": ".mncs/environment.json",
+      "workspace_scope_repository_count": 16,
+      "entry_result_returned": false,
+      "session_identity_returned": false,
+      "session_persistence_status": "not-established"
+    },
+    "attempts": [
+      {
+        "command": "./scripts/mncs-env enter --new-session",
+        "termination": "interrupted-after-bounded-observation",
+        "samples": [
+          {
+            "elapsed_seconds": 67,
+            "cpu_percent": 76.7,
+            "resident_memory_kib": 501840
+          },
+          {
+            "elapsed_seconds": 114,
+            "cpu_percent": 79.4,
+            "resident_memory_kib": 514492,
+            "entry_store_lock_file_descriptor_open": true
+          }
+        ],
+        "final_result": "no-environment-entry-result-returned"
+      },
+      {
+        "command": "./scripts/mncs-env enter",
+        "termination": "interrupted-by-SIGINT-after-stack-observation",
+        "samples": [
+          {
+            "elapsed_seconds": 44,
+            "cpu_percent": 91.3,
+            "resident_memory_kib": 497616
+          }
+        ],
+        "observed_call_path": [
+          "mncs_env.entry.enter: ambient_tick",
+          "mncs_env.entry.ambient_tick: incremental.tick",
+          "mncs_env.coherence.tick: owner runner execution",
+          "mncs_env.store_backend: immutable session snapshot write",
+          "mncs_store.embedded.EmbeddedStore.put_bound_object",
+          "mncs_store.session.Session.call_batch: json.dumps(request)"
+        ],
+        "interrupt_location": "Python JSON encoding while preparing a Store request; no Store response was received for this call.",
+        "final_result": "entry-session-identity-and-completion-not-returned"
+      }
+    ],
+    "diagnosis": {
+      "store_snapshot_serialization_observed": true,
+      "ambient_owner_pass_identity": "not-captured",
+      "snapshot_payload_bytes": "not-measured",
+      "root_cause": "not-established",
+      "next_investigation": "Measure the session snapshot payload and per-owner ambient pass costs using bounded instrumentation, then determine whether repeated whole-snapshot serialization or one unusually large observation dominates entry."
+    }
+  },
+  "source_references": [
+    {
+      "repository": "mncs-environment",
+      "commit": "d327685abb4d4b269c2ccfccc2e17063fc9f1b60",
+      "path": ".mncs/environment.json",
+      "sha256": "83a49a81f9737e52eaf49b07a32ebf03a22cc78dd210f4d6d39a24ff4e626dcc"
+    },
+    {
+      "repository": "mncs-environment",
+      "commit": "d327685abb4d4b269c2ccfccc2e17063fc9f1b60",
+      "path": "mncs_env/entry.py",
+      "sha256": "5a16451a4b059d547fbdc42d618c9a439ee5f319e0b61524e9e5df371ee70e14"
+    },
+    {
+      "repository": "mncs-environment",
+      "commit": "d327685abb4d4b269c2ccfccc2e17063fc9f1b60",
+      "path": "mncs_env/coherence.py",
+      "sha256": "8b08f7220ca2151c9f93068386ed45a1ea69c831d967d564ee754cd95ea837eb"
+    },
+    {
+      "repository": "mncs-store",
+      "commit": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+      "path": "python/mncs_store/session.py",
+      "sha256": "de1ae4d77239b3f34a654500f3b50c6b1b72bbbb38c99c9d929adb55907be33d"
+    },
+    {
+      "repository": "mncs-store",
+      "commit": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+      "path": "python/mncs_store/embedded.py",
+      "sha256": "e4a34943a7d542ced90e4bb831a938439c033e2b8fce5cf6ab6079d08c4c42b3"
+    }
+  ],
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "objective": "Observe real conditions affecting MNCS session entry and agent access to environmental capabilities."
+  }
+}
