@@ -3125,12 +3125,67 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
         "identity": "clm_projection_sample_v2",
     }
     claim_lookup_batches = []
+    owner_event_page_requests = []
+    owner_claim_id = "claim:mncs-environment:paths:sample0"
+    owner_events = {
+        "ses_other_coordinator_0": [
+            {
+                "identity": "evt_owner_claim_acquired",
+                "sequence": 2,
+                "type": "lease.acquired",
+                "payload": {
+                    "repository": "mncs-environment",
+                    "basis": claims.BASIS_EXPLICIT,
+                    "claim_identity": owner_claim_id,
+                    "claim_version": 1,
+                    "scope": {
+                        "kind": "paths",
+                        "repository": "mncs-environment",
+                        "paths": ["mncs_env/source_0.py"],
+                        "exclusive": False,
+                    },
+                    "campaign_id": "cmp_owner_campaign",
+                    "work_intent_id": "int_owner_work",
+                    "reason": "must remain outside the projection",
+                },
+            },
+            {
+                "identity": "evt_owner_claim_released",
+                "sequence": 3,
+                "type": "lease.released",
+                "payload": {
+                    "repository": "mncs-environment",
+                    "claim_id": owner_claim_id,
+                    "released": 1,
+                    "campaign_id": "cmp_owner_campaign",
+                    "work_intent_id": "int_owner_work",
+                    "reason": "must remain outside the projection",
+                },
+            },
+        ],
+    }
+
+    def read_owner_event_page(owner_session_id, *, limit, before_sequence=None):
+        owner_event_page_requests.append(owner_session_id)
+        selected = owner_events.get(owner_session_id, [])[-limit:]
+        return {
+            "events": selected,
+            "event_count": len(owner_events.get(owner_session_id, [])),
+            "truncated": False,
+            "next_before_sequence": None,
+        }
 
     def read_latest_claims_for(claim_ids):
         claim_lookup_batches.append(list(claim_ids))
         return [sample_claim] if sample_claim_id in claim_ids else []
 
-    session.store = SimpleNamespace(read_latest_claims_for=read_latest_claims_for)
+    session.store = SimpleNamespace(
+        read_latest_claims_for=read_latest_claims_for,
+        read_event_page=read_owner_event_page,
+        load_snapshot=lambda owner_session_id: {
+            "session_id": owner_session_id, "lifecycle": "active",
+        },
+    )
     session.recent_events = lambda *, limit, before_sequence=None: {
         "event_count": len(events), "events": events[-limit:],
         "truncated": False, "next_before_sequence": None,
@@ -3203,6 +3258,34 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
     assert denial_followup["search_completeness_status"] == (
         "complete-for-returned-records"
     )
+    correlations = activity["claim_lifecycle_correlations"]
+    sample_zero_correlation = correlations[0]
+    assert sample_zero_correlation["claim_id"] == sample_claim_id
+    assert sample_zero_correlation["owner_session_id"] == (
+        "ses_other_coordinator_0"
+    )
+    assert sample_zero_correlation["status"] == (
+        "matching-events-in-owner-history"
+    )
+    assert sample_zero_correlation["causal_resolution_status"] == (
+        "not-established"
+    )
+    assert [
+        item["action"] for item in
+        sample_zero_correlation["claim_lifecycle_events"]
+    ] == ["released", "acquired"]
+    assert [
+        item["kind"] for item in
+        sample_zero_correlation["related_session_activity"]
+    ] == ["authority-denial", "integration-eligibility"]
+    assert denial["claim_conflict"]["blocking_claim"][
+        "claim_lifecycle_correlation_identity"
+    ] == sample_zero_correlation["identity"]
+    assert eligibility["coordination_overlaps"][0][
+        "claim_lifecycle_correlation_identity"
+    ] == sample_zero_correlation["identity"]
+    assert owner_event_page_requests.count("ses_other_coordinator_0") == 1
+    assert "must remain outside" not in json.dumps(sample_zero_correlation)
     assert activity["source"]["authority_claim_state_lookup"][
         "lookup_count"
     ] == 1
@@ -3247,11 +3330,40 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
     assert compact_eligibility["work_intent_id"] == session.snapshot["intent"]["identity"]
     compact_denial = compact["session_activity"]["authority_denials"][0]
     assert compact_denial["work_intent_reference_status"] == "recorded-on-event"
+    compact_correlation = compact["session_activity"][
+        "claim_lifecycle_correlations"
+    ][0]
+    assert compact["session_activity"][
+        "claim_lifecycle_correlations_returned"
+    ] == 1
+    assert compact["session_activity"][
+        "claim_lifecycle_correlations_omitted_count"
+    ] == 4
+    assert compact_correlation["claim_lifecycle_events"][0][
+        "event_reference"]["identity"] == "evt_owner_claim_released"
+    assert compact_correlation["claim_lifecycle_events_projection_truncated"] is True
+    assert compact_correlation[
+        "claim_lifecycle_events_projection_omitted_count"
+    ] == 1
+    assert compact_correlation["owner_event_page"] == {
+        "status": "read", "truncated": False,
+        "limit": capability_intelligence.MAX_SESSION_CLAIM_OWNER_EVENT_PAGE,
+    }
+    assert compact["session_activity"]["integration_eligibility"][0][
+        "coordination_overlaps"][0]["claim_lifecycle_correlation_identity"] == (
+            compact_correlation["identity"]
+        )
     assert compact_eligibility["coordination_overlap_count"] == 5
     assert compact_eligibility["coordination_overlap_records_returned"] == 4
     assert compact_eligibility[
         "coordination_overlaps_projection_truncated"
     ] is True
+    assert compact_eligibility[
+        "coordination_overlap_details_projection_truncated"
+    ] is True
+    assert compact_eligibility[
+        "coordination_overlap_detail_fields_omitted_count"
+    ] > 0
     assert compact_eligibility["coordination_overlaps"][0]["claim_id"] == (
         "claim:mncs-environment:paths:sample0"
     )
@@ -3272,6 +3384,56 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
         "lookup_omitted_count"
     ] == 1
     assert checkout not in json.dumps(compact)
+    assert len(json.dumps(compact, ensure_ascii=False).encode("utf-8")) <= 10_000
+
+
+def test_claim_owner_history_uses_only_bounded_read_interfaces() -> None:
+    def unbounded_read_events(_session_id):
+        raise AssertionError("unbounded event history must not be read")
+
+    unavailable = capability_intelligence._claim_owner_event_page(
+        SimpleNamespace(
+            load_snapshot=lambda session_id: {"session_id": session_id},
+            read_events=unbounded_read_events,
+        ),
+        "ses_owner",
+    )
+    assert unavailable is None
+
+    events = [
+        {
+            "identity": f"evt_owner_{sequence}",
+            "sequence": sequence,
+            "type": "lease.acquired",
+            "payload": {},
+        }
+        for sequence in range(33)
+    ]
+    requests = []
+
+    def read_tail(session_id, *, limit):
+        requests.append((session_id, limit))
+        return events, 40
+
+    page = capability_intelligence._claim_owner_event_page(
+        SimpleNamespace(
+            load_snapshot=lambda session_id: {"session_id": session_id},
+            read_event_tail=read_tail,
+        ),
+        "ses_owner",
+    )
+    assert requests == [(
+        "ses_owner", capability_intelligence.MAX_SESSION_CLAIM_OWNER_EVENT_PAGE,
+    )]
+    assert page is not None
+    assert page["events"] == events[
+        -capability_intelligence.MAX_SESSION_CLAIM_OWNER_EVENT_PAGE:
+    ]
+    assert page["event_records_considered"] == (
+        capability_intelligence.MAX_SESSION_CLAIM_OWNER_EVENT_PAGE
+    )
+    assert page["event_count"] == 40
+    assert page["truncated"] is True
 
 
 def test_preflight_followup_search_reports_truncated_overlap_evidence(
@@ -3532,6 +3694,12 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     assert compact_activity["authority_denial_candidates"][0][
         "claim_conflict_evidence_status"
     ] == "partially-recorded"
+    compact_candidate_blocker = compact_activity[
+        "authority_denial_candidates"
+    ][0]["blocking_claims"][0]
+    assert compact_candidate_blocker["current_claim_state"][
+        "recovery_verdict"
+    ] == "recoverable"
     assert compact_activity["source"]["authority_claim_state_lookup"][
         "status"
     ] == "read"
@@ -3542,6 +3710,9 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     assert compact_recorded_denial["claim_conflict"][
         "current_claim_state"
     ]["recovery_verdict"] == "recoverable"
+    assert "claim_lifecycle_correlation_identity" not in compact_recorded_denial[
+        "claim_conflict"]["blocking_claim"]
+    assert compact_activity["claim_lifecycle_correlations_omitted_count"] == 1
     assert alias_checkout not in json.dumps(compact)
 
     active_at = claims.utcnow()

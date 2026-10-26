@@ -216,6 +216,10 @@ MAX_SESSION_ACTIVITY_INTEGRATION_ELIGIBILITY = 16
 MAX_SESSION_ACTIVITY_INTEGRATION_OVERLAPS = 8
 MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES = 8
 MAX_SESSION_ACTIVITY_CLAIM_COORDINATION = 16
+MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 8
+MAX_SESSION_CLAIM_OWNER_EVENT_SESSIONS = 4
+MAX_SESSION_CLAIM_OWNER_EVENT_PAGE = 32
+MAX_SESSION_CLAIM_LIFECYCLE_EVENTS_PER_CORRELATION = 4
 MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS = 4
 CLAIM_COORDINATION_EVENT_ACTIONS = {
     "lease.acquired": "acquired",
@@ -2677,6 +2681,25 @@ def _compact_projection(
             )
             if key in activity_source
         })
+    claim_lifecycle_source = activity_source.get(
+        "claim_lifecycle_correlation",
+    )
+    if isinstance(claim_lifecycle_source, dict):
+        compact_activity_source["claim_lifecycle_correlation"] = {
+            key: claim_lifecycle_source[key]
+            for key in (
+                "status", "correlation_records_considered",
+                "correlation_records_returned", "correlation_records_omitted",
+                "related_session_activity_records_considered",
+                "related_session_activity_records_omitted",
+                "owner_session_lookups_attempted", "owner_session_lookup_limit",
+                "owner_session_lookups_omitted", "owner_event_page_limit",
+                "owner_event_pages_unavailable", "owner_event_pages_truncated",
+                "owner_session_states_unavailable",
+                "selection_policy",
+            )
+            if key in claim_lifecycle_source
+        }
     if activity_source.get("integration_eligibility_events_considered", 0):
         compact_activity_source.update({
             key: activity_source[key]
@@ -3326,6 +3349,72 @@ def _compact_projection(
                 if key in reference
             }
         compact_claim_coordination.append(compact_item)
+    compact_claim_lifecycle_correlations = []
+    raw_claim_lifecycle_correlations = activity.get(
+        "claim_lifecycle_correlations",
+    )
+    raw_claim_lifecycle_correlations = (
+        raw_claim_lifecycle_correlations
+        if isinstance(raw_claim_lifecycle_correlations, list) else []
+    )
+    for item in raw_claim_lifecycle_correlations[
+        :MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS
+    ]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 192)
+            for key in (
+                "identity", "repository", "owner_session_id", "claim_id",
+                "status", "causal_resolution_status",
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in (
+            "claim_lifecycle_event_count",
+            "claim_lifecycle_records_omitted",
+            "related_session_activity_count",
+        ):
+            if type(item.get(key)) is int and item[key] >= 0:
+                compact_item[key] = item[key]
+        page = item.get("owner_event_page")
+        if isinstance(page, dict):
+            compact_item["owner_event_page"] = {
+                key: page[key]
+                for key in ("status", "truncated", "limit")
+                if key in page
+            }
+        lifecycle_events = item.get("claim_lifecycle_events")
+        if isinstance(lifecycle_events, list):
+            compact_lifecycle_events = []
+            for lifecycle_event in lifecycle_events[:1]:
+                if not isinstance(lifecycle_event, dict):
+                    continue
+                compact_event = {
+                    key: _short_text(lifecycle_event[key], 192)
+                    for key in ("action",)
+                    if isinstance(lifecycle_event.get(key), str)
+                }
+                event_reference = lifecycle_event.get("event_reference")
+                if isinstance(event_reference, dict):
+                    compact_event["event_reference"] = {
+                        key: event_reference[key]
+                        for key in ("identity", "sequence", "type")
+                        if key in event_reference
+                    }
+                compact_lifecycle_events.append(compact_event)
+            compact_item["claim_lifecycle_events"] = compact_lifecycle_events
+            omitted_lifecycle_events = max(
+                0, len(lifecycle_events) - len(compact_lifecycle_events),
+            )
+            if omitted_lifecycle_events:
+                compact_item[
+                    "claim_lifecycle_events_projection_truncated"
+                ] = True
+                compact_item[
+                    "claim_lifecycle_events_projection_omitted_count"
+                ] = omitted_lifecycle_events
+        compact_claim_lifecycle_correlations.append(compact_item)
     compact_authority_denials = []
     raw_authority_denials = activity.get("authority_denials")
     raw_authority_denials = (
@@ -3345,7 +3434,11 @@ def _compact_projection(
             if isinstance(item.get(key), str)
         }
         if isinstance(item.get("claim_conflict"), dict):
-            compact_item["claim_conflict"] = item["claim_conflict"]
+            compact_conflict = dict(item["claim_conflict"])
+            blocker = compact_conflict.get("blocking_claim")
+            if isinstance(blocker, dict):
+                compact_conflict["blocking_claim"] = dict(blocker)
+            compact_item["claim_conflict"] = compact_conflict
         preflight_state = item.get("repository_preflight_state")
         if isinstance(preflight_state, dict):
             compact_item["repository_preflight_state"] = {
@@ -3424,7 +3517,10 @@ def _compact_projection(
                 continue
             compact_overlap = {
                 key: _short_text(overlap.get(key), 160)
-                for key in ("session_id", "claim_id", "overlap_reason")
+                for key in (
+                    "session_id", "claim_id", "overlap_reason",
+                    "claim_lifecycle_correlation_identity",
+                )
                 if isinstance(overlap.get(key), str)
             }
             scope = _authority_conflict_scope(
@@ -3504,10 +3600,38 @@ def _compact_projection(
             ]
         blockers = item.get("blocking_claims")
         if isinstance(blockers, list):
-            compact_item["blocking_claims"] = [
-                blocker for blocker in blockers[:4]
-                if isinstance(blocker, dict)
-            ]
+            compact_blockers = []
+            for blocker in blockers[:4]:
+                if not isinstance(blocker, dict):
+                    continue
+                compact_blocker = {
+                    key: _short_text(blocker[key], 160)
+                    for key in ("session_id", "claim_id")
+                    if isinstance(blocker.get(key), str)
+                }
+                if type(blocker.get("occurrence_count")) is int:
+                    compact_blocker["occurrence_count"] = blocker[
+                        "occurrence_count"
+                    ]
+                scope = _authority_conflict_scope(
+                    blocker.get("scope"), item.get("repository"),
+                )
+                if scope is not None:
+                    compact_blocker["scope"] = scope
+                current_state = blocker.get("current_claim_state")
+                if isinstance(current_state, dict):
+                    compact_blocker["current_claim_state"] = {
+                        key: current_state[key]
+                        for key in (
+                            "basis", "claim_version", "blocking_status",
+                            "recovery_verdict", "freshness",
+                            "owner_liveness_evidence_status",
+                            "recorded_owner_relation",
+                        )
+                        if key in current_state
+                    }
+                compact_blockers.append(compact_blocker)
+            compact_item["blocking_claims"] = compact_blockers
         references = item.get("supporting_events")
         if isinstance(references, list):
             compact_item["supporting_events"] = [
@@ -3559,6 +3683,25 @@ def _compact_projection(
         compact_activity["claim_coordination"] = compact_claim_coordination
         if len(raw_claim_coordination) > len(compact_claim_coordination):
             compact_activity["claim_coordination_truncated"] = True
+    if (raw_claim_lifecycle_correlations
+            or isinstance(activity_source.get("claim_lifecycle_correlation"), dict)):
+        lifecycle_source = activity_source.get("claim_lifecycle_correlation")
+        lifecycle_source = lifecycle_source if isinstance(lifecycle_source, dict) else {}
+        lifecycle_count = lifecycle_source.get("correlation_records_considered")
+        if type(lifecycle_count) is not int:
+            lifecycle_count = len(raw_claim_lifecycle_correlations)
+        compact_activity["claim_lifecycle_correlation_count"] = lifecycle_count
+        compact_activity["claim_lifecycle_correlations_returned"] = len(
+            compact_claim_lifecycle_correlations,
+        )
+        compact_activity["claim_lifecycle_correlations_omitted_count"] = max(
+            0, lifecycle_count - len(compact_claim_lifecycle_correlations),
+        )
+        compact_activity["claim_lifecycle_correlations"] = (
+            compact_claim_lifecycle_correlations
+        )
+        if lifecycle_count > len(compact_claim_lifecycle_correlations):
+            compact_activity["claim_lifecycle_correlations_truncated"] = True
     if (activity_source.get("rpc_operation_capture_count") is not None
             or raw_rpc_operations or raw_rpc_summary):
         compact_activity["rpc_operation_count"] = activity.get(
@@ -3769,6 +3912,57 @@ def _compact_projection(
             "context_pressure_candidate_count", len(compact_context_candidates),
         )
         result["context_pressure_candidates"] = compact_context_candidates
+    raw_activity = projection.get("session_activity")
+    raw_activity = raw_activity if isinstance(raw_activity, dict) else {}
+    raw_correlations = raw_activity.get("claim_lifecycle_correlations")
+    raw_correlations = raw_correlations if isinstance(raw_correlations, list) else []
+    has_preflight_lifecycle_correlation = any(
+        isinstance(correlation, dict)
+        and any(
+            isinstance(reference, dict)
+            and reference.get("kind") == "integration-eligibility"
+            for reference in (
+                correlation.get("related_session_activity")
+                if isinstance(correlation.get("related_session_activity"), list)
+                else []
+            )
+        )
+        for correlation in raw_correlations
+    )
+
+    def omit_compact_claim_lifecycle_correlation(
+        removed: dict[str, Any],
+    ) -> None:
+        activity_result = result["session_activity"]
+        returned = len(activity_result.get("claim_lifecycle_correlations", []))
+        total = activity_result.get("claim_lifecycle_correlation_count", returned)
+        activity_result["claim_lifecycle_correlations_returned"] = returned
+        activity_result["claim_lifecycle_correlations_omitted_count"] = max(
+            0, total - returned,
+        )
+        correlation_identity = removed.get("identity")
+        if not isinstance(correlation_identity, str):
+            return
+        for denial in activity_result.get("authority_denials", []):
+            if not isinstance(denial, dict):
+                continue
+            conflict = denial.get("claim_conflict")
+            blocker = (
+                conflict.get("blocking_claim")
+                if isinstance(conflict, dict) else None
+            )
+            if (isinstance(blocker, dict)
+                    and blocker.get("claim_lifecycle_correlation_identity")
+                    == correlation_identity):
+                blocker.pop("claim_lifecycle_correlation_identity", None)
+        for eligibility in activity_result.get("integration_eligibility", []):
+            if not isinstance(eligibility, dict):
+                continue
+            for overlap in eligibility.get("coordination_overlaps", []):
+                if (isinstance(overlap, dict)
+                        and overlap.get("claim_lifecycle_correlation_identity")
+                        == correlation_identity):
+                    overlap.pop("claim_lifecycle_correlation_identity", None)
     # The selected fields are individually bounded. This final reduction also
     # accounts for unusual but valid identifiers and reference paths.
     while len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")) > max_result_bytes:
@@ -3866,6 +4060,58 @@ def _compact_projection(
             result["pressure_hypotheses"].pop()
         elif result["improvement_relations"]:
             result["improvement_relations"].pop(0)
+        elif any(
+            isinstance(item, dict)
+            and isinstance(item.get("coordination_overlaps"), list)
+            and any(
+                isinstance(overlap, dict)
+                and ("overlap_reason" in overlap or "scope" in overlap)
+                for overlap in item["coordination_overlaps"]
+            )
+            for item in activity_result.get("integration_eligibility", [])
+        ):
+            eligibility = next(
+                item for item in reversed(
+                    activity_result["integration_eligibility"],
+                )
+                if isinstance(item, dict)
+                and isinstance(item.get("coordination_overlaps"), list)
+                and any(
+                    isinstance(overlap, dict)
+                    and ("overlap_reason" in overlap or "scope" in overlap)
+                    for overlap in item["coordination_overlaps"]
+                )
+            )
+            overlap = next(
+                overlap for overlap in reversed(
+                    eligibility["coordination_overlaps"],
+                )
+                if isinstance(overlap, dict)
+                and ("overlap_reason" in overlap or "scope" in overlap)
+            )
+            field = (
+                "overlap_reason" if "overlap_reason" in overlap else "scope"
+            )
+            overlap.pop(field)
+            eligibility[
+                "coordination_overlap_details_projection_truncated"
+            ] = True
+            eligibility[
+                "coordination_overlap_detail_fields_omitted_count"
+            ] = eligibility.get(
+                "coordination_overlap_detail_fields_omitted_count", 0,
+            ) + 1
+        elif (has_preflight_lifecycle_correlation
+              and result["session_activity"].get(
+                  "claim_lifecycle_correlations",
+              )):
+            removed = result["session_activity"][
+                "claim_lifecycle_correlations"
+            ].pop()
+            result["session_activity"][
+                "claim_lifecycle_correlations_truncated"
+            ] = True
+            omit_compact_claim_lifecycle_correlation(removed)
         elif result["session_activity"].get("integration_eligibility"):
             result["session_activity"]["integration_eligibility"].pop()
             result["session_activity"]["integration_eligibility_truncated"] = True
@@ -3901,6 +4147,17 @@ def _compact_projection(
         elif result["session_activity"].get("claim_coordination"):
             result["session_activity"]["claim_coordination"].pop()
             result["session_activity"]["claim_coordination_truncated"] = True
+        elif (not has_preflight_lifecycle_correlation
+              and result["session_activity"].get(
+                  "claim_lifecycle_correlations",
+              )):
+            removed = result["session_activity"][
+                "claim_lifecycle_correlations"
+            ].pop()
+            result["session_activity"][
+                "claim_lifecycle_correlations_truncated"
+            ] = True
+            omit_compact_claim_lifecycle_correlation(removed)
         elif result["session_activity"].get("authority_denial_candidates"):
             result["session_activity"]["authority_denial_candidates"].pop()
             result["session_activity"]["authority_denial_candidates_truncated"] = True
@@ -9567,6 +9824,413 @@ def _claim_coordination_event_projection(
     return row
 
 
+def _claim_event_identity_matches(
+    event: dict[str, Any], *, repository: str, claim_id: str,
+) -> bool:
+    """Match an event to a claim only through an exact recorded identity."""
+    payload = event.get("payload")
+    if not isinstance(payload, dict):
+        return False
+    event_repository = payload.get("repository")
+    if event_repository is not None and event_repository != repository:
+        return False
+    identities = {
+        payload.get(key)
+        for key in ("claim_identity", "claim_id", "target_claim_id")
+        if isinstance(payload.get(key), str)
+    }
+    released = payload.get("released")
+    if isinstance(released, list):
+        identities.update(item for item in released if isinstance(item, str))
+    recovered_from = payload.get("recovered_from")
+    if isinstance(recovered_from, list):
+        identities.update(
+            item.get("claim_id") for item in recovered_from
+            if isinstance(item, dict) and isinstance(item.get("claim_id"), str)
+        )
+    return claim_id in identities
+
+
+def _claim_owner_event_page(
+    store: Any, owner_session_id: str,
+) -> dict[str, Any] | None:
+    """Read a bounded owner event tail; never fall back to an unbounded log."""
+    snapshot_reader = getattr(store, "load_snapshot", None)
+    owner_state_status = "unavailable"
+    if callable(snapshot_reader):
+        try:
+            owner_state_status = (
+                "present" if isinstance(snapshot_reader(owner_session_id), dict)
+                else "not-found"
+            )
+        except (LifecycleError, StoreIntegrityFailure, StoreUnavailable,
+                OSError, TypeError, ValueError):
+            owner_state_status = "unavailable"
+    page_reader = getattr(store, "read_event_page", None)
+    tail_reader = getattr(store, "read_event_tail", None)
+    try:
+        if callable(page_reader):
+            page = page_reader(
+                owner_session_id, limit=MAX_SESSION_CLAIM_OWNER_EVENT_PAGE,
+            )
+        elif callable(tail_reader):
+            events, event_count = tail_reader(
+                owner_session_id, limit=MAX_SESSION_CLAIM_OWNER_EVENT_PAGE,
+            )
+            page = {
+                "events": events,
+                "event_count": event_count,
+                "truncated": (
+                    type(event_count) is int and isinstance(events, list)
+                    and event_count > len(events)
+                ),
+            }
+        else:
+            return None
+    except (LifecycleError, StoreIntegrityFailure, StoreUnavailable,
+            OSError, TypeError, ValueError):
+        return None
+    if (
+        not isinstance(page, dict)
+        or not isinstance(page.get("events"), list)
+        or type(page.get("event_count")) is not int
+        or page["event_count"] < 0
+        or type(page.get("truncated")) is not bool
+        or page["event_count"] < len(page["events"])
+    ):
+        return None
+    events = [item for item in page["events"] if isinstance(item, dict)]
+    overflow = len(events) > MAX_SESSION_CLAIM_OWNER_EVENT_PAGE
+    if overflow:
+        events = events[-MAX_SESSION_CLAIM_OWNER_EVENT_PAGE:]
+    return {
+        "events": events,
+        "event_count": page["event_count"],
+        "truncated": (
+            page["truncated"] or overflow
+            or page["event_count"] > len(events)
+        ),
+        "event_records_considered": len(events),
+        "owner_session_state_status": owner_state_status,
+    }
+
+
+def _session_claim_lifecycle_correlations(
+    session: Any, *, selected_session_id: str,
+    selected_events: list[dict[str, Any]], selected_event_count: int,
+    selected_event_window_truncated: bool,
+    denial_records: list[dict[str, Any]],
+    integration_eligibility_records: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Correlate claim transitions with exact denial/preflight claim references."""
+    relations: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    identifier = re.compile(r"[A-Za-z0-9][A-Za-z0-9:._-]{0,159}")
+
+    def add_relation(
+        repository: Any, owner_session_id: Any, claim_id: Any,
+        activity_kind: str, activity_record: dict[str, Any],
+    ) -> None:
+        if (
+            not _is_repository_identity(repository)
+            or not isinstance(owner_session_id, str)
+            or not identifier.fullmatch(owner_session_id)
+            or not isinstance(claim_id, str)
+            or not identifier.fullmatch(claim_id)
+        ):
+            return
+        key = (repository, owner_session_id, claim_id)
+        references = relations.setdefault(key, [])
+        event_reference = activity_record.get("event_reference")
+        event_identity = (
+            event_reference.get("identity")
+            if isinstance(event_reference, dict) else None
+        )
+        if not isinstance(event_identity, str):
+            return
+        if any(
+            item.get("event_reference", {}).get("identity") == event_identity
+            for item in references
+        ):
+            return
+        reference: dict[str, Any] = {
+            "kind": activity_kind,
+            "event_reference": event_reference,
+        }
+        for key_name in (
+            "action", "campaign_id", "work_intent_id",
+            "work_intent_reference_status",
+        ):
+            value = activity_record.get(key_name)
+            if isinstance(value, str):
+                reference[key_name] = value
+        references.append(reference)
+
+    for denial in denial_records:
+        conflict = denial.get("claim_conflict")
+        blocker = (
+            conflict.get("blocking_claim")
+            if isinstance(conflict, dict) else None
+        )
+        if isinstance(blocker, dict):
+            add_relation(
+                conflict.get("repository"), blocker.get("session_id"),
+                blocker.get("claim_id"), "authority-denial", denial,
+            )
+    for eligibility in integration_eligibility_records:
+        for overlap in eligibility.get("coordination_overlaps", []):
+            if isinstance(overlap, dict):
+                add_relation(
+                    eligibility.get("repository"), overlap.get("session_id"),
+                    overlap.get("claim_id"), "integration-eligibility",
+                    eligibility,
+                )
+
+    ordered_keys = list(relations)
+    selected_keys = ordered_keys[
+        :MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS
+    ]
+    owner_sessions = list(dict.fromkeys(key[1] for key in selected_keys))
+    foreign_owner_sessions = [
+        owner_session_id for owner_session_id in owner_sessions
+        if owner_session_id != selected_session_id
+    ]
+    selected_foreign_owner_sessions = foreign_owner_sessions[
+        :MAX_SESSION_CLAIM_OWNER_EVENT_SESSIONS
+    ]
+    store = getattr(session, "store", None)
+    pages: dict[str, dict[str, Any] | None] = {}
+    if selected_session_id in owner_sessions:
+        local_events = selected_events[-MAX_SESSION_CLAIM_OWNER_EVENT_PAGE:]
+        pages[selected_session_id] = {
+            "events": local_events,
+            "event_count": selected_event_count,
+            "truncated": (
+                selected_event_window_truncated
+                or selected_event_count > len(local_events)
+            ),
+            "event_records_considered": len(local_events),
+            "owner_session_state_status": "selected-session-snapshot",
+        }
+    for owner_session_id in selected_foreign_owner_sessions:
+        pages[owner_session_id] = _claim_owner_event_page(
+            store, owner_session_id,
+        )
+
+    correlations: list[dict[str, Any]] = []
+    owner_pages_unavailable: set[str] = set()
+    owner_pages_truncated: set[str] = set()
+    owner_states_unavailable: set[str] = set()
+    for repository, owner_session_id, claim_id in selected_keys:
+        correlation_id = "clmlife_" + digest_hex({
+            "repository": repository,
+            "owner_session_id": owner_session_id,
+            "claim_id": claim_id,
+        }, length=16)
+        owner_selected = (
+            owner_session_id == selected_session_id
+            or owner_session_id in selected_foreign_owner_sessions
+        )
+        page = pages.get(owner_session_id) if owner_selected else None
+        if not owner_selected:
+            page_status = "owner-session-lookup-limit"
+        elif page is None:
+            page_status = "owner-event-page-unavailable"
+            owner_pages_unavailable.add(owner_session_id)
+        else:
+            page_status = "read"
+            if page["truncated"]:
+                owner_pages_truncated.add(owner_session_id)
+            if page.get("owner_session_state_status") not in {
+                "present", "selected-session-snapshot",
+            }:
+                owner_states_unavailable.add(owner_session_id)
+        matching_records = []
+        matching_invalid = 0
+        if isinstance(page, dict):
+            for event in page["events"]:
+                event_type = event.get("type")
+                if (
+                    not isinstance(event_type, str)
+                    or (
+                        event_type not in CLAIM_COORDINATION_EVENT_ACTIONS
+                        and event_type != "lease.recovered-and-acquired"
+                    )
+                    or not _claim_event_identity_matches(
+                        event, repository=repository, claim_id=claim_id,
+                    )
+                ):
+                    continue
+                projected = (
+                    _claim_recovery_event_projection(event, owner_session_id)
+                    if event_type == "lease.recovered-and-acquired"
+                    else _claim_coordination_event_projection(
+                        event, owner_session_id,
+                    )
+                )
+                if projected is None:
+                    matching_invalid += 1
+                    continue
+                projected["owner_session_id"] = owner_session_id
+                projected["matched_claim_id"] = claim_id
+                projected["relation_basis"] = (
+                    "exact-owner-session-and-claim-identity;repository-checked-if-recorded"
+                )
+                matching_records.append(projected)
+        matching_records.sort(
+            key=lambda item: item["event_reference"]["sequence"],
+        )
+        valid_match_count = len(matching_records)
+        returned_records = list(reversed(matching_records))[
+            :MAX_SESSION_CLAIM_LIFECYCLE_EVENTS_PER_CORRELATION
+        ]
+        if page is None:
+            status = page_status
+        elif page.get("owner_session_state_status") not in {
+            "present", "selected-session-snapshot",
+        }:
+            state_status = page.get("owner_session_state_status")
+            state_suffix = (
+                "snapshot-not-found" if state_status == "not-found"
+                else "state-unavailable"
+            )
+            status = f"matching-events-owner-{state_suffix}" if returned_records else (
+                f"owner-{state_suffix}"
+            )
+        elif returned_records and page["truncated"]:
+            status = "matching-events-in-truncated-owner-tail"
+        elif returned_records:
+            status = "matching-events-in-owner-history"
+        elif matching_invalid:
+            status = "matching-events-invalid-for-projection"
+        elif page["truncated"]:
+            status = "no-match-in-truncated-owner-tail"
+        else:
+            status = "no-matching-event-in-owner-history"
+        row = {
+            "identity": correlation_id,
+            "repository": repository,
+            "owner_session_id": owner_session_id,
+            "claim_id": claim_id,
+            "status": status,
+            "relation_basis": (
+                "exact repository, owner session, and claim identity; matching "
+                "lifecycle event references are inspected without causal inference"
+            ),
+            "causal_resolution_status": "not-established",
+            "related_session_activity": relations[(repository, owner_session_id, claim_id)][
+                :MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS
+            ],
+            "related_session_activity_count": len(
+                relations[(repository, owner_session_id, claim_id)],
+            ),
+            "related_session_activity_omitted_count": max(
+                0,
+                len(relations[(repository, owner_session_id, claim_id)])
+                - MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS,
+            ),
+            "claim_lifecycle_event_count": valid_match_count,
+            "claim_lifecycle_events": returned_records,
+            "claim_lifecycle_records_omitted": max(
+                0, valid_match_count - len(returned_records),
+            ),
+            "claim_lifecycle_records_invalid": matching_invalid,
+        }
+        if isinstance(page, dict):
+            row["owner_event_page"] = {
+                "status": "read",
+                "event_count": page["event_count"],
+                "event_records_considered": page["event_records_considered"],
+                "truncated": page["truncated"],
+                "limit": MAX_SESSION_CLAIM_OWNER_EVENT_PAGE,
+                "owner_session_state_status": (
+                    page["owner_session_state_status"]
+                ),
+            }
+        else:
+            row["owner_event_page"] = {
+                "status": page_status,
+                "limit": MAX_SESSION_CLAIM_OWNER_EVENT_PAGE,
+                "owner_session_state_status": (
+                    "unavailable" if page is None else
+                    page.get("owner_session_state_status", "unavailable")
+                ),
+            }
+        for activity_record in denial_records:
+            conflict = activity_record.get("claim_conflict")
+            blocker = (
+                conflict.get("blocking_claim")
+                if isinstance(conflict, dict) else None
+            )
+            if (
+                isinstance(blocker, dict)
+                and conflict.get("repository") == repository
+                and blocker.get("session_id") == owner_session_id
+                and blocker.get("claim_id") == claim_id
+            ):
+                blocker["claim_lifecycle_correlation_identity"] = correlation_id
+        for eligibility in integration_eligibility_records:
+            if eligibility.get("repository") != repository:
+                continue
+            for overlap in eligibility.get("coordination_overlaps", []):
+                if (
+                    isinstance(overlap, dict)
+                    and overlap.get("session_id") == owner_session_id
+                    and overlap.get("claim_id") == claim_id
+                ):
+                    overlap["claim_lifecycle_correlation_identity"] = correlation_id
+        correlations.append(row)
+
+    lookup_omitted = max(
+        0, len(foreign_owner_sessions) - len(selected_foreign_owner_sessions),
+    )
+    correlation_omitted = max(0, len(ordered_keys) - len(selected_keys))
+    incomplete = bool(
+        lookup_omitted or correlation_omitted or owner_pages_unavailable
+        or owner_pages_truncated
+        or any(item.get("claim_lifecycle_records_invalid", 0) for item in correlations)
+        or any(item.get("claim_lifecycle_records_omitted", 0) for item in correlations)
+        or any(item.get("related_session_activity_omitted_count", 0)
+               for item in correlations)
+        or any(
+            item.get("status") in {
+                "no-match-in-truncated-owner-tail",
+                "owner-state-unavailable",
+                "matching-events-owner-state-unavailable",
+                "owner-snapshot-not-found",
+                "matching-events-owner-snapshot-not-found",
+            }
+            for item in correlations
+        )
+    )
+    source = {
+        "status": (
+            "not-applicable" if not ordered_keys
+            else "partial" if incomplete else "available"
+        ),
+        "correlation_records_considered": len(ordered_keys),
+        "correlation_records_returned": len(correlations),
+        "correlation_records_omitted": correlation_omitted,
+        "related_session_activity_records_considered": sum(
+            item["related_session_activity_count"] for item in correlations
+        ),
+        "related_session_activity_records_omitted": sum(
+            item["related_session_activity_omitted_count"]
+            for item in correlations
+        ),
+        "owner_session_lookups_attempted": len(selected_foreign_owner_sessions),
+        "owner_session_lookup_limit": MAX_SESSION_CLAIM_OWNER_EVENT_SESSIONS,
+        "owner_session_lookups_omitted": lookup_omitted,
+        "owner_event_page_limit": MAX_SESSION_CLAIM_OWNER_EVENT_PAGE,
+        "owner_event_pages_unavailable": len(owner_pages_unavailable),
+        "owner_event_pages_truncated": len(owner_pages_truncated),
+        "owner_session_states_unavailable": len(owner_states_unavailable),
+        "selection_policy": (
+            "denial-and-integration-overlap-claim-references-first"
+        ),
+    }
+    return correlations, source
+
+
 def _resource_sample_payload(value: Any) -> tuple[dict[str, Any] | None, str | None]:
     """Select the privacy-minimized, bounded fields from one Monitor sample."""
     if not isinstance(value, dict) or value.get("schema") != SYSTEM_RESOURCE_SAMPLE_SCHEMA:
@@ -10732,6 +11396,31 @@ def _session_activity(
         valid_integration_eligibility_count
         - len(integration_eligibility_records),
     )
+    claim_lifecycle_correlations, claim_lifecycle_correlation_source = (
+        _session_claim_lifecycle_correlations(
+            session,
+            selected_session_id=session.session_id,
+            selected_events=events,
+            selected_event_count=event_count,
+            selected_event_window_truncated=event_window_truncated,
+            denial_records=denial_records,
+            integration_eligibility_records=integration_eligibility_records,
+        )
+    )
+    if claim_lifecycle_correlation_source["status"] != "not-applicable":
+        limits.append(
+            "Claim lifecycle correlations match exact repository, owner-session, "
+            "and claim identities across bounded event pages; shared identity "
+            "does not establish that a transition caused a denial or later preflight."
+        )
+    if claim_lifecycle_correlation_source["status"] == "partial":
+        if not status.startswith("partial"):
+            status = "partial"
+        limits.append(
+            "Claim lifecycle correlations use at most four bounded owner-session "
+            "event pages; omitted, unreadable, or truncated pages do not establish "
+            "that a matching transition is absent."
+        )
     eligible_preflights_by_claim: dict[
         tuple[str, str, str], dict[str, dict[str, Any]],
     ] = {}
@@ -11088,6 +11777,12 @@ def _session_activity(
                     "newest-sanitized-claim-transitions-in-selected-session-window"
                 ),
             } if claim_coordination_events else {}),
+            **({
+                "claim_lifecycle_correlation": (
+                    claim_lifecycle_correlation_source
+                ),
+            } if claim_lifecycle_correlation_source.get("status")
+                != "not-applicable" else {}),
             "invocation_events_considered": len(invocation_events),
             "completion_events_considered": len(completion_events),
             "invocation_records_omitted": invocations_omitted,
@@ -11149,6 +11844,9 @@ def _session_activity(
             "claim_coordination_count": len(claim_coordination),
             "claim_coordination": claim_coordination,
         } if claim_coordination_events else {}),
+        **({
+            "claim_lifecycle_correlations": claim_lifecycle_correlations,
+        } if claim_lifecycle_correlations else {}),
         "capabilities": capabilities,
         "capability_delivery": capability_delivery,
         "measurement_limits": limits,
