@@ -1,0 +1,78 @@
+{
+  "captured_at": "2026-10-26T11:22:00Z",
+  "identity": "ev_environment_observation_contract_pressure_20261026",
+  "measurement_basis": "live-campaign-state-environmental-capability-projection-and-exact-content-addressed-observation-reference",
+  "not_measured": [
+    "independent truth of every operational field in the original observation",
+    "cross-session recurrence",
+    "downstream agent discovery or use"
+  ],
+  "observation": {
+    "kind": "environmental-observation-excluded-by-record-contract",
+    "outcome": {
+      "affected_observation_content_sha256": "73f81927b8a7796eb2f13578725f9ee69415e3900f5043d51b754228d64130dc",
+      "affected_observation_identity": "ev_environment_same_session_claim_composition_revalidation_20261026",
+      "contract_diagnostics": [
+        "missing-observation-request",
+        "missing-observation-outcome-or-projection-summary"
+      ],
+      "interpretation_limit": "The bytes matched their recorded digest, but the missing request and outcome fields kept this authentic operation record out of pressure analysis. This is a record-integrity and projection usability pressure, not evidence that the recorded claim-revalidation operation failed.",
+      "observation_records_unavailable": 1,
+      "observation_records_verified": 6,
+      "observation_reference_diagnostic_count": 1,
+      "projection_status": "partial"
+    },
+    "request": {
+      "campaign_evidence_count": 11,
+      "campaign_state_checkpoint_id": "chk_a02cc5e825be5d1f",
+      "observed_repository_head": "331a48bb40ad4dadd98f6357c43226cc1604831a",
+      "operation": "campaign-state",
+      "projection_identity": "eci_e24a5e4618ad35aa",
+      "session_id": "ses_a07d4236d818e24f"
+    },
+    "source_interface": "MNCS Environment campaign-state environmental-capability projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Permit an exact, append-only correction to complete missing required request and outcome fields after content integrity and the complete resulting observation contract are checked; retain the original pointer and diagnostic.",
+    "basis": "At checkpoint chk_a02cc5e825be5d1f, an authentic session observation had a verified content pointer but the live environmental-capability projection reported it unavailable for exactly the two missing contract fields. No cross-session recurrence is established.",
+    "category": "verification-recovery",
+    "identity": "ph_environment_observation_contract_recovery_20261026",
+    "not_measured": [
+      "frequency in other campaign histories",
+      "agent work lost because of the projection gap",
+      "longitudinal recovery effectiveness"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "not-established-across-sessions",
+    "subsystem": "MNCS Environment environmental-observation loading, correction, and capability projection",
+    "title": "Integrity-verified environmental observations with missing request or outcome fields are excluded without an append-only recovery path"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "consumer_id": "codex-environment-capability",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_5719f1dc85592a13",
+    "session_id": "ses_a07d4236d818e24f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_5719f1dc85592a13",
+    "repository": "mncs-environment",
+    "session_id": "ses_a07d4236d818e24f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "331a48bb40ad4dadd98f6357c43226cc1604831a",
+      "identity": "ev_environment_same_session_claim_composition_revalidation_20261026",
+      "kind": "campaign-evidence-reference",
+      "path": "evidence/environmental-capability/same-session-claim-composition-revalidation-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "73f81927b8a7796eb2f13578725f9ee69415e3900f5043d51b754228d64130dc"
+    }
+  ]
+}

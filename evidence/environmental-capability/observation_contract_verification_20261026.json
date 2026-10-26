@@ -1,0 +1,129 @@
+{
+  "captured_at": "2026-10-26T11:36:22Z",
+  "identity": "ev_environment_observation_contract_verification_20261026",
+  "measurement_basis": "targeted-capability-intelligence-test-run-and-live-environmental-capability-cli-projection",
+  "not_measured": [
+    "cross-session recurrence and recovery frequency",
+    "agent discovery across other model configurations",
+    "long-term effectiveness"
+  ],
+  "observation": {
+    "kind": "environmental-observation-correction-verification",
+    "outcome": {
+      "interpretation_limit": "The target now appears in the projection with bounded request and outcome context while its original contract diagnostic remains visible. The projection remains partial and response-truncated; this verifies one campaign path, not recurrence reduction or long-term effectiveness.",
+      "projection_readback": {
+        "observation_records_considered": 12,
+        "observation_records_unavailable": 0,
+        "observation_records_verified": 8,
+        "observation_reference_diagnostic_count": 1,
+        "record_corrections_applied_count": 2,
+        "record_corrections_unverified_count": 0,
+        "response_truncated": true
+      },
+      "status": "partial",
+      "target_observation": {
+        "correction_observation_identity": "ev_environment_same_session_claim_observation_correction_20261026",
+        "correction_status": "completed-by-append-only-record",
+        "failure_event_sequence": 76,
+        "identity": "ev_environment_same_session_claim_composition_revalidation_20261026",
+        "post_commit_event_sequence": 131,
+        "recovery_event_sequence": 117,
+        "request_summary_operation": "complete-missing-required-fields-on-exact-observation-reference",
+        "source_contract_diagnostics": [
+          "missing-observation-request",
+          "missing-observation-outcome-or-projection-summary"
+        ],
+        "source_event_identities": [
+          "evt_46da9deab607ccc8",
+          "evt_85b22b0268de88ac",
+          "evt_067e00b413d872e5",
+          "evt_55fddce6db4ccc18",
+          "evt_285a27e6ae886f0b"
+        ]
+      },
+      "verification": {
+        "command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "failed": 0,
+        "passed": 117
+      }
+    },
+    "request": {
+      "command": "./scripts/mncs-env projections ses_a07d4236d818e24f --interpret environmental-capability --history-pages 1 --evidence-offset 0 --evidence-limit 32 --session-event-before-sequence 153 --session-event-limit 32",
+      "correction_observation_identity": "ev_environment_same_session_claim_observation_correction_20261026",
+      "implementation_commit": "5f0942f2230fa66389ec6e86dac2f8238f38dc61",
+      "operation": "post-change environmental-capability projection readback",
+      "projection_identity": "eci_f2ea64e5a6021d89",
+      "repository_head": "5f0942f2230fa66389ec6e86dac2f8238f38dc61",
+      "target_observation_identity": "ev_environment_same_session_claim_composition_revalidation_20261026"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection CLI and capability-intelligence tests"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Keep original diagnostics, correction provenance, bounded request context, and outcome context together in projection results.",
+    "basis": "This record verifies the one previously observed missing-field exclusion after an exact content-addressed correction and tested bounded summary support.",
+    "category": "verification-recovery",
+    "identity": "ph_environment_observation_contract_recovery_20261026",
+    "not_measured": [
+      "cross-session recurrence",
+      "longitudinal effectiveness",
+      "agent discovery across other models or configurations"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "not-established-across-sessions",
+    "subsystem": "MNCS Environment environmental-observation loading, correction, and capability projection",
+    "title": "Integrity-verified environmental observations with missing request or outcome fields are excluded without an append-only recovery path"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "consumer_id": "codex-environment-capability",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_5719f1dc85592a13",
+    "session_id": "ses_a07d4236d818e24f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_5719f1dc85592a13",
+    "repository": "mncs-environment",
+    "session_id": "ses_a07d4236d818e24f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "331a48bb40ad4dadd98f6357c43226cc1604831a",
+      "identity": "ev_environment_same_session_claim_composition_revalidation_20261026",
+      "kind": "campaign-evidence-reference",
+      "path": "evidence/environmental-capability/same-session-claim-composition-revalidation-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "73f81927b8a7796eb2f13578725f9ee69415e3900f5043d51b754228d64130dc"
+    },
+    {
+      "commit": "75b9dbb52eb216ca51468274d9ad3f1d6b54e967",
+      "identity": "ev_environment_same_session_claim_observation_correction_20261026",
+      "kind": "campaign-evidence-reference",
+      "path": "evidence/environmental-capability/same-session-claim-observation-correction-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "432cd1cc116161f2915bf18af286befb732cf8fd0abdf1aba98cea8a3bdf817e"
+    },
+    {
+      "commit": "5f0942f2230fa66389ec6e86dac2f8238f38dc61",
+      "identity": "mncs_environment_observation_contract_correction_implementation_5f0942f",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "4c11810a087ecacbd262f9d79d6ad01d669bda5222caaad60aca6b8f975c8350"
+    },
+    {
+      "commit": "5f0942f2230fa66389ec6e86dac2f8238f38dc61",
+      "identity": "mncs_environment_observation_contract_correction_tests_5f0942f",
+      "kind": "verification-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "1f5f9591a4009e6082a76fea23288678fdace10c5d865c615ebf1fe2c58dcd1d"
+    }
+  ]
+}

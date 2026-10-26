@@ -1,0 +1,80 @@
+{
+  "captured_at": "2026-10-26T11:36:22Z",
+  "identity": "ev_environment_observation_contract_improvement_link_20261026",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_observation_contract_recovery_20261026",
+    "basis": "The pre-change campaign projection excluded the exact target observation for missing request and outcome fields. After the append-only correction implementation and bounded request/outcome summary commit, the live projection includes the record, preserves the original diagnostic, reports zero unavailable observations, and links the correction record; the targeted 117-test suite passed.",
+    "identity": "im_environment_observation_contract_recovery_20261026",
+    "implementation_reference": {
+      "commit": "5f0942f2230fa66389ec6e86dac2f8238f38dc61",
+      "identity": "mncs_environment_observation_contract_correction_implementation_5f0942f",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "4c11810a087ecacbd262f9d79d6ad01d669bda5222caaad60aca6b8f975c8350"
+    },
+    "not_measured": [
+      "subsequent recurrence of this record-schema gap",
+      "cross-session coordination overhead",
+      "agent discovery and use across changing models"
+    ],
+    "subsequent_observation_identity": null,
+    "verification_observation_identity": "ev_environment_observation_contract_verification_20261026"
+  },
+  "measurement_basis": "verified-projection-and-test-evidence-linked-to-the-integrity-verified-implementation-source",
+  "not_measured": [
+    "future recurrence and downstream development consequences"
+  ],
+  "observation": {
+    "kind": "environmental-improvement-relation-recording",
+    "outcome": {
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The post-change projection and tests verify the targeted path. No subsequent campaign observation yet establishes recurrence reduction or long-term effects.",
+      "status": "relation-recorded",
+      "subsequent_observation_identity": "not-yet-recorded"
+    },
+    "request": {
+      "implementation_identity": "mncs_environment_observation_contract_correction_implementation_5f0942f",
+      "operation": "relate observed evidence-schema pressure to implementation and verification",
+      "pressure_hypothesis_identity": "ph_environment_observation_contract_recovery_20261026",
+      "verification_observation_identity": "ev_environment_observation_contract_verification_20261026"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "consumer_id": "codex-environment-capability",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_5719f1dc85592a13",
+    "session_id": "ses_a07d4236d818e24f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_5719f1dc85592a13",
+    "repository": "mncs-environment",
+    "session_id": "ses_a07d4236d818e24f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "5f0942f2230fa66389ec6e86dac2f8238f38dc61",
+      "identity": "mncs_environment_observation_contract_correction_implementation_5f0942f",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "4c11810a087ecacbd262f9d79d6ad01d669bda5222caaad60aca6b8f975c8350"
+    },
+    {
+      "commit": "5f0942f2230fa66389ec6e86dac2f8238f38dc61",
+      "identity": "mncs_environment_observation_contract_correction_tests_5f0942f",
+      "kind": "verification-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "1f5f9591a4009e6082a76fea23288678fdace10c5d865c615ebf1fe2c58dcd1d"
+    }
+  ]
+}
