@@ -8148,6 +8148,135 @@ class SessionTests(unittest.TestCase):
                 proposal_event["identity"],
             )
 
+    def test_provider_publish_runs_without_claim_and_keeps_overlap_advisory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository_root = root / "MNCS-Commons"
+            checkout = repository_root / ".worktrees" / "publish"
+            (repository_root / ".mncs").mkdir(parents=True)
+            (repository_root / ".mncs" / "project.json").write_text(
+                json.dumps({"repository": "MNCS-Commons"}) + "\n"
+            )
+            (repository_root / "seed.txt").write_text("publish proposal fixture\n")
+            subprocess.run(
+                ["git", "-C", str(repository_root), "init", "-b", "main"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "config", "user.name", "MNCS test"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "config", "user.email", "mncs-test@example.invalid"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "add", ".mncs/project.json", "seed.txt"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "commit", "-m", "seed publish fixture"],
+                check=True, capture_output=True, text=True,
+            )
+            checkout.parent.mkdir(parents=True)
+            branch = "campaign/publish-proposal"
+            subprocess.run(
+                ["git", "-C", str(repository_root), "worktree", "add", "-b",
+                 branch, str(checkout), "HEAD"],
+                check=True, capture_output=True, text=True,
+            )
+
+            session = make_session(
+                root,
+                intent={
+                    "goal": "publish an isolated proposal without persistent ownership",
+                    "repositories": ["MNCS-Commons"],
+                },
+            )
+            try:
+                session.snapshot["workspace"]["root"] = str(root)
+                session.snapshot["workspace"]["repositories"] = [{
+                    "name": "MNCS-Commons",
+                    "path": str(repository_root),
+                    "manifest_repository": "MNCS-Commons",
+                    "branch": "main",
+                }, {
+                    "name": "MNCS-Commons@publish",
+                    "path": str(checkout),
+                    "manifest_repository": "MNCS-Commons",
+                    "worktree_of": "MNCS-Commons",
+                    "branch": branch,
+                }]
+                session.snapshot["authority"]["writable"] = ["MNCS-Commons"]
+                session.snapshot["selected_checkouts"] = {"MNCS-Commons": {
+                    "repository": "MNCS-Commons",
+                    "path": str(checkout),
+                    "branch": branch,
+                }}
+                foreign_claim = claims.acquire(
+                    session.store,
+                    repository="MNCS-Commons",
+                    session_id="ses_foreign_publisher",
+                    consumer_id="foreign-publisher",
+                    basis=claims.BASIS_EXPLICIT,
+                    reason="record independent repository coordination activity",
+                    scope={"kind": "repository", "exclusive": False},
+                )
+                binding = capabilities.probe_availability(
+                    capabilities.bind(
+                        provider="mncs-commons", capability="campaign-publisher",
+                        contract_revision="1", entrypoint="e", address="/bin/echo",
+                        effects=["publish"], provider_root=str(checkout),
+                        provenance={"checkout": {
+                            "path": str(checkout), "branch": branch,
+                        }},
+                    )
+                )
+                session.snapshot["bindings"].append(binding)
+
+                with mock.patch.object(
+                    sessions.capabilities_module,
+                    "invoke",
+                    return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
+                ) as provider:
+                    result = session.invoke(
+                        "campaign-publisher", ["publish"],
+                        effect_target={
+                            "repository": "MNCS-Commons",
+                            "checkout": str(checkout),
+                            "branch": branch,
+                        },
+                    )
+
+                self.assertEqual(result["status"], "ok", result)
+                provider.assert_called_once()
+                eligibility = [
+                    event for event in session._log()
+                    if event.get("type") == "authority.integration-eligible"
+                ]
+                self.assertGreaterEqual(len(eligibility), 2)
+                for event in eligibility:
+                    payload = event["payload"]
+                    self.assertFalse(payload["persistent_claim_required"])
+                    self.assertEqual(payload["coordination_overlap_count"], 1)
+                    self.assertFalse(payload["operation_executed"])
+                invocation = next(
+                    event for event in session._log()
+                    if event.get("type") == "capability.invoked"
+                )
+                self.assertEqual(
+                    invocation["payload"]["effect_target"]["scope_kind"],
+                    "worktree",
+                )
+                active = claims.active_claims(session.store.read_claims())
+                self.assertEqual(list(active), [foreign_claim["claim_id"]])
+                self.assertNotIn(
+                    session.session_id,
+                    [item["session_id"] for item in active.values()],
+                )
+            finally:
+                session.close()
+
     def test_provider_effect_resolves_relative_selected_worktree_without_claim(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
