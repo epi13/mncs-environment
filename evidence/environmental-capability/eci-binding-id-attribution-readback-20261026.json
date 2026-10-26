@@ -1,0 +1,140 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_binding_id_attribution_readback_20261026",
+  "captured_at": "2026-10-26T05:16:34Z",
+  "measurement_basis": "authenticated Control environmental-capability projection for the selected campaign session; source checkout and returned projection schema recorded separately",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_227a10c47620d1e7",
+    "campaign_evidence_count_before_recording": 47,
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents through provenance-linked observations from authentic development, preserving uncertainty and using independent verification.",
+    "claim_ids": [
+      "claim:mncs-environment:paths:ab778ef9e4fd",
+      "claim:mncs-environment:paths:ff3316b8cc5e",
+      "claim:mncs-environment:worktree:370cbc78fb3c"
+    ]
+  },
+  "observation": {
+    "kind": "live-projection-readback-before-source-integration",
+    "source_interface": "MNCS Environment projections --interpret environmental-capability",
+    "query": {
+      "session_id": "ses_9ad3efb63438cf3d",
+      "evidence_offset": 43,
+      "evidence_limit": 4,
+      "session_event_before_sequence": 42,
+      "session_event_limit": 1,
+      "projection_identity": "eci_1473a98bfd1ab429",
+      "source_context_event": {
+        "identity": "evt_de29b1e1b27f5e61",
+        "sequence": 41,
+        "type": "environment.rpc.read_observed"
+      }
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "delivery_status": "ready",
+      "binding_count": 9,
+      "summary_schema_version_returned": "mncs.environment.capability-binding-evidence-summary/1",
+      "context_response_inclusion_status_counts": {
+        "identity-tuple-in-matched-response": 9
+      },
+      "context_response_binding_id_attribution_status_counts": "not-present-in-returned-schema",
+      "context_response_binding_id_list_status_counts": "not-present-in-returned-schema",
+      "context_response": {
+        "available_count": 9,
+        "available_binding_ids": [],
+        "binding_ids_status": "partial",
+        "available_identity_digest": "f17577d81f1195126dd8df5c24829a91a9043d297c42236037abd4e579432ec9",
+        "event_reference": {
+          "identity": "evt_de29b1e1b27f5e61",
+          "sequence": 41,
+          "type": "environment.rpc.read_observed"
+        }
+      }
+    },
+    "active_service_checkout": {
+      "repository": "mncs-environment",
+      "branch": "campaign/scoped-merge-publish-authority-20261020",
+      "head": "f345d619b442ec16cb549c68fb791caef911af9f",
+      "path": "/home/epi13/Documents/Projects/mncs-environment",
+      "clean": true
+    },
+    "implementation_under_review": {
+      "branch": "campaign/eci-context-binding-id-summary-20261026",
+      "head": "3b2aacfff5090978344a70cd70533b7146937d10",
+      "source_commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a"
+    },
+    "checkout_selection_attempt": {
+      "mechanism": "campaign-writable checkout scope grant for the already-writable mncs-environment repository",
+      "outcome": "rejected",
+      "reason": "selected worktree scope has an existing live claim: mncs-environment",
+      "publication_completed": false,
+      "claim_identity_returned": false,
+      "recovery_performed": false
+    },
+    "assessment": "The active Control projection still served schema /1 from the campaign root checkout, so this readback does not establish that the new schema /2 is live. The authenticated event still establishes nine tuple-level matches with partial binding-ID capture. The code change remains independently verified by regression and repository tests."
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_active_projection_checkout_lags_verified_source",
+    "title": "The active Environment projection can remain on an older checkout after a verified implementation is committed elsewhere",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Control Environment session checkout selection and projection serving",
+    "owner": "mncs-environment",
+    "basis": "Control selected the session against a clean root checkout at f345d619 while the verified summary implementation was committed in a registered worktree. The live projection returned summary schema /1. A campaign-writable checkout selection attempt reported an existing live claim without identifying its owner in the response.",
+    "actionable_recommendation": "Make the active checkout and its serving revision directly inspectable, and ensure an authorized campaign can select its exact claimed worktree after ordinary same-owner claim release or recovery without broadening repository authority.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether the running Environment service dynamically reloads source changes after checkout selection",
+      "which exact claim prevented the selected-checkout scope grant",
+      "whether the existing live claim corresponds to active work or a recoverable lease",
+      "whether schema /2 is served after integration and service revalidation"
+    ]
+  },
+  "measurement_limits": [
+    "This is a live readback of the active root checkout, not a readback of the schema /2 implementation.",
+    "A successful projection response does not establish agent receipt, discovery, or use.",
+    "The Control error did not identify the claim that prevented worktree selection; no claim was forcibly recovered.",
+    "The historical source event records partial binding-ID capture and does not identify why capture was partial."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "evt_de29b1e1b27f5e61",
+      "kind": "authenticated-session-event",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "sequence": 41,
+      "type": "environment.rpc.read_observed"
+    },
+    {
+      "identity": "mncs_environment_live_projection_eci_1473a98bfd1ab429",
+      "kind": "authenticated-live-projection",
+      "projection_identity": "eci_1473a98bfd1ab429",
+      "source_checkout_head": "f345d619b442ec16cb549c68fb791caef911af9f"
+    },
+    {
+      "identity": "mncs_environment_binding_attribution_implementation_3b50f67",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "mncs_env/capability_intelligence.py"
+    },
+    {
+      "identity": "mncs_environment_binding_attribution_improvement_evidence_3b2aacf",
+      "kind": "verified-implementation-evidence",
+      "repository": "mncs-environment",
+      "commit": "3b2aacfff5090978344a70cd70533b7146937d10",
+      "path": "evidence/environmental-capability/eci-binding-id-attribution-improvement-20261026.json"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

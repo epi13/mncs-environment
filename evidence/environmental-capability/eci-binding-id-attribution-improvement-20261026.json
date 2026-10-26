@@ -70,8 +70,8 @@
     "pressure": "ph_environment_eci_context_binding_id_attribution_loss_under_compaction",
     "implementation_commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
     "verification": "focused regression tests (4 passed), full repository suite (989 passed, 81 skipped), vertical proof (passed), campaign proofs (14 passed, 2 skipped, 0 failed), and static checks passed",
-    "subsequent_effectiveness": "not-assessed",
-    "interpretation": "The Environment projection now keeps the observed partial binding-ID capture status and source event identity available after per-binding rows are compacted. This improves inspectability of the pressure; it does not make Control capture a complete binding-ID list."
+    "subsequent_effectiveness": "not-assessed; active Control serving revision differs from the implementation checkout",
+    "interpretation": "The committed projection implementation preserves partial binding-ID capture status and source context-event identity after per-binding rows are compacted. The authenticated live Control readback still served summary schema /1 from the selected root checkout; schema /2 live serving is not yet verified."
   },
   "measurement_limits": [
     "This implementation preserves existing evidence; it does not change Control's response capture behavior.",

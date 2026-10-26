@@ -1,0 +1,78 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_binding_id_attribution_verification_20261026",
+  "captured_at": "2026-10-26T05:16:34Z",
+  "measurement_basis": "existing unit, repository, vertical, campaign proof, static, and authenticated projection readback results",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_227a10c47620d1e7",
+    "campaign_evidence_count_before_recording": 47,
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents through provenance-linked observations from authentic development, preserving uncertainty and using independent verification.",
+    "pressure_hypothesis_identity": "ph_environment_eci_context_binding_id_attribution_loss_under_compaction",
+    "implementation_evidence_identity": "ev_environment_eci_binding_id_attribution_improvement_20261026"
+  },
+  "observation": {
+    "kind": "independent-binding-id-attribution-verification",
+    "implementation_commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+    "focused_regressions": {
+      "command": "python3 -m pytest tests/test_capability_intelligence.py -q -k 'capability_use_is_attributed_to_the_exact_historical_binding or capability_binding_summary_survives_response_budget_trimming or session_activity_correlates_authenticated_control_read_operations or context_response_inclusion_uses_exact_bounded_binding_ids'",
+      "result": "4 passed"
+    },
+    "full_repository_suite": {
+      "command": "python3 -m pytest tests/ -q",
+      "result": "989 passed, 81 skipped in 697.13s"
+    },
+    "vertical_proof": {
+      "command": "python3 scripts/vertical_proof.py",
+      "result": "passed; 15 events, 3 checkpoints, 1 handoff"
+    },
+    "campaign_proofs": {
+      "command": "python3 scripts/campaign_proofs.py",
+      "result": "14 passed, 2 skipped, 0 failed",
+      "skip_reasons": [
+        "language.live-delta: host binary absent",
+        "memory.untouched: mncs-memory checkout absent"
+      ]
+    },
+    "static_checks": {
+      "compileall": "passed",
+      "ruff": "passed",
+      "git_diff_check": "passed",
+      "json_validation": "passed"
+    },
+    "live_projection_readback_identity": "ev_environment_eci_binding_id_attribution_readback_20261026",
+    "live_projection_result": "active Control checkout still returned summary schema /1; schema /2 live serving remains unverified",
+    "verification_status": "implementation-verified-live-serving-unverified"
+  },
+  "measurement_limits": [
+    "Unit and repository tests exercise the new implementation directly; Control live projection remained bound to a different checkout revision.",
+    "Campaign proof skips are environmental availability skips, not passes for those capabilities.",
+    "Long-term effectiveness and subsequent agent receipt or use have not been assessed."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_binding_attribution_source_commit_3b50f67",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "mncs_env/capability_intelligence.py"
+    },
+    {
+      "identity": "ev_environment_eci_binding_id_attribution_readback_20261026",
+      "kind": "live-projection-readback",
+      "path": "evidence/environmental-capability/eci-binding-id-attribution-readback-20261026.json"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
