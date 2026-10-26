@@ -11,7 +11,7 @@ import json
 import re
 from typing import Any
 
-SCHEMA = "mncs.environment.capability-accountability-links/2"
+SCHEMA = "mncs.environment.capability-accountability-links/3"
 MAX_LINKS = 4
 MAX_RESULT_BYTES = 8 * 1024
 MAX_RESULT_RESERVE_BYTES = MAX_RESULT_BYTES
@@ -139,10 +139,10 @@ def _correspondence_links(correspondence: dict[str, Any]):
             yield pressure_link
 
 
-def _native_implementation_sources(
+def _implementation_source_role_references(
     correspondence: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    """Expose one bounded, integrity-addressed source per native evidence role."""
+    """Expose bounded, integrity-addressed references by recorded source role."""
     role_evidence = correspondence.get("source_evidence_by_role")
     if not isinstance(role_evidence, dict):
         return []
@@ -170,6 +170,27 @@ def _native_implementation_sources(
             ),
         })
     return result
+
+
+def _implementation_ownership_assessment(
+    source_roles: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Keep source-role evidence distinct from implementation ownership."""
+    roles = [
+        role["role"] for role in source_roles
+        if isinstance(role, dict) and isinstance(role.get("role"), str)
+    ]
+    return {
+        "status": "not-established",
+        "source_role_evidence_status": (
+            "recorded-from-correspondence" if roles else "not-recorded"
+        ),
+        "source_roles": roles[:3],
+        "native_language_displacement_status": "not-established",
+        "interpretation_limit": (
+            "Role-tagged source pointers and content integrity establish traceability only; they do not establish complete implementation ownership or displacement of host functionality."
+        ),
+    }
 
 
 def _diagnostic_reference(value: Any) -> dict[str, str] | None:
@@ -707,6 +728,9 @@ def project(
         reference = _reference(pointer)
         if reference is None:
             return
+        implementation_source_roles = _implementation_source_role_references(
+            correspondence,
+        )
         link: dict[str, Any] = {
             "relationship_kind": relationship_kind,
             "owner_audit_identity": audit_identity,
@@ -723,8 +747,9 @@ def project(
                 _text(correspondence.get("source_evidence_status"), 128)
                 or "unavailable"
             ),
-            "native_implementation_source_references": (
-                _native_implementation_sources(correspondence)
+            "implementation_source_role_references": implementation_source_roles,
+            "implementation_ownership_assessment": (
+                _implementation_ownership_assessment(implementation_source_roles)
             ),
             "shared_pressure_source_reference": reference,
             "pressure_source_integrity_status": (
@@ -912,7 +937,7 @@ def project(
         > MAX_RESULT_BYTES and result["links"]
     ):
         source_roles = result["links"][0].get(
-            "native_implementation_source_references",
+            "implementation_source_role_references",
         )
         if isinstance(source_roles, list) and len(source_roles) > 2:
             # Keep the language contract and runtime provider as the primary
@@ -926,7 +951,7 @@ def project(
             source_roles.pop(
                 compiler_index if compiler_index is not None else 1,
             )
-            result["links"][0]["native_implementation_sources_truncated"] = True
+            result["links"][0]["implementation_source_roles_truncated"] = True
             continue
         result["links"].pop()
         result["link_count"] = len(result["links"])

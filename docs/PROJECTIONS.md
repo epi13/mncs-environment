@@ -227,12 +227,18 @@ pointer into a causal or migration-readiness claim.
 The same `implementation_accountability` view can expose a bounded
 `native_capability_correspondences` list. Each record links a target pressure
 identity to exact MNCS-language contract, runtime-provider, dispatch, test, and
-host-boundary source pointers. The projection reports source integrity by role
-and can join a shared pressure identity through a verified `commons_pressure_id`
-alias. The roles are campaign interpretations of source content; verified
-digests do not establish implementation ownership or suitability. A recorded
-test result remains distinct from source presence, consumer integration,
-agent usage, causal attribution, and migration readiness. These statuses stay
+host-boundary source pointers. Schema `/3` calls these
+`implementation_source_role_references` so a language contract is not grouped
+under a field that implies every referenced source is native implementation.
+The accompanying `implementation_ownership_assessment` reports
+`not-established` and keeps native-language displacement `not-established`.
+The projection reports source integrity by role and can join a shared pressure
+identity through a verified `commons_pressure_id` alias. Role labels are
+campaign interpretations of source content; verified digests establish
+traceability, not completeness, implementation ownership, or displacement of
+host functionality. A recorded test result remains distinct from source
+presence, consumer integration, agent usage, causal attribution, and migration
+readiness. These statuses stay
 `not-measured` or `not-established` until independent evidence supports them.
 
 Each correspondence also retains a bounded `source_work_context` from that

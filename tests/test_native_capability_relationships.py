@@ -256,6 +256,7 @@ def _accountability(pointer: dict[str, str]) -> dict:
 def test_shared_verified_source_pointer_links_owner_context_without_claiming_causality():
     result = capability_relationships.project(_accountability(_pointer()))
 
+    assert result["schema_version"] == "mncs.environment.capability-accountability-links/3"
     assert result["status"] == "linked-source-context"
     assert result["link_count"] == 1
     link = result["links"][0]
@@ -264,7 +265,7 @@ def test_shared_verified_source_pointer_links_owner_context_without_claiming_cau
     assert link["native_capability_source_evidence_status"] == (
         "required-source-blobs-and-pressure-alias-verified"
     )
-    implementation_roles = link["native_implementation_source_references"]
+    implementation_roles = link["implementation_source_role_references"]
     assert [item["role"] for item in implementation_roles] == [
         "language_contract", "compiler_support", "host_runtime_provider",
     ]
@@ -275,6 +276,17 @@ def test_shared_verified_source_pointer_links_owner_context_without_claiming_cau
     assert implementation_roles[2]["source_reference"]["path"].endswith(
         "/process_runtime.rs"
     )
+    ownership = link["implementation_ownership_assessment"]
+    assert ownership["status"] == "not-established"
+    assert ownership["source_role_evidence_status"] == "recorded-from-correspondence"
+    assert ownership["source_roles"] == [
+        "language_contract", "compiler_support", "host_runtime_provider",
+    ]
+    assert ownership["native_language_displacement_status"] == "not-established"
+    assert "do not establish complete implementation ownership" in (
+        ownership["interpretation_limit"]
+    )
+    assert "native_implementation_source_references" not in link
     assert link["shared_pressure_source_reference"]["identity"] == "MNCS-TEST-P-001"
     assert link["pressure_source_integrity_status"] == (
         "verified-in-both-linked-observations"
@@ -657,6 +669,13 @@ def test_derived_relationship_output_stays_within_reserved_projection_budget():
     assert len(json.dumps(result, separators=(",", ":")).encode()) <= (
         capability_relationships.MAX_RESULT_BYTES
     )
+    link = result["links"][0]
+    assert link["implementation_ownership_assessment"]["status"] == (
+        "not-established"
+    )
+    assert [item["role"] for item in link[
+        "implementation_source_role_references"
+    ]] == ["language_contract", "compiler_support", "host_runtime_provider"]
 
 
 def _context_activity(summary: dict | None, *, status: str = "partial") -> dict:
