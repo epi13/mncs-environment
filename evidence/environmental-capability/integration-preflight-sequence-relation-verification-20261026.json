@@ -1,0 +1,75 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_integration_preflight_sequence_relation_verification_20261026",
+  "captured_at": "2026-10-26T09:37:51Z",
+  "measurement_basis": "full capability-intelligence suite and source checks on the committed projection",
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment session activity capability-intelligence projection",
+    "request": {
+      "implementation_commit": "8cebfb0fb78cfea08418df473ec75c3f83d12c40",
+      "test_command": "python3 -m pytest -q tests/test_capability_intelligence.py",
+      "test_result": {
+        "passed": 113,
+        "failed": 0,
+        "elapsed_seconds": 4.94
+      },
+      "compile_check": "python3 -m compileall -q mncs_env: passed",
+      "diff_check": "git diff --check: passed"
+    },
+    "outcome": {
+      "verified_behavior": "A structured denial links to the earliest later integration-eligibility event in the selected window when repository, action, and blocker claim identity match. The linked preflight remains explicitly unexecuted, and the relation marks causality as not established.",
+      "verification_limit": "The regression uses controlled event records to test the relationship. The earlier authenticated campaign readback retained only a bounded subset of 17 preflight overlaps, so it does not establish whether the denied claim was among the retained overlaps. No post-change live projection readback was available."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents through provenance-linked observations and verified environmental improvements.",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_d55083969e46d580",
+    "campaign_evidence_count_before_recording": 81
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "not_measured": [
+    "whether the historical preflight record retained the denied claim identity",
+    "post-change projection output from the canonical campaign session",
+    "whether the relation changes agent decisions or improves coordination",
+    "whether any Git integration succeeded because of the later preflight"
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_later_preflight_relation_projection_8cebfb0",
+      "repository": "mncs-environment",
+      "commit": "8cebfb0fb78cfea08418df473ec75c3f83d12c40",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "a9ff228068041f8cb9b90ec20347092758a103b43b2bbc462290cb967a09f17f",
+      "kind": "committed-session-evidence-projection"
+    },
+    {
+      "identity": "mncs_environment_later_preflight_relation_tests_8cebfb0",
+      "repository": "mncs-environment",
+      "commit": "8cebfb0fb78cfea08418df473ec75c3f83d12c40",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "3ca4c619345bffacaaf9212158c56f66fda090181dba4a55bfa8d61d42aa5227",
+      "kind": "committed-projection-regressions"
+    },
+    {
+      "identity": "mncs_environment_later_preflight_relation_docs_8cebfb0",
+      "repository": "mncs-environment",
+      "commit": "8cebfb0fb78cfea08418df473ec75c3f83d12c40",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "855e672a17bd5c714fed81560814d7a35241563265c2a9b6507a2f990fdb4b59",
+      "kind": "committed-projection-documentation"
+    }
+  ]
+}
