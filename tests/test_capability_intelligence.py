@@ -1103,6 +1103,99 @@ def test_observation_correction_accepts_integrity_verified_read_only_source(
     assert _git(checkout, "status", "--porcelain") == ""
 
 
+def test_observation_correction_accepts_verified_source_outside_campaign_page(
+    tmp_path: Path,
+) -> None:
+    target = _observation(
+        "ev_environment_page_local_correction_target",
+        "ses_environment_page_local_correction",
+        "cmp_environment_page_local_correction",
+    )
+    session, state = _session(tmp_path, [target])
+    checkout = Path(session.snapshot["workspace"]["root"]) / "mncs-test"
+    checkout.mkdir(parents=True)
+    _git(checkout, "init", "--quiet")
+    _git(checkout, "config", "user.name", "test")
+    _git(checkout, "config", "user.email", "test@example.invalid")
+    source_path = checkout / "pressures/MNCS-TEST-P-001.json"
+    source_path.parent.mkdir(parents=True)
+    source_bytes = json.dumps({
+        "schema_version": "mncs-test.pressure/1",
+        "id": "MNCS-TEST-P-001",
+        "commons_pressure_id": "MNCS-TOOLING-B665F138D324",
+    }, sort_keys=True, separators=(",", ":")).encode()
+    source_path.write_bytes(source_bytes)
+    _git(checkout, "add", "pressures/MNCS-TEST-P-001.json")
+    _git(checkout, "commit", "--quiet", "-m", "pressure source")
+    source = {
+        "identity": "MNCS-TEST-P-001",
+        "repository": "mncs-test",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": "pressures/MNCS-TEST-P-001.json",
+        "sha256": hashlib.sha256(source_bytes).hexdigest(),
+        "kind": "repository-owner-runtime-and-tooling-pressure",
+    }
+    _register_workspace_source(
+        session, checkout, source, repository="mncs-test",
+        include_source_record=True,
+    )
+
+    correction = _observation(
+        "ev_environment_page_local_correction",
+        "ses_environment_page_local_correction",
+        "cmp_environment_page_local_correction",
+    )
+    correction.pop("pressure_hypothesis")
+    correction["supporting_sources"] = [source]
+    correction["record_correction"] = {
+        "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+        "target_reference": dict(state["evidence"][0]),
+        "corrected_field_paths": ["supporting_sources"],
+        "replacement_values": {"supporting_sources": [source]},
+        "reason": (
+            "Link a source whose blob is verified in a selected read-only "
+            "checkout, even though this campaign page does not register it."
+        ),
+    }
+    relative = "evidence/environmental-capability/page-local-correction.json"
+    raw = json.dumps(correction, sort_keys=True, separators=(",", ":")).encode()
+    correction_path = Path(session.snapshot["selected_checkouts"][
+        "mncs-environment"
+    ]["path"]) / relative
+    correction_path.parent.mkdir(parents=True, exist_ok=True)
+    correction_path.write_bytes(raw)
+    _git(correction_path.parents[2], "add", relative)
+    _git(correction_path.parents[2], "commit", "--quiet", "-m", "correction record")
+    state["evidence"].append({
+        "identity": correction["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(correction_path.parents[2], "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    })
+    state["evidence_count"] = len(state["evidence"])
+
+    result = capability_intelligence.project(session)
+
+    assert result["source"]["record_corrections_applied_count"] == 1
+    assert result["source"]["record_corrections_unverified_count"] == 0
+    corrected = next(
+        item for item in result["observations"]
+        if item["identity"] == target["identity"]
+    )
+    assert corrected["record_correction"]["status"] == (
+        "corrected-by-verified-record"
+    )
+    assert corrected["supporting_sources"][0]["status"] == (
+        "not-present-in-selected-campaign-evidence-window"
+    )
+    assert corrected["supporting_sources"][0]["content_integrity_status"] == (
+        "workspace-read-only-content-integrity-verified"
+    )
+    assert session.snapshot["authority"]["writable"] == ["mncs-environment"]
+    assert _git(checkout, "status", "--porcelain") == ""
+
+
 def test_append_only_evidence_reference_correction_recovers_exact_record(
     tmp_path: Path,
 ) -> None:

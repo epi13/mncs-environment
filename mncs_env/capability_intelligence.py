@@ -9347,6 +9347,7 @@ def project(
                             source, references,
                         ).get("status")) in {
                             "verified", "not-an-environmental-observation",
+                            "not-present-in-selected-campaign-evidence-window",
                         }
                         or (
                             source_status == "outside-selected-session"

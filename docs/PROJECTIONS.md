@@ -666,19 +666,22 @@ hypothesis only to describe the change should use `supporting-context`, so the
 same declaration is not counted as another observed pressure occurrence. An
 append-only correction can fix a previously published role while preserving the
 original record and its pointer.
-Each replacement source must appear in the selected campaign evidence window
-and have verified content integrity. A non-observation source in another
-workspace repository may remain `outside-selected-session` when the bounded,
-read-only workspace lookup verifies its exact commit, path, and digest; this
-does not select or claim that repository. An environmental-observation source
-outside the selected session is not accepted as a replacement. The projection
-applies a correction only when the exact target pointer and target record are
-verified and the replacement values differ from the target. It keeps the
-original record inspectable through its evidence reference and exposes the
-effective values with a link to the correction record. A target outside the
-selected pages remains explicitly unresolved; an invalid or conflicting
-correction is not applied. Corrections do not change an improvement relation
-or effectiveness assessment.
+Each replacement source must have verified content integrity. A source may
+already be registered in the selected campaign evidence window, or a
+non-observation source may be read through the bounded, read-only workspace
+lookup when its in-root checkout is uniquely resolved, then verified by exact
+commit, path, and digest. In the latter case, the projection reports
+`not-present-in-selected-campaign-evidence-window` for page-local registration
+while preserving the independent content-integrity result; it does not grant
+write authority or a claim on the source repository. An
+environmental-observation source outside the selected campaign evidence is
+not accepted as a replacement. The projection applies a correction only when
+the exact target pointer and target record are verified and the replacement
+values differ from the target. It keeps the original record inspectable through
+its evidence reference and exposes the effective values with a link to the
+correction record. A target outside the selected pages remains explicitly
+unresolved; an invalid or conflicting correction is not applied. Corrections
+do not change an improvement relation or effectiveness assessment.
 
 The query considers at most 32 campaign evidence references, reads at most 16
 observation records of 64 KiB each within one 8 second Git-read budget, and
