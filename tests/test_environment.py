@@ -3470,6 +3470,26 @@ class ToolchainTests(unittest.TestCase):
 
 
 class SessionTests(unittest.TestCase):
+    def test_context_lists_exact_binding_ids_for_available_capabilities(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            try:
+                binding_id = "cap_" + "a" * 64
+                session.snapshot["bindings"] = [{
+                    "binding_id": binding_id,
+                    "capability": "mncs-test:run",
+                    "provider": "mncs-test",
+                    "contract_revision": "r1",
+                    "availability": {"status": "available"},
+                }]
+                available = session.context()["capabilities"]["available"]
+
+                self.assertEqual(len(available), 1)
+                self.assertEqual(available[0]["binding_id"], binding_id)
+                self.assertEqual(available[0]["capability"], "mncs-test:run")
+            finally:
+                session.close()
+
     def test_declared_provider_accepts_exact_authenticated_external_worktree(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -7904,6 +7924,11 @@ class EntryFrictionTests(unittest.TestCase):
             self.assertEqual(context["protected_repositories"], ["mncs-memory"])
             self.assertIn("available", context["capabilities"])
             self.assertIn("unavailable_count", context["capabilities"])
+            self.assertTrue(all(
+                isinstance(item.get("binding_id"), str)
+                and item["binding_id"].startswith("cap_")
+                for item in context["capabilities"]["available"]
+            ))
             projection_action = context["actions"][
                 "environmental_capability_projection"
             ]["argv"]

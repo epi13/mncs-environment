@@ -2110,7 +2110,7 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     session, _ = _session(tmp_path, [record])
     session.snapshot["rpc_read_activity_count"] = 4
     session.snapshot["bindings"] = [{
-        "binding_id": "cap_projection_context_test",
+        "binding_id": "cap_" + "a" * 64,
         "provider": "mncs-test",
         "capability": "mncs-test:run",
         "contract_revision": "r1",
@@ -2183,7 +2183,7 @@ def test_session_activity_correlates_authenticated_control_read_operations(
                 "mncs.environment.rpc-read-activity/2"
             )
             payload["context_response_summary"] = {
-                "schema_version": "mncs.environment.context-response-summary/1",
+                "schema_version": "mncs.environment.context-response-summary/2",
                 "capture_status": "captured",
                 "capture_reason": None,
                 "context_schema_version": "mncs.environment.entry-context/1",
@@ -2194,6 +2194,8 @@ def test_session_activity_correlates_authenticated_control_read_operations(
                 "capabilities_truncated": False,
                 "available_identity_digest": context_identity_digest,
                 "identity_digest_status": "complete",
+                "available_binding_ids": ["cap_" + "a" * 64],
+                "binding_ids_status": "complete",
             }
         events.append({
             "identity": f"evt_rpc_read_{sequence}",
@@ -2222,7 +2224,7 @@ def test_session_activity_correlates_authenticated_control_read_operations(
             "payload": {
                 "capability": "mncs-test:run",
                 "provider": "mncs-test",
-                "binding_id": "cap_projection_context_test",
+                "binding_id": "cap_" + "a" * 64,
                 "contract_revision": "r1",
                 "provider_request_id": "req_rpc_capability_after_context",
             },
@@ -2235,7 +2237,7 @@ def test_session_activity_correlates_authenticated_control_read_operations(
             "payload": {
                 "capability": "mncs-test:run",
                 "provider": "mncs-test",
-                "binding_id": "cap_projection_context_test",
+                "binding_id": "cap_" + "a" * 64,
                 "contract_revision": "r1",
                 "provider_request_id": "req_rpc_capability_after_context",
                 "status": "succeeded",
@@ -2325,6 +2327,9 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert context_activity["response_summaries"][0][
         "available_identity_digest"
     ] == context_identity_digest
+    assert context_activity["response_summaries"][0][
+        "available_binding_ids"
+    ] == ["cap_" + "a" * 64]
     comparison = context_activity["response_summaries"][0][
         "binding_snapshot_comparison"
     ]
@@ -2336,14 +2341,12 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     binding_context_inclusion = activity["capability_delivery"]["bindings"][0][
         "context_response_inclusion"
     ]
-    assert binding_context_inclusion["status"] == (
-        "identity-tuple-in-matched-response"
-    )
+    assert binding_context_inclusion["status"] == "exact-binding-id-in-response"
     assert binding_context_inclusion["identity_basis"] == (
-        "capability-provider-contract-revision"
+        "exact-capability-binding-id"
     )
     assert binding_context_inclusion["binding_id_attribution_status"] == (
-        "not-carried-by-context-response-summary"
+        "exact-from-response"
     )
     assert binding_context_inclusion["supporting_events"][0]["identity"] == (
         "evt_rpc_read_24"
@@ -2405,6 +2408,9 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert compact_context_activity["response_summaries"][0][
         "binding_snapshot_comparison"
     ]["status"] == "matches-current-session-binding-snapshot"
+    assert compact_context_activity["response_summaries"][0][
+        "available_binding_ids"
+    ] == ["cap_" + "a" * 64]
     compact_comparison = compact_context_activity["response_summaries"][0][
         "binding_snapshot_comparison"
     ]
@@ -2413,9 +2419,7 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     compact_binding_inclusion = compact_delivery["bindings"][0][
         "context_response_inclusion"
     ]
-    assert compact_binding_inclusion["status"] == (
-        "identity-tuple-in-matched-response"
-    )
+    assert compact_binding_inclusion["status"] == "exact-binding-id-in-response"
     assert compact_binding_inclusion["supporting_events"][0]["identity"] == (
         "evt_rpc_read_24"
     )
@@ -2429,6 +2433,30 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert compact_sequence_relation["observed_pairs"][0][
         "invocation_event"
     ]["identity"] == "evt_rpc_capability_invoked_after_context"
+    context_event = next(event for event in events if event["sequence"] == 24)
+    current_context_summary = context_event["payload"]["context_response_summary"]
+    historical_context_summary = {
+        key: value for key, value in current_context_summary.items()
+        if key not in {"available_binding_ids", "binding_ids_status"}
+    }
+    historical_context_summary["schema_version"] = (
+        "mncs.environment.context-response-summary/1"
+    )
+    context_event["payload"]["context_response_summary"] = historical_context_summary
+    historical_inclusion = capability_intelligence.project(session)[
+        "session_activity"
+    ]["capability_delivery"]["bindings"][0]["context_response_inclusion"]
+    assert historical_inclusion["status"] == "identity-tuple-in-matched-response"
+    assert historical_inclusion["binding_id_attribution_status"] == (
+        "not-carried-by-historical-context-response-summary"
+    )
+    context_event["payload"]["context_response_summary"] = current_context_summary
+    context_event["payload"]["context_response_summary"][
+        "available_binding_ids"
+    ] = []
+    context_event["payload"]["context_response_summary"][
+        "binding_ids_status"
+    ] = "partial"
     assert any(
         "no binding revision" in limit
         for limit in compact_context_activity["measurement_limits"]
@@ -2445,9 +2473,6 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     ] == "evt_rpc_read_21"
     assert compact_activity["rpc_failure_candidates"][0]["distinct_session_count"] == 1
 
-    context_event = next(
-        event for event in events if event["sequence"] == 24
-    )
     context_event["payload"]["context_response_summary"]["unknown_count"] = 1
     unknown_mismatch = capability_intelligence.project(session)["session_activity"]
     unknown_comparison = unknown_mismatch["capability_delivery"][
@@ -2618,6 +2643,57 @@ def test_context_response_use_relation_preserves_temporal_and_missing_use_limits
     assert omitted_response_inclusion["reason"] == (
         "context-response-summaries-omitted"
     )
+
+
+def test_context_response_inclusion_uses_exact_bounded_binding_ids() -> None:
+    binding = {
+        "availability_status": "available",
+        "binding_id": "cap_" + "a" * 64,
+        "capability": "mncs-test:run",
+        "provider": "mncs-test",
+        "contract_revision": "r1",
+    }
+    event = {
+        "identity": "evt_context_binding_ids",
+        "sequence": 12,
+        "type": "environment.rpc.read_observed",
+    }
+    partially_listed_response = {
+        "capture_status": "captured",
+        "binding_ids_status": "partial",
+        "available_binding_ids": [binding["binding_id"]],
+        "event_reference": event,
+    }
+    exact = capability_intelligence._context_response_binding_inclusion(
+        binding, [partially_listed_response], [event],
+        context_operation_count=1, complete_history=False,
+    )
+    assert exact["status"] == "exact-binding-id-in-response"
+    assert exact["response_binding_ids_status"] == "partial"
+    assert exact["binding_id_attribution_status"] == "exact-from-response"
+
+    complete_other_binding_response = {
+        "capture_status": "captured",
+        "binding_ids_status": "complete",
+        "available_binding_ids": ["cap_" + "b" * 64],
+        "event_reference": event,
+    }
+    absent = capability_intelligence._context_response_binding_inclusion(
+        binding, [complete_other_binding_response], [event],
+        context_operation_count=1, complete_history=True,
+    )
+    assert absent["status"] == (
+        "binding-id-absent-from-complete-selected-responses"
+    )
+    assert absent["supporting_events"] == [event]
+
+    incomplete_absence = capability_intelligence._context_response_binding_inclusion(
+        binding, [{
+            **complete_other_binding_response,
+            "binding_ids_status": "partial",
+        }], [event], context_operation_count=1, complete_history=True,
+    )
+    assert incomplete_absence["status"] == "not-established"
 
 
 def test_session_activity_marks_truncated_authenticated_rpc_only_history_partial(

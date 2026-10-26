@@ -62,7 +62,8 @@ MAX_RPC_ACTIVITY_RECONCILIATION_EVENTS = 256
 MAX_RPC_READ_ACTIVITY_OBSERVATIONS = MAX_RPC_ACTIVITY_RECONCILIATION_EVENTS
 RPC_READ_ACTIVITY_EVENT = "environment.rpc.read_observed"
 RPC_READ_ACTIVITY_REQUEST_INDEX = "rpc_read_activity_request_index"
-CONTEXT_RESPONSE_SUMMARY_SCHEMA = "mncs.environment.context-response-summary/1"
+CONTEXT_RESPONSE_SUMMARY_SCHEMA = "mncs.environment.context-response-summary/2"
+_CONTEXT_RESPONSE_SUMMARY_SCHEMA_V1 = "mncs.environment.context-response-summary/1"
 CONTEXT_RESPONSE_SCHEMA_VERSION = "mncs.environment.entry-context/1"
 _CONTEXT_RESPONSE_UNAVAILABLE_REASONS = frozenset({
     "operation-failed", "stdout-unavailable", "response-too-large",
@@ -74,15 +75,23 @@ _CONTEXT_RESPONSE_PARTIAL_REASONS = frozenset({
 
 
 def is_valid_context_response_summary(value: Any) -> bool:
-    """Validate the redacted, versioned shape summary for session.context."""
-    expected_keys = {
+    """Validate current summaries and persisted summaries from before ID capture."""
+    v1_keys = {
         "schema_version", "capture_status", "capture_reason",
         "context_schema_version", "available_count", "listed_available_count",
         "unavailable_count", "unknown_count", "capabilities_truncated",
         "available_identity_digest", "identity_digest_status",
     }
-    if (not isinstance(value, dict) or set(value) != expected_keys
-            or value.get("schema_version") != CONTEXT_RESPONSE_SUMMARY_SCHEMA):
+    schema = value.get("schema_version") if isinstance(value, dict) else None
+    if schema == _CONTEXT_RESPONSE_SUMMARY_SCHEMA_V1:
+        expected_keys = v1_keys
+        has_binding_ids = False
+    elif schema == CONTEXT_RESPONSE_SUMMARY_SCHEMA:
+        expected_keys = v1_keys | {"available_binding_ids", "binding_ids_status"}
+        has_binding_ids = True
+    else:
+        return False
+    if not isinstance(value, dict) or set(value) != expected_keys:
         return False
     capture_status = value.get("capture_status")
     capture_reason = value.get("capture_reason")
@@ -94,6 +103,8 @@ def is_valid_context_response_summary(value: Any) -> bool:
     truncated = value.get("capabilities_truncated")
     identity_digest = value.get("available_identity_digest")
     identity_digest_status = value.get("identity_digest_status")
+    binding_ids = value.get("available_binding_ids")
+    binding_ids_status = value.get("binding_ids_status")
     if capture_status == "unavailable":
         return (
             isinstance(capture_reason, str)
@@ -103,6 +114,9 @@ def is_valid_context_response_summary(value: Any) -> bool:
             and truncated is None
             and identity_digest is None
             and identity_digest_status == "unavailable"
+            and (not has_binding_ids or (
+                binding_ids is None and binding_ids_status == "unavailable"
+            ))
         )
     if capture_status == "partial":
         return (
@@ -113,6 +127,9 @@ def is_valid_context_response_summary(value: Any) -> bool:
             and truncated is None
             and identity_digest is None
             and identity_digest_status == "unavailable"
+            and (not has_binding_ids or (
+                binding_ids is None and binding_ids_status == "unavailable"
+            ))
         )
     if (capture_status != "captured" or capture_reason is not None
             or context_schema_version != CONTEXT_RESPONSE_SCHEMA_VERSION
@@ -123,13 +140,34 @@ def is_valid_context_response_summary(value: Any) -> bool:
             or (not truncated and counts[0] != counts[1])):
         return False
     if identity_digest_status == "complete":
-        return (
+        digest_valid = (
             not truncated
             and counts[0] == counts[1]
             and isinstance(identity_digest, str)
             and re.fullmatch(r"[0-9a-f]{64}", identity_digest) is not None
         )
-    return identity_digest_status == "partial" and identity_digest is None
+    else:
+        digest_valid = identity_digest_status == "partial" and identity_digest is None
+    if not digest_valid:
+        return False
+    if not has_binding_ids:
+        return True
+    if binding_ids_status == "unavailable":
+        return binding_ids is None
+    if (binding_ids_status not in {"complete", "partial"}
+            or not isinstance(binding_ids, list)
+            or len(binding_ids) > 20
+            or any(not isinstance(item, str)
+                   or re.fullmatch(r"cap_[0-9a-f]{64}", item) is None
+                   for item in binding_ids)
+            or len(set(binding_ids)) != len(binding_ids)):
+        return False
+    if binding_ids_status == "complete":
+        return (
+            not truncated and counts[0] == counts[1]
+            and len(binding_ids) == counts[1]
+        )
+    return len(binding_ids) <= counts[1]
 
 
 def _request_operation_digest(
@@ -8068,6 +8106,7 @@ class Session:
             availability = binding.get("availability") or {}
             if availability.get("status") == "available":
                 available.append({
+                    "binding_id": binding.get("binding_id"),
                     "capability": binding.get("capability"),
                     "provider": binding.get("provider"),
                     "contract_revision": binding.get("contract_revision"),

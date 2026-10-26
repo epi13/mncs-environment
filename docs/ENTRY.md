@@ -199,6 +199,10 @@ Entry returns `mncs.environment.entry-context/1`: identities, lifecycle,
 consumer, configuration source, state directory/backend, workspace root,
 bounded project and capability summaries, authority, toolchain observation,
 readiness, recovery operations, and whether prior work was reused.
+Each listed available capability includes its opaque `binding_id` so later
+authenticated context-response evidence can be correlated to that exact
+session binding. Presence in this response does not establish consumer receipt,
+discovery, or successful use.
 When a campaign matches the authenticated continuation authority, the
 response also includes a compact campaign capsule with prior Environment
 sessions, checkpoints, claims, repository checkout identities, branch heads,

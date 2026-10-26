@@ -2451,11 +2451,20 @@ def _compact_projection(
             compact_summary = {
                 key: _short_text(summary[key], 128)
                 for key in (
-                    "capture_status", "capture_reason", "context_schema_version",
+                    "schema_version", "capture_status", "capture_reason",
+                    "context_schema_version",
                     "identity_digest_status", "available_identity_digest",
+                    "binding_ids_status",
                 )
                 if isinstance(summary.get(key), str)
             }
+            binding_ids = summary.get("available_binding_ids")
+            if isinstance(binding_ids, list):
+                compact_summary["available_binding_ids"] = [
+                    _short_text(item, 80)
+                    for item in binding_ids[:MAX_CONTEXT_RESPONSE_CAPABILITY_LIST]
+                    if isinstance(item, str)
+                ]
             for key in (
                 "available_count", "listed_available_count", "unavailable_count",
                 "unknown_count",
@@ -6051,6 +6060,67 @@ def _context_response_binding_inclusion(
             "response_summaries_omitted": response_summaries_omitted,
         }
 
+    binding_id = binding.get("binding_id")
+    if isinstance(binding_id, str) and binding_id:
+        exact_responses = [
+            summary for summary in response_summaries
+            if (isinstance(summary, dict)
+                and summary.get("capture_status") == "captured"
+                and summary.get("binding_ids_status") in {"complete", "partial"}
+                and isinstance(summary.get("available_binding_ids"), list)
+                and binding_id in summary["available_binding_ids"])
+        ]
+        if exact_responses:
+            return {
+                "status": "exact-binding-id-in-response",
+                "basis": "response-recorded-binding-id",
+                "identity_basis": "exact-capability-binding-id",
+                "binding_id_attribution_status": "exact-from-response",
+                "response_binding_ids_status": (
+                    "complete" if all(
+                        summary.get("binding_ids_status") == "complete"
+                        for summary in exact_responses
+                    ) else "partial"
+                ),
+                "comparison_time_basis": "captured-session-context-response",
+                "scope": "authenticated-session.context-events-in-selected-window",
+                "event_window_status": event_window_status,
+                "response_summaries_omitted": response_summaries_omitted,
+                "supporting_events": [
+                    summary["event_reference"]
+                    for summary in exact_responses[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+                    if isinstance(summary.get("event_reference"), dict)
+                ],
+            }
+
+        complete_id_responses = [
+            summary for summary in response_summaries
+            if (isinstance(summary, dict)
+                and summary.get("capture_status") == "captured"
+                and summary.get("binding_ids_status") == "complete")
+        ]
+        if (context_operation_count > 0
+                and response_summaries_omitted == 0
+                and len(response_summaries) == context_operation_count
+                and len(complete_id_responses) == context_operation_count):
+            return {
+                "status": "binding-id-absent-from-complete-selected-responses",
+                "basis": "complete-response-binding-id-lists",
+                "identity_basis": "exact-capability-binding-id",
+                "binding_id_attribution_status": "exact-from-response",
+                "comparison_time_basis": "captured-session-context-response",
+                "scope": "authenticated-session.context-events-in-selected-window",
+                "event_window_status": event_window_status,
+                "response_summaries_omitted": response_summaries_omitted,
+                "supporting_events": [
+                    summary["event_reference"]
+                    for summary in complete_id_responses[
+                        :MAX_CAPABILITY_SUPPORTING_EVENTS
+                    ]
+                    if isinstance(summary.get("event_reference"), dict)
+                ],
+            }
+
     matching_responses = [
         summary for summary in response_summaries
         if (isinstance(summary, dict)
@@ -6067,7 +6137,13 @@ def _context_response_binding_inclusion(
                 "complete-response-identity-set-matches-current-session-snapshot"
             ),
             "identity_basis": "capability-provider-contract-revision",
-            "binding_id_attribution_status": "not-carried-by-context-response-summary",
+            "binding_id_attribution_status": (
+                "not-carried-by-historical-context-response-summary"
+                if all(summary.get("schema_version")
+                       == "mncs.environment.context-response-summary/1"
+                       for summary in matching_responses)
+                else "binding-id-capture-incomplete"
+            ),
             "comparison_time_basis": "current-session-binding-snapshot-at-projection-time",
             "scope": "authenticated-session.context-events-in-selected-window",
             "event_window_status": event_window_status,
@@ -6126,7 +6202,10 @@ def _context_response_use_sequence_relation(
 ) -> dict[str, Any]:
     """Describe same-session sequence order without inferring a causal effect."""
     event_window_status = "complete" if complete_history else "partial"
-    if inclusion.get("status") != "identity-tuple-in-matched-response":
+    if inclusion.get("status") not in {
+        "identity-tuple-in-matched-response",
+        "exact-binding-id-in-response",
+    }:
         return {
             "status": "not-comparable",
             "reason": "context-response-inclusion-not-established",
@@ -6362,12 +6441,14 @@ def _capability_delivery_view(
                 **{
                     key: response_summary[key]
                     for key in (
-                        "capture_status", "capture_reason",
+                        "schema_version", "capture_status", "capture_reason",
                         "context_schema_version", "available_count",
                         "listed_available_count", "unavailable_count",
                         "unknown_count", "capabilities_truncated",
                         "available_identity_digest", "identity_digest_status",
+                        "available_binding_ids", "binding_ids_status",
                     )
+                    if key in response_summary
                 },
             })
             response_summaries.sort(
@@ -6448,7 +6529,7 @@ def _capability_delivery_view(
         ),
         "agent_receipt_status": "not-established",
         "measurement_limits": [
-            "Control records only a bounded capability-list shape and digest; it does not persist capability names or the full response body.",
+            "Control records only a bounded capability-tuple digest and bounded binding identifiers; it does not persist capability names or the full response body.",
             "A successful session.context operation and captured response summary do not establish the consumer's receipt, discovery, or use of a capability.",
             "Binding comparison uses the current session snapshot; the event has no binding revision, so a difference does not establish a response failure.",
         ],
