@@ -705,6 +705,15 @@ class AuthorityTests(unittest.TestCase):
                     "manifest_identity": "manifest:atlas",
                 },
             }
+            session.snapshot["claim_holders"] = {"mncs-atlas": [{
+                "session_id": "ses_broad_coordinator",
+                "claim_id": "claim:mncs-atlas",
+                "scope": {
+                    "kind": "repository",
+                    "repository": "mncs-atlas",
+                    "exclusive": True,
+                },
+            }]}
             scope = {
                 "kind": "worktree",
                 "checkout": checkout,
@@ -749,6 +758,19 @@ class AuthorityTests(unittest.TestCase):
             event = session._log()[-1]
             self.assertEqual(event["type"], "authority.proposal-eligible")
             self.assertFalse(event["payload"]["operation_executed"])
+            self.assertEqual(
+                event["payload"]["coordination_only_claim_count"], 1,
+            )
+            self.assertEqual(
+                event["payload"]["coordination_only_claims"][0]["claim_id"],
+                "claim:mncs-atlas",
+            )
+            self.assertEqual(
+                event["payload"]["coordination_only_claims"][0][
+                    "disposition"
+                ],
+                "coordination-only-broad-claim",
+            )
             self.assertEqual(
                 event["payload"]["proposal_preflight_state"],
                 {
