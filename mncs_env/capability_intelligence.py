@@ -2476,6 +2476,13 @@ def _compact_projection(
                     compact_replacements["pressure_hypothesis_role"] = (
                         replacement_role
                     )
+                recommendation = replacement_values.get(
+                    "pressure_hypothesis.actionable_recommendation",
+                )
+                if isinstance(recommendation, str):
+                    compact_replacements[
+                        "pressure_hypothesis.actionable_recommendation"
+                    ] = _short_text(recommendation, 512)
                 for field in ("observation.request", "observation.outcome"):
                     payload = replacement_values.get(field)
                     if isinstance(payload, dict):
@@ -5473,8 +5480,10 @@ def _context_pressure_candidates(
                 )
             ),
             "not_measured": [
-                "whether a preflight led to executed integration or a successful "
-                "outcome",
+                (
+                    "whether a preflight led to executed integration or a successful "
+                    "outcome"
+                ),
                 (
                     "whether read-only evidence access suffices for the objective "
                     "or other read or write operations need checkout selection"
@@ -7169,6 +7178,7 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
                     "supporting_sources", "not_measured",
                     "pressure_hypothesis_role", "observation.request",
                     "observation.outcome",
+                    "pressure_hypothesis.actionable_recommendation",
                 }
                 for field in fields
             )
@@ -7196,6 +7206,18 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
             and (not isinstance(replacements["pressure_hypothesis_role"], str)
                  or replacements["pressure_hypothesis_role"]
                  not in PRESSURE_HYPOTHESIS_ROLES)):
+        return None
+    if ("pressure_hypothesis.actionable_recommendation" in fields
+            and (not isinstance(
+                    replacements["pressure_hypothesis.actionable_recommendation"],
+                    str,
+                 )
+                 or not replacements[
+                     "pressure_hypothesis.actionable_recommendation"
+                 ]
+                 or len(replacements[
+                     "pressure_hypothesis.actionable_recommendation"
+                 ]) > 512)):
         return None
     for field in ("observation.request", "observation.outcome"):
         if field in fields and not isinstance(replacements[field], dict):
@@ -11375,6 +11397,12 @@ def project(
                 if not target_is_contract_invalid or isinstance(current, dict):
                     replacements_verified = False
                     break
+            elif field.startswith("pressure_hypothesis."):
+                hypothesis = target_record.get("pressure_hypothesis")
+                current = (
+                    hypothesis.get(field.partition(".")[2])
+                    if isinstance(hypothesis, dict) else None
+                )
             else:
                 current = target_record.get(field)
             if current == replacement:
@@ -11420,6 +11448,16 @@ def project(
                         field.partition(".")[2]: replacement_values[field]
                         for field in correction["corrected_field_paths"]
                         if field.startswith("observation.")
+                    },
+                },
+                "pressure_hypothesis": {
+                    **(target_record.get("pressure_hypothesis")
+                       if isinstance(target_record.get("pressure_hypothesis"), dict)
+                       else {}),
+                    **{
+                        field.partition(".")[2]: replacement_values[field]
+                        for field in correction["corrected_field_paths"]
+                        if field.startswith("pressure_hypothesis.")
                     },
                 },
             }
@@ -11481,6 +11519,16 @@ def project(
                     field.partition(".")[2]: correction["replacement_values"][field]
                     for field in correction["corrected_field_paths"]
                     if field.startswith("observation.")
+                },
+            },
+            "pressure_hypothesis": {
+                **(target_record.get("pressure_hypothesis")
+                   if isinstance(target_record.get("pressure_hypothesis"), dict)
+                   else {}),
+                **{
+                    field.partition(".")[2]: correction["replacement_values"][field]
+                    for field in correction["corrected_field_paths"]
+                    if field.startswith("pressure_hypothesis.")
                 },
             },
         }

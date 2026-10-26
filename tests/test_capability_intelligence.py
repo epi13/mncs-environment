@@ -1243,6 +1243,103 @@ def test_observation_contract_correction_requires_complete_contract(
                for item in result["observations"])
 
 
+def test_observation_contract_correction_can_restore_pressure_recommendation(
+    tmp_path: Path,
+) -> None:
+    target = _observation(
+        "ev_environment_missing_pressure_recommendation",
+        "ses_pressure_recommendation_correction",
+        "cmp_pressure_recommendation_correction",
+    )
+    target["pressure_hypothesis"].pop("actionable_recommendation")
+    session, state = _session(tmp_path, [target])
+    correction = _observation(
+        "ev_environment_pressure_recommendation_correction",
+        "ses_pressure_recommendation_correction",
+        "cmp_pressure_recommendation_correction",
+    )
+    correction.pop("pressure_hypothesis")
+    correction["observation"]["kind"] = "environmental-observation-correction"
+    correction["record_correction"] = {
+        "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+        "target_reference": dict(state["evidence"][0]),
+        "corrected_field_paths": [
+            "pressure_hypothesis.actionable_recommendation",
+        ],
+        "replacement_values": {
+            "pressure_hypothesis.actionable_recommendation": (
+                "Keep this verified session-selection improvement discoverable "
+                "through the bounded coordination projection."
+            ),
+        },
+        "reason": (
+            "Restore the missing actionable recommendation without rewriting "
+            "the content-addressed observation."
+        ),
+    }
+    relative = (
+        "evidence/environmental-capability/"
+        "pressure-recommendation-correction.json"
+    )
+    correction_bytes = json.dumps(
+        correction, sort_keys=True, separators=(",", ":"),
+    ).encode()
+    checkout = Path(session.snapshot["selected_checkouts"][
+        "mncs-environment"
+    ]["path"])
+    correction_path = checkout / relative
+    correction_path.parent.mkdir(parents=True, exist_ok=True)
+    correction_path.write_bytes(correction_bytes)
+    _git(checkout, "add", relative)
+    _git(checkout, "commit", "--quiet", "-m", "append pressure recommendation correction")
+    state["evidence"].append({
+        "identity": correction["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(correction_bytes).hexdigest(),
+    })
+    state["evidence_count"] = len(state["evidence"])
+
+    result = capability_intelligence.project(session)
+    corrected_target = next(
+        item for item in result["observations"]
+        if item["identity"] == target["identity"]
+    )
+    correction_observation = next(
+        item for item in result["observations"]
+        if item["identity"] == correction["identity"]
+    )
+
+    assert result["source"]["record_corrections_applied_count"] == 1
+    assert result["source"]["record_corrections_unverified_count"] == 0
+    assert corrected_target["pressure_hypothesis"][
+        "actionable_recommendation"
+    ] == correction["record_correction"]["replacement_values"][
+        "pressure_hypothesis.actionable_recommendation"
+    ]
+    assert corrected_target["record_correction"]["status"] == (
+        "completed-by-append-only-record"
+    )
+    assert correction_observation["record_correction"]["status"] == (
+        "applied-to-integrity-verified-contract-invalid-target"
+    )
+    compact = capability_intelligence._compact_projection(
+        result, 100_000, 24_000,
+    )
+    compact_target = next(
+        item for item in compact["observations"]
+        if item["identity"] == target["identity"]
+    )
+    assert compact_target["record_correction"]["replacement_values"] == {
+        "pressure_hypothesis.actionable_recommendation": (
+            correction["record_correction"]["replacement_values"][
+                "pressure_hypothesis.actionable_recommendation"
+            ]
+        ),
+    }
+
+
 def test_observation_contract_correction_cannot_rewrite_valid_observation(
     tmp_path: Path,
 ) -> None:
