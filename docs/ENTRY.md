@@ -59,12 +59,14 @@ recovery event records the superseded claim versions; it does not assert that
 an arbitrary host process was terminated or authorize a separate host-side
 operation.
 
-A worktree claim may be narrowed to repo-relative paths with `--paths`; the
-registered checkout and branch remain part of its identity. This lets separate
-branches claim disjoint files while preserving conflicts for overlapping files
-on the same checkout or shared branch. A path claim without a worktree anchor
-remains repository-relative and conservatively conflicts with an overlapping
-worktree claim because it does not identify a branch.
+A `--paths` claim follows the session's selected, verified worktree by default;
+the checkout and branch stay part of its identity. This lets independent
+branches claim the same files for isolated proposals while preserving conflicts
+for the same checkout or a shared attached branch. Use `--worktree` to select a
+different registered checkout. Use `--repository-paths --paths` when a
+repository-relative claim should intentionally conflict across every checkout.
+An unanchored path claim requires that explicit flag, so a missing checkout
+cannot silently create a repository-wide blocker.
 
 For a repository that is already writable in the campaign, `claims acquire`
 can target a registered linked worktree directly with `--worktree` and an

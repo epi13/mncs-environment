@@ -141,6 +141,82 @@ class ClaimGenerationCliTests(unittest.TestCase):
     def parse(self, *args: str):
         return cli.build_parser().parse_args(["claims", "ses_fixture", *args])
 
+    def test_path_claim_defaults_to_selected_worktree(self):
+        parsed = self.parse(
+            "--acquire", "fixture", "--paths", "src/component.mncs",
+        )
+        observed = {}
+        session = SimpleNamespace(
+            snapshot={
+                "selected_checkouts": {"fixture": {
+                    "path": "/workspace/fixture",
+                    "branch": "campaign/agent-a",
+                }},
+                "workspace": {"root": "/workspace"},
+            },
+            acquire_claim=lambda repository, **kwargs: observed.update(
+                repository=repository, **kwargs,
+            ) or {"status": "held", "scope": kwargs["scope"]},
+        )
+        stdout = io.StringIO()
+        with redirect_stdout(stdout), patch.object(
+            cli, "open_store", return_value=SimpleNamespace(close=lambda: None),
+        ), patch.object(cli, "_resume_session", return_value=session):
+            code = cli.cmd_claims(parsed)
+
+        self.assertEqual(code, 0)
+        self.assertEqual(observed["scope"], {
+            "kind": "worktree",
+            "checkout": "/workspace/fixture",
+            "branch": "campaign/agent-a",
+            "paths": ["src/component.mncs"],
+        })
+
+    def test_repository_wide_path_claim_is_explicit(self):
+        parsed = self.parse(
+            "--acquire", "fixture", "--paths", "src/component.mncs",
+            "--repository-paths",
+        )
+        observed = {}
+        session = SimpleNamespace(
+            snapshot={"selected_checkouts": {"fixture": {
+                "path": "/workspace/fixture", "branch": "campaign/agent-a",
+            }}},
+            acquire_claim=lambda repository, **kwargs: observed.update(
+                repository=repository, **kwargs,
+            ) or {"status": "held", "scope": kwargs["scope"]},
+        )
+        stdout = io.StringIO()
+        with redirect_stdout(stdout), patch.object(
+            cli, "open_store", return_value=SimpleNamespace(close=lambda: None),
+        ), patch.object(cli, "_resume_session", return_value=session):
+            code = cli.cmd_claims(parsed)
+
+        self.assertEqual(code, 0)
+        self.assertEqual(observed["scope"], {
+            "kind": "paths", "checkout": None, "branch": None,
+            "paths": ["src/component.mncs"],
+        })
+
+    def test_unanchored_path_claim_requires_explicit_repository_scope(self):
+        parsed = self.parse(
+            "--acquire", "fixture", "--paths", "src/component.mncs",
+        )
+        calls = []
+        session = SimpleNamespace(
+            snapshot={"selected_checkouts": {}},
+            acquire_claim=lambda *args, **kwargs: calls.append((args, kwargs)),
+        )
+        stderr = io.StringIO()
+        with redirect_stderr(stderr), patch.object(
+            cli, "open_store", return_value=SimpleNamespace(close=lambda: None),
+        ), patch.object(cli, "_resume_session", return_value=session):
+            code = cli.cmd_claims(parsed)
+
+        self.assertEqual(code, 2)
+        self.assertEqual(calls, [])
+        self.assertIn("use --repository-paths", stderr.getvalue())
+
     def test_generation_option_requires_acquire_before_opening_store(self):
         parsed = self.parse("--expected-store-generation", "12")
         stderr = io.StringIO()

@@ -939,6 +939,47 @@ class ClaimTests(unittest.TestCase):
             "shared branch with overlapping paths across checkouts",
         )
 
+    def test_overlapping_path_proposals_coexist_on_distinct_worktree_branches(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first_checkout = root / "first"
+            second_checkout = root / "second"
+            same_branch_checkout = root / "same-branch"
+            for checkout in (first_checkout, second_checkout, same_branch_checkout):
+                checkout.mkdir()
+            store = open_store(root / "state", "file")
+            shared_paths = ["mncs_env/claims.py", "tests/test_environment.py"]
+            first = claims.acquire(
+                store, repository="r", session_id="proposal-a", consumer_id="a",
+                basis=claims.BASIS_EXPLICIT, reason="propose claim improvement",
+                workspace_root=str(root),
+                scope={"kind": "worktree", "checkout": str(first_checkout),
+                       "branch": "campaign/proposal-a", "paths": shared_paths,
+                       "exclusive": False},
+            )
+            second = claims.acquire(
+                store, repository="r", session_id="proposal-b", consumer_id="b",
+                basis=claims.BASIS_EXPLICIT, reason="propose compatible improvement",
+                workspace_root=str(root),
+                scope={"kind": "worktree", "checkout": str(second_checkout),
+                       "branch": "campaign/proposal-b", "paths": shared_paths,
+                       "exclusive": False},
+            )
+
+            self.assertNotEqual(first["claim_id"], second["claim_id"])
+            self.assertEqual(len(claims.active_claims(store.read_claims())), 2)
+            with self.assertRaises(claims.ClaimConflict):
+                claims.acquire(
+                    store, repository="r", session_id="proposal-c",
+                    consumer_id="c", basis=claims.BASIS_EXPLICIT,
+                    reason="same branch remains serialized",
+                    workspace_root=str(root),
+                    scope={"kind": "worktree",
+                           "checkout": str(same_branch_checkout),
+                           "branch": "campaign/proposal-a", "paths": shared_paths,
+                           "exclusive": False},
+                )
+
     def test_detached_worktrees_coexist_but_same_checkout_is_fenced(self) -> None:
         first = claims.normalize_scope({
             "kind": "worktree", "checkout": "/repo/.worktrees/first",

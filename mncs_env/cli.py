@@ -1313,6 +1313,7 @@ def cmd_claims(args: argparse.Namespace) -> int:
         if (
             args.acquire or args.release or args.transfer_to or args.claim_id or args.explain
             or args.transfer_consumer or args.paths or args.worktree or args.branch
+            or args.repository_paths
             or args.adopt or args.reason or args.basis != claims_module.BASIS_EXPLICIT
             or args.ttl != 24
         ):
@@ -1323,6 +1324,12 @@ def cmd_claims(args: argparse.Namespace) -> int:
         limit = 100 if args.limit is None else args.limit
         if offset < 0 or limit < 1 or limit > 128:
             return fail("claim page requires offset >= 0 and limit between 1 and 128")
+    if args.repository_paths and not args.paths:
+        return fail("--repository-paths requires --paths")
+    if args.repository_paths and args.worktree:
+        return fail("--repository-paths cannot be combined with --worktree")
+    if args.repository_paths and args.branch:
+        return fail("--repository-paths cannot be combined with --branch")
     store = open_store(args.state_dir, args.persistence, session_id=args.session)
     try:
         if expected_generation is not None and not callable(
@@ -1398,7 +1405,25 @@ def cmd_claims(args: argparse.Namespace) -> int:
                         checkout = str((Path(workspace) / checkout_path).resolve())
                 if args.worktree and branch is None:
                     branch = selected.get("branch")
-                scope = {"kind": "worktree" if args.worktree else "paths",
+                scope_kind = "worktree" if args.worktree else "paths"
+                if args.paths and not args.worktree and not args.repository_paths:
+                    selected_path = selected.get("path") if isinstance(selected, dict) else None
+                    if not isinstance(selected_path, str) or not selected_path:
+                        return fail(
+                            "--paths needs a selected checkout to scope the claim safely; "
+                            "select a worktree or use --repository-paths for an intentional "
+                            "repository-relative claim"
+                        )
+                    selected_branch = selected.get("branch")
+                    if args.branch is not None and args.branch != selected_branch:
+                        return fail(
+                            "--branch cannot override the selected checkout branch for "
+                            "a worktree-scoped path claim"
+                        )
+                    checkout = selected_path
+                    branch = selected_branch
+                    scope_kind = "worktree"
+                scope = {"kind": scope_kind,
                          "checkout": checkout, "branch": branch,
                          "paths": args.paths}
             basis = claims_module.BASIS_ADOPTION if args.adopt else args.basis
@@ -2601,7 +2626,11 @@ def build_parser() -> argparse.ArgumentParser:
     claims.add_argument("--transfer-consumer", default="",
                         help="consumer identity receiving a claim transfer")
     claims.add_argument("--paths", nargs="*", default=None,
-                        help="repo-relative path scopes for a paths claim")
+                        help="repo-relative paths, scoped to the selected worktree by default")
+    claims.add_argument(
+        "--repository-paths", action="store_true",
+        help="make --paths conflict across all checkouts instead of anchoring to the selected worktree",
+    )
     claims.add_argument("--worktree", default=None,
                         help="checkout path for a worktree-scoped claim")
     claims.add_argument("--branch", default=None)
