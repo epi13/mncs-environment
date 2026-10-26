@@ -490,6 +490,12 @@ Missing measurements remain explicit.
 Observations can also report measurements without a pressure hypothesis, so a
 resource sample is not forced into a healthy/unhealthy judgment. Its sampling
 scope and unavailable attribution remain attached to that observation.
+When an observation fails the record contract, its bounded
+`observation_reference_diagnostics[].contract_diagnostics` names missing or
+invalid fields such as `missing-observation-source-interface`,
+`missing-observation-request`, or `missing-related-work-session-id`. The
+record remains unavailable to pressure analysis; the field names make recorder
+gaps actionable without rewriting immutable historical evidence.
 
 The projection subject also reports `campaign_charter` separately from
 `work_intent`. A charter objective is exposed only when one content-addressed

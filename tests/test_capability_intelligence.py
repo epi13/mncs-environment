@@ -483,6 +483,28 @@ def test_project_correlates_authentic_observation_and_preserves_uncertainty(tmp_
     ] == "captured-in-observation-record"
 
 
+def test_invalid_observation_diagnostic_names_missing_context_fields(tmp_path: Path) -> None:
+    report = _observation(
+        "ev_environment_missing_observation_context",
+        "ses_observation_context",
+        "cmp_observation_context",
+    )
+    report["observation"].pop("source_interface")
+    report["observation"].pop("request")
+    report["related_work"].pop("session_id")
+    session, _state = _session(tmp_path, [report])
+
+    result = capability_intelligence.project(session)
+
+    diagnostic = result["source"]["observation_reference_diagnostics"][0]
+    assert diagnostic["verification"] == "observation-contract-invalid"
+    assert diagnostic["contract_diagnostics"] == [
+        "missing-observation-source-interface",
+        "missing-observation-request",
+        "missing-related-work-session-id",
+    ]
+
+
 def test_project_links_unselected_work_intent_repository_to_evidence_visibility(
     tmp_path: Path,
 ) -> None:

@@ -1,0 +1,251 @@
+{
+  "captured_at": "2026-10-26T02:35:00+00:00",
+  "identity": "ev_environment_commons_native_process_consumer_projection_readback_20261026",
+  "measurement_basis": "The existing environmental-capability projection was run against the authenticated campaign ledger. Commons pressure and consumer records were read from pinned Git objects in the explicitly readable workspace and passed source digest, schema, and exact pressure-identity checks.",
+  "measurement_limits": [
+    "The projection reports a bounded source sample, not a complete consumer inventory or proof that agents received or used the capability.",
+    "The two listed prior environmental observations remain rejected by the observation contract and were not used as evidence in this result.",
+    "The projection response was compacted; the consumer evidence and its exact source references were retained in the returned view.",
+    "Source records and passing canaries do not establish causality, recurring failure, or readiness to migrate host behavior."
+  ],
+  "observation": {
+    "kind": "native-capability-consumer-evidence-readback",
+    "outcome": {
+      "consumer_evidence": {
+        "actionable_observation": "Inspect the source-declared consumer migration states and missing contracts per repository. These records show consumer-specific implementation conditions; they do not establish a common caus…",
+        "causal_relation_status": "not-established",
+        "consumer_migration_states": [
+          "open"
+        ],
+        "consumer_repositories_observed": [
+          "mncs-actions",
+          "mncs-debug",
+          "mncs-forge"
+        ],
+        "consumer_repository_count": 3,
+        "cross_consumer_status": "multiple-consumer-repositories-recorded",
+        "join_basis": "Exact target_pressure_identity and native_capability_identity in the campaign observation, followed by exact Commons pressureId checks against the capability correspondence.",
+        "native_migration_readiness": "not-established",
+        "observations": [
+          {
+            "consumer_repository": "mncs-actions",
+            "current_validation": true,
+            "identity": "MNCS-TOOLING-B665F138D324--OBS-B8EF1F4A281D",
+            "language_profile": "0.17",
+            "observed_at": "2026-09-15T00:00:00Z",
+            "record_kind": "observation",
+            "reproduction_status": "PASS",
+            "source_recorded_agent": "Luna Max",
+            "source_reference": {
+              "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+              "identity": "MNCS-TOOLING-B665F138D324--OBS-B8EF1F4A281D",
+              "path": "pressures/observations/MNCS-TOOLING-B665F138D324--OBS-B8EF1F4A281D.json",
+              "repository": "mncs-commons",
+              "sha256": "1e6f3dc20521af092527169fa650ce2fde460e8a0e609c96aebe9dd8cc7a802f"
+            },
+            "summary": "Actions native shadow launches the generic bounded process capability with explicit argv, bounded stdout, exit status, and deadline enforcement.",
+            "workaround": {
+              "active": true,
+              "removed": false
+            }
+          },
+          {
+            "capability_state": "available",
+            "consumer_migration": "open",
+            "consumer_repository": "mncs-debug",
+            "identity": "MNCS-TOOLING-B665F138D324--OBS-5DC50E462638",
+            "language_profile": "0.18",
+            "observed_at": "2026-09-17T10:53:22Z",
+            "record_kind": "verification",
+            "reproduction_status": "PASS",
+            "source_recorded_agent": "Luna Max",
+            "source_reference": {
+              "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+              "identity": "MNCS-TOOLING-B665F138D324--OBS-5DC50E462638",
+              "path": "pressures/observations/MNCS-TOOLING-B665F138D324--OBS-5DC50E462638.json",
+              "repository": "mncs-commons",
+              "sha256": "bde38ec6dbb2d70afae210fd10b2c68ac97a27f54f425092e95a12358bcd74e5"
+            },
+            "summary": "The generic bounded process_run capability remains current and Debug replay continues to use it with explicit argv, bounded capture, deadline, and structured status. The legacy host diagnostic loop still owns some orchestration, so the consumer workaround remains active.",
+            "workaround": {
+              "active": true,
+              "removed": false
+            }
+          },
+          {
+            "classification": "CAPABILITY_AVAILABLE_CONSUMER_NOT_MIGRATED",
+            "consumer_repository": "mncs-forge",
+            "consumer_status": "CONSUMER_DEBT",
+            "identity": "MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41",
+            "language_profile": "0.18",
+            "missing_contracts": [
+              "aggregate cgroup resource envelope",
+              "typed raw cgroup observation result",
+              "source-visible cancellable process handle"
+            ],
+            "observed_at": "2026-09-23T10:03:09Z",
+            "record_kind": "observation",
+            "reproduction_status": "UNKNOWN",
+            "source_declared_related_pressure_identities": [
+              "MNCS-LANG-64AD712CD2DE"
+            ],
+            "source_reference": {
+              "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+              "identity": "MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41",
+              "path": "pressures/observations/MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41.json",
+              "repository": "mncs-commons",
+              "sha256": "1a4d54f1328475e4cfadfbfd62a8d19384b90eeba5816a2a771c3a209ebd8bf2"
+            },
+            "summary": "Profile 0.18 process_run remains a real process_grant capability with bounded typed request/result. Forge has not moved verifier process execution onto it because it cannot express aggregate cgroup limits or a cancellable in-flight handle; Python remains the Linux realization adapter.",
+            "workaround": {
+              "active": true
+            }
+          }
+        ],
+        "observations_truncated": false,
+        "passing_reproduction_observation_count": 2,
+        "pressure_record": {
+          "identity": "MNCS-TOOLING-B665F138D324",
+          "recorded_status": "discovered",
+          "source_reference": {
+            "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+            "identity": "MNCS-TOOLING-B665F138D324",
+            "path": "pressures/records/MNCS-TOOLING-B665F138D324.json",
+            "repository": "mncs-commons",
+            "sha256": "8f7078c1c18b8a4bb5bb27c726917dc3c27ad26067750c6b532f49bfc88ba550"
+          },
+          "status": "source-integrity-schema-and-pressure-identity-verified",
+          "summary": "Imported legacy pressure DOC-P-011: No process spawning / capture / exit status.",
+          "title": "No process spawning / capture / exit status"
+        },
+        "recorded_affected_repositories": [
+          "mncs-doctor"
+        ],
+        "recurrence_status": "not-established",
+        "related_pressure_identities": [
+          "MNCS-LANG-64AD712CD2DE"
+        ],
+        "source_coverage_scope": "bounded-source-references-in-authenticated-campaign-observations; not-an-exhaustive-consumer-inventory",
+        "source_observation_count": 3,
+        "status": "verified-commons-consumer-evidence-available",
+        "unverified_source_count": 0,
+        "unverified_source_references": [],
+        "workaround_active_observation_count": 3
+      },
+      "measurement_availability": {
+        "agent_receipt_or_use": "not-measured",
+        "causality_and_migration_readiness": "not-established",
+        "complete_consumer_inventory": "not-measured",
+        "consumer_observation_records": "verified-at-pinned-commons-revision"
+      },
+      "observation_count": 5,
+      "observation_reference_diagnostics": [
+        {
+          "commit": "d327685abb4d4b269c2ccfccc2e17063fc9f1b60",
+          "identity": "ev_environment_native_pressure_identity_context_readback_20261026",
+          "path": "evidence/environmental-capability/pressure-identity-context-readback-20261026.json",
+          "path_truncated": false,
+          "repository": "mncs-environment",
+          "sha256": "005fc683dd0c810265a4837749ecbfdc75a65ae7b6f1b577d0f63a97f0815e93",
+          "verification": "observation-contract-invalid"
+        },
+        {
+          "commit": "919e490ba64f86643d33631c83765d77404cb5d7",
+          "identity": "ev_environment_entry_store_serialization_pressure_readback_20261026",
+          "path": "evidence/environmental-capability/session-entry-store-serialization-pressure-20261026.json",
+          "path_truncated": false,
+          "repository": "mncs-environment",
+          "sha256": "92a4c878c5614468422017f1dfae27c5f210c31261e3e36ccbf44f8ef2e5f825",
+          "verification": "observation-contract-invalid"
+        }
+      ],
+      "projection_identity": "eci_da1418bfc0998965",
+      "projection_status": "partial",
+      "response_truncated": true,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "source_pointer_content_integrity_verified_count": 20,
+      "verified_observation_count": 5
+    },
+    "request": {
+      "evidence_limit": 16,
+      "history_pages": 4,
+      "interpretation": "environmental-capability",
+      "operation": "projections",
+      "session_event_limit": 4,
+      "session_id": "ses_9ad3efb63438cf3d"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_4c126896d339c0ce",
+    "session_id": "ses_9ad3efb63438cf3d"
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "objective": "Connect authentic environmental and compiler evidence to provenance-aware, actionable projections.",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "012252b130b87ee48f9ad84ee408728babbac3b1",
+      "identity": "ev_environment_commons_native_process_consumer_evidence_20261026",
+      "kind": "native-capability-consumer-evidence-source",
+      "path": "evidence/environmental-capability/commons-native-process-consumer-evidence-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "f5018508dae383ed64b237e94ad36c0a7bbb28acbb0b04407b3a7b2306dbda1b"
+    },
+    {
+      "commit": "012252b130b87ee48f9ad84ee408728babbac3b1",
+      "identity": "mncs_environment_capability_intelligence_012252b",
+      "kind": "committed-implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "8f115067422113e4f7516f8cb8c443e73f5eaf45f49b4e167502c4d52c5b7ca0"
+    },
+    {
+      "commit": "012252b130b87ee48f9ad84ee408728babbac3b1",
+      "identity": "mncs_environment_workspace_resolution_012252b",
+      "kind": "committed-implementation-source",
+      "path": "mncs_env/workspace.py",
+      "repository": "mncs-environment",
+      "sha256": "5e56fe043e8baf05af1ce55deeaad51832c66c434ff774fd5e6f73b5335f2d51"
+    },
+    {
+      "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+      "identity": "MNCS-TOOLING-B665F138D324",
+      "kind": "commons-family-pressure-record-source",
+      "path": "pressures/records/MNCS-TOOLING-B665F138D324.json",
+      "repository": "mncs-commons",
+      "sha256": "8f7078c1c18b8a4bb5bb27c726917dc3c27ad26067750c6b532f49bfc88ba550"
+    },
+    {
+      "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+      "identity": "MNCS-TOOLING-B665F138D324--OBS-B8EF1F4A281D",
+      "kind": "commons-family-pressure-observation-source",
+      "path": "pressures/observations/MNCS-TOOLING-B665F138D324--OBS-B8EF1F4A281D.json",
+      "repository": "mncs-commons",
+      "sha256": "1e6f3dc20521af092527169fa650ce2fde460e8a0e609c96aebe9dd8cc7a802f"
+    },
+    {
+      "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+      "identity": "MNCS-TOOLING-B665F138D324--OBS-5DC50E462638",
+      "kind": "commons-family-pressure-observation-source",
+      "path": "pressures/observations/MNCS-TOOLING-B665F138D324--OBS-5DC50E462638.json",
+      "repository": "mncs-commons",
+      "sha256": "bde38ec6dbb2d70afae210fd10b2c68ac97a27f54f425092e95a12358bcd74e5"
+    },
+    {
+      "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+      "identity": "MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41",
+      "kind": "commons-family-pressure-observation-source",
+      "path": "pressures/observations/MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41.json",
+      "repository": "mncs-commons",
+      "sha256": "1a4d54f1328475e4cfadfbfd62a8d19384b90eeba5816a2a771c3a209ebd8bf2"
+    }
+  ]
+}

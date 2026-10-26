@@ -1708,16 +1708,25 @@ def _compact_projection(
     for diagnostic in raw_diagnostics[:4]:
         if not isinstance(diagnostic, dict):
             continue
-        compact_diagnostics.append({
+        compact_diagnostic = {
             key: _short_text(diagnostic.get(key), 192 if key == "path" else 160)
             for key in (
                 "identity", "record_identity", "repository", "commit",
                 "sha256", "verification", "path",
             )
             if isinstance(diagnostic.get(key), str)
-        })
+        }
         if type(diagnostic.get("path_truncated")) is bool:
-            compact_diagnostics[-1]["path_truncated"] = diagnostic["path_truncated"]
+            compact_diagnostic["path_truncated"] = diagnostic["path_truncated"]
+        contract_diagnostics = diagnostic.get("contract_diagnostics")
+        if isinstance(contract_diagnostics, list):
+            compact_diagnostic["contract_diagnostics"] = [
+                _short_text(value, 128) for value in contract_diagnostics[:8]
+                if isinstance(value, str)
+            ]
+            if len(contract_diagnostics) > 8:
+                compact_diagnostic["contract_diagnostics_truncated"] = True
+        compact_diagnostics.append(compact_diagnostic)
     if compact_diagnostics:
         compact_source["observation_reference_diagnostics"] = compact_diagnostics
         compact_source["observation_reference_diagnostics_truncated"] = (
@@ -4108,6 +4117,87 @@ def _compiler_native_application_proof_observation(
     }
 
 
+def _observation_contract_diagnostics(record: dict[str, Any]) -> list[str]:
+    """Return bounded, field-level reasons for rejecting an observation record."""
+    diagnostics: list[str] = []
+
+    def required_string(container: Any, field: str, label: str) -> None:
+        if not isinstance(container, dict):
+            diagnostics.append(f"missing-{label}")
+        elif not isinstance(container.get(field), str) or not container[field]:
+            state = "missing" if field not in container or container[field] is None else "invalid"
+            diagnostics.append(f"{state}-{label}")
+
+    if record.get("schema_version") != OBSERVATION_SCHEMA:
+        diagnostics.append("unsupported-schema-version")
+    required_string(record, "captured_at", "captured-at")
+    observation = record.get("observation")
+    if not isinstance(observation, dict):
+        diagnostics.append("missing-observation-object")
+    else:
+        required_string(observation, "kind", "observation-kind")
+        required_string(
+            observation, "source_interface", "observation-source-interface",
+        )
+        if not isinstance(observation.get("request"), dict):
+            state = "missing" if "request" not in observation else "invalid"
+            diagnostics.append(f"{state}-observation-request")
+        if (not isinstance(observation.get("outcome"), dict)
+                and not isinstance(observation.get("projection_summary"), dict)):
+            diagnostics.append("missing-observation-outcome-or-projection-summary")
+    related_work = record.get("related_work")
+    if not isinstance(related_work, dict):
+        diagnostics.append("missing-related-work-object")
+    else:
+        required_string(related_work, "campaign_id", "related-work-campaign-id")
+        required_string(related_work, "session_id", "related-work-session-id")
+        for field in ("work_intent_id", "work_intent_goal"):
+            value = related_work.get(field)
+            if value is not None and (not isinstance(value, str) or not value):
+                diagnostics.append(f"invalid-related-work-{field.replace('_', '-')}")
+    source_context = (
+        observation.get("source_session_context")
+        if isinstance(observation, dict) else None
+    )
+    if source_context is not None and not isinstance(source_context, dict):
+        diagnostics.append("invalid-source-session-context")
+    elif isinstance(source_context, dict) and any(
+        value is not None and not isinstance(value, str)
+        for value in source_context.values()
+    ):
+        diagnostics.append("invalid-source-session-context-fields")
+    recorder = record.get("recorder")
+    if recorder is not None:
+        if not isinstance(recorder, dict):
+            diagnostics.append("invalid-recorder-object")
+        elif any(
+            not isinstance(recorder.get(field), str)
+            or not recorder[field]
+            or len(recorder[field]) > 160
+            for field in (
+                "campaign_id", "session_id", "consumer_id", "environment_id",
+                "definition_id", "environment_version",
+            ) if field in recorder
+        ):
+            diagnostics.append("invalid-recorder-fields")
+    hypothesis = record.get("pressure_hypothesis")
+    if hypothesis is not None and not isinstance(hypothesis, dict):
+        diagnostics.append("invalid-pressure-hypothesis-object")
+    elif isinstance(hypothesis, dict):
+        for field in (
+            "identity", "title", "category", "subsystem",
+            "actionable_recommendation",
+        ):
+            required_string(
+                hypothesis, field,
+                f"pressure-hypothesis-{field.replace('_', '-')}",
+            )
+        owner = hypothesis.get("owner")
+        if owner is not None and (not isinstance(owner, str) or not owner):
+            diagnostics.append("invalid-pressure-hypothesis-owner")
+    return diagnostics[:16] or ["invalid-observation-contract"]
+
+
 def _load_observation(
     session: Any, reference: dict[str, str], root: Path, *, deadline: float,
 ) -> tuple[dict[str, Any] | None, str]:
@@ -4209,16 +4299,25 @@ def _load_observation(
                        if key in recorder)
             ))
             or (hypothesis is not None and not isinstance(hypothesis, dict))):
-        return None, "observation-contract-invalid"
+        record["_projection_contract_diagnostics"] = (
+            _observation_contract_diagnostics(record)
+        )
+        return record, "observation-contract-invalid"
     if isinstance(hypothesis, dict) and any(
         not isinstance(hypothesis.get(key), str) or not hypothesis[key]
         for key in ("identity", "title", "category", "subsystem",
                     "actionable_recommendation")
     ):
-        return None, "observation-contract-invalid"
+        record["_projection_contract_diagnostics"] = (
+            _observation_contract_diagnostics(record)
+        )
+        return record, "observation-contract-invalid"
     if (isinstance(hypothesis, dict) and hypothesis.get("owner") is not None
             and (not isinstance(hypothesis["owner"], str) or not hypothesis["owner"])):
-        return None, "observation-contract-invalid"
+        record["_projection_contract_diagnostics"] = (
+            _observation_contract_diagnostics(record)
+        )
+        return record, "observation-contract-invalid"
     return record, "verified"
 
 
@@ -8630,6 +8729,20 @@ def project(
                 and isinstance(record.get("identity"), str)
                 and record["identity"]):
             reference["record_identity"] = record["identity"][:160]
+        contract_diagnostics = (
+            record.get("_projection_contract_diagnostics")
+            if isinstance(record, dict) else None
+        )
+        if verification == "observation-contract-invalid" and isinstance(
+            contract_diagnostics, list,
+        ):
+            reference["contract_diagnostics"] = [
+                _short_text(value, 128) for value in contract_diagnostics[:8]
+                if isinstance(value, str)
+            ]
+            reference["contract_diagnostics_truncated"] = (
+                len(contract_diagnostics) > 8
+            )
         references.append(reference)
         if record is None or verification != "verified":
             unavailable += 1
@@ -8776,7 +8889,7 @@ def project(
         }:
             continue
         path = reference["path"]
-        observation_reference_diagnostics.append({
+        diagnostic = {
             key: reference[key]
             for key in (
                 "identity", "record_identity", "repository", "commit",
@@ -8786,7 +8899,14 @@ def project(
         } | {
             "path": path[:512],
             "path_truncated": len(path) > 512,
-        })
+        }
+        contract_diagnostics = reference.get("contract_diagnostics")
+        if isinstance(contract_diagnostics, list):
+            diagnostic["contract_diagnostics"] = contract_diagnostics[:8]
+            diagnostic["contract_diagnostics_truncated"] = (
+                reference.get("contract_diagnostics_truncated") is True
+            )
+        observation_reference_diagnostics.append(diagnostic)
     source_integrity: dict[tuple[str, str, str, str], str] = {}
     source_payloads: dict[tuple[str, str, str, str], bytes] = {}
     attempted_sources: set[tuple[str, str, str, str]] = set()
