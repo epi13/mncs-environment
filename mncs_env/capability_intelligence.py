@@ -3257,6 +3257,8 @@ def _compact_projection(
             key: _short_text(item.get(key), 160)
             for key in (
                 "identity", "status", "repository", "basis", "claim_id",
+                "campaign_id", "campaign_reference_status", "work_intent_id",
+                "work_intent_reference_status",
             )
             if isinstance(item.get(key), str)
         }
@@ -9353,6 +9355,7 @@ def _claim_recovery_event_projection(
         or not isinstance(repository, str)
         or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,119}", repository)
         or type(claim_version) is not int or claim_version < 1
+        or not isinstance(basis, str)
         or basis not in {
             claims_module.BASIS_EXPLICIT,
             claims_module.BASIS_INTENT_SCOPE,
@@ -9390,7 +9393,7 @@ def _claim_recovery_event_projection(
             "owner_session": owner,
         })
     recovered_count = len(recovered_from) + omitted
-    return {
+    row = {
         "identity": "clmrec_" + digest_hex({
             "session_id": session_id,
             "event": reference["identity"],
@@ -9410,7 +9413,18 @@ def _claim_recovery_event_projection(
             "predecessors were classified as recoverable in the same claim "
             "transition. It does not establish downstream work success."
         ),
+        **_authority_event_objective_context(payload),
     }
+    campaign_id = payload.get("campaign_id")
+    if (isinstance(campaign_id, str)
+            and identifier.fullmatch(campaign_id)):
+        row["campaign_reference_status"] = "recorded-on-event"
+    else:
+        row["campaign_reference_status"] = (
+            "invalid-event-reference" if campaign_id is not None
+            else "not-recorded-on-event"
+        )
+    return row
 
 
 def _claim_coordination_event_projection(

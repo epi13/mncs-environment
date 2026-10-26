@@ -1111,6 +1111,10 @@ class ClaimTests(unittest.TestCase):
             self.assertEqual(activity["claim_recoveries"][0]["claim_id"],
                              acquired["claim_id"])
             self.assertEqual(
+                activity["claim_recoveries"][0]["work_intent_id"],
+                session.snapshot["intent"]["identity"],
+            )
+            self.assertEqual(
                 activity["claim_recoveries"][0]["scope"]["paths"],
                 ["src/unit.mncs"],
             )
@@ -1128,6 +1132,10 @@ class ClaimTests(unittest.TestCase):
             self.assertEqual(
                 compact_activity["claim_recoveries"][0]["event_reference"]["type"],
                 "lease.recovered-and-acquired",
+            )
+            self.assertEqual(
+                compact_activity["claim_recoveries"][0]["work_intent_id"],
+                session.snapshot["intent"]["identity"],
             )
             self.assertEqual(
                 compact_activity["claim_recoveries"][0]["scope"]["paths"],

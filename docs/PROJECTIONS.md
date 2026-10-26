@@ -462,9 +462,10 @@ in-flight process stopped, or execute a change.
 
 `session_activity.claim_recoveries` exposes up to eight
 `lease.recovered-and-acquired` events from the selected page, including the
-new claim identity/version and up to eight superseded claim identities. It is
-causal provenance for an accepted claim transition, not evidence that the
-subsequent implementation objective succeeded.
+new claim identity/version, up to eight superseded claim identities, and the
+event-time campaign/work-intent references when available. It is causal
+provenance for an accepted claim transition, not evidence that the subsequent
+implementation objective succeeded.
 
 `session_activity.claim_coordination` exposes up to sixteen newest claim
 acquisition, release, transfer, and owner-recovery lifecycle transitions in
