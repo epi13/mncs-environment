@@ -1100,6 +1100,86 @@ class ClaimTests(unittest.TestCase):
             self.assertFalse(claim["scope"]["exclusive"])
             session.close()
 
+    def test_cli_path_claim_uses_selected_worktree_end_to_end(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workspace_root = root / "workspace"
+            checkout = workspace_root / "fixture"
+            (checkout / ".mncs").mkdir(parents=True)
+            (checkout / ".mncs" / "project.json").write_text(
+                json.dumps({"schema_version": "mncs.project/1",
+                            "repository": "fixture"}) + "\n",
+                encoding="utf-8",
+            )
+            (checkout / "README.md").write_text("registered checkout\n",
+                                                 encoding="utf-8")
+
+            def git(*args: str) -> None:
+                subprocess.run(["git", "-C", str(checkout), *args], check=True,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               text=True)
+
+            git("init", "-b", "main")
+            git("config", "user.name", "MNCS Environment Test")
+            git("config", "user.email", "environment-test@example.invalid")
+            git("add", ".mncs/project.json", "README.md")
+            git("commit", "-m", "Create registered fixture checkout")
+
+            state = root / "state"
+            store = open_store(state, "file")
+            environment = sessions.resolve_environment(
+                definition=definition(intent={
+                    "goal": "claim a selected worktree path through the CLI",
+                    "repositories": ["fixture"],
+                }),
+                workspace_root=workspace_root,
+                state_dir=state,
+                consumer_id="cli-path-claim-test",
+                store=store,
+            )
+            session = sessions.Session.create(
+                state_dir=state, environment=environment,
+                consumer_id="cli-path-claim-test", backend="file", store=store,
+            )
+            session.transition("resolving", "CLI path claim test")
+            session.transition("ready", "CLI path claim test")
+            session.transition("active", "CLI path claim test")
+            session_id = session.session_id
+            head = subprocess.check_output(
+                ["git", "-C", str(checkout), "rev-parse", "HEAD"],
+                text=True,
+            ).strip()
+            session.snapshot["selected_checkouts"] = {"fixture": {
+                "repository": "fixture", "path": str(checkout),
+                "branch": "main", "head": head, "clean": True,
+            }}
+            session._save()
+            self.assertEqual(
+                session.snapshot["selected_checkouts"]["fixture"]["path"],
+                str(checkout),
+            )
+            session.close()
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = cli.main([
+                    "--persistence", "file", "--state-dir", str(state),
+                    "claims", session_id, "--acquire", "fixture",
+                    "--paths", "src/component.mncs",
+                ])
+
+            self.assertEqual(code, 0, stderr.getvalue())
+            claim = json.loads(stdout.getvalue())
+            self.assertEqual(claim["scope"], {
+                "kind": "worktree",
+                "checkout": str(checkout),
+                "branch": "main",
+                "paths": ["src/component.mncs"],
+                "exclusive": False,
+                "repository": "fixture",
+            })
+
     def test_claim_can_target_another_registered_worktree_within_authorized_repo(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace_root = Path(directory) / "workspace"
