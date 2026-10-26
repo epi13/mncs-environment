@@ -1,0 +1,183 @@
+{
+  "captured_at": "2026-10-26T11:31:25Z",
+  "identity": "ev_environment_same_session_claim_observation_correction_20261026",
+  "measurement_basis": "append-only-correction-from-content-addressed-session-events-and-projection-recorded-in-the-target-observation",
+  "not_measured": [
+    "independent verification of each source event's operational consequence",
+    "cross-session recurrence of invalid observation records",
+    "whether this correction changes downstream agent discovery or campaign progress"
+  ],
+  "observation": {
+    "kind": "environmental-observation-contract-correction",
+    "outcome": {
+      "interpretation_limit": "The exact referenced events and the target record preserve the reported values. Applying this correction restores the target's record shape and does not independently attest that every reported operation succeeded or establish long-term effects.",
+      "original_contract_diagnostics": [
+        "missing-observation-request",
+        "missing-observation-outcome-or-projection-summary"
+      ],
+      "original_record_status": "observation-contract-invalid",
+      "projection_readback": {
+        "available_count": 31,
+        "binding_count": 49,
+        "discoverability_status": "not-measured",
+        "identity": "eci_99995085afddcfa5",
+        "response_truncated": true,
+        "status": "partial",
+        "unknown_count": 18
+      },
+      "source_event_summary": {
+        "failure": {
+          "capabilities_unbound": 9,
+          "identity": "evt_46da9deab607ccc8",
+          "same_session_exact_checkout_claims": 3,
+          "sequence": 76,
+          "skip_reason": "ambiguous-base-intent-checkout"
+        },
+        "post_commit_revalidation": {
+          "capabilities_bound": 0,
+          "capabilities_changed": 0,
+          "capabilities_unbound": 0,
+          "claim_event_identity": "evt_285a27e6ae886f0b",
+          "identity": "evt_067e00b413d872e5",
+          "retained_selected_checkout": true,
+          "sequence": 131
+        },
+        "recovery": {
+          "capabilities_rebound": 9,
+          "composed_claim_count": 3,
+          "identity": "evt_85b22b0268de88ac",
+          "manual_reconcile_performed": false,
+          "owner_transfer_performed": false,
+          "sequence": 117
+        }
+      },
+      "verification_results_recorded_in_target": {
+        "campaign_tests_passed": 340,
+        "capability_intelligence_tests_passed": 114,
+        "compileall": "passed",
+        "focused_claim_tests_passed": 103,
+        "git_diff_check": "passed"
+      }
+    },
+    "request": {
+      "corrected_field_paths": [
+        "observation.request",
+        "observation.outcome"
+      ],
+      "operation": "complete-missing-required-fields-on-exact-observation-reference",
+      "projection_identity": "eci_99995085afddcfa5",
+      "source_event_identities": [
+        "evt_46da9deab607ccc8",
+        "evt_85b22b0268de88ac",
+        "evt_067e00b413d872e5",
+        "evt_55fddce6db4ccc18",
+        "evt_285a27e6ae886f0b"
+      ],
+      "target_content_sha256": "73f81927b8a7796eb2f13578725f9ee69415e3900f5043d51b754228d64130dc",
+      "target_observation_identity": "ev_environment_same_session_claim_composition_revalidation_20261026"
+    },
+    "source_interface": "MNCS Environment campaign evidence and environmental-capability projection"
+  },
+  "record_correction": {
+    "corrected_field_paths": [
+      "observation.request",
+      "observation.outcome"
+    ],
+    "reason": "Preserve the immutable observation pointer while making its existing authenticated event and projection context available to the schema-validated environmental-capability projection.",
+    "replacement_values": {
+      "observation.outcome": {
+        "interpretation_limit": "The exact referenced events and the target record preserve the reported values. Applying this correction restores the target's record shape and does not independently attest that every reported operation succeeded or establish long-term effects.",
+        "original_contract_diagnostics": [
+          "missing-observation-request",
+          "missing-observation-outcome-or-projection-summary"
+        ],
+        "original_record_status": "observation-contract-invalid",
+        "projection_readback": {
+          "available_count": 31,
+          "binding_count": 49,
+          "discoverability_status": "not-measured",
+          "identity": "eci_99995085afddcfa5",
+          "response_truncated": true,
+          "status": "partial",
+          "unknown_count": 18
+        },
+        "source_event_summary": {
+          "failure": {
+            "capabilities_unbound": 9,
+            "identity": "evt_46da9deab607ccc8",
+            "same_session_exact_checkout_claims": 3,
+            "sequence": 76,
+            "skip_reason": "ambiguous-base-intent-checkout"
+          },
+          "post_commit_revalidation": {
+            "capabilities_bound": 0,
+            "capabilities_changed": 0,
+            "capabilities_unbound": 0,
+            "claim_event_identity": "evt_285a27e6ae886f0b",
+            "identity": "evt_067e00b413d872e5",
+            "retained_selected_checkout": true,
+            "sequence": 131
+          },
+          "recovery": {
+            "capabilities_rebound": 9,
+            "composed_claim_count": 3,
+            "identity": "evt_85b22b0268de88ac",
+            "manual_reconcile_performed": false,
+            "owner_transfer_performed": false,
+            "sequence": 117
+          }
+        },
+        "verification_results_recorded_in_target": {
+          "campaign_tests_passed": 340,
+          "capability_intelligence_tests_passed": 114,
+          "compileall": "passed",
+          "focused_claim_tests_passed": 103,
+          "git_diff_check": "passed"
+        }
+      },
+      "observation.request": {
+        "corrected_field_paths": [
+          "observation.request",
+          "observation.outcome"
+        ],
+        "operation": "complete-missing-required-fields-on-exact-observation-reference",
+        "projection_identity": "eci_99995085afddcfa5",
+        "source_event_identities": [
+          "evt_46da9deab607ccc8",
+          "evt_85b22b0268de88ac",
+          "evt_067e00b413d872e5",
+          "evt_55fddce6db4ccc18",
+          "evt_285a27e6ae886f0b"
+        ],
+        "target_content_sha256": "73f81927b8a7796eb2f13578725f9ee69415e3900f5043d51b754228d64130dc",
+        "target_observation_identity": "ev_environment_same_session_claim_composition_revalidation_20261026"
+      }
+    },
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "commit": "331a48bb40ad4dadd98f6357c43226cc1604831a",
+      "identity": "ev_environment_same_session_claim_composition_revalidation_20261026",
+      "path": "evidence/environmental-capability/same-session-claim-composition-revalidation-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "73f81927b8a7796eb2f13578725f9ee69415e3900f5043d51b754228d64130dc"
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "consumer_id": "codex-environment-capability",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_5719f1dc85592a13",
+    "session_id": "ses_a07d4236d818e24f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_5719f1dc85592a13",
+    "repository": "mncs-environment",
+    "session_id": "ses_a07d4236d818e24f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1"
+}
