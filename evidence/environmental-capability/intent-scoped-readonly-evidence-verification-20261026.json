@@ -1,0 +1,130 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_intent_readonly_evidence_verification_20261026",
+  "captured_at": "2026-10-26T14:15:38Z",
+  "measurement_basis": "targeted regression tests, campaign proofs, and authenticated live projection readback",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-intent-scoped-readonly-evidence-verification",
+    "source_interface": "MNCS Environment capability projection, pytest, and campaign proofs",
+    "request": {
+      "implementation_commit": "6c25f3c3c5b711db13a260a7f5358b9548ec4b0f",
+      "focused_test_command": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py",
+      "campaign_proof_command": "python scripts/campaign_proofs.py",
+      "live_projection": {
+        "session_id": "ses_8945548a87d98ed5",
+        "campaign_id": "cmp_7f550d193225b7be",
+        "event_page_before_sequence": 90,
+        "event_limit": 128,
+        "evidence_history_pages": 4,
+        "evidence_limit": 32
+      }
+    },
+    "outcome": {
+      "focused_tests": {
+        "passed": 121,
+        "failed": 0
+      },
+      "campaign_proofs": {
+        "passed": 17,
+        "skipped": 0,
+        "failed": 0
+      },
+      "static_checks": {
+        "ruff_e_f": "passed",
+        "python_compile": "passed",
+        "git_diff_check": "passed"
+      },
+      "live_projection": {
+        "status": "partial",
+        "observation_count": 1,
+        "verified_observation_count": 1,
+        "verified_identity": "ev_environment_claimless_integration_preflight_projection_readback_20261026",
+        "read_basis": "workspace-read-only-checkout",
+        "workspace_alignment": "declared-repositories-not-selected",
+        "selected_checkouts_unchanged": true,
+        "read_only_evidence_reference_count": 1,
+        "matching_merge_preflight_count": 4,
+        "preflight_persistent_claim_required": false,
+        "preflight_operation_executed": false
+      },
+      "negative_coverage": [
+        "undeclared repository observation remains unread",
+        "supporting source outside the selected session remains unread",
+        "an observation record cannot self-assert its workspace read basis"
+      ]
+    }
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_intent_readonly_evidence_implementation_20261026",
+      "repository": "mncs-environment",
+      "commit": "6c25f3c3c5b711db13a260a7f5358b9548ec4b0f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e1f5702dfc82f5eccb3e67a4dce51c2616e9123c312938d8b053b307759dcddc"
+    },
+    {
+      "identity": "ev_environment_intent_readonly_evidence_tests_20261026",
+      "repository": "mncs-environment",
+      "commit": "6c25f3c3c5b711db13a260a7f5358b9548ec4b0f",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "d37df9f862bb1de0c0d48b2e0361be26c41cdc87854acbadddb75d2e056632e5"
+    },
+    {
+      "identity": "ev_environment_claimless_integration_preflight_projection_readback_20261026",
+      "repository": "mncs-environment",
+      "commit": "ae12e7f66cf55d792760b2db101fa399e678135c",
+      "path": "evidence/environmental-capability/claimless-integration-preflight-projection-readback-20261026.json",
+      "sha256": "3bf5746f197a3feb17f9025e1802085f7f2e25b07d23e58f7f76421c5beaf437"
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "capability-projection-tests",
+      "command": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py",
+      "passed": 121,
+      "failed": 0
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "campaign-proofs",
+      "command": "python scripts/campaign_proofs.py",
+      "passed": 17,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "session_id": "ses_8945548a87d98ed5",
+      "event_identities": [
+        "evt_e80c256b6e642fc1",
+        "evt_bc15414f5b697eb1",
+        "evt_8ba23b658ee08ea1",
+        "evt_81f5f6c003c2a328"
+      ]
+    }
+  ],
+  "not_measured": [
+    "whether later agents discover or use the read-only evidence path",
+    "whether a different agent session encounters the same checkout-selection gap",
+    "whether any of the four historical merge preflights was followed by an executed merge",
+    "whether the missing selection prevented this campaign objective from being completed"
+  ]
+}

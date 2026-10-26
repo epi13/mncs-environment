@@ -1,0 +1,157 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_intent_scoped_readonly_evidence_projection_20261026",
+  "captured_at": "2026-10-26T14:15:38Z",
+  "measurement_basis": "authenticated campaign evidence and bounded read-only projection",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-intent-scoped-readonly-evidence-projection",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_8945548a87d98ed5",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "work_intent_id": "int_e9a2959ffe2e952c",
+      "evidence_window": {
+        "history_pages": 4,
+        "evidence_limit_per_page": 32
+      },
+      "session_event_window": {
+        "before_sequence": 90,
+        "event_limit": 128
+      },
+      "read_only_source_identity": "ev_environment_claimless_integration_preflight_projection_readback_20261026",
+      "selected_checkout_mutation": "none"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "verified_observation_count": 1,
+      "evidence_reference": {
+        "identity": "ev_environment_claimless_integration_preflight_projection_readback_20261026",
+        "repository": "mncs-environment",
+        "commit": "ae12e7f66cf55d792760b2db101fa399e678135c",
+        "path": "evidence/environmental-capability/claimless-integration-preflight-projection-readback-20261026.json",
+        "sha256": "3bf5746f197a3feb17f9025e1802085f7f2e25b07d23e58f7f76421c5beaf437"
+      },
+      "source_repository_read_basis": "workspace-read-only-checkout",
+      "work_intent_repository": "mncs-environment",
+      "selected_repository_set": [
+        "mncs-rights-provenance",
+        "mncs-store",
+        "mncs-system-monitor"
+      ],
+      "workspace_alignment_status": "declared-repositories-not-selected",
+      "pressure_candidate": {
+        "identity": "cpc_4f3c9d479b3d3e00",
+        "kind": "declared-repository-selection-gap",
+        "interpretation": "hypothesis",
+        "read_only_observation_reference_count": 1,
+        "matching_same_work_intent_merge_preflight_count": 4,
+        "recommendation": "Read-only campaign evidence is available, and a same-intent merge or publish preflight required no persistent claim but did not execute. Keep checkout binding operation-scoped; bind or claim only if a concrete mutation requires it."
+      },
+      "historical_preflight_events": [
+        "evt_e80c256b6e642fc1",
+        "evt_bc15414f5b697eb1",
+        "evt_8ba23b658ee08ea1",
+        "evt_81f5f6c003c2a328"
+      ],
+      "limits": [
+        "the four preflights did not execute integration",
+        "the selection gap alone does not establish blocked work",
+        "recurrence across other sessions is not established",
+        "projection status remains partial because the selected activity window lacks a recorded invocation"
+      ]
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_campaign_evidence_checkout_coupling_20261026",
+    "title": "Campaign observation evidence is coupled to checkout selection",
+    "category": "evidence-provenance",
+    "subsystem": "mncs_env.capability_intelligence campaign evidence source resolution",
+    "actionable_recommendation": "Read content-addressed observations through bounded read-only workspace authority when their repository is declared in the active Work Intent; leave selected checkout and mutation eligibility unchanged.",
+    "owner": "mncs-environment"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_claimless_integration_preflight_projection_readback_20261026",
+      "repository": "mncs-environment",
+      "commit": "ae12e7f66cf55d792760b2db101fa399e678135c",
+      "path": "evidence/environmental-capability/claimless-integration-preflight-projection-readback-20261026.json",
+      "sha256": "3bf5746f197a3feb17f9025e1802085f7f2e25b07d23e58f7f76421c5beaf437"
+    },
+    {
+      "identity": "ev_environment_intent_readonly_evidence_implementation_20261026",
+      "repository": "mncs-environment",
+      "commit": "6c25f3c3c5b711db13a260a7f5358b9548ec4b0f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e1f5702dfc82f5eccb3e67a4dce51c2616e9123c312938d8b053b307759dcddc"
+    },
+    {
+      "identity": "ev_environment_intent_readonly_evidence_tests_20261026",
+      "repository": "mncs-environment",
+      "commit": "6c25f3c3c5b711db13a260a7f5358b9548ec4b0f",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "d37df9f862bb1de0c0d48b2e0361be26c41cdc87854acbadddb75d2e056632e5"
+    },
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "session_id": "ses_8945548a87d98ed5",
+      "event_identities": [
+        "evt_e80c256b6e642fc1",
+        "evt_bc15414f5b697eb1",
+        "evt_8ba23b658ee08ea1",
+        "evt_81f5f6c003c2a328"
+      ]
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "live-environmental-capability-projection",
+      "verified_observation_count": 1,
+      "read_basis": "workspace-read-only-checkout",
+      "preflight_count": 4,
+      "selected_checkout_mutation": "none"
+    }
+  ],
+  "improvement_relation": {
+    "identity": "im_environment_campaign_evidence_read_path_20261026",
+    "addresses_hypothesis_identity": "ph_environment_campaign_evidence_checkout_coupling_20261026",
+    "implementation_reference": {
+      "identity": "ev_environment_intent_readonly_evidence_implementation_20261026",
+      "repository": "mncs-environment",
+      "commit": "6c25f3c3c5b711db13a260a7f5358b9548ec4b0f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e1f5702dfc82f5eccb3e67a4dce51c2616e9123c312938d8b053b307759dcddc"
+    },
+    "verification_observation_identity": "ev_environment_intent_readonly_evidence_verification_20261026",
+    "subsequent_observation_identity": null,
+    "basis": "The bounded lookup verified the active campaign's content-addressed observation and the projection retained its source pointer without adding a selected checkout. The declared repository, same-intent preflights, live result, regression tests, and independent campaign proofs are linked as evidence.",
+    "not_measured": [
+      "whether another agent benefits from reduced checkout-binding overhead",
+      "whether this session-selection pressure recurs in subsequent sessions",
+      "whether ordinary mutation operations can be performed without checkout selection"
+    ]
+  },
+  "not_measured": [
+    "whether the prior selection gap blocked this work or merely omitted projection context",
+    "whether later sessions use this path successfully",
+    "whether any of the four merge preflights later executed",
+    "whether this change resolves broader authority and ownership friction"
+  ]
+}
