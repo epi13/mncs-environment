@@ -909,6 +909,228 @@ def test_append_only_correction_requires_exact_verified_observation_pointer(
     ]
 
 
+def test_append_only_correction_completes_integrity_verified_invalid_observation(
+    tmp_path: Path,
+) -> None:
+    target = _observation(
+        "ev_environment_incomplete_observation_record",
+        "ses_contract_completion",
+        "cmp_contract_completion",
+    )
+    target["observation"].pop("request")
+    target["observation"].pop("outcome")
+    session, state = _session(tmp_path, [target])
+    target_reference = dict(state["evidence"][0])
+
+    correction = _observation(
+        "ev_environment_incomplete_observation_correction",
+        "ses_contract_completion",
+        "cmp_contract_completion",
+    )
+    correction.pop("pressure_hypothesis")
+    correction["observation"]["kind"] = "environmental-observation-correction"
+    correction["record_correction"] = {
+        "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+        "target_reference": target_reference,
+        "corrected_field_paths": [
+            "observation.request",
+            "observation.outcome",
+        ],
+        "replacement_values": {
+            "observation.request": {
+                "basis": "recorded from the original bounded CLI invocation",
+                "operation": "environmental-capability projection readback",
+            },
+            "observation.outcome": {
+                "basis": "recorded from the original CLI response",
+                "status": "partial",
+                "response_truncated": True,
+            },
+        },
+        "reason": (
+            "Complete fields omitted from the original content-addressed record; "
+            "retain its original pointer and schema diagnostic."
+        ),
+    }
+    relative = "evidence/environmental-capability/observation-correction.json"
+    raw = json.dumps(correction, sort_keys=True, separators=(",", ":")).encode()
+    correction_path = Path(session.snapshot["selected_checkouts"][
+        "mncs-environment"
+    ]["path"]) / relative
+    correction_path.write_bytes(raw)
+    _git(correction_path.parents[2], "add", relative)
+    _git(correction_path.parents[2], "commit", "--quiet", "-m", "append-only correction")
+    state["evidence"].append({
+        "identity": correction["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(correction_path.parents[2], "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    })
+    state["evidence_count"] = len(state["evidence"])
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["source"]["record_corrections_applied_count"] == 1
+    assert result["source"]["record_corrections_unverified_count"] == 0
+    assert result["source"]["observation_records_unavailable"] == 0
+    corrected = next(
+        item for item in result["observations"]
+        if item["identity"] == target["identity"]
+    )
+    assert corrected["record_correction"]["status"] == (
+        "completed-by-append-only-record"
+    )
+    assert corrected["record_correction"]["correction_observation_identity"] == (
+        correction["identity"]
+    )
+    assert corrected["observation"]["request"] == correction[
+        "record_correction"
+    ]["replacement_values"]["observation.request"]
+    assert corrected["observation"]["outcome"] == correction[
+        "record_correction"
+    ]["replacement_values"]["observation.outcome"]
+    diagnostic = next(
+        item for item in result["source"]["observation_reference_diagnostics"]
+        if item["identity"] == target["identity"]
+    )
+    assert diagnostic["verification"] == "observation-contract-invalid"
+    assert diagnostic["contract_diagnostics"] == [
+        "missing-observation-request",
+        "missing-observation-outcome-or-projection-summary",
+    ]
+    assert diagnostic["correction_status"] == "completed-by-append-only-record"
+    assert diagnostic["correction_observation_identity"] == correction["identity"]
+    compact = capability_intelligence._compact_projection(
+        result, 100_000, 24_000,
+    )
+    compact_corrected = next(
+        item for item in compact["observations"]
+        if item["identity"] == target["identity"]
+    )
+    assert compact_corrected["record_correction"]["replacement_values"][
+        "observation.request"
+    ]["key_count"] == 2
+
+
+def test_observation_contract_correction_requires_complete_contract(
+    tmp_path: Path,
+) -> None:
+    target = _observation(
+        "ev_environment_still_incomplete_observation_record",
+        "ses_contract_completion",
+        "cmp_contract_completion",
+    )
+    target["observation"].pop("request")
+    target["observation"].pop("outcome")
+    session, state = _session(tmp_path, [target])
+    correction = _observation(
+        "ev_environment_partial_observation_correction",
+        "ses_contract_completion",
+        "cmp_contract_completion",
+    )
+    correction.pop("pressure_hypothesis")
+    correction["record_correction"] = {
+        "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+        "target_reference": dict(state["evidence"][0]),
+        "corrected_field_paths": ["observation.request"],
+        "replacement_values": {
+            "observation.request": {"operation": "partial-correction"},
+        },
+        "reason": "The outcome remains unavailable in this correction.",
+    }
+    relative = "evidence/environmental-capability/partial-observation-correction.json"
+    raw = json.dumps(correction, sort_keys=True, separators=(",", ":")).encode()
+    path = Path(session.snapshot["selected_checkouts"]["mncs-environment"]["path"])
+    correction_path = path / relative
+    correction_path.write_bytes(raw)
+    _git(path, "add", relative)
+    _git(path, "commit", "--quiet", "-m", "append partial observation correction")
+    state["evidence"].append({
+        "identity": correction["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(path, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    })
+    state["evidence_count"] = len(state["evidence"])
+
+    result = capability_intelligence.project(session)
+
+    correction_projection = next(
+        item for item in result["observations"]
+        if item["identity"] == correction["identity"]
+    )
+    assert result["source"]["record_corrections_applied_count"] == 0
+    assert result["source"]["record_corrections_unverified_count"] == 1
+    assert correction_projection["record_correction"]["status"] == (
+        "replacement-does-not-complete-observation-contract"
+    )
+    assert all(item["identity"] != target["identity"]
+               for item in result["observations"])
+
+
+def test_observation_contract_correction_cannot_rewrite_valid_observation(
+    tmp_path: Path,
+) -> None:
+    target = _observation(
+        "ev_environment_valid_observation_not_rewritten",
+        "ses_contract_immutability",
+        "cmp_contract_immutability",
+    )
+    session, state = _session(tmp_path, [target])
+    correction = _observation(
+        "ev_environment_valid_observation_correction_attempt",
+        "ses_contract_immutability",
+        "cmp_contract_immutability",
+    )
+    correction.pop("pressure_hypothesis")
+    correction["record_correction"] = {
+        "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+        "target_reference": dict(state["evidence"][0]),
+        "corrected_field_paths": ["observation.request"],
+        "replacement_values": {
+            "observation.request": {"operation": "rewrite-existing-request"},
+        },
+        "reason": "A valid target must remain unchanged.",
+    }
+    relative = "evidence/environmental-capability/valid-observation-correction.json"
+    raw = json.dumps(correction, sort_keys=True, separators=(",", ":")).encode()
+    path = Path(session.snapshot["selected_checkouts"]["mncs-environment"]["path"])
+    correction_path = path / relative
+    correction_path.write_bytes(raw)
+    _git(path, "add", relative)
+    _git(path, "commit", "--quiet", "-m", "reject valid observation rewrite")
+    state["evidence"].append({
+        "identity": correction["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(path, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    })
+    state["evidence_count"] = len(state["evidence"])
+
+    result = capability_intelligence.project(session)
+
+    correction_projection = next(
+        item for item in result["observations"]
+        if item["identity"] == correction["identity"]
+    )
+    unchanged_target = next(
+        item for item in result["observations"]
+        if item["identity"] == target["identity"]
+    )
+    assert result["source"]["record_corrections_applied_count"] == 0
+    assert result["source"]["record_corrections_unverified_count"] == 1
+    assert correction_projection["record_correction"]["status"] == (
+        "replacement-values-unverified-or-unchanged"
+    )
+    assert unchanged_target["observation"]["request"] == target[
+        "observation"
+    ]["request"]
+
+
 def test_append_only_pressure_role_correction_does_not_count_context_as_recurrence(
     tmp_path: Path,
 ) -> None:

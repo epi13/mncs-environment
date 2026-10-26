@@ -1880,7 +1880,8 @@ def _compact_projection(
             key: _short_text(diagnostic.get(key), 192 if key == "path" else 160)
             for key in (
                 "identity", "record_identity", "repository", "commit",
-                "sha256", "verification", "path",
+                "sha256", "verification", "path", "correction_status",
+                "correction_observation_identity",
             )
             if isinstance(diagnostic.get(key), str)
         }
@@ -2331,6 +2332,18 @@ def _compact_projection(
                     compact_replacements["pressure_hypothesis_role"] = (
                         replacement_role
                     )
+                for field in ("observation.request", "observation.outcome"):
+                    payload = replacement_values.get(field)
+                    if isinstance(payload, dict):
+                        keys = [
+                            _short_text(key, 64) for key in list(payload)[:12]
+                            if isinstance(key, str)
+                        ]
+                        compact_replacements[field] = {
+                            "keys": keys,
+                            "key_count": len(payload),
+                            "keys_truncated": len(payload) > len(keys),
+                        }
                 compact_correction["replacement_values"] = compact_replacements
             compact_observation["record_correction"] = compact_correction
         compact_sources = []
@@ -4661,7 +4674,7 @@ def _observation_contract_diagnostics(record: dict[str, Any]) -> list[str]:
                  or hypothesis_role not in PRESSURE_HYPOTHESIS_ROLES
                  or not isinstance(hypothesis, dict))):
         diagnostics.append("invalid-pressure-hypothesis-role")
-    return diagnostics[:16] or ["invalid-observation-contract"]
+    return diagnostics[:16]
 
 
 def _load_observation(
@@ -6802,7 +6815,8 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
                 not isinstance(field, str)
                 or field not in {
                     "supporting_sources", "not_measured",
-                    "pressure_hypothesis_role",
+                    "pressure_hypothesis_role", "observation.request",
+                    "observation.outcome",
                 }
                 for field in fields
             )
@@ -6831,6 +6845,9 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
                  or replacements["pressure_hypothesis_role"]
                  not in PRESSURE_HYPOTHESIS_ROLES)):
         return None
+    for field in ("observation.request", "observation.outcome"):
+        if field in fields and not isinstance(replacements[field], dict):
+            return None
     return {
         "schema_version": OBSERVATION_CORRECTION_SCHEMA,
         "target_reference": target,
@@ -10484,6 +10501,9 @@ def project(
     root = _workspace_root(session)
     references: list[dict[str, Any]] = []
     verified_records: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    contract_invalid_records: dict[
+        str, tuple[dict[str, Any], dict[str, Any]]
+    ] = {}
     seen_observations: set[tuple[str, str, str, str, str]] = set()
     unavailable = 0
     skipped_by_page_budget = 0
@@ -10547,6 +10567,10 @@ def project(
                 len(contract_diagnostics) > 8
             )
         references.append(reference)
+        if record is not None and verification == "observation-contract-invalid":
+            record_identity = record.get("identity")
+            if isinstance(record_identity, str) and record_identity == pointer["identity"]:
+                contract_invalid_records[record_identity] = (record, reference)
         if record is None or verification != "verified":
             unavailable += 1
             continue
@@ -10703,6 +10727,9 @@ def project(
             "path": path[:512],
             "path_truncated": len(path) > 512,
         }
+        for key in ("correction_status", "correction_observation_identity"):
+            if isinstance(reference.get(key), str):
+                diagnostic[key] = reference[key]
         contract_diagnostics = reference.get("contract_diagnostics")
         if isinstance(contract_diagnostics, list):
             diagnostic["contract_diagnostics"] = contract_diagnostics[:8]
@@ -10814,7 +10841,11 @@ def project(
             }
             unverified_record_correction_count += 1
             continue
-        if verification != "verified":
+        target_is_contract_invalid = (
+            verification == "observation-contract-invalid"
+            and target_identity in contract_invalid_records
+        )
+        if verification != "verified" and not target_is_contract_invalid:
             correction_status_by_record[correction_record["identity"]] = {
                 "status": "target-not-verified-in-projection",
                 "target_identity": target_identity,
@@ -10837,6 +10868,10 @@ def project(
             unverified_record_correction_count += 1
             continue
         target_record = projected_records_by_identity.get(target_identity)
+        if target_record is None:
+            invalid_target = contract_invalid_records.get(target_identity)
+            if invalid_target is not None:
+                target_record = invalid_target[0]
         if target_record is None:
             correction_status_by_record[correction_record["identity"]] = {
                 "status": "target-not-projected",
@@ -10861,7 +10896,18 @@ def project(
         replacement_values = correction["replacement_values"]
         for field in correction["corrected_field_paths"]:
             replacement = replacement_values[field]
-            if target_record.get(field) == replacement:
+            if field.startswith("observation."):
+                observation = target_record.get("observation")
+                current = (
+                    observation.get(field.partition(".")[2])
+                    if isinstance(observation, dict) else None
+                )
+                if not target_is_contract_invalid or isinstance(current, dict):
+                    replacements_verified = False
+                    break
+            else:
+                current = target_record.get(field)
+            if current == replacement:
                 replacements_verified = False
                 break
             if field != "supporting_sources":
@@ -10893,16 +10939,40 @@ def project(
             if not replacement_sources_valid:
                 replacements_verified = False
                 break
+        if replacements_verified and target_is_contract_invalid:
+            corrected_record = {
+                **target_record,
+                "observation": {
+                    **(target_record.get("observation")
+                       if isinstance(target_record.get("observation"), dict)
+                       else {}),
+                    **{
+                        field.partition(".")[2]: replacement_values[field]
+                        for field in correction["corrected_field_paths"]
+                        if field.startswith("observation.")
+                    },
+                },
+            }
+            if _observation_contract_diagnostics(corrected_record):
+                replacements_verified = False
         if not replacements_verified:
             correction_status_by_record[correction_record["identity"]] = {
-                "status": "replacement-values-unverified-or-unchanged",
+                "status": (
+                    "replacement-does-not-complete-observation-contract"
+                    if target_is_contract_invalid
+                    else "replacement-values-unverified-or-unchanged"
+                ),
                 "target_identity": target_identity,
                 "target_reference": target_reference,
             }
             unverified_record_correction_count += 1
             continue
         correction_status_by_record[correction_record["identity"]] = {
-            "status": "applied-to-verified-target",
+            "status": (
+                "applied-to-integrity-verified-contract-invalid-target"
+                if target_is_contract_invalid
+                else "applied-to-verified-target"
+            ),
             "target_identity": target_identity,
             "target_reference": target_reference,
             "corrected_field_paths": correction["corrected_field_paths"],
@@ -10924,6 +10994,54 @@ def project(
                 "status": "conflicting-corrections-for-target",
                 "target_identity": target_identity,
             }
+
+    for target_identity, (correction_record, correction, _correction_reference) in (
+        list(correction_by_target.items())
+    ):
+        invalid_target = contract_invalid_records.get(target_identity)
+        if invalid_target is None:
+            continue
+        target_record, target_reference = invalid_target
+        corrected_record = {
+            **target_record,
+            "observation": {
+                **(target_record.get("observation")
+                   if isinstance(target_record.get("observation"), dict) else {}),
+                **{
+                    field.partition(".")[2]: correction["replacement_values"][field]
+                    for field in correction["corrected_field_paths"]
+                    if field.startswith("observation.")
+                },
+            },
+        }
+        corrected_record.pop("_projection_contract_diagnostics", None)
+        if _observation_contract_diagnostics(corrected_record):
+            continue
+        if len(projected_records) >= MAX_OBSERVATIONS:
+            correction_by_target.pop(target_identity, None)
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "corrected-target-projection-limit-reached",
+                "target_identity": target_identity,
+            }
+            unverified_record_correction_count += 1
+            continue
+        projected_records.append((corrected_record, target_reference))
+        projected_records_by_identity[target_identity] = corrected_record
+        target_reference["correction_status"] = (
+            "completed-by-append-only-record"
+        )
+        target_reference["correction_observation_identity"] = (
+            correction_record["identity"]
+        )
+        for diagnostic in observation_reference_diagnostics:
+            if diagnostic.get("identity") == target_identity:
+                diagnostic["correction_status"] = (
+                    "completed-by-append-only-record"
+                )
+                diagnostic["correction_observation_identity"] = (
+                    correction_record["identity"]
+                )
+        unavailable = max(0, unavailable - 1)
 
     unverified_improvement_relation_count = sum(
         record.get("improvement_relation") is not None
@@ -11050,7 +11168,11 @@ def project(
                 ]
             if record_correction_summary is None:
                 record_correction_summary = {
-                    "status": "corrected-by-verified-record",
+                    "status": (
+                        "completed-by-append-only-record"
+                        if record["identity"] in contract_invalid_records
+                        else "corrected-by-verified-record"
+                    ),
                     "correction_observation_identity": correction_record["identity"],
                     "corrected_field_paths": corrected_fields,
                     "replacement_values": replacement_values,

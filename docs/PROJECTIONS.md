@@ -791,7 +791,15 @@ a transcription or relation needs correction. A later record can use the
 `mncs.environment.observation-correction/1` contract to point to the exact
 target evidence reference, name corrected fields, and provide their replacement
 values. Supported fields include `supporting_sources`, `not_measured`, and
-`pressure_hypothesis_role`. A pressure hypothesis can have role `occurrence` or
+`pressure_hypothesis_role`. For an integrity-verified record whose observation
+contract is incomplete, a correction may also supply a missing or invalid
+`observation.request` or `observation.outcome`. These nested fields can only
+complete a contract-invalid target; they cannot rewrite fields on a valid
+observation. The projection reapplies the complete record contract before it
+includes the corrected record in pressure analysis. It retains the original
+contract diagnostic, exact target pointer, and correction identity so the
+corrected projection does not make the original record appear complete.
+A pressure hypothesis can have role `occurrence` or
 `supporting-context`; records without an explicit role retain the historical
 `occurrence` default. A verification or improvement record that repeats a
 hypothesis only to describe the change should use `supporting-context`, so the
@@ -808,8 +816,10 @@ while preserving the independent content-integrity result; it does not grant
 write authority or a claim on the source repository. An
 environmental-observation source outside the selected campaign evidence is
 not accepted as a replacement. The projection applies a correction only when
-the exact target pointer and target record are verified and the replacement
-values differ from the target. It keeps the original record inspectable through
+the exact target pointer and target record are integrity-verified and the
+replacement values differ from the target. For a contract-invalid target, the
+replacement fields must make the complete observation contract valid. It keeps
+the original record inspectable through
 its evidence reference and exposes the effective values with a link to the
 correction record. A target outside the selected pages remains explicitly
 unresolved; an invalid or conflicting correction is not applied. Corrections
