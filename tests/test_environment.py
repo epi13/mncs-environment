@@ -431,6 +431,48 @@ class AuthorityTests(unittest.TestCase):
             "shared branch with overlapping paths across checkouts",
         )
 
+    def test_same_branch_claim_in_separate_git_common_directory_does_not_block(
+        self,
+    ) -> None:
+        checkout = "/workspace/mncs-atlas/.worktrees/proposal"
+        target = checkout + "/src/shared.mn"
+        scope = {
+            "kind": "worktree", "checkout": checkout,
+            "branch": "campaign/proposal", "exclusive": False,
+        }
+        facts = {"mncs-atlas": {
+            "repository": "mncs-atlas", "path": checkout,
+            "repository_root_path": "/workspace/mncs-atlas",
+            "branch": "campaign/proposal", "main_branch": False,
+            "clean": True, "foreign_signals": [],
+            "git_common_directory_identity": "git-common:proposal-clone",
+        }}
+        separate_clone_scope = {
+            "kind": "worktree",
+            "checkout": "/workspace/mncs-atlas-copy/.worktrees/other",
+            "branch": "campaign/proposal",
+            "paths": ["src/shared.mn"],
+            "git_common_directory_identity": "git-common:other-clone",
+            "exclusive": False,
+        }
+
+        verdict = authority.evaluate(
+            context_for(), action="write", target=target,
+            session_id="ses_proposer",
+            claims={"mncs-atlas": [{
+                "claim_id": "claim:mncs-atlas:worktree:other-clone",
+                "session_id": "ses_other_clone",
+                "scope": separate_clone_scope,
+            }]},
+            repo_facts=facts, scope=scope,
+        )
+
+        self.assertEqual(verdict["verdict"], "allow", verdict)
+        self.assertEqual(
+            verdict["eligibility_basis"],
+            authority.PROPOSAL_WORKTREE_ELIGIBILITY,
+        )
+
     def test_non_main_branch_in_repository_root_still_requires_claim(self) -> None:
         checkout = "/workspace/mncs-atlas"
         target = checkout + "/src/shared.mn"
@@ -1951,6 +1993,55 @@ class ClaimTests(unittest.TestCase):
             claims.scopes_conflict(first, second),
             "shared branch with overlapping paths across checkouts",
         )
+
+    def test_same_branch_claims_only_conflict_when_common_directory_is_shared(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first_checkout = root / "first"
+            second_checkout = root / "second"
+            third_checkout = root / "third"
+            for checkout in (first_checkout, second_checkout, third_checkout):
+                checkout.mkdir()
+            store = open_store(root / "state", "file")
+            shared_paths = ["src/shared.mn"]
+            first = claims.acquire(
+                store, repository="r", session_id="a", consumer_id="a",
+                basis=claims.BASIS_EXPLICIT, reason="first clone proposal",
+                workspace_root=str(root),
+                scope={
+                    "kind": "worktree", "checkout": str(first_checkout),
+                    "branch": "campaign/shared", "paths": shared_paths,
+                    "git_common_directory_identity": "git-common:first",
+                    "exclusive": False,
+                },
+            )
+            second = claims.acquire(
+                store, repository="r", session_id="b", consumer_id="b",
+                basis=claims.BASIS_EXPLICIT, reason="independent clone proposal",
+                workspace_root=str(root),
+                scope={
+                    "kind": "worktree", "checkout": str(second_checkout),
+                    "branch": "campaign/shared", "paths": shared_paths,
+                    "git_common_directory_identity": "git-common:second",
+                    "exclusive": False,
+                },
+            )
+            self.assertNotEqual(first["claim_id"], second["claim_id"])
+            self.assertEqual(len(claims.active_claims(store.read_claims())), 2)
+
+            with self.assertRaises(claims.ClaimConflict):
+                claims.acquire(
+                    store, repository="r", session_id="c", consumer_id="c",
+                    basis=claims.BASIS_EXPLICIT,
+                    reason="overlapping proposal on shared Git refs",
+                    workspace_root=str(root),
+                    scope={
+                        "kind": "worktree", "checkout": str(third_checkout),
+                        "branch": "campaign/shared", "paths": shared_paths,
+                        "git_common_directory_identity": "git-common:first",
+                        "exclusive": False,
+                    },
+                )
 
     def test_overlapping_path_proposals_coexist_on_distinct_worktree_branches(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

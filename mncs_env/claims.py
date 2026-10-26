@@ -249,9 +249,13 @@ def scopes_conflict(left: dict[str, Any], right: dict[str, Any]) -> str | None:
 
     Returns a reason string on conflict, None when the scopes coexist.
     Repository scopes are deliberately broad and conflict with every scope.
-    Worktree scopes are isolated by checkout; across linked checkouts only
-    overlapping paths on the same attached branch conflict because they share
-    refs. Detached worktrees have private HEADs and no shared branch ref.
+    Worktree scopes are isolated by checkout. Across linked checkouts,
+    overlapping paths on the same attached branch conflict when their
+    observed Git common-directory identity matches, because those checkouts
+    share refs. Distinct observed common directories have independent local
+    refs even when the branch names match. If either identity is unavailable,
+    retain the conservative shared-branch conflict. Detached worktrees have
+    private HEADs and no shared branch ref.
     """
     if left.get("repository") != right.get("repository"):
         return None
@@ -275,6 +279,12 @@ def scopes_conflict(left: dict[str, Any], right: dict[str, Any]) -> str | None:
     if left_branch is None or right_branch is None:
         return None
     if left_branch != right_branch:
+        return None
+    left_common = left.get("git_common_directory_identity")
+    right_common = right.get("git_common_directory_identity")
+    if (isinstance(left_common, str) and left_common
+            and isinstance(right_common, str) and right_common
+            and left_common != right_common):
         return None
     if _paths_overlap(left.get("paths"), right.get("paths")):
         return "shared branch with overlapping paths across checkouts"

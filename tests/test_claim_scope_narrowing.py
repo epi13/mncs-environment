@@ -122,3 +122,38 @@ def test_narrow_worktree_paths_conflict_on_same_checkout_or_shared_branch() -> N
     )
     assert claims.scopes_conflict(first, shared_branch_disjoint) is None
     assert claims.scopes_conflict(first, other_branch_overlap) is None
+
+
+def test_same_branch_only_conflicts_when_git_common_directory_is_shared():
+    linked_first = _scope(
+        "worktree",
+        checkout="/workspace/mncs-environment/.worktrees/first",
+        branch="campaign/shared",
+        paths=["mncs_env/claims.py"],
+    )
+    linked_second = _scope(
+        "worktree",
+        checkout="/workspace/mncs-environment/.worktrees/second",
+        branch="campaign/shared",
+        paths=["mncs_env/claims.py"],
+    )
+    linked_first["git_common_directory_identity"] = "git-common:shared"
+    linked_second["git_common_directory_identity"] = "git-common:shared"
+    separate_clone = {
+        **linked_second,
+        "checkout": "/workspace/mncs-environment-copy/.worktrees/second",
+        "git_common_directory_identity": "git-common:separate",
+    }
+
+    assert claims.scopes_conflict(linked_first, linked_second) == (
+        "shared branch with overlapping paths across checkouts"
+    )
+    assert claims.scopes_conflict(linked_first, separate_clone) is None
+
+    # Older claims without an observed common-directory identity retain the
+    # conservative behavior until their scope is refreshed.
+    legacy_scope = {key: value for key, value in linked_second.items()
+                    if key != "git_common_directory_identity"}
+    assert claims.scopes_conflict(linked_first, legacy_scope) == (
+        "shared branch with overlapping paths across checkouts"
+    )

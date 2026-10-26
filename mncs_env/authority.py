@@ -304,6 +304,24 @@ def _requested_scope(repo: str, target: str,
         merged = {"kind": "paths" if scope.get("paths") else "repository",
                   "repository": repo}
         merged.update(scope)
+        # Operation callers may provide only an exact registered checkout and
+        # branch. Attach the common-directory identity from the fresh
+        # Environment observation so branch-name collisions across separate
+        # clones do not become false coordination conflicts. Existing caller
+        # values remain subject to the normal observation match below.
+        checkout = merged.get("checkout")
+        if merged.get("kind") == "worktree" and isinstance(checkout, str):
+            observed = checkout_facts_for_target(checkout, repo_facts)
+            if (observed is not None and observed[0] == repo
+                    and os.path.normpath(str(observed[1].get("path", "")))
+                    == os.path.normpath(checkout)):
+                for key in (
+                    "git_common_directory_identity", "checkout_identity",
+                    "manifest_identity",
+                ):
+                    if (key not in merged
+                            and isinstance(observed[1].get(key), str)):
+                        merged[key] = observed[1][key]
         return claims_module.normalize_scope(merged, repo)
     if os.path.isabs(target):
         match = checkout_facts_for_target(target, repo_facts)
@@ -418,8 +436,9 @@ def evaluate(
     a proposal surface: its session-writable repository scope is sufficient
     for local development, and repository-wide or repository-relative path
     claims remain visible as coordination context rather than reserving every
-    proposal branch. Checkout-scoped claims for the same checkout or attached
-    branch still block. Protected, forbidden,
+    proposal branch. Checkout-scoped claims for the same checkout or a shared
+    attached branch still block. Branch names in separate Git common
+    directories do not identify shared refs. Protected, forbidden,
     and fenced scope denies. For merge and publish, overlap remains
     coordination evidence while the repository-native update resolves actual
     conflicts. Escalate and deny never authorize execution.

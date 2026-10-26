@@ -81,9 +81,12 @@ different registered checkout. Use `--repository-paths --paths` when a
 repository-relative claim should intentionally describe a path across every
 checkout. Such claims still coordinate with other claim requests, but do not
 reserve isolated proposal worktrees for local edits; preflight records them as
-coordination evidence. A checkout-bound worktree claim continues to protect an
-overlapping edit in the same checkout or attached branch. An unanchored path
-claim requires that explicit flag, so a missing checkout cannot silently
+coordination evidence. A checkout-bound worktree claim protects an overlapping
+edit in the same checkout or on the same attached branch when both checkouts
+have the same observed Git common-directory identity. Matching branch names in
+distinct Git common directories do not share local refs and do not block one
+another. Older claims without that identity remain conservative. An unanchored
+path claim requires that explicit flag, so a missing checkout cannot silently
 create a repository-wide blocker.
 
 Before acquiring a claim from the session's selected checkout, Environment

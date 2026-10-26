@@ -1402,6 +1402,10 @@ class EntryContractTests(unittest.TestCase):
             expected_repository_root=self.project,
             expected_branch="campaign/project-environment",
         )
+        self.assertEqual(
+            current_checkout["git_common_directory_identity"],
+            nested_checkout["git_common_directory_identity"],
+        )
         snapshot = {
             "campaign": {"identity": "cmp_project_environment_checkout"},
             "authenticated_principal_id": "principal-project-environment",
@@ -1515,6 +1519,10 @@ class EntryContractTests(unittest.TestCase):
         ).stdout.strip()
         clone_identity = workspace.repository_checkout_identity(
             self.base, "fixture", clone,
+        )
+        self.assertNotEqual(
+            current_checkout["git_common_directory_identity"],
+            clone_identity["git_common_directory_identity"],
         )
         invalid_snapshot = {
             "campaign": {"identity": "cmp_unregistered_campaign_checkout"},
