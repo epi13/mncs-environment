@@ -3569,6 +3569,97 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     assert live_guidance["claim_mutated"] is False
 
 
+def test_claim_coordination_projects_bounded_objective_linked_transitions(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_claim_coordination_activity",
+        "ses_environment_claim_coordination_activity",
+        "cmp_environment_claim_coordination_activity",
+    )
+    session, _state = _session(tmp_path, [record])
+    private_checkout = "/private/agent/worktrees/environment"
+    events = [
+        {
+            "identity": "evt_claim_coordination_acquired",
+            "sequence": 4,
+            "type": "lease.acquired",
+            "payload": {
+                "repository": "mncs-environment",
+                "basis": claims.BASIS_EXPLICIT,
+                "claim_identity": "claim:mncs-environment:paths:abc123",
+                "claim_version": 2,
+                "scope": {
+                    "kind": "paths",
+                    "repository": "mncs-environment",
+                    "checkout": private_checkout,
+                    "branch": "campaign/coordination",
+                    "paths": ["mncs_env/sessions.py"],
+                    "exclusive": False,
+                },
+                "campaign_id": "cmp_coordination_campaign",
+                "work_intent_id": "int_coordination_intent",
+                "reason": "private reason must not enter the projection",
+            },
+        },
+        {
+            "identity": "evt_claim_coordination_release",
+            "sequence": 5,
+            "type": "lease.released",
+            "payload": {
+                "repository": "mncs-environment",
+                "claim_id": "claim:mncs-environment:paths:abc123",
+                "released": ["claim:mncs-environment:paths:abc123"],
+                "reason": "legacy event has no objective reference",
+            },
+        },
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events), "events": events[-limit:],
+        "truncated": False, "next_before_sequence": None,
+    }
+
+    activity = capability_intelligence.project(session)["session_activity"]
+    assert activity["claim_coordination_count"] == 2
+    assert activity["source"]["claim_coordination_events_considered"] == 2
+    assert activity["source"]["claim_coordination_records_invalid"] == 0
+    acquired, released = activity["claim_coordination"][::-1]
+    assert acquired["event_reference"]["identity"] == (
+        "evt_claim_coordination_acquired"
+    )
+    assert acquired["campaign_id"] == "cmp_coordination_campaign"
+    assert acquired["campaign_reference_status"] == "recorded-on-event"
+    assert acquired["work_intent_id"] == "int_coordination_intent"
+    assert acquired["work_intent_reference_status"] == "recorded-on-event"
+    assert acquired["scope"] == {
+        "kind": "paths",
+        "repository": "mncs-environment",
+        "exclusive": False,
+        "branch": "campaign/coordination",
+        "paths": ["mncs_env/sessions.py"],
+    }
+    assert "reason" not in acquired
+    assert released["work_intent_reference_status"] == "not-recorded-on-event"
+    assert released["event_reference"]["identity"] == (
+        "evt_claim_coordination_release"
+    )
+    assert private_checkout not in json.dumps(activity)
+    assert "private reason" not in json.dumps(activity)
+    assert all("successful" not in item["status"]
+               for item in activity["claim_coordination"])
+
+    compact = capability_intelligence.project(
+        session, max_result_bytes=10_000,
+    )["session_activity"]
+    assert compact["claim_coordination"][0]["event_reference"]["identity"] == (
+        "evt_claim_coordination_release"
+    )
+    assert compact["claim_coordination"][1]["work_intent_id"] == (
+        "int_coordination_intent"
+    )
+    assert private_checkout not in json.dumps(compact)
+
+
 def test_session_activity_discloses_bounded_event_and_interaction_windows(
     tmp_path: Path,
 ) -> None:
@@ -7584,6 +7675,34 @@ def test_session_event_reference_resolution_includes_claim_recoveries() -> None:
         "event_reference_count": 1,
         "event_reference_matched_count": 1,
         "event_reference_match_categories": ["claim_recovery"],
+    }
+
+    coordination_match = (
+        capability_intelligence._authenticated_session_event_reference_resolution(
+            {**source, "event_identities": ["evt_coordination_one"]},
+            selected_session_id="ses_claim_recovery_reference",
+            activity={
+                "source": {
+                    "event_window_truncated": False,
+                    "claim_coordination_events_considered": 1,
+                    "claim_coordination_records_returned": 1,
+                    "claim_coordination_records_omitted": 0,
+                    "claim_coordination_records_invalid": 0,
+                },
+                "claim_coordination": [{
+                    "event_reference": {
+                        "identity": "evt_coordination_one",
+                        "type": "lease.acquired",
+                    },
+                }],
+            },
+        )
+    )
+    assert coordination_match == {
+        "event_reference_status": "all-referenced-events-present",
+        "event_reference_count": 1,
+        "event_reference_matched_count": 1,
+        "event_reference_match_categories": ["claim_coordination"],
     }
 
     denial_match = (

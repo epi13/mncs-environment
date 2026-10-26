@@ -6203,6 +6203,7 @@ class Session:
             "claim_identity": record.get("claim_id"),
             "claim_version": record.get("version"),
             "scope": record.get("scope", {}),
+            **self._authority_event_context(),
         }
         if _owner_recovery_authorization is not None:
             event_payload.update({
@@ -6296,6 +6297,7 @@ class Session:
         )
         target_claim_id = claims_module.claim_identity(repository, target_scope)
         live = claims_module.active_claims(self.store.read_claims())
+        source = live.get(claim_id)
         recovered_target = live.get(target_claim_id)
         if (recovered_target is not None
                 and recovered_target.get("session_id") == self.session_id
@@ -6304,7 +6306,6 @@ class Session:
                     "authorization_id") == authorization.get("authorization_id")):
             record = recovered_target
         else:
-            source = live.get(claim_id)
             if (source is None or source.get("session_id") != owner_session_id
                     or int(source.get("version", 0)) != expected_version
                     or source.get("consumer_id") != authorization.get("owner_consumer_id")
@@ -6358,6 +6359,29 @@ class Session:
                 "operator_approval_reference"
             ]
         old_session = Session(self.store, owner_session_id)
+        old_recovery_payload = {
+            **recovery_payload,
+            **old_session._authority_event_context(),
+        }
+        old_recovery_payload.update({
+            "basis": (
+                source.get("basis")
+                if isinstance(source, dict)
+                and source.get("session_id") == owner_session_id
+                else None
+            ),
+            "claim_version": expected_version,
+            "scope": owner_scope,
+        })
+        new_recovery_payload = {
+            **recovery_payload,
+            **self._authority_event_context(),
+        }
+        new_recovery_payload.update({
+            "basis": record.get("basis"),
+            "claim_version": record.get("version"),
+            "scope": record.get("scope", target_scope),
+        })
         old_authority = dict(old_session.snapshot.get("authority") or {})
         fences = [
             dict(item) for item in old_authority.get("claim_fences", [])
@@ -6394,7 +6418,7 @@ class Session:
         )
         if not already_fenced:
             old_session._emit(
-                "lease.recovered-away", "mncs-control-mcp", recovery_payload,
+                "lease.recovered-away", "mncs-control-mcp", old_recovery_payload,
                 request_id=request_id, operation_digest=operation_digest,
             )
         old_session._save()
@@ -6408,7 +6432,7 @@ class Session:
         if not already_reconciled:
             self._emit(
                 "lease.owner-recovery-reconciled", "mncs-control-mcp",
-                recovery_payload, request_id=request_id,
+                new_recovery_payload, request_id=request_id,
                 operation_digest=operation_digest,
             )
         self._save()
@@ -6461,6 +6485,7 @@ class Session:
                         "claim_id": claim_id,
                         "request_id": request_id,
                         "request_digest": request_digest,
+                        **self._authority_event_context(),
                     },
                 )
                 self._save()
@@ -6497,6 +6522,7 @@ class Session:
             if request_id is not None:
                 payload["request_id"] = request_id
                 payload["request_digest"] = request_digest
+            payload.update(self._authority_event_context())
             self._emit(
                 "lease.released", self.snapshot.get("consumer_id", "unknown"),
                 payload,
@@ -6546,6 +6572,11 @@ class Session:
                     "claim_id": claim_id,
                     "to_session": to_session,
                     "transfer_request_id": transfer_request_id,
+                    "repository": record.get("repository"),
+                    "claim_version": record.get("version"),
+                    "basis": record.get("basis"),
+                    "scope": record.get("scope"),
+                    **self._authority_event_context(),
                 },
             )
         self._save()
@@ -8325,6 +8356,7 @@ class Session:
                                 "request_id": request_id,
                                 "release_request_id": release_request_id,
                                 "repository": repository,
+                                **self._authority_event_context(),
                             },
                         )
         except Exception as exc:  # noqa: BLE001 - recorded, never raised
@@ -8339,6 +8371,7 @@ class Session:
                             str(record.get("claim_id", "")) for record in released
                         }),
                         "reason": reason,
+                        **self._authority_event_context(),
                     },
                 )
         return {"released": sorted({

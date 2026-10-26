@@ -1096,6 +1096,10 @@ class ClaimTests(unittest.TestCase):
                 recovered_event["payload"]["claim_identity"],
                 acquired["claim_id"],
             )
+            self.assertEqual(
+                recovered_event["payload"]["work_intent_id"],
+                session.snapshot["intent"]["identity"],
+            )
             self.assertEqual(recovered_event["payload"]["recovered_from"], [{
                 "claim_id": stale_claim["claim_id"],
                 "version": stale_claim["version"],
@@ -1134,6 +1138,26 @@ class ClaimTests(unittest.TestCase):
                     "session_id"
                 ],
                 session.session_id,
+            )
+            self.assertTrue(session.release_claim(
+                "repo-allowed", claim_id=acquired["claim_id"],
+                reason="complete the verified stale-scope work",
+            ))
+            released_event = next(
+                event for event in session.recent_events(limit=32)["events"]
+                if event.get("type") == "lease.released"
+            )
+            self.assertEqual(
+                released_event["payload"]["work_intent_id"],
+                session.snapshot["intent"]["identity"],
+            )
+            coordination = capability_intelligence.project(
+                session,
+            )["session_activity"]["claim_coordination"]
+            self.assertEqual(coordination[0]["action"], "released")
+            self.assertEqual(
+                coordination[0]["work_intent_id"],
+                session.snapshot["intent"]["identity"],
             )
             session.close()
 

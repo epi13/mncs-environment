@@ -215,7 +215,17 @@ MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES = 8
 MAX_SESSION_ACTIVITY_INTEGRATION_ELIGIBILITY = 16
 MAX_SESSION_ACTIVITY_INTEGRATION_OVERLAPS = 8
 MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES = 8
+MAX_SESSION_ACTIVITY_CLAIM_COORDINATION = 16
 MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS = 4
+CLAIM_COORDINATION_EVENT_ACTIONS = {
+    "lease.acquired": "acquired",
+    "lease.owner-recovered": "owner-recovered",
+    "lease.released": "released",
+    "lease.release_noop": "release-noop",
+    "lease.transferred": "transferred",
+    "lease.recovered-away": "recovered-away",
+    "lease.owner-recovery-reconciled": "owner-recovery-reconciled",
+}
 SOURCE_INTEGRITY_VERIFIED = frozenset({
     "content-integrity-verified",
     "record-integrity-verified-in-projection",
@@ -2597,6 +2607,11 @@ def _compact_projection(
             "event_window_sequence_start", "event_window_sequence_end",
             "invocation_events_considered", "invocation_records_omitted",
             "resource_sample_identity_digest",
+            "claim_coordination_events_considered",
+            "claim_coordination_records_returned",
+            "claim_coordination_records_omitted",
+            "claim_coordination_records_invalid",
+            "claim_coordination_selection_policy",
         )
         if key in activity_source
         and (key not in {"event_page_before_sequence", "next_event_before_sequence"}
@@ -3273,6 +3288,42 @@ def _compact_projection(
                 if key in reference
             }
         compact_claim_recoveries.append(compact_item)
+    compact_claim_coordination = []
+    raw_claim_coordination = activity.get("claim_coordination")
+    raw_claim_coordination = (
+        raw_claim_coordination if isinstance(raw_claim_coordination, list) else []
+    )
+    for item in raw_claim_coordination[:MAX_SESSION_ACTIVITY_CLAIM_COORDINATION]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 192)
+            for key in (
+                "identity", "action", "status", "repository",
+                "repository_status", "scope_status", "claim_id",
+                "successor_claim_id", "basis", "campaign_id",
+                "campaign_reference_status", "work_intent_id",
+                "work_intent_reference_status",
+                "interpretation",
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in ("claim_version", "released_count"):
+            if type(item.get(key)) is int and item[key] >= 0:
+                compact_item[key] = item[key]
+        if isinstance(item.get("scope"), dict):
+            compact_item["scope"] = item["scope"]
+        for key in ("owner_session_id", "new_session_id", "to_session_id"):
+            if isinstance(item.get(key), str):
+                compact_item[key] = _short_text(item[key], 160)
+        reference = item.get("event_reference")
+        if isinstance(reference, dict):
+            compact_item["event_reference"] = {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in reference
+            }
+        compact_claim_coordination.append(compact_item)
     compact_authority_denials = []
     raw_authority_denials = activity.get("authority_denials")
     raw_authority_denials = (
@@ -3497,6 +3548,15 @@ def _compact_projection(
         compact_activity["claim_recoveries"] = compact_claim_recoveries
         if len(raw_claim_recoveries) > len(compact_claim_recoveries):
             compact_activity["claim_recoveries_truncated"] = True
+    if raw_claim_coordination or activity_source.get(
+        "claim_coordination_events_considered", 0,
+    ):
+        compact_activity["claim_coordination_count"] = activity.get(
+            "claim_coordination_count", len(raw_claim_coordination),
+        )
+        compact_activity["claim_coordination"] = compact_claim_coordination
+        if len(raw_claim_coordination) > len(compact_claim_coordination):
+            compact_activity["claim_coordination_truncated"] = True
     if (activity_source.get("rpc_operation_capture_count") is not None
             or raw_rpc_operations or raw_rpc_summary):
         compact_activity["rpc_operation_count"] = activity.get(
@@ -3836,6 +3896,9 @@ def _compact_projection(
         elif result["session_activity"].get("claim_recoveries"):
             result["session_activity"]["claim_recoveries"].pop()
             result["session_activity"]["claim_recoveries_truncated"] = True
+        elif result["session_activity"].get("claim_coordination"):
+            result["session_activity"]["claim_coordination"].pop()
+            result["session_activity"]["claim_coordination_truncated"] = True
         elif result["session_activity"].get("authority_denial_candidates"):
             result["session_activity"]["authority_denial_candidates"].pop()
             result["session_activity"]["authority_denial_candidates_truncated"] = True
@@ -7051,6 +7114,7 @@ def _authenticated_session_event_reference_resolution(
     record_collections = (
         ("rpc_operation", "rpc_operations"),
         ("claim_recovery", "claim_recoveries"),
+        ("claim_coordination", "claim_coordination"),
         ("authority_denial", "authority_denials"),
         ("integration_eligibility", "integration_eligibility"),
     )
@@ -7095,6 +7159,44 @@ def _authenticated_session_event_reference_resolution(
         activity_source.get("rpc_operation_records_returned")
         if activity_source is not None else None
     )
+    claim_coordination_records = activity.get("claim_coordination")
+    claim_coordination_records = (
+        claim_coordination_records
+        if isinstance(claim_coordination_records, list) else []
+    )
+    coordination_events_considered = (
+        activity_source.get("claim_coordination_events_considered")
+        if activity_source is not None else None
+    )
+    coordination_records_returned = (
+        activity_source.get("claim_coordination_records_returned")
+        if activity_source is not None else None
+    )
+    coordination_records_omitted = (
+        activity_source.get("claim_coordination_records_omitted")
+        if activity_source is not None else None
+    )
+    coordination_records_invalid = (
+        activity_source.get("claim_coordination_records_invalid")
+        if activity_source is not None else None
+    )
+    claim_coordination_bounded = (
+        type(coordination_events_considered) is int
+        and coordination_events_considered > 0
+        and (
+            type(coordination_records_returned) is not int
+            or coordination_records_returned != len(claim_coordination_records)
+            or type(coordination_records_omitted) is not int
+            or coordination_records_omitted > 0
+            or type(coordination_records_invalid) is not int
+            or coordination_records_invalid > 0
+            or coordination_events_considered != (
+                coordination_records_returned
+                + coordination_records_omitted
+                + coordination_records_invalid
+            )
+        )
+    )
     bounded = (
         activity_source is None
         or activity_source.get("event_window_truncated") is not False
@@ -7107,6 +7209,7 @@ def _authenticated_session_event_reference_resolution(
         or type(records_returned) is not int
         or events_considered != records_returned
         or records_returned != len(raw_operations)
+        or claim_coordination_bounded
         or non_rpc_records_present
     )
     if matched_event_ids == expected_event_ids:
@@ -9310,6 +9413,143 @@ def _claim_recovery_event_projection(
     }
 
 
+def _claim_coordination_event_projection(
+    event: dict[str, Any], session_id: str,
+) -> dict[str, Any] | None:
+    """Sanitize one recorded claim lifecycle transition for session activity."""
+    reference = _event_reference(event)
+    event_type = event.get("type")
+    action = CLAIM_COORDINATION_EVENT_ACTIONS.get(event_type)
+    payload = event.get("payload")
+    payload = payload if isinstance(payload, dict) else {}
+    if reference is None or action is None:
+        return None
+
+    identifier = re.compile(r"[A-Za-z0-9][A-Za-z0-9:._-]{0,159}")
+    repository = payload.get("repository")
+    repository_valid = _is_repository_identity(repository)
+    raw_scope = payload.get("scope")
+    scope = (
+        _authority_conflict_scope(raw_scope, repository)
+        if repository_valid and isinstance(raw_scope, dict) else None
+    )
+    if isinstance(raw_scope, dict) and scope is None:
+        return None
+
+    claim_id = payload.get("claim_identity", payload.get("claim_id"))
+    if claim_id is not None and (
+        not isinstance(claim_id, str) or not identifier.fullmatch(claim_id)
+    ):
+        return None
+    successor_claim_id = payload.get("target_claim_id")
+    if successor_claim_id is not None and (
+        not isinstance(successor_claim_id, str)
+        or not identifier.fullmatch(successor_claim_id)
+    ):
+        return None
+
+    claim_version = (
+        payload.get("superseded_version")
+        if action == "recovered-away"
+        else payload.get("claim_version", payload.get("new_claim_version"))
+    )
+    if claim_version is not None and (
+        type(claim_version) is not int or claim_version < 1
+    ):
+        return None
+    basis = payload.get("basis")
+    if basis is not None and (not isinstance(basis, str) or basis not in {
+        claims_module.BASIS_EXPLICIT,
+        claims_module.BASIS_INTENT_SCOPE,
+        claims_module.BASIS_RECOVERY,
+        claims_module.BASIS_ADOPTION,
+        claims_module.BASIS_TRANSFER,
+    }):
+        return None
+
+    released = payload.get("released")
+    released_count = None
+    if type(released) is int and 0 <= released <= 100_000:
+        released_count = released
+    elif isinstance(released, list) and len(released) <= 100_000:
+        if any(not isinstance(item, str) or not identifier.fullmatch(item)
+               for item in released):
+            return None
+        released_count = len(released)
+    elif released is not None:
+        return None
+
+    row: dict[str, Any] = {
+        "identity": "clmcoord_" + digest_hex({
+            "session_id": session_id,
+            "event": reference["identity"],
+        }, length=16),
+        "action": action,
+        "status": {
+            "acquired": "claim-acquired",
+            "owner-recovered": "claim-acquired-by-authorized-recovery",
+            "released": "claim-release-recorded",
+            "release-noop": "claim-release-no-op",
+            "transferred": "claim-transfer-recorded",
+            "recovered-away": "claim-recovery-fenced-prior-owner",
+            "owner-recovery-reconciled": "owner-recovery-reconciled",
+        }[action],
+        "repository_status": (
+            "recorded-on-event" if repository_valid else (
+                "invalid-event-value" if repository is not None
+                else "not-recorded-on-event"
+            )
+        ),
+        "scope_status": (
+            "validated-from-event" if scope is not None else (
+                "invalid-event-value" if raw_scope is not None
+                else "not-recorded-on-event"
+            )
+        ),
+        "event_reference": reference,
+        "interpretation": (
+            "This records a claim coordination transition at event time; it does "
+            "not establish the claim's current state or whether the associated "
+            "development work succeeded."
+        ),
+        **_authority_event_objective_context(payload),
+    }
+    campaign_id = payload.get("campaign_id")
+    if (isinstance(campaign_id, str)
+            and identifier.fullmatch(campaign_id)):
+        row["campaign_reference_status"] = "recorded-on-event"
+    else:
+        row["campaign_reference_status"] = (
+            "invalid-event-reference" if campaign_id is not None
+            else "not-recorded-on-event"
+        )
+    if repository_valid:
+        row["repository"] = repository
+    if scope is not None:
+        row["scope"] = scope
+    if claim_id is not None:
+        row["claim_id"] = claim_id
+    if claim_version is not None:
+        row["claim_version"] = claim_version
+    if basis is not None:
+        row["basis"] = basis
+    if released_count is not None:
+        row["released_count"] = released_count
+    if successor_claim_id is not None:
+        row["successor_claim_id"] = successor_claim_id
+    for source_key, output_key in (
+        ("owner_session_id", "owner_session_id"),
+        ("new_session_id", "new_session_id"),
+        ("to_session", "to_session_id"),
+    ):
+        value = payload.get(source_key)
+        if value is not None:
+            if not isinstance(value, str) or not identifier.fullmatch(value):
+                return None
+            row[output_key] = value
+    return row
+
+
 def _resource_sample_payload(value: Any) -> tuple[dict[str, Any] | None, str | None]:
     """Select the privacy-minimized, bounded fields from one Monitor sample."""
     if not isinstance(value, dict) or value.get("schema") != SYSTEM_RESOURCE_SAMPLE_SCHEMA:
@@ -9716,6 +9956,24 @@ def _session_activity(
     claim_recovery_records_omitted = max(
         0, valid_claim_recovery_count - len(claim_recoveries),
     )
+    claim_coordination_events = [
+        event for event in events
+        if event.get("type") in CLAIM_COORDINATION_EVENT_ACTIONS
+    ]
+    claim_coordination = []
+    invalid_claim_coordination_event_count = 0
+    valid_claim_coordination_count = 0
+    for event in reversed(claim_coordination_events):
+        item = _claim_coordination_event_projection(event, session.session_id)
+        if item is None:
+            invalid_claim_coordination_event_count += 1
+            continue
+        valid_claim_coordination_count += 1
+        if len(claim_coordination) < MAX_SESSION_ACTIVITY_CLAIM_COORDINATION:
+            claim_coordination.append(item)
+    claim_coordination_records_omitted = max(
+        0, valid_claim_coordination_count - len(claim_coordination),
+    )
     invocation_events = [
         event for event in events if event.get("type") == "capability.invoked"
     ]
@@ -10053,7 +10311,8 @@ def _session_activity(
     partial = (
         event_window_truncated or event_before_sequence is not None
         or invocations_omitted > 0 or rpc_operations_omitted > 0
-        or rpc_capture_limit_reached
+        or rpc_capture_limit_reached or claim_coordination_records_omitted > 0
+        or invalid_claim_coordination_event_count > 0
     )
     if partial and not invocation_events:
         status = (
@@ -10118,6 +10377,12 @@ def _session_activity(
         limits.append(
             "Claim-recovery activity records claim-state transitions, not "
             "whether later development outcomes improved."
+        )
+    if claim_coordination_events:
+        limits.append(
+            "Claim-coordination activity records bounded claim-state transitions, "
+            "not exclusive work authority, accepted modifications, or development outcomes. "
+            "Historical events without objective references remain unlinked."
         )
     denial_records: list[dict[str, Any]] = []
     snapshot_facts = authority_module.repository_facts_for_snapshot(snapshot)
@@ -10790,6 +11055,21 @@ def _session_activity(
                     "newest-valid-recovery-events-in-selected-session-window"
                 ),
             } if claim_recovery_events else {}),
+            **({
+                "claim_coordination_events_considered": len(
+                    claim_coordination_events,
+                ),
+                "claim_coordination_records_returned": len(claim_coordination),
+                "claim_coordination_records_omitted": (
+                    claim_coordination_records_omitted
+                ),
+                "claim_coordination_records_invalid": (
+                    invalid_claim_coordination_event_count
+                ),
+                "claim_coordination_selection_policy": (
+                    "newest-sanitized-claim-transitions-in-selected-session-window"
+                ),
+            } if claim_coordination_events else {}),
             "invocation_events_considered": len(invocation_events),
             "completion_events_considered": len(completion_events),
             "invocation_records_omitted": invocations_omitted,
@@ -10847,6 +11127,10 @@ def _session_activity(
             "claim_recovery_count": len(claim_recoveries),
             "claim_recoveries": claim_recoveries,
         } if claim_recovery_events else {}),
+        **({
+            "claim_coordination_count": len(claim_coordination),
+            "claim_coordination": claim_coordination,
+        } if claim_coordination_events else {}),
         "capabilities": capabilities,
         "capability_delivery": capability_delivery,
         "measurement_limits": limits,

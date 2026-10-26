@@ -466,9 +466,23 @@ new claim identity/version and up to eight superseded claim identities. It is
 causal provenance for an accepted claim transition, not evidence that the
 subsequent implementation objective succeeded.
 
+`session_activity.claim_coordination` exposes up to sixteen newest claim
+acquisition, release, transfer, and owner-recovery lifecycle transitions in
+the same selected event page. Each row retains the exact event reference,
+event-time campaign/work-intent references when available, and validated
+repository-relative scope; checkout paths and human-provided reason text are
+omitted. Historical events without objective references remain explicitly
+unlinked. `lease.recovered-and-acquired` remains in `claim_recoveries` to avoid
+duplicating its richer recovery record. This is descriptive coordination
+evidence: a claim transition records event-time activity, not the claim's
+current state, an accepted code change, or a successful development outcome.
+The source summary reports invalid and omitted records, and bounded pages
+remain partial when older transitions are outside the view.
+
 Environmental observation sources that retain authenticated session event
 identities are resolved against the bounded RPC, authority-denial,
-integration-eligibility, and claim-recovery records in that same session view.
+integration-eligibility, claim-recovery, and claim-coordination records in that
+same session view.
 A matched source reports which record categories contain its events. Finding
 the event establishes that the record is present in the selected projection;
 it does not establish the event's cause or downstream success. Missing
