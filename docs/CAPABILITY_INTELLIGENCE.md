@@ -15,9 +15,11 @@ second telemetry store or capability registry.
 Inspect `capability_accountability_links` in the result. It reports exact
 repository, commit, path, and SHA-256 relationships, along with their source
 references, the owner audit's declared host responsibilities, the candidate
-native capability, and the existing next-investigation text. It is bounded to
-four links and 4 KiB. Exact pointers provide traceability, not proof of
-causation or migration suitability.
+native capability, the existing next-investigation text, and one bounded
+source reference for its language contract, compiler support, and host runtime
+provider where those records are available. It is bounded to four links and
+5 KiB. Exact pointers provide traceability, not proof of causation or migration
+suitability.
 
 ## Current evidence path
 
@@ -39,7 +41,11 @@ and that the P-001 source pointer is integrity-verified in both linked
 observations. Its current correction status is
 `replacement-values-unverified-or-unchanged`, and the improvement relation is
 `not-recorded`. The view therefore preserves the source trail without claiming
-that the original audit was changed.
+that the original audit was changed. The linked process correspondence also
+exposes integrity-addressed pointers to the MNCS process language contract,
+compiler support, and runtime provider. These references make the candidate
+implementation inspectable; they do not establish consumer integration or
+implementation responsibility for an owner-declared host task.
 
 For this candidate, the next investigation is to find an existing native MNCS
 consumer, establish how it discovers and invokes the API, and verify parity

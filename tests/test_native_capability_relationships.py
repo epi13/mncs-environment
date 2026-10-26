@@ -17,6 +17,18 @@ def _pointer(*, sha256: str = "b" * 64, integrity: str = "content-integrity-veri
     }
 
 
+def _native_source(identity: str, path: str, sha256: str) -> dict[str, str]:
+    return {
+        "identity": identity,
+        "kind": "native-process-implementation-source",
+        "repository": "mncs-language",
+        "commit": "c" * 40,
+        "path": path,
+        "sha256": sha256,
+        "content_integrity_status": "workspace-read-only-content-integrity-verified",
+    }
+
+
 def _accountability(pointer: dict[str, str]) -> dict:
     return {
         "schema_version": "mncs.environment.implementation-accountability/1",
@@ -59,6 +71,38 @@ def _accountability(pointer: dict[str, str]) -> dict:
             "identity": "ev_environment_native_process_correspondence",
             "target_pressure_identity": "MNCS-TOOLING-B665F138D324",
             "native_capability_identity": "mncs.std.process.v1",
+            "source_evidence_status": (
+                "required-source-blobs-and-pressure-alias-verified"
+            ),
+            "source_evidence_by_role": {
+                "language_contract": {
+                    "status": "content-integrity-verified",
+                    "source_reference_count": 1,
+                    "source_references": [_native_source(
+                        "mncs_language_process_contract",
+                        "library/std/process.mncs", "1" * 64,
+                    )],
+                },
+                "compiler_support": {
+                    "status": "content-integrity-verified",
+                    "source_reference_count": 2,
+                    "source_references": [_native_source(
+                        "mncs_language_process_frontend",
+                        "crates/mncs-compiler/src/frontend.rs", "2" * 64,
+                    ), _native_source(
+                        "mncs_language_process_inventory",
+                        "crates/mncs-compiler/src/inventory.rs", "3" * 64,
+                    )],
+                },
+                "host_runtime_provider": {
+                    "status": "content-integrity-verified",
+                    "source_reference_count": 1,
+                    "source_references": [_native_source(
+                        "mncs_language_process_runtime",
+                        "crates/mncs-model/src/process_runtime.rs", "4" * 64,
+                    )],
+                },
+            },
             "relationship_assessment": "candidate-correspondence",
             "next_investigation": "Measure an existing native consumer and parity before migration.",
             "pressure_source_links": {
@@ -83,6 +127,20 @@ def test_shared_verified_source_pointer_links_owner_context_without_claiming_cau
     link = result["links"][0]
     assert link["target_pressure_identity"] == "MNCS-TOOLING-B665F138D324"
     assert link["native_capability_identity"] == "mncs.std.process.v1"
+    assert link["native_capability_source_evidence_status"] == (
+        "required-source-blobs-and-pressure-alias-verified"
+    )
+    implementation_roles = link["native_implementation_source_references"]
+    assert [item["role"] for item in implementation_roles] == [
+        "language_contract", "compiler_support", "host_runtime_provider",
+    ]
+    assert implementation_roles[0]["source_reference"]["path"] == (
+        "library/std/process.mncs"
+    )
+    assert implementation_roles[1]["additional_references_not_included"] is True
+    assert implementation_roles[2]["source_reference"]["path"].endswith(
+        "/process_runtime.rs"
+    )
     assert link["shared_pressure_source_reference"]["identity"] == "MNCS-TEST-P-001"
     assert link["pressure_source_integrity_status"] == (
         "verified-in-both-linked-observations"

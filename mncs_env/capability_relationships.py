@@ -13,7 +13,7 @@ from typing import Any
 
 SCHEMA = "mncs.environment.capability-accountability-links/1"
 MAX_LINKS = 4
-MAX_RESULT_BYTES = 4 * 1024
+MAX_RESULT_BYTES = 5 * 1024
 MAX_RESULT_RESERVE_BYTES = MAX_RESULT_BYTES
 VERIFIED_SOURCE_STATUSES = frozenset({
     "content-integrity-verified",
@@ -76,8 +76,6 @@ def _owner_audit_context(audit: dict[str, Any], repository: str) -> dict[str, An
     if isinstance(project, dict):
         for source_key, target_key in (
             ("owner_declared_status", "owner_declared_status"),
-            ("owner_declared_native_surface", "owner_declared_native_surface"),
-            ("owner_declared_next_native_slice", "owner_declared_next_native_slice"),
         ):
             value = _text(project.get(source_key), 160)
             if value is not None:
@@ -138,6 +136,39 @@ def _correspondence_links(correspondence: dict[str, Any]):
             yield pressure_link
 
 
+def _native_implementation_sources(
+    correspondence: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Expose one bounded, integrity-addressed source per native evidence role."""
+    role_evidence = correspondence.get("source_evidence_by_role")
+    if not isinstance(role_evidence, dict):
+        return []
+    result = []
+    for role in ("language_contract", "compiler_support", "host_runtime_provider"):
+        evidence = role_evidence.get(role)
+        if not isinstance(evidence, dict):
+            continue
+        raw_references = evidence.get("source_references")
+        raw_references = raw_references if isinstance(raw_references, list) else []
+        reference = _reference(raw_references[0]) if raw_references else None
+        if reference is None:
+            continue
+        count = evidence.get("source_reference_count")
+        result.append({
+            "role": role,
+            "source_status": _text(evidence.get("status"), 96) or "unavailable",
+            "source_reference_count": (
+                count if type(count) is int and count >= 0 else len(raw_references)
+            ),
+            "source_reference": reference,
+            "additional_references_not_included": (
+                len(raw_references) > 1
+                or (type(count) is int and count > 1)
+            ),
+        })
+    return result
+
+
 def project(
     implementation_accountability: Any,
     observations: Any = None,
@@ -170,7 +201,7 @@ def project(
         *, audit: dict[str, Any], correspondence: dict[str, Any],
         pressure_link: dict[str, Any], pointer: Any,
         observed_source_status: Any, relationship_kind: str,
-        provenance: str, correction: dict[str, Any] | None = None,
+        correction: dict[str, Any] | None = None,
     ) -> None:
         nonlocal total_matches, unverified_matches, overflow
         pointer_key = _pointer_key(pointer)
@@ -219,12 +250,14 @@ def project(
                 _text(correspondence.get("native_capability_identity"), 128)
                 or "unavailable"
             ),
-            "relationship_assessment": (
-                _text(correspondence.get("relationship_assessment"), 192)
+            "native_capability_source_evidence_status": (
+                _text(correspondence.get("source_evidence_status"), 128)
                 or "unavailable"
             ),
+            "native_implementation_source_references": (
+                _native_implementation_sources(correspondence)
+            ),
             "shared_pressure_source_reference": reference,
-            "source_reference_provenance": provenance[:192],
             "pressure_source_integrity_status": (
                 "verified-in-both-linked-observations"
                 if integrity_verified else "not-verified-in-both-linked-observations"
@@ -239,11 +272,6 @@ def project(
             "next_investigation": (
                 _text(correspondence.get("next_investigation"), 192)
                 or "unavailable"
-            ),
-            "interpretation_limit": (
-                "Exact source pointers establish traceability only. They do not "
-                "prove that the pressure causes a specific host responsibility "
-                "or that the candidate native capability is a safe replacement."
             ),
         }
         if correction is not None:
@@ -318,7 +346,6 @@ def project(
                         observed_source_status=audit_source.get(
                             "content_integrity_status",
                         ), relationship_kind="exact-shared-source-pointer",
-                        provenance="owner_audit.supporting_source_references",
                     )
 
                 for correction in corrections[:4]:
@@ -340,10 +367,6 @@ def project(
                             relationship_kind=(
                                 "audit-correction-to-native-source-pointer"
                             ),
-                            provenance=(
-                                "correction.supporting_sources; correction target "
-                                "matches owner audit evidence_reference"
-                            ),
                             correction=correction,
                         )
 
@@ -359,10 +382,9 @@ def project(
         "systemwide_native_adoption_ratio": {"status": "not-measured"},
         "recurrence_status": "not-established",
         "measurement_limits": [
-            "Links use exact repository, commit, path, and SHA-256 pointers from existing campaign observations.",
-            "Owner audit classifications remain owner-declared even when referenced source bytes are integrity-verified.",
-            "A correction target match preserves traceability but does not establish that replacement values were applied to the original record.",
-            "A shared pressure source does not establish causal blocking, agent use, or migration readiness.",
+            "Exact source pointers provide traceability, not causal blocking or safe replacement.",
+            "Owner declarations and append-only correction values remain unverified as implementation ownership or an applied change.",
+            "Agent discovery/use, recurrence, migration readiness, and systemwide adoption are not measured.",
         ],
     }
     result["status"] = (
@@ -375,9 +397,25 @@ def project(
     )
     while (
         len(json.dumps(result, ensure_ascii=False, separators=(",", ":")).encode())
-        > MAX_RESULT_BYTES
-        and result["links"]
+        > MAX_RESULT_BYTES and result["links"]
     ):
+        source_roles = result["links"][0].get(
+            "native_implementation_source_references",
+        )
+        if isinstance(source_roles, list) and len(source_roles) > 2:
+            # Keep the language contract and runtime provider as the primary
+            # path; omit compiler support only when the response needs room.
+            compiler_index = next(
+                (index for index, item in enumerate(source_roles)
+                 if isinstance(item, dict)
+                 and item.get("role") == "compiler_support"),
+                None,
+            )
+            source_roles.pop(
+                compiler_index if compiler_index is not None else 1,
+            )
+            result["links"][0]["native_implementation_sources_truncated"] = True
+            continue
         result["links"].pop()
         result["link_count"] = len(result["links"])
         result["links_truncated"] = True
