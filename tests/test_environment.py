@@ -8264,9 +8264,12 @@ class SessionTests(unittest.TestCase):
                     event for event in session._log()
                     if event.get("type") == "capability.invoked"
                 )
+                effect_target = invocation["payload"]["effect_target"]
+                self.assertEqual(effect_target["scope_kind"], "worktree")
+                operation_lease = effect_target["operation_lease"]
+                self.assertEqual(operation_lease["status"], "held")
                 self.assertEqual(
-                    invocation["payload"]["effect_target"]["scope_kind"],
-                    "worktree",
+                    operation_lease["scope"], "one-provider-invocation",
                 )
                 active = claims.active_claims(session.store.read_claims())
                 self.assertEqual(list(active), [foreign_claim["claim_id"]])
