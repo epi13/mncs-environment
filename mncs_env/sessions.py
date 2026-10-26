@@ -4573,6 +4573,11 @@ class Session:
                 and isinstance(selected.get("path"), str)
                 and bool(selected.get("path"))
             )
+            needs_workspace_root_observation = (
+                needs_selected_scope
+                and target == repository
+                and not needs_selected_checkout_observation
+            )
             needs_scoped_checkout_observation = (
                 needs_explicit_integration_scope
                 and not (os.path.isabs(target) and target_checkout is not None)
@@ -4580,6 +4585,7 @@ class Session:
             preflight_state_observation: dict[str, Any] | None = None
             if (needs_absolute_target_validation
                     or needs_selected_checkout_observation
+                    or needs_workspace_root_observation
                     or needs_scoped_checkout_observation):
                 workspace = self.snapshot.get("workspace", {})
                 workspace = workspace if isinstance(workspace, dict) else {}
@@ -4593,6 +4599,20 @@ class Session:
                 elif needs_explicit_integration_scope:
                     observed_checkout = {}
                     checkout_path = explicit_worktree_checkout
+                elif needs_workspace_root_observation:
+                    workspace_rows = workspace.get("repositories", [])
+                    if not isinstance(workspace_rows, list):
+                        workspace_rows = []
+                    repository_roots = [
+                        row for row in workspace_rows
+                        if isinstance(row, dict)
+                        and row.get("name") == repository
+                        and row.get("manifest_repository") == repository
+                        and isinstance(row.get("path"), str)
+                    ]
+                    root_row = repository_roots[0] if len(repository_roots) == 1 else {}
+                    observed_checkout = {"branch": root_row.get("branch")}
+                    checkout_path = root_row.get("path")
                 else:
                     observed_checkout = selected or {}
                     checkout_path = observed_checkout.get("path")
@@ -4622,7 +4642,9 @@ class Session:
                     # its cached branch is only an earlier observation. Read
                     # the current registered checkout below and derive the
                     # exact operation scope from that fresh state. Explicit
-                    # integration scopes keep their branch fence above.
+                    # integration scopes keep their branch fence above. When
+                    # no explicit selected path exists, the unique repository
+                    # root in the workspace is the bounded fallback.
                     expected_branch = None
                 try:
                     checkout_identity = workspace_module.verify_registered_checkout(
