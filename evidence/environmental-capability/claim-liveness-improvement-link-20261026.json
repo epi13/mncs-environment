@@ -1,0 +1,107 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_claim_liveness_improvement_link_20261026",
+  "captured_at": "2026-10-26T07:50:13Z",
+  "measurement_basis": "full-commit-source-reference-and-independent-verification-followup-link",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_authority_claim_liveness_observability_20261026",
+      "implementation_commit": "e57535e71fce3ddb4956865d392708249fafb885",
+      "verification_observation_identity": "ev_environment_claim_liveness_verification_20261026",
+      "subsequent_observation_identity": "ev_environment_claim_liveness_readback_20261026",
+      "prior_relation_disposition": "The initial improvement relation used an abbreviated Git commit pointer and was retained unchanged; this record supplies a full, content-addressed implementation pointer for projection validation."
+    },
+    "outcome": {
+      "implementation_change": "Ordinary acquisition safely supersedes overlapping claims only when all conflicts are classified recoverable, within one Store compare-and-swap. The existing environmental-capability projection exposes recorded blocker identities against latest current claim state and bounded recovery events.",
+      "verification_basis": "The linked verification record preserves full-suite, focused compatibility, vertical-proof, campaign-proof, lint, compile, and diff-check results.",
+      "followup_basis": "The linked projection readback confirms the authentic historical denials remain visible, their blocker identities were not recorded, and no recovery event occurred in the selected window.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The relation establishes provenance and verification linkage only. It does not establish that the historical denials were caused by stale claims, that this change reduced coordination overhead, or that a real recovery has improved subsequent work."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_05ff4ac639ce7f1f",
+    "campaign_evidence_count_before_recording": 65,
+    "claim_ids": [
+      "claim:mncs-environment:paths:120912fd0f77",
+      "claim:mncs-environment:paths:f69dc8630ed0",
+      "claim:mncs-environment:paths:7d5c61149717"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_claim_liveness_recovery_link_20261026",
+    "addresses_hypothesis_identity": "ph_authority_claim_liveness_observability_20261026",
+    "implementation_reference": {
+      "identity": "mncs_environment_recoverable_claim_transition_e57535e",
+      "repository": "mncs-environment",
+      "commit": "e57535e71fce3ddb4956865d392708249fafb885",
+      "path": "mncs_env/claims.py",
+      "sha256": "c6f300fc1dbf5717c41f93faad8097d9b67f378a2df653c0c6b70bd7b00d1377",
+      "kind": "committed-implementation"
+    },
+    "verification_observation_identity": "ev_environment_claim_liveness_verification_20261026",
+    "subsequent_observation_identity": "ev_environment_claim_liveness_readback_20261026",
+    "basis": "The full commit and source digest identify the implemented liveness-classified compare-and-swap transition. Independent test evidence verifies safety boundaries; a later bounded readback preserves the historical evidence and its limits. Neither supplies empirical effectiveness evidence.",
+    "not_measured": [
+      "whether either historical denial was unnecessary",
+      "whether authentic later claim recoveries reduce coordination steps or waiting",
+      "cross-session recurrence and long-term environmental outcomes",
+      "host process termination or operating-system-level fencing"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_recoverable_claim_transition_e57535e",
+      "repository": "mncs-environment",
+      "commit": "e57535e71fce3ddb4956865d392708249fafb885",
+      "path": "mncs_env/claims.py",
+      "sha256": "c6f300fc1dbf5717c41f93faad8097d9b67f378a2df653c0c6b70bd7b00d1377",
+      "kind": "committed-implementation"
+    },
+    {
+      "identity": "mncs_environment_claim_liveness_projection_e57535e",
+      "repository": "mncs-environment",
+      "commit": "e57535e71fce3ddb4956865d392708249fafb885",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "09eb3737b4fd09a35f3b060d2375f3a89a6563dc690eee66c91ceee26a52a57c",
+      "kind": "committed-projection-implementation"
+    },
+    {
+      "identity": "ev_environment_claim_liveness_verification_20261026",
+      "repository": "mncs-environment",
+      "commit": "bb4ae65f189a4ab21adc8a166450786553710bcb",
+      "path": "evidence/environmental-capability/claim-liveness-verification-20261026.json",
+      "sha256": "3c9ba0fbce23e2a111d6c3a4c8187029b5f1d4d697acff14cbafc9e5f6dbc2f5"
+    },
+    {
+      "identity": "ev_environment_claim_liveness_readback_20261026",
+      "repository": "mncs-environment",
+      "commit": "bb4ae65f189a4ab21adc8a166450786553710bcb",
+      "path": "evidence/environmental-capability/claim-liveness-readback-20261026.json",
+      "sha256": "034e73f6f3393db28ac41f1cf838705222a9ca91c227eb65e12e7a130b2fc76e"
+    }
+  ],
+  "not_measured": [
+    "authentic recovery use after this implementation",
+    "reduction in agent-visible authority or coordination overhead",
+    "cross-session recurrence",
+    "long-term effectiveness"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
