@@ -6231,6 +6231,9 @@ class Session:
         self._revalidate_selected_checkout_for_claim(
             repository, scope=scope, workspace_root=workspace_root,
         )
+        prior_repository_refs = list(
+            (self.snapshot.get("campaign") or {}).get("repository_refs", [])
+        )
         prior_request = (
             any(
                 record.get("provenance", {}).get("operation_request_id") == request_id
@@ -6702,10 +6705,10 @@ class Session:
         if record.get("claim_id") not in claim_ids:
             claim_ids.append(record.get("claim_id"))
         campaign["claim_ids"] = claim_ids[-64:]
-        campaign["repository_refs"] = self._campaign_repository_refs(
-            claims_module.active_claims(self.store.read_claims())
-        )
         self.snapshot["campaign"] = campaign
+        self.reconcile_campaign_continuity(
+            prior_repository_refs=prior_repository_refs,
+        )
         self._refresh_holders()
         recovery_sources = record.get("provenance", {}).get("recovered_from", [])
         recovery_sources = (
@@ -6880,6 +6883,9 @@ class Session:
                 "operator_approval_reference"
             ]
         old_session = Session(self.store, owner_session_id)
+        old_prior_repository_refs = list(
+            (old_session.snapshot.get("campaign") or {}).get("repository_refs", [])
+        )
         old_recovery_payload = {
             **recovery_payload,
             **old_session._authority_event_context(),
@@ -6926,10 +6932,10 @@ class Session:
             item for item in old_campaign.get("claim_ids", [])
             if str(item) != claim_id
         ]
-        old_campaign["repository_refs"] = old_session._campaign_repository_refs(
-            claims_module.active_claims(self.store.read_claims())
-        )
         old_session.snapshot["campaign"] = old_campaign
+        old_session.reconcile_campaign_continuity(
+            prior_repository_refs=old_prior_repository_refs,
+        )
         old_session._refresh_holders()
         already_fenced = any(
             event.get("type") == "lease.recovered-away"
@@ -6992,6 +6998,9 @@ class Session:
                     raise claims_module.ClaimConflict(
                         "claim release request identity is already bound to another payload")
                 return False
+        prior_repository_refs = list(
+            (self.snapshot.get("campaign") or {}).get("repository_refs", [])
+        )
         released = claims_module.release(
             self.store, session_id=self.session_id, reason=reason,
             claim_id=claim_id, repository=normalized_repository,
@@ -7022,10 +7031,10 @@ class Session:
             item for item in campaign.get("claim_ids", [])
             if str(item) in still_held
         ]
-        campaign["repository_refs"] = self._campaign_repository_refs(
-            claims_module.active_claims(self.store.read_claims())
-        )
         self.snapshot["campaign"] = campaign
+        self.reconcile_campaign_continuity(
+            prior_repository_refs=prior_repository_refs,
+        )
         release_event_exists = (
             request_id is not None
             and any(
@@ -7054,6 +7063,9 @@ class Session:
     def transfer_claim(self, claim_id: str, to_session: str,
                        to_consumer: str, reason: str = "",
                        request_id: str | None = None) -> dict[str, Any]:
+        prior_repository_refs = list(
+            (self.snapshot.get("campaign") or {}).get("repository_refs", [])
+        )
         record = claims_module.transfer(
             self.store, claim_id=claim_id, from_session=self.session_id,
             to_session=to_session, to_consumer=to_consumer, reason=reason,
@@ -7069,10 +7081,10 @@ class Session:
             item for item in campaign.get("claim_ids", [])
             if str(item) != claim_id
         ]
-        campaign["repository_refs"] = self._campaign_repository_refs(
-            claims_module.active_claims(self.store.read_claims())
-        )
         self.snapshot["campaign"] = campaign
+        self.reconcile_campaign_continuity(
+            prior_repository_refs=prior_repository_refs,
+        )
         transfer_event_exists = False
         if isinstance(transfer_request_id, str):
             for event in self._log():

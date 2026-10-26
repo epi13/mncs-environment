@@ -2819,6 +2819,23 @@ class CampaignContinuityTests(unittest.TestCase):
                     reason="test durable campaign checkout association",
                     workspace_root=str(root),
                 )
+                claim_observation = next(
+                    item for item in reversed(
+                        session.store.read_events(session.session_id)
+                    )
+                    if item.get("type") == "campaign.reconciled"
+                    and item.get("payload", {}).get("repository_ref_transitions")
+                )
+                claim_transition = claim_observation["payload"][
+                    "repository_ref_transitions"
+                ][0]
+                self.assertEqual(
+                    claim_transition["after"]["head"], head,
+                )
+                self.assertIn("first-observed", claim_transition["change_kinds"])
+                self.assertEqual(
+                    claim_transition["causal_status"], "not-established",
+                )
                 session.snapshot["campaign"]["repository_refs"] = []
                 session._save()
                 session.close()
@@ -2868,6 +2885,37 @@ class CampaignContinuityTests(unittest.TestCase):
                 self.assertEqual(transition["after"]["head"], next_head)
                 self.assertEqual(transition["causal_status"], "not-established")
                 self.assertNotIn(str(root), json.dumps(transition))
+
+                claim_id = next(
+                    record["claim_id"]
+                    for record in claims.active_claims(
+                        session.store.read_claims()
+                    ).values()
+                    if record.get("session_id") == session.session_id
+                )
+                campaign_transition_count = sum(
+                    item.get("type") == "campaign.reconciled"
+                    and bool(item.get("payload", {}).get("repository_ref_transitions"))
+                    for item in session.store.read_events(session.session_id)
+                )
+                self.assertTrue(session.release_claim(
+                    "mncs-control-mcp", claim_id=claim_id,
+                    reason="finish observed checkout work",
+                ))
+                release_events = session.store.read_events(session.session_id)
+                self.assertEqual(
+                    sum(
+                        item.get("type") == "campaign.reconciled"
+                        and bool(item.get("payload", {}).get("repository_ref_transitions"))
+                        for item in release_events
+                    ),
+                    campaign_transition_count,
+                )
+                self.assertTrue(any(
+                    item.get("type") == "lease.released"
+                    and item.get("payload", {}).get("claim_id") == claim_id
+                    for item in release_events
+                ))
             finally:
                 session.close()
 

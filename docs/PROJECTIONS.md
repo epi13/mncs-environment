@@ -478,8 +478,10 @@ the source event reference so an agent can inspect the underlying evidence.
 Workspace observation records bounded `repository_ref_transitions` before
 advancing the campaign's stored checkout baseline; the canonical
 `mncs-env reconcile` path invokes that observation and refreshes campaign
-continuity. Each transition carries
-workspace-relative repository and checkout identity, branch and HEAD
+continuity. Claim acquisition, release, transfer, and controlled recovery use
+the same recorder when they change the campaign's observed checkout set; an
+unchanged repository ref produces no synthetic transition. Each transition
+carries workspace-relative repository and checkout identity, branch and HEAD
 observations, clean state, and dirty-entry count;
 absolute paths and remote URLs are not copied. Initial observations and
 newly available fields are marked as baseline/enrichment rather than as a
