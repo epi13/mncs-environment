@@ -9863,6 +9863,66 @@ def _session_activity(
         valid_integration_eligibility_count
         - len(integration_eligibility_records),
     )
+    eligible_preflights_by_claim: dict[
+        tuple[str, str, str], dict[str, dict[str, Any]],
+    ] = {}
+    for eligibility in integration_eligibility_records:
+        reference = eligibility.get("event_reference")
+        sequence = reference.get("sequence") if isinstance(reference, dict) else None
+        repository = eligibility.get("repository")
+        action = eligibility.get("action")
+        if (type(sequence) is not int or not isinstance(repository, str)
+                or not isinstance(action, str)):
+            continue
+        for overlap in eligibility.get("coordination_overlaps", []):
+            claim_id = overlap.get("claim_id") if isinstance(overlap, dict) else None
+            if not isinstance(claim_id, str):
+                continue
+            key = (repository, action, claim_id)
+            eligible_preflights_by_claim.setdefault(key, {}).setdefault(
+                str(reference.get("identity")), eligibility,
+            )
+    for denial in denial_records:
+        conflict = denial.get("claim_conflict")
+        blocker = (
+            conflict.get("blocking_claim") if isinstance(conflict, dict) else None
+        )
+        claim_id = blocker.get("claim_id") if isinstance(blocker, dict) else None
+        denial_reference = denial.get("event_reference")
+        denial_sequence = (
+            denial_reference.get("sequence")
+            if isinstance(denial_reference, dict) else None
+        )
+        repository = denial.get("repository")
+        action = denial.get("action")
+        if (not isinstance(conflict, dict) or not isinstance(claim_id, str)
+                or type(denial_sequence) is not int
+                or not isinstance(repository, str) or not isinstance(action, str)):
+            continue
+        candidates = [
+            eligibility for eligibility in eligible_preflights_by_claim.get(
+                (repository, action, claim_id), {},
+            ).values()
+            if isinstance(eligibility.get("event_reference"), dict)
+            and type(eligibility["event_reference"].get("sequence")) is int
+            and eligibility["event_reference"]["sequence"] > denial_sequence
+        ]
+        if not candidates:
+            continue
+        followup = min(
+            candidates,
+            key=lambda item: item["event_reference"]["sequence"],
+        )
+        conflict["subsequent_integration_preflight"] = {
+            "event_reference": followup["event_reference"],
+            "eligibility_basis": followup["eligibility_basis"],
+            "persistent_claim_required": False,
+            "operation_executed": False,
+            "relation_basis": (
+                "later-event-same-repository-action-and-claim-identity"
+            ),
+            "causal_resolution_status": "not-established",
+        }
     integration_claim_ids = list(dict.fromkeys(
         overlap["claim_id"]
         for item in integration_eligibility_records

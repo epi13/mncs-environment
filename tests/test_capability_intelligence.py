@@ -2551,6 +2551,17 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
         "does-not-block-at-projection-time"
     )
     assert activity["authority_denial_count"] == 1
+    denial_followup = activity["authority_denials"][0]["claim_conflict"][
+        "subsequent_integration_preflight"
+    ]
+    assert denial_followup["event_reference"]["identity"] == (
+        "evt_integration_eligible"
+    )
+    assert denial_followup["relation_basis"] == (
+        "later-event-same-repository-action-and-claim-identity"
+    )
+    assert denial_followup["causal_resolution_status"] == "not-established"
+    assert denial_followup["operation_executed"] is False
     assert activity["source"]["authority_claim_state_lookup"][
         "lookup_count"
     ] == 1
