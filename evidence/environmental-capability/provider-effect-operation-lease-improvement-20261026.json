@@ -1,0 +1,121 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_provider_effect_operation_lease_improvement_20261026",
+  "captured_at": "2026-10-26T22:17:00Z",
+  "measurement_basis": "committed-change-linked-to-concurrency-interruption-projection-and-campaign-verification",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_alignment_status": "the persisted WorkIntent predates the current environmental capability campaign objective",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_d22b8e54809745b7",
+    "campaign_evidence_count_before_recording": 81
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment provider invocation and environmental-capability session-activity projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_provider_effect_claim_gate_20261026",
+      "prior_provider_effect_commit": "b4b417a2037a9e0a6b3c14078db52f34da3e409c",
+      "implementation_commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "verification_observation_identity": "ev_environment_provider_effect_operation_lease_verification_20261026",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "The selected non-main linked-worktree provider effect path remains eligible without a persistent owner claim after applicable writable-rights and checkout checks. Environment now acquires a kernel-scoped directory lock for that exact checkout, repeats the fresh preflight while holding the lock, invokes the provider, and releases after result publication. The lock creates no file or persistent owner record and is released by the kernel when the Environment process exits. A bounded wait timeout emits the canonical effect.operation-deferred event and starts no provider. Capability invocation and completion events carry the exact preflight reference and bounded lock evidence; the existing activity projection shows lock wait/release and deferred attempts without exposing checkout paths.",
+      "implementation_scope": [
+        "mncs_env.Session.invoke",
+        "mncs_env.workspace.checkout_operation_lease",
+        "mncs_env.events.TYPES",
+        "mncs_env.capability_intelligence session activity projection"
+      ],
+      "verified_change": "Two independent Environment session objects targeting the same real linked worktree did not overlap their mocked provider calls and acquired no persistent claims. An abruptly exiting lock owner did not block a subsequent zero-wait acquisition. The injected busy result recorded effect.operation-deferred and did not invoke the provider. Capability-intelligence, provider/effect-target, authority, event, campaign, and vertical proofs passed; the details and test counts are in the linked verification observation.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The checks establish the Environment-mediated coordination contract and event projection, not lower real-agent coordination overhead. The test provider was mocked; no independent agent used the path. The advisory directory lock does not fence direct shell or Git operations, and shared-main, destructive, and whole-tree remediation checks remain in place."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "prs_f117146a6f28e4dd",
+    "title": "Manifest verification commands cannot execute under session authority in dirty/foreign checkouts",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment provider effect eligibility and verification",
+    "owner": "mncs-environment",
+    "basis": "This reuses the existing pressure identity and records the improvement as supporting context. The source pressure registry records a dirty-branch verification invocation that required a claim and fell back to direct host tests. This implementation makes the exact selected proposal-worktree path eligible without a persistent claim and adds same-checkout serialization; its tests are not a new agent encounter.",
+    "recurrence": "one prior session recorded in the source pressure registry plus user-reported repeated friction; cross-session system recurrence not established",
+    "actionable_recommendation": "Use a separate linked worktree for independent proposals, and inspect operation-lease wait and deferral evidence when Environment-mediated effects target the same checkout.",
+    "not_measured": [
+      "whether the historical test invocation now succeeds through Environment",
+      "whether separate worktrees improve real development concurrency",
+      "whether any observed lock wait was unnecessary",
+      "whether this change reduces authorization or coordination tool calls",
+      "whether direct non-Environment operations create conflicts"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_provider_effect_operation_lease_20261026",
+    "addresses_hypothesis_identity": "ph_environment_provider_effect_claim_gate_20261026",
+    "implementation_reference": {
+      "identity": "mncs_environment_operation_scoped_provider_effect_lease_311164a",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "mncs_env/sessions.py",
+      "sha256": "6f68e6a5ffc5449c7aa6b93233747aa0102c38e4bae9c8095baff5db7b539f9d"
+    },
+    "verification_observation_identity": "ev_environment_provider_effect_operation_lease_verification_20261026",
+    "subsequent_observation_identity": null,
+    "basis": "The implementation permits a provider effect in an exact selected proposal checkout after applicable rights and a fresh checkout preflight, without acquiring a persistent owner claim. A short-lived kernel directory lock serializes Environment-mediated provider invocations against that checkout. The lock and fresh preflight are linked in capability.invoked and invocation.completed events. Bounded effect.operation-deferred records feed the existing session-activity projection. Verification covers same-checkout session serialization, lock release after process exit, the no-provider timeout path, path redaction, and existing campaign invariants.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "actual provider-side writes or test commands accepted through this path",
+      "whether another agent can discover and use it without assistance",
+      "actual lock contention and wait duration during independent development",
+      "impact on human or agent coordination effort",
+      "long-term recurrence or effectiveness after future use"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_operation_lease_verification_20261026",
+      "kind": "verified-environmental-observation",
+      "repository": "mncs-environment",
+      "commit": "5e45b7b2cbf15926bdbcaaf95508c643956ae0bf",
+      "path": "evidence/environmental-capability/provider-effect-operation-lease-verification-20261026.json",
+      "sha256": "e35f8e1d607186f24a066f43316d42cbc22eae2c175c46b2b2b4791f746fba9b"
+    },
+    {
+      "identity": "mncs_environment_provider_effect_lease_implementation_311164a",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "mncs_env/sessions.py",
+      "sha256": "6f68e6a5ffc5449c7aa6b93233747aa0102c38e4bae9c8095baff5db7b539f9d"
+    },
+    {
+      "identity": "mncs_environment_recorded_dirty-branch-verification-pressure_311164a",
+      "kind": "existing-pressure-registry-record",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "pressures/registry.json",
+      "sha256": "22eb64f1e897adfc521840c305b00ab5fe4c8aaa1cbc598ccbf9cce818091807"
+    }
+  ],
+  "not_measured": [
+    "real-world adoption of the selected-worktree provider effect path",
+    "whether recurring agent friction declines after the implementation",
+    "cross-session resource contention or provider lock utilization",
+    "whether the historical pressure hypothesis is empirically resolved"
+  ]
+}
