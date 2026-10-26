@@ -2508,6 +2508,16 @@ def _compact_projection(
             )
             if key in activity_source
         })
+        claim_lookup = activity_source.get("integration_claim_state_lookup")
+        if isinstance(claim_lookup, dict):
+            compact_activity_source["integration_claim_state_lookup"] = {
+                key: claim_lookup[key]
+                for key in (
+                    "status", "lookup_omitted_count",
+                    "activity_lookup_count", "activity_lookup_limit",
+                )
+                if key in claim_lookup
+            }
     compact_activity_interactions = []
     raw_interactions = activity.get("interactions")
     raw_interactions = raw_interactions if isinstance(raw_interactions, list) else []
@@ -3151,6 +3161,8 @@ def _compact_projection(
         if item.get("coordination_overlaps_truncated") is True:
             compact_item["coordination_overlaps_truncated"] = True
         compact_overlaps = []
+        compact_claim_state_count = 0
+        omitted_compact_claim_state_count = 0
         raw_overlaps = item.get("coordination_overlaps")
         raw_overlaps = raw_overlaps if isinstance(raw_overlaps, list) else []
         for overlap in raw_overlaps[:4]:
@@ -3166,6 +3178,19 @@ def _compact_projection(
             )
             if scope is not None:
                 compact_overlap["scope"] = scope
+            current_claim_state = overlap.get("current_claim_state")
+            if isinstance(current_claim_state, dict):
+                if compact_claim_state_count == 0:
+                    compact_overlap["current_claim_state"] = {
+                        key: current_claim_state[key]
+                        for key in (
+                            "lookup_status", "blocking_status",
+                        )
+                        if key in current_claim_state
+                    }
+                    compact_claim_state_count += 1
+                else:
+                    omitted_compact_claim_state_count += 1
             compact_overlaps.append(compact_overlap)
         if compact_overlaps:
             compact_item["coordination_overlaps"] = compact_overlaps
@@ -3174,6 +3199,11 @@ def _compact_projection(
             )
             if len(compact_overlaps) < len(raw_overlaps):
                 compact_item["coordination_overlaps_projection_truncated"] = True
+        if omitted_compact_claim_state_count:
+            compact_item["current_claim_states_projection_truncated"] = True
+            compact_item["current_claim_states_projection_omitted_count"] = (
+                omitted_compact_claim_state_count
+            )
         scope = _authority_conflict_scope(
             item.get("scope"), item.get("repository"),
         )
@@ -8461,35 +8491,59 @@ def _authority_claim_conflict(
     return conflict
 
 
-def _authority_current_claim_states(
-    session: Any, denial_records: list[dict[str, Any]],
+def _session_activity_current_claim_states(
+    session: Any,
+    activity_records: list[dict[str, Any]],
+    *,
+    lookup_limit: int = MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
-    """Read current state for a small set of recorded blocker claim IDs.
+    """Read current state for a small set of claims referenced by activity.
 
-    Event evidence describes the denial-time conflict. This derived view is a
-    separate, on-demand observation of the canonical claim store and owner
-    liveness at projection time.
+    Event evidence remains immutable. This derived view is a separate,
+    on-demand observation of the canonical claim store and owner liveness at
+    projection time. Callers share a bounded activity-wide lookup allowance.
     """
+    lookup_limit = max(0, min(lookup_limit, MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS))
     claim_ids: list[str] = []
     recorded_owners: dict[str, str] = {}
-    for denial in denial_records:
-        conflict = denial.get("claim_conflict")
-        blocker = conflict.get("blocking_claim") if isinstance(conflict, dict) else None
-        claim_id = blocker.get("claim_id") if isinstance(blocker, dict) else None
-        if isinstance(claim_id, str) and claim_id not in claim_ids:
-            claim_ids.append(claim_id)
-        if (isinstance(claim_id, str) and isinstance(blocker, dict)
-                and isinstance(blocker.get("session_id"), str)):
-            recorded_owners.setdefault(claim_id, blocker["session_id"])
+    for activity_record in activity_records:
+        conflict = activity_record.get("claim_conflict")
+        blocker = (
+            conflict.get("blocking_claim") if isinstance(conflict, dict) else None
+        )
+        references = [blocker] if isinstance(blocker, dict) else []
+        overlaps = activity_record.get("coordination_overlaps")
+        if isinstance(overlaps, list):
+            references.extend(item for item in overlaps if isinstance(item, dict))
+        for reference in references:
+            claim_id = reference.get("claim_id")
+            if isinstance(claim_id, str) and claim_id not in claim_ids:
+                claim_ids.append(claim_id)
+            if (isinstance(claim_id, str)
+                    and isinstance(reference.get("session_id"), str)):
+                recorded_owners.setdefault(claim_id, reference["session_id"])
     if not claim_ids:
         return {}, {
             "status": "no-recorded-claim-identities",
             "lookup_count": 0,
-            "lookup_limit": MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS,
+            "lookup_limit": lookup_limit,
         }
 
-    selected_ids = claim_ids[:MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS]
+    selected_ids = claim_ids[:lookup_limit]
     omitted_count = len(claim_ids) - len(selected_ids)
+    if not selected_ids:
+        return {
+            claim_id: {
+                "lookup_status": "not-inspected-limit",
+                "blocking_status": "not-established",
+            }
+            for claim_id in claim_ids
+        }, {
+            "status": "partial-lookup-limit",
+            "lookup_count": 0,
+            "lookup_limit": lookup_limit,
+            "lookup_omitted_count": omitted_count,
+        }
     store = getattr(session, "store", None)
     reader = getattr(store, "read_latest_claims_for", None)
     if not callable(reader):
@@ -8503,7 +8557,7 @@ def _authority_current_claim_states(
         summary = {
             "status": "targeted-claim-read-unavailable",
             "lookup_count": 0,
-            "lookup_limit": MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS,
+            "lookup_limit": lookup_limit,
         }
     else:
         try:
@@ -8521,7 +8575,7 @@ def _authority_current_claim_states(
             summary = {
                 "status": "current-claim-read-failed",
                 "lookup_count": len(selected_ids),
-                "lookup_limit": MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS,
+                "lookup_limit": lookup_limit,
             }
         else:
             observed_at = claims_module.utcnow()
@@ -8632,11 +8686,11 @@ def _authority_current_claim_states(
             summary = {
                 "status": "partial-lookup-limit" if omitted_count else "read",
                 "lookup_count": len(selected_ids),
-                "lookup_limit": MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS,
+                "lookup_limit": lookup_limit,
                 "observed_at": observed_at,
             }
 
-    for claim_id in claim_ids[MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS:]:
+    for claim_id in claim_ids[lookup_limit:]:
         states[claim_id] = {
             "lookup_status": "not-inspected-limit",
             "blocking_status": "not-established",
@@ -9578,7 +9632,7 @@ def _session_activity(
         if claim_conflict is not None:
             denial["claim_conflict"] = claim_conflict
         denial_records.append(denial)
-    current_claim_states, claim_state_lookup = _authority_current_claim_states(
+    current_claim_states, claim_state_lookup = _session_activity_current_claim_states(
         session, denial_records,
     )
     for denial in denial_records:
@@ -9809,6 +9863,78 @@ def _session_activity(
         valid_integration_eligibility_count
         - len(integration_eligibility_records),
     )
+    integration_claim_ids = list(dict.fromkeys(
+        overlap["claim_id"]
+        for item in integration_eligibility_records
+        for overlap in item["coordination_overlaps"]
+        if isinstance(overlap.get("claim_id"), str)
+    ))
+    existing_integration_claim_states = {
+        claim_id: current_claim_states[claim_id]
+        for claim_id in integration_claim_ids
+        if claim_id in current_claim_states
+    }
+    reused_integration_claim_lookups = sum(
+        state.get("lookup_status") != "not-inspected-limit"
+        for state in existing_integration_claim_states.values()
+    )
+    previously_uninspected_integration_claims = sum(
+        state.get("lookup_status") == "not-inspected-limit"
+        for state in existing_integration_claim_states.values()
+    )
+    integration_claim_records_for_lookup = [{
+        "coordination_overlaps": [
+            overlap for overlap in item["coordination_overlaps"]
+            if overlap.get("claim_id") not in current_claim_states
+        ],
+    } for item in integration_eligibility_records]
+    prior_claim_lookup_count = claim_state_lookup.get("lookup_count", 0)
+    remaining_claim_lookup_limit = max(
+        0, MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS - prior_claim_lookup_count,
+    )
+    integration_claim_states, integration_claim_state_lookup = (
+        _session_activity_current_claim_states(
+            session,
+            integration_claim_records_for_lookup,
+            lookup_limit=remaining_claim_lookup_limit,
+        )
+    )
+    current_claim_states.update(integration_claim_states)
+    omitted_integration_claim_lookups = (
+        integration_claim_state_lookup.get("lookup_omitted_count", 0)
+        + previously_uninspected_integration_claims
+    )
+    if omitted_integration_claim_lookups:
+        integration_claim_state_lookup["lookup_omitted_count"] = (
+            omitted_integration_claim_lookups
+        )
+    if (integration_claim_ids
+            and len(existing_integration_claim_states) == len(integration_claim_ids)
+            and not integration_claim_state_lookup.get("lookup_count")):
+        integration_claim_state_lookup["status"] = (
+            "partial-lookup-limit"
+            if previously_uninspected_integration_claims
+            else "reused-prior-activity-lookups"
+        )
+    integration_claim_state_lookup.update({
+        "claim_id_count": len(integration_claim_ids),
+        "reused_activity_lookup_count": reused_integration_claim_lookups,
+        "prior_activity_lookup_count": prior_claim_lookup_count,
+        "activity_lookup_count": (
+            prior_claim_lookup_count
+            + integration_claim_state_lookup.get("lookup_count", 0)
+        ),
+        "activity_lookup_limit": MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS,
+    })
+    for item in integration_eligibility_records:
+        for overlap in item["coordination_overlaps"]:
+            claim_id = overlap.get("claim_id")
+            current_state = (
+                current_claim_states.get(claim_id)
+                if isinstance(claim_id, str) else None
+            )
+            if isinstance(current_state, dict):
+                overlap["current_claim_state"] = current_state
     if ((integration_eligibility_records_omitted
          or invalid_integration_eligibility_event_count)
             and not status.startswith("partial")):
@@ -9896,6 +10022,9 @@ def _session_activity(
             **({
                 "authority_claim_state_lookup": claim_state_lookup,
             } if denial_events else {}),
+            **({
+                "integration_claim_state_lookup": integration_claim_state_lookup,
+            } if integration_eligibility_events else {}),
             **({
                 "claim_recovery_events_considered": len(claim_recovery_events),
                 "claim_recovery_records_returned": len(claim_recoveries),

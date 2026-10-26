@@ -2455,6 +2455,71 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
             "target": checkout,
         },
     }]
+    events.insert(0, {
+        "identity": "evt_authority_denied_same_claim",
+        "sequence": 40,
+        "type": "authority.denied",
+        "session_id": session.session_id,
+        "payload": {
+            "action": "merge",
+            "target": checkout,
+            "reason": (
+                f"{checkout} overlaps scope claimed by another session "
+                "(ses_other_coordinator_0): repository-relative paths overlap"
+            ),
+            "claim_conflict": {
+                "schema_version": (
+                    capability_intelligence.authority_module.CLAIM_CONFLICT_SCHEMA
+                ),
+                "repository": "mncs-environment",
+                "conflict_reason": "repository-relative paths overlap",
+                "requested_scope": {
+                    "kind": "paths",
+                    "repository": "mncs-environment",
+                    "paths": ["mncs_env/source_0.py"],
+                },
+                "blocking_claim": {
+                    "claim_id": "claim:mncs-environment:paths:sample0",
+                    "session_id": "ses_other_coordinator_0",
+                    "scope": {
+                        "kind": "paths",
+                        "repository": "mncs-environment",
+                        "paths": ["mncs_env/source_0.py"],
+                    },
+                },
+            },
+        },
+    })
+    sample_claim_id = "claim:mncs-environment:paths:sample0"
+    sample_claim_time = claims.utcnow()
+    sample_claim = {
+        "schema_version": claims.SCHEMA,
+        "claim_id": sample_claim_id,
+        "version": 2,
+        "repository": "mncs-environment",
+        "scope": {
+            "kind": "paths",
+            "repository": "mncs-environment",
+            "paths": ["mncs_env/source_0.py"],
+            "exclusive": False,
+        },
+        "session_id": "ses_other_coordinator_0",
+        "consumer_id": "consumer_projection_sample",
+        "basis": claims.BASIS_EXPLICIT,
+        "reason": "projection fixture",
+        "status": "released",
+        "acquired_at": sample_claim_time,
+        "expires_at": sample_claim_time,
+        "released_at": sample_claim_time,
+        "identity": "clm_projection_sample_v2",
+    }
+    claim_lookup_batches = []
+
+    def read_latest_claims_for(claim_ids):
+        claim_lookup_batches.append(list(claim_ids))
+        return [sample_claim] if sample_claim_id in claim_ids else []
+
+    session.store = SimpleNamespace(read_latest_claims_for=read_latest_claims_for)
     session.recent_events = lambda *, limit, before_sequence=None: {
         "event_count": len(events), "events": events[-limit:],
         "truncated": False, "next_before_sequence": None,
@@ -2477,6 +2542,27 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
     assert eligibility["coordination_overlaps"][0]["session_id"] == (
         "ses_other_coordinator_0"
     )
+    current_claim_state = eligibility["coordination_overlaps"][0][
+        "current_claim_state"
+    ]
+    assert current_claim_state["basis"] == "current-authoritative-claim-store"
+    assert current_claim_state["record_status"] == "released"
+    assert current_claim_state["blocking_status"] == (
+        "does-not-block-at-projection-time"
+    )
+    assert activity["authority_denial_count"] == 1
+    assert activity["source"]["authority_claim_state_lookup"][
+        "lookup_count"
+    ] == 1
+    claim_lookup = activity["source"]["integration_claim_state_lookup"]
+    assert claim_lookup["lookup_count"] == 3
+    assert claim_lookup["lookup_limit"] == 3
+    assert claim_lookup["lookup_omitted_count"] == 1
+    assert claim_lookup["activity_lookup_count"] == 4
+    assert claim_lookup["prior_activity_lookup_count"] == 1
+    assert claim_lookup["reused_activity_lookup_count"] == 1
+    assert [len(batch) for batch in claim_lookup_batches] == [1, 3]
+    assert sample_claim_id not in claim_lookup_batches[1]
     assert eligibility["event_reference"]["identity"] == (
         "evt_integration_eligible"
     )
@@ -2494,7 +2580,7 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
         for limit in activity["measurement_limits"]
     )
 
-    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+    compact = capability_intelligence.project(session, max_result_bytes=10_000)
     compact_eligibility = compact["session_activity"][
         "integration_eligibility"
     ][0]
@@ -2510,6 +2596,22 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
     assert compact_eligibility["coordination_overlaps"][0]["claim_id"] == (
         "claim:mncs-environment:paths:sample0"
     )
+    compact_claim_state = compact_eligibility["coordination_overlaps"][0].get(
+        "current_claim_state",
+    )
+    assert compact_claim_state["blocking_status"] == (
+        "does-not-block-at-projection-time"
+    )
+    assert compact_eligibility[
+        "current_claim_states_projection_truncated"
+    ] is True
+    assert compact_eligibility[
+        "current_claim_states_projection_omitted_count"
+    ] == 3
+    compact_source = compact["session_activity"]["source"]
+    assert compact_source["integration_claim_state_lookup"][
+        "lookup_omitted_count"
+    ] == 1
     assert checkout not in json.dumps(compact)
 
 

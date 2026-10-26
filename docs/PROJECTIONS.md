@@ -373,19 +373,30 @@ merge or publication succeeded, leaving concurrent ref updates to Git's own
 checks. Event records retain up to eight overlap references and the total
 observed count; compact responses retain up to four and mark any projection
 truncation separately from overlap records omitted at capture time.
+Compact responses retain up to one current claim state among returned overlap
+records and report other omitted states within those records with
+`current_claim_states_projection_truncated` and
+`current_claim_states_projection_omitted_count`. Overlap records outside the
+compact four-record window remain covered by
+`coordination_overlaps_projection_truncated`.
 
-When structured evidence includes blocker claim IDs, the projection performs
-targeted reads for at most four unique current claim records and adds
-`current_claim_state` separately from the immutable denial evidence. This
-point-in-time view uses the existing claim lifecycle explanation and includes
-its observation time, current claim version/status, and available owner
-liveness details. Active or unresolved claims are distinguished from a
-recoverable claim that ordinary acquisition can safely supersede, and from a
-released or expired claim that no longer blocks. The read does not recover a
-claim or authorize a mutation; unreadable, malformed, and over-limit states
-stay explicit. Older denials without recorded claim IDs remain
-`not-recorded`, and current liveness does not establish the denial-time state
-or whether blocking was technically necessary.
+When structured denial or preflight coordination evidence includes claim IDs,
+the projection performs targeted reads for at most four unique current claim
+records across the activity view. It adds `current_claim_state` separately
+from the immutable denial or eligibility evidence and reports lookup counts in
+`source.authority_claim_state_lookup` and
+`source.integration_claim_state_lookup`. This point-in-time view uses the
+existing claim lifecycle explanation and includes its observation time,
+current claim version/status, and available owner liveness details. Active or
+unresolved claims are distinguished from a recoverable claim that ordinary
+acquisition can safely supersede, and from a released or expired claim that no
+longer blocks. Integration-eligibility overlaps may therefore show a
+`current_claim_state` even though the claim is advisory and does not gate the
+recorded eligibility decision. The read does not recover a claim, authorize a
+mutation, revise the recorded decision, or establish the state that existed at
+decision time; unreadable, malformed, and over-limit states stay explicit.
+Older denials without recorded claim IDs remain `not-recorded`, and current
+liveness does not establish whether a denial was technically necessary.
 
 `session_activity.claim_recoveries` exposes up to eight
 `lease.recovered-and-acquired` events from the selected page, including the
