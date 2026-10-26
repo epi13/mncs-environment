@@ -1,0 +1,100 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_binding_summary_budget_verification_20261026",
+  "captured_at": "2026-10-26T04:22:06Z",
+  "measurement_basis": "targeted regression tests and bounded static checks on the implementation commit",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve how effectively MNCS language, compiler, tooling, and environment serve agents through evidence from real development.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_63fe3c94c3a42c40",
+    "campaign_evidence_count_before_recording": 43,
+    "claim_ids": [
+      "claim:mncs-environment:paths:c3e1017d7bdd",
+      "claim:mncs-environment:paths:04d9e0f2dd6b"
+    ]
+  },
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "pytest, Ruff, Python bytecode compilation, and Git whitespace validation",
+    "request": {
+      "implementation_commit": "28c94c963f3a122d6b9c797cc0f1f67a730cd353",
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q -k 'capability_use_is_attributed_to_the_exact_historical_binding or capability_binding_summary_survives_response_budget_trimming'",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "python3 -m py_compile mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "status": "passed",
+      "tests": {
+        "passed": 2,
+        "deselected": 108,
+        "failed": 0
+      },
+      "ruff": "passed",
+      "py_compile": "passed",
+      "git_diff_check": "passed",
+      "coverage": "Exact provider, binding ID, and contract revision invocation attribution remains bounded and separately qualified. The response-budget test verifies that all detailed bindings can be removed while summary counts, omission state, uncertainty, and the byte limit remain available."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_binding_details_lost_under_response_budget",
+    "title": "Capability delivery relationships disappear when response compaction removes binding rows",
+    "category": "agent-capability-discovery-and-delivery",
+    "subsystem": "MNCS Environment capability-delivery projection compaction",
+    "owner": "mncs-environment",
+    "basis": "An authenticated projection readback in this session showed nine capability bindings with no detailed rows after response-budget compaction. The pre-change implementation contained no compact relationship summary to preserve when rows were trimmed.",
+    "actionable_recommendation": "Preserve bounded counts for binding availability, context-response inclusion, use attribution, and response-to-use sequence, including exact-binding invocation counts, when detailed rows are omitted. Retain source-window and uncertainty qualifications.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "agent receipt or discoverability",
+      "whether a particular agent needed a trimmed row",
+      "recurrence across sessions or projection configurations",
+      "tool activity outside the selected Environment event history"
+    ]
+  },
+  "measurement_limits": [
+    "Only the two targeted tests were run; the full capability-intelligence suite was not run.",
+    "Static checks establish local correctness conditions, not long-term agent-facing effectiveness."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_capability_binding_evidence_summary_28c94c9",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "28c94c963f3a122d6b9c797cc0f1f67a730cd353",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "24bccb1e9100575f321aaef11c88ba12e9823f607aadcbb7549335c5e1eec3fd"
+    },
+    {
+      "identity": "mncs_environment_capability_binding_evidence_regression_28c94c9",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "28c94c963f3a122d6b9c797cc0f1f67a730cd353",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "b8e74fd05de4b26d3bcec1b1d420f7cc46ca39ccf856c026813b78e9053d6ae2"
+    },
+    {
+      "identity": "mncs_environment_capability_binding_summary_projection_docs_28c94c9",
+      "kind": "committed-projection-documentation",
+      "repository": "mncs-environment",
+      "commit": "28c94c963f3a122d6b9c797cc0f1f67a730cd353",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "b4bf63434e8a23cff87030d149277e6c010bd3bee9817591596d9e73c05065c8"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

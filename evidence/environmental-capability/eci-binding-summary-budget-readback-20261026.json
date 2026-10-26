@@ -1,0 +1,113 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_binding_summary_budget_readback_20261026",
+  "captured_at": "2026-10-26T04:22:06Z",
+  "measurement_basis": "authenticated-Control-session environmental-capability projection after the capability binding evidence summary change",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve how effectively MNCS language, compiler, tooling, and environment serve agents through evidence from real development.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_63fe3c94c3a42c40",
+    "campaign_evidence_count_before_recording": 43,
+    "claim_ids": [
+      "claim:mncs-environment:paths:c3e1017d7bdd",
+      "claim:mncs-environment:paths:04d9e0f2dd6b"
+    ]
+  },
+  "observation": {
+    "kind": "capability-binding-evidence-summary-live-readback",
+    "source_interface": "MNCS Environment projections --interpret environmental-capability",
+    "request": {
+      "command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 1 --evidence-limit 4 --evidence-offset 0 --session-event-limit 128",
+      "implementation_commit": "28c94c963f3a122d6b9c797cc0f1f67a730cd353",
+      "projection_identity": "eci_49ede1f5bb67a833",
+      "campaign_state_checkpoint_id": "chk_63fe3c94c3a42c40",
+      "campaign_evidence_count": 43,
+      "event_window": "complete-session-history"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "binding_count": 9,
+      "binding_detail_count": 0,
+      "bindings_truncated": true,
+      "summary_schema": "mncs.environment.capability-binding-evidence-summary/1",
+      "availability_status_counts": {
+        "available": 9
+      },
+      "context_response_inclusion_status_counts": {
+        "identity-tuple-in-matched-response": 9
+      },
+      "use_observation_status_counts": {
+        "no-environment-invocation-record-in-session-history": 9
+      },
+      "binding_attribution_status_counts": {
+        "no-exact-binding-use-in-session-history": 9
+      },
+      "context_response_use_sequence_status_counts": {
+        "no-exact-binding-invocation-record-in-session-history": 9
+      },
+      "exact_binding_invoked_binding_count": 0,
+      "exact_binding_invocation_count": 0,
+      "exact_binding_completion_count": 0,
+      "binding_details_omitted_count": 9,
+      "discoverability_status": "not-measured",
+      "agent_receipt_status": "not-established",
+      "interpretation_limit": "No exact invocation is present in the selected Environment session event history; direct or other-interface tool activity is outside this evidence and is not ruled out."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_binding_details_lost_under_response_budget",
+    "title": "Capability delivery relationships disappear when response compaction removes binding rows",
+    "category": "agent-capability-discovery-and-delivery",
+    "subsystem": "MNCS Environment capability-delivery projection compaction",
+    "owner": "mncs-environment",
+    "basis": "An authenticated projection readback in this session showed nine capability bindings with no detailed rows after response-budget compaction. The pre-change implementation contained no compact relationship summary to preserve when rows were trimmed.",
+    "actionable_recommendation": "Preserve bounded counts for binding availability, context-response inclusion, use attribution, and response-to-use sequence, including exact-binding invocation counts, when detailed rows are omitted. Retain source-window and uncertainty qualifications.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "agent receipt or discoverability",
+      "whether a particular agent needed a trimmed row",
+      "recurrence across sessions or projection configurations",
+      "tool activity outside the selected Environment event history"
+    ]
+  },
+  "measurement_limits": [
+    "The projection status is partial; this record captures the capability-delivery summary rather than claiming full ECI completeness.",
+    "The summary uses the current binding snapshot and selected Environment event history, not every possible external tool interaction.",
+    "A matched context response is evidence of response inclusion, not proof of agent receipt, discovery, reading, or use.",
+    "No exact invocation was present in this selected event history; this does not establish that the agent did not invoke the capability elsewhere.",
+    "Longitudinal effectiveness and recurrence are not assessed."
+  ],
+  "improvement_relation_status": "implementation-and-verification-linked; longitudinal effectiveness not-assessed",
+  "improvement_relation_identity": "im_environment_eci_binding_summary_budget_20261026",
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_capability_binding_evidence_summary_28c94c9",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "28c94c963f3a122d6b9c797cc0f1f67a730cd353",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "24bccb1e9100575f321aaef11c88ba12e9823f607aadcbb7549335c5e1eec3fd"
+    },
+    {
+      "identity": "mncs_environment_capability_binding_evidence_regression_28c94c9",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "28c94c963f3a122d6b9c797cc0f1f67a730cd353",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "b8e74fd05de4b26d3bcec1b1d420f7cc46ca39ccf856c026813b78e9053d6ae2"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

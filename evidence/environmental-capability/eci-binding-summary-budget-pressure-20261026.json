@@ -1,0 +1,77 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_binding_summary_budget_pressure_20261026",
+  "captured_at": "2026-10-26T04:22:06Z",
+  "measurement_basis": "prior authenticated session projection readback and exact pre-change source inspection; baseline projection payload was not retained as an evidence artifact",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve how effectively MNCS language, compiler, tooling, and environment serve agents through evidence from real development.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_63fe3c94c3a42c40",
+    "campaign_evidence_count_before_recording": 43,
+    "claim_ids": [
+      "claim:mncs-environment:paths:c3e1017d7bdd",
+      "claim:mncs-environment:paths:04d9e0f2dd6b"
+    ]
+  },
+  "observation": {
+    "kind": "capability-binding-detail-loss-under-response-budget",
+    "source_interface": "MNCS Environment projections --interpret environmental-capability",
+    "request": {
+      "pre_change_implementation_commit": "f6af7a161c81119232ce6afe3d6fd19f143227a1",
+      "pre_change_projection_identity": "not-retained-in-campaign-evidence",
+      "observed_binding_count": 9,
+      "response_budget_bytes": 49152
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "binding_detail_count": 0,
+      "bindings_truncated": true,
+      "pre_change_summary_present": false,
+      "assessment": "The response budget removed every per-binding row while retaining only an aggregate binding count. This prevented inspection of which available capabilities were represented in context responses and how recorded invocations related to exact bindings.",
+      "interpretation_limit": "This is a bounded projection detail-loss observation. It does not establish that agents failed to discover, receive, or use the capabilities."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_binding_details_lost_under_response_budget",
+    "title": "Capability delivery relationships disappear when response compaction removes binding rows",
+    "category": "agent-capability-discovery-and-delivery",
+    "subsystem": "MNCS Environment capability-delivery projection compaction",
+    "owner": "mncs-environment",
+    "basis": "An authenticated projection readback in this session showed nine capability bindings with no detailed rows after response-budget compaction. The pre-change implementation contained no compact relationship summary to preserve when rows were trimmed.",
+    "actionable_recommendation": "Preserve bounded counts for binding availability, context-response inclusion, use attribution, and response-to-use sequence, including exact-binding invocation counts, when detailed rows are omitted. Retain source-window and uncertainty qualifications.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "agent receipt or discoverability",
+      "whether a particular agent needed a trimmed row",
+      "recurrence across sessions or projection configurations",
+      "tool activity outside the selected Environment event history"
+    ]
+  },
+  "measurement_limits": [
+    "The exact pre-change projection identity and payload were not retained as an evidence artifact; the bounded output values were observed during the authenticated campaign session.",
+    "Pre-change source inspection verifies that no binding evidence summary was emitted, but does not establish agent impact.",
+    "A missing Environment invocation record does not establish that a capability was not used through another interface."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_pre_change_capability_delivery_compaction_f6af7a1",
+      "kind": "pre-change-projection-implementation",
+      "repository": "mncs-environment",
+      "commit": "f6af7a161c81119232ce6afe3d6fd19f143227a1",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "cfd8c9a0d767d4536d1fcbf99869f946b9b4f125b0014d1b270c8def534dcdd8"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
