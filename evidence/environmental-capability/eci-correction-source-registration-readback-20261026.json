@@ -1,0 +1,126 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_source_registration_readback_20261026",
+  "captured_at": "2026-10-26T03:43:30Z",
+  "measurement_basis": "post-checkpoint-campaign-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve how effectively MNCS language, compiler, tooling, and environment serve and potentiate agents through evidence from real development.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_9bef259e9eaf1051"
+    }
+  },
+  "observation": {
+    "kind": "environmental-improvement-ledger-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 1 --evidence-limit 8 --evidence-offset 29",
+      "campaign_state_checkpoint_id": "chk_9bef259e9eaf1051",
+      "campaign_evidence_count": 34,
+      "projection_identity": "eci_64b3911da99acdc4"
+    },
+    "outcome": {
+      "projection": {
+        "status": "partial",
+        "evidence_page_offset": 29,
+        "evidence_page_limit": 8,
+        "observation_records_considered": 5,
+        "observation_records_verified": 3,
+        "observation_records_unavailable": 2,
+        "new_pressure_hypothesis_count": 1,
+        "pressure_hypothesis_identity": "ph_environment_eci_correction_source_registration",
+        "pressure_observation_count": 1,
+        "pressure_recurrence_status": "not-established",
+        "improvement_relation_count": 1,
+        "improvement_relation_identity": "im_environment_eci_correction_source_registration_validated",
+        "improvement_relation_status": "validated",
+        "pressure_hypothesis_status": "present-in-projection",
+        "implementation_content_integrity_status": "content-integrity-verified",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "not-recorded",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "preserved_invalid_evidence": [
+        {
+          "identity": "ev_environment_eci_correction_source_registration_improvement_20261026",
+          "status": "observation-contract-invalid",
+          "diagnostics": [
+            "missing-pressure-hypothesis-subsystem",
+            "missing-pressure-hypothesis-actionable-recommendation"
+          ]
+        },
+        {
+          "identity": "ev_environment_eci_correction_source_registration_verification_20261026",
+          "status": "observation-contract-invalid",
+          "diagnostics": [
+            "missing-pressure-hypothesis-subsystem",
+            "missing-pressure-hypothesis-actionable-recommendation"
+          ]
+        }
+      ],
+      "recovery_action": "The invalid content-addressed records remain unchanged in the campaign ledger. New append-only improvement and verification records include complete pressure context; the projection validates their relation and source pointers.",
+      "interpretation": "The new valid improvement relation resolves its pressure, implementation, and verification records in the selected campaign pages. The initial malformed records remain visible as unavailable history and are not treated as evidence. Recurrence and long-term effectiveness remain unestablished."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_correction_source_registration",
+    "title": "Page-local evidence registration can mask independently verified correction sources",
+    "category": "environmental-observation",
+    "subsystem": "MNCS Environment campaign correction validation and capability-accountability projection",
+    "owner": "mncs-environment",
+    "basis": "The authenticated page-zero projection rejected one correction while its P-001 replacement source was independently digest-verified from a read-only workspace checkout and explicitly absent only from the selected campaign evidence page.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Keep page-local registration separate from content integrity: allow a non-observation replacement source when its exact blob is independently verified through bounded read-only workspace access, while preserving both statuses in the projection.",
+    "not_measured": [
+      "how often other append-only corrections use sources absent from their selected campaign pages",
+      "whether an agent relied on the rejected correction or missing accountability link",
+      "whether this behavior occurs in other projection or repository workflows",
+      "cross-session recurrence or long-term improvement effectiveness"
+    ]
+  },
+  "measurement_limits": [
+    "The readback covers the selected page window and does not establish completeness for the campaign's full history.",
+    "Two earlier malformed records remain in immutable history and are explicitly diagnosed; the new valid records are separate evidence, not repairs to those bytes.",
+    "The implementation and source-link checks do not establish agent discovery or use, causal pressure attribution, native migration readiness, or long-term effectiveness."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_accept_verified_campaign_external_correction_source_2bca5ce",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "2bca5ce0305ad9d6ab38982075e17453d8220a1f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "cfd8c9a0d767d4536d1fcbf99869f946b9b4f125b0014d1b270c8def534dcdd8"
+    },
+    {
+      "identity": "ev_environment_eci_correction_source_registration_pressure_20261026",
+      "kind": "campaign-pressure-observation-source",
+      "repository": "mncs-environment",
+      "commit": "bd53a0fed226357a96af48f185152275350de03f",
+      "path": "evidence/environmental-capability/eci-correction-source-registration-pressure-20261026.json",
+      "sha256": "5b22ed34eafd62b43cfb5bd0c85a86a0673d43cd2ace49b7faee27f37649a83c"
+    },
+    {
+      "identity": "ev_environment_eci_correction_source_registration_improvement_validated_20261026",
+      "kind": "campaign-improvement-observation-source",
+      "repository": "mncs-environment",
+      "commit": "97a6ffe364638d5d920a00dc6206e723d51ee57c",
+      "path": "evidence/environmental-capability/eci-correction-source-registration-improvement-validated-20261026.json",
+      "sha256": "ca92f99e84a26b115978231cbd5f8bb231ad13247d6030c94da8331c46d9e0a6"
+    },
+    {
+      "identity": "ev_environment_eci_correction_source_registration_verification_validated_20261026",
+      "kind": "campaign-verification-observation-source",
+      "repository": "mncs-environment",
+      "commit": "97a6ffe364638d5d920a00dc6206e723d51ee57c",
+      "path": "evidence/environmental-capability/eci-correction-source-registration-verification-validated-20261026.json",
+      "sha256": "1ebf0dd491e14899e16da1c7cb76dd82b1f132b6635b397815e1cd774dd2cb7d"
+    }
+  ]
+}
