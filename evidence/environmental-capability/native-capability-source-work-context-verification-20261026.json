@@ -1,0 +1,189 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_capability_source_work_context_verification_20261026",
+  "captured_at": "2026-10-26T03:05:58Z",
+  "measurement_basis": "targeted-existing-tests-and-live-campaign-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_91333de7b2e32117"
+    }
+  },
+  "observation": {
+    "kind": "native-capability-source-work-context-projection-verification",
+    "source_interface": "MNCS Environment environmental-capability projection and existing test suites",
+    "request": {
+      "implementation_commit": "03a2226cb5b69b231d6a503ad9c181560b6d4d83",
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 4 --evidence-limit 24",
+      "test_commands": [
+        "PYTHONPATH=. pytest -q tests/test_native_capability_relationships.py",
+        "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py -k 'native_capability'",
+        "ruff check mncs_env/capability_intelligence.py tests/test_native_capability_relationships.py",
+        "python -m py_compile mncs_env/capability_intelligence.py tests/test_native_capability_relationships.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "projection_identity": "eci_569aa5362b2e8193",
+      "projection_status": "partial",
+      "projection_compact_bytes": 45349,
+      "projection_limit_bytes": 49152,
+      "pre_compaction_response_bytes": 148475,
+      "pre_compaction_response_truncated": true,
+      "campaign_charter_status": "verified",
+      "campaign_charter_reference": {
+        "identity": "ev_environment_campaign_charter_capability_intelligence_20261026",
+        "repository": "mncs-environment",
+        "commit": "17b9ff569986e252895a45d073cfda09021cd476",
+        "path": "evidence/campaign-charters/ev_environment_campaign_charter_capability_intelligence_20261026.json",
+        "sha256": "75d22a96c24f26bda80e9c19297d6a9fb320e1ef491c17e6eca52c9e08f42efa"
+      },
+      "source_correspondence": {
+        "identity": "ev_environment_native_process_capability_correspondence_20261025",
+        "target_pressure_identity": "MNCS-TOOLING-B665F138D324",
+        "native_capability_identity": "mncs.std.process.v1",
+        "agent_usage_status": "not-measured",
+        "causal_relation_status": "not-established",
+        "native_migration_readiness": "not-established",
+        "source_work_context": {
+          "status": "recorded-in-source-observation",
+          "basis": "native-capability-observation.related_work",
+          "campaign_id": "cmp_env_capability_intelligence_codex_20261025T1957",
+          "session_id": "ses_6c794a018a1a0b5a",
+          "environment_id": "renv_5b0c0fe32bee2ced",
+          "objective_capture_status": "objectives-not-recorded-in-source-observation",
+          "source_observation_identity": "ev_environment_native_process_capability_correspondence_20261025",
+          "source_observation_reference": {
+            "identity": "ev_environment_native_process_capability_correspondence_20261025",
+            "repository": "mncs-environment",
+            "commit": "85648827af074366ad5b1e638286fe0bdbe9ecba",
+            "path": "evidence/environmental-capability/native-process-capability-correspondence-20261025.json",
+            "sha256": "5ae1c4e92ddd250d2f9f567b991ab8c2b5bf400d3852cd02e550d8438b80270f"
+          }
+        }
+      },
+      "consumer_evidence": {
+        "status": "verified-commons-consumer-evidence-available",
+        "source_observation_count": 3,
+        "consumer_repositories": [
+          "mncs-actions",
+          "mncs-debug",
+          "mncs-forge"
+        ],
+        "forge_observation": {
+          "identity": "MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41",
+          "source_reference": {
+            "identity": "MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41",
+            "repository": "mncs-commons",
+            "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+            "path": "pressures/observations/MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41.json",
+            "sha256": "1a4d54f1328475e4cfadfbfd62a8d19384b90eeba5816a2a771c3a209ebd8bf2"
+          },
+          "missing_contracts": [
+            "aggregate cgroup resource envelope",
+            "typed raw cgroup observation result",
+            "source-visible cancellable process handle"
+          ],
+          "reproduction_status": "UNKNOWN"
+        },
+        "recurrence_status": "not-established",
+        "causal_relation_status": "not-established",
+        "native_migration_readiness": "not-established"
+      },
+      "existing_projection_diagnostics": {
+        "campaign_evidence_reference_count": 14,
+        "verified_observation_count": 11,
+        "invalid_observation_count": 2,
+        "invalid_observations": [
+          {
+            "identity": "ev_environment_native_pressure_identity_context_readback_20261026",
+            "diagnostics": [
+              "missing-observation-source-interface",
+              "missing-observation-request"
+            ]
+          },
+          {
+            "identity": "ev_environment_entry_store_serialization_pressure_readback_20261026",
+            "diagnostics": [
+              "missing-observation-source-interface",
+              "missing-observation-request",
+              "missing-observation-outcome-or-projection-summary",
+              "missing-related-work-session-id"
+            ]
+          }
+        ],
+        "unverified_record_correction_count": 1
+      },
+      "verification": {
+        "native_capability_relationship_tests": {
+          "passed": 21,
+          "failed": 0
+        },
+        "targeted_capability_intelligence_tests": {
+          "passed": 1,
+          "failed": 0,
+          "deselected": 105
+        },
+        "ruff": "passed",
+        "python_syntax_compilation": "passed",
+        "git_diff_check": "passed"
+      },
+      "interpretation": "The projection now connects the native process correspondence to its originating campaign/session and exact observation pointer, while making absent historical objectives explicit. Authentic Commons evidence exposes process-contract gaps in three consumer repositories, including Forge's resource-envelope, typed cgroup-result, and cancellable-handle gaps. These source records do not establish agent use, recurrence, causality, or migration readiness. The current campaign charter is verified separately. The projection remains partial because the existing campaign ledger contains two invalid observation records and one unverified correction; its compact response fits under the configured bound, but the pre-compaction response was truncated.",
+      "subsequent_observation_identity": null
+    }
+  },
+  "measurement_limits": [
+    "Historical objective text is absent from the source correspondence and was not inferred from the current verified charter.",
+    "The compiler process API's discoverability, receipt, and use by an agent were not measured by this environment session.",
+    "The three Commons consumer repositories are a bounded source sample, not an exhaustive inventory or recurrence finding.",
+    "The active compiler campaign remains unmodified and unclaimed."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_capability_intelligence_source_work_context",
+      "kind": "source-review",
+      "repository": "mncs-environment",
+      "commit": "03a2226cb5b69b231d6a503ad9c181560b6d4d83",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "19dbd7e5e4b13acb455529c85d5ef49a1cc12325230db0e95c33e04f8c0d681e"
+    },
+    {
+      "identity": "mncs_environment_test_native_capability_source_work_context",
+      "kind": "source-review",
+      "repository": "mncs-environment",
+      "commit": "03a2226cb5b69b231d6a503ad9c181560b6d4d83",
+      "path": "tests/test_native_capability_relationships.py",
+      "sha256": "f0f0f7e69bbb2a72518915b27c3d57c00400e404b10b22829be9e881a5bc9970"
+    },
+    {
+      "identity": "ev_environment_campaign_charter_capability_intelligence_20261026",
+      "kind": "campaign-charter-source",
+      "repository": "mncs-environment",
+      "commit": "17b9ff569986e252895a45d073cfda09021cd476",
+      "path": "evidence/campaign-charters/ev_environment_campaign_charter_capability_intelligence_20261026.json",
+      "sha256": "75d22a96c24f26bda80e9c19297d6a9fb320e1ef491c17e6eca52c9e08f42efa"
+    },
+    {
+      "identity": "ev_environment_native_process_capability_correspondence_20261025",
+      "kind": "environmental-observation-source",
+      "repository": "mncs-environment",
+      "commit": "85648827af074366ad5b1e638286fe0bdbe9ecba",
+      "path": "evidence/environmental-capability/native-process-capability-correspondence-20261025.json",
+      "sha256": "5ae1c4e92ddd250d2f9f567b991ab8c2b5bf400d3852cd02e550d8438b80270f"
+    },
+    {
+      "identity": "MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41",
+      "kind": "commons-pressure-observation-source",
+      "repository": "mncs-commons",
+      "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+      "path": "pressures/observations/MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41.json",
+      "sha256": "1a4d54f1328475e4cfadfbfd62a8d19384b90eeba5816a2a771c3a209ebd8bf2"
+    }
+  ]
+}

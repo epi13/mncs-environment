@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_capability_source_work_context_pressure_20261026",
+  "captured_at": "2026-10-26T03:10:09Z",
+  "measurement_basis": "authenticated-source-review-of-baseline-projection-and-originating-campaign-observation",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_91333de7b2e32117"
+    }
+  },
+  "observation": {
+    "kind": "native-capability-source-work-context-gap",
+    "source_interface": "MNCS Environment environmental-capability projection and pinned campaign evidence",
+    "request": {
+      "baseline_projection_commit": "07dfd0f91908eae8875877dbe26eac34d0c58339",
+      "native_correspondence_identity": "ev_environment_native_process_capability_correspondence_20261025",
+      "projection_route": "mncs-env projections --interpret environmental-capability"
+    },
+    "outcome": {
+      "target_pressure_identity": "MNCS-TOOLING-B665F138D324",
+      "native_capability_identity": "mncs.std.process.v1",
+      "baseline_projection_retained_source_work_context": false,
+      "baseline_projection_retained_correspondence_evidence_pointer": false,
+      "originating_source_recorded_context": {
+        "campaign_id": "cmp_env_capability_intelligence_codex_20261025T1957",
+        "session_id": "ses_6c794a018a1a0b5a",
+        "environment_id": "renv_5b0c0fe32bee2ced",
+        "work_intent_id_status": "not-recorded-in-source-observation",
+        "work_intent_goal_status": "not-recorded-in-source-observation",
+        "campaign_objective_status": "not-recorded-in-source-observation"
+      },
+      "interpretation": "The baseline correspondence projection omitted its source observation's related_work and evidence_reference. The pinned source record identifies its originating campaign, session, and environment but does not record a work intent or objective. This leaves an agent unable to distinguish absent historical objective data from an unlinked record or inspect the exact source through the correspondence itself.",
+      "hypothesis_limits": [
+        "This is one observed correspondence; recurrence across other records is not established.",
+        "The missing source objective does not establish that the original agent lacked an objective.",
+        "The current campaign charter must not be substituted for the originating campaign's missing objective.",
+        "Agent discovery or use of mncs.std.process.v1, causal pressure, and migration readiness are not measured."
+      ]
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_native_capability_source_work_context",
+    "title": "Native capability correspondences omit originating work context and source provenance",
+    "category": "provenance-and-continuity",
+    "subsystem": "MNCS Environment implementation-accountability projection",
+    "owner": "mncs-environment",
+    "basis": "The baseline correspondence projection retained capability and pressure identities but omitted the authenticated observation's related_work context and exact evidence pointer. The source record carries campaign, session, and environment identity while its objective fields are absent.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Preserve bounded source work context and the exact observation reference in native capability correspondences; explicitly report when historical objective fields were not recorded, and record those fields in future observations where available.",
+    "not_measured": [
+      "whether this context gap recurs across other native capability records",
+      "whether any agent discovered or used the native process API",
+      "whether the documented host boundaries were caused by the linked pressure",
+      "whether a consumer is ready to migrate"
+    ]
+  },
+  "measurement_limits": [
+    "The baseline behavior is established by source inspection at the recorded commit, not by reconstructing an unrecorded historical agent response.",
+    "The source observation's missing objective fields remain unavailable and are not inferred from the current campaign charter.",
+    "Source integrity supports traceability but does not prove semantic ownership, causality, recurrence, or migration suitability."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_capability_intelligence_baseline",
+      "kind": "source-review",
+      "repository": "mncs-environment",
+      "commit": "07dfd0f91908eae8875877dbe26eac34d0c58339",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "66423e39fe315f37e832eb42914c5138cfa35b92cb15966d3f58dfa404e4d084",
+      "verified_behavior": "Baseline native correspondence projection omitted related_work and evidence_reference from its result."
+    },
+    {
+      "identity": "ev_environment_native_process_capability_correspondence_20261025",
+      "kind": "environmental-observation-source",
+      "repository": "mncs-environment",
+      "commit": "85648827af074366ad5b1e638286fe0bdbe9ecba",
+      "path": "evidence/environmental-capability/native-process-capability-correspondence-20261025.json",
+      "sha256": "5ae1c4e92ddd250d2f9f567b991ab8c2b5bf400d3852cd02e550d8438b80270f",
+      "verified_behavior": "Pinned source record supplies the originating campaign, session, and environment identifiers and omits work intent and objective fields."
+    }
+  ]
+}
