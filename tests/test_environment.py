@@ -4360,7 +4360,114 @@ class SessionTests(unittest.TestCase):
             )
             self.assertNotIn(checkout, json.dumps(integration_event["payload"]))
             self.assertEqual(inspect_repo.call_count, 5)
-            self.assertEqual(verify_checkout.call_count, 3)
+            self.assertEqual(verify_checkout.call_count, 5)
+
+    def test_explicit_integration_scope_refreshes_and_records_destination_preimage(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(
+                Path(directory),
+                intent={"goal": "integrate an exact registered checkout",
+                        "repositories": ["mncs-atlas"]},
+            )
+            checkout = "/workspace/mncs-atlas/.worktrees/destination"
+            old_head = "a" * 40
+            fresh_head = "b" * 40
+            session.snapshot["workspace"] = {
+                "root": "/workspace",
+                "repositories": [{
+                    "name": "mncs-atlas",
+                    "path": "/workspace/mncs-atlas",
+                    "manifest_repository": "mncs-atlas",
+                }],
+            }
+            session.snapshot["selected_checkouts"] = {"mncs-atlas": {
+                "path": checkout,
+                "branch": "campaign/native-path",
+            }}
+            session.snapshot["repo_facts"] = {"mncs-atlas": {
+                "repository": "mncs-atlas",
+                "path": checkout,
+                "branch": "campaign/native-path",
+                "head": old_head,
+                "dirty": False,
+            }}
+            session.snapshot["claim_holders"]["mncs-atlas"] = [{
+                "session_id": "ses_concurrent_change",
+                "claim_id": "claim:mncs-atlas:worktree:destination",
+                "scope": {
+                    "kind": "worktree",
+                    "repository": "mncs-atlas",
+                    "checkout": checkout,
+                    "branch": "campaign/native-path",
+                    "exclusive": False,
+                },
+            }]
+            scope = {
+                "kind": "worktree",
+                "checkout": checkout,
+                "branch": "campaign/native-path",
+                "checkout_identity": "checkout:native-path",
+                "git_common_directory_identity": "git-common:mncs-atlas",
+                "manifest_identity": "manifest:mncs-atlas",
+                "exclusive": False,
+            }
+            inspected = sessions.workspace_module.RepoState(
+                name="destination",
+                path=checkout,
+                manifest_repository="mncs-atlas",
+                manifest_revision=1,
+                branch="campaign/native-path",
+                head=fresh_head,
+                dirty=True,
+                untracked_count=1,
+            )
+            checkout_identity = {
+                "path": checkout,
+                "branch": "campaign/native-path",
+                "checkout_identity": "checkout:native-path",
+                "git_common_directory_identity": "git-common:mncs-atlas",
+                "manifest_identity": "manifest:mncs-atlas",
+            }
+            with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
+                sessions.workspace_module, "verify_registered_checkout",
+                return_value=checkout_identity,
+            ) as verify_checkout, mock.patch.object(
+                sessions.workspace_module, "inspect_repo", return_value=inspected,
+            ) as inspect_repo:
+                verdict = session.check(
+                    action="merge", target="mncs-atlas", scope=scope,
+                )
+
+            self.assertEqual(verdict["verdict"], "allow", verdict)
+            self.assertFalse(verdict["persistent_claim_required"])
+            self.assertEqual(verdict["coordination_overlap_count"], 1)
+            verify_checkout.assert_called_once()
+            self.assertEqual(
+                verify_checkout.call_args.kwargs["expected_branch"],
+                "campaign/native-path",
+            )
+            inspect_repo.assert_called_once()
+            event = session._log()[-1]
+            self.assertEqual(event["type"], "authority.integration-eligible")
+            self.assertFalse(event["payload"]["operation_executed"])
+            self.assertEqual(
+                event["payload"]["repository_preflight_state"],
+                {
+                    "schema_version": (
+                        "mncs.environment.integration-preflight-state/1"
+                    ),
+                    "observation_basis": (
+                        "fresh-registered-checkout-inspection"
+                    ),
+                    "checkout_identity": "checkout:native-path",
+                    "branch": "campaign/native-path",
+                    "branch_status": "attached",
+                    "head": fresh_head,
+                    "head_status": "measured",
+                    "working_tree_status": "dirty",
+                },
+            )
+            self.assertNotIn(checkout, json.dumps(event["payload"]))
 
     def test_absolute_linked_worktree_uses_manifest_repo_but_keeps_exact_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

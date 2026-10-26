@@ -4544,8 +4544,9 @@ class Session:
                     and Path(os.path.abspath(target))
                     == Path(os.path.abspath(selected_path))
                 )
+            integration_action = action in ("publish", "merge")
             needs_selected_scope = (
-                action in ("publish", "merge")
+                integration_action
                 and normalized_scope is None
                 and (target == repository or selected_target)
             )
@@ -4553,15 +4554,52 @@ class Session:
                 target_checkout is not None
                 and (
                     action in authority_module.MUTATING_ACTIONS
-                    or action in ("publish", "merge")
+                    or integration_action
                 )
             )
-            if needs_absolute_target_validation:
+            explicit_worktree_checkout = (
+                normalized_scope.get("checkout")
+                if (integration_action
+                    and isinstance(normalized_scope, dict)
+                    and normalized_scope.get("kind") == "worktree")
+                else None
+            )
+            needs_explicit_integration_scope = (
+                isinstance(explicit_worktree_checkout, str)
+                and bool(explicit_worktree_checkout)
+            )
+            needs_selected_checkout_observation = (
+                needs_selected_scope and isinstance(selected, dict)
+                and isinstance(selected.get("path"), str)
+                and bool(selected.get("path"))
+            )
+            needs_scoped_checkout_observation = (
+                needs_explicit_integration_scope
+                and not (os.path.isabs(target) and target_checkout is not None)
+            )
+            preflight_state_observation: dict[str, Any] | None = None
+            if (needs_absolute_target_validation
+                    or needs_selected_checkout_observation
+                    or needs_scoped_checkout_observation):
                 workspace = self.snapshot.get("workspace", {})
                 workspace = workspace if isinstance(workspace, dict) else {}
                 workspace_root = workspace.get("root", ".")
                 if not isinstance(workspace_root, str):
                     raise LifecycleError("absolute checkout target workspace is unavailable")
+                if (os.path.isabs(target) and target_checkout is not None
+                        and needs_absolute_target_validation):
+                    observed_checkout = target_checkout[1]
+                    checkout_path = observed_checkout.get("path")
+                elif needs_explicit_integration_scope:
+                    observed_checkout = {}
+                    checkout_path = explicit_worktree_checkout
+                else:
+                    observed_checkout = selected or {}
+                    checkout_path = observed_checkout.get("path")
+                if not isinstance(checkout_path, str) or not checkout_path:
+                    raise LifecycleError("integration checkout observation unavailable")
+                if not os.path.isabs(checkout_path):
+                    checkout_path = str(Path(workspace_root) / checkout_path)
                 expected_repository_root = None
                 rows = workspace.get("repositories", [])
                 if isinstance(rows, list):
@@ -4574,10 +4612,11 @@ class Session:
                     ]
                     if len(roots) == 1:
                         expected_repository_root = roots[0]
-                observed_checkout = target_checkout[1]
-                checkout_path = observed_checkout.get("path")
-                if not isinstance(checkout_path, str) or not checkout_path:
-                    raise LifecycleError("absolute target checkout path is unavailable")
+                expected_branch = observed_checkout.get("branch")
+                if (needs_explicit_integration_scope
+                        and not (os.path.isabs(target)
+                                 and target_checkout is not None)):
+                    expected_branch = normalized_scope.get("branch")
                 try:
                     checkout_identity = workspace_module.verify_registered_checkout(
                         checkout_path,
@@ -4585,21 +4624,32 @@ class Session:
                         workspace_root=workspace_root,
                         expected_repository_root=expected_repository_root,
                         expected_branch=(
-                            observed_checkout.get("branch")
-                            if isinstance(observed_checkout.get("branch"), str)
+                            expected_branch
+                            if isinstance(expected_branch, str)
                             else None
                         ),
                     )
                 except workspace_module.WorkspaceResolutionError as error:
+                    scope_description = (
+                        "explicit integration scope checkout"
+                        if needs_scoped_checkout_observation
+                        else "absolute target checkout"
+                    )
                     raise LifecycleError(
-                        "absolute target checkout is not currently registered"
+                        f"{scope_description} is not currently registered"
                     ) from error
                 inspected = workspace_module.inspect_repo(
                     Path(checkout_identity["path"]), _refresh=True,
                 )
                 if inspected is None or inspected.git_error:
+                    observation_description = (
+                        "explicit integration scope checkout"
+                        if needs_scoped_checkout_observation
+                        else "absolute integration target"
+                    )
                     raise LifecycleError(
-                        "absolute integration target observation unavailable at mutation boundary"
+                        f"{observation_description} observation unavailable "
+                        "at mutation boundary"
                     )
                 record = inspected.record()
                 record["name"] = repository
@@ -4612,7 +4662,59 @@ class Session:
                     if isinstance(checkout_identity.get(key), str):
                         fresh_facts[repository][key] = checkout_identity[key]
                 observed_facts = {**observed_facts, **fresh_facts}
-                if normalized_scope is None and action in ("publish", "merge"):
+                if integration_action:
+                    observed_head = record.get("head")
+                    valid_head = (
+                        isinstance(observed_head, str)
+                        and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", observed_head)
+                        is not None
+                    )
+                    observed_branch = record.get("branch")
+                    valid_branch = (
+                        isinstance(observed_branch, str)
+                        and bool(observed_branch)
+                        and len(observed_branch) <= 160
+                        and "\x00" not in observed_branch
+                        and not observed_branch.startswith("/")
+                    )
+                    if valid_branch:
+                        branch_status = "attached"
+                    elif observed_branch is None:
+                        branch_status = "detached"
+                    else:
+                        branch_status = "unavailable"
+                    if not valid_branch:
+                        observed_branch = None
+                    observed_checkout_identity = checkout_identity.get(
+                        "checkout_identity"
+                    )
+                    if (isinstance(observed_checkout_identity, str)
+                            and re.fullmatch(
+                                r"[A-Za-z0-9:._-]{1,160}",
+                                observed_checkout_identity,
+                            )):
+                        dirty = record.get("dirty")
+                        preflight_state_observation = {
+                            "schema_version": (
+                                "mncs.environment.integration-preflight-state/1"
+                            ),
+                            "observation_basis": (
+                                "fresh-registered-checkout-inspection"
+                            ),
+                            "checkout_identity": observed_checkout_identity,
+                            "branch": observed_branch,
+                            "branch_status": branch_status,
+                            "head": observed_head if valid_head else None,
+                            "head_status": (
+                                "measured" if valid_head else "unavailable"
+                            ),
+                            "working_tree_status": (
+                                "clean" if dirty is False else (
+                                    "dirty" if dirty is True else "unavailable"
+                                )
+                            ),
+                        }
+                if normalized_scope is None and needs_selected_scope:
                     normalized_scope = self._canonical_scope(repository, {
                         "kind": "worktree",
                         "checkout": checkout_identity["path"],
@@ -4630,7 +4732,9 @@ class Session:
                     normalized_scope is not None
                     and (
                         (
-                            normalized_scope.get("kind") == "worktree"
+                            os.path.isabs(target)
+                            and target_checkout is not None
+                            and normalized_scope.get("kind") == "worktree"
                             and os.path.normpath(
                                 str(normalized_scope.get("checkout", ""))
                             ) != os.path.normpath(checkout_identity["path"])
@@ -4723,6 +4827,8 @@ class Session:
                 "operation_executed": False,
                 **self._authority_event_context(),
             }
+            if preflight_state_observation is not None:
+                payload["repository_preflight_state"] = preflight_state_observation
             if type(verdict.get("coordination_overlap_count")) is int:
                 payload.update({
                     "coordination_overlap_count": verdict[

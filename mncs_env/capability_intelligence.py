@@ -2584,6 +2584,7 @@ def _compact_projection(
                 "integration_eligibility_records_returned",
                 "integration_eligibility_records_omitted",
                 "integration_eligibility_records_invalid",
+                "integration_preflight_state_observations_invalid",
             )
             if key in activity_source
         })
@@ -3227,10 +3228,26 @@ def _compact_projection(
             for key in (
                 "identity", "action", "repository", "authorization_basis",
                 "eligibility_basis", "campaign_id", "work_intent_id",
-                "work_intent_reference_status",
+                "work_intent_reference_status", "preflight_state_status",
             )
             if isinstance(item.get(key), str)
         }
+        preflight_state = item.get("repository_preflight_state")
+        if isinstance(preflight_state, dict):
+            compact_item["repository_preflight_state"] = {
+                key: preflight_state[key]
+                for key in (
+                    "schema_version", "observation_basis", "checkout_identity",
+                    "branch", "branch_status", "head", "head_status",
+                    "working_tree_status",
+                )
+                if key in preflight_state
+            }
+            limit = item.get("preflight_state_interpretation_limit")
+            if isinstance(limit, str):
+                compact_item["preflight_state_interpretation_limit"] = (
+                    _short_text(limit, 320)
+                )
         if item.get("persistent_claim_required") is False:
             compact_item["persistent_claim_required"] = False
         if item.get("operation_executed") is False:
@@ -8542,6 +8559,60 @@ def _authority_conflict_scope(
     return result
 
 
+def _authority_integration_preflight_state(value: Any) -> dict[str, Any] | None:
+    """Validate the bounded direct checkout preimage recorded at preflight."""
+    expected = {
+        "schema_version", "observation_basis", "checkout_identity", "branch",
+        "branch_status", "head", "head_status", "working_tree_status",
+    }
+    if (not isinstance(value, dict) or set(value) != expected
+            or value.get("schema_version")
+            != "mncs.environment.integration-preflight-state/1"
+            or value.get("observation_basis")
+            != "fresh-registered-checkout-inspection"):
+        return None
+    checkout_identity = value.get("checkout_identity")
+    identifier = re.compile(r"[A-Za-z0-9:._-]{1,160}")
+    if (not isinstance(checkout_identity, str)
+            or not identifier.fullmatch(checkout_identity)):
+        return None
+    branch_status = value.get("branch_status")
+    branch = value.get("branch")
+    if branch_status == "attached":
+        if (not isinstance(branch, str) or not branch or len(branch) > 160
+                or "\x00" in branch or branch.startswith("/")):
+            return None
+    elif branch_status in {"detached", "unavailable"}:
+        if branch is not None:
+            return None
+    else:
+        return None
+    head_status = value.get("head_status")
+    head = value.get("head")
+    if head_status == "measured":
+        if (not isinstance(head, str)
+                or re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", head) is None):
+            return None
+    elif head_status == "unavailable":
+        if head is not None:
+            return None
+    else:
+        return None
+    working_tree_status = value.get("working_tree_status")
+    if working_tree_status not in {"clean", "dirty", "unavailable"}:
+        return None
+    return {
+        "schema_version": "mncs.environment.integration-preflight-state/1",
+        "observation_basis": "fresh-registered-checkout-inspection",
+        "checkout_identity": checkout_identity,
+        "branch": branch,
+        "branch_status": branch_status,
+        "head": head,
+        "head_status": head_status,
+        "working_tree_status": working_tree_status,
+    }
+
+
 def _authority_claim_conflict(
     value: Any, repository: str | None,
 ) -> dict[str, Any] | None:
@@ -9933,6 +10004,7 @@ def _session_activity(
             break
     integration_eligibility_records = []
     invalid_integration_eligibility_event_count = 0
+    invalid_integration_preflight_state_count = 0
     valid_integration_eligibility_count = 0
     for event in reversed(integration_eligibility_events):
         reference = _event_reference(event)
@@ -10013,7 +10085,18 @@ def _session_activity(
             MAX_SESSION_ACTIVITY_INTEGRATION_ELIGIBILITY
         ):
             continue
-        integration_eligibility_records.append({
+        raw_preflight_state = payload.get("repository_preflight_state")
+        preflight_state = _authority_integration_preflight_state(
+            raw_preflight_state,
+        )
+        if raw_preflight_state is None:
+            preflight_state_status = "not-recorded-on-event"
+        elif preflight_state is None:
+            preflight_state_status = "invalid-event-observation"
+            invalid_integration_preflight_state_count += 1
+        else:
+            preflight_state_status = "recorded-and-validated"
+        eligibility_record = {
             "identity": "inteligible_" + digest_hex({
                 "session_id": session.session_id,
                 "event": reference["identity"],
@@ -10025,6 +10108,7 @@ def _session_activity(
             "eligibility_basis": eligibility_basis,
             "persistent_claim_required": False,
             "operation_executed": False,
+            "preflight_state_status": preflight_state_status,
             "coordination_overlap_count": raw_overlap_count,
             "coordination_overlaps": coordination_overlaps,
             "coordination_overlaps_truncated": truncated_overlaps,
@@ -10034,7 +10118,15 @@ def _session_activity(
                 "at preflight time. No integration result is recorded by this event."
             ),
             "event_reference": reference,
-        })
+        }
+        if preflight_state is not None:
+            eligibility_record["repository_preflight_state"] = preflight_state
+            eligibility_record["preflight_state_interpretation_limit"] = (
+                "This is the local destination checkout preimage at preflight; "
+                "it does not establish source branch, remote ref state, later "
+                "execution, or integration outcome."
+            )
+        integration_eligibility_records.append(eligibility_record)
     integration_eligibility_records_omitted = max(
         0,
         valid_integration_eligibility_count
@@ -10353,6 +10445,9 @@ def _session_activity(
                 ),
                 "integration_eligibility_records_invalid": (
                     invalid_integration_eligibility_event_count
+                ),
+                "integration_preflight_state_observations_invalid": (
+                    invalid_integration_preflight_state_count
                 ),
                 "integration_eligibility_selection_policy": (
                     "newest-sanitized-preflight-decisions-in-selected-session-window"

@@ -375,7 +375,15 @@ caused a denial. Older events without an objective reference report
 `work_intent_reference_status: not-recorded-on-event`. The record says
 `operation_executed: false`: it does not reserve the scope or assert that a
 merge or publication succeeded, leaving concurrent ref updates to Git's own
-checks. Event records retain up to eight overlap references and the total
+checks. When the exact target checkout is available, merge and publish
+preflight refreshes its registered identity and Git state even when the caller
+supplies an explicit worktree scope. The event carries a bounded
+`repository_preflight_state` with checkout identity, branch, HEAD, and
+working-tree status. The projection validates and preserves this as the local
+destination preimage; older events report `preflight_state_status:
+not-recorded-on-event`. A local preimage does not establish source-branch or
+remote-ref state, subsequent execution, or integration outcome. Event records
+retain up to eight overlap references and the total
 observed count; compact responses retain up to four and mark any projection
 truncation separately from overlap records omitted at capture time.
 When a later returned eligible preflight in the selected event window has the

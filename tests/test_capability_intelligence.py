@@ -2693,6 +2693,20 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
             ),
             "persistent_claim_required": False,
             "operation_executed": False,
+            "repository_preflight_state": {
+                "schema_version": (
+                    "mncs.environment.integration-preflight-state/1"
+                ),
+                "observation_basis": (
+                    "fresh-registered-checkout-inspection"
+                ),
+                "checkout_identity": "checkout:integration-target",
+                "branch": "campaign/example",
+                "branch_status": "attached",
+                "head": "c" * 40,
+                "head_status": "measured",
+                "working_tree_status": "clean",
+            },
             "campaign_id": session.snapshot["campaign"]["identity"],
             "work_intent_id": session.snapshot["intent"]["identity"],
             "coordination_overlap_count": 5,
@@ -2796,6 +2810,14 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
     )
     assert eligibility["persistent_claim_required"] is False
     assert eligibility["operation_executed"] is False
+    assert eligibility["preflight_state_status"] == "recorded-and-validated"
+    assert eligibility["repository_preflight_state"]["checkout_identity"] == (
+        "checkout:integration-target"
+    )
+    assert eligibility["repository_preflight_state"]["head"] == "c" * 40
+    assert "does not establish source branch, remote ref state" in (
+        eligibility["preflight_state_interpretation_limit"]
+    )
     assert eligibility["campaign_id"] == session.snapshot["campaign"]["identity"]
     assert eligibility["work_intent_id"] == session.snapshot["intent"]["identity"]
     assert eligibility["work_intent_reference_status"] == "recorded-on-event"
@@ -2879,6 +2901,10 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
         "evt_integration_eligible"
     )
     assert compact_eligibility["operation_executed"] is False
+    assert compact_eligibility["preflight_state_status"] == (
+        "recorded-and-validated"
+    )
+    assert compact_eligibility["repository_preflight_state"]["head"] == "c" * 40
     assert compact_eligibility["work_intent_id"] == session.snapshot["intent"]["identity"]
     compact_denial = compact["session_activity"]["authority_denials"][0]
     assert compact_denial["work_intent_reference_status"] == "recorded-on-event"
