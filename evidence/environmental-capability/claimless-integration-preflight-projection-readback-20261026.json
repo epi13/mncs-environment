@@ -1,0 +1,131 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_claimless_integration_preflight_projection_readback_20261026",
+  "captured_at": "2026-10-26T13:48:20Z",
+  "measurement_basis": "authenticated-session-projection-and-targeted-verification",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-scoped-integration-preflight-readback",
+    "source_interface": "mncs-env projections and campaign-state environmental-capability projections",
+    "request": {
+      "historical_event_page": {
+        "before_sequence": 79,
+        "event_limit": 8,
+        "evidence_limit": 4,
+        "read_mode": "read-only"
+      },
+      "campaign_state_checkpoint_id": "chk_ecb838d36a7a59ac",
+      "campaign_state_evidence_limit": 4
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "workspace_alignment_status": "declared-repositories-not-selected",
+      "declared_repository": "mncs-environment",
+      "selected_repositories": [
+        "mncs-rights-provenance",
+        "mncs-store",
+        "mncs-system-monitor"
+      ],
+      "context_candidate_kind": "declared-repository-selection-gap",
+      "context_candidate_interpretation": "hypothesis",
+      "historical_page": {
+        "sequence_start": 71,
+        "sequence_end": 78,
+        "older_records_remain": true,
+        "matching_preflight_count": 1,
+        "matching_event_identities": [
+          "evt_e80c256b6e642fc1"
+        ]
+      },
+      "full_session_history_readback": {
+        "sequence_start": 1,
+        "sequence_end": 86,
+        "older_records_remain": false,
+        "matching_preflight_count": 4,
+        "matching_event_identities": [
+          "evt_e80c256b6e642fc1",
+          "evt_bc15414f5b697eb1",
+          "evt_8ba23b658ee08ea1",
+          "evt_81f5f6c003c2a328"
+        ]
+      },
+      "preflight_evidence": {
+        "repository": "mncs-environment",
+        "work_intent_id": "int_e9a2959ffe2e952c",
+        "action": "merge",
+        "persistent_claim_required": false,
+        "operation_executed": false,
+        "integration_outcome": "not-recorded"
+      },
+      "verification": {
+        "focused_test_command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "focused_tests_passed": 118,
+        "focused_tests_failed": 0,
+        "campaign_proof_command": "python3 scripts/campaign_proofs.py",
+        "campaign_proof_result": "17 passed, 0 skipped, 0 failed",
+        "implementation_commit": "c44ce2e6c16a69423d19aeeb3686ecd912ba5620"
+      },
+      "interpretation": "The projection relates this Work Intent's repository-selection gap to validated scoped merge preflights from the same campaign and session. The records show that those preflights needed no persistent claim, but did not execute integration. The candidate remains a hypothesis; this does not establish that the selection gap blocked work, that ordinary repository reads or writes were available, or that any merge succeeded."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "session_id": "ses_8945548a87d98ed5",
+      "event_identities": [
+        "evt_e80c256b6e642fc1",
+        "evt_bc15414f5b697eb1",
+        "evt_8ba23b658ee08ea1",
+        "evt_81f5f6c003c2a328"
+      ]
+    },
+    {
+      "kind": "implementation-source",
+      "identity": "ev_environment_claimless_integration_preflight_implementation_20261026",
+      "repository": "mncs-environment",
+      "commit": "c44ce2e6c16a69423d19aeeb3686ecd912ba5620",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "5f6c69386b8f2a0b7f2caaad5b413ad8befbf8f345ca3cb772d383ea5dbabc04"
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "focused-tests",
+      "command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+      "passed": 118,
+      "failed": 0
+    },
+    {
+      "kind": "direct-operation-result",
+      "repository": "mncs-environment",
+      "operation": "campaign-proofs",
+      "command": "python3 scripts/campaign_proofs.py",
+      "passed": 17,
+      "skipped": 0,
+      "failed": 0
+    }
+  ],
+  "not_measured": [
+    "whether the selection gap blocked ordinary repository work",
+    "whether any scoped preflight was followed by an integration operation",
+    "whether the implementation changes later agents' coordination effort",
+    "whether the selection gap recurs in other sessions",
+    "whether this implementation resolves the broader repository-selection gap"
+  ]
+}
