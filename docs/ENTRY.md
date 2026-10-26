@@ -59,6 +59,20 @@ recovery event records the superseded claim versions; it does not assert that
 an arbitrary host process was terminated or authorize a separate host-side
 operation.
 
+For an Environment-mediated provider effect against one exact, registered
+worktree, the operation preflight can also supersede conflicting claims that
+the same liveness classifier marks recoverable. It does this immediately as
+part of the requested operation path, without creating a replacement
+persistent owner claim, then refreshes claim state and repeats eligibility
+before acquiring the checkout operation lock and checking eligibility again
+under that lock. Active, uncertain, malformed, over-limit, and quiet exclusive
+conflicts remain blocked. The recovery event points back to the authority
+denial and names the superseded claim versions; each superseded claim also
+retains that denial pointer in the same atomic claim transition. Invocation
+provenance points forward to the recovery event. This covers
+Environment-mediated provider effects only. Direct shell or Git mutations do
+not pass through this operation boundary.
+
 A `--paths` claim follows the session's selected, verified worktree by default;
 the checkout and branch stay part of its identity. This lets independent
 branches claim the same files for isolated proposals while preserving conflicts

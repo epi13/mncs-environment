@@ -5232,7 +5232,16 @@ class Session:
             if isinstance(claim_conflict, dict):
                 denial["claim_conflict"] = claim_conflict
             denial.update(self._authority_event_context())
-            self._emit("authority.denied", "environment", denial)
+            denial_event = self._emit("authority.denied", "environment", denial)
+            if (
+                isinstance(denial_event.get("identity"), str)
+                and type(denial_event.get("sequence")) is int
+            ):
+                verdict["event_reference"] = {
+                    "identity": denial_event["identity"],
+                    "sequence": denial_event["sequence"],
+                    "type": denial_event.get("type", "authority.denied"),
+                }
         elif verdict["verdict"] == "escalate":
             self._emit("authority.escalated", "environment",
                        {"action": action, "target": target,
@@ -5743,6 +5752,7 @@ class Session:
         checked_effect_repository: str | None = None
         effect_check_scope: dict[str, Any] | None = None
         operation_checkout_path: str | None = None
+        operation_recovery_event: dict[str, Any] | None = None
         initial_preflight_state: dict[str, Any] | None = None
         initial_preflight_event: dict[str, Any] | None = None
         if required != "read":
@@ -5835,9 +5845,105 @@ class Session:
                     scope=effect_check_scope,
                 )
             if effect_verdict["verdict"] == "deny":
-                raise AuthorityDenied(effect_verdict["reason"])
+                claim_conflict = effect_verdict.get("claim_conflict")
+                current_claim_state = (
+                    claim_conflict.get("current_claim_state")
+                    if isinstance(claim_conflict, dict) else None
+                )
+                decision_basis = (
+                    claim_conflict.get("decision_basis")
+                    if isinstance(claim_conflict, dict) else None
+                )
+                if (
+                    required in authority_module.PROPOSAL_WORKTREE_ACTIONS
+                    and operation_checkout_path is not None
+                    and isinstance(effect_scope, dict)
+                    and effect_scope.get("kind") == "worktree"
+                    and isinstance(checked_effect_repository, str)
+                    and isinstance(current_claim_state, dict)
+                    and current_claim_state.get("recovery_verdict") == "recoverable"
+                    and isinstance(decision_basis, dict)
+                    and decision_basis.get("authorization_status") == "eligible"
+                    and decision_basis.get("persistent_authority_required") is False
+                ):
+                    denial_reference = effect_verdict.get("event_reference")
+                    if not (
+                        isinstance(denial_reference, dict)
+                        and isinstance(denial_reference.get("identity"), str)
+                        and type(denial_reference.get("sequence")) is int
+                        and denial_reference.get("type") == "authority.denied"
+                    ):
+                        raise LifecycleError(
+                            "recoverable authority denial lacks its event reference"
+                        )
+                    recovery_attempt_succeeded = False
+                    try:
+                        recovered_claims = (
+                            claims_module.recover_stale_conflicts_for_operation(
+                                self.store,
+                                repository=checked_effect_repository,
+                                session_id=self.session_id,
+                                consumer_id=str(
+                                    self.snapshot.get("consumer_id", "unknown")
+                                ),
+                                scope=effect_scope,
+                                reason=(
+                                    "Environment provider effect recovered "
+                                    "liveness-classified stale coordination claims"
+                                ),
+                                cause_event_reference=denial_reference,
+                            )
+                        )
+                        recovery_attempt_succeeded = True
+                    except claims_module.ClaimConflict:
+                        recovered_claims = []
+                    if recovery_attempt_succeeded and recovered_claims:
+                        recovered_from = [
+                            {
+                                "claim_id": str(item["claim_id"]),
+                                "version": int(item["provenance"][
+                                    "recovered_from_version"
+                                ]),
+                                "superseded_version": int(item["version"]),
+                                "owner_session": str(item["session_id"]),
+                            }
+                            for item in recovered_claims
+                        ]
+                        operation_recovery_event = self._emit(
+                            "lease.recovered-for-operation",
+                            self.snapshot.get("consumer_id", "unknown"),
+                            {
+                                "action": required,
+                                "repository": checked_effect_repository,
+                                "scope": claim_conflict.get("requested_scope"),
+                                "authority_denial_event": denial_reference,
+                                "recovered_count": len(recovered_from),
+                                "recovered_from": recovered_from,
+                                "operation_effect_started": False,
+                                **self._authority_event_context(),
+                            },
+                        )
+                        self._save()
+                    if recovery_attempt_succeeded:
+                        self._refresh_holders()
+                        effect_verdict = self.check(
+                            action=required,
+                            target=checked_effect_repository,
+                            scope=effect_check_scope,
+                        )
+                if effect_verdict["verdict"] == "deny":
+                    raise AuthorityDenied(effect_verdict["reason"])
             if effect_verdict["verdict"] == "escalate":
                 return self._pending(capability, argv, required, effect_verdict["reason"])
+            if operation_recovery_event is not None and admitted_effect_target is not None:
+                operation_recovery_reference = {
+                    key: operation_recovery_event[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in operation_recovery_event
+                }
+                admitted_effect_target["operation_claim_recovery_event"] = (
+                    operation_recovery_reference
+                )
             if admitted_effect_target is not None:
                 evidence = effect_verdict.get("eligibility_evidence")
                 if (

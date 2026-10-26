@@ -2921,6 +2921,18 @@ def _compact_projection(
             )
             if key in activity_source
         })
+    if activity_source.get("operation_claim_recovery_events_considered", 0):
+        compact_activity_source.update({
+            key: activity_source[key]
+            for key in (
+                "operation_claim_recovery_events_considered",
+                "operation_claim_recovery_records_returned",
+                "operation_claim_recovery_records_omitted",
+                "operation_claim_recovery_records_invalid",
+                "operation_claim_recovery_selection_policy",
+            )
+            if key in activity_source
+        })
     if activity_source.get("operation_deferral_events_considered", 0):
         compact_activity_source.update({
             key: activity_source[key]
@@ -3568,6 +3580,43 @@ def _compact_projection(
                 if key in reference
             }
         compact_claim_recoveries.append(compact_item)
+    compact_operation_claim_recoveries = []
+    raw_operation_claim_recoveries = activity.get("operation_claim_recoveries")
+    raw_operation_claim_recoveries = (
+        raw_operation_claim_recoveries
+        if isinstance(raw_operation_claim_recoveries, list) else []
+    )
+    for item in raw_operation_claim_recoveries[
+        :MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES
+    ]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in ("identity", "status", "action", "repository")
+            if isinstance(item.get(key), str)
+        }
+        if isinstance(item.get("scope"), dict):
+            compact_item["scope"] = item["scope"]
+        if type(item.get("recovered_count")) is int:
+            compact_item["recovered_count"] = item["recovered_count"]
+        recovered_from = item.get("recovered_from")
+        if isinstance(recovered_from, list):
+            compact_item["recovered_from"] = [
+                entry for entry in recovered_from[:4]
+                if isinstance(entry, dict)
+            ]
+            if len(recovered_from) > 4:
+                compact_item["recovered_from_truncated"] = True
+        for key in ("authority_denial_event", "event_reference"):
+            reference = item.get(key)
+            if isinstance(reference, dict):
+                compact_item[key] = {
+                    field: reference[field]
+                    for field in ("identity", "sequence", "type")
+                    if field in reference
+                }
+        compact_operation_claim_recoveries.append(compact_item)
     compact_claim_coordination = []
     raw_claim_coordination = activity.get("claim_coordination")
     raw_claim_coordination = (
@@ -4193,6 +4242,18 @@ def _compact_projection(
         compact_activity["claim_recoveries"] = compact_claim_recoveries
         if len(raw_claim_recoveries) > len(compact_claim_recoveries):
             compact_activity["claim_recoveries_truncated"] = True
+    if (raw_operation_claim_recoveries
+            or activity_source.get("operation_claim_recovery_events_considered", 0)):
+        compact_activity["operation_claim_recovery_count"] = activity.get(
+            "operation_claim_recovery_count", len(raw_operation_claim_recoveries),
+        )
+        compact_activity["operation_claim_recoveries"] = (
+            compact_operation_claim_recoveries
+        )
+        if len(raw_operation_claim_recoveries) > len(
+            compact_operation_claim_recoveries,
+        ):
+            compact_activity["operation_claim_recoveries_truncated"] = True
     if raw_claim_coordination or activity_source.get(
         "claim_coordination_events_considered", 0,
     ):
@@ -4772,6 +4833,11 @@ def _compact_projection(
         elif result["session_activity"].get("claim_recoveries"):
             result["session_activity"]["claim_recoveries"].pop()
             result["session_activity"]["claim_recoveries_truncated"] = True
+        elif result["session_activity"].get("operation_claim_recoveries"):
+            result["session_activity"]["operation_claim_recoveries"].pop()
+            result["session_activity"][
+                "operation_claim_recoveries_truncated"
+            ] = True
         elif result["session_activity"].get("claim_coordination"):
             result["session_activity"]["claim_coordination"].pop()
             result["session_activity"]["claim_coordination_truncated"] = True
@@ -8459,6 +8525,7 @@ def _authenticated_session_event_reference_resolution(
     record_collections = (
         ("rpc_operation", "rpc_operations"),
         ("claim_recovery", "claim_recoveries"),
+        ("operation_claim_recovery", "operation_claim_recoveries"),
         ("claim_coordination", "claim_coordination"),
         ("authority_denial", "authority_denials"),
         ("integration_eligibility", "integration_eligibility"),
@@ -11211,6 +11278,86 @@ def _claim_recovery_event_projection(
     return row
 
 
+def _operation_claim_recovery_event_projection(
+    event: dict[str, Any], session_id: str,
+) -> dict[str, Any] | None:
+    """Project stale claims superseded for one exact provider operation."""
+    reference = _event_reference(event)
+    payload = event.get("payload")
+    payload = payload if isinstance(payload, dict) else {}
+    repository = payload.get("repository")
+    action = payload.get("action")
+    scope = (
+        _authority_conflict_scope(payload.get("scope"), repository)
+        if _is_repository_identity(repository)
+        and isinstance(payload.get("scope"), dict) else None
+    )
+    denial = _event_reference(payload.get("authority_denial_event"))
+    recovered = payload.get("recovered_from")
+    recovered_count = payload.get("recovered_count")
+    identifier = re.compile(r"[A-Za-z0-9][A-Za-z0-9:._-]{0,159}")
+    if (
+        reference is None
+        or not _is_repository_identity(repository)
+        or action not in {"write", "mutate", "execute", "verify"}
+        or scope is None
+        or scope.get("kind") != "worktree"
+        or scope.get("exclusive") is not False
+        or denial is None
+        or denial.get("type") != "authority.denied"
+        or denial.get("sequence", reference["sequence"])
+        >= reference["sequence"]
+        or type(recovered_count) is not int
+        or not 1 <= recovered_count <= 16
+        or not isinstance(recovered, list)
+        or len(recovered) != recovered_count
+        or payload.get("operation_effect_started") is not False
+    ):
+        return None
+    recovered_from = []
+    for item in recovered:
+        if not isinstance(item, dict):
+            return None
+        claim_id = item.get("claim_id")
+        owner = item.get("owner_session")
+        version = item.get("version")
+        superseded = item.get("superseded_version")
+        if (
+            not isinstance(claim_id, str) or not identifier.fullmatch(claim_id)
+            or not isinstance(owner, str) or not identifier.fullmatch(owner)
+            or type(version) is not int or version < 1
+            or type(superseded) is not int or superseded != version + 1
+        ):
+            return None
+        recovered_from.append({
+            "claim_id": claim_id,
+            "version": version,
+            "superseded_version": superseded,
+            "owner_session": owner,
+        })
+    return {
+        "identity": "opclmrec_" + digest_hex({
+            "session_id": session_id,
+            "event": reference["identity"],
+        }, length=16),
+        "status": "stale-claims-superseded-for-one-operation",
+        "action": action,
+        "repository": repository,
+        "scope": scope,
+        "recovered_count": recovered_count,
+        "recovered_from": recovered_from,
+        "authority_denial_event": denial,
+        "event_reference": reference,
+        "interpretation": (
+            "The Environment superseded only liveness-classified recoverable "
+            "claims before the exact operation's fresh eligibility check. No "
+            "replacement persistent claim was created, and this record alone "
+            "does not establish that the operation later succeeded."
+        ),
+        **_authority_event_objective_context(payload),
+    }
+
+
 def _claim_coordination_event_projection(
     event: dict[str, Any], session_id: str,
 ) -> dict[str, Any] | None:
@@ -12268,6 +12415,27 @@ def _session_activity(
             claim_recoveries.append(item)
     claim_recovery_records_omitted = max(
         0, valid_claim_recovery_count - len(claim_recoveries),
+    )
+    operation_claim_recovery_events = [
+        event for event in events
+        if event.get("type") == "lease.recovered-for-operation"
+    ]
+    operation_claim_recoveries = []
+    invalid_operation_claim_recovery_count = 0
+    for event in reversed(operation_claim_recovery_events):
+        item = _operation_claim_recovery_event_projection(
+            event, session.session_id,
+        )
+        if item is None:
+            invalid_operation_claim_recovery_count += 1
+            continue
+        if len(operation_claim_recoveries) < MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES:
+            operation_claim_recoveries.append(item)
+    operation_claim_recoveries_omitted = max(
+        0,
+        len(operation_claim_recovery_events)
+        - invalid_operation_claim_recovery_count
+        - len(operation_claim_recoveries),
     )
     claim_coordination_events = [
         event for event in events
@@ -13776,6 +13944,23 @@ def _session_activity(
                 ),
             } if claim_recovery_events else {}),
             **({
+                "operation_claim_recovery_events_considered": len(
+                    operation_claim_recovery_events,
+                ),
+                "operation_claim_recovery_records_returned": len(
+                    operation_claim_recoveries,
+                ),
+                "operation_claim_recovery_records_omitted": (
+                    operation_claim_recoveries_omitted
+                ),
+                "operation_claim_recovery_records_invalid": (
+                    invalid_operation_claim_recovery_count
+                ),
+                "operation_claim_recovery_selection_policy": (
+                    "newest-valid-operation-recoveries-in-selected-session-window"
+                ),
+            } if operation_claim_recovery_events else {}),
+            **({
                 "claim_coordination_events_considered": len(
                     claim_coordination_events,
                 ),
@@ -13877,6 +14062,10 @@ def _session_activity(
             "claim_recovery_count": len(claim_recoveries),
             "claim_recoveries": claim_recoveries,
         } if claim_recovery_events else {}),
+        **({
+            "operation_claim_recovery_count": len(operation_claim_recoveries),
+            "operation_claim_recoveries": operation_claim_recoveries,
+        } if operation_claim_recovery_events else {}),
         **({
             "claim_coordination_count": len(claim_coordination),
             "claim_coordination": claim_coordination,

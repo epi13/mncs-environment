@@ -7789,6 +7789,160 @@ class SessionTests(unittest.TestCase):
             with self.assertRaises(sessions.AuthorityDenied):
                 session.invoke("writer", ["hi"])
 
+    def test_provider_effect_recovers_stale_nonexclusive_claim_without_new_owner(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository_root = root / "MNCS-Commons"
+            (repository_root / ".mncs").mkdir(parents=True)
+            (repository_root / ".mncs" / "project.json").write_text(
+                json.dumps({"repository": "MNCS-Commons"}) + "\n"
+            )
+            (repository_root / "seed.txt").write_text("stale-claim fixture\n")
+            subprocess.run(
+                ["git", "-C", str(repository_root), "init", "-b", "main"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "config", "user.name", "MNCS test"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "config", "user.email", "mncs-test@example.invalid"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "add", ".mncs/project.json", "seed.txt"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "commit", "-m", "seed stale claim fixture"],
+                check=True, capture_output=True, text=True,
+            )
+            head = subprocess.run(
+                ["git", "-C", str(repository_root), "rev-parse", "HEAD"],
+                check=True, capture_output=True, text=True,
+            ).stdout.strip()
+            branch = "main"
+            session = make_session(
+                root / "state",
+                intent={"goal": "exercise automatic stale-claim recovery",
+                        "repositories": ["MNCS-Commons"]},
+            )
+            session.snapshot["workspace"]["root"] = str(root)
+            session.snapshot["workspace"]["repositories"] = [{
+                "name": "MNCS-Commons",
+                "path": str(repository_root),
+                "manifest_repository": "MNCS-Commons",
+                "branch": branch,
+            }]
+            session.snapshot["authority"]["writable"] = ["MNCS-Commons"]
+            session.snapshot["selected_checkouts"] = {"MNCS-Commons": {
+                "repository": "MNCS-Commons",
+                "path": str(repository_root),
+                "branch": branch,
+                "head": head,
+                "clean": True,
+            }}
+
+            quiet_since = datetime.now(timezone.utc) - timedelta(hours=2)
+            quiet_at = quiet_since.isoformat(timespec="seconds")
+            session.store.save_snapshot("ses_quiet_owner", {
+                "session_id": "ses_quiet_owner",
+                "lifecycle": "active",
+                "lifecycle_history": [{"state": "active", "at": quiet_at}],
+            })
+            session.store.put_event("ses_quiet_owner", 1, {
+                "identity": "evt_quiet_owner_activity",
+                "session_id": "ses_quiet_owner",
+                "sequence": 1,
+                "type": "session.activity",
+                "observed_at": quiet_at,
+                "payload": {},
+            })
+            stale_claim = claims.acquire(
+                session.store,
+                repository="MNCS-Commons",
+                session_id="ses_quiet_owner",
+                consumer_id="quiet-owner",
+                basis=claims.BASIS_EXPLICIT,
+                reason="seed a stale nonexclusive worktree coordination claim",
+                scope={
+                    "kind": "worktree",
+                    "checkout": str(repository_root),
+                    "branch": branch,
+                },
+            )
+            binding = capabilities.probe_availability(
+                capabilities.bind(
+                    provider="mncs-commons", capability="campaign-writer",
+                    contract_revision="1", entrypoint="e", address="/bin/echo",
+                    effects=["write"], provider_root=str(repository_root),
+                    provenance={"checkout": {
+                        "path": str(repository_root), "branch": branch,
+                    }},
+                )
+            )
+            session.snapshot["bindings"].append(binding)
+
+            with mock.patch.object(
+                sessions.capabilities_module, "invoke",
+                return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
+            ) as provider:
+                result = session.invoke(
+                    "campaign-writer", ["fixture"],
+                    effect_target={
+                        "repository": "MNCS-Commons",
+                        "checkout": str(repository_root),
+                        "branch": branch,
+                    },
+                )
+
+            self.assertEqual(result["status"], "ok", result)
+            provider.assert_called_once()
+            claim_history = session.store.read_claims()
+            latest_claim = claims.latest_record_for(
+                claim_history, stale_claim["claim_id"],
+            )
+            self.assertIsNotNone(latest_claim)
+            self.assertEqual(latest_claim["status"], claims.STATUS_SUPERSEDED)
+            self.assertFalse(claims.active_claims(claim_history))
+
+            events_for_session = session._log()
+            recovery_events = [
+                event for event in events_for_session
+                if event.get("type") == "lease.recovered-for-operation"
+            ]
+            self.assertEqual(len(recovery_events), 1)
+            denial_events = [
+                event for event in events_for_session
+                if event.get("type") == "authority.denied"
+                and isinstance(event.get("payload", {}).get("claim_conflict"), dict)
+            ]
+            self.assertEqual(len(denial_events), 1)
+            recovery = recovery_events[0]
+            self.assertEqual(
+                recovery["payload"]["authority_denial_event"]["identity"],
+                denial_events[0]["identity"],
+            )
+            self.assertEqual(
+                latest_claim["provenance"]["operation_cause_event_reference"],
+                recovery["payload"]["authority_denial_event"],
+            )
+            self.assertFalse(recovery["payload"]["operation_effect_started"])
+            self.assertEqual(recovery["payload"]["recovered_count"], 1)
+            invocation = next(
+                event for event in events_for_session
+                if event.get("type") == "capability.invoked"
+            )
+            self.assertEqual(
+                invocation["payload"]["effect_target"][
+                    "operation_claim_recovery_event"
+                ]["identity"],
+                recovery["identity"],
+            )
+
     def test_provider_write_uses_selected_proposal_worktree_without_claim(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace_root = Path(directory) / "workspace"

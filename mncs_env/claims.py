@@ -61,6 +61,7 @@ STATUS_SUPERSEDED = "superseded"
 # continuing owner can reacquire its exact scope, while stale consumers can
 # never make a lease effectively permanent with an unbounded TTL.
 MAX_TTL_HOURS = 168
+MAX_OPERATION_RECOVERY_CLAIMS = 16
 
 
 def _operation_digest(operation: str, **payload: Any) -> str:
@@ -320,6 +321,114 @@ def active_claims(all_records: list[dict[str, Any]], *,
     """Latest live record per claim identity; released/expired drop out."""
     return {key: record for key, record in _latest_by_identity(all_records).items()
             if _alive(record, now)}
+
+
+def recover_stale_conflicts_for_operation(
+    store, *, repository: str, session_id: str, consumer_id: str,
+    scope: dict[str, Any], reason: str,
+    cause_event_reference: dict[str, Any],
+    now: datetime | None = None,
+) -> list[dict[str, Any]]:
+    """CAS-supersede only recoverable conflicts for one bounded operation.
+
+    This removes stale, non-exclusive coordination records without creating a
+    replacement owner claim. The caller must already have validated writable
+    rights and an exact registered operation scope, and must enforce the
+    operation's own concurrency contract. Active, uncertain, malformed, and
+    quiet exclusive claims remain fail-closed.
+    """
+    if (not isinstance(repository, str) or not repository
+            or len(repository) > 160 or "\x00" in repository
+            or not isinstance(session_id, str) or not session_id
+            or len(session_id) > 160 or "\x00" in session_id
+            or not isinstance(consumer_id, str) or not consumer_id
+            or len(consumer_id) > 160 or "\x00" in consumer_id
+            or not isinstance(reason, str) or not reason
+            or len(reason) > 512 or "\x00" in reason):
+        raise ValueError("operation claim recovery identity or reason is invalid")
+    resolved = normalize_scope(scope, repository)
+    if resolved.get("kind") != "worktree" or resolved.get("exclusive"):
+        raise ValueError(
+            "operation claim recovery requires a nonexclusive exact worktree scope"
+        )
+    if (
+        not isinstance(cause_event_reference, dict)
+        or set(cause_event_reference) != {"identity", "sequence", "type"}
+        or not isinstance(cause_event_reference.get("identity"), str)
+        or not re.fullmatch(
+            r"evt_[A-Za-z0-9][A-Za-z0-9_-]{0,155}",
+            cause_event_reference["identity"],
+        )
+        or type(cause_event_reference.get("sequence")) is not int
+        or cause_event_reference["sequence"] < 1
+        or cause_event_reference.get("type") != "authority.denied"
+    ):
+        raise ValueError(
+            "operation claim recovery requires its exact authority denial event"
+        )
+    for _ in range(16):
+        generation = store.claim_generation()
+        records = store.read_claims()
+        if store.claim_generation() != generation:
+            continue
+        live = active_claims(records, now=now)
+        conflicts: list[tuple[str, dict[str, Any]]] = []
+        for claim_id, record in live.items():
+            if (record.get("repository") != repository
+                    or record.get("session_id") == session_id):
+                continue
+            raw_scope = record.get("scope")
+            if not isinstance(raw_scope, dict):
+                raise ClaimConflict(
+                    f"{claim_id} has malformed live scope and blocks operation recovery")
+            try:
+                existing_scope = normalize_scope(raw_scope, repository)
+            except (TypeError, ValueError) as error:
+                raise ClaimConflict(
+                    f"{claim_id} has invalid live scope and blocks operation recovery: {error}") from error
+            overlap = scopes_conflict(resolved, existing_scope)
+            if overlap is None:
+                continue
+            conflicts.append((claim_id, record))
+            if len(conflicts) > MAX_OPERATION_RECOVERY_CLAIMS:
+                raise ClaimConflict(
+                    "operation scope overlaps more than 16 claims; "
+                    "bounded stale-claim recovery deferred")
+        if not conflicts:
+            return []
+        assessments = [
+            (claim_id, record, explain(record, store, now=now))
+            for claim_id, record in conflicts
+        ]
+        blocked = [
+            (claim_id, record, assessment)
+            for claim_id, record, assessment in assessments
+            if assessment.get("verdict") != "recoverable"
+        ]
+        if blocked:
+            claim_id, record, assessment = blocked[0]
+            raise ClaimConflict(
+                f"{claim_id} held by {record.get('session_id')} remains "
+                f"non-recoverable ({assessment.get('verdict')}): "
+                f"{assessment.get('reason')}")
+        recovered = _recovery_records(
+            records,
+            [(claim_id, record) for claim_id, record, _ in assessments],
+            session_id=session_id,
+            consumer_id=consumer_id,
+            reason=reason,
+            operation_cause_event_reference=cause_event_reference,
+        )
+        try:
+            store.put_claim_batch(recovered, expected_generation=generation)
+            return recovered
+        except ClaimBatchConflict:
+            continue
+        except ClaimVersionConflict as error:
+            raise ClaimConflict(
+                f"operation recovery lost the claim version race: {error}") from error
+    raise ClaimConflict(
+        "claim set kept advancing during operation recovery; retry after reconciling")
 
 
 def holders(all_records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
@@ -899,6 +1008,7 @@ def _recovery_records(records: list[dict[str, Any]],
                       session_id: str, consumer_id: str,
                       reason: str,
                       owner_recovery_authorization: dict[str, Any] | None = None,
+                      operation_cause_event_reference: dict[str, Any] | None = None,
                       ) -> list[dict[str, Any]]:
     """Prepare superseding records for the caller's atomic claim batch."""
     moment = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -914,6 +1024,10 @@ def _recovery_records(records: list[dict[str, Any]],
         }
         if owner_recovery_authorization is not None:
             provenance["owner_recovery"] = owner_recovery_authorization
+        if operation_cause_event_reference is not None:
+            provenance["operation_cause_event_reference"] = dict(
+                operation_cause_event_reference,
+            )
         supersede = {
             "schema_version": SCHEMA,
             "claim_id": victim_id,

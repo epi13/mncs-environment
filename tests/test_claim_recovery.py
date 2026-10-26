@@ -383,6 +383,148 @@ class AcquireRecoveryTests(RecoveryFixture):
             "ses_new",
         )
 
+    def test_operation_recovery_supersedes_stale_scope_without_new_owner(self):
+        self.seed_session(
+            "ses_quiet", "active",
+            datetime.now(timezone.utc) - timedelta(hours=2),
+        )
+        checkout = Path(self.temp.name) / "operation-worktree"
+        checkout.mkdir()
+        scope = {
+            "kind": "worktree", "checkout": str(checkout), "branch": "main",
+        }
+        victim = claims.acquire(
+            self.store, repository="r", session_id="ses_quiet",
+            consumer_id="ses_quiet", basis=claims.BASIS_EXPLICIT,
+            reason="test hold", scope=scope,
+        )
+        self.seed_session("ses_new", "active", datetime.now(timezone.utc))
+
+        recovered = claims.recover_stale_conflicts_for_operation(
+            self.store,
+            repository="r",
+            session_id="ses_new",
+            consumer_id="ses_new",
+            scope=scope,
+            reason="recover stale blocker for one serialized provider operation",
+            cause_event_reference={
+                "identity": "evt_operation_denial",
+                "sequence": 1,
+                "type": "authority.denied",
+            },
+        )
+
+        self.assertEqual(len(recovered), 1)
+        self.assertEqual(recovered[0]["claim_id"], victim["claim_id"])
+        self.assertEqual(recovered[0]["status"], claims.STATUS_SUPERSEDED)
+        self.assertEqual(recovered[0]["provenance"]["recovered_by"], "ses_new")
+        self.assertEqual(recovered[0]["provenance"]["recovered_from_version"], 1)
+        self.assertEqual(
+            recovered[0]["provenance"]["operation_cause_event_reference"][
+                "identity"
+            ],
+            "evt_operation_denial",
+        )
+        self.assertEqual(claims.active_claims(self.store.read_claims()), {})
+
+    def test_operation_recovery_keeps_live_conflict_and_claim_history_unchanged(self):
+        self.seed_session(
+            "ses_live", "active",
+            datetime.now(timezone.utc) - timedelta(minutes=1),
+        )
+        checkout = Path(self.temp.name) / "operation-worktree"
+        checkout.mkdir()
+        scope = {
+            "kind": "worktree", "checkout": str(checkout), "branch": "main",
+        }
+        victim = claims.acquire(
+            self.store, repository="r", session_id="ses_live",
+            consumer_id="ses_live", basis=claims.BASIS_EXPLICIT,
+            reason="test hold", scope=scope,
+        )
+        self.seed_session("ses_new", "active", datetime.now(timezone.utc))
+        records_before = self.store.read_claims()
+
+        with self.assertRaises(claims.ClaimConflict):
+            claims.recover_stale_conflicts_for_operation(
+                self.store,
+                repository="r",
+                session_id="ses_new",
+                consumer_id="ses_new",
+                scope=scope,
+                reason="must not recover an active owner",
+                cause_event_reference={
+                    "identity": "evt_operation_denial",
+                    "sequence": 1,
+                    "type": "authority.denied",
+                },
+            )
+
+        self.assertEqual(self.store.read_claims(), records_before)
+        self.assertEqual(
+            claims.active_claims(self.store.read_claims())[victim["claim_id"]][
+                "session_id"
+            ],
+            "ses_live",
+        )
+
+    def test_operation_recovery_keeps_quiet_exclusive_claim_blocking(self):
+        self.seed_session(
+            "ses_quiet", "active",
+            datetime.now(timezone.utc) - timedelta(hours=2),
+        )
+        victim = claims.acquire(
+            self.store,
+            repository="r",
+            session_id="ses_quiet",
+            consumer_id="ses_quiet",
+            basis=claims.BASIS_EXPLICIT,
+            reason="exclusive repository scope",
+        )
+        self.seed_session("ses_new", "active", datetime.now(timezone.utc))
+        records_before = self.store.read_claims()
+
+        with self.assertRaises(claims.ClaimConflict):
+            claims.recover_stale_conflicts_for_operation(
+                self.store,
+                repository="r",
+                session_id="ses_new",
+                consumer_id="ses_new",
+                scope={"kind": "worktree", "checkout": "/tmp/worktree"},
+                reason="exclusive scope must stay protected",
+                cause_event_reference={
+                    "identity": "evt_operation_denial",
+                    "sequence": 1,
+                    "type": "authority.denied",
+                },
+            )
+
+        self.assertEqual(self.store.read_claims(), records_before)
+        self.assertEqual(
+            claims.latest_record_for(
+                self.store.read_claims(), victim["claim_id"],
+            )["status"],
+            "held",
+        )
+
+    def test_operation_recovery_rejects_broad_scope(self):
+        self.seed_session("ses_new", "active", datetime.now(timezone.utc))
+
+        with self.assertRaisesRegex(ValueError, "exact worktree scope"):
+            claims.recover_stale_conflicts_for_operation(
+                self.store,
+                repository="r",
+                session_id="ses_new",
+                consumer_id="ses_new",
+                scope={"kind": "repository"},
+                reason="must remain operation-scoped",
+                cause_event_reference={
+                    "identity": "evt_operation_denial",
+                    "sequence": 1,
+                    "type": "authority.denied",
+                },
+            )
+
     def test_ordinary_acquisition_keeps_quiet_exclusive_scope_blocked(self):
         self.seed_session("ses_quiet", "active",
                           datetime.now(timezone.utc) - timedelta(hours=2))

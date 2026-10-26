@@ -8637,6 +8637,108 @@ def test_session_event_reference_resolution_includes_claim_recoveries() -> None:
     }
 
 
+def test_operation_stale_claim_recovery_projects_causal_evidence(tmp_path: Path) -> None:
+    session, _state = _session(tmp_path, [])
+    denial_event = {
+        "identity": "evt_operation_claim_denial",
+        "sequence": 1,
+        "type": "authority.denied",
+        "payload": {"action": "write", "target": "mncs-environment"},
+    }
+    recovery_event = {
+        "identity": "evt_operation_claim_recovery",
+        "sequence": 2,
+        "type": "lease.recovered-for-operation",
+        "payload": {
+            "action": "write",
+            "repository": "mncs-environment",
+            "scope": {
+                "kind": "worktree",
+                "repository": "mncs-environment",
+                "checkout": "/workspace/mncs-environment",
+                "branch": "main",
+                "exclusive": False,
+            },
+            "authority_denial_event": {
+                "identity": denial_event["identity"],
+                "sequence": denial_event["sequence"],
+                "type": denial_event["type"],
+            },
+            "recovered_count": 1,
+            "recovered_from": [{
+                "claim_id": "claim:mncs-environment:worktree:abcdef123456",
+                "version": 1,
+                "superseded_version": 2,
+                "owner_session": "ses_quiet_owner",
+            }],
+            "operation_effect_started": False,
+        },
+    }
+    events = [denial_event, recovery_event]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events),
+        "events": events[-limit:],
+        "truncated": False,
+        "next_before_sequence": None,
+    }
+
+    projection = capability_intelligence.project(session)
+    activity = projection["session_activity"]
+
+    assert activity["source"]["operation_claim_recovery_events_considered"] == 1
+    assert activity["source"]["operation_claim_recovery_records_returned"] == 1
+    recovery = activity["operation_claim_recoveries"][0]
+    assert recovery["status"] == "stale-claims-superseded-for-one-operation"
+    assert recovery["recovered_from"][0]["owner_session"] == "ses_quiet_owner"
+    assert recovery["authority_denial_event"]["identity"] == denial_event["identity"]
+    assert recovery["event_reference"]["identity"] == recovery_event["identity"]
+
+    resolved = capability_intelligence._authenticated_session_event_reference_resolution(
+        {
+            "kind": "authenticated-session-activity-projection",
+            "repository": "mncs-environment",
+            "campaign_id": "cmp_projection_reader",
+            "session_id": session.session_id,
+            "event_identities": [recovery_event["identity"]],
+        },
+        selected_session_id=session.session_id,
+        activity=activity,
+    )
+    assert resolved["event_reference_status"] == "all-referenced-events-present"
+    assert resolved["event_reference_match_categories"] == [
+        "operation_claim_recovery",
+    ]
+
+    compact = capability_intelligence._compact_projection(
+        projection, 100_000, 24_000,
+    )
+    compact_recovery = compact["session_activity"][
+        "operation_claim_recoveries"
+    ][0]
+    assert compact_recovery["event_reference"]["identity"] == (
+        recovery_event["identity"]
+    )
+    assert compact_recovery["authority_denial_event"]["identity"] == (
+        denial_event["identity"]
+    )
+    assert compact_recovery["recovered_from"][0]["claim_id"] == (
+        recovery["recovered_from"][0]["claim_id"]
+    )
+
+    reordered = {
+        **recovery_event,
+        "payload": {
+            **recovery_event["payload"],
+            "authority_denial_event": {
+                **recovery_event["payload"]["authority_denial_event"],
+                "sequence": recovery_event["sequence"],
+            },
+        },
+    }
+    assert capability_intelligence._operation_claim_recovery_event_projection(
+        reordered, session.session_id,
+    ) is None
+
 def test_improvement_record_does_not_count_as_another_pressure_occurrence(
     tmp_path: Path,
 ) -> None:
