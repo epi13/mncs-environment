@@ -1,0 +1,68 @@
+{
+  "captured_at": "2026-10-26T02:48:22+00:00",
+  "identity": "ev_environment_campaign_charter_projection_readback_20261026",
+  "measurement_basis": "The environmental-capability projection read the authenticated campaign charter index and verified its single content-addressed record against the selected campaign identity, Git commit, and SHA-256.",
+  "measurement_limits": [
+    "The projection reports the campaign charter separately from the session Work Intent; it does not rewrite or infer the session task from the campaign objective.",
+    "The selected evidence page is partial, so this readback establishes charter verification but not exhaustive campaign observation coverage.",
+    "The charter records the user-directed objective and does not establish implementation effectiveness or grant repository authority."
+  ],
+  "observation": {
+    "kind": "campaign-charter-projection-readback",
+    "outcome": {
+      "campaign_identity": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "campaign_charter": {
+        "identity": "ev_environment_campaign_charter_capability_intelligence_20261026",
+        "status": "verified",
+        "title": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign"
+      },
+      "projection_status": "partial",
+      "session_work_intent": {
+        "goal": "exercise canonical Environment persistence through the Control socket",
+        "identity": "int_8475157f281c835f"
+      },
+      "separate_objective_relationship": "campaign charter preserves the user-directed environmental capability objective independently of the session Work Intent",
+      "evidence_window": {
+        "campaign_state_checkpoint_id": "chk_5f23addd126638e2",
+        "evidence_count": 12,
+        "evidence_limit": 1,
+        "evidence_offset": 11,
+        "observation_records_verified": 0
+      }
+    },
+    "request": {
+      "evidence_limit": 1,
+      "evidence_offset": 11,
+      "history_pages": 1,
+      "interpretation": "environmental-capability",
+      "operation": "projections",
+      "session_event_limit": 1,
+      "session_id": "ses_9ad3efb63438cf3d"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_4c126896d339c0ce",
+    "session_id": "ses_9ad3efb63438cf3d"
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "objective": "Connect authentic environmental and compiler evidence to provenance-aware, actionable projections.",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "17b9ff569986e252895a45d073cfda09021cd476",
+      "identity": "ev_environment_campaign_charter_capability_intelligence_20261026",
+      "kind": "campaign-charter-source",
+      "path": "evidence/campaign-charters/ev_environment_campaign_charter_capability_intelligence_20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "75d22a96c24f26bda80e9c19297d6a9fb320e1ef491c17e6eca52c9e08f42efa"
+    }
+  ]
+}
