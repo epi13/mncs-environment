@@ -1,0 +1,67 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_pressure_hypothesis_role_pressure_20261026",
+  "captured_at": "2026-10-26T03:24:41Z",
+  "measurement_basis": "live-campaign-projection-and-exact-source-record-comparison",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_7d4ad7e40a67bf39"
+    }
+  },
+  "observation": {
+    "kind": "pressure-recurrence-attribution-overcounts-linked-verification-context",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 1 --evidence-limit 3 --evidence-offset 18",
+      "projection_identity": "eci_3d7bf631ded3f99b",
+      "campaign_state_checkpoint_id": "chk_7d4ad7e40a67bf39",
+      "selected_observation_identities": [
+        "ev_environment_eci_improvement_relation_compaction_pressure_20261026",
+        "ev_environment_eci_improvement_relation_compaction_improvement_20261026",
+        "ev_environment_eci_improvement_relation_compaction_verification_20261026"
+      ]
+    },
+    "outcome": {
+      "pressure_hypothesis_identity": "ph_environment_eci_improvement_relation_compaction",
+      "projected_recurrence_status": "repeated-within-session",
+      "projected_hypothesis_observation_count": 2,
+      "source_pressure_occurrence_record_count": 1,
+      "verification_record_repeats_same_hypothesis": true,
+      "independent_second_pressure_occurrence_established": false,
+      "interpretation": "The projection counted the pressure record and its verification record under one hypothesis because the verification repeated the hypothesis without an explicit context role. The second record verifies an implementation and is not independent evidence of another pressure incident.",
+      "measurement_limits": [
+        "Only one direct pressure occurrence is present in this selected evidence slice.",
+        "The incorrect recurrence status is established for this projection; other records and sessions have not yet been audited for the same pattern.",
+        "This attribution issue does not establish anything about agent efficiency or the underlying compaction pressure's recurrence."
+      ]
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_pressure_hypothesis_role",
+    "title": "Linked verification context can inflate pressure recurrence counts",
+    "category": "environmental-observation",
+    "subsystem": "MNCS Environment pressure-hypothesis recurrence projection",
+    "owner": "mncs-environment",
+    "basis": "A selected campaign page contained one pressure observation and a linked verification record that repeated the same pressure hypothesis. The projection counted both as occurrences and reported repeated-within-session, though only the first record described a pressure occurrence.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Represent whether a record is an occurrence or supporting context for a pressure hypothesis, and allow a verified append-only correction to repair earlier role attribution without rewriting the source record.",
+    "not_measured": [
+      "how often improvement and verification records repeat pressure hypotheses across existing campaigns",
+      "whether any other recurrence conclusions are affected",
+      "whether an agent relied on the repeated-within-session interpretation",
+      "whether subsequent projection use confirms the new role field is discoverable"
+    ]
+  },
+  "measurement_limits": [
+    "The hypothesis is based on direct comparison of three selected source records and their projection result.",
+    "The correction changes the role of linked records only; it preserves the pressure observation and every original evidence pointer.",
+    "Recurrence remains not-established after correction unless independent occurrence evidence appears."
+  ]
+}
