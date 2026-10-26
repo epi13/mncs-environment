@@ -1,0 +1,12 @@
+{
+  "schema_version": "mncs.environment.campaign-charter/1",
+  "identity": "ev_environment_campaign_charter_capability_intelligence_20261026",
+  "recorded_at": "2026-10-26T02:47:44+00:00",
+  "campaign_identity": "cmp_env_capability_intelligence_continuation_codex_20261025",
+  "source": {
+    "kind": "user-directed campaign request and amendment",
+    "request_title": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign"
+  },
+  "objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+  "authority_boundary": "This charter records the user-directed campaign objective and grants no repository or service authority; repository mutations, integration, and publication continue to follow the selected Environment session's existing authority and ownership mechanisms."
+}
