@@ -1,9 +1,9 @@
 """Claim recovery: stale/dead claims become recoverable via session liveness.
 
-Doctrine says quiet ownership goes stale and becomes recoverable; these
-tests pin the liveness-derived recovery path in `claims.acquire` with the
-`recovery` basis: dead owners free their scopes before TTL expiry, live
-owners are never stolen from, and concurrent recovery attempts fail safe.
+Doctrine says quiet ownership goes stale and becomes recoverable; these tests
+pin liveness-derived recovery in `claims.acquire`. Ordinary acquisition can
+recover a safe stale non-exclusive scope, while live, uncertain, and quiet
+exclusive owners remain protected.
 """
 
 from __future__ import annotations
@@ -94,6 +94,38 @@ class OwnerStateTests(RecoveryFixture):
         self.assertEqual(len(self.store.read_events("ses_observed")), 2)
         self.assertEqual(verdict["verdict"], "recoverable")
         self.assertEqual(verdict["freshness"], "stale")
+
+    def test_incomplete_event_tail_does_not_infer_quiet_owner(self):
+        class TruncatedTailStore:
+            def load_snapshot(self, session_id):
+                return _snapshot(session_id, "active")
+
+            def read_event_page(self, session_id, *, limit, before_sequence=None):
+                self.limit = limit
+                self.before_sequence = before_sequence
+                return {
+                    "events": [{
+                        "sequence": index,
+                        "type": "environment.rpc.read_observed",
+                        "observed_at": claims.utcnow(),
+                    } for index in range(limit)],
+                    "event_count": limit + 1,
+                    "truncated": True,
+                }
+
+        now = datetime.now(timezone.utc)
+        store = TruncatedTailStore()
+        owner = claims.owner_state(store, "ses_truncated_tail")
+        record = self.acquire_paths("ses_truncated_tail", ["out/gen.json"])
+        verdict = claims.classify(record, owner, now=now + timedelta(hours=3))
+
+        self.assertEqual(store.limit, claims.MAX_OWNER_ACTIVITY_EVENT_TAIL)
+        self.assertIsNone(store.before_sequence)
+        self.assertEqual(
+            owner["error"], "owner-activity-not-established-from-truncated-tail",
+        )
+        self.assertIsNone(owner["last_activity_at"])
+        self.assertEqual(verdict["verdict"], "not-recoverable")
 
     def test_terminal_session_is_dead_despite_recent_activity(self):
         moment = datetime.now(timezone.utc) - timedelta(seconds=30)
@@ -258,6 +290,9 @@ class AcquireRecoveryTests(RecoveryFixture):
             self.acquire_paths("ses_new", ["out/gen.json"],
                                basis=claims.BASIS_RECOVERY, reason="takeover bid")
         self.assertIn("live", str(raised.exception))
+        with self.assertRaises(claims.ClaimConflict):
+            self.acquire_paths("ses_new", ["out/gen.json"],
+                               basis=claims.BASIS_EXPLICIT, reason="ordinary request")
         holders = claims.holders(self.store.read_claims())["r"]
         self.assertEqual(holders[0]["session_id"], "ses_live")
 
@@ -295,14 +330,63 @@ class AcquireRecoveryTests(RecoveryFixture):
                                     reason="stale recovery")
         self.assertEqual(record["session_id"], "ses_new")
 
-    def test_explicit_basis_still_fails_closed_on_stale_claim(self):
+    def test_ordinary_acquisition_recovers_stale_nonexclusive_scope(self):
+        self.seed_session("ses_quiet", "active",
+                          datetime.now(timezone.utc) - timedelta(hours=2))
+        victim = self.acquire_paths("ses_quiet", ["out/gen.json"])
+        self.seed_session("ses_new", "active", datetime.now(timezone.utc))
+        record = self.acquire_paths(
+            "ses_new", ["out/gen.json"],
+            basis=claims.BASIS_EXPLICIT, reason="ordinary continuation",
+        )
+
+        self.assertEqual(record["basis"], claims.BASIS_EXPLICIT)
+        self.assertEqual(
+            record["provenance"]["recovery_mode"],
+            "owner-liveness-classified-and-cas-superseded",
+        )
+        self.assertEqual(record["provenance"]["recovered_from"], [{
+            "claim_id": victim["claim_id"],
+            "version": victim["version"],
+            "superseded_version": victim["version"] + 1,
+            "owner_session": "ses_quiet",
+        }])
+        history = [
+            item for item in self.store.read_claims()
+            if item["claim_id"] == victim["claim_id"]
+        ]
+        self.assertEqual(
+            [item["status"] for item in sorted(
+                history, key=lambda item: item["version"],
+            )],
+            ["held", "superseded", "held"],
+        )
+        self.assertEqual(
+            claims.holders(self.store.read_claims())["r"][0]["session_id"],
+            "ses_new",
+        )
+
+    def test_ordinary_acquisition_keeps_quiet_exclusive_scope_blocked(self):
         self.seed_session("ses_quiet", "active",
                           datetime.now(timezone.utc) - timedelta(hours=2))
         self.acquire_paths("ses_quiet", ["out/gen.json"])
         self.seed_session("ses_new", "active", datetime.now(timezone.utc))
-        with self.assertRaises(claims.ClaimConflict):
-            self.acquire_paths("ses_new", ["out/gen.json"],
-                               basis=claims.BASIS_EXPLICIT, reason="ordinary")
+        repository_claim = claims.acquire(
+            self.store, repository="r", session_id="ses_quiet",
+            consumer_id="ses_quiet", basis=claims.BASIS_EXPLICIT,
+            reason="exclusive repository claim",
+        )
+        with self.assertRaises(claims.ClaimConflict) as raised:
+            self.acquire_paths(
+                "ses_new", ["out/gen.json"],
+                basis=claims.BASIS_EXPLICIT, reason="ordinary request",
+            )
+
+        self.assertIn("not-recoverable", str(raised.exception))
+        self.assertIn(
+            repository_claim["claim_id"],
+            claims.active_claims(self.store.read_claims()),
+        )
 
     def test_expired_claim_needs_no_recovery(self):
         record = self.acquire_paths("ses_old", ["out/gen.json"], ttl_hours=24)

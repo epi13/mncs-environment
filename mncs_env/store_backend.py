@@ -516,6 +516,68 @@ class StoreBackend:
         out.sort(key=lambda record: (str(record.get("claim_id", "")), int(record.get("version", 0))))
         return out
 
+    def read_latest_claims_for(self, claim_ids: list[str]) -> list[dict[str, Any]]:
+        """Read only the newest claim payload for up to eight identities.
+
+        Store binding identities are scanned as metadata, then only the
+        selected newest payload per requested identity is verified and read.
+        A generation change retries the selection so the returned states come
+        from one stable Store head.
+        """
+        if (not isinstance(claim_ids, list) or not claim_ids
+                or len(claim_ids) > 8
+                or any(not isinstance(item, str) or not item or len(item) > 160
+                       or "\x00" in item for item in claim_ids)):
+            raise ValueError("targeted claim lookup needs 1..8 bounded claim IDs")
+        requested = sorted(set(claim_ids))
+        for _attempt in range(2):
+            generation = self._store.current_generation
+            prefixes = {
+                f"claim:{claim_id}:".encode(): claim_id
+                for claim_id in requested
+            }
+            latest: dict[str, tuple[int, bytes]] = {}
+            for schema, identity in self._store.domain_bindings_at(generation):
+                if schema != SCHEMA_CLAIM:
+                    continue
+                for prefix, claim_id in prefixes.items():
+                    if not identity.startswith(prefix):
+                        continue
+                    suffix = identity[len(prefix):]
+                    if len(suffix) != 10 or not suffix.isdigit():
+                        continue
+                    try:
+                        version = int(suffix)
+                    except ValueError:
+                        continue
+                    if version < 1 or suffix != f"{version:010d}".encode():
+                        continue
+                    current = latest.get(claim_id)
+                    if current is None or version > current[0]:
+                        latest[claim_id] = (version, identity)
+
+            out = []
+            for claim_id in requested:
+                selected = latest.get(claim_id)
+                if selected is None:
+                    continue
+                version, identity = selected
+                record = self.get_record_strict(SCHEMA_CLAIM, identity)
+                if (record is None or record.get("claim_id") != claim_id
+                        or type(record.get("version")) is not int
+                        or record["version"] != version):
+                    raise StoreIntegrityFailure(
+                        "latest claim payload does not match its Store identity"
+                    )
+                out.append(record)
+            if self._store.current_generation == generation:
+                out.sort(key=lambda record: str(record.get("claim_id", "")))
+                return out
+        raise StoreUnavailable(
+            "claim history changed during bounded identity lookup",
+            code="claim-state-changed",
+        )
+
     # -- checkpoints / handoffs ---------------------------------------------------
 
     def put_record(self, schema: bytes, identity: bytes, record: dict[str, Any]):

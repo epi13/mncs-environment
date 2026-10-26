@@ -5737,11 +5737,16 @@ class Session:
         )
         self.snapshot["campaign"] = campaign
         self._refresh_holders()
-        event_type = (
-            "lease.owner-recovered"
-            if _owner_recovery_authorization is not None
-            else "lease.acquired"
+        recovery_sources = record.get("provenance", {}).get("recovered_from", [])
+        recovery_sources = (
+            recovery_sources if isinstance(recovery_sources, list) else []
         )
+        if _owner_recovery_authorization is not None:
+            event_type = "lease.owner-recovered"
+        elif recovery_sources:
+            event_type = "lease.recovered-and-acquired"
+        else:
+            event_type = "lease.acquired"
         event_payload = {
             "repository": repository,
             "basis": basis,
@@ -5756,6 +5761,27 @@ class Session:
                 "owner_claim_version": _owner_recovery_authorization["expected_claim_version"],
                 "recovery_authorization_id": _owner_recovery_authorization["authorization_id"],
             })
+        elif recovery_sources:
+            event_payload["recovered_from"] = [
+                {
+                    key: item[key]
+                    for key in (
+                        "claim_id", "version", "superseded_version",
+                        "owner_session",
+                    )
+                    if key in item
+                }
+                for item in sorted(
+                    (item for item in recovery_sources if isinstance(item, dict)),
+                    key=lambda item: (
+                        str(item.get("claim_id", "")),
+                        int(item.get("version", 0)),
+                    ),
+                )[:8]
+            ]
+            event_payload["recovered_from_omitted_count"] = max(
+                0, len(recovery_sources) - 8,
+            )
         self._emit(event_type, self.snapshot.get("consumer_id", "unknown"),
                    event_payload)
         self._save()

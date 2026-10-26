@@ -41,6 +41,7 @@ from mncs_env import (  # noqa: E402
     authority,
     briefing,
     capabilities,
+    capability_intelligence,
     claims,
     cli,
     evidence_store,
@@ -752,6 +753,114 @@ class ClaimTests(unittest.TestCase):
                 request_id="claim-authority-release",
             ))
             self.assertEqual(claims.active_claims(store.read_claims()), {})
+            session.close()
+
+    def test_ordinary_claim_acquisition_records_safe_stale_recovery(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            state = base / "state"
+            workspace_root = base / "workspace"
+            workspace_root.mkdir()
+            store = open_store(state, "file")
+            environment = sessions.resolve_environment(
+                definition=definition(intent={
+                    "goal": "continue scoped work after a stale claim",
+                    "repositories": ["repo-allowed"],
+                }),
+                workspace_root=workspace_root,
+                state_dir=state,
+                consumer_id="claim-recovery-test",
+                store=store,
+            )
+            session = sessions.Session.create(
+                state_dir=state,
+                environment=environment,
+                consumer_id="claim-recovery-test",
+                backend="file",
+                store=store,
+            )
+            session.transition("resolving", "claim recovery test")
+            session.transition("ready", "claim recovery test")
+            session.transition("active", "claim recovery test")
+            stale_session = "ses_stale_claim_owner"
+            stale_activity = datetime.now(timezone.utc) - timedelta(hours=2)
+            store.save_snapshot(stale_session, {
+                "session_id": stale_session,
+                "lifecycle": "active",
+                "lifecycle_history": [],
+            })
+            store.put_event(stale_session, 1, {
+                "identity": "evt_stale_owner_activity",
+                "sequence": 1,
+                "type": "test.ping",
+                "observed_at": stale_activity.isoformat(timespec="seconds"),
+                "payload": {},
+            })
+            stale_claim = claims.acquire(
+                store,
+                repository="repo-allowed",
+                session_id=stale_session,
+                consumer_id="stale-claim-owner",
+                basis=claims.BASIS_EXPLICIT,
+                reason="stale scoped claim fixture",
+                scope={"kind": "paths", "paths": ["src/unit.mncs"]},
+            )
+
+            acquired = session.acquire_claim(
+                "repo-allowed",
+                scope={"kind": "paths", "paths": ["src/unit.mncs"]},
+                reason="continue the verified stale scope",
+            )
+            events = session.recent_events(limit=16)["events"]
+            recovered_event = next(
+                event for event in events
+                if event.get("type") == "lease.recovered-and-acquired"
+            )
+
+            self.assertEqual(acquired["basis"], claims.BASIS_EXPLICIT)
+            self.assertEqual(
+                recovered_event["payload"]["claim_identity"],
+                acquired["claim_id"],
+            )
+            self.assertEqual(recovered_event["payload"]["recovered_from"], [{
+                "claim_id": stale_claim["claim_id"],
+                "version": stale_claim["version"],
+                "superseded_version": stale_claim["version"] + 1,
+                "owner_session": stale_session,
+            }])
+            activity = capability_intelligence.project(session)["session_activity"]
+            self.assertEqual(activity["claim_recovery_count"], 1)
+            self.assertEqual(activity["claim_recoveries"][0]["claim_id"],
+                             acquired["claim_id"])
+            self.assertEqual(
+                activity["claim_recoveries"][0]["scope"]["paths"],
+                ["src/unit.mncs"],
+            )
+            self.assertEqual(
+                activity["claim_recoveries"][0]["event_reference"]["type"],
+                "lease.recovered-and-acquired",
+            )
+            self.assertEqual(
+                activity["claim_recoveries"][0]["recovered_from"][0]["claim_id"],
+                stale_claim["claim_id"],
+            )
+            compact_activity = capability_intelligence.project(
+                session, max_result_bytes=10_000,
+            )["session_activity"]
+            self.assertEqual(
+                compact_activity["claim_recoveries"][0]["event_reference"]["type"],
+                "lease.recovered-and-acquired",
+            )
+            self.assertEqual(
+                compact_activity["claim_recoveries"][0]["scope"]["paths"],
+                ["src/unit.mncs"],
+            )
+            self.assertEqual(
+                claims.active_claims(store.read_claims())[stale_claim["claim_id"]][
+                    "session_id"
+                ],
+                session.session_id,
+            )
             session.close()
 
 

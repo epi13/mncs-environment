@@ -301,6 +301,8 @@ def _session_store_package(state_dir: Path | str, session_id: str) -> str | None
 class SessionStore:
     """Persistence contract for one state directory."""
 
+    MAX_TARGETED_CLAIM_IDS = 8
+
     def load_snapshot(self, session_id: str) -> dict[str, Any] | None:
         raise NotImplementedError
 
@@ -395,6 +397,34 @@ class SessionStore:
 
     def read_claims(self) -> list[dict[str, Any]]:
         raise NotImplementedError
+
+    def read_latest_claims_for(self, claim_ids: list[str]) -> list[dict[str, Any]]:
+        """Read only the latest record for each of up to eight claim IDs.
+
+        Canonical Store persistence resolves exact latest identities and reads
+        only those payloads. The file-backed debug store uses this bounded
+        compatibility fallback over its diagnostic claim file.
+        """
+        if (not isinstance(claim_ids, list) or not claim_ids
+                or len(claim_ids) > self.MAX_TARGETED_CLAIM_IDS
+                or any(not isinstance(item, str) or not item or len(item) > 160
+                       or "\x00" in item for item in claim_ids)):
+            raise ValueError("targeted claim lookup needs 1..8 bounded claim IDs")
+        wanted = set(claim_ids)
+        latest: dict[str, dict[str, Any]] = {}
+        for record in self.read_claims():
+            if not isinstance(record, dict):
+                continue
+            claim_id = record.get("claim_id")
+            if not isinstance(claim_id, str) or claim_id not in wanted:
+                continue
+            version = record.get("version")
+            if type(version) is not int or version < 1:
+                continue
+            previous = latest.get(claim_id)
+            if previous is None or version > previous["version"]:
+                latest[claim_id] = record
+        return [latest[claim_id] for claim_id in sorted(latest)]
 
     def read_projection_row(
             self, projection_id: str) -> tuple[int, dict[str, Any]] | None:
@@ -842,6 +872,14 @@ class StoreSessionStore(SessionStore):
 
     def read_claims(self) -> list[dict[str, Any]]:
         return self.backend.read_claims()
+
+    def read_latest_claims_for(self, claim_ids: list[str]) -> list[dict[str, Any]]:
+        if (not isinstance(claim_ids, list) or not claim_ids
+                or len(claim_ids) > self.MAX_TARGETED_CLAIM_IDS
+                or any(not isinstance(item, str) or not item or len(item) > 160
+                       or "\x00" in item for item in claim_ids)):
+            raise ValueError("targeted claim lookup needs 1..8 bounded claim IDs")
+        return self.backend.read_latest_claims_for(sorted(set(claim_ids)))
 
     def read_projection_row(
             self, projection_id: str) -> tuple[int, dict[str, Any]] | None:

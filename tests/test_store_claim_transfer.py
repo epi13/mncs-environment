@@ -38,6 +38,33 @@ def _seed_store(state_dir: Path):
     return store, record
 
 
+def test_targeted_claim_read_returns_latest_selected_identities(tmp_path: Path) -> None:
+    store, selected = _seed_store(tmp_path / "targeted-claims")
+    claims.release(
+        store,
+        session_id=SOURCE_SESSION,
+        claim_id=selected["claim_id"],
+        request_id="targeted-claim-history-release",
+    )
+    unrelated = claims.acquire(
+        store,
+        repository="mncs-environment-unrelated-fixture",
+        session_id="ses_targeted_unrelated",
+        consumer_id="consumer_targeted_unrelated",
+        basis=claims.BASIS_EXPLICIT,
+        reason="unrelated targeted history fixture",
+    )
+
+    latest = store.read_latest_claims_for([selected["claim_id"]])
+
+    assert [record["version"] for record in latest] == [2]
+    assert {record["claim_id"] for record in latest} == {selected["claim_id"]}
+    assert latest[0]["status"] == "released"
+    assert unrelated["claim_id"] not in {record["claim_id"] for record in latest}
+    with pytest.raises(ValueError):
+        store.read_latest_claims_for([f"claim:{index}" for index in range(9)])
+
+
 def _transfer_after_restart(store, claim_id: str, request_id: str) -> dict:
     return claims.transfer(
         store,

@@ -50,6 +50,7 @@ EVENT_CLASSES = {
     "authority.denied": ("safety", "an authority denial names this session"),
     "authority.escalated": ("safety", "an escalation needs a decision"),
     "lease.acquired": ("ownership", "claim ownership changed"),
+    "lease.recovered-and-acquired": ("ownership", "stale claim safely recovered"),
     "lease.released": ("ownership", "claim ownership changed"),
     "lease.transferred": ("ownership", "claim ownership changed"),
     "invocation.completed": ("verification", "a capability invocation finished"),

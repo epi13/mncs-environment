@@ -12,15 +12,15 @@ recovery basis that records what was adopted. Liveness is derived from
 session activity or an explicit owner renewal, never by the observer: quiet
 ownership goes stale and becomes recoverable, it is never seized silently.
 
-Recovery (`recovery` basis) supersedes an overlapping live claim only
-when the owner's session state shows it is safe: a terminal (dead)
-owner frees every scope, while a merely quiet or unknown owner frees
-only non-exclusive scopes. Exclusive repository scopes held by a live
-or quiet-but-undead owner still fail closed until TTL expiry. Every
-recovery is explicit, version-checked against races, and recorded with
-`recovered_from` provenance on both the superseding record and the new
-claim. New leases are bounded to 168 hours; a continuing owner reacquires
-its exact scope instead of extending a lease with an unbounded duration.
+An overlapping claim classified as recoverable is superseded atomically as
+part of an ordinary acquisition. A terminal owner frees every scope, while a
+quiet or unknown owner frees only non-exclusive scopes; active, uncertain, or
+exclusive quiet ownership still fails closed. Recovery is version-checked,
+uses the existing liveness contract, and records `recovered_from` provenance
+on both the superseding record and the new claim. The `recovery` basis remains
+available when a caller specifically intends recovery. New leases are bounded
+to 168 hours; a continuing owner reacquires its exact scope instead of
+extending a lease with an unbounded duration.
 Legacy records keep their original expiry in the history, but ownership
 checks cap an overlong lease at acquisition plus the current maximum.
 """
@@ -48,6 +48,7 @@ ADOPTION_BASES = (BASIS_RECOVERY, BASIS_ADOPTION)
 ACTIVE_WINDOW = timedelta(minutes=15)
 STALE_WINDOW = timedelta(hours=1)
 NON_OWNER_ACTIVITY_EVENT_TYPES = frozenset({"environment.rpc.read_observed"})
+MAX_OWNER_ACTIVITY_EVENT_TAIL = 256
 
 #: Owner lifecycles that free every held scope immediately (dead owners).
 TERMINAL_LIFECYCLES = ("completed", "failed")
@@ -304,6 +305,15 @@ def _latest_by_identity(all_records: list[dict[str, Any]]) -> dict[str, dict[str
     return latest
 
 
+def latest_record_for(
+    records: list[dict[str, Any]], claim_id: str,
+) -> dict[str, Any] | None:
+    """Return the latest version of one claim from a bounded history read."""
+    if not isinstance(claim_id, str) or not claim_id:
+        return None
+    return _latest_by_identity(records).get(claim_id)
+
+
 def active_claims(all_records: list[dict[str, Any]], *,
                   now: datetime | None = None) -> dict[str, dict[str, Any]]:
     """Latest live record per claim identity; released/expired drop out."""
@@ -385,20 +395,60 @@ def owner_state(store, session_id: str) -> dict[str, Any]:
     lifecycle = snapshot.get("lifecycle")
     state["lifecycle"] = str(lifecycle) if lifecycle is not None else None
     try:
-        events = store.read_events(session_id)
+        page_reader = getattr(store, "read_event_page", None)
+        tail_reader = getattr(store, "read_event_tail", None)
+        if callable(page_reader):
+            page = page_reader(
+                session_id, limit=MAX_OWNER_ACTIVITY_EVENT_TAIL,
+            )
+            if (not isinstance(page, dict)
+                    or not isinstance(page.get("events"), list)
+                    or type(page.get("event_count")) is not int
+                    or page["event_count"] < 0
+                    or type(page.get("truncated")) is not bool):
+                raise ValueError("invalid owner event page")
+            events = page["events"]
+            event_count = page["event_count"]
+            event_tail_truncated = (
+                page["truncated"] or event_count > len(events)
+            )
+        else:
+            if callable(tail_reader):
+                events, event_count = tail_reader(
+                    session_id, limit=MAX_OWNER_ACTIVITY_EVENT_TAIL,
+                )
+            else:
+                events = store.read_events(session_id)
+                event_count = len(events) if isinstance(events, list) else -1
+            if (not isinstance(events, list) or type(event_count) is not int
+                    or event_count < len(events)):
+                raise ValueError("invalid owner event tail")
+            event_tail_truncated = event_count > MAX_OWNER_ACTIVITY_EVENT_TAIL
+        if len(events) != min(event_count, MAX_OWNER_ACTIVITY_EVENT_TAIL):
+            event_tail_truncated = True
     except Exception:
         state["error"] = "session-events-unreadable"
         return state
     latest: datetime | None = None
+    owner_activity_observed = False
     if isinstance(events, list):
         for event in events:
             if (not isinstance(event, dict)
                     or event.get("type") in NON_OWNER_ACTIVITY_EVENT_TYPES):
                 continue
             seen = _parse_time(event.get("observed_at"))
-            if seen is not None and (latest is None or seen > latest):
-                latest = seen
-    if latest is None:
+            if seen is not None:
+                owner_activity_observed = True
+                if latest is None or seen > latest:
+                    latest = seen
+    if len(events) != min(event_count, MAX_OWNER_ACTIVITY_EVENT_TAIL):
+        state["error"] = "owner-event-payloads-incomplete"
+    elif event_tail_truncated and not owner_activity_observed:
+        # Without a relevant event in the selected tail, older activity may
+        # have been omitted. Do not turn an incomplete read into stale-owner
+        # evidence; classify will fail closed for nonterminal sessions.
+        state["error"] = "owner-activity-not-established-from-truncated-tail"
+    elif latest is None:
         # Lifecycle transitions are genuine session activity too; a
         # session that recently checkpointed or resumed is demonstrably
         # alive even when its event log is unavailable.
@@ -824,11 +874,12 @@ def acquire(
 ) -> dict[str, Any]:
     """Claim a scope; conflicts and unknown-work adoption fail closed.
 
-    The `recovery` basis additionally supersedes overlapping live claims
-    whose owners classify as recoverable (dead, or quietly stale on a
-    non-exclusive scope). Every other basis fails closed on any live
-    overlap. `now` shifts only recovery quiet-age comparison; TTL expiry
-    always uses wall-clock time.
+    Any overlapping claim that already classifies as recoverable (terminal
+    owner, or quietly stale non-exclusive scope) is superseded in the same
+    compare-and-swap publication as the new claim. Active, uncertain, and
+    quiet exclusive claims still fail closed for every basis. `now` shifts
+    only recovery quiet-age comparison; TTL expiry always uses wall-clock
+    time.
     """
     allowed = (BASIS_EXPLICIT, BASIS_INTENT_SCOPE, BASIS_RECOVERY,
                BASIS_ADOPTION, BASIS_TRANSFER)
@@ -956,7 +1007,7 @@ def acquire(
                 consumer_id=consumer_id, reason=reason,
                 owner_recovery_authorization=recovery,
             )
-        elif conflicts and basis == BASIS_RECOVERY:
+        elif conflicts:
             assessments = []
             for other_id, other, reason_ in conflicts:
                 verdict = explain(other, store, now=now)
@@ -969,7 +1020,7 @@ def acquire(
                     f"{verdict.get('verdict')} ({verdict.get('reason')})"
                     for other_id, other, _, verdict in blocked)
                 raise ClaimConflict(
-                    f"{claim_id} cannot recover overlapping scope: {detail}")
+                    f"{claim_id} cannot acquire overlapping scope: {detail}")
             recovered = _recovery_records(
                 records,
                 [(other_id, other)
@@ -977,15 +1028,6 @@ def acquire(
                 session_id=session_id, consumer_id=consumer_id,
                 reason=reason,
             )
-        elif conflicts:
-            other_id, other, reason_ = conflicts[0]
-            try:
-                verdict = explain(other, store, now=now)
-                suffix = f" [{verdict.get('verdict')}: {verdict.get('reason')}]"
-            except Exception:
-                suffix = ""
-            raise ClaimConflict(
-                _conflict_text(claim_id, other_id, other, reason_) + suffix)
         dirty = bool(facts.get("dirty")) or bool(facts.get("foreign_signals"))
         if dirty and basis not in ADOPTION_BASES and not any(
             other.get("session_id") == session_id for other in live.values()
@@ -1032,7 +1074,7 @@ def acquire(
             record["provenance"]["adopted_head"] = facts.get("head")
             record["provenance"]["adopted_dirty"] = facts.get("dirty")
             record["provenance"]["adopted_signals"] = facts.get("foreign_signals")
-        if basis == BASIS_RECOVERY and recovered:
+        if recovered:
             record["provenance"]["recovered_from"] = [
                 {"claim_id": str(item["claim_id"]),
                  "version": int(item["provenance"]["recovered_from_version"]),
@@ -1040,6 +1082,9 @@ def acquire(
                  "owner_session": str(item["session_id"])}
                 for item in recovered
             ]
+            record["provenance"]["recovery_mode"] = (
+                "owner-liveness-classified-and-cas-superseded"
+            )
             if owner_recovery_authorization is not None:
                 record["provenance"]["owner_recovery"] = owner_recovery_authorization
         record = _with_identity(record)

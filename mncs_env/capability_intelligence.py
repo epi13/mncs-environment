@@ -21,6 +21,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from . import authority as authority_module
+from . import claims as claims_module
 from . import invocation_artifacts as invocation_artifacts_module
 from . import workspace as workspace_module
 from .identity import digest_hex
@@ -211,6 +212,8 @@ MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS = 32
 MAX_SESSION_ACTIVITY_RPC_SUMMARY_REFERENCES = 3
 MAX_SESSION_ACTIVITY_AUTHORITY_DENIALS = 16
 MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES = 8
+MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES = 8
+MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS = 4
 SOURCE_INTEGRITY_VERIFIED = frozenset({
     "content-integrity-verified",
     "record-integrity-verified-in-projection",
@@ -2463,6 +2466,28 @@ def _compact_projection(
             )
             if key in activity_source
         })
+        claim_lookup = activity_source.get("authority_claim_state_lookup")
+        if isinstance(claim_lookup, dict):
+            compact_activity_source["authority_claim_state_lookup"] = {
+                key: claim_lookup[key]
+                for key in (
+                    "status", "lookup_count", "lookup_limit",
+                    "lookup_omitted_count", "observed_at",
+                )
+                if key in claim_lookup
+            }
+    if activity_source.get("claim_recovery_events_considered", 0):
+        compact_activity_source.update({
+            key: activity_source[key]
+            for key in (
+                "claim_recovery_events_considered",
+                "claim_recovery_records_returned",
+                "claim_recovery_records_omitted",
+                "claim_recovery_records_invalid",
+                "claim_recovery_selection_policy",
+            )
+            if key in activity_source
+        })
     compact_activity_interactions = []
     raw_interactions = activity.get("interactions")
     raw_interactions = raw_interactions if isinstance(raw_interactions, list) else []
@@ -3009,6 +3034,49 @@ def _compact_projection(
                 if isinstance(reference, dict)
             ]
         compact_rpc_pressure.append(compact_item)
+    compact_claim_recoveries = []
+    raw_claim_recoveries = activity.get("claim_recoveries")
+    raw_claim_recoveries = (
+        raw_claim_recoveries if isinstance(raw_claim_recoveries, list) else []
+    )
+    for item in raw_claim_recoveries[:MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in (
+                "identity", "status", "repository", "basis", "claim_id",
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in (
+            "claim_version", "recovered_count",
+            "recovered_from_omitted_count",
+        ):
+            if type(item.get(key)) is int:
+                compact_item[key] = item[key]
+        if isinstance(item.get("interpretation"), str):
+            compact_item["interpretation"] = _short_text(
+                item["interpretation"], 256,
+            )
+        if isinstance(item.get("scope"), dict):
+            compact_item["scope"] = item["scope"]
+        recovered_from = item.get("recovered_from")
+        if isinstance(recovered_from, list):
+            compact_item["recovered_from"] = [
+                entry for entry in recovered_from[:4]
+                if isinstance(entry, dict)
+            ]
+            if len(recovered_from) > 4:
+                compact_item["recovered_from_truncated"] = True
+        reference = item.get("event_reference")
+        if isinstance(reference, dict):
+            compact_item["event_reference"] = {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in reference
+            }
+        compact_claim_recoveries.append(compact_item)
     compact_authority_denials = []
     raw_authority_denials = activity.get("authority_denials")
     raw_authority_denials = (
@@ -3107,6 +3175,13 @@ def _compact_projection(
             ]
     if compact_capability_delivery:
         compact_activity["capability_delivery"] = compact_capability_delivery
+    if raw_claim_recoveries:
+        compact_activity["claim_recovery_count"] = activity.get(
+            "claim_recovery_count", len(raw_claim_recoveries),
+        )
+        compact_activity["claim_recoveries"] = compact_claim_recoveries
+        if len(raw_claim_recoveries) > len(compact_claim_recoveries):
+            compact_activity["claim_recoveries_truncated"] = True
     if (activity_source.get("rpc_operation_capture_count") is not None
             or raw_rpc_operations or raw_rpc_summary):
         compact_activity["rpc_operation_count"] = activity.get(
@@ -3431,6 +3506,9 @@ def _compact_projection(
         elif result["session_activity"].get("rpc_failure_candidates"):
             result["session_activity"]["rpc_failure_candidates"].pop()
             result["session_activity"]["rpc_failure_candidates_truncated"] = True
+        elif result["session_activity"].get("claim_recoveries"):
+            result["session_activity"]["claim_recoveries"].pop()
+            result["session_activity"]["claim_recoveries_truncated"] = True
         elif result["session_activity"].get("authority_denial_candidates"):
             result["session_activity"]["authority_denial_candidates"].pop()
             result["session_activity"]["authority_denial_candidates_truncated"] = True
@@ -8265,6 +8343,271 @@ def _authority_claim_conflict(
     return conflict
 
 
+def _authority_current_claim_states(
+    session: Any, denial_records: list[dict[str, Any]],
+) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+    """Read current state for a small set of recorded blocker claim IDs.
+
+    Event evidence describes the denial-time conflict. This derived view is a
+    separate, on-demand observation of the canonical claim store and owner
+    liveness at projection time.
+    """
+    claim_ids: list[str] = []
+    recorded_owners: dict[str, str] = {}
+    for denial in denial_records:
+        conflict = denial.get("claim_conflict")
+        blocker = conflict.get("blocking_claim") if isinstance(conflict, dict) else None
+        claim_id = blocker.get("claim_id") if isinstance(blocker, dict) else None
+        if isinstance(claim_id, str) and claim_id not in claim_ids:
+            claim_ids.append(claim_id)
+        if (isinstance(claim_id, str) and isinstance(blocker, dict)
+                and isinstance(blocker.get("session_id"), str)):
+            recorded_owners.setdefault(claim_id, blocker["session_id"])
+    if not claim_ids:
+        return {}, {
+            "status": "no-recorded-claim-identities",
+            "lookup_count": 0,
+            "lookup_limit": MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS,
+        }
+
+    selected_ids = claim_ids[:MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS]
+    omitted_count = len(claim_ids) - len(selected_ids)
+    store = getattr(session, "store", None)
+    reader = getattr(store, "read_latest_claims_for", None)
+    if not callable(reader):
+        states = {
+            claim_id: {
+                "lookup_status": "targeted-claim-read-unavailable",
+                "blocking_status": "not-established",
+            }
+            for claim_id in selected_ids
+        }
+        summary = {
+            "status": "targeted-claim-read-unavailable",
+            "lookup_count": 0,
+            "lookup_limit": MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS,
+        }
+    else:
+        try:
+            records = reader(selected_ids)
+        except (LifecycleError, StoreIntegrityFailure, StoreUnavailable, OSError, ValueError):
+            records = None
+        if not isinstance(records, list):
+            states = {
+                claim_id: {
+                    "lookup_status": "current-claim-read-failed",
+                    "blocking_status": "not-established",
+                }
+                for claim_id in selected_ids
+            }
+            summary = {
+                "status": "current-claim-read-failed",
+                "lookup_count": len(selected_ids),
+                "lookup_limit": MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS,
+            }
+        else:
+            observed_at = claims_module.utcnow()
+            states = {}
+            owner_states: dict[str, dict[str, Any]] = {}
+            for claim_id in selected_ids:
+                try:
+                    record = claims_module.latest_record_for(records, claim_id)
+                except (TypeError, ValueError, KeyError):
+                    record = None
+                if record is None:
+                    states[claim_id] = {
+                        "lookup_status": "claim-not-found-or-invalid-in-current-store",
+                        "basis": "current-authoritative-claim-store",
+                        "observed_at": observed_at,
+                        "blocking_status": "not-established",
+                    }
+                    continue
+                owner = None
+                try:
+                    if record.get("status") == "held":
+                        owner_session = record.get("session_id")
+                        if isinstance(owner_session, str) and owner_session:
+                            owner = owner_states.get(owner_session)
+                            if owner is None:
+                                owner = claims_module.owner_state(store, owner_session)
+                                owner_states[owner_session] = owner
+                        else:
+                            owner = None
+                        classification = claims_module.classify(record, owner)
+                    else:
+                        classification = claims_module.classify(record, None)
+                except (LifecycleError, StoreIntegrityFailure, StoreUnavailable,
+                        OSError, TypeError, ValueError):
+                    classification = None
+                if not isinstance(classification, dict):
+                    states[claim_id] = {
+                        "lookup_status": "claim-classification-failed",
+                        "basis": "current-authoritative-claim-store",
+                        "observed_at": observed_at,
+                        "blocking_status": "not-established",
+                    }
+                    continue
+                verdict = classification.get("verdict")
+                record_status = record.get("status")
+                if verdict in {"live", "not-recoverable"}:
+                    blocking_status = "blocks-at-projection-time"
+                elif verdict == "recoverable":
+                    blocking_status = "eligible-for-safe-recovery-on-acquisition"
+                elif verdict in {"released", "expired", "superseded"}:
+                    blocking_status = "does-not-block-at-projection-time"
+                else:
+                    blocking_status = "not-established"
+                state: dict[str, Any] = {
+                    "lookup_status": "found",
+                    "basis": "current-authoritative-claim-store",
+                    "observed_at": observed_at,
+                    "claim_version": (
+                        record["version"] if type(record.get("version")) is int
+                        else None
+                    ),
+                    "record_status": (
+                        record_status if isinstance(record_status, str)
+                        else "status-unavailable"
+                    ),
+                    "blocking_status": blocking_status,
+                }
+                if isinstance(owner, dict):
+                    owner_lifecycle = owner.get("lifecycle")
+                    if owner_lifecycle in claims_module.TERMINAL_LIFECYCLES:
+                        owner_evidence_status = "terminal-lifecycle-observed"
+                    elif owner.get("error"):
+                        owner_evidence_status = "incomplete"
+                    elif not owner.get("known"):
+                        owner_evidence_status = "owner-session-unavailable"
+                    elif isinstance(owner.get("last_activity_at"), str):
+                        owner_evidence_status = "activity-recorded"
+                    else:
+                        owner_evidence_status = "no-owner-activity-recorded"
+                    state["owner_liveness_evidence_status"] = owner_evidence_status
+                current_owner = record.get("session_id")
+                if isinstance(current_owner, str) and re.fullmatch(
+                    r"[A-Za-z0-9][A-Za-z0-9:._-]{0,159}", current_owner,
+                ):
+                    state["current_owner_session_id"] = current_owner
+                    recorded_owner = recorded_owners.get(claim_id)
+                    if isinstance(recorded_owner, str):
+                        state["recorded_owner_relation"] = (
+                            "same" if recorded_owner == current_owner else "changed"
+                        )
+                if verdict in {"live", "recoverable", "not-recoverable"}:
+                    state["recovery_verdict"] = verdict
+                freshness = classification.get("freshness")
+                if isinstance(freshness, str):
+                    state["freshness"] = freshness
+                if type(classification.get("owner_known")) is bool:
+                    state["owner_known"] = classification["owner_known"]
+                for key in ("owner_lifecycle", "last_activity_at"):
+                    value = classification.get(key)
+                    if isinstance(value, str) and len(value) <= 96:
+                        state[key] = value
+                lease = classification.get("lease")
+                if isinstance(lease, dict):
+                    expiry = lease.get("effective_expires_at")
+                    if isinstance(expiry, str) and len(expiry) <= 96:
+                        state["effective_expires_at"] = expiry
+                states[claim_id] = state
+            summary = {
+                "status": "partial-lookup-limit" if omitted_count else "read",
+                "lookup_count": len(selected_ids),
+                "lookup_limit": MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS,
+                "observed_at": observed_at,
+            }
+
+    for claim_id in claim_ids[MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS:]:
+        states[claim_id] = {
+            "lookup_status": "not-inspected-limit",
+            "blocking_status": "not-established",
+        }
+    if omitted_count:
+        summary["lookup_omitted_count"] = omitted_count
+    return states, summary
+
+
+def _claim_recovery_event_projection(
+    event: dict[str, Any], session_id: str,
+) -> dict[str, Any] | None:
+    """Sanitize one automatic claim-recovery event for the activity view."""
+    reference = _event_reference(event)
+    payload = event.get("payload")
+    payload = payload if isinstance(payload, dict) else {}
+    claim_id = payload.get("claim_identity")
+    repository = payload.get("repository")
+    claim_version = payload.get("claim_version")
+    recovered = payload.get("recovered_from")
+    omitted = payload.get("recovered_from_omitted_count", 0)
+    basis = payload.get("basis")
+    identifier = re.compile(r"[A-Za-z0-9][A-Za-z0-9:._-]{0,159}")
+    if (
+        reference is None
+        or not isinstance(claim_id, str) or not identifier.fullmatch(claim_id)
+        or not isinstance(repository, str)
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,119}", repository)
+        or type(claim_version) is not int or claim_version < 1
+        or basis not in {
+            claims_module.BASIS_EXPLICIT,
+            claims_module.BASIS_INTENT_SCOPE,
+            claims_module.BASIS_RECOVERY,
+            claims_module.BASIS_ADOPTION,
+            claims_module.BASIS_TRANSFER,
+        }
+        or not isinstance(recovered, list) or not 1 <= len(recovered) <= 8
+        or type(omitted) is not int or omitted < 0
+    ):
+        return None
+    scope = _authority_conflict_scope(payload.get("scope"), repository)
+    if scope is None:
+        return None
+    recovered_from = []
+    for item in recovered:
+        if not isinstance(item, dict):
+            return None
+        source_id = item.get("claim_id")
+        owner = item.get("owner_session")
+        source_version = item.get("version")
+        superseded_version = item.get("superseded_version")
+        if (
+            not isinstance(source_id, str) or not identifier.fullmatch(source_id)
+            or not isinstance(owner, str) or not identifier.fullmatch(owner)
+            or type(source_version) is not int or source_version < 1
+            or type(superseded_version) is not int
+            or superseded_version != source_version + 1
+        ):
+            return None
+        recovered_from.append({
+            "claim_id": source_id,
+            "version": source_version,
+            "superseded_version": superseded_version,
+            "owner_session": owner,
+        })
+    recovered_count = len(recovered_from) + omitted
+    return {
+        "identity": "clmrec_" + digest_hex({
+            "session_id": session_id,
+            "event": reference["identity"],
+        }, length=16),
+        "status": "claim-transition-recorded",
+        "repository": repository,
+        "basis": basis,
+        "scope": scope,
+        "claim_id": claim_id,
+        "claim_version": claim_version,
+        "recovered_count": recovered_count,
+        "recovered_from": recovered_from,
+        "recovered_from_omitted_count": omitted,
+        "event_reference": reference,
+        "interpretation": (
+            "The session event records a new claim published after its "
+            "predecessors were classified as recoverable in the same claim "
+            "transition. It does not establish downstream work success."
+        ),
+    }
+
+
 def _resource_sample_payload(value: Any) -> tuple[dict[str, Any] | None, str | None]:
     """Select the privacy-minimized, bounded fields from one Monitor sample."""
     if not isinstance(value, dict) or value.get("schema") != SYSTEM_RESOURCE_SAMPLE_SCHEMA:
@@ -8653,6 +8996,24 @@ def _session_activity(
         raw_events,
         key=lambda item: item.get("sequence") if type(item.get("sequence")) is int else -1,
     )
+    claim_recovery_events = [
+        event for event in events
+        if event.get("type") == "lease.recovered-and-acquired"
+    ]
+    claim_recoveries = []
+    invalid_claim_recovery_event_count = 0
+    valid_claim_recovery_count = 0
+    for event in reversed(claim_recovery_events):
+        item = _claim_recovery_event_projection(event, session.session_id)
+        if item is None:
+            invalid_claim_recovery_event_count += 1
+            continue
+        valid_claim_recovery_count += 1
+        if len(claim_recoveries) < MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES:
+            claim_recoveries.append(item)
+    claim_recovery_records_omitted = max(
+        0, valid_claim_recovery_count - len(claim_recoveries),
+    )
     invocation_events = [
         event for event in events if event.get("type") == "capability.invoked"
     ]
@@ -9035,6 +9396,18 @@ def _session_activity(
     denial_events = [
         event for event in events if event.get("type") == "authority.denied"
     ]
+    if denial_events:
+        limits.append(
+            "Authority-denial projections compare recorded blocker identities "
+            "with at most four current claim records; owner liveness is a "
+            "point-in-time observation and does not prove that the original "
+            "denial was appropriate."
+        )
+    if claim_recovery_events:
+        limits.append(
+            "Claim-recovery activity records claim-state transitions, not "
+            "whether later development outcomes improved."
+        )
     denial_records: list[dict[str, Any]] = []
     snapshot_facts = authority_module.repository_facts_for_snapshot(snapshot)
     invalid_denial_event_count = 0
@@ -9078,6 +9451,20 @@ def _session_activity(
         if claim_conflict is not None:
             denial["claim_conflict"] = claim_conflict
         denial_records.append(denial)
+    current_claim_states, claim_state_lookup = _authority_current_claim_states(
+        session, denial_records,
+    )
+    for denial in denial_records:
+        conflict = denial.get("claim_conflict")
+        blocker = (
+            conflict.get("blocking_claim") if isinstance(conflict, dict) else None
+        )
+        claim_id = blocker.get("claim_id") if isinstance(blocker, dict) else None
+        current_state = (
+            current_claim_states.get(claim_id) if isinstance(claim_id, str) else None
+        )
+        if isinstance(current_state, dict):
+            conflict["current_claim_state"] = current_state
     authority_denials = denial_records[:MAX_SESSION_ACTIVITY_AUTHORITY_DENIALS]
     authority_denials_omitted = max(0, len(denial_records) - len(authority_denials))
     denial_groups: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
@@ -9134,16 +9521,17 @@ def _session_activity(
             if len(recorded_conflicts) == len(group):
                 candidate["interpretation"] = (
                     "Structured requested and blocking scopes were recorded for "
-                    "every denial in this session window. Current claim liveness, "
-                    "whether the overlap required blocking, and broader cause "
-                    "remain unestablished."
+                    "every denial in this session window. Any current claim state "
+                    "is a separate point-in-time observation; whether the overlap "
+                    "required blocking and broader cause remain unestablished."
                 )
             elif recorded_conflicts:
                 candidate["interpretation"] = (
                     "Structured requested and blocking scopes were recorded for "
                     "some denials in this session window; older records lack "
-                    "those details. Current claim liveness, whether the overlap "
-                    "required blocking, and broader cause remain unestablished."
+                    "those details. Current claim state, when available, is a "
+                    "separate point-in-time observation; whether the overlap "
+                    "required blocking and broader cause remain unestablished."
                 )
             blockers: dict[tuple[str, str], dict[str, Any]] = {}
             for conflict_record in recorded_conflicts:
@@ -9165,6 +9553,9 @@ def _session_activity(
                 })
                 if isinstance(blocker_claim_id, str):
                     summary["claim_id"] = blocker_claim_id
+                    current_state = current_claim_states.get(blocker_claim_id)
+                    if isinstance(current_state, dict):
+                        summary["current_claim_state"] = current_state
                 summary["occurrence_count"] += 1
             if blockers:
                 candidate["blocking_claims"] = list(blockers.values())[:4]
@@ -9246,6 +9637,18 @@ def _session_activity(
             "authority_denial_selection_policy": (
                 "newest-sanitized-denials-in-selected-event-window"
             ),
+            **({
+                "authority_claim_state_lookup": claim_state_lookup,
+            } if denial_events else {}),
+            **({
+                "claim_recovery_events_considered": len(claim_recovery_events),
+                "claim_recovery_records_returned": len(claim_recoveries),
+                "claim_recovery_records_omitted": claim_recovery_records_omitted,
+                "claim_recovery_records_invalid": invalid_claim_recovery_event_count,
+                "claim_recovery_selection_policy": (
+                    "newest-valid-recovery-events-in-selected-session-window"
+                ),
+            } if claim_recovery_events else {}),
             "invocation_events_considered": len(invocation_events),
             "completion_events_considered": len(completion_events),
             "invocation_records_omitted": invocations_omitted,
@@ -9293,6 +9696,10 @@ def _session_activity(
         "authority_denial_count": len(authority_denials),
         "authority_denials": authority_denials,
         "authority_denial_candidates": authority_denial_candidates,
+        **({
+            "claim_recovery_count": len(claim_recoveries),
+            "claim_recoveries": claim_recoveries,
+        } if claim_recovery_events else {}),
         "capabilities": capabilities,
         "capability_delivery": capability_delivery,
         "measurement_limits": limits,

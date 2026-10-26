@@ -52,6 +52,7 @@ TYPES = (
     "authority.escalated",
     "authority.scope-granted",
     "lease.acquired",
+    "lease.recovered-and-acquired",
     "lease.owner-recovered",
     "lease.recovered-away",
     "lease.owner-recovery-reconciled",

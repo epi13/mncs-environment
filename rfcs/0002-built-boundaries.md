@@ -84,6 +84,18 @@ owner, checks host processes, jobs, grants, and user services, then atomically
 retires the old claim and transfers its scope to the selected worktree. Store
 generation CAS and stale-owner fencing remain authoritative.
 
+Ordinary claim acquisition also applies the established claim-liveness
+classifier to every overlapping claim. A terminal owner makes its scopes
+recoverable; a quietly stale or unknown owner is recoverable only for a
+nonexclusive scope. When every conflict is recoverable, the old claim versions
+and new claim publish in one Store compare-and-swap, with `recovered_from`
+provenance and a `lease.recovered-and-acquired` session event. Live, unresolved
+nonterminal, or quiet exclusive claims continue to block. This automatic
+transition removes a separate claim-transfer step for recoverable scopes; it
+does not assert that an arbitrary host process has stopped. Control's
+process/job fencing remains required for host-side operations and checkout
+selection transitions.
+
 ## 6. Provider addressing is explicit
 
 Bindings come from repository-owned semantic declarations, project manifests,

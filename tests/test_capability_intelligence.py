@@ -11,7 +11,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from mncs_env import capability_intelligence, cli, projections
+from mncs_env import capability_intelligence, claims, cli, projections
 from mncs_env.sessions import LifecycleError
 
 
@@ -2441,6 +2441,36 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
             },
         },
     }
+    now = claims.utcnow()
+    current_claim = {
+        "schema_version": claims.SCHEMA,
+        "claim_id": "claim:mncs-environment:paths:abc123",
+        "version": 4,
+        "repository": "mncs-environment",
+        "scope": {
+            "kind": "paths",
+            "repository": "mncs-environment",
+            "paths": ["mncs_env/sessions.py"],
+            "exclusive": False,
+        },
+        "session_id": "ses_blocker",
+        "consumer_id": "consumer_blocker",
+        "basis": claims.BASIS_EXPLICIT,
+        "reason": "projection fixture",
+        "status": "held",
+        "acquired_at": now,
+        "expires_at": "2099-01-01T00:00:00+00:00",
+        "identity": "clm_projection_blocker_v4",
+    }
+    session.store = SimpleNamespace(
+        read_latest_claims_for=lambda claim_ids: (
+            [current_claim] if current_claim["claim_id"] in claim_ids else []
+        ),
+        load_snapshot=lambda session_id: {
+            "session_id": session_id, "lifecycle": "completed",
+        },
+        read_events=lambda _session_id: [],
+    )
     events = [
         {
             "identity": f"evt_claim_conflict_{sequence}",
@@ -2474,12 +2504,31 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     assert by_sequence[42]["claim_conflict"]["blocking_claim"]["claim_id"] == (
         "claim:mncs-environment:paths:abc123"
     )
+    current_state = by_sequence[42]["claim_conflict"]["current_claim_state"]
+    assert current_state["basis"] == "current-authoritative-claim-store"
+    assert current_state["claim_version"] == 4
+    assert current_state["blocking_status"] == (
+        "eligible-for-safe-recovery-on-acquisition"
+    )
+    assert current_state["recovery_verdict"] == "recoverable"
+    assert current_state["freshness"] == "stale"
+    assert current_state["owner_liveness_evidence_status"] == (
+        "terminal-lifecycle-observed"
+    )
+    assert current_state["recorded_owner_relation"] == "same"
+    assert isinstance(current_state["observed_at"], str)
     assert "checkout" not in by_sequence[42]["claim_conflict"]["requested_scope"]
     assert by_sequence[43]["claim_conflict_evidence_status"] == "not-recorded"
+    assert "claim_conflict" not in by_sequence[43]
+    assert activity["source"]["authority_claim_state_lookup"]["lookup_count"] == 1
     candidate = activity["authority_denial_candidates"][0]
     assert candidate["occurrence_count"] == 3
     assert candidate["claim_conflict_evidence_status"] == "partially-recorded"
-    assert candidate["blocking_claims"] == [{
+    projected_blocker = candidate["blocking_claims"][0]
+    assert {
+        key: value for key, value in projected_blocker.items()
+        if key != "current_claim_state"
+    } == {
         "session_id": "ses_blocker",
         "occurrence_count": 2,
         "scope": {
@@ -2489,7 +2538,8 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
             "paths": ["mncs_env/sessions.py"],
         },
         "claim_id": "claim:mncs-environment:paths:abc123",
-    }]
+    }
+    assert projected_blocker["current_claim_state"] == current_state
     assert alias_checkout not in json.dumps(result)
     assert "/private/other-checkout" not in json.dumps(result)
 
@@ -2498,7 +2548,37 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     assert compact_activity["authority_denial_candidates"][0][
         "claim_conflict_evidence_status"
     ] == "partially-recorded"
+    assert compact_activity["source"]["authority_claim_state_lookup"][
+        "status"
+    ] == "read"
+    compact_recorded_denial = next(
+        denial for denial in compact_activity["authority_denials"]
+        if "claim_conflict" in denial
+    )
+    assert compact_recorded_denial["claim_conflict"][
+        "current_claim_state"
+    ]["recovery_verdict"] == "recoverable"
     assert alias_checkout not in json.dumps(compact)
+
+    active_at = claims.utcnow()
+    session.store.load_snapshot = lambda session_id: {
+        "session_id": session_id, "lifecycle": "active",
+    }
+    session.store.read_events = lambda _session_id: [{
+        "identity": "evt_projection_owner_active",
+        "sequence": 1,
+        "type": "test.ping",
+        "observed_at": active_at,
+        "payload": {},
+    }]
+    live_projection = capability_intelligence.project(session)
+    live_denial = next(
+        denial for denial in live_projection["session_activity"]["authority_denials"]
+        if "claim_conflict" in denial
+    )
+    live_state = live_denial["claim_conflict"]["current_claim_state"]
+    assert live_state["recovery_verdict"] == "live"
+    assert live_state["blocking_status"] == "blocks-at-projection-time"
 
 
 def test_session_activity_discloses_bounded_event_and_interaction_windows(

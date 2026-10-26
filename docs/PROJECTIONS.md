@@ -362,6 +362,25 @@ recurs across sessions. For absolute targets, repository attribution uses
 observed checkout paths. Merge and publish authorization still requires a live
 claim covering the resolved scope.
 
+When structured evidence includes blocker claim IDs, the projection performs
+targeted reads for at most four unique current claim records and adds
+`current_claim_state` separately from the immutable denial evidence. This
+point-in-time view uses the existing claim lifecycle explanation and includes
+its observation time, current claim version/status, and available owner
+liveness details. Active or unresolved claims are distinguished from a
+recoverable claim that ordinary acquisition can safely supersede, and from a
+released or expired claim that no longer blocks. The read does not recover a
+claim or authorize a mutation; unreadable, malformed, and over-limit states
+stay explicit. Older denials without recorded claim IDs remain
+`not-recorded`, and current liveness does not establish the denial-time state
+or whether blocking was technically necessary.
+
+`session_activity.claim_recoveries` exposes up to eight
+`lease.recovered-and-acquired` events from the selected page, including the
+new claim identity/version and up to eight superseded claim identities. It is
+causal provenance for an accepted claim transition, not evidence that the
+subsequent implementation objective succeeded.
+
 The same session activity view exposes up to four newest successful
 `mncs-system-monitor:system-resource-sample` artifacts, one per binding. The
 Environment definition selects this read-only capability, but sampling remains

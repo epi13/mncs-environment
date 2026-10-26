@@ -48,8 +48,16 @@ worktree and are nonexclusive. Repository-wide claims require an explicit
 scope. When ordinary acquisition encounters one exact conflicting claim held
 by the same authenticated operator, Control checks host liveness, fences the
 old execution, and atomically transfers the claim into the selected scope.
-Foreign owners, multiple overlapping claims, active executions, or incomplete
-host observations still fail closed.
+This checkout-selection path keeps its process fence. For ordinary claim
+acquisition, the existing liveness classifier may also supersede overlapping
+claims it marks recoverable, in the same Store compare-and-swap as the new
+claim. Terminal owners free all scopes; quietly stale or unknown owners may
+be recovered only on nonexclusive scopes under the existing liveness
+contract. Live, unreadable, or incomplete nonterminal owner state and quiet
+exclusive scopes still fail closed. The
+recovery event records the superseded claim versions; it does not assert that
+an arbitrary host process was terminated or authorize a separate host-side
+operation.
 
 A worktree claim may be narrowed to repo-relative paths with `--paths`; the
 registered checkout and branch remain part of its identity. This lets separate
@@ -338,6 +346,20 @@ the missing claim or scope. Absolute checkout targets are attributed only
 through observed checkout paths, and merge or publish still requires a live
 claim covering the resolved checkout scope.
 
+For up to four unique recorded blocker claim IDs, the projection also performs
+a bounded targeted read of current claim records and exposes a separate
+`current_claim_state` observation. Its `observed_at`, current claim version,
+owner relationship, and existing liveness verdict describe projection time;
+they do not reconstruct denial-time state, establish that the denial was
+appropriate, or authorize claim recovery. Missing, invalid, unreadable, and
+over-limit lookups remain explicit. The original event evidence is unchanged.
+Canonical Store owner-liveness checks read at most 256 recent event payloads;
+if that tail is incomplete and contains no owner activity, the state stays
+unresolved and claim recovery fails closed.
+`session_activity.claim_recoveries` projects bounded `lease.recovered-and-acquired`
+events with the new claim and superseded claim versions. This records that the
+claim transition completed; it does not claim later development work succeeded.
+
 Authority decisions distinguish the lease needed to continue from an owner
 approval. A missing exact claim for merge, publish, retire, or another scoped
 mutation reports `required_authorization: session-claim` and
@@ -351,9 +373,15 @@ normal claims operation, then re-evaluate authority with its claim identity:
 
 `--claim-id` uses the selected session's current live claim scope and refuses
 claims owned by another session. This does not request a second user approval.
-Foreign overlapping claims, protected repositories, or scope outside the
-campaign's writable repositories remain blocking conditions. Decisions that
-actually require owner approval identify that separately as
+Ordinary claim acquisition now supersedes a conflicting lease in the same
+compare-and-swap only when the existing owner-liveness rules classify it as
+recoverable. The new claim records the superseded identity and version, and
+the session emits `lease.recovered-and-acquired`. Live, unreadable, incomplete,
+or quietly-held exclusive scopes still block acquisition; dirty-work adoption
+and owner-approved recovery keep their existing explicit boundaries.
+Other foreign overlapping claims, protected repositories, or scope outside
+the campaign's writable repositories remain blocking conditions. Decisions
+that actually require owner approval identify that separately as
 `required_authorization: owner-approval`.
 
 Observation source summaries keep registration status separate from
@@ -606,10 +634,14 @@ New claim leases accept 1 to 168 hours (default 24). A continuing owner
 reacquires its exact scope to renew it. Older records retain their original
 expiry in history, while an overlong lease stops blocking at acquisition plus
 168 hours; inspectors expose that effective deadline. Session activity alone
-does not renew a claim. Release and explicit transfer publish their related
-claim versions in one generation. Acquisition and recovery publish their
-ownership transition in one generation as well, so an interrupted recovery
-leaves either the prior owner or the admitted successor. Retry identities let
+does not renew a claim. A recoverable stale or terminal-owner scope is
+automatically superseded during acquisition; live or unresolved ownership is
+never silently taken. The new holder and superseded history publish in one
+generation with `recovered_from` provenance. Release and explicit transfer
+publish their related claim versions in one generation as well. Acquisition
+and recovery publish their ownership transition in one generation, so an
+interrupted recovery leaves either the prior owner or the admitted successor.
+Retry identities let
 a caller read back an outcome after losing the response. Transfer preserves the
 source claim's lease start and deadline instead of restarting the lease; the
 owning session event records when the transfer was observed. This keeps the
