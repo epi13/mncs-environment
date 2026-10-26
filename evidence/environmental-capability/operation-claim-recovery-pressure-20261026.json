@@ -1,0 +1,94 @@
+{
+  "captured_at": "2026-10-26T23:14:41Z",
+  "identity": "ev_environment_operation_claim_recovery_pressure_20261026",
+  "measurement_basis": "authenticated-canonical-session-event-and-environmental-capability-projection",
+  "not_measured": [
+    "provider invocation or effect attempt linked to this denial",
+    "actual recovery actions avoided",
+    "cross-session prevalence",
+    "outcomes after an operation-boundary recovery"
+  ],
+  "observation": {
+    "kind": "authority-denial-with-liveness-classified-stale-claim",
+    "outcome": {
+      "analysis_limit": "The projection is partial and its event window is truncated. The claim state is an observed point-in-time classification; this record makes no claim about the owner process at other times.",
+      "authorization_status": "eligible",
+      "blocking_claim_id": "claim:mncs-environment:paths:6287c9dc9f9c",
+      "blocking_claim_version": 1,
+      "blocking_owner_session_id": "ses_c6b0d153689d7388",
+      "blocking_scope": "one repository-relative evidence path",
+      "claim_conflict_evidence_status": "recorded-and-projected",
+      "denial_count_in_selected_window": 1,
+      "interpretation": "The environment exposed enough liveness and scope evidence to distinguish this nonexclusive blocker as recoverable while preserving the authority denial. This selected event window does not establish that a provider effect was attempted or that an extra action was actually taken.",
+      "linked_provider_effect_observed": false,
+      "owner_freshness": "stale",
+      "persistent_authority_required": false,
+      "prior_coordination_recommendation": "retry-exact-scoped-acquisition",
+      "reason_class": "overlapping-claim",
+      "recovery_verdict": "recoverable"
+    },
+    "request": {
+      "action": "write",
+      "authority_denial_event": {
+        "identity": "evt_dd80d70da3160b77",
+        "sequence": 373,
+        "type": "authority.denied"
+      },
+      "event_window_sequence_end": 373,
+      "event_window_sequence_start": 358,
+      "event_window_truncated": true,
+      "projection_identity": "eci_8898f26ea146549e",
+      "repository": "mncs-environment",
+      "session_id": "ses_9ad3efb63438cf3d"
+    },
+    "source_interface": "MNCS Environment authority.denied event and environmental-capability projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "At a rights-eligible Environment-mediated provider effect boundary, CAS-supersede only exact-scope claims that the existing liveness classifier marks recoverable, persist the denial cause, then repeat eligibility under the checkout operation lock. Keep authority diagnostics read-only.",
+    "basis": "A live authority.denied event records eligible write rights, no persistent authority requirement, and a blocking nonexclusive claim classified recoverable. The prior denial guidance recommended retrying exact-scoped claim acquisition. The selected event window does not establish that a provider effect was attempted after this diagnostic.",
+    "category": "coordination-continuity",
+    "identity": "ph_environment_operation_claim_recovery_20261026",
+    "not_measured": [
+      "whether a provider effect was attempted after the observed authority diagnostic",
+      "number of separate coordination actions avoided in live work",
+      "live adoption of operation-boundary recovery",
+      "cross-session recurrence or long-term coordination overhead"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "one directly projected denial in one selected session; broader recurrence not established by this record",
+    "subsystem": "MNCS Environment authority eligibility, workspace claims, and provider effects",
+    "title": "Recoverable stale claims still route provider work through a separate coordination step"
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_4c126896d339c0ce",
+    "session_id": "ses_9ad3efb63438cf3d"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 93,
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Preserve evidence relating objectives, capabilities, coordination, environmental conditions, verification, and outcomes; do not turn usage or adoption into agent performance scores.",
+    "campaign_state_checkpoint_id_before_recording": "chk_526ad7428c0c5c62",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_4c126896d339c0ce",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_alignment_status": "persisted WorkIntent predates the current environmental capability objective",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "event_identities": [
+        "evt_dd80d70da3160b77"
+      ],
+      "kind": "authenticated-session-activity-projection",
+      "projection_identity": "eci_8898f26ea146549e",
+      "repository": "mncs-environment",
+      "session_id": "ses_9ad3efb63438cf3d"
+    }
+  ]
+}

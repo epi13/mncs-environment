@@ -1,0 +1,145 @@
+{
+  "captured_at": "2026-10-26T23:14:41Z",
+  "identity": "ev_environment_operation_claim_recovery_improvement_20261026",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_operation_claim_recovery_20261026",
+    "basis": "The operation boundary now recovers only classifier-approved stale nonexclusive conflicts without acquiring a new owner claim; a controlled canonical-Store scenario verifies the claim transition, causal event link, fresh eligibility checks, and ECI projection.",
+    "effectiveness_assessment": "not-assessed",
+    "identity": "im_environment_operation_claim_recovery_20261026",
+    "implementation_reference": {
+      "commit": "83c3de24aaf6d04790ee98f031896288bc0ffa9f",
+      "identity": "mncs_environment_operation_claim_recovery_sessions_83c3de2",
+      "kind": "committed-environment-implementation",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "b5110ce30fb91cf97d7e9c5a718b256fba365004012f7996d51c136f43a0abdd"
+    },
+    "not_measured": [
+      "live recovery event occurrence after this implementation",
+      "agent actions or waiting avoided",
+      "cross-session recurrence after deployment",
+      "long-term correctness and recovery outcomes"
+    ],
+    "subsequent_observation_identity": null,
+    "verification_observation_identity": "ev_environment_operation_claim_recovery_verification_20261026"
+  },
+  "measurement_basis": "committed-environment-change-linked-to-verification-and-authentic-pressure-evidence",
+  "not_measured": [
+    "live effect-boundary adoption or operation recovery count",
+    "reduced authority-related interaction overhead",
+    "long-term recurrence and cross-agent reliability"
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "effectiveness_assessment": "verified-operation-boundary-and-projection-contract; live-coordination-overhead-not-assessed",
+      "implementation_change": "Before an Environment-mediated provider effect on an exact registered worktree, the effect path may CAS-supersede up to 16 conflicting claims only when the existing liveness classifier marks every overlap recoverable. The atomic superseded records retain the triggering authority-denial event. The Environment emits a recovery event, repeats fresh eligibility, then acquires the existing checkout operation lock and checks eligibility again under that lock. No replacement persistent claim is created. Active, uncertain, malformed, excessive, and quiet exclusive conflicts stay blocked. ECI validates and exposes the denial, recovered claim versions, operation scope, and recovery event link.",
+      "interpretation_limit": "The authentic source is a write authority diagnostic, not an observed provider operation failure. Controlled tests establish the implementation contract but do not establish that agents have adopted it, that fewer live coordination steps occurred, or that no claim conflict will recur.",
+      "verified_change": "A canonical-Store provider-effect regression recovered one quiet nonexclusive worktree claim, retained the denial cause in the atomic claim transition, invoked a controlled provider once, and left no live replacement claim. Active-owner, quiet-exclusive, and broad-scope tests remain fail-closed."
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_operation_claim_recovery_20261026",
+      "implementation_commit": "83c3de24aaf6d04790ee98f031896288bc0ffa9f",
+      "subsequent_observation_identity": null,
+      "verification_observation_identity": "ev_environment_operation_claim_recovery_verification_20261026"
+    },
+    "source_interface": "MNCS Environment Session.invoke, canonical claim Store, and ECI projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "At a rights-eligible Environment-mediated provider effect boundary, CAS-supersede only exact-scope claims that the existing liveness classifier marks recoverable, persist the denial cause, then repeat eligibility under the checkout operation lock. Keep authority diagnostics read-only.",
+    "basis": "A live authority.denied event records eligible write rights, no persistent authority requirement, and a blocking nonexclusive claim classified recoverable. The prior denial guidance recommended retrying exact-scoped claim acquisition. The selected event window does not establish that a provider effect was attempted after this diagnostic.",
+    "category": "coordination-continuity",
+    "identity": "ph_environment_operation_claim_recovery_20261026",
+    "not_measured": [
+      "whether a provider effect was attempted after the observed authority diagnostic",
+      "number of separate coordination actions avoided in live work",
+      "live adoption of operation-boundary recovery",
+      "cross-session recurrence or long-term coordination overhead"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "one directly projected denial in one selected session; broader recurrence not established by this record",
+    "subsystem": "MNCS Environment authority eligibility, workspace claims, and provider effects",
+    "title": "Recoverable stale claims still route provider work through a separate coordination step"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_4c126896d339c0ce",
+    "session_id": "ses_9ad3efb63438cf3d"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 93,
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Preserve evidence relating objectives, capabilities, coordination, environmental conditions, verification, and outcomes; do not turn usage or adoption into agent performance scores.",
+    "campaign_state_checkpoint_id_before_recording": "chk_526ad7428c0c5c62",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_4c126896d339c0ce",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_alignment_status": "persisted WorkIntent predates the current environmental capability objective",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "83c3de24aaf6d04790ee98f031896288bc0ffa9f",
+      "identity": "mncs_environment_operation_claim_recovery_claims_83c3de2",
+      "kind": "committed-environment-implementation",
+      "path": "mncs_env/claims.py",
+      "repository": "mncs-environment",
+      "sha256": "40ea5193e6156e50b02f891f80f19941673dede2aa08601799cf79dd627d51e8"
+    },
+    {
+      "commit": "83c3de24aaf6d04790ee98f031896288bc0ffa9f",
+      "identity": "mncs_environment_operation_claim_recovery_sessions_83c3de2",
+      "kind": "committed-environment-implementation",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "b5110ce30fb91cf97d7e9c5a718b256fba365004012f7996d51c136f43a0abdd"
+    },
+    {
+      "commit": "83c3de24aaf6d04790ee98f031896288bc0ffa9f",
+      "identity": "mncs_environment_operation_claim_recovery_projection_83c3de2",
+      "kind": "committed-projection-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "ebbb536a4108e81ac335d511b317c6bbc63b964775b96183a7ddb21ba21ea4b0"
+    },
+    {
+      "commit": "83c3de24aaf6d04790ee98f031896288bc0ffa9f",
+      "identity": "mncs_environment_operation_claim_recovery_claim_tests_83c3de2",
+      "kind": "committed-regression-test",
+      "path": "tests/test_claim_recovery.py",
+      "repository": "mncs-environment",
+      "sha256": "60a9534df79228178762ef6bf320f32b07a9c6f33d48f378deb1063fd76ca80b"
+    },
+    {
+      "commit": "83c3de24aaf6d04790ee98f031896288bc0ffa9f",
+      "identity": "mncs_environment_operation_claim_recovery_effect_test_83c3de2",
+      "kind": "committed-regression-test",
+      "path": "tests/test_environment.py",
+      "repository": "mncs-environment",
+      "sha256": "3f86417c6b2489893b727f46581d740c99dcc494660479c2e1201bb07144cd64"
+    },
+    {
+      "commit": "83c3de24aaf6d04790ee98f031896288bc0ffa9f",
+      "identity": "mncs_environment_operation_claim_recovery_projection_test_83c3de2",
+      "kind": "committed-projection-regression-test",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "b1b0c002d17a34724a8557991e992ef4fc40e0b415fb6241ecbb78579a22ea79"
+    },
+    {
+      "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "event_identities": [
+        "evt_dd80d70da3160b77"
+      ],
+      "kind": "authenticated-session-activity-projection",
+      "projection_identity": "eci_8898f26ea146549e",
+      "repository": "mncs-environment",
+      "session_id": "ses_9ad3efb63438cf3d"
+    }
+  ]
+}
