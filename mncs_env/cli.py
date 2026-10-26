@@ -50,7 +50,7 @@ CAMPAIGN_STATE_PROJECTION_MIN_BYTES = 4 * 1024
 # artifact while keeping artifact-read output explicitly bounded.
 MAX_ARTIFACT_READ_BYTES = 1_300_000
 MAX_CLAIM_PAGE_OUTPUT_BYTES = 48 * 1024
-MAX_CLAIM_PAGE_OWNER_SESSIONS = 16
+MAX_CLAIM_PAGE_OWNER_SESSIONS = claims_module.MAX_OWNER_LIVENESS_INSPECTIONS
 DEFAULT_ECI_EVIDENCE_PAGE_SIZE = 2
 DEFAULT_ECI_SESSION_EVENT_LIMIT = 4
 
@@ -1301,45 +1301,10 @@ def _claim_owner_liveness(
     now: datetime,
 ) -> dict[str, Any]:
     """Project bounded owner freshness separately from lease expiry."""
-    if record.get("live") is not True:
-        explanation = claims_module.classify(record, {}, now=now)
-        return {
-            "inspection_status": "not-needed-nonblocking",
-            "freshness": explanation.get("freshness"),
-            "recovery_eligibility": explanation.get("verdict", "unknown"),
-            "recommended_operation": "refresh-scope-and-acquire",
-        }
-
-    session_id = str(record.get("session_id") or "")
-    if session_id not in owner_states:
-        if len(owner_states) >= MAX_CLAIM_PAGE_OWNER_SESSIONS:
-            return {
-                "inspection_status": "inspection-limit-reached",
-                "freshness": None,
-                "recovery_eligibility": "unknown",
-                "recommended_operation": "inspect-owner-state-before-acquiring",
-            }
-        owner_states[session_id] = claims_module.owner_state(store, session_id)
-    owner = owner_states[session_id]
-    explanation = claims_module.classify(record, owner, now=now)
-    if owner.get("error"):
-        inspection_status = "owner-state-unavailable"
-    elif owner.get("known") is not True:
-        inspection_status = "owner-unknown"
-    else:
-        inspection_status = "observed"
-    recovery = explanation.get("verdict", "unknown")
-    next_operation = {
-        "recoverable": "retry-exact-scoped-acquisition",
-        "live": "use-disjoint-scope-or-wait",
-        "not-recoverable": "preserve-scope-and-inspect-owner",
-    }.get(recovery, "refresh-scope-and-acquire")
-    return {
-        "inspection_status": inspection_status,
-        "freshness": explanation.get("freshness"),
-        "recovery_eligibility": recovery,
-        "recommended_operation": next_operation,
-    }
+    return claims_module.owner_liveness_summary(
+        record, store, owner_states, now=now,
+        owner_session_limit=MAX_CLAIM_PAGE_OWNER_SESSIONS,
+    )
 
 
 def cmd_claims(args: argparse.Namespace) -> int:

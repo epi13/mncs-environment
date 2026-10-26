@@ -480,6 +480,17 @@ current state, an accepted code change, or a successful development outcome.
 The source summary reports invalid and omitted records, and bounded pages
 remain partial when older transitions are outside the view.
 
+The entry continuation capsule also annotates its bounded page of foreign
+claims with advisory owner liveness, using the same classification as the
+claim query. It inspects at most four distinct owners through a provider's
+bounded event interface, caches repeated owners within that projection, and
+marks unavailable or over-limit observations as partial. The capsule keeps
+claim presence, owner recovery eligibility, and relation to a requested scope
+separate: entry has no proposed operation to compare, so
+`scope_relation_status` is `not-evaluated-no-request-scope`. This read performs
+no recovery or ownership transfer; an eligible non-exclusive claim still
+requires a normal exact-scope acquisition to recheck current state atomically.
+
 `session_activity.claim_lifecycle_correlations` connects structured denial
 blockers and integration-preflight overlaps to claim transitions from the
 recorded owner session. A relation requires an exact repository, owner-session,

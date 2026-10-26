@@ -49,6 +49,7 @@ ACTIVE_WINDOW = timedelta(minutes=15)
 STALE_WINDOW = timedelta(hours=1)
 NON_OWNER_ACTIVITY_EVENT_TYPES = frozenset({"environment.rpc.read_observed"})
 MAX_OWNER_ACTIVITY_EVENT_TAIL = 256
+MAX_OWNER_LIVENESS_INSPECTIONS = 16
 
 #: Owner lifecycles that free every held scope immediately (dead owners).
 TERMINAL_LIFECYCLES = ("completed", "failed")
@@ -372,7 +373,9 @@ def liveness(
     return "stale"
 
 
-def owner_state(store, session_id: str) -> dict[str, Any]:
+def owner_state(
+    store, session_id: str, *, require_bounded_events: bool = False,
+) -> dict[str, Any]:
     """Best-effort owner session state from the authoritative session store.
 
     Returns known/lifecycle/last_activity_at plus an error marker when the
@@ -397,6 +400,27 @@ def owner_state(store, session_id: str) -> dict[str, Any]:
     try:
         page_reader = getattr(store, "read_event_page", None)
         tail_reader = getattr(store, "read_event_tail", None)
+        if require_bounded_events:
+            # The base SessionStore contract can implement these APIs by
+            # materializing the complete event history. Entry projections
+            # must not silently turn a bounded liveness summary into an
+            # unbounded history scan on providers without indexed reads.
+            from .session_store import SessionStore
+
+            store_type = type(store)
+            page_implementation = getattr(store_type, "read_event_page", None)
+            tail_implementation = getattr(store_type, "read_event_tail", None)
+            has_bounded_page = (
+                callable(page_implementation)
+                and page_implementation is not SessionStore.read_event_page
+            )
+            has_bounded_tail = (
+                callable(tail_implementation)
+                and tail_implementation is not SessionStore.read_event_tail
+            )
+            if not has_bounded_page and not has_bounded_tail:
+                state["error"] = "bounded-session-event-access-unavailable"
+                return state
         if callable(page_reader):
             page = page_reader(
                 session_id, limit=MAX_OWNER_ACTIVITY_EVENT_TAIL,
@@ -609,6 +633,68 @@ def explain(record: dict[str, Any], store, *,
     """Classify one record, resolving its owner from the session store."""
     return classify(record, owner_state(store, record.get("session_id", "")),
                     now=now)
+
+
+def owner_liveness_summary(
+    record: dict[str, Any],
+    store,
+    owner_states: dict[str, dict[str, Any]],
+    *,
+    now: datetime | None = None,
+    is_active: bool | None = None,
+    owner_session_limit: int = MAX_OWNER_LIVENESS_INSPECTIONS,
+    require_bounded_events: bool = False,
+) -> dict[str, Any]:
+    """Project advisory owner freshness independently from claim presence.
+
+    ``is_active`` describes whether the claim is present in the caller's
+    current active-claim view; it does not describe owner process liveness.
+    This function never changes, acquires, or recovers a claim.
+    """
+    if type(owner_session_limit) is not int or owner_session_limit < 0:
+        raise ValueError("owner session inspection limit must be non-negative")
+    active = record.get("live") is True if is_active is None else is_active
+    if active is not True:
+        explanation = classify(record, {}, now=now)
+        return {
+            "inspection_status": "not-needed-nonblocking",
+            "freshness": explanation.get("freshness"),
+            "recovery_eligibility": explanation.get("verdict", "unknown"),
+            "recommended_operation": "refresh-scope-and-acquire",
+        }
+
+    session_id = str(record.get("session_id") or "")
+    if session_id not in owner_states:
+        if len(owner_states) >= owner_session_limit:
+            return {
+                "inspection_status": "inspection-limit-reached",
+                "freshness": None,
+                "recovery_eligibility": "unknown",
+                "recommended_operation": "inspect-owner-state-before-acquiring",
+            }
+        owner_states[session_id] = owner_state(
+            store, session_id, require_bounded_events=require_bounded_events,
+        )
+    owner = owner_states[session_id]
+    explanation = classify(record, owner, now=now)
+    if owner.get("error"):
+        inspection_status = "owner-state-unavailable"
+    elif owner.get("known") is not True:
+        inspection_status = "owner-unknown"
+    else:
+        inspection_status = "observed"
+    recovery = explanation.get("verdict", "unknown")
+    next_operation = {
+        "recoverable": "retry-exact-scoped-acquisition",
+        "live": "use-disjoint-scope-or-wait",
+        "not-recoverable": "preserve-scope-and-inspect-owner",
+    }.get(recovery, "refresh-scope-and-acquire")
+    return {
+        "inspection_status": inspection_status,
+        "freshness": explanation.get("freshness"),
+        "recovery_eligibility": recovery,
+        "recommended_operation": next_operation,
+    }
 
 
 class ClaimConflict(Exception):

@@ -2056,6 +2056,21 @@ class CampaignContinuityTests(unittest.TestCase):
 
                 private_checkout = base / "foreign-owner-private-checkout"
                 private_checkout.mkdir()
+                session.store.save_snapshot(
+                    "ses_foreign_campaign_owner",
+                    {"session_id": "ses_foreign_campaign_owner", "lifecycle": "active"},
+                )
+                quiet_activity = datetime.now(timezone.utc) - timedelta(hours=3)
+                session.store.put_event(
+                    "ses_foreign_campaign_owner", 1,
+                    {
+                        "session_id": "ses_foreign_campaign_owner",
+                        "sequence": 1,
+                        "type": "test.agent_activity",
+                        "observed_at": quiet_activity.isoformat(timespec="seconds"),
+                        "payload": {},
+                    },
+                )
                 foreign = claims.acquire(
                     session.store,
                     repository="mncs-compiler",
@@ -2098,6 +2113,15 @@ class CampaignContinuityTests(unittest.TestCase):
                 self.assertEqual(projected["version"], foreign["version"])
                 self.assertEqual(projected["owner_session_id"], "ses_foreign_campaign_owner")
                 self.assertEqual(projected["owner_consumer_id"], "compiler-campaign-owner")
+                self.assertEqual(projected["owner_liveness"]["freshness"], "stale")
+                self.assertEqual(
+                    projected["owner_liveness"]["recovery_eligibility"],
+                    "not-recoverable",
+                )  # This worktree scope is exclusive.
+                self.assertEqual(
+                    projected["scope_relation_status"],
+                    "not-evaluated-no-request-scope",
+                )
                 self.assertFalse(projected["workspace_related"])
                 self.assertEqual(
                     projected["effective_expires_at"],
@@ -2108,6 +2132,100 @@ class CampaignContinuityTests(unittest.TestCase):
                     "branch": "campaign/protected-worktree", "checkout_bound": True,
                 })
                 self.assertNotIn(str(private_checkout), json.dumps(capsule))
+                self.assertEqual(
+                    capsule["foreign_claim_owner_liveness"]["owner_sessions_inspected"],
+                    1,
+                )
+                self.assertTrue(
+                    capsule["foreign_claim_owner_liveness"]["observed_at"].endswith("Z")
+                )
+            finally:
+                session.close()
+
+    def test_continuation_identifies_recoverable_nonexclusive_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory) / "state")
+            try:
+                owner_id = "ses_quiet_path_owner"
+                session.store.save_snapshot(
+                    owner_id, {"session_id": owner_id, "lifecycle": "active"},
+                )
+                quiet_activity = datetime.now(timezone.utc) - timedelta(hours=3)
+                session.store.put_event(owner_id, 1, {
+                    "session_id": owner_id,
+                    "sequence": 1,
+                    "type": "test.agent_activity",
+                    "observed_at": quiet_activity.isoformat(timespec="seconds"),
+                    "payload": {},
+                })
+                foreign = claims.acquire(
+                    session.store,
+                    repository="mncs-environment",
+                    session_id=owner_id,
+                    consumer_id="quiet-path-owner",
+                    basis=claims.BASIS_EXPLICIT,
+                    reason="continuation liveness projection test",
+                    scope={"kind": "paths", "paths": ["mncs_env/sessions.py"]},
+                )
+
+                capsule = session.context()["continuation"]
+                projected = next(
+                    item for item in capsule["foreign_claims"]
+                    if item["claim_id"] == foreign["claim_id"]
+                )
+                self.assertEqual(projected["owner_liveness"]["freshness"], "stale")
+                self.assertEqual(
+                    projected["owner_liveness"]["recovery_eligibility"],
+                    "recoverable",
+                )
+                self.assertEqual(
+                    projected["owner_liveness"]["recommended_operation"],
+                    "retry-exact-scoped-acquisition",
+                )
+                self.assertEqual(
+                    capsule["foreign_claim_owner_liveness"]["status"], "complete",
+                )
+                self.assertEqual(
+                    capsule["foreign_claim_owner_liveness"]["claim_records_inspected"],
+                    1,
+                )
+            finally:
+                session.close()
+
+    def test_continuation_caps_foreign_owner_inspection(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory) / "state")
+            try:
+                for index in range(
+                    sessions.CONTINUATION_MAX_FOREIGN_CLAIM_OWNER_SESSIONS + 2
+                ):
+                    owner_id = f"ses_continuation_owner_{index}"
+                    claims.acquire(
+                        session.store,
+                        repository="mncs-environment",
+                        session_id=owner_id,
+                        consumer_id=owner_id,
+                        basis=claims.BASIS_EXPLICIT,
+                        reason="bounded continuation owner inspection test",
+                        scope={"kind": "paths", "paths": [f"out/{index}.json"]},
+                    )
+
+                capsule = session.context()["continuation"]
+                inspection = capsule["foreign_claim_owner_liveness"]
+                self.assertEqual(
+                    inspection["owner_sessions_inspected"],
+                    sessions.CONTINUATION_MAX_FOREIGN_CLAIM_OWNER_SESSIONS,
+                )
+                self.assertEqual(inspection["claim_records_not_inspected"], 2)
+                self.assertEqual(inspection["status"], "partial")
+                self.assertEqual(
+                    sum(
+                        item["owner_liveness"]["inspection_status"]
+                        == "inspection-limit-reached"
+                        for item in capsule["foreign_claims"]
+                    ),
+                    2,
+                )
             finally:
                 session.close()
 
@@ -9157,6 +9275,13 @@ class EntryFrictionTests(unittest.TestCase):
             self.assertEqual(
                 capsule["foreign_claims"][0]["claim_id"], protected["claim_id"]
             )
+            self.assertEqual(
+                capsule["foreign_claim_owner_liveness"]["claim_records_inspected"],
+                1,
+            )
+            self.assertEqual(
+                capsule["foreign_claim_owner_liveness"]["status"], "partial",
+            )  # The file projection has no indexed bounded event reader.
             self.assertIn(first["session_id"], diagnostic["diagnostics"]["next"])
             self.assertEqual(foreign_code, 2)
             self.assertEqual(foreign, {})

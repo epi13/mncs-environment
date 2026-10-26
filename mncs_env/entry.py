@@ -1515,6 +1515,9 @@ def _validate_campaign_identity(store, *, campaign_id: str,
                 "foreign_claims": observations["foreign_claims"],
                 "foreign_claims_count": observations["foreign_claims_count"],
                 "foreign_claims_truncated": observations["foreign_claims_truncated"],
+                "foreign_claim_owner_liveness": observations[
+                    "foreign_claim_owner_liveness"
+                ],
             })
         return result
 

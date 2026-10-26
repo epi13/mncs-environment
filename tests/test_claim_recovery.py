@@ -127,6 +127,23 @@ class OwnerStateTests(RecoveryFixture):
         self.assertIsNone(owner["last_activity_at"])
         self.assertEqual(verdict["verdict"], "not-recoverable")
 
+    def test_bounded_projection_does_not_fall_back_to_full_event_history(self):
+        class UnindexedStore:
+            def load_snapshot(self, session_id):
+                return _snapshot(session_id, "active")
+
+            def read_events(self, session_id):
+                raise AssertionError("full event history must not be read")
+
+        owner = claims.owner_state(
+            UnindexedStore(), "ses_unindexed", require_bounded_events=True,
+        )
+        self.assertTrue(owner["known"])
+        self.assertEqual(
+            owner["error"], "bounded-session-event-access-unavailable",
+        )
+        self.assertIsNone(owner["last_activity_at"])
+
     def test_terminal_session_is_dead_despite_recent_activity(self):
         moment = datetime.now(timezone.utc) - timedelta(seconds=30)
         self.seed_session("ses_dead", "completed", moment)

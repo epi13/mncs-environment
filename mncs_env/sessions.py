@@ -202,6 +202,7 @@ def _request_operation_digest(
 
 CONTINUATION_MAX_CHECKPOINT_REMAINING = 8
 CONTINUATION_MAX_FOREIGN_CLAIMS = 12
+CONTINUATION_MAX_FOREIGN_CLAIM_OWNER_SESSIONS = 4
 CONTINUATION_MAX_CLAIM_PATHS = 4
 CAMPAIGN_EVIDENCE_MAX = 128
 CAMPAIGN_CHARTER_EVIDENCE_MAX = 16
@@ -834,7 +835,9 @@ def continuation_observations(
         if isinstance(item, dict):
             add_repository(item.get("manifest_repository") or item.get("name"))
 
-    foreign: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+    foreign: list[
+        tuple[tuple[Any, ...], dict[str, Any], dict[str, Any]]
+    ] = []
     repository_order = {name: index for index, name in enumerate(relevant_repositories)}
     for claim_id, record in all_claims.items():
         owner_session = str(record.get("session_id", ""))
@@ -892,8 +895,37 @@ def continuation_observations(
             repository_order.get(repository, len(repository_order)),
             repository, str(claim_id),
         )
-        foreign.append((sort_key, projection))
+        foreign.append((sort_key, projection, record))
     foreign.sort(key=lambda item: item[0])
+    selected_foreign = foreign[:CONTINUATION_MAX_FOREIGN_CLAIMS]
+    owner_states: dict[str, dict[str, Any]] = {}
+    owner_liveness_time = datetime.now(timezone.utc)
+    owner_liveness_inspection_statuses: list[str] = []
+    for _, projection, record in selected_foreign:
+        projection["owner_liveness"] = claims_module.owner_liveness_summary(
+            record,
+            store,
+            owner_states,
+            now=owner_liveness_time,
+            is_active=True,
+            owner_session_limit=CONTINUATION_MAX_FOREIGN_CLAIM_OWNER_SESSIONS,
+            require_bounded_events=True,
+        )
+        # Entry has no proposed mutation or requested scope to compare against
+        # this claim. Keep owner freshness separate from operation eligibility.
+        projection["scope_relation_status"] = (
+            "not-evaluated-no-request-scope"
+        )
+        owner_liveness_inspection_statuses.append(
+            projection["owner_liveness"]["inspection_status"]
+        )
+    claim_records_not_inspected = sum(
+        status == "inspection-limit-reached"
+        for status in owner_liveness_inspection_statuses
+    )
+    owner_liveness_partial = any(
+        status != "observed" for status in owner_liveness_inspection_statuses
+    )
 
     checkpoints = [
         record for record in store.list_checkpoints(session_id)
@@ -970,9 +1002,27 @@ def continuation_observations(
 
     return {
         "claim_ids": own_claim_ids[-16:],
-        "foreign_claims": [item[1] for item in foreign[:CONTINUATION_MAX_FOREIGN_CLAIMS]],
+        "foreign_claims": [item[1] for item in selected_foreign],
         "foreign_claims_count": len(foreign),
         "foreign_claims_truncated": len(foreign) > CONTINUATION_MAX_FOREIGN_CLAIMS,
+        "foreign_claim_owner_liveness": {
+            "schema_version": "mncs.environment.claim-owner-liveness/1",
+            "observed_at": owner_liveness_time.isoformat(
+                timespec="seconds"
+            ).replace("+00:00", "Z"),
+            "status": "partial" if owner_liveness_partial else "complete",
+            "owner_sessions_inspected": len(owner_states),
+            "claim_records_inspected": (
+                len(selected_foreign) - claim_records_not_inspected
+            ),
+            "claim_records_not_inspected": claim_records_not_inspected,
+            "owner_sessions_not_inspected": len({
+                str(record.get("session_id") or "")
+                for _, _, record in selected_foreign
+                if str(record.get("session_id") or "") not in owner_states
+            }),
+            "owner_session_limit": CONTINUATION_MAX_FOREIGN_CLAIM_OWNER_SESSIONS,
+        },
         "latest_checkpoint": latest_checkpoint,
         "campaign_state": campaign_state_projection,
     }
@@ -8772,6 +8822,9 @@ class Session:
                 "foreign_claims": observations["foreign_claims"],
                 "foreign_claims_count": observations["foreign_claims_count"],
                 "foreign_claims_truncated": observations["foreign_claims_truncated"],
+                "foreign_claim_owner_liveness": observations[
+                    "foreign_claim_owner_liveness"
+                ],
             })
         if observations["latest_checkpoint"] is not None:
             continuation["latest_checkpoint"] = observations["latest_checkpoint"]
