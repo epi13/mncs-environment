@@ -69,6 +69,32 @@ class OwnerStateTests(RecoveryFixture):
         self.assertEqual(claims._parse_time(owner["last_activity_at"]),
                          moment.replace(microsecond=0))
 
+    def test_read_only_observation_does_not_refresh_owner_liveness(self):
+        now = datetime.now(timezone.utc).replace(microsecond=0)
+        prior_activity = now - timedelta(hours=3)
+        self.seed_session("ses_observed", "active", prior_activity)
+        self.store.put_event(
+            "ses_observed", 2,
+            {
+                "sequence": 2,
+                "type": "environment.rpc.read_observed",
+                "observed_at": now.isoformat(timespec="seconds"),
+                "payload": {"operation": "session.inspect"},
+            },
+        )
+
+        owner = claims.owner_state(self.store, "ses_observed")
+        claim = self.acquire_paths("ses_observed", ["evidence/result.json"])
+        verdict = claims.classify(claim, owner, now=now)
+
+        self.assertEqual(
+            claims._parse_time(owner["last_activity_at"]),
+            prior_activity,
+        )
+        self.assertEqual(len(self.store.read_events("ses_observed")), 2)
+        self.assertEqual(verdict["verdict"], "recoverable")
+        self.assertEqual(verdict["freshness"], "stale")
+
     def test_terminal_session_is_dead_despite_recent_activity(self):
         moment = datetime.now(timezone.utc) - timedelta(seconds=30)
         self.seed_session("ses_dead", "completed", moment)

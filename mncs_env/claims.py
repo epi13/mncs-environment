@@ -47,6 +47,7 @@ ADOPTION_BASES = (BASIS_RECOVERY, BASIS_ADOPTION)
 #: Quiet thresholds for derived liveness.
 ACTIVE_WINDOW = timedelta(minutes=15)
 STALE_WINDOW = timedelta(hours=1)
+NON_OWNER_ACTIVITY_EVENT_TYPES = frozenset({"environment.rpc.read_observed"})
 
 #: Owner lifecycles that free every held scope immediately (dead owners).
 TERMINAL_LIFECYCLES = ("completed", "failed")
@@ -366,7 +367,9 @@ def owner_state(store, session_id: str) -> dict[str, Any]:
 
     Returns known/lifecycle/last_activity_at plus an error marker when the
     owner cannot be determined. Callers fail closed on error: an unreadable
-    owner is never treated as dead.
+    owner is never treated as dead. Read-only RPC observations remain in the
+    evidence log but do not prove that the session owner is active: another
+    authenticated session may have inspected this session.
     """
     state: dict[str, Any] = {"session_id": str(session_id), "known": False,
                              "lifecycle": None, "last_activity_at": None,
@@ -389,7 +392,8 @@ def owner_state(store, session_id: str) -> dict[str, Any]:
     latest: datetime | None = None
     if isinstance(events, list):
         for event in events:
-            if not isinstance(event, dict):
+            if (not isinstance(event, dict)
+                    or event.get("type") in NON_OWNER_ACTIVITY_EVENT_TYPES):
                 continue
             seen = _parse_time(event.get("observed_at"))
             if seen is not None and (latest is None or seen > latest):
