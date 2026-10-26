@@ -4617,6 +4617,13 @@ class Session:
                         and not (os.path.isabs(target)
                                  and target_checkout is not None)):
                     expected_branch = normalized_scope.get("branch")
+                elif needs_selected_scope:
+                    # The selected path/repository is the operation boundary;
+                    # its cached branch is only an earlier observation. Read
+                    # the current registered checkout below and derive the
+                    # exact operation scope from that fresh state. Explicit
+                    # integration scopes keep their branch fence above.
+                    expected_branch = None
                 try:
                     checkout_identity = workspace_module.verify_registered_checkout(
                         checkout_path,

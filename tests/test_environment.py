@@ -4362,6 +4362,73 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(inspect_repo.call_count, 5)
             self.assertEqual(verify_checkout.call_count, 5)
 
+    def test_selected_integration_refreshes_branch_after_checkout_switch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(
+                Path(directory),
+                intent={"goal": "integrate the currently selected checkout",
+                        "repositories": ["mncs-atlas"]},
+            )
+            checkout = "/workspace/mncs-atlas"
+            fresh_head = "c" * 40
+            session.snapshot["workspace"] = {
+                "root": "/workspace",
+                "repositories": [{
+                    "name": "mncs-atlas",
+                    "path": checkout,
+                    "manifest_repository": "mncs-atlas",
+                }],
+            }
+            session.snapshot["selected_checkouts"] = {"mncs-atlas": {
+                "path": checkout,
+                "branch": "campaign/previous",
+            }}
+            session.snapshot["repo_facts"] = {"mncs-atlas": {
+                "repository": "mncs-atlas",
+                "path": checkout,
+                "branch": "campaign/previous",
+                "head": "a" * 40,
+                "dirty": False,
+            }}
+            checkout_identity = {
+                "path": checkout,
+                "branch": "main",
+                "checkout_identity": "checkout:mncs-atlas-main",
+                "git_common_directory_identity": "git-common:mncs-atlas",
+                "manifest_identity": "manifest:mncs-atlas",
+            }
+            inspected = sessions.workspace_module.RepoState(
+                name="mncs-atlas",
+                path=checkout,
+                manifest_repository="mncs-atlas",
+                manifest_revision=1,
+                branch="main",
+                head=fresh_head,
+                dirty=False,
+            )
+            with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
+                sessions.workspace_module, "verify_registered_checkout",
+                return_value=checkout_identity,
+            ) as verify_checkout, mock.patch.object(
+                sessions.workspace_module, "inspect_repo", return_value=inspected,
+            ):
+                verdict = session.check(action="merge", target="mncs-atlas")
+
+            self.assertEqual(verdict["verdict"], "allow", verdict)
+            self.assertIsNone(
+                verify_checkout.call_args.kwargs["expected_branch"],
+            )
+            event = session._log()[-1]
+            self.assertEqual(event["type"], "authority.integration-eligible")
+            self.assertEqual(
+                event["payload"]["repository_preflight_state"]["branch"],
+                "main",
+            )
+            self.assertEqual(
+                event["payload"]["repository_preflight_state"]["head"],
+                fresh_head,
+            )
+
     def test_explicit_integration_scope_refreshes_and_records_destination_preimage(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(
