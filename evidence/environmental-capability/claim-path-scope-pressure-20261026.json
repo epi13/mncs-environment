@@ -1,0 +1,106 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_claim_path_scope_pressure_20261026",
+  "captured_at": "2026-10-26T08:12:01Z",
+  "measurement_basis": "authenticated-claim-acquisition-event-and-pre-change-cli-contract",
+  "observation": {
+    "kind": "selected-worktree-path-claim-scope-pressure",
+    "source_interface": "MNCS Environment claims CLI and environmental-capability projection",
+    "request": {
+      "command": "scripts/mncs-env claims ses_9ad3efb63438cf3d --acquire mncs-environment --paths mncs_env/cli.py tests/test_environment.py docs/ENTRY.md README.md --reason \"Bind ordinary path-scoped work to an isolated selected checkout and preserve explicit global scopes\" --ttl 8",
+      "pre_change_cli_commit": "c194eeefa419d98f96c1b9eaa2987ec8398eddb5",
+      "projection_identity": "eci_6687d46bcaf7c086",
+      "event_window": {
+        "event_count": 225,
+        "sequence_start": 194,
+        "sequence_end": 225,
+        "truncated": true
+      }
+    },
+    "outcome": {
+      "acquired_claim": {
+        "claim_id": "claim:mncs-environment:paths:d87c092c7b68",
+        "scope_kind": "paths",
+        "checkout_identity": "not-recorded",
+        "branch": "not-recorded",
+        "path_count": 4,
+        "event_identity": "evt_281f329226ce8875",
+        "event_sequence": 223,
+        "event_type": "lease.recovered-and-acquired"
+      },
+      "automatic_recovery": {
+        "recovered_count": 1,
+        "recovered_claim_id": "claim:mncs-environment:paths:c60f18bca6b3",
+        "recovered_owner_session": "ses_5530f63cd8293e03",
+        "superseded_version": 4,
+        "recovery_basis": "Environment emitted a recovered-and-acquired transition after classifying the prior scope recoverable; the underlying historical denial cause is not inferred."
+      },
+      "interpretation": "One authentic path-scoped claim acquisition produced a repository-relative scope with no checkout or branch, even though work was being conducted in a registered worktree. The same transition safely superseded one older recoverable claim. This demonstrates the actual scope the CLI published and an automatic recovery event; it does not show that the unanchored scope blocked a concurrent agent or caused an earlier denial.",
+      "analysis_limit": "The canonical session currently retains an older selected checkout than this implementation worktree. This point-in-time selection mismatch is separate from the CLI scope default and is why the evidence claim itself targeted the registered main worktree explicitly."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_31a97f33db6faa10",
+    "campaign_evidence_count_before_recording": 67,
+    "claim_ids": [
+      "claim:mncs-environment:paths:d87c092c7b68",
+      "claim:mncs-environment:worktree:2d61988fa1d6"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_path_claim_cli_overbroad_default_20261026",
+    "title": "CLI path claims omit checkout scope for isolated proposals",
+    "category": "authority-and-work-scope",
+    "subsystem": "MNCS Environment claims CLI, selected worktrees, and coordination",
+    "owner": "mncs-environment",
+    "recurrence": "one-authenticated-claim-operation;cross-session-recurrence-not-established",
+    "basis": "An authentic --paths acquisition emitted a repository-relative scope without checkout or branch. The event also recorded automatic recovery of one older recoverable path claim. No live concurrent conflict was observed, so excess blocking remains a pressure hypothesis.",
+    "actionable_recommendation": "Bind ordinary --paths claims to the selected verified worktree so isolated branches can propose changes concurrently; require the explicit --repository-paths option for intentional repository-wide path conflicts.",
+    "not_measured": [
+      "whether any earlier operation was blocked by the unanchored scope",
+      "whether another agent needed a claim transfer or waited",
+      "cross-session recurrence",
+      "agent time or tool calls saved after the change"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_unanchored_path_claim_cli_c194eee",
+      "repository": "mncs-environment",
+      "commit": "c194eeefa419d98f96c1b9eaa2987ec8398eddb5",
+      "path": "mncs_env/cli.py",
+      "sha256": "370aa31dac05289e4bd6eb5ebe347f9edfadbf1f07e7b224a6e71460e684b6df",
+      "kind": "source-implementation-before-change"
+    },
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "projection_identity": "eci_6687d46bcaf7c086",
+      "event_identities": [
+        "evt_281f329226ce8875"
+      ]
+    }
+  ],
+  "not_measured": [
+    "whether any earlier operation was blocked by the unanchored scope",
+    "whether another agent needed a claim transfer or waited",
+    "cross-session recurrence",
+    "agent time or tool calls saved after the change"
+  ]
+}
