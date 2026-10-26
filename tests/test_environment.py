@@ -2637,6 +2637,20 @@ class CampaignContinuityTests(unittest.TestCase):
                 self.assertEqual(current["branch"], "main")
                 self.assertTrue(current["clean"])
                 self.assertEqual(current["observation"], "current")
+                transition_event = next(
+                    event for event in reversed(
+                        session.store.read_events(session.session_id)
+                    )
+                    if event.get("type") == "campaign.reconciled"
+                    and event.get("payload", {}).get("repository_ref_transitions")
+                )
+                transition = transition_event["payload"][
+                    "repository_ref_transitions"
+                ][0]
+                self.assertEqual(transition["before"]["head"], first_head)
+                self.assertEqual(transition["after"]["head"], current_head)
+                self.assertEqual(transition["state_change_status"], "observed-delta")
+                self.assertEqual(transition["causal_status"], "not-established")
             finally:
                 session.close()
 

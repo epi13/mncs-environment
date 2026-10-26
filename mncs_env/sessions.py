@@ -2658,7 +2658,9 @@ class Session:
         })
         self._save()
 
-    def reconcile_campaign_continuity(self) -> dict[str, Any]:
+    def reconcile_campaign_continuity(
+        self, *, prior_repository_refs: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         """Rebuild the small campaign projection from immutable session facts."""
         campaign = dict(self.snapshot.get("campaign") or {})
         checkpoints = self.store.list_checkpoints(self.session_id)
@@ -2672,7 +2674,10 @@ class Session:
         claims = sorted(str(record.get("claim_id")) for record in own_claims.values())
         prior_checkpoints = list(self.snapshot.get("checkpoints", []))
         prior_claims = list(campaign.get("claim_ids", []))
-        prior_repository_refs = campaign.get("repository_refs", [])
+        prior_repository_refs = (
+            campaign.get("repository_refs", [])
+            if prior_repository_refs is None else prior_repository_refs
+        )
         checkpoint_ids = list(dict.fromkeys([*prior_checkpoints, *persisted_ids]))
         missing = sorted(set(prior_checkpoints) - set(persisted_ids))
         campaign_state_history = _validated_campaign_state_history(
@@ -7667,6 +7672,9 @@ class Session:
             # inspect; preserve its last complete observation and let the
             # grant/claim composition pass refresh those exact paths below.
             return []
+        prior_repository_refs = list(
+            (self.snapshot.get("campaign") or {}).get("repository_refs", [])
+        )
         workspace = workspace_module.discover_workspace(
             workspace_root, repositories=scan_repositories)
         if workspace.get("error") or workspace.get("scan", {}).get("status") != "complete":
@@ -7772,11 +7780,9 @@ class Session:
             workspace["selected_checkouts"] = self.snapshot["selected_checkouts"]
         self.snapshot["workspace"] = workspace
         self.snapshot["repo_facts"] = _repo_facts(workspace)
-        campaign = dict(self.snapshot.get("campaign") or {})
-        campaign["repository_refs"] = self._campaign_repository_refs(
-            claims_module.active_claims(self.store.read_claims())
+        self.reconcile_campaign_continuity(
+            prior_repository_refs=prior_repository_refs,
         )
-        self.snapshot["campaign"] = campaign
         self._save()
         return events
 

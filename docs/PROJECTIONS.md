@@ -475,9 +475,10 @@ not-recorded-on-event`; this state identifies the local checkout preimage only.
 These are preflight observations: they do not prove that an operation ran,
 that its changes were accepted, verified, or beneficial. The projection keeps
 the source event reference so an agent can inspect the underlying evidence.
-The canonical `mncs-env reconcile` path also refreshes campaign continuity and
-records bounded `repository_ref_transitions` when it observes a change in
-tracked checkout refs or worktree state. Each transition carries
+Workspace observation records bounded `repository_ref_transitions` before
+advancing the campaign's stored checkout baseline; the canonical
+`mncs-env reconcile` path invokes that observation and refreshes campaign
+continuity. Each transition carries
 workspace-relative repository and checkout identity, branch and HEAD
 observations, clean state, and dirty-entry count;
 absolute paths and remote URLs are not copied. Initial observations and
