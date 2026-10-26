@@ -1,0 +1,123 @@
+{
+  "captured_at": "2026-10-26T01:58:13+00:00",
+  "identity": "ev_environment_unmatched_native_pressure_context_readback_20261026",
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "measurement_limits": [
+    "No exact shared pointer is not proof that the owner pressure records and native process candidate are unrelated; their responsibility relationship remains unestablished.",
+    "The owner pressure references are content-integrity verified but were not present in the selected campaign evidence window.",
+    "The process correspondence identifies a candidate API and pressure pointer; it does not establish responsibility matching, causality, or migration readiness.",
+    "The linked session context event has a partial binding-ID summary and a per-binding view truncated to three rows; agent receipt and use remain unestablished."
+  ],
+  "observation": {
+    "kind": "unmatched-source-pointer-context-with-session-evidence",
+    "outcome": {
+      "projection_route": "mncs-env projections --interpret environmental-capability",
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 4 --session-event-before-sequence 42 --session-event-limit 1",
+      "implementation_commit": "41f381e48008e371a77018b775f8f42023863fee",
+      "projection_bytes": 43292,
+      "projection_limit_bytes": 49152,
+      "relationship_projection_bytes": 4620,
+      "relationship_projection_limit_bytes": 8192,
+      "overall_projection_status": "partial",
+      "relationship_link_count": 0,
+      "relationship_status": "no-exact-shared-source-pointer",
+      "history_pages": [
+        {
+          "offset": 2,
+          "page_limit": 2,
+          "read_budget": 2,
+          "selected_observation_reference_identities": [
+            "ev_environment_native_userland_owner_audit_correlation_20261025",
+            "ev_environment_native_userland_accountability_correction_20261025"
+          ]
+        },
+        {
+          "offset": 0,
+          "page_limit": 2,
+          "read_budget": 2,
+          "selected_observation_reference_identities": [
+            "ev_environment_native_process_capability_correspondence_20261025",
+            "ev_environment_native_process_correspondence_session_readback_20261026"
+          ]
+        }
+      ],
+      "unmatched_source_pointer_context": {
+        "status": "no-exact-shared-source-pointer",
+        "comparison_basis": "repository+commit+path+sha256",
+        "causal_relation_status": "not-established",
+        "owner_audit_pressure_sources": {
+          "reference_count": 2,
+          "references_truncated": false,
+          "references": [
+            {
+              "identity": "MNCS-TEST-P-004",
+              "kind": "repository-owner-language-and-runtime-pressure",
+              "repository": "mncs-test",
+              "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+              "path": "pressures/MNCS-TEST-P-004.json",
+              "sha256": "1b3a90dedc869f666e898450af81634aa27863a4c144b7d4b5d87caa992b42bf",
+              "status": "not-present-in-selected-campaign-evidence-window",
+              "content_integrity_status": "workspace-read-only-content-integrity-verified"
+            },
+            {
+              "identity": "MNCS-TEST-P-006",
+              "kind": "repository-owner-native-result-transport-pressure",
+              "repository": "mncs-test",
+              "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+              "path": "pressures/MNCS-TEST-P-006.json",
+              "sha256": "26d0e4eae997127cadb0b17ae8f0ebb733983ddb64162b72ae96fa319ac616f86",
+              "status": "not-present-in-selected-campaign-evidence-window",
+              "content_integrity_status": "workspace-read-only-content-integrity-verified"
+            }
+          ]
+        },
+        "native_capability_pressure_sources": {
+          "reference_count": 1,
+          "references_truncated": false,
+          "references": [
+            {
+              "identity": "MNCS-TEST-P-001",
+              "repository": "mncs-test",
+              "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+              "path": "pressures/MNCS-TEST-P-001.json",
+              "sha256": "38cb0494d2362b9b9b760ab3c76a4f27c6bd6595ca337b15765564e8ad0975de"
+            }
+          ]
+        },
+        "correction_pressure_source_reference_count": 0
+      },
+      "native_capability_candidate": {
+        "identity": "mncs.std.process.v1",
+        "target_pressure_identity": "MNCS-TOOLING-B665F138D324",
+        "migration_readiness": "not-established"
+      },
+      "session_context_event_reference": {
+        "session_id": "ses_9ad3efb63438cf3d",
+        "identity": "evt_de29b1e1b27f5e61",
+        "sequence": 41,
+        "binding_ids_status": "partial",
+        "target_capability_attribution_status": "not-established",
+        "agent_receipt_status": "not-established"
+      },
+      "next_investigation": "Inspect the integrity-addressed P-004, P-006, and P-001 records and establish whether they describe the same responsibility; record a provenance relation only when the source evidence supports it."
+    },
+    "verification": {
+      "command": "PYTHONPATH=. pytest -q tests/test_native_capability_relationships.py tests/test_capability_projection_cli.py",
+      "passed": 19,
+      "failed": 0,
+      "result": "passed",
+      "diff_check": "passed"
+    },
+    "source_pointer_digest_check": {
+      "repository": "mncs-test",
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "command": "sha256sum pressures/MNCS-TEST-P-001.json pressures/MNCS-TEST-P-004.json pressures/MNCS-TEST-P-006.json",
+      "result": "all three file digests matched the projection references"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "prior_observation_identity": "ev_environment_session_context_delivery_readback_20261026",
+    "session_id": "ses_9ad3efb63438cf3d"
+  }
+}

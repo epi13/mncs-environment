@@ -130,7 +130,9 @@ The current expanded page has no exact shared source-pointer match: its owner
 audit lists MNCS-Test pressure sources P-004 and P-006, while the candidate
 process correspondence points to P-001. The projection exposes both sides in
 `unmatched_source_pointer_context` with their integrity-addressed source
-references and leaves causality `not-established`. This is a provenance gap
+references and leaves causality `not-established`. Their SHA-256 values were
+also rechecked against the three source files at the recorded MNCS-Test commit.
+This is a provenance gap
 for further inspection, not evidence that the records describe unrelated
 work. The current readback is preserved in
 [`unmatched-native-pressure-context-readback-20261026.json`](../evidence/environmental-capability/unmatched-native-pressure-context-readback-20261026.json).
