@@ -8271,6 +8271,32 @@ class SessionTests(unittest.TestCase):
                 self.assertEqual(
                     operation_lease["scope"], "one-provider-invocation",
                 )
+                projection = capability_intelligence.project(
+                    session, session_event_limit=64,
+                )
+                activity = projection["session_activity"]
+                projected_invocation = next(
+                    item for item in activity["interactions"]
+                    if item.get("capability") == "campaign-publisher"
+                )
+                projected_effect = projected_invocation["effect_target"]
+                matched_eligibility = [
+                    item for item in activity["integration_eligibility"]
+                    if item.get("event_reference", {}).get("identity")
+                    == projected_effect["preflight_event"]["identity"]
+                ]
+                self.assertEqual(len(matched_eligibility), 1)
+                self.assertEqual(
+                    matched_eligibility[0]["coordination_overlap_count"], 1,
+                )
+                projected_lease = projected_effect["operation_lease"]
+                self.assertEqual(
+                    projected_lease["acquisition_status"], "recorded",
+                )
+                self.assertEqual(
+                    projected_lease["release_status"],
+                    "released-after-completion",
+                )
                 active = claims.active_claims(session.store.read_claims())
                 self.assertEqual(list(active), [foreign_claim["claim_id"]])
                 self.assertNotIn(
