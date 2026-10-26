@@ -1,0 +1,116 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_process_debug_consumer_verification_20261026",
+  "captured_at": "2026-10-26T05:52:10Z",
+  "measurement_basis": "focused-native-debug-unit-and-integration-test-runs-with-committed-language-runtime-source-review",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_7a10097ee265868e",
+    "campaign_evidence_count_before_recording": 57
+  },
+  "observation": {
+    "kind": "native-process-consumer-integration-verification",
+    "source_interface": "MNCS Debug focused test suite and MNCS Language process-result implementation",
+    "request": {
+      "debug_commit": "a036a0042bd0529ef8401b952eb921146e01590d",
+      "unit_test_command": "PYTHONPATH=.:tests python3 -m unittest test_native_core.NativeCoreLibraryResolutionTests",
+      "native_core_suite_command": "PYTHONPATH=. python3 -m unittest discover -s tests -p 'test_native_core.py'",
+      "integration_test_command": "PYTHONPATH=. MNCS_BINARY=/home/epi13/Documents/Projects/mncs-language/target/debug/mncs pytest -q tests/test_native_core_integration.py::test_native_debug_process_effect_returns_typed_status_and_output",
+      "integration_test_identity": "test_native_debug_process_effect_returns_typed_status_and_output",
+      "language_commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+      "mncs_binary_sha256": "ab64c0678bee39764565c6135ab517f3ff9815f15b72d2cf1bfc2c8d974e8c6a"
+    },
+    "outcome": {
+      "resolver_unit_tests": {
+        "passed": 2,
+        "failed": 0
+      },
+      "native_core_suite": {
+        "passed": 6,
+        "failed": 0
+      },
+      "native_process_integration": {
+        "status": "failed-typed-success-assertion",
+        "compilation": "passed; the duplicate-module candidate error is absent",
+        "observed_typed_result": {
+          "success": false,
+          "exit_code": 0,
+          "has_exit_code": true,
+          "timed_out": false,
+          "stdout": "debug-process",
+          "stderr": "",
+          "stdout_truncated": false,
+          "stderr_truncated": false,
+          "subprocess_count": 1
+        },
+        "assertion": "result['success'] is True",
+        "interpretation_limit": "The native call returned the expected output and exit code zero, but the typed result marked success false. The result does not expose lifecycle status or a failure reason. This run does not establish whether the cause is in Language runtime lifecycle reporting, process execution, or consumer integration."
+      },
+      "language_success_predicate": "The committed SSA executor sets process-result success only when lifecycle status is Exited and exit_code is Some(0). The exact status used for this observed result is not exposed by the returned typed ProcessResult.",
+      "resolver_pressure_status": "targeted-resolution-change-verified; long-term-effectiveness-not-assessed",
+      "remaining_runtime_pressure_status": "unresolved; recurrence-not-established"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_process_result_success_cause_not_exposed",
+    "title": "Native process result reports success false without exposing the lifecycle reason",
+    "category": "compiler-runtime-and-diagnostics",
+    "subsystem": "MNCS Language typed process-result lifecycle reporting as consumed by MNCS Debug",
+    "owner": "mncs-language",
+    "basis": "After the Debug library-root fix, the focused integration call returned exit_code 0 and the expected stdout, but its typed ProcessResult had success false. The current SSA executor's success predicate requires lifecycle status Exited and exit_code Some(0); ProcessResult does not expose the lifecycle status needed to distinguish causes.",
+    "recurrence": "one observed focused integration test; recurrence not established",
+    "actionable_recommendation": "Expose or preserve the bounded lifecycle status and failure reason in process-result diagnostics, then determine whether the runtime or consumer integration violates the expected exit and output contract before changing semantics.",
+    "not_measured": [
+      "the exact process lifecycle status and reason for this result",
+      "whether this runtime outcome recurs under other commands or environments",
+      "whether the issue affects other native process consumers",
+      "whether changing the runtime result contract is the correct remedy"
+    ]
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_language_process_success_predicate_6a3f6907",
+      "kind": "committed-runtime-implementation",
+      "repository": "mncs-language",
+      "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+      "path": "crates/mncs-model/src/ssa_execution.rs",
+      "sha256": "80f619468b65580258fbcf20a4b796f6adc1a762890a46057e14292fb0985434"
+    },
+    {
+      "identity": "mncs_language_process_runtime_6a3f6907",
+      "kind": "committed-runtime-provider-implementation",
+      "repository": "mncs-language",
+      "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+      "path": "crates/mncs-model/src/process_runtime.rs",
+      "sha256": "61fd703075fa711fa9bcafdc822bde33ba06cfe39a11d4de03686d79ed50ae41"
+    },
+    {
+      "identity": "mncs_debug_native_process_integration_test_a036a004",
+      "kind": "committed-integration-test-source",
+      "repository": "mncs-debug",
+      "commit": "a036a0042bd0529ef8401b952eb921146e01590d",
+      "path": "tests/test_native_core_integration.py",
+      "sha256": "ecd327f6679412cec2dc4eccd772c29314ff3325cee45ea3afa739e6405f0a1e"
+    }
+  ],
+  "not_measured": [
+    "the exact internal lifecycle event state behind success false",
+    "whether any agent independently discovered or used the process capability",
+    "cross-agent or cross-session recurrence",
+    "native-versus-host adoption or migration readiness"
+  ]
+}

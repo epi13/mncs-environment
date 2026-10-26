@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_process_debug_consumer_pressure_20261026",
+  "captured_at": "2026-10-26T05:52:10Z",
+  "measurement_basis": "committed-source-review-and-targeted-native-debug-process-integration-test",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_7a10097ee265868e",
+    "campaign_evidence_count_before_recording": 57
+  },
+  "observation": {
+    "kind": "native-capability-consumer-integration-pressure",
+    "source_interface": "MNCS Debug native process integration test and standard-library resolution",
+    "request": {
+      "consumer_repository": "mncs-debug",
+      "native_capability_identity": "mncs.std.process.v1",
+      "integration_test_identity": "test_native_debug_process_effect_returns_typed_status_and_output",
+      "integration_test_command": "PYTHONPATH=. MNCS_BINARY=/home/epi13/Documents/Projects/mncs-language/target/debug/mncs pytest -q tests/test_native_core_integration.py::test_native_debug_process_effect_returns_typed_status_and_output",
+      "pre_change_debug_commit": "e94e8a6408dfd5de202b01d690d891219660be0b"
+    },
+    "outcome": {
+      "consumer_surface": "MNCS Debug declares replay_process with effect process_run authorized_by debug_process and invokes it through its native core.",
+      "observed_limitation": "Before the resolver change, the targeted consumer integration test failed during compilation because the extracted mncs-stdlib root and mncs-language/library mirror both supplied the mncs.std.process.v1 module identity.",
+      "environmental_pressure": "The consumer had a native process capability and an existing integration test, but automatic library-root discovery supplied duplicate standard-library module identities and prevented the consumer from compiling.",
+      "agent_impact": "not-established; the observed failure came from an explicitly run integration test, not a recorded agent attempt",
+      "causal_scope": "The duplicate module roots explain this compile failure; the evidence does not establish broader agent impact or recurrence."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_debug_process_duplicate_stdlib_root",
+    "title": "Duplicate standard-library roots block MNCS Debug's native process consumer",
+    "category": "tooling-and-capability-integration",
+    "subsystem": "MNCS Debug process-call library resolution",
+    "owner": "mncs-debug",
+    "basis": "The pre-change Debug resolver automatically included both the extracted stdlib and mncs-language/library. The targeted process integration test then failed to compile on the duplicate mncs.std.process.v1 identity.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Use the extracted stdlib as the sole automatic standard-library root when it is present, retain the language-tree fallback when it is absent, and preserve explicit MNCS_LIBRARY_PATH additions.",
+    "not_measured": [
+      "whether an agent encountered this failure outside the targeted integration test",
+      "whether the pressure recurs in other Debug operations or other consumers",
+      "whether an agent discovered the native process capability before invoking the test"
+    ]
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_debug_native_core_pre_resolver_fix_e94e8a6",
+      "kind": "pre-change-committed-implementation",
+      "repository": "mncs-debug",
+      "commit": "e94e8a6408dfd5de202b01d690d891219660be0b",
+      "path": "mncs_debug/native_core.py",
+      "sha256": "8b7f6e487c5076a737e3606411a2b458048c4d7f75508a8f4518d17145b46e27"
+    },
+    {
+      "identity": "mncs_debug_native_process_integration_test_e94e8a6",
+      "kind": "committed-integration-test-source",
+      "repository": "mncs-debug",
+      "commit": "e94e8a6408dfd5de202b01d690d891219660be0b",
+      "path": "tests/test_native_core_integration.py",
+      "sha256": "ecd327f6679412cec2dc4eccd772c29314ff3325cee45ea3afa739e6405f0a1e"
+    },
+    {
+      "identity": "mncs_debug_native_process_effect_surface_e94e8a6",
+      "kind": "committed-native-capability-consumer-source",
+      "repository": "mncs-debug",
+      "commit": "e94e8a6408dfd5de202b01d690d891219660be0b",
+      "path": "native/mncs/debug/debug.mncs",
+      "sha256": "0077fd1fd0a999e4356eb3b72e34b3de9f5da1f824270ff0a192eb02539dac62"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence or agent-level failure rate",
+    "agent receipt, discovery, or successful use of mncs.std.process.v1",
+    "systemwide native-versus-host implementation ownership or an adoption denominator",
+    "whether fixing Debug's library roots establishes process-runtime correctness"
+  ]
+}

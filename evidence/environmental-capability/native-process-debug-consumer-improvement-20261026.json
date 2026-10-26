@@ -1,0 +1,94 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_process_debug_consumer_improvement_20261026",
+  "captured_at": "2026-10-26T05:52:10Z",
+  "measurement_basis": "committed-consumer-resolver-change-linked-to-targeted-regression-verification",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_7a10097ee265868e",
+    "campaign_evidence_count_before_recording": 57
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_debug_process_duplicate_stdlib_root",
+      "implementation_commit": "a036a0042bd0529ef8401b952eb921146e01590d",
+      "verification_observation_identity": "ev_environment_native_process_debug_consumer_verification_20261026",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "MNCS Debug now uses the extracted mncs-stdlib library as its sole automatic standard-library root when available. The mncs-language/library tree remains the fallback when the extracted stdlib is absent; explicit MNCS_LIBRARY_PATH roots remain additive.",
+      "implementation_scope": "mncs_debug.native_core._libraries",
+      "verified_change": "The two library-resolution unit tests pass and the complete test_native_core.py suite passes. The consumer's targeted process integration test now compiles and reaches native execution; its separate typed success assertion still fails and is preserved as unresolved runtime evidence.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The resolver change removes the duplicate standard-library candidate observed before the fix. It does not establish successful process-result semantics, agent discoverability, broad consumer reliability, or long-term reduction in the original pressure."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_debug_process_duplicate_stdlib_root",
+    "addresses_hypothesis_identity": "ph_environment_eci_debug_process_duplicate_stdlib_root",
+    "implementation_reference": {
+      "identity": "mncs_debug_prefer_extracted_stdlib_a036a004",
+      "kind": "committed-implementation",
+      "repository": "mncs-debug",
+      "commit": "a036a0042bd0529ef8401b952eb921146e01590d",
+      "path": "mncs_debug/native_core.py",
+      "sha256": "fc6d710ce868b37010acb89d4ddea4c2a52cb9b2f1693dfa3d90375b962ed518"
+    },
+    "verification_observation_identity": "ev_environment_native_process_debug_consumer_verification_20261026",
+    "subsequent_observation_identity": null,
+    "basis": "The committed resolver selects only the extracted stdlib automatically when present, avoiding the duplicate language-tree mirror. Targeted resolver tests and the full native-core test module pass; the process integration test now executes the consumer but still fails its typed success assertion, so only the library-resolution pressure is verified addressed.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "whether later independent sessions can discover and use this native consumer reliably",
+      "whether the duplicate-root pressure recurs in other Debug operations or consumers",
+      "whether the native process integration test will pass after its unresolved runtime result is investigated",
+      "whether the change enables any host implementation migration"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_debug_prefer_extracted_stdlib_a036a004",
+      "kind": "committed-implementation",
+      "repository": "mncs-debug",
+      "commit": "a036a0042bd0529ef8401b952eb921146e01590d",
+      "path": "mncs_debug/native_core.py",
+      "sha256": "fc6d710ce868b37010acb89d4ddea4c2a52cb9b2f1693dfa3d90375b962ed518"
+    },
+    {
+      "identity": "mncs_debug_resolver_regression_tests_a036a004",
+      "kind": "committed-verification-tests",
+      "repository": "mncs-debug",
+      "commit": "a036a0042bd0529ef8401b952eb921146e01590d",
+      "path": "tests/test_native_core.py",
+      "sha256": "496e57919d5c19abe7bee2f81a774cdbea24022fcbb09c4cbee29205810c0626"
+    },
+    {
+      "identity": "mncs_debug_native_process_integration_test_a036a004",
+      "kind": "committed-integration-test-source",
+      "repository": "mncs-debug",
+      "commit": "a036a0042bd0529ef8401b952eb921146e01590d",
+      "path": "tests/test_native_core_integration.py",
+      "sha256": "ecd327f6679412cec2dc4eccd772c29314ff3325cee45ea3afa739e6405f0a1e"
+    }
+  ],
+  "not_measured": [
+    "agent-facing discoverability and successful independent use",
+    "cross-session pressure recurrence",
+    "systemwide native implementation ownership and verified migration readiness"
+  ]
+}
