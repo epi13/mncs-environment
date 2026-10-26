@@ -2524,6 +2524,52 @@ class ClaimTests(unittest.TestCase):
 
 
 class CampaignContinuityTests(unittest.TestCase):
+    def test_session_reconcile_runs_campaign_continuity(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory) / "state")
+            try:
+                call_order: list[str] = []
+                with (
+                    mock.patch.object(
+                        session, "revalidate",
+                        side_effect=lambda: call_order.append("revalidate") or {"ok": True},
+                    ),
+                    mock.patch.object(
+                        sessions.readiness_module, "reconcile_services",
+                        side_effect=lambda *_args, **_kwargs: (
+                            call_order.append("services") or {"operations": []}
+                        ),
+                    ),
+                    mock.patch(
+                        "mncs_env.doctor.repair_delta",
+                        side_effect=lambda *_args, **_kwargs: (
+                            call_order.append("repairs") or []
+                        ),
+                    ),
+                    mock.patch(
+                        "mncs_env.doctor.record_epoch",
+                        side_effect=lambda *_args, **_kwargs: (
+                            call_order.append("doctor") or {"recorded": True}
+                        ),
+                    ),
+                    mock.patch.object(
+                        session, "reconcile_campaign_continuity",
+                        side_effect=lambda: (
+                            call_order.append("campaign") or {"changed": True}
+                        ),
+                    ),
+                ):
+                    result = session.reconcile()
+
+                self.assertEqual(
+                    call_order,
+                    ["revalidate", "services", "repairs", "doctor", "campaign"],
+                )
+                self.assertEqual(result["campaign_continuity"], {"changed": True})
+                self.assertTrue(result["doctor"]["recorded"])
+            finally:
+                session.close()
+
     def test_workspace_observation_refreshes_campaign_repository_head(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

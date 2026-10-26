@@ -265,7 +265,7 @@ services. Readiness can be checked separately when needed:
 ./scripts/mncs-env health <session>       # live read-only probes
 ./scripts/mncs-env resources              # caller ancestry FD limits/counts, RSS, watchers
 ./scripts/mncs-env resources --pid 12345  # explicit PID observation; no Store open
-./scripts/mncs-env reconcile <session>    # refresh, recover, verify
+./scripts/mncs-env reconcile <session>    # refresh, recover, verify, observe campaign refs
 ./scripts/mncs-env projections <session>  # ambient projection coherence
 ./scripts/mncs-env capabilities <session>
 ./scripts/mncs-env invoke <session> <capability> -- <args...>

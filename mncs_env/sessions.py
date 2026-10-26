@@ -9478,7 +9478,9 @@ class Session:
                               "detail": "explicit reconcile: full revalidation and service recovery",
                               "validated": True}],
             operations=result["operations"], revalidation=revalidation)
+        campaign_continuity = self.reconcile_campaign_continuity()
         return {**self.context(), "reconciliation": {"revalidation": revalidation, **result},
+                "campaign_continuity": campaign_continuity,
                 "doctor": report}
 
     def status(self) -> dict[str, Any]:
