@@ -1,0 +1,96 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_selection_claim_coordination_projection_readback_20261026",
+  "captured_at": "2026-10-26T14:57:33Z",
+  "measurement_basis": "live bounded Environmental Capability projection over the persisted campaign ledger",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_f1fac570cb880cf4",
+    "campaign_evidence_count_before_recording": 9
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "projection_identity": "eci_9e545cf84e8b27f7",
+      "campaign_state_checkpoint_id": "chk_f1fac570cb880cf4",
+      "history_pages": 2,
+      "evidence_limit_per_page": 8,
+      "session_event_before_sequence": 104,
+      "session_event_limit": 8
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_truncated": true,
+      "observation_records_verified": 9,
+      "source_pointer_content_integrity_verified_count": 11,
+      "record_corrections_applied_count": 1,
+      "improvement_relation": {
+        "identity": "im_environment_claim_independent_session_selection_20261026",
+        "pressure_hypothesis_status": "present-in-projection",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "implementation_content_integrity_status": "workspace-read-only-content-integrity-verified",
+        "effectiveness_assessment": "not-assessed",
+        "subsequent_record_status": "not-recorded"
+      },
+      "session_activity_status": "partial-no-invocations-in-selected-window",
+      "limits": [
+        "the compact response was truncated while preserving bounded source references",
+        "the selected session event page contains no capability invocations",
+        "the projection verifies recorded evidence and source integrity but does not establish future agent benefit"
+      ]
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_claims_block_unique_session_discovery_20261026",
+    "title": "A work claim can block project session selection after context is already unique",
+    "category": "coordination-continuity",
+    "subsystem": "MNCS Control authenticated project continuation selection",
+    "basis": "This is a projection readback of the verified improvement relation, not another agent encounter or evidence that the pressure has recurred or been eliminated.",
+    "recurrence": "not-established",
+    "owner": "mncs-environment"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_session_selection_claim_coordination_verification_20261026",
+      "kind": "committed-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/session-selection-claim-coordination-verification-20261026.json",
+      "sha256": "2e3768e2819865477d36d236bd5214c1a15a06ea5e7df016f829b4f19ab3ad90"
+    },
+    {
+      "identity": "ev_environment_session_selection_claim_coordination_improvement_20261026",
+      "kind": "committed-improvement-relation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/session-selection-claim-coordination-improvement-20261026.json",
+      "sha256": "cb645f7f00ba1019bf940dd0a32cadbcea2a096282e7520f572d6351ff0d5a86"
+    },
+    {
+      "identity": "mncs_control_project_continuation_selector_1ce6d95",
+      "kind": "implementation-source-pointer-verified-in-projection",
+      "repository": "mncs-control-mcp",
+      "commit": "1ce6d9591a9f697506dae932d42db4f956cafd4e",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "sha256": "efa34f2b1965908ba71e56575034e41e168760bc1b419fb77553bd09bcf29567"
+    }
+  ],
+  "not_measured": [
+    "whether agents use the updated selector in later sessions",
+    "whether the change reduces actual coordination steps or interruptions",
+    "whether subsequent development confirms the pressure is reduced"
+  ]
+}
