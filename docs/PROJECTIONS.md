@@ -386,6 +386,13 @@ remote-ref state, subsequent execution, or integration outcome. Event records
 retain up to eight overlap references and the total
 observed count; compact responses retain up to four and mark any projection
 truncation separately from overlap records omitted at capture time.
+When an exact registered destination was refreshed before a merge or publish
+denial, that `authority.denied` event also carries its repository identity and
+the same bounded local preimage. The projection exposes it as
+`integration_preflight_state_status` and retains the state in compact responses.
+It does not establish that the denial was appropriate, identify the source or
+remote-ref state, or record a later integration outcome; older denial events
+remain `not-recorded-on-event`.
 When a later returned eligible preflight in the selected event window has the
 same repository, action, and overlapping claim identity as a structured
 denial, the denial may expose

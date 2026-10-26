@@ -2609,6 +2609,21 @@ def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Pat
                 "reason": (
                     "private-reason-echo is outside this session's writable authority"
                 ),
+                "repository": "mncs-environment",
+                "repository_preflight_state": {
+                    "schema_version": (
+                        "mncs.environment.integration-preflight-state/1"
+                    ),
+                    "observation_basis": (
+                        "fresh-registered-checkout-inspection"
+                    ),
+                    "checkout_identity": "checkout:main-target",
+                    "branch": "main",
+                    "branch_status": "attached",
+                    "head": "d" * 40,
+                    "head_status": "measured",
+                    "working_tree_status": "clean",
+                },
             },
         }
         for sequence in (41, 42)
@@ -2627,6 +2642,15 @@ def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Pat
     assert activity["authority_denials"][0]["reason_class"] == (
         "outside-writable-authority"
     )
+    assert activity["authority_denials"][0][
+        "integration_preflight_state_status"
+    ] == "recorded-and-validated"
+    assert activity["authority_denials"][0]["repository_preflight_state"][
+        "head"
+    ] == "d" * 40
+    assert "does not establish whether the denial was appropriate" in (
+        activity["authority_denials"][0]["preflight_state_interpretation_limit"]
+    )
     assert activity["authority_denials"][0]["event_reference"]["sequence"] == 42
     assert result["session_activity_pressure_candidate_count"] == 1
     candidate = activity["authority_denial_candidates"][0]
@@ -2638,11 +2662,16 @@ def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Pat
     assert alias_checkout not in json.dumps(result)
     assert "private-reason-echo" not in json.dumps(result)
 
-    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+    compact = capability_intelligence.project(session, max_result_bytes=6_500)
     compact_activity = compact["session_activity"]
     assert compact_activity["authority_denials"][0]["event_reference"][
         "identity"
     ] == "evt_authority_denied_42"
+    assert compact_activity["authority_denials"][0][
+        "integration_preflight_state_status"
+    ] == "recorded-and-validated"
+    assert compact_activity["authority_denials"][0][
+        "repository_preflight_state"]["head"] == "d" * 40
     assert compact_activity["authority_denial_candidates"][0][
         "supporting_events"
     ][0]["identity"] == "evt_authority_denied_41"

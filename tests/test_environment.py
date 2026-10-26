@@ -4469,6 +4469,29 @@ class SessionTests(unittest.TestCase):
             )
             self.assertNotIn(checkout, json.dumps(event["payload"]))
 
+            with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
+                sessions.workspace_module, "verify_registered_checkout",
+                return_value=checkout_identity,
+            ), mock.patch.object(
+                sessions.workspace_module, "inspect_repo", return_value=inspected,
+            ), mock.patch.object(
+                sessions.authority_module, "evaluate",
+                return_value={"verdict": "deny", "reason": "fixture-denial"},
+            ):
+                denied = session.check(
+                    action="merge", target="mncs-atlas", scope=scope,
+                )
+
+            self.assertEqual(denied["verdict"], "deny")
+            denial_event = session._log()[-1]
+            self.assertEqual(denial_event["type"], "authority.denied")
+            self.assertEqual(denial_event["payload"]["repository"], "mncs-atlas")
+            self.assertEqual(
+                denial_event["payload"]["repository_preflight_state"],
+                event["payload"]["repository_preflight_state"],
+            )
+            self.assertNotIn(checkout, json.dumps(denial_event["payload"]))
+
     def test_absolute_linked_worktree_uses_manifest_repo_but_keeps_exact_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(

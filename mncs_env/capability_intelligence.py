@@ -2551,6 +2551,7 @@ def _compact_projection(
                 "authority_denial_records_returned",
                 "authority_denial_records_omitted",
                 "authority_denial_records_invalid",
+                "integration_denial_preflight_state_observations_invalid",
             )
             if key in activity_source
         })
@@ -3201,11 +3202,28 @@ def _compact_projection(
                 "identity", "action", "outcome_status", "reason_class", "repository",
                 "claim_conflict_evidence_status", "campaign_id", "work_intent_id",
                 "work_intent_reference_status",
+                "integration_preflight_state_status",
             )
             if isinstance(item.get(key), str)
         }
         if isinstance(item.get("claim_conflict"), dict):
             compact_item["claim_conflict"] = item["claim_conflict"]
+        preflight_state = item.get("repository_preflight_state")
+        if isinstance(preflight_state, dict):
+            compact_item["repository_preflight_state"] = {
+                key: preflight_state[key]
+                for key in (
+                    "schema_version", "observation_basis", "checkout_identity",
+                    "branch", "branch_status", "head", "head_status",
+                    "working_tree_status",
+                )
+                if key in preflight_state
+            }
+            limit = item.get("preflight_state_interpretation_limit")
+            if isinstance(limit, str):
+                compact_item["preflight_state_interpretation_limit"] = (
+                    _short_text(limit, 320)
+                )
         reference = item.get("event_reference")
         if isinstance(reference, dict):
             compact_item["event_reference"] = {
@@ -9831,6 +9849,7 @@ def _session_activity(
     denial_records: list[dict[str, Any]] = []
     snapshot_facts = authority_module.repository_facts_for_snapshot(snapshot)
     invalid_denial_event_count = 0
+    invalid_integration_denial_preflight_state_count = 0
     for event in reversed(denial_events):
         reference = _event_reference(event)
         payload = event.get("payload")
@@ -9843,10 +9862,12 @@ def _session_activity(
         if not isinstance(action, str) or action not in authority_module.ACTIONS:
             action = "action-unavailable"
         target = payload.get("target")
-        repository = (
-            authority_module.repository_for_target(target, snapshot_facts)
-            if isinstance(target, str) and target else None
-        )
+        repository = payload.get("repository")
+        if not _is_repository_identity(repository):
+            repository = (
+                authority_module.repository_for_target(target, snapshot_facts)
+                if isinstance(target, str) and target else None
+            )
         reason_class = _authority_denial_reason_class(reason)
         claim_conflict = _authority_claim_conflict(
             payload.get("claim_conflict"), repository,
@@ -9869,6 +9890,29 @@ def _session_activity(
             **({"repository": repository} if repository else {}),
             "event_reference": reference,
         }
+        if action in {"merge", "publish"}:
+            raw_preflight_state = payload.get("repository_preflight_state")
+            preflight_state = _authority_integration_preflight_state(
+                raw_preflight_state,
+            )
+            if raw_preflight_state is None:
+                preflight_state_status = "not-recorded-on-event"
+            elif preflight_state is None:
+                preflight_state_status = "invalid-event-observation"
+                invalid_integration_denial_preflight_state_count += 1
+            else:
+                preflight_state_status = "recorded-and-validated"
+            denial["integration_preflight_state_status"] = (
+                preflight_state_status
+            )
+            if preflight_state is not None:
+                denial["repository_preflight_state"] = preflight_state
+                denial["preflight_state_interpretation_limit"] = (
+                    "This is the local destination checkout state at a denied "
+                    "preflight; it does not establish whether the denial was "
+                    "appropriate, source or remote-ref state, later execution, "
+                    "or integration outcome."
+                )
         if claim_conflict is not None:
             denial["claim_conflict"] = claim_conflict
         denial_records.append(denial)
@@ -10430,6 +10474,11 @@ def _session_activity(
             "authority_denial_records_returned": len(authority_denials),
             "authority_denial_records_omitted": authority_denials_omitted,
             "authority_denial_records_invalid": invalid_denial_event_count,
+            **({
+                "integration_denial_preflight_state_observations_invalid": (
+                    invalid_integration_denial_preflight_state_count
+                ),
+            } if invalid_integration_denial_preflight_state_count else {}),
             "authority_denial_selection_policy": (
                 "newest-sanitized-denials-in-selected-event-window"
             ),

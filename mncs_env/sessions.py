@@ -4795,6 +4795,12 @@ class Session:
                 "target": target,
                 "reason": verdict["reason"],
             }
+            if (action in ("merge", "publish")
+                    and preflight_state_observation is not None):
+                denial["repository"] = repository
+                denial["repository_preflight_state"] = (
+                    preflight_state_observation
+                )
             claim_conflict = verdict.get("claim_conflict")
             if isinstance(claim_conflict, dict):
                 denial["claim_conflict"] = claim_conflict
