@@ -848,6 +848,15 @@ does not account for use through external interfaces. These relationships make
 availability and recorded use inspectable without treating an absent record
 as evidence of poor discoverability or usability.
 
+New write-effect invocation events may include an `effect_target` with the
+exact repository, checkout, and branch admitted for that operation.
+`session_activity.interactions[].effect_target` exposes the recorded
+repository, branch, stable checkout identity, and authority preflight event
+reference, omitting the local checkout path. Its reference leads to the
+immutable proposal-eligibility or integration-eligibility observation; its
+absence is not evidence that the capability was read-only or that no effect
+occurred.
+
 `context_operation_activity` also summarizes authenticated `session.context`
 RPC records. New `/2` records preserve a bounded summary of the returned
 capability list: available, unavailable, and unknown counts; truncation state;

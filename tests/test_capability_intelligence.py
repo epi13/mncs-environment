@@ -2271,6 +2271,18 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
                 "capability": "mncs-compiler:build",
                 "provider_request_id": request_id,
                 "argv": ["build", "private-source-path"],
+                "effect_target": {
+                    "kind": "worktree",
+                    "repository": "mncs-compiler",
+                    "checkout": "/private/selected-checkout",
+                    "branch": "campaign/compiler",
+                    "checkout_identity": "checkout:campaign",
+                    "preflight_event": {
+                        "identity": "evt_authority_proposal_1",
+                        "sequence": 9,
+                        "type": "authority.proposal-eligible",
+                    },
+                },
             },
         },
         {
@@ -2312,6 +2324,19 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
     assert prior["correlation_status"] == "matched-by-provider-request-id"
     assert prior["outcome_status"] == "failed"
     assert prior["returncode"] == 2
+    assert prior["effect_target"] == {
+        "status": "recorded",
+        "repository": "mncs-compiler",
+        "branch_status": "recorded",
+        "branch": "campaign/compiler",
+        "checkout_identity": "checkout:campaign",
+        "scope_kind": "worktree",
+        "preflight_event": {
+            "identity": "evt_authority_proposal_1",
+            "sequence": 9,
+            "type": "authority.proposal-eligible",
+        },
+    }
     assert prior["invocation_event"]["identity"] == "evt_capability_invoked_1"
     assert prior["completion_event"]["identity"] == "evt_invocation_completed_1"
     assert activity["capabilities"] == [{
@@ -2373,6 +2398,19 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
     assert compact["session_activity"]["capabilities"][0]["supporting_events"][0][
         "identity"
     ] == "evt_capability_invoked_2"
+    assert compact["session_activity"]["interactions"][1]["effect_target"] == {
+        "status": "recorded",
+        "repository": "mncs-compiler",
+        "branch_status": "recorded",
+        "branch": "campaign/compiler",
+        "checkout_identity": "checkout:campaign",
+        "scope_kind": "worktree",
+        "preflight_event": {
+            "identity": "evt_authority_proposal_1",
+            "sequence": 9,
+            "type": "authority.proposal-eligible",
+        },
+    }
     assert compact["session_activity"]["capability_delivery"][
         "discoverability_status"
     ] == "not-measured"
@@ -2384,6 +2422,7 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
         "evt_capability_available_1"
     )
     assert "private-source-path" not in json.dumps(activity)
+    assert "/private/selected-checkout" not in json.dumps(activity)
     assert any("token usage" in item for item in activity["measurement_limits"])
 
 

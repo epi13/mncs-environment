@@ -4798,6 +4798,8 @@ class Session:
             target, observed_facts,
         )
         normalized_scope = self._canonical_scope(repository, scope)
+        preflight_state_observation: dict[str, Any] | None = None
+        eligibility_evidence: dict[str, Any] | None = None
         if action in (
             "write", "mutate", "execute", "publish", "merge", "delete",
             "retire", "verify",
@@ -4872,7 +4874,6 @@ class Session:
                 needs_explicit_integration_scope
                 and not (os.path.isabs(target) and target_checkout is not None)
             )
-            preflight_state_observation: dict[str, Any] | None = None
             if (needs_absolute_target_validation
                     or needs_selected_checkout_observation
                     or needs_workspace_root_observation
@@ -5273,10 +5274,21 @@ class Session:
                         "coordination_overlaps_truncated", False,
                     ),
                 })
-            self._emit(
+            emitted = self._emit(
                 "authority.integration-eligible", "environment",
                 payload,
             )
+            eligibility_evidence = {
+                "action": action,
+                "repository": repository,
+                "scope": payload["scope"],
+                "operation_executed": False,
+                "event_reference": {
+                    key: emitted[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in emitted
+                },
+            }
         elif (
             verdict.get("verdict") == "allow"
             and action in authority_module.PROPOSAL_WORKTREE_ACTIONS
@@ -5313,9 +5325,22 @@ class Session:
                 payload["proposal_preflight_state"] = (
                     preflight_state_observation
                 )
-            self._emit(
+            emitted = self._emit(
                 "authority.proposal-eligible", "environment", payload,
             )
+            eligibility_evidence = {
+                "action": action,
+                "repository": repository,
+                "scope": payload["scope"],
+                "operation_executed": False,
+                "event_reference": {
+                    key: emitted[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in emitted
+                },
+            }
+        if eligibility_evidence is not None:
+            verdict["eligibility_evidence"] = eligibility_evidence
         return verdict
 
     def last_activity_at(self) -> str | None:
@@ -5486,9 +5511,11 @@ class Session:
         The target repository must be session-observed (selected, else
         workspace-discovered). A supplied checkout must be exactly that
         checkout; a repository-only target resolves to that same observed
-        checkout. Effect writes stay confined to claimed session scope, never
-        to an arbitrary path the caller names. Anything else is denied,
-        never escalated.
+        checkout. Effect writes stay confined to an exact session-observed
+        checkout, and any supplied branch must match its observed branch;
+        callers cannot relabel the target. Environment applies the same
+        proposal-worktree or scoped-lease checks used for
+        direct work. Anything else is denied, never escalated.
         """
         if not isinstance(target, dict):
             raise AuthorityDenied(
@@ -5531,7 +5558,14 @@ class Session:
                     f"capability {capability!r} effect target checkout does not match "
                     f"the session-observed checkout for {repository!r}")
         scope: dict[str, Any] = {"kind": "worktree", "checkout": str(resolved)}
-        wanted = target.get("branch") or branch
+        if "branch" in target:
+            requested_branch = target.get("branch")
+            if (not isinstance(requested_branch, str) or not requested_branch
+                    or requested_branch != branch):
+                raise AuthorityDenied(
+                    f"capability {capability!r} effect target branch does not match "
+                    f"the session-observed checkout for {repository!r}")
+        wanted = branch
         if isinstance(wanted, str) and wanted:
             scope["branch"] = wanted
         return repository, scope
@@ -5666,10 +5700,11 @@ class Session:
         effect authority (mutating state). By default the declared effects
         are checked against the provider's own checkout; pass
         ``effect_target`` (``{"repository", "checkout"?, "branch"?}``) when
-        the provider legitimately mutates a different, explicitly claimed
+        the provider legitimately mutates a different, session-observed
         target checkout. Environment resolves a repository-only target to
-        this session's exact observed checkout. Invocation records carry both
-        executor and effect target.
+        this session's exact observed checkout and applies the same proposal
+        scope or shared-mutation lease checks as direct work. Invocation
+        records carry both executor and effect target.
         """
         binding = self._binding(capability)
         if output_limit_bytes is None:
@@ -5697,21 +5732,41 @@ class Session:
         required = authority_module.required_action_for_effects(binding.get("effects", ["read"]))
         executor = self._executor_identity(binding)
         admitted_effect_target: dict[str, Any] | None = None
+        checked_effect_repository: str | None = None
         if required != "read":
             if effect_target is not None:
                 effect_repository, effect_scope = self._admit_effect_target(
                     capability, effect_target)
-                admitted_effect_target = {"repository": effect_repository,
-                                          **effect_scope}
+                checked_effect_repository = effect_repository
+                admitted_effect_target = {"repository": effect_repository}
+                selected = self.snapshot.get("selected_checkouts", {}).get(
+                    effect_repository,
+                )
+                selected_path = (
+                    selected.get("path") if isinstance(selected, dict) else None
+                )
+                workspace_root = self.snapshot.get("workspace", {}).get("root")
+                if isinstance(selected_path, str) and selected_path:
+                    raw_selected = Path(selected_path)
+                    if not raw_selected.is_absolute() and workspace_root:
+                        raw_selected = Path(str(workspace_root)) / raw_selected
+                    selected_path = str(raw_selected.resolve())
+                effect_check_scope = (
+                    None
+                    if selected_path == effect_scope.get("checkout")
+                    else effect_scope
+                )
                 effect_verdict = self.check(
-                    action=required, target=effect_repository, scope=effect_scope)
+                    action=required, target=effect_repository,
+                    scope=effect_check_scope,
+                )
             else:
                 provider = str(binding.get("provider", capability))
                 checkout = binding.get("provenance", {}).get("checkout", {})
                 checkout_path = checkout.get("path") or binding.get("provider_root")
                 effect_scope = None
+                selected_checkout = None
                 if isinstance(checkout_path, str) and checkout_path:
-                    selected_checkout = None
                     workspace_root = self.snapshot.get("workspace", {}).get("root")
                     raw_selected_path = Path(checkout_path)
                     if not raw_selected_path.is_absolute() and workspace_root:
@@ -5752,12 +5807,50 @@ class Session:
                         # it predates optional identity fields on claim rows.
                     if isinstance(branch, str) and branch:
                         effect_scope["branch"] = branch
+                    checked_effect_repository = provider
+                    admitted_effect_target = {"repository": provider}
                 effect_verdict = self.check(
-                    action=required, target=provider, scope=effect_scope)
+                    action=required,
+                    target=provider,
+                    scope=(None if selected_checkout is not None else effect_scope),
+                )
             if effect_verdict["verdict"] == "deny":
                 raise AuthorityDenied(effect_verdict["reason"])
             if effect_verdict["verdict"] == "escalate":
                 return self._pending(capability, argv, required, effect_verdict["reason"])
+            if admitted_effect_target is not None:
+                evidence = effect_verdict.get("eligibility_evidence")
+                if (
+                    isinstance(evidence, dict)
+                    and evidence.get("action") == required
+                    and evidence.get("repository") == checked_effect_repository
+                    and evidence.get("operation_executed") is False
+                ):
+                    preflight_scope = evidence.get("scope")
+                    event_reference = evidence.get("event_reference")
+                    if isinstance(preflight_scope, dict):
+                        if preflight_scope.get("kind") in {"repository", "worktree"}:
+                            admitted_effect_target["scope_kind"] = preflight_scope["kind"]
+                        for key in (
+                            "branch", "checkout_identity",
+                            "git_common_directory_identity", "manifest_identity",
+                        ):
+                            value = preflight_scope.get(key)
+                            if isinstance(value, str) and value:
+                                admitted_effect_target[key] = value
+                    if (
+                        isinstance(event_reference, dict)
+                        and event_reference.get("type") in {
+                            "authority.proposal-eligible",
+                            "authority.integration-eligible",
+                        }
+                        and isinstance(event_reference.get("identity"), str)
+                        and type(event_reference.get("sequence")) is int
+                    ):
+                        admitted_effect_target["preflight_event"] = {
+                            key: event_reference[key]
+                            for key in ("identity", "sequence", "type")
+                        }
         prepared_inputs = self._read_provider_input_artifacts(input_artifacts)
         binding_identity = {
             key: binding[key]

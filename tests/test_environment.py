@@ -770,6 +770,14 @@ class AuthorityTests(unittest.TestCase):
             self.assertEqual(event["type"], "authority.proposal-eligible")
             self.assertFalse(event["payload"]["operation_executed"])
             self.assertEqual(
+                verdict["eligibility_evidence"]["event_reference"]["identity"],
+                event["identity"],
+            )
+            self.assertEqual(
+                verdict["eligibility_evidence"]["scope"],
+                event["payload"]["scope"],
+            )
+            self.assertEqual(
                 event["payload"]["coordination_only_claim_count"], 1,
             )
             self.assertEqual(
@@ -6075,6 +6083,15 @@ class SessionTests(unittest.TestCase):
                 }
             }
 
+            with self.assertRaisesRegex(
+                sessions.AuthorityDenied, "branch does not match"
+            ):
+                session._admit_effect_target(
+                    "mncs-forge:resident-reconcile",
+                    {"repository": "mncs-reference-studies",
+                     "branch": "campaign/stale"},
+                )
+
             repository, scope = session._admit_effect_target(
                 "mncs-forge:resident-reconcile",
                 {"repository": "mncs-reference-studies"},
@@ -7752,69 +7769,177 @@ class SessionTests(unittest.TestCase):
             with self.assertRaises(sessions.AuthorityDenied):
                 session.invoke("writer", ["hi"])
 
-    def test_provider_write_uses_exact_selected_worktree_claim_scope(self) -> None:
+    def test_provider_write_uses_selected_proposal_worktree_without_claim(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            session = make_session(Path(directory))
+            workspace_root = Path(directory) / "workspace"
+            repository_root = workspace_root / "MNCS-Commons"
+            checkout = repository_root / ".worktrees" / "campaign"
+            checkout.mkdir(parents=True)
+            session = make_session(workspace_root)
             session.snapshot["intent"]["repositories"] = ["MNCS-Commons"]
             session.snapshot["authority"]["writable"] = ["MNCS-Commons"]
-            checkout = "/selected/MNCS-Commons/.worktrees/campaign"
+            branch = "campaign/commons-parity"
+            checkout_path = str(checkout)
+            session.snapshot["workspace"]["repositories"] = [{
+                "name": "MNCS-Commons",
+                "path": str(repository_root),
+                "manifest_repository": "MNCS-Commons",
+                "branch": "main",
+            }, {
+                "name": "MNCS-Commons@campaign",
+                "path": checkout_path,
+                "manifest_repository": "MNCS-Commons",
+                "worktree_of": "MNCS-Commons",
+                "branch": branch,
+            }]
             binding = capabilities.probe_availability(
                 capabilities.bind(
                     provider="mncs-commons", capability="campaign-writer",
                     contract_revision="1", entrypoint="e", address="/bin/echo",
-                    effects=["write"], provider_root=checkout,
+                    effects=["write"], provider_root=checkout_path,
                     provenance={"checkout": {
-                        "path": checkout, "branch": "campaign/commons-parity",
+                        "path": checkout_path, "branch": branch,
                     }},
                 ))
             session.snapshot["bindings"].append(binding)
             session.snapshot["selected_checkouts"] = {"MNCS-Commons": {
-                "path": checkout, "branch": "campaign/commons-parity",
+                "repository": "MNCS-Commons",
+                "path": checkout_path,
+                "branch": branch,
+                "head": "c" * 40,
+                "clean": False,
+                "checkout_identity": "checkout:fixture",
+                "git_common_directory_identity": "git-common:fixture",
+                "manifest_identity": "manifest:fixture",
             }}
-            session.snapshot["claim_holders"]["MNCS-Commons"] = [{
-                "session_id": session.session_id,
-                "scope": {
-                    "kind": "worktree", "repository": "MNCS-Commons",
-                    "checkout": checkout, "branch": "campaign/commons-parity",
-                    "paths": None, "exclusive": False,
-                },
-            }]
-            # This case isolates path mapping; provide current transport facts
-            # for its synthetic checkout and manually supplied claim fixture.
+            # The bound provider and selected worktree identities are exact;
+            # no persistent claim is present for this isolated proposal.
             with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
                 sessions, "_verified_declared_provider_checkout",
                 return_value={
-                    "path": checkout,
-                    "branch": "campaign/commons-parity",
+                    "path": checkout_path,
+                    "branch": branch,
                     "head": "fixture",
-                    "workspace_root": "/selected/MNCS-Commons",
+                    "workspace_root": str(repository_root),
                     "checkout_identity": "checkout:fixture",
                     "git_common_directory_identity": "git-common:fixture",
                     "manifest_identity": "manifest:fixture",
                 },
             ), mock.patch.object(
-                sessions.workspace_module, "inspect_repo", return_value=sessions.workspace_module.RepoState(
-                    name="MNCS-Commons", path=str(checkout), manifest_repository="MNCS-Commons",
-                    manifest_revision=1, branch="campaign/commons-parity", head="fixture", dirty=False)), mock.patch.object(
+                sessions.workspace_module, "verify_registered_checkout",
+                return_value={
+                    "path": checkout_path,
+                    "branch": branch,
+                    "checkout_identity": "checkout:fixture",
+                    "git_common_directory_identity": "git-common:fixture",
+                    "manifest_identity": "manifest:fixture",
+                },
+            ) as verify_checkout, mock.patch.object(
+                sessions.workspace_module, "inspect_repo",
+                return_value=sessions.workspace_module.RepoState(
+                    name="MNCS-Commons@campaign",
+                    path=checkout_path,
+                    manifest_repository="MNCS-Commons",
+                    manifest_revision=1,
+                    branch=branch,
+                    head="f" * 40,
+                    dirty=True,
+                ),
+            ), mock.patch.object(
                 sessions.capabilities_module, "invoke",
                 return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
             ) as invoke:
                 result = session.invoke("campaign-writer", ["fixture"])
             self.assertEqual(result["status"], "ok", result)
             self.assertEqual(invoke.call_count, 1)
+            self.assertIsNone(verify_checkout.call_args.kwargs["expected_branch"])
+            self.assertFalse(session.snapshot["claim_holders"].get("MNCS-Commons"))
+            proposal_event = next(
+                event for event in session._log()
+                if event.get("type") == "authority.proposal-eligible"
+            )
+            self.assertFalse(
+                proposal_event["payload"]["persistent_claim_required"],
+            )
+            self.assertEqual(
+                proposal_event["payload"]["proposal_preflight_state"]["head"],
+                "f" * 40,
+            )
+            invocation_event = next(
+                event for event in session._log()
+                if event.get("type") == "capability.invoked"
+            )
+            effect_target = invocation_event["payload"]["effect_target"]
+            self.assertEqual(effect_target["branch"], branch)
+            self.assertNotIn("checkout", effect_target)
+            self.assertEqual(
+                effect_target["checkout_identity"],
+                proposal_event["payload"]["scope"]["checkout_identity"],
+            )
+            self.assertEqual(
+                effect_target["preflight_event"]["identity"],
+                proposal_event["identity"],
+            )
 
-    def test_provider_effect_resolves_relative_checkout_from_campaign_root(self) -> None:
+    def test_provider_effect_resolves_relative_selected_worktree_without_claim(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            checkout = root / "MNCS-Commons" / ".worktrees" / "campaign"
-            checkout.mkdir(parents=True)
-            session = make_session(root)
+            repository_root = root / "MNCS-Commons"
+            checkout = repository_root / ".worktrees" / "campaign"
+            (repository_root / ".mncs").mkdir(parents=True)
+            (repository_root / ".mncs" / "project.json").write_text(
+                json.dumps({"repository": "MNCS-Commons"}) + "\n"
+            )
+            (repository_root / "seed.txt").write_text("registered provider fixture\n")
+            subprocess.run(
+                ["git", "-C", str(repository_root), "init", "-b", "main"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "config", "user.name", "MNCS test"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "config", "user.email", "mncs-test@example.invalid"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "add", ".mncs/project.json", "seed.txt"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "commit", "-m", "seed provider fixture"],
+                check=True, capture_output=True, text=True,
+            )
+            checkout.parent.mkdir(parents=True)
+            branch = "campaign/commons-parity"
+            subprocess.run(
+                ["git", "-C", str(repository_root), "worktree", "add", "-b",
+                 branch, str(checkout), "HEAD"],
+                check=True, capture_output=True, text=True,
+            )
+            session = make_session(
+                root,
+                intent={"goal": "run a provider in the selected proposal checkout",
+                        "repositories": ["MNCS-Commons"]},
+            )
             session.snapshot["workspace"]["root"] = str(root)
-            session.snapshot["intent"]["repositories"] = ["MNCS-Commons"]
+            session.snapshot["workspace"]["repositories"] = [{
+                "name": "MNCS-Commons",
+                "path": str(repository_root),
+                "manifest_repository": "MNCS-Commons",
+                "branch": "main",
+            }, {
+                "name": "MNCS-Commons@campaign",
+                "path": str(checkout),
+                "manifest_repository": "MNCS-Commons",
+                "worktree_of": "MNCS-Commons",
+                "branch": branch,
+            }]
             session.snapshot["authority"]["writable"] = ["MNCS-Commons"]
             session.snapshot["selected_checkouts"] = {"MNCS-Commons": {
                 "path": "MNCS-Commons/.worktrees/campaign",
-                "branch": "campaign/commons-parity",
+                "branch": branch,
             }}
             binding = capabilities.probe_availability(
                 capabilities.bind(
@@ -7823,31 +7948,46 @@ class SessionTests(unittest.TestCase):
                     effects=["write"], provider_root=str(checkout),
                     provenance={"checkout": {
                         "path": "MNCS-Commons/.worktrees/campaign",
-                        "branch": "campaign/commons-parity",
+                        "branch": branch,
                     }},
                 ))
             session.snapshot["bindings"].append(binding)
-            session.snapshot["claim_holders"]["MNCS-Commons"] = [{
-                "session_id": session.session_id,
-                "scope": {
-                    "kind": "worktree", "repository": "MNCS-Commons",
-                    "checkout": str(checkout.resolve()),
-                    "branch": "campaign/commons-parity",
-                    "paths": None, "exclusive": False,
-                },
-            }]
-            # This case isolates path mapping; provide current transport facts
-            # for its synthetic checkout and manually supplied claim fixture.
-            with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
-                sessions.workspace_module, "inspect_repo", return_value=sessions.workspace_module.RepoState(
-                    name="MNCS-Commons", path=str(checkout), manifest_repository="MNCS-Commons",
-                    manifest_revision=1, branch="campaign/commons-parity", head="fixture", dirty=False)), mock.patch.object(
+            with mock.patch.object(
                 sessions.capabilities_module, "invoke",
                 return_value={"status": "ok", "returncode": 0, "stdout": "ok"},
             ) as invoke:
-                result = session.invoke("campaign-writer", ["fixture"])
+                result = session.invoke(
+                    "campaign-writer", ["fixture"],
+                    effect_target={
+                        "repository": "MNCS-Commons",
+                        "checkout": "MNCS-Commons/.worktrees/campaign",
+                        "branch": branch,
+                    },
+                )
             self.assertEqual(result["status"], "ok")
             self.assertEqual(invoke.call_count, 1)
+            self.assertFalse(session.snapshot["claim_holders"].get("MNCS-Commons"))
+            eligibility = next(
+                event for event in session._log()
+                if event.get("type") == "authority.proposal-eligible"
+            )
+            self.assertFalse(eligibility["payload"]["persistent_claim_required"])
+            invocation = next(
+                event for event in session._log()
+                if event.get("type") == "capability.invoked"
+            )
+            effect_target = invocation["payload"]["effect_target"]
+            self.assertEqual(effect_target["branch"], branch)
+            self.assertEqual(effect_target["scope_kind"], "worktree")
+            self.assertEqual(
+                effect_target["checkout_identity"],
+                eligibility["payload"]["scope"]["checkout_identity"],
+            )
+            self.assertNotIn("checkout", effect_target)
+            self.assertEqual(
+                effect_target["preflight_event"]["identity"],
+                eligibility["identity"],
+            )
 
     def test_relative_worktree_claim_matches_bound_absolute_provider_path(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -35,8 +35,10 @@ or setup environment variables are required in the standard sibling layout.
 See [the entry contract](docs/ENTRY.md) for selection, recovery, and provider
 readiness declarations. To require resident Forge, use
 `./scripts/mncs-env enter --consumer my-agent --definition samples/forge-resident.environment.json`.
-The selected Forge must publish its resident descriptors and any unowned
-worktree needs an explicit claim before reconciliation can start it.
+The selected Forge must publish its resident descriptors. Provider effects
+still require the session's applicable rights and fresh scope eligibility;
+isolated selected non-main linked worktree effects do not require a persistent
+claim, while shared main and whole-tree Doctor remediation remain claim-gated.
 
 ## Why this exists
 

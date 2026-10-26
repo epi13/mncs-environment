@@ -597,9 +597,12 @@ removes a socket, or adopts foreign work as a startup workaround.
 
 When reconciliation changes a selected consumer checkout instead of the
 provider checkout, `effect_target` names that repository. Environment resolves
-it to the exact checkout observed by the current session and checks its claim
-and authority before invocation; provider-supplied ambient paths are not
-accepted. Direct `mncs-env invoke` calls can select the same boundary with
+it to the exact checkout observed by the current session and checks applicable
+proposal eligibility or claim scope before invocation; an isolated selected
+non-main linked worktree can pass the fresh proposal eligibility check without
+a persistent claim, while shared mutable targets retain their scoped lease
+checks. Provider-supplied ambient paths are not accepted. Direct
+`mncs-env invoke` calls can select the same boundary with
 `--effect-repository <selected-repository>`.
 
 There are at most 16 service declarations. Each read probe has a three-second
@@ -627,7 +630,10 @@ The sample selects Language Service explicitly and binds `.mncs/forge.toml`
 from the selected Environment checkout. Ordinary local entry retains its
 existing six-provider definition; Forge residency is an explicit requirement.
 An unavailable required descriptor blocks; optional gaps remain degradation.
-An unowned provider worktree needs a claim before its execute/write effects.
+An isolated selected non-main provider worktree can use execute/write effects
+after Environment freshly verifies its registration and proposal eligibility.
+Shared mutable targets and whole-tree Doctor remediation retain their explicit
+claim requirements.
 
 Service `argv` also accepts `{"repository": "mncs-environment", "path":
 ".mncs/forge.toml"}` references. These resolve only through selected capability

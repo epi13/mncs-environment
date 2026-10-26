@@ -1141,7 +1141,9 @@ def _manifest_test_bindings(
 
     Test commands are fixed argv, run from the provider checkout, and carry
     write effects because build tools may update local caches or test outputs.
-    The session must therefore hold a claim scoped to this exact worktree.
+    Environment checks the selected checkout's proposal eligibility or the
+    scoped lease needed for shared mutable state; an isolated non-main
+    worktree does not require a persistent claim.
     """
     manifest_revision = digest_hex(manifest)
     out: list[dict[str, Any]] = []

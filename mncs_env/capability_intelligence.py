@@ -2984,6 +2984,9 @@ def _compact_projection(
             }
         if type(item.get("returncode")) is int:
             compact_item["returncode"] = item["returncode"]
+        effect_target = _invocation_effect_target(item.get("effect_target"))
+        if effect_target is not None:
+            compact_item["effect_target"] = effect_target
         for key in ("invocation_event", "completion_event"):
             reference = item.get(key)
             if isinstance(reference, dict):
@@ -8997,6 +9000,40 @@ def _invocation_binding_identity(value: Any) -> dict[str, Any]:
     return {"status": status, **identity}
 
 
+def _invocation_effect_target(value: Any) -> dict[str, Any] | None:
+    """Project an explicit provider effect target without exposing checkout paths."""
+    if not isinstance(value, dict):
+        return None
+
+    def bounded_identity(item: Any, limit: int) -> str | None:
+        if (not isinstance(item, str) or not item or len(item) > limit
+                or any(ord(character) < 32 or ord(character) == 127
+                       for character in item)):
+            return None
+        return item
+
+    repository = bounded_identity(value.get("repository"), 160)
+    branch = bounded_identity(value.get("branch"), 160)
+    checkout_identity = bounded_identity(value.get("checkout_identity"), 160)
+    if repository is None:
+        return {"status": "invalid"}
+    result: dict[str, Any] = {
+        "status": "recorded" if branch is not None else "partial",
+        "repository": repository,
+        "branch_status": "recorded" if branch is not None else "unavailable",
+    }
+    if branch is not None:
+        result["branch"] = branch
+    if checkout_identity is not None:
+        result["checkout_identity"] = checkout_identity
+    if value.get("kind", value.get("scope_kind")) == "worktree":
+        result["scope_kind"] = "worktree"
+    preflight_event = _event_reference(value.get("preflight_event"))
+    if preflight_event is not None:
+        result["preflight_event"] = preflight_event
+    return result
+
+
 def _context_response_binding_inclusion(
     binding: dict[str, Any], response_summaries: list[dict[str, Any]],
     context_supporting_events: list[dict[str, Any]], *,
@@ -12154,6 +12191,9 @@ def _session_activity(
             "completion_event": completion_reference,
             "binding_identity": _invocation_binding_identity(payload),
         }
+        effect_target = _invocation_effect_target(payload.get("effect_target"))
+        if effect_target is not None:
+            interaction["effect_target"] = effect_target
         interactions.append(interaction)
         if len(interactions) >= MAX_SESSION_ACTIVITY_INTERACTIONS:
             break
