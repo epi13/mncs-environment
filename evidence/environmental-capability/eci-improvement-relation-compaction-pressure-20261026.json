@@ -1,0 +1,79 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_improvement_relation_compaction_pressure_20261026",
+  "captured_at": "2026-10-26T03:18:50Z",
+  "measurement_basis": "paired-bounded-live-environmental-capability-projection-queries",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_f7c0d6f1d6830469"
+    }
+  },
+  "observation": {
+    "kind": "environmental-improvement-relation-omitted-by-bounded-projection",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 4 --evidence-limit 24",
+      "projection_identity": "eci_c9378a9f6b9c031d",
+      "baseline_observation_time_status": "not-recorded",
+      "campaign_state_checkpoint_id": "chk_f7c0d6f1d6830469",
+      "selected_evidence_reference_count": 18
+    },
+    "outcome": {
+      "baseline_compact_response_bytes": 45555,
+      "response_limit_bytes": 49152,
+      "response_truncated": true,
+      "observation_count": 14,
+      "observation_records_compacted_out_count": 14,
+      "pressure_hypothesis_count": 4,
+      "returned_pressure_hypothesis_summary_count": 0,
+      "improvement_relation_count": 1,
+      "returned_improvement_relation_count": 0,
+      "returned_observation_summary_count": 0,
+      "interpretation": "The bounded response reported one improvement relation and four pressure hypotheses by count, but returned no corresponding relation, hypothesis, or observation summaries. The source evidence remained in the campaign ledger; the selected broad projection did not expose the counted relationship for direct inspection.",
+      "pressure_limits": [
+        "This is one projection response; recurrence under other workloads is not established.",
+        "An omitted compact summary does not mean the source evidence or improvement is absent.",
+        "This observation does not attribute the response size to any agent's efficiency or behavior."
+      ]
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_improvement_relation_compaction",
+    "title": "Bounded environmental-capability responses can count but omit improvement relationships",
+    "category": "environmental-observation",
+    "subsystem": "MNCS Environment environmental-capability response compaction",
+    "owner": "mncs-environment",
+    "basis": "A live campaign projection selected 18 evidence references and returned count fields for one improvement relation and four pressure hypotheses, while its compact relationship, hypothesis, and observation arrays were empty.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "When compacting an oversized environmental-capability response, omit lower-priority nested owner-audit detail payloads before discarding improvement and pressure relationships; retain their exact evidence pointers and disclose each omission.",
+    "not_measured": [
+      "recurrence of this compaction outcome across campaigns or input sizes",
+      "whether another agent attempted to inspect this exact response",
+      "whether the omitted summaries changed a development decision",
+      "the long-term response-size distribution for environmental-capability projections"
+    ]
+  },
+  "measurement_limits": [
+    "The baseline query's exact wall-clock time was not recorded; it occurred in this campaign session before the compactor change.",
+    "The output counts are direct projection values; the interpretation concerns their absent returned arrays.",
+    "Source record integrity, agent use, causality, recurrence, and effectiveness are separate questions."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_capability_intelligence_baseline_compaction",
+      "kind": "source-code-baseline",
+      "repository": "mncs-environment",
+      "commit": "33a98deb78a72e46f70e1f738f72e969e1cb4983",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "19dbd7e5e4b13acb455529c85d5ef49a1cc12325230db0e95c33e04f8c0d681e",
+      "verified_behavior": "The response reducer removed observation and pressure summaries before removing improvement relations, so a bounded output could retain counts while omitting the inspectable relationship entries."
+    }
+  ]
+}

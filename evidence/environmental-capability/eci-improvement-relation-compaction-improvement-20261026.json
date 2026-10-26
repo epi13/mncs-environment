@@ -1,0 +1,111 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_improvement_relation_compaction_improvement_20261026",
+  "captured_at": "2026-10-26T03:18:50Z",
+  "measurement_basis": "committed-projection-change-targeted-regression-tests-and-live-readback",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection compactor",
+    "request": {
+      "pressure_identity": "ph_environment_eci_improvement_relation_compaction",
+      "implementation_commit": "f37cbefcdea084e279126ab22dba82f6bc2645ed",
+      "verification_observation_identity": "ev_environment_eci_improvement_relation_compaction_verification_20261026"
+    },
+    "outcome": {
+      "implementation_change": "When a compact response exceeds its byte budget, the reducer now omits nested owner-audit source-detail entries one at a time before deleting environmental observation summaries. It preserves exact supporting source references and adds source_audit_details_truncated plus source_audit_details_omitted_count to disclose the reduction.",
+      "implementation_scope": "mncs_env.capability_intelligence._compact_projection",
+      "observed_after_change": {
+        "broad_projection_compact_bytes": 42368,
+        "broad_projection_limit_bytes": 49152,
+        "owner_audit_source_details_omitted_count": 2,
+        "improvement_relation_summary_count": 1,
+        "matching_pressure_hypothesis_summary_count": 1,
+        "verified_implementation_pointer_status": "content-integrity-verified",
+        "verification_record_status": "record-integrity-verified-in-projection"
+      },
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The broad response still omits detailed observation summaries. A narrower evidence page exposes four verified source observation summaries and the linked relation; longer-term behavior under other workloads and use by later agents remain unobserved."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_improvement_relation_compaction",
+    "title": "Bounded environmental-capability responses can count but omit improvement relationships",
+    "category": "environmental-observation",
+    "subsystem": "MNCS Environment environmental-capability response compaction",
+    "owner": "mncs-environment",
+    "basis": "A live campaign projection selected 18 evidence references and returned count fields for one improvement relation and four pressure hypotheses, while its compact relationship, hypothesis, and observation arrays were empty.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "When compacting an oversized environmental-capability response, omit lower-priority nested owner-audit detail payloads before discarding improvement and pressure relationships; retain their exact evidence pointers and disclose each omission.",
+    "not_measured": [
+      "recurrence of this compaction outcome across campaigns or input sizes",
+      "whether another agent attempted to inspect this exact response",
+      "whether the omitted summaries changed a development decision",
+      "the long-term response-size distribution for environmental-capability projections"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_improvement_relation_compaction",
+    "addresses_hypothesis_identity": "ph_environment_eci_improvement_relation_compaction",
+    "implementation_reference": {
+      "identity": "mncs_environment_preserve_verified_relationships_f37cbef",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "f37cbefcdea084e279126ab22dba82f6bc2645ed",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "a53f9ec1c9ab7112b529f4bfe9797a680f8e51ebb35341bbdf1fb8d43f90a641"
+    },
+    "verification_observation_identity": "ev_environment_eci_improvement_relation_compaction_verification_20261026",
+    "subsequent_observation_identity": null,
+    "basis": "The committed reducer preferentially omits lower-priority nested owner-audit details, retains exact source references, and exposes the pressure and verified improvement relation in a broad live projection. Targeted regression tests cover this behavior. A narrow projection page returns the four source observations and resolves the existing implementation relation and its verification record.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "whether subsequent agents can discover and use the improved relationship projection",
+      "whether later observations show lower recurrence of the compaction pressure",
+      "whether compact projections with different large evidence mixes retain the same relationship detail",
+      "whether source audit detail removal is optimal for every projection consumer"
+    ]
+  },
+  "measurement_limits": [
+    "The change does not eliminate response truncation or guarantee that every observation summary fits.",
+    "Exact source pointers are preserved; omitted nested owner-audit detail must be read from its authoritative source when needed.",
+    "A test and immediate live readback establish behavior for the covered inputs, not long-term effectiveness."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_preserve_verified_relationships_f37cbef",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "f37cbefcdea084e279126ab22dba82f6bc2645ed",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "a53f9ec1c9ab7112b529f4bfe9797a680f8e51ebb35341bbdf1fb8d43f90a641",
+      "verified_behavior": "Trims nested owner-audit detail entries before environmental observation summaries and records omitted counts."
+    },
+    {
+      "identity": "mncs_environment_test_projection_improvement_priority_f37cbef",
+      "kind": "committed-test-source",
+      "repository": "mncs-environment",
+      "commit": "f37cbefcdea084e279126ab22dba82f6bc2645ed",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "129ad456281ef231cbd095c1ed486fbb4a0a3f908b74e1c82288b62dc67d429b",
+      "verified_behavior": "Regression test verifies compact evidence retains the pressure, implementation, verification and follow-up references while disclosing omitted owner-audit detail."
+    },
+    {
+      "identity": "mncs_environment_docs_projection_compaction_f37cbef",
+      "kind": "committed-documentation-source",
+      "repository": "mncs-environment",
+      "commit": "f37cbefcdea084e279126ab22dba82f6bc2645ed",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "ac2f1eeb4282a39269afc5e06904fb50dbc761dcd647def8c60a683c508559a2",
+      "verified_behavior": "Documents bounded projection omission fields and source-pointer behavior."
+    }
+  ]
+}

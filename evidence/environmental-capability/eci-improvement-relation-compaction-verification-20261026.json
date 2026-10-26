@@ -1,0 +1,135 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_improvement_relation_compaction_verification_20261026",
+  "captured_at": "2026-10-26T03:18:50Z",
+  "measurement_basis": "targeted-existing-regression-tests-and-live-campaign-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_f7c0d6f1d6830469"
+    }
+  },
+  "observation": {
+    "kind": "environmental-improvement-verification",
+    "source_interface": "MNCS Environment environmental-capability projection and existing test suite",
+    "request": {
+      "implementation_commit": "f37cbefcdea084e279126ab22dba82f6bc2645ed",
+      "projection_commands": [
+        "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 4 --evidence-limit 24",
+        "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 1 --evidence-limit 5 --evidence-offset 13"
+      ],
+      "test_commands": [
+        "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py -k 'compact_projection or improvement_relation'",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "python -m py_compile mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "focused_tests": {
+        "passed": 8,
+        "failed": 0,
+        "deselected": 99
+      },
+      "ruff": "passed",
+      "python_syntax_compilation": "passed",
+      "git_diff_check": "passed",
+      "implementation_commit": "f37cbefcdea084e279126ab22dba82f6bc2645ed",
+      "broad_projection": {
+        "identity": "eci_c9378a9f6b9c031d",
+        "status": "partial",
+        "compact_bytes": 42368,
+        "response_limit_bytes": 49152,
+        "pre_compaction_response_bytes": 175362,
+        "campaign_checkpoint_id": "chk_f7c0d6f1d6830469",
+        "campaign_evidence_count": 18,
+        "observation_records_verified": 14,
+        "observation_records_unavailable": 2,
+        "improvement_relation_summary_count": 1,
+        "matching_pressure_hypothesis_summary_count": 1,
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "owner_audit_source_detail_omitted_count": 2,
+        "observation_summary_count": 0
+      },
+      "narrow_projection": {
+        "identity": "eci_b0830d72b6c4edcb",
+        "status": "partial",
+        "compact_bytes": 40062,
+        "pre_compaction_response_bytes": 56686,
+        "campaign_checkpoint_id": "chk_f7c0d6f1d6830469",
+        "campaign_evidence_count": 18,
+        "evidence_page_offset": 13,
+        "evidence_page_limit": 5,
+        "observation_records_verified": 4,
+        "observation_records_unavailable": 0,
+        "returned_observation_identities": [
+          "ev_environment_charter_index_selection_verification_20261026",
+          "ev_environment_native_capability_source_work_context_pressure_20261026",
+          "ev_environment_native_capability_source_work_context_improvement_20261026",
+          "ev_environment_native_capability_source_work_context_verification_20261026"
+        ],
+        "improvement_relation_identity": "im_environment_native_capability_source_work_context",
+        "pressure_hypothesis_status": "present-in-projection",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "not-recorded",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "interpretation": "The targeted regression verifies that a bounded result keeps the linked pressure, improvement relation, and implementation, verification, and follow-up evidence pointers while disclosing owner-audit source-detail omission. In the live broad campaign projection, the prior improvement relation and matching pressure summary are now returned; two nested owner-audit detail records are explicitly marked omitted. A narrower page returns four verified source observation summaries, the exact pressure evidence pointer, and the relation's verified implementation and verification pointers. Both outputs remain partial because they are bounded; no long-term agent-use or effectiveness result is claimed.",
+      "subsequent_observation_identity": null
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_improvement_relation_compaction",
+    "title": "Bounded environmental-capability responses can count but omit improvement relationships",
+    "category": "environmental-observation",
+    "subsystem": "MNCS Environment environmental-capability response compaction",
+    "owner": "mncs-environment",
+    "basis": "A live campaign projection selected 18 evidence references and returned count fields for one improvement relation and four pressure hypotheses, while its compact relationship, hypothesis, and observation arrays were empty.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "When compacting an oversized environmental-capability response, omit lower-priority nested owner-audit detail payloads before discarding improvement and pressure relationships; retain their exact evidence pointers and disclose each omission.",
+    "not_measured": [
+      "recurrence of this compaction outcome across campaigns or input sizes",
+      "whether another agent attempted to inspect this exact response",
+      "whether the omitted summaries changed a development decision",
+      "the long-term response-size distribution for environmental-capability projections"
+    ]
+  },
+  "measurement_limits": [
+    "The broad view remains partial and does not include observation summaries, although its pressure and improvement entries retain exact evidence references.",
+    "The narrow query reads a selected page only; it does not repair or reinterpret other invalid historical observations.",
+    "The command results and projection statuses are recorded evidence, not an independent Environment attestation of long-term effectiveness.",
+    "A future observation from another agent or workload is not yet available."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_preserve_verified_relationships_f37cbef",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "f37cbefcdea084e279126ab22dba82f6bc2645ed",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "a53f9ec1c9ab7112b529f4bfe9797a680f8e51ebb35341bbdf1fb8d43f90a641"
+    },
+    {
+      "identity": "mncs_environment_test_projection_improvement_priority_f37cbef",
+      "kind": "committed-test-source",
+      "repository": "mncs-environment",
+      "commit": "f37cbefcdea084e279126ab22dba82f6bc2645ed",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "129ad456281ef231cbd095c1ed486fbb4a0a3f908b74e1c82288b62dc67d429b"
+    },
+    {
+      "identity": "mncs_environment_docs_projection_compaction_f37cbef",
+      "kind": "committed-documentation-source",
+      "repository": "mncs-environment",
+      "commit": "f37cbefcdea084e279126ab22dba82f6bc2645ed",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "ac2f1eeb4282a39269afc5e06904fb50dbc761dcd647def8c60a683c508559a2"
+    }
+  ]
+}
