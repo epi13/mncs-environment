@@ -1,0 +1,118 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_pressure_hypothesis_role_ledger_readback_20261026",
+  "captured_at": "2026-10-26T03:28:23Z",
+  "measurement_basis": "post-checkpoint-campaign-projection-readback-and-full-target-module-verification",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_7b53e41896bc4967"
+    }
+  },
+  "observation": {
+    "kind": "environmental-improvement-ledger-readback",
+    "source_interface": "MNCS Environment environmental-capability projection and existing test suite",
+    "request": {
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 1 --evidence-limit 10 --evidence-offset 18",
+      "campaign_state_checkpoint_id": "chk_7b53e41896bc4967",
+      "test_command": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py"
+    },
+    "outcome": {
+      "projection": {
+        "identity": "eci_a658a2e1ddfa67be",
+        "status": "partial",
+        "compact_bytes": 45615,
+        "response_limit_bytes": 49152,
+        "pre_compaction_bytes": 81381,
+        "campaign_evidence_count": 28,
+        "evidence_page_offset": 18,
+        "evidence_page_limit": 10,
+        "observation_records_considered": 10,
+        "observation_records_verified": 8,
+        "observation_records_unavailable": 0,
+        "record_corrections_applied_count": 2,
+        "record_corrections_unverified_count": 0
+      },
+      "role_improvement_relation": {
+        "identity": "im_environment_eci_pressure_hypothesis_role",
+        "pressure_hypothesis_status": "present-in-projection",
+        "verification_observation_identity": "ev_environment_eci_pressure_hypothesis_role_verification_20261026",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "implementation_commit": "814205607e749943a864e31f1b0e6998e5e1a264",
+        "implementation_content_integrity_status": "content-integrity-verified",
+        "subsequent_record_status": "not-recorded",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "pressure_hypotheses": {
+        "ph_environment_eci_improvement_relation_compaction": {
+          "observation_count": 1,
+          "recurrence_status": "not-established"
+        },
+        "ph_environment_eci_pressure_hypothesis_role": {
+          "observation_count": 1,
+          "recurrence_status": "not-established"
+        }
+      },
+      "corrected_records": [
+        {
+          "identity": "ev_environment_eci_improvement_relation_compaction_improvement_20261026",
+          "pressure_hypothesis_role": "supporting-context",
+          "record_correction_status": "corrected-by-verified-record"
+        },
+        {
+          "identity": "ev_environment_eci_improvement_relation_compaction_verification_20261026",
+          "pressure_hypothesis_role": "supporting-context",
+          "record_correction_status": "corrected-by-verified-record"
+        }
+      ],
+      "full_target_module_tests": {
+        "command": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py",
+        "passed": 108,
+        "failed": 0
+      },
+      "ruff": "passed",
+      "python_syntax_compilation": "passed",
+      "git_diff_check": "passed",
+      "interpretation": "After the role-aware implementation and both exact append-only corrections were included in the campaign checkpoint, the projection resolved the new improvement link to its pressure hypothesis, verified the referenced verification record and implementation content, and reported both correction applications. Each hypothesis has one occurrence in this selected evidence page, so recurrence is not established. The improvement's lasting effectiveness and subsequent agent use remain unassessed.",
+      "subsequent_observation_identity": null
+    }
+  },
+  "measurement_limits": [
+    "The query reads a selected evidence page, not the full campaign history.",
+    "The compact projection remains partial because its 81,381-byte full response is reduced to fit the 49,152-byte limit.",
+    "The readback establishes link resolution and correction application for this page; it does not establish later agent use or long-term effectiveness.",
+    "A recurrence status of not-established is not a claim that the underlying pressure is resolved."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_distinguish_pressure_context_8142056",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "814205607e749943a864e31f1b0e6998e5e1a264",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "f84ee164b9e48af83eb88211b0eaf9e4264d6913709e70d2f6aa38787100e13b"
+    },
+    {
+      "identity": "mncs_environment_test_pressure_context_correction_8142056",
+      "kind": "committed-test-source",
+      "repository": "mncs-environment",
+      "commit": "814205607e749943a864e31f1b0e6998e5e1a264",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "2f38dbd7a365b03f49be7caee44b9962e155b15b37fd7a507ef3636cbd19c92b"
+    },
+    {
+      "identity": "ev_environment_eci_pressure_hypothesis_role_verification_20261026",
+      "kind": "committed-verification-observation",
+      "repository": "mncs-environment",
+      "commit": "0700d50a3d367d61e095735bce1055cb29680a59",
+      "path": "evidence/environmental-capability/eci-pressure-hypothesis-role-verification-20261026.json",
+      "sha256": "c108113fcc540867d4dba0531a0fe0cc02bf49ca81c11d21a947898381fac20d"
+    }
+  ]
+}
