@@ -1517,6 +1517,65 @@ def _compact_delivery_binding(value: Any) -> dict[str, Any] | None:
     return result
 
 
+def _compact_count_map(value: Any, *, key_limit: int = 64) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        _short_text(key, key_limit): count
+        for key, count in sorted(
+            (
+                (key, count)
+                for key, count in value.items()
+                if isinstance(key, str) and type(count) is int and count >= 0
+            ),
+            key=lambda item: item[0],
+        )[:8]
+    }
+
+
+def _compact_binding_evidence_summary(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    summary = {
+        key: _short_text(value[key], limit)
+        for key, limit in (
+            ("schema_version", 96), ("source_basis", 128),
+            ("event_window_status", 64), ("discoverability_status", 64),
+            ("agent_receipt_status", 64), ("interpretation_limit", 512),
+        )
+        if isinstance(value.get(key), str)
+    }
+    for key in (
+        "binding_count", "exact_binding_invoked_binding_count",
+        "exact_binding_invocation_count", "exact_binding_completion_count",
+        "binding_details_omitted_count", "binding_records_not_examined",
+        "binding_records_invalid",
+    ):
+        count = value.get(key)
+        if type(count) is int and count >= 0:
+            summary[key] = count
+    if type(value.get("event_window_complete_history")) is bool:
+        summary["event_window_complete_history"] = value[
+            "event_window_complete_history"
+        ]
+    if type(value.get("binding_details_truncated")) is bool:
+        summary["binding_details_truncated"] = value[
+            "binding_details_truncated"
+        ]
+    for key in (
+        "availability_status_counts",
+        "context_response_inclusion_status_counts",
+        "use_observation_status_counts",
+        "binding_attribution_status_counts",
+        "context_response_use_sequence_status_counts",
+        "exact_binding_outcome_status_counts",
+    ):
+        counts = _compact_count_map(value.get(key))
+        if counts:
+            summary[key] = counts
+    return summary
+
+
 def _selected_session_delivery_observation(
     contract: Any, delivery: Any, *, session_id: str,
 ) -> dict[str, Any] | None:
@@ -2612,6 +2671,26 @@ def _compact_projection(
         compact_capability_delivery["bindings"] = compact_capability_bindings
         if len(raw_capability_bindings) > len(compact_capability_bindings):
             compact_capability_delivery["bindings_truncated"] = True
+    binding_evidence_summary = _compact_binding_evidence_summary(
+        raw_capability_delivery.get("binding_evidence_summary"),
+    )
+    if binding_evidence_summary is not None:
+        omitted_details = binding_evidence_summary.get(
+            "binding_details_omitted_count", 0,
+        )
+        omitted_details = omitted_details if type(omitted_details) is int else 0
+        omitted_details += max(
+            0, len(raw_capability_bindings) - len(compact_capability_bindings),
+        )
+        binding_evidence_summary["binding_details_omitted_count"] = omitted_details
+        binding_evidence_summary["binding_details_truncated"] = (
+            binding_evidence_summary.get("binding_details_truncated") is True
+            or omitted_details > 0
+            or len(raw_capability_bindings) > len(compact_capability_bindings)
+        )
+        compact_capability_delivery[
+            "binding_evidence_summary"
+        ] = binding_evidence_summary
     transition_events = raw_capability_delivery.get("availability_transition_events")
     if isinstance(transition_events, list):
         compact_capability_delivery["availability_transition_events"] = [
@@ -3199,6 +3278,17 @@ def _compact_projection(
             elif delivery_result.get("bindings"):
                 delivery_result["bindings"].pop()
                 delivery_result["bindings_truncated"] = True
+                binding_summary = delivery_result.get(
+                    "binding_evidence_summary",
+                )
+                if isinstance(binding_summary, dict):
+                    binding_summary["binding_details_omitted_count"] = (
+                        binding_summary.get("binding_details_omitted_count", 0) + 1
+                        if type(binding_summary.get(
+                            "binding_details_omitted_count",
+                        )) is int else 1
+                    )
+                    binding_summary["binding_details_truncated"] = True
                 continue
             elif delivery_result.get("availability_transition_events"):
                 delivery_result["availability_transition_events"].pop()
@@ -7170,6 +7260,98 @@ def _context_response_use_sequence_relation(
     }
 
 
+def _capability_binding_evidence_summary(
+    bindings: list[dict[str, Any]], *, availability_counts: dict[str, int],
+    complete_history: bool, binding_details_omitted_count: int,
+    binding_records_not_examined: int, binding_records_invalid: int,
+) -> dict[str, Any]:
+    def status_counts(field: str, nested_field: str | None = None) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for binding in bindings:
+            value = binding.get(field)
+            if nested_field is not None:
+                value = value.get(nested_field) if isinstance(value, dict) else None
+            if isinstance(value, str) and value:
+                counts[value] = counts.get(value, 0) + 1
+        return dict(sorted(counts.items())[:8])
+
+    exact_bindings = [
+        binding for binding in bindings
+        if binding.get("use_observation_status")
+        == "invoked-for-exact-session-binding"
+        and binding.get("binding_attribution_status")
+        == "exact-session-binding-observed-in-selected-window"
+        and binding.get("invocation_count_basis")
+        == "exact-session-binding-identity"
+    ]
+    exact_outcomes: dict[str, int] = {}
+    for binding in exact_bindings:
+        outcomes = binding.get("outcome_status_counts")
+        if not isinstance(outcomes, dict):
+            continue
+        for outcome, count in outcomes.items():
+            if isinstance(outcome, str) and type(count) is int and count >= 0:
+                exact_outcomes[outcome] = exact_outcomes.get(outcome, 0) + count
+
+    return {
+        "schema_version": "mncs.environment.capability-binding-evidence-summary/1",
+        "source_basis": (
+            "current-session-binding-snapshot-and-selected-session-event-window"
+        ),
+        "binding_count": len(bindings),
+        "availability_status_counts": dict(sorted(availability_counts.items())[:8]),
+        "context_response_inclusion_status_counts": status_counts(
+            "context_response_inclusion", "status",
+        ),
+        "use_observation_status_counts": status_counts(
+            "use_observation_status",
+        ),
+        "binding_attribution_status_counts": status_counts(
+            "binding_attribution_status",
+        ),
+        "context_response_use_sequence_status_counts": status_counts(
+            "context_response_use_sequence_relation", "status",
+        ),
+        "exact_binding_invoked_binding_count": sum(
+            type(binding.get("invocation_count")) is int
+            and binding["invocation_count"] > 0
+            for binding in exact_bindings
+        ),
+        "exact_binding_invocation_count": sum(
+            binding.get("invocation_count", 0)
+            for binding in exact_bindings
+            if type(binding.get("invocation_count")) is int
+            and binding["invocation_count"] >= 0
+        ),
+        "exact_binding_completion_count": sum(
+            binding.get("completion_count", 0)
+            for binding in exact_bindings
+            if type(binding.get("completion_count")) is int
+            and binding["completion_count"] >= 0
+        ),
+        "exact_binding_outcome_status_counts": dict(
+            sorted(exact_outcomes.items())[:8]
+        ),
+        "event_window_status": (
+            "complete-session-history" if complete_history
+            else "selected-event-window"
+        ),
+        "event_window_complete_history": complete_history,
+        "discoverability_status": "not-measured",
+        "agent_receipt_status": "not-established",
+        "binding_details_truncated": binding_details_omitted_count > 0,
+        "binding_details_omitted_count": max(0, binding_details_omitted_count),
+        "binding_records_not_examined": max(0, binding_records_not_examined),
+        "binding_records_invalid": max(0, binding_records_invalid),
+        "interpretation_limit": (
+            "Status counts summarize the current binding snapshot and selected "
+            "Environment event history. Context inclusion records response "
+            "evidence, not agent receipt or discovery; invocation counts do not "
+            "include direct external tool activity."
+        ),
+    }
+
+
 def _capability_delivery_view(
     snapshot: dict[str, Any], capability_summaries: list[dict[str, Any]],
     interactions: list[dict[str, Any]], events: list[dict[str, Any]],
@@ -7667,6 +7849,13 @@ def _capability_delivery_view(
     binding_records_not_examined = max(
         0, len(raw_bindings) - len(examined_bindings),
     )
+    binding_evidence_summary = _capability_binding_evidence_summary(
+        binding_records, availability_counts=availability_counts,
+        complete_history=complete_history,
+        binding_details_omitted_count=omitted_bindings,
+        binding_records_not_examined=binding_records_not_examined,
+        binding_records_invalid=invalid_binding_count,
+    )
     outside_inventory.sort(key=lambda item: item["capability"])
     return {
         "status": (
@@ -7682,6 +7871,7 @@ def _capability_delivery_view(
         "availability_counts": dict(sorted(availability_counts.items())),
         "bindings_omitted": omitted_bindings,
         "bindings": binding_records[:MAX_SESSION_ACTIVITY_BINDINGS],
+        "binding_evidence_summary": binding_evidence_summary,
         "availability_transition_event_count": transition_count,
         "availability_transition_events_omitted": max(
             0, transition_count - len(transition_events),

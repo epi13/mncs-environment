@@ -1929,6 +1929,23 @@ def test_capability_use_is_attributed_to_the_exact_historical_binding(
     )
     assert provider_two["invocation_count"] == 0
     assert provider_two["supporting_events"] == []
+    evidence_summary = delivery["binding_evidence_summary"]
+    assert evidence_summary["schema_version"] == (
+        "mncs.environment.capability-binding-evidence-summary/1"
+    )
+    assert evidence_summary["binding_count"] == 2
+    assert evidence_summary["context_response_inclusion_status_counts"] == {
+        "not-observed-in-session-history": 2,
+    }
+    assert evidence_summary["use_observation_status_counts"] == {
+        "capability-invoked; no-exact-invocation-for-this-binding": 1,
+        "invoked-for-exact-session-binding": 1,
+    }
+    assert evidence_summary["exact_binding_invoked_binding_count"] == 1
+    assert evidence_summary["exact_binding_invocation_count"] == 1
+    assert evidence_summary["exact_binding_completion_count"] == 1
+    assert evidence_summary["discoverability_status"] == "not-measured"
+    assert evidence_summary["agent_receipt_status"] == "not-established"
 
     compact = capability_intelligence._compact_projection(
         capability_intelligence.project(session),
@@ -1949,6 +1966,11 @@ def test_capability_use_is_attributed_to_the_exact_historical_binding(
     assert compact_provider_one["binding_attribution_status"] == (
         "exact-session-binding-observed-in-selected-window"
     )
+    compact_summary = compact["session_activity"]["capability_delivery"][
+        "binding_evidence_summary"
+    ]
+    assert compact_summary["exact_binding_invocation_count"] == 1
+    assert compact_summary["binding_details_truncated"] is False
 
     events[1]["payload"]["binding_id"] = "cap_wrong_provider"
     inconsistent = capability_intelligence.project(session)["session_activity"]
@@ -1958,6 +1980,123 @@ def test_capability_use_is_attributed_to_the_exact_historical_binding(
     )
     assert inconsistent_interaction["completion_event"] is None
     assert inconsistent_interaction["outcome_status"] is None
+
+
+def test_capability_binding_summary_survives_response_budget_trimming(
+    tmp_path: Path,
+) -> None:
+    assert capability_intelligence._compact_count_map({
+        "invalid": "not-a-count", "valid": 1,
+    }) == {"valid": 1}
+    record = _observation(
+        "ev_environment_binding_summary_budget",
+        "ses_binding_summary_budget",
+        "cmp_binding_summary_budget",
+    )
+    session, _state = _session(tmp_path, [record])
+    session.snapshot["bindings"] = []
+    session.recent_events = lambda *, limit: {
+        "event_count": 0, "events": [], "truncated": False,
+    }
+    projection = capability_intelligence.project(session)
+    delivery = projection["session_activity"]["capability_delivery"]
+
+    bindings = []
+    for index in range(9):
+        exact_use = index == 0
+        references = [
+            {
+                "identity": f"evt_{index}_{event_index}_" + "x" * 320,
+                "sequence": event_index,
+                "type": "capability.invoked",
+            }
+            for event_index in range(3)
+        ]
+        bindings.append({
+            "provider": f"provider-{index}",
+            "capability": f"mncs-capability-{index}",
+            "availability_status": "available",
+            "binding_id": f"cap_binding_{index}",
+            "contract_revision": "1",
+            "use_observation_status": (
+                "invoked-for-exact-session-binding" if exact_use else
+                "no-environment-invocation-record-in-session-history"
+            ),
+            "binding_attribution_status": (
+                "exact-session-binding-observed-in-selected-window" if exact_use else
+                "no-exact-binding-use-in-session-history"
+            ),
+            "invocation_count_basis": (
+                "exact-session-binding-identity" if exact_use else
+                "no-invocation-record"
+            ),
+            "invocation_count": 2 if exact_use else 0,
+            "completion_count": 1 if exact_use else 0,
+            "outcome_status_counts": {"succeeded": 1} if exact_use else {},
+            "supporting_events": references if exact_use else [],
+            "context_response_inclusion": {
+                "status": "exact-binding-id-in-response",
+                "supporting_events": references[:1],
+            },
+            "context_response_use_sequence_relation": {
+                "status": "invocation-observed-after-context-response"
+                if exact_use else "no-exact-binding-invocation-in-session-history",
+            },
+        })
+    delivery.update({
+        "binding_count": len(bindings),
+        "bindings": bindings,
+        "bindings_omitted": 0,
+        "availability_counts": {"available": len(bindings)},
+        "binding_evidence_summary": (
+            capability_intelligence._capability_binding_evidence_summary(
+                bindings,
+                availability_counts={"available": len(bindings)},
+                complete_history=True,
+                binding_details_omitted_count=0,
+                binding_records_not_examined=0,
+                binding_records_invalid=0,
+            )
+        ),
+    })
+
+    delivery_without_rows = dict(delivery)
+    delivery_without_rows["bindings"] = []
+    projection_without_rows = dict(projection)
+    projection_without_rows["session_activity"] = dict(
+        projection["session_activity"],
+    )
+    projection_without_rows["session_activity"]["capability_delivery"] = (
+        delivery_without_rows
+    )
+    minimal = capability_intelligence._compact_projection(
+        projection_without_rows, 100_000, 100_000,
+    )
+    minimum_size = len(json.dumps(
+        minimal, ensure_ascii=False, sort_keys=True,
+    ).encode("utf-8"))
+    budget = minimum_size + 96
+
+    compact = capability_intelligence._compact_projection(
+        projection, 100_000, budget,
+    )
+    compact_delivery = compact["session_activity"]["capability_delivery"]
+    summary = compact_delivery["binding_evidence_summary"]
+
+    assert compact_delivery["bindings"] == []
+    assert compact_delivery["bindings_truncated"] is True
+    assert summary["binding_details_truncated"] is True
+    assert summary["binding_details_omitted_count"] == 9
+    assert summary["exact_binding_invocation_count"] == 2
+    assert summary["exact_binding_completion_count"] == 1
+    assert summary["context_response_inclusion_status_counts"] == {
+        "exact-binding-id-in-response": 9,
+    }
+    assert summary["discoverability_status"] == "not-measured"
+    assert summary["agent_receipt_status"] == "not-established"
+    assert len(json.dumps(
+        compact, ensure_ascii=False, sort_keys=True,
+    ).encode("utf-8")) <= budget
 
 
 def test_session_resource_sample_is_correlated_sanitized_and_compactable(

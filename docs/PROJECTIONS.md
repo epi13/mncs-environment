@@ -632,6 +632,18 @@ unmeasured. This delivery evidence is separate from
 `implementation_accountability`: an available capability does not establish
 native implementation ownership or migration readiness.
 
+If the environmental-capability response budget trims per-binding rows,
+`capability_delivery.binding_evidence_summary` preserves bounded counts for
+availability, context-response inclusion, observed use, binding attribution,
+and response-to-use sequence relationships. It includes invocation and outcome
+counts only for events attributed to the exact provider, binding ID, and
+contract revision. `binding_details_truncated` and
+`binding_details_omitted_count` show when the per-binding source references are
+not in this response; use a narrower event or evidence window to inspect them.
+The summary reports the selected event-window scope and keeps agent receipt
+`not-established` and discoverability `not-measured` even when a context
+response and invocation are recorded.
+
 When response compaction is needed, each pressure summary retains bounded exact
 evidence references (identity, repository, commit, path, and digest), so an
 agent can inspect the records supporting the hypothesis even when their full
