@@ -928,7 +928,9 @@ def cmd_invoke(args: argparse.Namespace) -> int:
             print("warning: provider invocation output was truncated by the capture limit",
                   file=sys.stderr)
             return 4
-        return 0 if result["status"] in ("ok", "pending-escalation") else 4
+        return 0 if result["status"] in (
+            "ok", "pending-escalation", "deferred-coordination",
+        ) else 4
     finally:
         session.close()
 

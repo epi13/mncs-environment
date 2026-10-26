@@ -232,6 +232,7 @@ MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES = 8
 MAX_SESSION_ACTIVITY_CLAIM_COORDINATION = 16
 MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 8
 MAX_SESSION_ACTIVITY_OPERATION_DEFERRALS = 8
+MAX_SESSION_ACTIVITY_COORDINATION_DEFERRALS = 8
 MAX_COMPACT_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 1
 MAX_SESSION_CLAIM_OWNER_EVENT_SESSIONS = 4
 MAX_SESSION_CLAIM_OWNER_EVENT_PAGE = 32
@@ -2850,6 +2851,11 @@ def _compact_projection(
             "proposal_eligibility_records_invalid",
             "proposal_preflight_state_observations_invalid",
             "proposal_eligibility_selection_policy",
+            "coordination_deferral_events_considered",
+            "coordination_deferral_records_returned",
+            "coordination_deferral_records_omitted",
+            "coordination_deferral_records_invalid",
+            "coordination_deferral_selection_policy",
             "repository_ref_transition_events_considered",
             "repository_ref_transition_records_returned",
             "repository_ref_transition_records_omitted",
@@ -3869,6 +3875,73 @@ def _compact_projection(
                 if key in reference
             }
         compact_authority_denials.append(compact_item)
+    compact_coordination_deferrals = []
+    raw_coordination_deferrals = activity.get("coordination_deferrals")
+    raw_coordination_deferrals = (
+        raw_coordination_deferrals
+        if isinstance(raw_coordination_deferrals, list) else []
+    )
+    for item in raw_coordination_deferrals[
+        :MAX_SESSION_ACTIVITY_COORDINATION_DEFERRALS
+    ]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in (
+                "identity", "action", "repository", "required_coordination",
+                "coordination_status", "next_step", "campaign_id",
+                "work_intent_id", "work_intent_reference_status",
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in ("persistent_authority_required", "operation_executed"):
+            if item.get(key) is False:
+                compact_item[key] = False
+        if isinstance(item.get("scope"), dict):
+            compact_item["scope"] = item["scope"]
+        reference = item.get("event_reference")
+        if isinstance(reference, dict):
+            compact_item["event_reference"] = {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in reference
+            }
+        compact_coordination_deferrals.append(compact_item)
+    compact_coordination_deferral_candidates = []
+    raw_coordination_deferral_candidates = activity.get(
+        "coordination_deferral_candidates",
+    )
+    raw_coordination_deferral_candidates = (
+        raw_coordination_deferral_candidates
+        if isinstance(raw_coordination_deferral_candidates, list) else []
+    )
+    for item in raw_coordination_deferral_candidates[:4]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in (
+                "identity", "status", "subsystem", "repository", "action",
+                "required_coordination", "recurrence_scope", "causal_claim",
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in ("occurrence_count", "distinct_session_count"):
+            if type(item.get(key)) is int:
+                compact_item[key] = item[key]
+        references = item.get("supporting_events")
+        if isinstance(references, list):
+            compact_item["supporting_events"] = [
+                {
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in reference
+                }
+                for reference in references[:4]
+                if isinstance(reference, dict)
+            ]
+        compact_coordination_deferral_candidates.append(compact_item)
     compact_integration_eligibility = []
     raw_integration_eligibility = activity.get("integration_eligibility")
     raw_integration_eligibility = (
@@ -4307,6 +4380,26 @@ def _compact_projection(
         compact_activity["authority_denials"] = compact_authority_denials
         if len(raw_authority_denials) > len(compact_authority_denials):
             compact_activity["authority_denials_truncated"] = True
+    if (raw_coordination_deferrals
+            or activity_source.get("coordination_deferral_events_considered", 0)):
+        compact_activity["coordination_deferral_count"] = activity.get(
+            "coordination_deferral_count", len(raw_coordination_deferrals),
+        )
+        compact_activity["coordination_deferrals"] = (
+            compact_coordination_deferrals
+        )
+        compact_activity["coordination_deferral_candidates"] = (
+            compact_coordination_deferral_candidates
+        )
+        compact_activity["coordination_deferral_candidate_count"] = activity.get(
+            "coordination_deferral_candidate_count",
+            len(raw_coordination_deferral_candidates),
+        )
+        if len(raw_coordination_deferrals) > len(compact_coordination_deferrals):
+            compact_activity["coordination_deferrals_truncated"] = True
+        if (len(raw_coordination_deferral_candidates)
+                > len(compact_coordination_deferral_candidates)):
+            compact_activity["coordination_deferral_candidates_truncated"] = True
     if raw_integration_eligibility:
         compact_activity["integration_eligibility_count"] = activity.get(
             "integration_eligibility_count", len(raw_integration_eligibility),
@@ -4855,6 +4948,18 @@ def _compact_projection(
         elif result["session_activity"].get("authority_denial_candidates"):
             result["session_activity"]["authority_denial_candidates"].pop()
             result["session_activity"]["authority_denial_candidates_truncated"] = True
+        elif result["session_activity"].get(
+            "coordination_deferral_candidates",
+        ):
+            result["session_activity"][
+                "coordination_deferral_candidates"
+            ].pop()
+            result["session_activity"][
+                "coordination_deferral_candidates_truncated"
+            ] = True
+        elif result["session_activity"].get("coordination_deferrals"):
+            result["session_activity"]["coordination_deferrals"].pop()
+            result["session_activity"]["coordination_deferrals_truncated"] = True
         elif result["session_activity"].get("authority_denials"):
             result["session_activity"]["authority_denials"].pop()
             result["session_activity"]["authority_denials_truncated"] = True
@@ -10418,7 +10523,7 @@ def _authority_event_objective_context(payload: dict[str, Any]) -> dict[str, str
 def _authority_conflict_scope(
     value: Any, repository: str,
 ) -> dict[str, Any] | None:
-    """Validate the bounded, path-sanitized scope attached to a denial."""
+    """Validate a bounded, path-sanitized authority or coordination scope."""
     if not isinstance(value, dict) or value.get("repository") != repository:
         return None
     kind = value.get("kind")
@@ -12845,6 +12950,10 @@ def _session_activity(
     denial_events = [
         event for event in events if event.get("type") == "authority.denied"
     ]
+    coordination_deferral_events = [
+        event for event in events
+        if event.get("type") == "authority.coordination-deferred"
+    ]
     integration_eligibility_events = [
         event for event in events
         if event.get("type") == "authority.integration-eligible"
@@ -12883,6 +12992,12 @@ def _session_activity(
             "with at most four current claim records; owner liveness is a "
             "point-in-time observation and does not prove that the original "
             "denial was appropriate."
+        )
+    if coordination_deferral_events:
+        limits.append(
+            "Coordination-deferred records describe operations withheld for a "
+            "scope or concurrency condition; they are not authority denials or "
+            "owner-approval requests, and do not prove the proposed work was invalid."
         )
     if claim_recovery_events:
         limits.append(
@@ -13201,6 +13316,120 @@ def _session_activity(
             candidate["repository"] = repository
         authority_denial_candidates.append(candidate)
         if len(authority_denial_candidates) >= (
+            MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES
+        ):
+            break
+    coordination_deferrals: list[dict[str, Any]] = []
+    invalid_coordination_deferral_event_count = 0
+    valid_coordination_deferral_count = 0
+    for event in reversed(coordination_deferral_events):
+        reference = _event_reference(event)
+        payload = event.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        action = payload.get("action")
+        repository = payload.get("repository")
+        required_coordination = payload.get("required_coordination")
+        coordination_status = payload.get("coordination_status")
+        next_step = payload.get("next_step")
+        scope = _authority_conflict_scope(payload.get("scope"), repository)
+        if (
+            reference is None
+            or not isinstance(action, str)
+            or action not in authority_module.ACTIONS
+            or not _is_repository_identity(repository)
+            or not isinstance(required_coordination, str)
+            or not 1 <= len(required_coordination) <= 96
+            or not isinstance(coordination_status, str)
+            or not 1 <= len(coordination_status) <= 96
+            or not isinstance(next_step, str)
+            or not 1 <= len(next_step) <= 160
+            or scope is None
+            or payload.get("decision_domain") != "coordination"
+            or payload.get("persistent_authority_required") is not False
+            or payload.get("operation_executed") is not False
+        ):
+            invalid_coordination_deferral_event_count += 1
+            continue
+        claim_conflict = _authority_claim_conflict(
+            payload.get("claim_conflict"), repository,
+        )
+        valid_coordination_deferral_count += 1
+        if len(coordination_deferrals) >= (
+            MAX_SESSION_ACTIVITY_COORDINATION_DEFERRALS
+        ):
+            continue
+        record = {
+            "identity": "coorddefer_" + digest_hex({
+                "session_id": session.session_id,
+                "event": reference["identity"],
+            }, length=16),
+            "action": action,
+            "repository": repository,
+            **_authority_event_objective_context(payload),
+            "required_coordination": required_coordination,
+            "coordination_status": coordination_status,
+            "next_step": next_step,
+            "persistent_authority_required": False,
+            "operation_executed": False,
+            "scope": scope,
+            "interpretation": (
+                "The Environment deferred this operation for coordination. "
+                "This is not an authority request or owner-approval requirement; "
+                "it does not establish that the proposed work is invalid."
+            ),
+            "event_reference": reference,
+        }
+        if claim_conflict is not None:
+            record["claim_conflict"] = claim_conflict
+        coordination_deferrals.append(record)
+    coordination_deferrals_omitted = max(
+        0, valid_coordination_deferral_count - len(coordination_deferrals),
+    )
+    coordination_deferral_groups: dict[
+        tuple[str, str, str], list[dict[str, Any]],
+    ] = {}
+    for item in coordination_deferrals:
+        coordination_deferral_groups.setdefault((
+            str(item["repository"]), str(item["action"]),
+            str(item["required_coordination"]),
+        ), []).append(item)
+    coordination_deferral_candidates = []
+    for (repository, action, required_coordination), group in sorted(
+        coordination_deferral_groups.items(),
+    ):
+        if len(group) < 2:
+            continue
+        candidate = {
+            "identity": "ph_coordination_" + digest_hex({
+                "session_id": session.session_id,
+                "repository": repository,
+                "action": action,
+                "required_coordination": required_coordination,
+            }, length=16),
+            "status": "candidate-needs-investigation",
+            "subsystem": "coordination-and-work-scope",
+            "repository": repository,
+            "action": action,
+            "required_coordination": required_coordination,
+            "occurrence_count": len(group),
+            "distinct_session_count": 1,
+            "recurrence_scope": "same-session-selected-event-window",
+            "causal_claim": "not-established",
+            "interpretation": (
+                "This coordination prerequisite recurred in one selected "
+                "session window. It may protect a real shared-state invariant "
+                "or reveal avoidable environmental friction; cause and "
+                "appropriateness remain unestablished."
+            ),
+            "supporting_events": [
+                item["event_reference"] for item in sorted(
+                    group,
+                    key=lambda row: row["event_reference"]["sequence"],
+                )[:8]
+            ],
+        }
+        coordination_deferral_candidates.append(candidate)
+        if len(coordination_deferral_candidates) >= (
             MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES
         ):
             break
@@ -13800,6 +14029,10 @@ def _session_activity(
          or invalid_proposal_eligibility_event_count)
             and not status.startswith("partial")):
         status = "partial"
+    if ((coordination_deferrals_omitted
+         or invalid_coordination_deferral_event_count)
+            and not status.startswith("partial")):
+        status = "partial"
     unpaired_completion_count = 0
     for event in completion_events:
         payload = event.get("payload")
@@ -13868,6 +14101,23 @@ def _session_activity(
             "authority_denial_selection_policy": (
                 "newest-sanitized-denials-in-selected-event-window"
             ),
+            **({
+                "coordination_deferral_events_considered": len(
+                    coordination_deferral_events,
+                ),
+                "coordination_deferral_records_returned": len(
+                    coordination_deferrals,
+                ),
+                "coordination_deferral_records_omitted": (
+                    coordination_deferrals_omitted
+                ),
+                "coordination_deferral_records_invalid": (
+                    invalid_coordination_deferral_event_count
+                ),
+                "coordination_deferral_selection_policy": (
+                    "newest-validated-coordination-deferrals-in-selected-session-window"
+                ),
+            } if coordination_deferral_events else {}),
             **({
                 "integration_eligibility_events_considered": len(
                     integration_eligibility_events,
@@ -14041,6 +14291,16 @@ def _session_activity(
         "authority_denial_count": len(authority_denials),
         "authority_denials": authority_denials,
         "authority_denial_candidates": authority_denial_candidates,
+        **({
+            "coordination_deferral_count": len(coordination_deferrals),
+            "coordination_deferrals": coordination_deferrals,
+            "coordination_deferral_candidate_count": len(
+                coordination_deferral_candidates,
+            ),
+            "coordination_deferral_candidates": (
+                coordination_deferral_candidates
+            ),
+        } if coordination_deferral_events else {}),
         **({
             "integration_eligibility_count": len(
                 integration_eligibility_records,
@@ -15492,7 +15752,9 @@ def project(
         "pressure_hypothesis_count": len(hypotheses),
         "session_activity_pressure_candidate_count": len(
             activity.get("rpc_failure_candidates", [])
-        ) + len(activity.get("authority_denial_candidates", [])),
+        ) + len(activity.get("authority_denial_candidates", [])) + len(
+            activity.get("coordination_deferral_candidates", [])
+        ),
         "improvement_relation_count": len(improvement_relations),
         "pressure_hypotheses": hypotheses,
         "improvement_relations": improvement_relations,

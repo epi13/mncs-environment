@@ -463,17 +463,21 @@ overlapping claim scopes as coordination evidence, and records the decision.
 It does not reserve the scope; the repository operation must enforce its own
 concurrent ref update. Supplying `--claim-id` is optional and uses only a live
 claim owned by the selected session. Claims remain available to describe
-concurrent work and to protect ordinary writes, delegated work, and retirement;
+concurrent work and coordinate ordinary writes, delegated work, and retirement;
 they do not grant merge or publish eligibility. Missing operation scope reports
-`required_authorization: operation-scope` only when Environment cannot resolve
+`required_coordination: operation-scope` only when Environment cannot resolve
 one registered destination from those sources; an explicit operation scope can
-then be supplied without asking for another agent's claim. Protected
+then be supplied without asking for another agent's claim or owner approval.
+Coordination-only prerequisites return `verdict: defer` and emit
+`authority.coordination-deferred`; they do not emit an authority escalation.
+The bounded `session_activity.coordination_deferrals` view exposes sanitized
+scope, required coordination, next step, objective references, and event
+provenance without copying local target paths or free-form reasons. Protected
 repositories, claim fences, and repositories outside the campaign's writable
-authority remain blocking conditions. Foreign
-overlap claims still block ordinary mutations; they are advisory for merge and
-publish, where Git's ref-update checks enforce concurrent integration.
-`retire` and `delegate` retain their existing claim requirements; `delete`
-remains owner-approval gated.
+authority remain blocking conditions. Foreign overlap claims still block
+ordinary mutations; they are advisory for merge and publish, where Git's
+ref-update checks enforce concurrent integration. `retire` and `delegate`
+retain scoped coordination requirements; `delete` remains owner-approval gated.
 
 Observation source summaries keep registration status separate from
 `content_integrity_status`. A selected source blob is marked

@@ -39,6 +39,14 @@ def test_scoped_delivery_uses_writable_rights_without_persistent_claim() -> None
             "path": scope["checkout"],
             "repository": "mncs-environment",
         },
+        "mncs-environment": {
+            **scope,
+            "path": scope["checkout"],
+            "repository": "mncs-environment",
+            "clean": False,
+            "main_branch": True,
+            "foreign_signals": ["dirty-tree"],
+        },
     }
 
     for action in ("merge", "publish"):
@@ -71,9 +79,13 @@ def test_scoped_delivery_uses_writable_rights_without_persistent_claim() -> None
             repo_facts=repo_facts,
             scope=scope,
         )
-        assert decision["verdict"] == "escalate"
-        assert decision["required_authorization"] == "session-claim"
-        assert decision["next_step"] == "acquire-exact-claim"
+        assert decision["verdict"] == "defer"
+        assert decision["required_coordination"] == (
+            "scoped-mutation-lease" if action == "retire"
+            else "isolated-worktree-or-exact-scope-lease"
+        )
+        assert "required_authorization" not in decision
+        assert decision["persistent_authority_required"] is False
 
     unscoped = authority.evaluate(
         context,
@@ -83,8 +95,9 @@ def test_scoped_delivery_uses_writable_rights_without_persistent_claim() -> None
         claims={},
         repo_facts=repo_facts,
     )
-    assert unscoped["verdict"] == "escalate"
-    assert unscoped["required_authorization"] == "operation-scope"
+    assert unscoped["verdict"] == "defer"
+    assert unscoped["required_coordination"] == "operation-scope"
+    assert "required_authorization" not in unscoped
 
 
 def test_owner_approval_remains_explicit_for_delete_escalation() -> None:

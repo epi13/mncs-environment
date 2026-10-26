@@ -165,10 +165,16 @@ class AuthorityTests(unittest.TestCase):
         # Intent names mncs-atlas, but dirty facts mean no implicit ownership.
         verdict = authority.evaluate(context_for(), action="write", target="mncs-atlas",
                                      session_id="ses_x", repo_facts=DIRTY_FACTS)
-        self.assertEqual(verdict["verdict"], "escalate")
+        self.assertEqual(verdict["verdict"], "defer")
         self.assertEqual(verdict["decision_domain"], "coordination")
         self.assertEqual(
-            verdict["coordination_status"], "exact-scope-lease-required",
+            verdict["required_coordination"],
+            "isolated-worktree-or-exact-scope-lease",
+        )
+        self.assertNotIn("required_authorization", verdict)
+        self.assertEqual(
+            verdict["coordination_status"],
+            "shared-checkout-needs-isolation-or-lease",
         )
         self.assertFalse(verdict["persistent_authority_required"])
 
@@ -902,12 +908,20 @@ class AuthorityTests(unittest.TestCase):
             ):
                 verdict = session.check(action="write", target="mncs-atlas")
 
-            self.assertEqual(verdict["verdict"], "escalate", verdict)
-            self.assertEqual(verdict["required_authorization"], "session-claim")
+            self.assertEqual(verdict["verdict"], "defer", verdict)
+            self.assertNotIn("required_authorization", verdict)
             self.assertEqual(
-                verdict["coordination_status"], "exact-scope-lease-required",
+                verdict["required_coordination"],
+                "isolated-worktree-or-exact-scope-lease",
             )
-            self.assertEqual(session._log()[-1]["type"], "authority.escalated")
+            self.assertEqual(
+                verdict["coordination_status"],
+                "shared-checkout-needs-isolation-or-lease",
+            )
+            self.assertEqual(
+                session._log()[-1]["type"],
+                "authority.coordination-deferred",
+            )
 
     def test_session_check_explains_recoverable_claim_without_mutating_it(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1264,10 +1278,9 @@ class AuthorityTests(unittest.TestCase):
                     context, action=action, target="mncs-atlas",
                     session_id="ses_mine", claims={}, repo_facts=observed_facts,
                 )
-                self.assertEqual(verdict["verdict"], "escalate", verdict)
-                self.assertEqual(
-                    verdict["required_authorization"], "operation-scope",
-                )
+                self.assertEqual(verdict["verdict"], "defer", verdict)
+                self.assertEqual(verdict["required_coordination"], "operation-scope")
+                self.assertNotIn("required_authorization", verdict)
             with self.subTest(action=action, case="outside writable intent"):
                 verdict = authority.evaluate(
                     {**context, "writable": []}, action=action,
@@ -1287,7 +1300,11 @@ class AuthorityTests(unittest.TestCase):
             context_for(), action="retire", target="mncs-atlas",
             session_id="ses_mine", repo_facts=CLEAN_FACTS,
         )
-        self.assertEqual(unclaimed["verdict"], "escalate")
+        self.assertEqual(unclaimed["verdict"], "defer")
+        self.assertEqual(
+            unclaimed["required_coordination"], "scoped-mutation-lease",
+        )
+        self.assertNotIn("required_authorization", unclaimed)
 
         owned = authority.evaluate(
             context_for(), action="retire", target="mncs-atlas",
@@ -1312,7 +1329,8 @@ class AuthorityTests(unittest.TestCase):
             context_for(), action="retire", target="mncs-atlas",
             session_id="ses_mine", claims=held_elsewhere, scope=scope,
         )
-        self.assertEqual(denied["verdict"], "escalate")
+        self.assertEqual(denied["verdict"], "defer")
+        self.assertNotIn("required_authorization", denied)
 
         exact = {
             "mncs-atlas": [{"session_id": "ses_mine", "scope": scope}],
@@ -7879,6 +7897,91 @@ class SessionTests(unittest.TestCase):
             session.snapshot["authority"]["protected_repositories"] = ["mncs-atlas"]
             with self.assertRaises(sessions.AuthorityDenied):
                 session.invoke("writer", ["hi"])
+
+    def test_unclaimed_dirty_main_provider_effect_defers_without_escalation(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace_root = Path(directory) / "workspace"
+            checkout = workspace_root / "mncs-atlas"
+            checkout.mkdir(parents=True)
+            session = make_session(
+                Path(directory) / "state",
+                intent={
+                    "goal": "make a source change without persistent ownership",
+                    "repositories": ["mncs-atlas"],
+                },
+            )
+            checkout_path = str(checkout)
+            session.snapshot["workspace"] = {
+                "root": str(workspace_root),
+                "repositories": [{
+                    "name": "mncs-atlas",
+                    "path": checkout_path,
+                    "manifest_repository": "mncs-atlas",
+                    "branch": "main",
+                }],
+            }
+            session.snapshot["selected_checkouts"] = {"mncs-atlas": {
+                "repository": "mncs-atlas",
+                "path": checkout_path,
+                "branch": "main",
+                "head": "e" * 40,
+                "clean": False,
+            }}
+            binding = capabilities.probe_availability(
+                capabilities.bind(
+                    provider="mncs-atlas", capability="main-checkout-writer",
+                    contract_revision="1", entrypoint="e", address="/bin/echo",
+                    effects=["write"], provider_root=checkout_path,
+                    provenance={"checkout": {
+                        "path": checkout_path, "branch": "main",
+                    }},
+                )
+            )
+            session.snapshot["bindings"].append(binding)
+            identity = {
+                "path": checkout_path,
+                "branch": "main",
+                "checkout_identity": "checkout:atlas-root",
+                "git_common_directory_identity": "git-common:atlas",
+                "manifest_identity": "manifest:atlas",
+            }
+            inspected = sessions.workspace_module.RepoState(
+                name="mncs-atlas", path=checkout_path,
+                manifest_repository="mncs-atlas", manifest_revision=1,
+                branch="main", head="f" * 40, dirty=True,
+            )
+            with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
+                sessions, "_verified_declared_provider_checkout",
+                return_value=identity,
+            ), mock.patch.object(
+                sessions.workspace_module, "verify_registered_checkout",
+                return_value=identity,
+            ), mock.patch.object(
+                sessions.workspace_module, "inspect_repo", return_value=inspected,
+            ), mock.patch.object(
+                sessions.capabilities_module, "invoke",
+                return_value={"status": "ok", "returncode": 0, "stdout": "bad"},
+            ) as provider:
+                result = session.invoke("main-checkout-writer", ["must-not-run"])
+
+            self.assertEqual(result["status"], "deferred-coordination", result)
+            self.assertEqual(
+                result["coordination_status"],
+                "shared-checkout-needs-isolation-or-lease",
+            )
+            provider.assert_not_called()
+            event_types = [event["type"] for event in session._log()]
+            self.assertIn("authority.coordination-deferred", event_types)
+            self.assertNotIn("authority.escalated", event_types)
+            activity = capability_intelligence.project(session)["session_activity"]
+            self.assertEqual(activity["coordination_deferral_count"], 1)
+            self.assertEqual(
+                activity["coordination_deferrals"][0]["work_intent_id"],
+                session.snapshot["intent"]["identity"],
+            )
+            session.close()
 
     def test_provider_effect_recovers_stale_nonexclusive_claim_without_new_owner(
         self,

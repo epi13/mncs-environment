@@ -731,21 +731,25 @@ class DelegateAuthorityTest(unittest.TestCase):
             session_id="ses_fixture")
         self.assertEqual(verdict["verdict"], "allow")
 
-    def test_delegate_escalates_without_claim(self) -> None:
+    def test_delegate_defers_without_coordination_scope(self) -> None:
         context = self._context({})
         verdict = authority_module.evaluate(
             context, action="delegate", target="mncs-actions",
             session_id="ses_fixture")
-        self.assertEqual(verdict["verdict"], "escalate")
+        self.assertEqual(verdict["verdict"], "defer")
+        self.assertEqual(
+            verdict["required_coordination"], "repository-scope-lease",
+        )
+        self.assertNotIn("required_authorization", verdict)
 
-    def test_delegate_denies_foreign_claim_scope(self) -> None:
+    def test_delegate_defers_with_only_foreign_claim_scope(self) -> None:
         context = self._context({"mncs-actions": [{
             "session_id": "ses_other",
             "scope": {"kind": "repository", "repository": "mncs-actions"}}]})
         verdict = authority_module.evaluate(
             context, action="delegate", target="mncs-actions",
             session_id="ses_fixture")
-        self.assertEqual(verdict["verdict"], "escalate")
+        self.assertEqual(verdict["verdict"], "defer")
 
 
 class AmbientEntryGatingTest(unittest.TestCase):

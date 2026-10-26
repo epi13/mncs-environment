@@ -1,9 +1,11 @@
 """Authority projection: explicit, machine-readable, default-deny.
 
 AuthorityContext evaluation is PURE: given an intent, workspace facts,
-active leases, and a requested action, it returns allow / deny / escalate
-with a reason. Session code enforces the verdict; nothing here spawns
-processes or mutates state. Absence of a grant never becomes permission.
+active coordination leases, and a requested action, it returns allow / deny /
+defer / escalate with a reason. A coordination defer is not an authority
+request; it means the operation needs a safer or more exact scope. Session
+code enforces the verdict; nothing here spawns processes or mutates state.
+Absence of a grant never becomes permission.
 """
 
 from __future__ import annotations
@@ -422,11 +424,12 @@ def evaluate(
     repo_facts: dict[str, dict[str, Any]] | None = None,
     scope: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return {verdict: allow|deny|escalate, reason} for one requested action.
+    """Return allow, deny, defer, or escalate for one requested action.
 
     Writable intent and explicit operation scope govern repository mutations.
     ``merge`` and ``publish`` require a writable repository and an exact scope
-    observed or supplied for this operation. The current claim view is checked
+    observed or supplied for this operation. Missing observation or scope is
+    a coordination defer, not an authority escalation. The current claim view is checked
     for overlapping foreign work; claims describe coordination but never grant
     repository write eligibility or integration eligibility. Repository
     operations must still use their native concurrency checks (for example,
@@ -636,8 +639,11 @@ def evaluate(
             )
         if not operation_scope_explicit:
             return {
-                "verdict": "escalate",
-                "required_authorization": "operation-scope",
+                "verdict": "defer",
+                "decision_domain": "coordination",
+                "required_coordination": "operation-scope",
+                "coordination_status": "exact-operation-scope-required",
+                "persistent_authority_required": False,
                 "next_step": "select-an-observed-checkout-or-explicit-scope",
                 "reason": (
                     f"{action} requires an exact observed or explicit destination "
@@ -675,12 +681,24 @@ def evaluate(
     if action == "delegate":
         # Asking an external system to verify a repository scope the
         # session owns is explicit intent, like publish. Anything else
-        # escalates; remote work never dispatches ambiently by default.
+        # defers; remote work never dispatches ambiently by default.
         if any((h.get("scope") or {}).get("kind") == "repository"
                and (h.get("scope") or {}).get("repository", repo) == repo
                for h in own):
             return {"verdict": "allow",
                     "reason": f"delegate by repository claim on {repo}"}
+        return {
+            "verdict": "defer",
+            "decision_domain": "coordination",
+            "required_coordination": "repository-scope-lease",
+            "coordination_status": "repository-scope-not-established",
+            "persistent_authority_required": False,
+            "next_step": "select-an-observed-repository-scope",
+            "reason": (
+                f"delegate requires an observed repository scope on {repo}; "
+                "this coordination requirement does not request owner approval"
+            ),
+        }
     if action == "retire":
         # Local Git retirement is narrower than general deletion: the
         # retirement adapter must first prove that the exact branch or
@@ -697,14 +715,13 @@ def evaluate(
                     "coordination_status": "scoped-mutation-lease-held",
                     "persistent_authority_required": False,
                     "reason": f"{target} retirement by scoped claim"}
-        return {"verdict": "escalate",
-                "required_authorization": "session-claim",
+        return {"verdict": "defer",
                 "required_coordination": "scoped-mutation-lease",
                 "decision_domain": "coordination",
                 "authorization_basis": "session-writable-scope",
                 "coordination_status": "exact-scope-lease-required",
                 "persistent_authority_required": False,
-                "next_step": "acquire-exact-claim",
+                "next_step": "acquire-exact-scope-lease",
                 "reason": f"{target} retirement requires a current claim covering the requested scope"}
     if action in MUTATING_ACTIONS:
         facts = (repo_facts or {}).get(repo, {})
@@ -741,24 +758,22 @@ def evaluate(
         )
         if not owned and not pristine:
             if not facts:
-                return {"verdict": "escalate",
-                        "required_authorization": "session-claim",
-                        "required_coordination": "scoped-mutation-lease",
+                return {"verdict": "defer",
+                        "required_coordination": "fresh-workspace-observation",
                         "decision_domain": "coordination",
                         "authorization_basis": "session-writable-scope",
-                        "coordination_status": "exact-scope-lease-required",
+                        "coordination_status": "workspace-scope-not-observed",
                         "persistent_authority_required": False,
-                        "next_step": "acquire-exact-claim",
-                        "reason": f"{repo} has no observed workspace facts; claim it first"}
-            return {"verdict": "escalate",
-                    "required_authorization": "session-claim",
-                    "required_coordination": "scoped-mutation-lease",
+                        "next_step": "refresh-workspace-or-select-an-observed-proposal-worktree",
+                        "reason": f"{repo} has no fresh workspace observation"}
+            return {"verdict": "defer",
+                    "required_coordination": "isolated-worktree-or-exact-scope-lease",
                     "decision_domain": "coordination",
                     "authorization_basis": "session-writable-scope",
-                    "coordination_status": "exact-scope-lease-required",
+                    "coordination_status": "shared-checkout-needs-isolation-or-lease",
                     "persistent_authority_required": False,
-                    "next_step": "acquire-exact-claim",
-                    "reason": f"{repo} is not owned scope (dirty/foreign/off-branch); claim it first"}
+                    "next_step": "select-or-create-an-observed-proposal-worktree",
+                    "reason": f"{repo} is not an isolated proposal worktree (dirty/foreign/off-branch)"}
         return {"verdict": "allow",
                 "decision_domain": "eligibility",
                 "authorization_basis": "session-writable-scope",

@@ -413,6 +413,20 @@ omitting freshness from each count group. The candidate's supporting event
 references allow inspection of the underlying decisions. These counts describe
 what the checks observed; they do not establish that each denial was necessary
 or identify a cause.
+Operations that need an exact coordination scope or a scoped shared-state
+lease return `verdict: defer` and emit `authority.coordination-deferred`, rather
+than asking for owner approval. `session_activity.coordination_deferrals`
+validates these events and exposes the required coordination, next step,
+sanitized repository scope, objective references, and source event. It omits
+absolute checkout paths and free-form reasons. The record says
+`persistent_authority_required: false` and `operation_executed: false`; it does
+not establish that the proposed work is invalid or that the coordination
+condition persisted. Repeated events with the same repository, action, and
+coordination requirement in one selected session window produce a
+`candidate-needs-investigation` pressure candidate; it records one-session
+recurrence only and does not determine whether the concurrency constraint is
+unnecessary. True policy denials and owner-approval escalations retain their
+separate event types.
 When a current `Session.check` observes a mutation or verification conflict,
 it attaches a separate `current_claim_state` with the claim version and
 bounded owner liveness, and whether safe recovery is eligible on a normal

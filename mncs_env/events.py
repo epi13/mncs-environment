@@ -51,6 +51,7 @@ TYPES = (
     "environment.rpc.read_observed",
     "authority.denied",
     "authority.escalated",
+    "authority.coordination-deferred",
     "authority.integration-eligible",
     "authority.proposal-eligible",
     "authority.scope-granted",

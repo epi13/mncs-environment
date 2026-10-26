@@ -136,9 +136,10 @@ Invariant: absence of a grant must not silently become permission.
 Coordination claims describe active work and scoped shared-mutation protection;
 they do not replace action authority. Protected and writable-scope checks run
 before claim conflicts, so a claim cannot grant write eligibility. The
-projection distinguishes a writable session blocked by a shared-mutation
-coordination lease from a policy denial, without asking agents to transfer
-ownership. Merge and publish eligibility derives from writable repository
+projection distinguishes `defer` for a coordination prerequisite from `deny`
+for policy or invariant failures and `escalate` for a genuine approval gate.
+A coordination defer records its next step without requesting owner approval
+or transferring ownership. Merge and publish eligibility derives from writable repository
 rights plus an exact operation scope, while Git's native reference update
 guards decide whether the proposed integration can still be applied. The
 projection preserves claim overlaps as coordination evidence without making a

@@ -60,6 +60,25 @@ def test_invoke_closes_session_after_complete_success() -> None:
     session.close.assert_called_once_with()
 
 
+def test_invoke_reports_coordination_defer_as_handled_without_escalation() -> None:
+    session = mock.Mock()
+    session.invoke.return_value = {
+        "status": "deferred-coordination", "returncode": None,
+        "stdout": "", "stderr": "nothing executed", "truncated": False,
+    }
+    with (
+        mock.patch.object(cli.sessions_module.Session, "resume",
+                          return_value=session),
+        mock.patch.object(cli, "out") as output,
+        mock.patch("sys.stderr"),
+    ):
+        result = cli.cmd_invoke(_args())
+
+    assert result == 0
+    assert output.call_args.args[0]["status"] == "deferred-coordination"
+    session.close.assert_called_once_with()
+
+
 def test_invoke_uses_declared_timeout_unless_caller_overrides_it() -> None:
     args = cli.build_parser().parse_args(
         ["invoke", "ses_invoke", "provider:receipt"],

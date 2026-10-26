@@ -5242,6 +5242,46 @@ class Session:
                     "sequence": denial_event["sequence"],
                     "type": denial_event.get("type", "authority.denied"),
                 }
+        elif verdict["verdict"] == "defer":
+            deferred_payload = {
+                "action": action,
+                "target": target,
+                "reason": verdict["reason"],
+                "decision_domain": "coordination",
+                "required_coordination": verdict.get(
+                    "required_coordination", "scope-refresh-or-isolation",
+                ),
+                "coordination_status": verdict.get(
+                    "coordination_status", "coordination-required",
+                ),
+                "next_step": verdict.get("next_step"),
+                "persistent_authority_required": False,
+                "operation_executed": False,
+                **self._authority_event_context(),
+            }
+            if repository:
+                deferred_payload["repository"] = repository
+                requested_scope = authority_module._requested_scope(
+                    repository, target, normalized_scope, observed_facts,
+                )
+                deferred_payload["scope"] = authority_module._scope_evidence(
+                    requested_scope, repository,
+                )
+            if isinstance(claim_conflict, dict):
+                deferred_payload["claim_conflict"] = claim_conflict
+            deferred_event = self._emit(
+                "authority.coordination-deferred", "environment",
+                deferred_payload,
+            )
+            if (
+                isinstance(deferred_event.get("identity"), str)
+                and type(deferred_event.get("sequence")) is int
+            ):
+                verdict["event_reference"] = {
+                    key: deferred_event[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in deferred_event
+                }
         elif verdict["verdict"] == "escalate":
             self._emit("authority.escalated", "environment",
                        {"action": action, "target": target,
@@ -5711,7 +5751,7 @@ class Session:
         effect_target: dict[str, Any] | None = None,
         input_artifacts: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
-        """Invoke a bound capability. Deny and escalate NEVER spawn a process.
+        """Invoke a bound capability. Deny, defer, and escalate never spawn.
 
         Execution authority (running the provider) stays separate from
         effect authority (mutating state). By default the declared effects
@@ -5744,6 +5784,8 @@ class Session:
         verdict = self.check(action="invoke", target=capability)
         if verdict["verdict"] == "deny":
             raise AuthorityDenied(verdict["reason"])
+        if verdict["verdict"] == "defer":
+            return self._deferred(capability, argv, "invoke", verdict)
         if verdict["verdict"] == "escalate":
             return self._pending(capability, argv, "invoke", verdict["reason"])
         required = authority_module.required_action_for_effects(binding.get("effects", ["read"]))
@@ -5935,6 +5977,10 @@ class Session:
                     raise AuthorityDenied(effect_verdict["reason"])
             if effect_verdict["verdict"] == "escalate":
                 return self._pending(capability, argv, required, effect_verdict["reason"])
+            if effect_verdict["verdict"] == "defer":
+                return self._deferred(
+                    capability, argv, required, effect_verdict,
+                )
             if operation_recovery_event is not None and admitted_effect_target is not None:
                 operation_recovery_reference = {
                     key: operation_recovery_event[key]
@@ -6031,6 +6077,10 @@ class Session:
                 )
                 if fresh_verdict["verdict"] == "deny":
                     raise AuthorityDenied(fresh_verdict["reason"])
+                if fresh_verdict["verdict"] == "defer":
+                    return self._deferred(
+                        capability, argv, required, fresh_verdict,
+                    )
                 if fresh_verdict["verdict"] == "escalate":
                     return self._pending(
                         capability, argv, required, fresh_verdict["reason"],
@@ -6190,6 +6240,35 @@ class Session:
                     "provider_request_id": provider_request_id,
                     "artifact_store_ref": artifact_fields.get("artifact_store_ref")})
         self._save()
+        return result
+
+    def _deferred(
+        self, capability: str, argv: list[str], action: str,
+        verdict: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Return a no-side-effect coordination defer without asking approval."""
+        self._save()
+        reference = verdict.get("event_reference")
+        result = {
+            "binding_id": None,
+            "capability": capability,
+            "status": "deferred-coordination",
+            "returncode": None,
+            "stdout": "",
+            "stderr": f"nothing executed: {verdict.get('reason', 'coordination required')}",
+            "action": action,
+            "coordination_status": verdict.get(
+                "coordination_status", "coordination-required",
+            ),
+            "next_step": verdict.get("next_step"),
+            "truncated": False,
+        }
+        if isinstance(reference, dict):
+            result["event_reference"] = {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in reference
+            }
         return result
 
     def _pending(self, capability: str, argv: list[str], action: str, reason: str) -> dict[str, Any]:

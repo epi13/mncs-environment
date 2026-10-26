@@ -3237,6 +3237,87 @@ def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Pat
     assert "private-reason-echo" not in json.dumps(compact)
 
 
+def test_coordination_deferrals_project_without_becoming_authority_escalations(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_coordination_defer",
+        "ses_environment_coordination_defer",
+        "cmp_environment_coordination_defer",
+    )
+    session, _ = _session(tmp_path, [record])
+    private_checkout = str(
+        Path(session.snapshot["selected_checkouts"]["mncs-environment"]["path"])
+        / ".worktrees" / "private-target"
+    )
+    events = [{
+        "identity": "evt_coordination_deferred_42",
+        "sequence": 42,
+        "type": "authority.coordination-deferred",
+        "payload": {
+            "action": "write",
+            "target": private_checkout,
+            "reason": "private-checkout-detail should not be projected",
+            "decision_domain": "coordination",
+            "repository": "mncs-environment",
+            "required_coordination": "scoped-mutation-lease",
+            "coordination_status": "exact-scope-lease-required",
+            "next_step": "select-or-create-an-observed-proposal-worktree",
+            "persistent_authority_required": False,
+            "operation_executed": False,
+            "scope": {
+                "kind": "worktree",
+                "repository": "mncs-environment",
+                "exclusive": False,
+                "branch": "main",
+                "checkout_identity": "checkout:private-target",
+            },
+            "campaign_id": "cmp_environment_coordination_defer",
+            "work_intent_id": "int_environment_coordination_defer",
+        },
+    }]
+    events.append({
+        **events[0],
+        "identity": "evt_coordination_deferred_41",
+        "sequence": 41,
+    })
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events), "events": events[-limit:],
+        "truncated": False, "next_before_sequence": None,
+    }
+
+    activity = capability_intelligence.project(session)["session_activity"]
+    assert activity["source"]["coordination_deferral_events_considered"] == 2
+    assert activity["source"]["coordination_deferral_records_invalid"] == 0
+    assert activity["coordination_deferral_count"] == 2
+    deferred = activity["coordination_deferrals"][0]
+    assert deferred["action"] == "write"
+    assert deferred["work_intent_id"] == "int_environment_coordination_defer"
+    assert deferred["persistent_authority_required"] is False
+    assert deferred["operation_executed"] is False
+    assert deferred["event_reference"]["type"] == (
+        "authority.coordination-deferred"
+    )
+    assert activity["authority_denial_count"] == 0
+    candidate = activity["coordination_deferral_candidates"][0]
+    assert candidate["status"] == "candidate-needs-investigation"
+    assert candidate["occurrence_count"] == 2
+    assert candidate["causal_claim"] == "not-established"
+    assert private_checkout not in json.dumps(activity)
+    assert "private-checkout-detail" not in json.dumps(activity)
+
+    compact = capability_intelligence.project(
+        session, max_result_bytes=8_000,
+    )["session_activity"]
+    assert compact["coordination_deferrals"][0]["event_reference"]["identity"] == (
+        "evt_coordination_deferred_42"
+    )
+    assert compact["coordination_deferral_candidates"][0][
+        "causal_claim"
+    ] == "not-established"
+    assert private_checkout not in json.dumps(compact)
+
+
 def test_claimless_proposal_worktree_preflight_is_projected_with_objective_context(
     tmp_path: Path,
 ) -> None:
