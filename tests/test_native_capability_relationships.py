@@ -181,6 +181,112 @@ def test_pointer_with_same_identity_but_different_digest_does_not_link():
     assert result["link_count"] == 0
 
 
+def test_unmatched_pressure_sources_are_exposed_without_claiming_a_relationship():
+    accountability = _accountability(_pointer())
+    accountability["owner_audit_evidence"]["audits"][0][
+        "supporting_source_references"
+    ] = [
+        {
+            **_pointer(sha256="4" * 64),
+            "identity": "MNCS-TEST-P-004",
+            "path": "pressures/MNCS-TEST-P-004.json",
+            "kind": "repository-owner-language-and-runtime-pressure",
+        },
+        {
+            **_pointer(sha256="5" * 64),
+            "identity": "MNCS-TEST-P-006",
+            "path": "pressures/MNCS-TEST-P-006.json",
+            "kind": "repository-owner-native-result-transport-pressure",
+        },
+    ]
+
+    result = capability_relationships.project(
+        accountability,
+        session_activity=_context_activity({
+            "capture_status": "captured",
+            "binding_ids_status": "partial",
+            "available_binding_ids": [],
+            "event_reference": {"identity": "evt_context", "sequence": 41},
+        }),
+    )
+
+    assert result["status"] == "no-exact-shared-source-pointer"
+    assert result["link_count"] == 0
+    comparison = result["unmatched_source_pointer_context"]
+    assert comparison["status"] == "no-exact-shared-source-pointer"
+    assert [reference["identity"] for reference in comparison[
+        "owner_audit_pressure_sources"]["references"]] == [
+            "MNCS-TEST-P-004", "MNCS-TEST-P-006",
+        ]
+    assert [reference["identity"] for reference in comparison[
+        "native_capability_pressure_sources"]["references"]] == [
+            "MNCS-TEST-P-001",
+        ]
+    assert comparison["comparison_basis"] == (
+        "repository+commit+path+sha256"
+    )
+    assert comparison["causal_relation_status"] == "not-established"
+    assert len(json.dumps(result, separators=(",", ":")).encode()) <= (
+        capability_relationships.MAX_RESULT_BYTES
+    )
+
+
+def test_unmatched_pointer_context_and_session_evidence_share_one_bounded_budget():
+    accountability = _accountability(_pointer())
+    long_pointer = {
+        **_pointer(),
+        "identity": "i" * 128,
+        "repository": "r" * 120,
+        "commit": "a" * 64,
+        "path": "p" * 256,
+        "sha256": "b" * 64,
+        "kind": "repository-owner-language-and-runtime-pressure",
+        "status": "not-present-in-selected-campaign-evidence-window",
+    }
+    accountability["owner_audit_evidence"]["audits"][0][
+        "supporting_source_references"
+    ] = [dict(long_pointer, sha256=str(index) * 64) for index in range(1, 7)]
+    candidate_pointer = dict(
+        long_pointer, sha256="c" * 64, kind="native-userland-pressure-source",
+    )
+    correction_pointer = dict(
+        long_pointer,
+        identity="MNCS-TEST-P-999",
+        path="pressures/MNCS-TEST-P-999.json",
+        sha256="f" * 64,
+        kind="native-userland-pressure-source",
+    )
+    accountability["native_capability_correspondences"][0][
+        "pressure_source_links"]["links"][0]["source_reference"] = candidate_pointer
+    summary = {
+        "capture_status": "captured",
+        "binding_ids_status": "complete",
+        "available_binding_ids": ["cap_" + "d" * 64 for _ in range(20)],
+        "available_identity_digest": "e" * 64,
+        "identity_digest_status": "complete",
+        "available_count": 20,
+        "listed_available_count": 20,
+        "unavailable_count": 0,
+        "unknown_count": 0,
+        "capabilities_truncated": False,
+        "event_reference": {"identity": "evt_long", "sequence": 7},
+    }
+
+    result = capability_relationships.project(
+        accountability,
+        observations=[{"supporting_sources": [correction_pointer]}],
+        session_activity=_context_activity(summary),
+        subject={"session_id": "s" * 128, "work_intent": {"goal": "g" * 192}},
+    )
+
+    assert result["unmatched_source_pointer_context"][
+        "owner_audit_pressure_sources"
+    ]["references_truncated"] is True
+    assert len(json.dumps(result, separators=(",", ":")).encode()) <= (
+        capability_relationships.MAX_RESULT_BYTES
+    )
+
+
 def test_correction_observation_bridges_owner_audit_and_native_pressure_source():
     accountability = _accountability(_pointer())
     owner_reference = accountability["owner_audit_evidence"]["audits"][0][

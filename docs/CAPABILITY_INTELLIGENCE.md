@@ -68,6 +68,12 @@ against a legitimate bounded host-tool operation before recommending migration.
 The relationship does not establish that the process pressure causes any
 particular owner-declared host responsibility.
 
+When no exact join exists, `unmatched_source_pointer_context` shows bounded
+integrity-addressed owner-audit pressure sources beside the candidate native
+pressure sources. The comparison uses the same repository, commit, path, and
+SHA-256 tuple as the positive link. It makes missing provenance inspectable;
+it does not conclude that the sources are unrelated or causally connected.
+
 ## Measurement limits
 
 - Systemwide native adoption remains `not-measured`; these observations are not
@@ -118,3 +124,13 @@ the projection can verify whether its summary contains exact IDs and compare
 that event's binding-level view. The assessment remains session-scoped and
 `target_capability_attribution_status` remains `not-established` until a
 specific target capability is linked by adequate evidence.
+
+For the broader evidence history, add `--history-pages 4` to that command.
+The current expanded page has no exact shared source-pointer match: its owner
+audit lists MNCS-Test pressure sources P-004 and P-006, while the candidate
+process correspondence points to P-001. The projection exposes both sides in
+`unmatched_source_pointer_context` with their integrity-addressed source
+references and leaves causality `not-established`. This is a provenance gap
+for further inspection, not evidence that the records describe unrelated
+work. The current readback is preserved in
+[`unmatched-native-pressure-context-readback-20261026.json`](../evidence/environmental-capability/unmatched-native-pressure-context-readback-20261026.json).

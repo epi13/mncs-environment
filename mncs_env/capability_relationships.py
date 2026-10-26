@@ -15,6 +15,8 @@ SCHEMA = "mncs.environment.capability-accountability-links/2"
 MAX_LINKS = 4
 MAX_RESULT_BYTES = 8 * 1024
 MAX_RESULT_RESERVE_BYTES = MAX_RESULT_BYTES
+MAX_UNMATCHED_OWNER_PRESSURE_REFERENCES = 2
+MAX_UNMATCHED_PRESSURE_REFERENCES = 1
 VERIFIED_SOURCE_STATUSES = frozenset({
     "content-integrity-verified",
     "workspace-read-only-content-integrity-verified",
@@ -167,6 +169,105 @@ def _native_implementation_sources(
             ),
         })
     return result
+
+
+def _diagnostic_reference(value: Any) -> dict[str, str] | None:
+    reference = _reference(value)
+    if reference is None or not isinstance(value, dict):
+        return None
+    for key in ("kind", "status", "content_integrity_status"):
+        text = _text(value.get(key), 128)
+        if text is not None:
+            reference[key] = text
+    return reference
+
+
+def _pointer_group(values: list[Any], limit: int) -> dict[str, Any]:
+    references: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    reference_count = 0
+    for value in values:
+        key = _pointer_key(value)
+        reference = _diagnostic_reference(value)
+        if key is None or reference is None or key in seen:
+            continue
+        seen.add(key)
+        reference_count += 1
+        if len(references) < limit:
+            references.append(reference)
+    return {
+        "reference_count": reference_count,
+        "references": references,
+        "references_truncated": reference_count > len(references),
+    }
+
+
+def _unmatched_source_pointer_context(
+    audits: list[Any], correspondences: list[Any], observations: list[Any],
+) -> dict[str, Any] | None:
+    """Expose both sides of an absent exact link without implying a relation."""
+    owner_pressure_sources: list[Any] = []
+    for audit in audits[:4]:
+        if not isinstance(audit, dict):
+            continue
+        sources = audit.get("supporting_source_references")
+        sources = sources if isinstance(sources, list) else []
+        for source in sources[:8]:
+            if (isinstance(source, dict)
+                    and isinstance(source.get("kind"), str)
+                    and "pressure" in source["kind"].lower()):
+                owner_pressure_sources.append(source)
+
+    native_pressure_sources: list[Any] = []
+    for correspondence in correspondences[:4]:
+        if not isinstance(correspondence, dict):
+            continue
+        for pressure_link in _correspondence_links(correspondence):
+            if isinstance(pressure_link, dict):
+                native_pressure_sources.append(
+                    pressure_link.get("source_reference"),
+                )
+
+    correction_pressure_sources: list[Any] = []
+    for observation in observations[:16]:
+        if not isinstance(observation, dict):
+            continue
+        sources = observation.get("supporting_sources")
+        sources = sources if isinstance(sources, list) else []
+        correction_pressure_sources.extend(sources[:8])
+
+    native_keys = {
+        key for value in native_pressure_sources
+        if (key := _pointer_key(value)) is not None
+    }
+    correction_pressure_sources = [
+        value for value in correction_pressure_sources
+        if _pointer_key(value) not in native_keys
+    ]
+    groups = {
+        "owner_audit_pressure_sources": _pointer_group(
+            owner_pressure_sources, MAX_UNMATCHED_OWNER_PRESSURE_REFERENCES,
+        ),
+        "native_capability_pressure_sources": _pointer_group(
+            native_pressure_sources, MAX_UNMATCHED_PRESSURE_REFERENCES,
+        ),
+        "correction_pressure_sources": _pointer_group(
+            correction_pressure_sources, MAX_UNMATCHED_PRESSURE_REFERENCES,
+        ),
+    }
+    if not any(group["reference_count"] for group in groups.values()):
+        return None
+    return {
+        "status": "no-exact-shared-source-pointer",
+        "comparison_basis": "repository+commit+path+sha256",
+        "causal_relation_status": "not-established",
+        **groups,
+        "next_investigation": (
+            "Inspect the integrity-addressed source records and establish whether they "
+            "describe the same responsibility; record a provenance relation only when "
+            "the source evidence supports it."
+        ),
+    }
 
 
 def _session_context_delivery_observation(
@@ -560,6 +661,12 @@ def project(
         "unverified_shared_pointer_match_count": unverified_matches,
         "links_truncated": overflow or total_matches > len(links),
         "links": links,
+        "unmatched_source_pointer_context": (
+            _unmatched_source_pointer_context(
+                audits, correspondences, observations,
+            )
+            if total_matches == 0 else None
+        ),
         "session_context_delivery_observation": (
             _session_context_delivery_observation(session_activity, subject)
         ),
