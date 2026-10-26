@@ -1,0 +1,166 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_native_process_correspondence_session_readback_20261026",
+  "captured_at": "2026-10-26T00:55:09Z",
+  "measurement_basis": "Authenticated Control environmental-capability projection of the selected campaign evidence ledger, followed by a protected-terminal inspection of the registered Environment main worktree and imported projection module.",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_objective": "Connect authentic agent-session, diagnostics, resource, and compiler evidence to provenance-aware projections that reveal actionable recurring environmental pressures."
+  },
+  "observation": {
+    "kind": "native-capability-correspondence-session-projection-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "operation": "projections",
+      "interpretation": "environmental-capability",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "history_pages": 1,
+      "evidence_limit": 16,
+      "session_event_limit": 16,
+      "session_event_before_sequence": 16
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_count": 1,
+      "source_observation": {
+        "identity": "ev_environment_native_process_capability_correspondence_20261025",
+        "origin_campaign_id": "cmp_env_capability_intelligence_codex_20261025T1957",
+        "origin_session_id": "ses_6c794a018a1a0b5a",
+        "target_pressure_identity": "MNCS-TOOLING-B665F138D324",
+        "recorded_pressure_status": "open",
+        "native_capability_identity": "mncs.std.process.v1",
+        "relationship_assessment": "candidate-correspondence; not a causal finding or migration decision",
+        "source_evidence_status": "required-source-blobs-and-pressure-alias-verified",
+        "source_evidence_by_role": {
+          "compiler_support": "content-integrity-verified",
+          "host_runtime_dispatch": "content-integrity-verified",
+          "host_runtime_provider": "content-integrity-verified",
+          "language_contract": "content-integrity-verified",
+          "native_language_test_source": "content-integrity-verified",
+          "owner_audit_source": "content-integrity-verified",
+          "runtime_provider_test_source": "content-integrity-verified",
+          "target_pressure_source": "content-integrity-verified"
+        },
+        "pressure_source_link": {
+          "status": "linked-through-integrity-verified-pressure-alias",
+          "identity": "MNCS-TOOLING-B665F138D324",
+          "source_identity": "MNCS-TEST-P-001",
+          "relationship_basis": "mncs-test.pressure/1.commons_pressure_id",
+          "causal_relation_status": "not-established"
+        },
+        "provider_verification": {
+          "status": "passed-in-campaign-run",
+          "test_identity": "process_runtime::tests::lifecycle_handle_is_provider_issued_and_cancel_requires_reap",
+          "passed": 1,
+          "failed": 0,
+          "filtered": 255,
+          "unsupported_branch_may_return_early": true
+        },
+        "agent_usage_status": "not-measured",
+        "native_migration_readiness": "not-established",
+        "systemwide_native_adoption_ratio": {
+          "status": "not-measured",
+          "reason": "A complete, ownership-verified MNCS implementation inventory and denominator are unavailable."
+        },
+        "next_investigation": "Establish how an existing native MNCS consumer discovers and invokes this capability, then measure parity against a legitimate bounded host-tool operation before any migration recommendation."
+      },
+      "projection_event_reference": {
+        "identity": "evt_531eb673f48b06d4",
+        "sequence": 32,
+        "type": "environment.rpc.read_observed",
+        "operation": "environmental-capability.projection",
+        "outcome_status": "succeeded",
+        "observed_at": "2026-10-26T00:55:09+00:00"
+      },
+      "projection_checkout_observation": {
+        "repository": "mncs-environment",
+        "branch": "main",
+        "head": "a93bd750af338c5c1f4a005e027bd09115e75e22",
+        "module_path": ".worktrees/environment-control-checkout-path-observation-20261025/mncs_env/capability_intelligence.py",
+        "module_imported_from_checkout": true
+      },
+      "session_environment_context": {
+        "repository_branch": "campaign/scoped-merge-publish-authority-20261020",
+        "repository_head": "f345d619b442ec16cb549c68fb791caef911af9f",
+        "basis": "The authenticated RPC observation records the selected session context; the protected command's separately inspected checkout was main at a93bd75."
+      },
+      "historical_context_response_summary": {
+        "schema_version": "mncs.environment.context-response-summary/1",
+        "context_event_reference": {
+          "identity": "evt_a855142abcedfb4d",
+          "sequence": 4,
+          "type": "environment.rpc.read_observed"
+        },
+        "available_count": 9,
+        "identity_digest_status": "complete",
+        "binding_ids_status": "not-carried-by-historical-schema"
+      },
+      "historical_binding_inclusion": {
+        "binding_id": "cap_bce1ed9579aa6fe9",
+        "capability": "mncs-environment:ambient-projection-coherence",
+        "status": "identity-tuple-in-matched-response",
+        "binding_id_attribution_status": "not-carried-by-historical-context-response-summary",
+        "context_event_reference": {
+          "identity": "evt_a855142abcedfb4d",
+          "sequence": 4,
+          "type": "environment.rpc.read_observed"
+        }
+      },
+      "actionable_interpretation": "MNCS already exposes a source-backed candidate relation between the open Test host-process pressure and the MNCS Language process API. The existing record identifies a concrete next investigation: establish an actual native consumer and compare bounded host/native behavior before recommending migration.",
+      "measurement_limits": [
+        "This readback verifies source correspondence and pressure traceability, not causation or host-boundary displacement.",
+        "The provider test may return early on unsupported platforms and did not run the MNCS lifecycle fixture.",
+        "Current agent discovery, receipt, consumer invocation, process parity, pressure recurrence, and migration readiness remain unmeasured.",
+        "The RPC event records the session's repository context, while a separate protected-terminal check identified the checkout used for projection; no single event joins those version identities yet.",
+        "The systemwide native-versus-host denominator remains unavailable."
+      ]
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_native_process_consumer_parity_gap_20261026",
+    "title": "A source-backed native process API has no measured native consumer or parity evidence in the linked observation",
+    "category": "native-capability-adoption-and-host-boundary",
+    "subsystem": "MNCS Environment capability intelligence, MNCS-Test process tooling, and MNCS Language process runtime",
+    "owner": "mncs-environment",
+    "basis": "The authenticated projection verified the correspondence source roles and P-001 pressure alias, while the source record explicitly leaves native consumer use, consumer parity, and migration readiness unmeasured.",
+    "actionable_recommendation": "In an authorized native tooling workstream, exercise one legitimate bounded process operation through mncs.std.process.v1 and the existing host runner, compare arguments, output, exit state, deadlines, cancellation, and cleanup, and preserve the independent verification results before considering migration.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether a current MNCS-Test or MNCS-Actions consumer invokes mncs.std.process.v1",
+      "parity between the native API and the existing host runner",
+      "independent recurrence of this pressure across sessions",
+      "agent discovery or receipt of the native API",
+      "whether the source-declared pressure has been resolved",
+      "systemwide native-versus-host adoption and its denominator"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "native-capability-correspondence-observation",
+      "identity": "ev_environment_native_process_capability_correspondence_20261025",
+      "repository": "mncs-environment",
+      "commit": "85648827af074366ad5b1e638286fe0bdbe9ecba",
+      "path": "evidence/environmental-capability/native-process-capability-correspondence-20261025.json",
+      "sha256": "5ae1c4e92ddd250d2f9f567b991ab8c2b5bf400d3852cd02e550d8438b80270f"
+    },
+    {
+      "kind": "committed-implementation",
+      "identity": "ev_environment_capability_intelligence_exact_binding_and_source_projection_20261026",
+      "repository": "mncs-environment",
+      "commit": "a93bd750af338c5c1f4a005e027bd09115e75e22",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "cf53f35ad9aefef0c7101db8397f0998939a8f3a8d9276894ab60018c37bc243"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
