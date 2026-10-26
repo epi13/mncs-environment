@@ -801,13 +801,37 @@ def project(
             ):
                 corrections.append(observation)
 
+        applied_correction_source_keys: set[tuple[str, str, str, str]] = set()
+        for correction in corrections[:4]:
+            correction_record = correction.get("record_correction")
+            correction_record = (
+                correction_record if isinstance(correction_record, dict) else {}
+            )
+            corrected_fields = correction_record.get("corrected_field_paths")
+            if (
+                correction_record.get("status") != "applied-to-verified-target"
+                or not isinstance(corrected_fields, list)
+                or "supporting_sources" not in corrected_fields
+            ):
+                continue
+            correction_sources = correction.get("supporting_sources")
+            correction_sources = (
+                correction_sources if isinstance(correction_sources, list) else []
+            )
+            for source in correction_sources[:8]:
+                key = _pointer_key(source)
+                if key is not None:
+                    applied_correction_source_keys.add(key)
+
         for correspondence in correspondences[:4]:
             if not isinstance(correspondence, dict):
                 continue
             for pressure_link in _correspondence_links(correspondence):
                 source_reference = pressure_link.get("source_reference")
                 pointer_key = _pointer_key(source_reference)
-                if pointer_key is not None and pointer_key in source_by_key:
+                if (pointer_key is not None
+                        and pointer_key in source_by_key
+                        and pointer_key not in applied_correction_source_keys):
                     audit_source = source_by_key[pointer_key]
                     record_match(
                         audit=audit, correspondence=correspondence,
@@ -865,7 +889,7 @@ def project(
         "recurrence_status": "not-established",
         "measurement_limits": [
             "Exact source pointers provide traceability, not causal blocking or safe replacement.",
-            "Owner declarations and append-only correction values remain unverified as implementation ownership or an applied change.",
+            "Verified source integrity and correction application do not establish implementation ownership, completeness, causality, or migration readiness.",
             "Session context responses are not proof of agent receipt or capability use; target-capability attribution requires exact binding evidence.",
             "Recurrence, migration readiness, and systemwide adoption are not measured.",
         ],
@@ -877,6 +901,11 @@ def project(
                 if audits and correspondences else "source-context-unavailable"
             )
         )
+    )
+    result["links"].sort(
+        key=lambda link: (
+            link.get("correction_record_status") != "applied-to-verified-target",
+        ),
     )
     while (
         len(json.dumps(result, ensure_ascii=False, separators=(",", ":")).encode())

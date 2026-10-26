@@ -596,6 +596,57 @@ def test_correction_observation_bridges_owner_audit_and_native_pressure_source()
     assert link["native_migration_readiness"] == "not-established"
 
 
+def test_applied_correction_provenance_replaces_duplicate_exact_pointer_link():
+    pointer = _pointer()
+    accountability = _accountability(pointer)
+    owner_reference = accountability["owner_audit_evidence"]["audits"][0][
+        "evidence_reference"
+    ]
+    correction = {
+        "identity": "ev_applied_native_userland_audit_correction",
+        "evidence_reference": {
+            "identity": "ev_applied_native_userland_audit_correction",
+            "repository": "mncs-environment",
+            "commit": "e" * 40,
+            "path": "evidence/native-userland-correction.json",
+            "sha256": "f" * 64,
+        },
+        "record_correction": {
+            "status": "applied-to-verified-target",
+            "target_reference": owner_reference,
+            "corrected_field_paths": ["supporting_sources"],
+        },
+        "improvement_relation_status": "not-recorded",
+        "supporting_sources": [pointer],
+    }
+
+    result = capability_relationships.project(
+        accountability, observations=[correction],
+    )
+
+    assert result["status"] == "linked-source-context"
+    assert result["exact_shared_pointer_match_count"] == 1
+    assert result["unverified_shared_pointer_match_count"] == 0
+    assert result["link_count"] == 1
+    assert result["links_truncated"] is False
+    link = result["links"][0]
+    assert link["relationship_kind"] == (
+        "audit-correction-to-native-source-pointer"
+    )
+    assert link["correction_observation_reference"]["identity"] == (
+        "ev_applied_native_userland_audit_correction"
+    )
+    assert link["audit_correction_target_match_status"] == "exact-reference-match"
+    assert link["correction_record_status"] == "applied-to-verified-target"
+    assert link["shared_pressure_source_reference"]["identity"] == (
+        "MNCS-TEST-P-001"
+    )
+    assert link["causal_relation_status"] == "not-established"
+    assert len(json.dumps(result, separators=(",", ":")).encode()) <= (
+        capability_relationships.MAX_RESULT_BYTES
+    )
+
+
 def test_derived_relationship_output_stays_within_reserved_projection_budget():
     accountability = _accountability(_pointer())
     project = accountability["owner_audit_evidence"]["audits"][0]["projects"][0]

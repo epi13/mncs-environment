@@ -215,6 +215,15 @@ aliases, and multiple verified records for one alias remain ambiguous. This
 does not establish that a shared pressure causally blocks a particular host
 responsibility.
 
+The on-demand `capability_accountability_links` view joins owner audits and
+native-capability correspondences through exact source pointers. When a pointer
+comes from an applied append-only correction to `supporting_sources`, the view
+keeps the correction observation and exact target reference on the link, and
+does not also emit a duplicate direct-pointer link for that same source. Under
+the response budget, applied correction links take priority over other link
+summaries. This preserves the provenance path without turning a verified
+pointer into a causal or migration-readiness claim.
+
 The same `implementation_accountability` view can expose a bounded
 `native_capability_correspondences` list. Each record links a target pressure
 identity to exact MNCS-language contract, runtime-provider, dispatch, test, and
