@@ -241,6 +241,15 @@ by themselves establish recurring failure, agent usage, a common cause, or
 host migration readiness. An actionable interpretation directs agents to
 inspect the source-declared per-consumer migration state and missing contracts.
 
+When a verified consumer observation contains an exact `language-pressure`
+evidence `ref`, the projection can join that declared identity to an additional
+Commons family-pressure record carried by authenticated campaign evidence. The
+related record is emitted with its own verified source pointer and with the
+consumer observation pointer that declared the relationship. Matching the
+identity and record schema establishes traceability only; the projection keeps
+causality and migration readiness `not-established`. IDs mentioned only in
+free-text summaries are not treated as relationship keys.
+
 The bounded workspace-read-only source resolver first uses an exact checkout
 name. If the directory uses a case variant, it accepts the match only when the
 repository manifest declares the exact requested identity; ambiguous matches

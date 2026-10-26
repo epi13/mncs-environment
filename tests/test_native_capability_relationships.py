@@ -83,6 +83,20 @@ def _commons_consumer_evidence_fixture():
         "requiredBehavior": "Confirm the imported requirement.",
         "affectedRepositories": ["mncs-doctor"],
     })
+    related_pressure_id = "MNCS-LANG-64AD712CD2DE"
+    add(
+        related_pressure_id,
+        capability_intelligence.COMMONS_PRESSURE_RECORD_SOURCE_KIND,
+        {
+            "schema": capability_intelligence.COMMONS_PRESSURE_RECORD_SCHEMA,
+            "id": related_pressure_id,
+            "initialStatus": "discovered",
+            "title": "Process effects lack resource envelopes and cancellation handles",
+            "summary": "The process API lacks a typed resource envelope and in-flight cancellation handle.",
+            "requiredBehavior": "Provide bounded resource constraints, typed observations, and a cancellable process handle.",
+            "affectedRepositories": ["mncs-forge", "mncs-language"],
+        },
+    )
     consumer_records = [
         {
             "id": pressure_id + "--OBS-B8EF1F4A281D",
@@ -880,6 +894,21 @@ def test_native_capability_projection_correlates_verified_commons_consumer_obser
     assert evidence["passing_reproduction_observation_count"] == 2
     assert evidence["workaround_active_observation_count"] == 3
     assert evidence["related_pressure_identities"] == ["MNCS-LANG-64AD712CD2DE"]
+    related = evidence["related_pressure_records"][0]
+    assert related["identity"] == "MNCS-LANG-64AD712CD2DE"
+    assert related["status"] == (
+        "source-integrity-schema-and-pressure-identity-verified"
+    )
+    assert related["recorded_status"] == "discovered"
+    assert related["affected_repositories"] == ["mncs-forge", "mncs-language"]
+    assert related["relation_basis"] == (
+        "exact-id-from-source-declared-language-pressure-evidence-ref"
+    )
+    assert related["causal_relation_status"] == "not-established"
+    assert related["source_reference"]["identity"] == "MNCS-LANG-64AD712CD2DE"
+    assert related["source_declaration_observations"][0]["identity"].endswith(
+        "OBS-E57B43F44F41"
+    )
     assert evidence["pressure_record"]["recorded_status"] == "discovered"
     forge = next(
         item for item in evidence["observations"]
@@ -900,6 +929,9 @@ def test_native_capability_projection_correlates_verified_commons_consumer_obser
     assert compact[0]["consumer_evidence"]["observations"][2][
         "consumer_repository"
     ] == "mncs-forge"
+    assert compact[0]["consumer_evidence"]["related_pressure_records"][0][
+        "source_reference"
+    ]["identity"] == "MNCS-LANG-64AD712CD2DE"
     assert len(json.dumps(compact, separators=(",", ":")).encode()) < (
         capability_intelligence.MAX_RESULT_BYTES
     )
@@ -942,3 +974,74 @@ def test_native_capability_consumer_projection_rejects_unverified_and_mismatched
     assert result["unverified_source_count"] == 1
     assert result["invalid_source_count"] == 1
     assert result["recurrence_status"] == "not-established"
+
+
+def test_related_pressure_requires_exact_source_declared_ref():
+    collector, payloads, integrity = _commons_consumer_evidence_fixture()
+    forge_pointer = next(
+        source for source in collector["supporting_sources"]
+        if source["identity"].endswith("OBS-E57B43F44F41")
+    )
+    forge_key = capability_intelligence._source_pointer_key(forge_pointer)
+    forge_payload = json.loads(payloads[forge_key])
+    forge_payload["evidence"][0]["ref"] = "related MNCS-LANG-64AD712CD2DE"
+    forge_payload["evidence"][0]["summary"] = (
+        "This summary mentions MNCS-LANG-64AD712CD2DE but provides no exact ref."
+    )
+    forged_raw = json.dumps(
+        forge_payload, sort_keys=True, separators=(",", ":"),
+    ).encode()
+    del payloads[forge_key]
+    del integrity[forge_key]
+    forge_pointer["sha256"] = hashlib.sha256(forged_raw).hexdigest()
+    forged_key = capability_intelligence._source_pointer_key(forge_pointer)
+    payloads[forged_key] = forged_raw
+    integrity[forged_key] = "workspace-read-only-content-integrity-verified"
+
+    result = capability_intelligence._native_capability_consumer_evidence_projection(
+        [collector],
+        "MNCS-TOOLING-B665F138D324",
+        "mncs.std.process.v1",
+        integrity,
+        payloads,
+    )
+
+    assert result["related_pressure_identities"] == []
+    assert result["related_pressure_records"] == []
+
+
+def test_related_pressure_record_identity_mismatch_is_not_joined():
+    collector, payloads, integrity = _commons_consumer_evidence_fixture()
+    related_pointer = next(
+        source for source in collector["supporting_sources"]
+        if source["identity"] == "MNCS-LANG-64AD712CD2DE"
+    )
+    related_key = capability_intelligence._source_pointer_key(related_pointer)
+    record = json.loads(payloads[related_key])
+    record["id"] = "MNCS-LANG-000000000000"
+    mismatched_raw = json.dumps(
+        record, sort_keys=True, separators=(",", ":"),
+    ).encode()
+    del payloads[related_key]
+    del integrity[related_key]
+    related_pointer["sha256"] = hashlib.sha256(mismatched_raw).hexdigest()
+    mismatched_key = capability_intelligence._source_pointer_key(related_pointer)
+    payloads[mismatched_key] = mismatched_raw
+    integrity[mismatched_key] = "workspace-read-only-content-integrity-verified"
+
+    result = capability_intelligence._native_capability_consumer_evidence_projection(
+        [collector],
+        "MNCS-TOOLING-B665F138D324",
+        "mncs.std.process.v1",
+        integrity,
+        payloads,
+    )
+
+    assert result["related_pressure_identities"] == ["MNCS-LANG-64AD712CD2DE"]
+    related = result["related_pressure_records"][0]
+    assert related["status"] == (
+        "authoritative-related-pressure-record-unavailable-or-unverified"
+    )
+    assert "source_reference" not in related
+    assert related["causal_relation_status"] == "not-established"
+    assert result["invalid_source_count"] == 1

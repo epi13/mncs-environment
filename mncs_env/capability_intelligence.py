@@ -141,7 +141,11 @@ COMMONS_PRESSURE_RECORD_SCHEMA = "commons.mncs.dev/family-pressure/v1"
 COMMONS_PRESSURE_OBSERVATION_SCHEMA = (
     "commons.mncs.dev/family-pressure-observation/v1"
 )
-MAX_COMMONS_PRESSURE_SOURCE_PAYLOADS = 9
+# Nine pointers cover one pressure plus up to eight consumer observations. Four
+# additional exact pressure records allow bounded joins for source-declared
+# related language pressures.
+MAX_COMMONS_PRESSURE_SOURCE_PAYLOADS = 13
+MAX_COMMONS_RELATED_PRESSURE_RECORDS = 4
 MAX_NATIVE_USERLAND_SOURCE_PAYLOADS = (
     MAX_NATIVE_USERLAND_AUDIT_RECORDS
     + MAX_NATIVE_USERLAND_PRESSURE_SOURCE_RECORDS
@@ -792,6 +796,47 @@ def _compact_native_capability_consumer_evidence(
             ]
             if len(values) > 8:
                 result[f"{key}_truncated"] = True
+    raw_related_pressures = value.get("related_pressure_records")
+    if isinstance(raw_related_pressures, list):
+        related_pressures = []
+        for item in raw_related_pressures[:MAX_COMMONS_RELATED_PRESSURE_RECORDS]:
+            if not isinstance(item, dict):
+                continue
+            compact_related = {
+                key: _short_text(item.get(key), 384)
+                for key in (
+                    "identity", "status", "recorded_status", "title", "summary",
+                    "required_behavior", "relation_basis", "causal_relation_status",
+                )
+                if isinstance(item.get(key), str)
+            }
+            affected = item.get("affected_repositories")
+            if isinstance(affected, list):
+                compact_related["affected_repositories"] = [
+                    _short_text(entry, 128) for entry in affected[:8]
+                    if isinstance(entry, str)
+                ]
+                if len(affected) > 8:
+                    compact_related["affected_repositories_truncated"] = True
+            declarations = item.get("source_declaration_observations")
+            if isinstance(declarations, list):
+                compact_related["source_declaration_observations"] = [
+                    reference
+                    for entry in declarations[:4]
+                    if (reference := _validate_reference(entry)) is not None
+                ]
+                if len(declarations) > 4:
+                    compact_related["source_declaration_observations_truncated"] = True
+            reference = _validate_reference(item.get("source_reference"))
+            if reference is not None:
+                compact_related["source_reference"] = reference
+            if compact_related:
+                related_pressures.append(compact_related)
+        result["related_pressure_records"] = related_pressures
+        result["related_pressure_records_truncated"] = (
+            value.get("related_pressure_records_truncated") is True
+            or len(raw_related_pressures) > len(related_pressures)
+        )
     pressure_record = value.get("pressure_record")
     if isinstance(pressure_record, dict):
         compact_record = {
@@ -5186,7 +5231,7 @@ def _owner_declared_pressure_links(
 
 
 def _commons_consumer_observation(
-    pointer: dict[str, str], source: dict[str, Any], target_pressure_identity: str,
+    pointer: dict[str, str], source: dict[str, Any], expected_pressure_identity: str,
     source_integrity: dict[tuple[str, str, str, str], str],
     source_payloads: dict[tuple[str, str, str, str], bytes],
 ) -> dict[str, Any]:
@@ -5220,7 +5265,7 @@ def _commons_consumer_observation(
     kind = source.get("kind")
     if kind == COMMONS_PRESSURE_RECORD_SOURCE_KIND:
         if (record.get("schema") != COMMONS_PRESSURE_RECORD_SCHEMA
-                or record.get("id") != target_pressure_identity
+                or record.get("id") != expected_pressure_identity
                 or record.get("id") != pointer.get("identity")):
             result["status"] = "verified-pressure-record-schema-or-identity-mismatch"
             return result
@@ -5246,7 +5291,7 @@ def _commons_consumer_observation(
         return result
     consumer_repository = record.get("repository")
     if (record.get("schema") != COMMONS_PRESSURE_OBSERVATION_SCHEMA
-            or record.get("pressureId") != target_pressure_identity
+            or record.get("pressureId") != expected_pressure_identity
             or record.get("id") != pointer.get("identity")
             or not _is_repository_identity(consumer_repository)):
         result["status"] = "verified-consumer-observation-schema-or-identity-mismatch"
@@ -5299,13 +5344,11 @@ def _commons_consumer_observation(
                 continue
             if item.get("kind") != "language-pressure":
                 continue
-            for field in ("ref", "summary"):
-                value = item.get(field)
-                if not isinstance(value, str):
-                    continue
-                for match in related_pressure_pattern.findall(value):
-                    if match not in related_pressure_ids:
-                        related_pressure_ids.append(match)
+            value = item.get("ref")
+            if (isinstance(value, str)
+                    and related_pressure_pattern.fullmatch(value)
+                    and value not in related_pressure_ids):
+                related_pressure_ids.append(value)
     if related_pressure_ids:
         projected["source_declared_related_pressure_identities"] = (
             related_pressure_ids[:4]
@@ -5353,12 +5396,26 @@ def _native_capability_consumer_evidence_projection(
             references.setdefault(key, (pointer, source))
 
     pressure_record: dict[str, Any] | None = None
+    related_pressure_candidates: dict[
+        str, tuple[dict[str, str], dict[str, Any]],
+    ] = {}
     consumer_observations: list[dict[str, Any]] = []
     unverified: list[dict[str, Any]] = []
     invalid_count = 0
     for pointer, source in list(references.values())[:MAX_COMMONS_PRESSURE_SOURCE_PAYLOADS]:
+        kind = source.get("kind")
+        if kind == COMMONS_PRESSURE_RECORD_SOURCE_KIND:
+            identity = pointer.get("identity")
+            if identity != target_pressure_identity and isinstance(identity, str):
+                related_pressure_candidates.setdefault(identity, (pointer, source))
+                continue
+            expected_identity = target_pressure_identity
+        elif kind == COMMONS_PRESSURE_OBSERVATION_SOURCE_KIND:
+            expected_identity = target_pressure_identity
+        else:
+            continue
         projected = _commons_consumer_observation(
-            pointer, source, target_pressure_identity, integrity, payloads,
+            pointer, source, expected_identity, integrity, payloads,
         )
         if projected.get("status") != (
             "source-integrity-schema-and-pressure-identity-verified"
@@ -5391,6 +5448,58 @@ def _native_capability_consumer_evidence_projection(
         for identity in item.get("source_declared_related_pressure_identities", [])
         if isinstance(identity, str)
     })
+    related_pressure_record_by_identity: dict[str, dict[str, Any]] = {}
+    for related_identity in related_pressure_ids[:MAX_COMMONS_RELATED_PRESSURE_RECORDS]:
+        candidate = related_pressure_candidates.get(related_identity)
+        if candidate is None:
+            continue
+        pointer, source = candidate
+        projected = _commons_consumer_observation(
+            pointer, source, related_identity, integrity, payloads,
+        )
+        if projected.get("status") != (
+            "source-integrity-schema-and-pressure-identity-verified"
+        ):
+            if projected.get("status") in {
+                "source-content-not-verified", "verified-payload-unavailable",
+            }:
+                unverified.append(projected)
+            else:
+                invalid_count += 1
+            continue
+        related_pressure_record_by_identity[related_identity] = projected
+
+    related_pressure_records: list[dict[str, Any]] = []
+    for related_identity in related_pressure_ids[:MAX_COMMONS_RELATED_PRESSURE_RECORDS]:
+        declaration_sources = [
+            item["source_reference"]
+            for item in consumer_observations
+            if related_identity in item.get(
+                "source_declared_related_pressure_identities", [],
+            ) and isinstance(item.get("source_reference"), dict)
+        ]
+        related_record = related_pressure_record_by_identity.get(related_identity)
+        relationship: dict[str, Any] = {
+            "identity": related_identity,
+            "status": (
+                related_record.get("status")
+                if isinstance(related_record, dict)
+                else "authoritative-related-pressure-record-unavailable-or-unverified"
+            ),
+            "relation_basis": (
+                "exact-id-from-source-declared-language-pressure-evidence-ref"
+            ),
+            "causal_relation_status": "not-established",
+            "source_declaration_observations": declaration_sources[:4],
+        }
+        if isinstance(related_record, dict):
+            for key in (
+                "recorded_status", "title", "summary", "required_behavior",
+                "affected_repositories", "source_reference",
+            ):
+                if key in related_record:
+                    relationship[key] = related_record[key]
+        related_pressure_records.append(relationship)
     recorded_affected = (
         pressure_record.get("affected_repositories", [])
         if isinstance(pressure_record, dict) else []
@@ -5412,9 +5521,10 @@ def _native_capability_consumer_evidence_projection(
         for item in consumer_observations
     )
     actionable_observation = (
-        "Inspect the source-declared consumer migration states and missing contracts "
-        "per repository. These records show consumer-specific implementation "
-        "conditions; they do not establish a common cause or authorize migration."
+        "Inspect the consumer migration states and missing contracts per repository, "
+        "then follow any exact source-declared related pressure records. These "
+        "relationships expose implementation conditions; they do not establish "
+        "causality or authorize migration."
         if consumer_observations else (
             "Inspect the exact source references and resolve the unavailable or "
             "unverified consumer evidence before drawing a capability conclusion."
@@ -5428,7 +5538,9 @@ def _native_capability_consumer_evidence_projection(
         "join_basis": (
             "Exact target_pressure_identity and native_capability_identity in the "
             "campaign observation, followed by exact Commons pressureId checks "
-            "against the capability correspondence."
+            "against the capability correspondence; related pressure records are "
+            "joined only when their exact identity appears in a verified consumer "
+            "language-pressure evidence ref."
         ),
         "source_coverage_scope": (
             "bounded-source-references-in-authenticated-campaign-observations; "
@@ -5442,6 +5554,10 @@ def _native_capability_consumer_evidence_projection(
         "passing_reproduction_observation_count": passing_count,
         "workaround_active_observation_count": workaround_active_count,
         "related_pressure_identities": related_pressure_ids[:8],
+        "related_pressure_records": related_pressure_records,
+        "related_pressure_records_truncated": (
+            len(related_pressure_ids) > len(related_pressure_records)
+        ),
         "cross_consumer_status": cross_consumer_status,
         "recurrence_status": "not-established",
         "causal_relation_status": "not-established",
