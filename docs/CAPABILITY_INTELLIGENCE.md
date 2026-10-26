@@ -95,6 +95,13 @@ and native migration readiness remain unestablished. The relationship still
 does not establish that the process pressure caused any particular owner-declared
 host responsibility.
 
+When a bounded selected evidence page contains this consumer-pressure cluster
+but not its older capability correspondence, `implementation_accountability`
+surfaces it through `native_consumer_activities`. The projection keeps this
+direct view deduplicated against activities nested under returned
+correspondences and retains the same exact evidence identities and source
+references.
+
 When no exact join exists, `unmatched_source_pointer_context` shows bounded
 integrity-addressed owner-audit pressure sources beside the candidate native
 pressure sources. The comparison uses the same repository, commit, path, and

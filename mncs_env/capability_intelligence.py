@@ -182,6 +182,7 @@ MAX_NATIVE_CAPABILITY_CORRESPONDENCES = 8
 MAX_NATIVE_CAPABILITY_SOURCE_REFERENCES = 16
 MAX_NATIVE_CONSUMER_ACTIVITY_RECORDS = 1
 MAX_NATIVE_CONSUMER_ACTIVITY_IMPROVEMENTS = 1
+MAX_NATIVE_CONSUMER_CAPABILITY_IDENTITIES = 4
 MAX_NATIVE_CONSUMER_ACTIVITY_SOURCE_REFERENCES = 2
 MAX_EVIDENCE_REFS = 32
 MAX_EVIDENCE_HISTORY_PAGES = 4
@@ -1245,6 +1246,21 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
     capability_correspondences = _compact_native_capability_correspondences(
         value.get("native_capability_correspondences"),
     )
+    raw_consumer_activities = value.get("native_consumer_activities")
+    raw_consumer_activities = (
+        raw_consumer_activities
+        if isinstance(raw_consumer_activities, list) else []
+    )
+    consumer_activities = [
+        compact_activity
+        for item in raw_consumer_activities[:MAX_NATIVE_CONSUMER_CAPABILITY_IDENTITIES]
+        if (compact_activity := _compact_native_capability_consumer_activity(item))
+        is not None
+    ]
+    consumer_activities_truncated = (
+        value.get("native_consumer_activities_truncated") is True
+        or len(raw_consumer_activities) > len(consumer_activities)
+    )
     if not raw_samples:
         result = {
             "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
@@ -1259,6 +1275,10 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
             result["owner_audit_evidence"] = owner_audit_evidence
         if capability_correspondences:
             result["native_capability_correspondences"] = capability_correspondences
+        if consumer_activities:
+            result["native_consumer_activities"] = consumer_activities
+        if consumer_activities_truncated:
+            result["native_consumer_activities_truncated"] = True
         return result
     samples = []
     for sample in raw_samples[:4]:
@@ -1380,6 +1400,10 @@ def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
         result["owner_audit_evidence"] = owner_audit_evidence
     if capability_correspondences:
         result["native_capability_correspondences"] = capability_correspondences
+    if consumer_activities:
+        result["native_consumer_activities"] = consumer_activities
+    if consumer_activities_truncated:
+        result["native_consumer_activities_truncated"] = True
     return result
 
 
@@ -7771,8 +7795,54 @@ def _native_capability_correspondence_projection(
     return correspondences
 
 
+def _native_consumer_activities_projection(
+    observations: list[dict[str, Any]],
+    native_capability_correspondences: list[dict[str, Any]],
+    source_integrity: dict[tuple[str, str, str, str], str] | None,
+) -> tuple[list[dict[str, Any]], bool]:
+    """Expose exact consumer evidence without requiring an older correspondence."""
+    selected = observations[:MAX_OBSERVATIONS]
+    already_exposed = {
+        correspondence.get("native_capability_identity")
+        for correspondence in native_capability_correspondences
+        if isinstance(correspondence, dict)
+        and isinstance(correspondence.get("native_consumer_activity"), dict)
+    }
+    identities: list[str] = []
+    seen: set[str] = set()
+    truncated = False
+    for record in selected:
+        observation = record.get("observation")
+        observation = observation if isinstance(observation, dict) else {}
+        if observation.get("kind") != (
+            NATIVE_CAPABILITY_CONSUMER_INTEGRATION_PRESSURE_KIND
+        ):
+            continue
+        request = observation.get("request")
+        request = request if isinstance(request, dict) else {}
+        identity = request.get("native_capability_identity")
+        if (not isinstance(identity, str) or not identity or len(identity) > 192
+                or identity in already_exposed or identity in seen):
+            continue
+        seen.add(identity)
+        if len(identities) >= MAX_NATIVE_CONSUMER_CAPABILITY_IDENTITIES:
+            truncated = True
+            continue
+        identities.append(identity)
+
+    activities = []
+    for identity in identities:
+        activity = _native_capability_consumer_activity_projection(
+            selected, identity, source_integrity or {},
+        )
+        if activity is not None:
+            activities.append(activity)
+    return activities, truncated
+
+
 def _implementation_accountability_projection(
     observations: list[dict[str, Any]], *, native_proof_reference_present: bool,
+    improvement_relations: list[dict[str, Any]] | None = None,
     selected_session_capability_delivery: Any = None,
     selected_session_id: str = "",
     owner_audit_source_payloads: dict[
@@ -7781,11 +7851,52 @@ def _implementation_accountability_projection(
     source_integrity: dict[tuple[str, str, str, str], str] | None = None,
 ) -> dict[str, Any] | None:
     """Summarize source-verified proofs and separate owner-declared audit evidence."""
+    relations_by_observation: dict[str, list[dict[str, Any]]] = {}
+    for relation in improvement_relations or []:
+        if not isinstance(relation, dict):
+            continue
+        recorded_by = relation.get("recorded_by_observation_identity")
+        if not isinstance(recorded_by, str) or not recorded_by:
+            continue
+        relations_by_observation.setdefault(recorded_by, []).append(relation)
+    relationship_observations = []
+    for record in observations[:MAX_OBSERVATIONS]:
+        if not isinstance(record, dict):
+            continue
+        if isinstance(record.get("improvement_relation"), dict):
+            relationship_observations.append(record)
+            continue
+        identity = record.get("identity")
+        matching_relations = (
+            relations_by_observation.get(identity, [])
+            if isinstance(identity, str) else []
+        )
+        if len(matching_relations) != 1:
+            relationship_observations.append(record)
+            continue
+        relation = matching_relations[0]
+        relationship_observations.append({
+            **record,
+            "improvement_relation": {
+                key: relation[key]
+                for key in (
+                    "identity", "addresses_hypothesis_identity",
+                    "verification_observation_identity",
+                )
+                if isinstance(relation.get(key), str)
+            },
+        })
     native_capability_correspondences = (
         _native_capability_correspondence_projection(
-            observations,
+            relationship_observations,
             source_integrity,
             owner_audit_source_payloads,
+        )
+    )
+    native_consumer_activities, native_consumer_activities_truncated = (
+        _native_consumer_activities_projection(
+            relationship_observations, native_capability_correspondences,
+            source_integrity,
         )
     )
     samples: list[dict[str, Any]] = []
@@ -8100,7 +8211,8 @@ def _implementation_accountability_projection(
         }
     if not samples:
         if (not native_proof_reference_present and owner_audit_evidence is None
-                and not native_capability_correspondences):
+                and not native_capability_correspondences
+                and not native_consumer_activities):
             return None
         result = {
             "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
@@ -8117,6 +8229,10 @@ def _implementation_accountability_projection(
             result["native_capability_correspondences"] = (
                 native_capability_correspondences
             )
+        if native_consumer_activities:
+            result["native_consumer_activities"] = native_consumer_activities
+        if native_consumer_activities_truncated:
+            result["native_consumer_activities_truncated"] = True
         return result
     result = {
         "schema_version": IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
@@ -8140,6 +8256,10 @@ def _implementation_accountability_projection(
         result["native_capability_correspondences"] = (
             native_capability_correspondences
         )
+    if native_consumer_activities:
+        result["native_consumer_activities"] = native_consumer_activities
+    if native_consumer_activities_truncated:
+        result["native_consumer_activities_truncated"] = True
     return result
 
 
@@ -14327,6 +14447,7 @@ def project(
             _is_compiler_native_application_proof_reference(reference)
             for reference in references
         ),
+        improvement_relations=improvement_relations,
         selected_session_capability_delivery=activity.get(
             "capability_delivery",
         ),

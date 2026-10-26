@@ -1029,6 +1029,7 @@ def test_native_capability_projection_joins_real_consumer_pressure_improvement_a
 
     assert accountability["sample_count"] == 0
     assert len(accountability["native_capability_correspondences"]) == 1
+    assert "native_consumer_activities" not in accountability
     correspondence = accountability["native_capability_correspondences"][0]
     activity = correspondence["native_consumer_activity"]
     assert activity["status"] == "native-consumer-pressure-evidence-available"
@@ -1099,6 +1100,69 @@ def test_native_capability_projection_joins_real_consumer_pressure_improvement_a
     assert compact_activity["activities"][0]["source_references"]
     assert len(json.dumps(compact, separators=(",", ":")).encode()) < (
         capability_intelligence.MAX_RESULT_BYTES
+    )
+
+    # The bounded evidence page can contain the consumer cluster while omitting
+    # the older correspondence anchor. The consumer relationship remains
+    # independently inspectable from its own exact evidence identities.
+    unanchored = capability_intelligence._implementation_accountability_projection(
+        evidence_records,
+        native_proof_reference_present=False,
+    )
+    assert unanchored["sample_count"] == 0
+    assert "native_capability_correspondences" not in unanchored
+    direct_activity = unanchored["native_consumer_activities"][0]
+    assert direct_activity["native_capability_identity"] == "mncs.std.process.v1"
+    assert direct_activity["activities"][0]["source_observation_identity"] == (
+        "ev_environment_native_process_debug_consumer_pressure_20261026"
+    )
+    assert direct_activity["activities"][0]["improvement_links"][0][
+        "verification_match_status"
+    ] == "exact-verification-observation-identity-match"
+    compact_direct = capability_intelligence._compact_implementation_accountability(
+        unanchored,
+    )
+    assert compact_direct["native_consumer_activities"][0]["activities"][0][
+        "source_references"
+    ]
+
+    # The live campaign projection stores validated improvement relations in a
+    # sibling list rather than on each observation. Ensure that representation
+    # retains the same exact verification join.
+    normalized_records = [
+        {
+            key: record[key]
+            for key in (
+                "identity", "observation", "pressure_hypothesis",
+                "supporting_sources", "evidence_reference",
+            )
+            if key in record
+        }
+        for record in evidence_records
+    ]
+    raw_relation = evidence_records[1]["improvement_relation"]
+    normalized = capability_intelligence._implementation_accountability_projection(
+        normalized_records,
+        native_proof_reference_present=False,
+        improvement_relations=[{
+            "identity": raw_relation["identity"],
+            "recorded_by_observation_identity": evidence_records[1]["identity"],
+            "addresses_hypothesis_identity": raw_relation[
+                "addresses_hypothesis_identity"
+            ],
+            "verification_observation_identity": raw_relation[
+                "verification_observation_identity"
+            ],
+        }],
+    )
+    normalized_link = normalized["native_consumer_activities"][0][
+        "activities"
+    ][0]["improvement_links"][0]
+    assert normalized_link["improvement_record_consistency_status"] == (
+        "request-and-relation-identities-match"
+    )
+    assert normalized_link["verification_match_status"] == (
+        "exact-verification-observation-identity-match"
     )
 
 

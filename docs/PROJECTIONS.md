@@ -290,6 +290,15 @@ recurrence, causal attribution beyond the evidence's stated scope, long-term
 effectiveness, and native migration readiness `not-established`; systemwide
 native adoption remains `not-measured`.
 
+The projection also exposes a bounded top-level `native_consumer_activities`
+list when the selected evidence page contains that exact consumer-pressure
+cluster but omits its older capability-correspondence anchor. When the same
+activity is already nested under a returned correspondence, it is not repeated
+in the top-level list. Each entry uses the same exact capability, pressure, and
+verification identity joins and bounded source references, so page selection
+does not hide a complete recent activity cluster. This remains selected-page
+evidence, not an exhaustive consumer inventory; omitted evidence is not inferred.
+
 The bounded workspace-read-only source resolver first uses an exact checkout
 name. If the directory uses a case variant, it accepts the match only when the
 repository manifest declares the exact requested identity; ambiguous matches
