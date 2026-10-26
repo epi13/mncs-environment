@@ -1,0 +1,108 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_selected_worktree_path_claim_readback_20261026",
+  "captured_at": "2026-10-26T08:13:16Z",
+  "measurement_basis": "bounded-canonical-environmental-capability-projection-of-appended-path-claim-evidence-and-session-events",
+  "observation": {
+    "kind": "selected-worktree-path-claim-improvement-projection-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_identity": "eci_1f87a86f04eec06a",
+      "campaign_state_checkpoint_id": "chk_0746b14ced332b7e",
+      "campaign_evidence_count": 70,
+      "evidence_offset": 67,
+      "evidence_limit": 4,
+      "history_pages": 1,
+      "session_event_before_sequence": 300,
+      "session_event_limit": 32,
+      "pressure_identity": "ph_environment_path_claim_cli_overbroad_default_20261026",
+      "improvement_relation_identity": "im_environment_selected_worktree_path_claim_20261026"
+    },
+    "outcome": {
+      "projection_status": "partial-response-byte-limit",
+      "selected_evidence_identities": [
+        "ev_environment_claim_path_scope_pressure_20261026",
+        "ev_environment_selected_worktree_path_claim_verification_20261026",
+        "ev_environment_selected_worktree_path_claim_improvement_20261026"
+      ],
+      "pressure_hypothesis": {
+        "identity": "ph_environment_path_claim_cli_overbroad_default_20261026",
+        "observation_count": 1,
+        "distinct_session_count": 1,
+        "recurrence_status": "not-established"
+      },
+      "improvement_relation": {
+        "identity": "im_environment_selected_worktree_path_claim_20261026",
+        "observation_status": "validated",
+        "pressure_hypothesis_status": "present-in-projection",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "not-present-in-projection",
+        "implementation_commit": "8287e86d9f7afca80af7e407a576d06301f3ff0e",
+        "implementation_content_integrity_status": "content-integrity-verified",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "authentic_claim_recovery": {
+        "event_identity": "evt_281f329226ce8875",
+        "sequence": 223,
+        "claim_id": "claim:mncs-environment:paths:d87c092c7b68",
+        "recovered_claim_id": "claim:mncs-environment:paths:c60f18bca6b3",
+        "recovered_count": 1,
+        "recovery_status": "claim-transition-recorded",
+        "scope_kind": "paths",
+        "checkout_identity": "not-recorded",
+        "branch": "not-recorded"
+      },
+      "interpretation_limit": "The recovery event proves one claim was safely classified recoverable and superseded before a new global path claim was acquired. It does not prove that the old scope blocked legitimate work. The improved CLI behavior is verified by committed tests, but no authentic post-change agent path-claim operation has occurred. The current session selection points to an older checkout; checkout-selection friction remains separate."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_0746b14ced332b7e",
+    "campaign_evidence_count_before_recording": 70,
+    "claim_ids": [
+      "claim:mncs-environment:paths:d87c092c7b68",
+      "claim:mncs-environment:worktree:2d61988fa1d6"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_selected_worktree_path_claim_cli_8287e86",
+      "repository": "mncs-environment",
+      "commit": "8287e86d9f7afca80af7e407a576d06301f3ff0e",
+      "path": "mncs_env/cli.py",
+      "sha256": "9a4b5d37b0a1ce93043a260a1abdf8305dcf5203d451c3b0b398d9249543cd95"
+    },
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "projection_identity": "eci_1f87a86f04eec06a",
+      "event_identities": [
+        "evt_281f329226ce8875"
+      ]
+    }
+  ],
+  "not_measured": [
+    "post-change real-agent path-claim usage",
+    "change in coordination operations or wait time",
+    "whether the recovered old claim caused previous blocking",
+    "cross-session recurrence",
+    "continued alignment between current checkout and session selection"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
