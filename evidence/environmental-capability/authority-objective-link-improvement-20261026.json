@@ -1,0 +1,97 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_authority_objective_link_improvement_20261026",
+  "captured_at": "2026-10-26T10:13:40Z",
+  "measurement_basis": "committed authority-event and projection improvement linked to authentic historical and current session evidence",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment authority guidance and session-activity capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_authority_objective_link_20261026",
+      "implementation_commit": "0b2bd4e1ebe14ca8d42a6e5f088bcf2d20db890b",
+      "verification_observation_identity": "ev_environment_authority_objective_link_verification_20261026",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "Canonical README, model, entry, projection, and as-built RFC guidance now describe merge/publish as writable-rights plus exact-scope eligibility without persistent-claim prerequisites. Authority denial, escalation, and integration-preflight events carry campaign and WorkIntent IDs when available, and session activity preserves those references with explicit missing/invalid historical status in full and compact views.",
+      "effectiveness_assessment": "event and projection behavior verified by the complete test suite, real-provider persistence proof, and a live claim-free merge preflight with objective references; reduced agent coordination effort remains unmeasured",
+      "analysis_limit": "The live preflight had 25 observed coordination overlaps, with the returned overlap records explicitly truncated. It establishes that eligibility and objective correlation are visible despite overlap evidence; it does not establish that a merge or publish succeeded or that every overlap was inspected."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_a07d4236d818e24f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_5719f1dc85592a13",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_1a196e6ad85bd8de",
+    "campaign_evidence_count_before_recording": 0
+  },
+  "recorder": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "session_id": "ses_a07d4236d818e24f",
+    "consumer_id": "codex-environment-capability",
+    "environment_id": "renv_5719f1dc85592a13",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "improvement_relation": {
+    "identity": "im_environment_authority_objective_link_20261026",
+    "addresses_hypothesis_identity": "ph_environment_authority_objective_link_20261026",
+    "implementation_reference": {
+      "identity": "mncs_environment_authority_objective_events_0b2bd4e",
+      "repository": "mncs-environment",
+      "commit": "0b2bd4e1ebe14ca8d42a6e5f088bcf2d20db890b",
+      "path": "mncs_env/sessions.py",
+      "sha256": "cb549ce8d87ee23f1a0c7f38182c27389e97c1633f7487e7924086bd19068185",
+      "kind": "authority-event-objective-references"
+    },
+    "verification_observation_identity": "ev_environment_authority_objective_link_verification_20261026",
+    "subsequent_observation_identity": null,
+    "basis": "The prior authenticated denial exposed an overlapping claim but had no objective reference, while top-level guidance contradicted the existing claim-free integration policy. After implementation, the current session recorded a claim-free eligible merge preflight and its capability projection retained the campaign and WorkIntent IDs alongside the bounded overlap count and truncation status. Contract regressions, the complete suite, and the provider handoff proof passed.",
+    "effectiveness_assessment": "implementation and immediate event-to-projection behavior verified; cross-agent discoverability and long-term coordination outcome not assessed",
+    "not_measured": [
+      "whether agents spend fewer operations on authority transfers or stale claims",
+      "whether the new objective references improve cross-session pressure discovery",
+      "whether a later integration operation succeeds",
+      "whether the prior pressure recurs after this change"
+    ]
+  },
+  "not_measured": [
+    "subsequent merge/publish operation outcome",
+    "long-term coordination and discoverability effects",
+    "cross-session recurrence after the correction"
+  ],
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_authority_objective_link_pressure_20261026",
+      "kind": "environmental-pressure-evidence",
+      "path": "evidence/environmental-capability/authority-objective-link-pressure-20261026.json",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_authority_objective_link_verification_20261026",
+      "kind": "committed-verification-observation",
+      "path": "evidence/environmental-capability/authority-objective-link-verification-20261026.json",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "mncs_environment_authority_objective_projection_0b2bd4e",
+      "repository": "mncs-environment",
+      "commit": "0b2bd4e1ebe14ca8d42a6e5f088bcf2d20db890b",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "ba381a222c439dfc4f1ea13f5779255f8ba0858e570e4a6feb50a3dc678024b1",
+      "kind": "objective-linked-activity-projection"
+    },
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7cee66bc5d834dad",
+      "session_id": "ses_a07d4236d818e24f",
+      "event_identities": [
+        "evt_0a08891051b3a15b"
+      ]
+    }
+  ]
+}

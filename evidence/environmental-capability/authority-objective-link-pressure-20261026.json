@@ -1,0 +1,77 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_authority_objective_link_pressure_20261026",
+  "captured_at": "2026-10-26T10:13:02Z",
+  "measurement_basis": "authenticated prior authority-denial evidence, current repository guidance, and the newly established campaign session",
+  "observation": {
+    "kind": "authority-evidence-detached-from-objective",
+    "source_interface": "MNCS Environment authority guidance, session events, and capability projection",
+    "request": {
+      "prior_denial_session_id": "ses_9ad3efb63438cf3d",
+      "prior_denial_event_identity": "evt_712291ee6703374a",
+      "implementation_baseline_commit": "d21577de52b2383e5a8dd78bf34f0c4797e65fa5",
+      "current_campaign_id": "cmp_7cee66bc5d834dad",
+      "current_work_intent_id": "int_e9a2959ffe2e952c",
+      "current_preflight_event_identity": "evt_0a08891051b3a15b"
+    },
+    "outcome": {
+      "observed_limit": "At the repository baseline, README.md and RFC 0002 described merge and publish as persistent-claim-required even though the executable authority policy and docs/ENTRY.md allowed scoped integration without a claim. Recorded authority events also lacked campaign and WorkIntent references, so the projection could not directly relate a denial to the objective it interrupted.",
+      "current_observation": "A real merge preflight in the new campaign session was allowed without an owned persistent claim. The projection linked it to campaign cmp_7cee66bc5d834dad and WorkIntent int_e9a2959ffe2e952c, and retained 25 observed claim overlaps with truncation explicit.",
+      "analysis_limit": "The prior denial is authentic evidence from an earlier session, but it does not establish a live concurrent owner at denial time. The current preflight establishes eligibility only; no Git merge or publication was executed."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_a07d4236d818e24f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_5719f1dc85592a13",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_1a196e6ad85bd8de",
+    "campaign_evidence_count_before_recording": 0
+  },
+  "recorder": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "session_id": "ses_a07d4236d818e24f",
+    "consumer_id": "codex-environment-capability",
+    "environment_id": "renv_5719f1dc85592a13",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_authority_objective_link_20261026",
+    "title": "Authority guidance and event evidence do not consistently expose claim-free integration under its motivating objective",
+    "category": "orientation-knowledge",
+    "subsystem": "MNCS Environment authority policy, documentation, and session activity projection",
+    "owner": "mncs-environment",
+    "recurrence": "one-authentic-prior-denial-and-one-current-preflight; broader recurrence-not-established",
+    "basis": "The prior campaign recorded an overlapping-claim merge denial. At the implementation baseline, top-level guidance still required a persistent claim for merge and publish despite the live policy allowing exact-scope integration without one. Neither the earlier denial nor preflight event carried the WorkIntent reference needed to correlate authority friction with its objective.",
+    "actionable_recommendation": "Keep canonical guidance aligned with executable eligibility rules and attach stable campaign and WorkIntent references to authority observations so projections can relate coordination pressure to the objective affected.",
+    "not_measured": [
+      "cross-session frequency of claim-related integration friction",
+      "whether agents discover the corrected claim-free integration path more reliably",
+      "whether objective-linked authority evidence reduces coordination effort over time",
+      "whether any eligible merge or publish operation ultimately succeeds"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "event_identities": [
+        "evt_712291ee6703374a"
+      ]
+    },
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7cee66bc5d834dad",
+      "session_id": "ses_a07d4236d818e24f",
+      "event_identities": [
+        "evt_0a08891051b3a15b"
+      ]
+    }
+  ]
+}
