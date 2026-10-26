@@ -1,0 +1,84 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_git_common_directory_claim_pressure_20261026",
+  "captured_at": "2026-10-26T23:26:33Z",
+  "measurement_basis": "source-policy-trace-and-verified-Git-common-directory-identities",
+  "observation": {
+    "kind": "same-branch-claim-comparison-ignores-Git-common-directory-identity",
+    "source_interface": "MNCS Environment claims.scopes_conflict, authority._requested_scope, and registered checkout identity",
+    "request": {
+      "repository_scope": "one repository manifest with multiple registered checkouts",
+      "overlapping_paths": true,
+      "branch_names_equal": true,
+      "observed_git_common_directory_identities": [
+        "different for separate clones",
+        "equal for linked worktrees"
+      ],
+      "prior_policy_basis": "repository identity, branch name, and path overlap; Git common-directory identity was not compared"
+    },
+    "outcome": {
+      "observed_limit": "The prior claim conflict rule treated matching branch names and overlapping paths as shared refs across all checkouts associated with a repository, even when registered checkouts had distinct Git common-directory identities.",
+      "interpretation": "This policy could block compatible proposals in separate clones. It is a source-level overconstraint, not a demonstrated historical agent denial.",
+      "historical_agent_impact": "not-observed-in-the-selected-campaign-evidence",
+      "analysis_limit": "No live denial or cross-session recurrence was established for this specific condition."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "last_confirmed_campaign_state_checkpoint_id": "chk_ea186dea95e4c1f5",
+    "last_confirmed_campaign_evidence_count": 97,
+    "current_campaign_state_read_status": "not-revalidated-control-transport-closed"
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_independent_clone_claim_conflict_20261026",
+    "title": "Matching branch names can falsely couple proposals from separate clones",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment worktree claim conflict evaluation",
+    "owner": "mncs-environment",
+    "recurrence": "not-established; one deterministic source-level policy path",
+    "basis": "The prior conflict rule did not compare Git common-directory identities. Existing checkout identity evidence distinguishes linked worktrees from separate clones, so equal branch labels do not always mean shared local refs.",
+    "actionable_recommendation": "Use the observed Git common-directory identity when determining whether same-named branches share refs. Preserve conservative conflict behavior when identity is unavailable, and source the operation identity from the freshly observed registered checkout.",
+    "not_measured": [
+      "whether an agent was historically denied for this specific condition",
+      "frequency across repositories or sessions",
+      "whether coordination tool calls or waiting time were reduced",
+      "concurrent integration outcomes across independent clones"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_prechange_claim_conflict_rule_7d86c34",
+      "repository": "mncs-environment",
+      "commit": "7d86c343a1cd9d2f0052bc1299f3cf32fd1dea65",
+      "path": "mncs_env/claims.py",
+      "sha256": "40ea5193e6156e50b02f891f80f19941673dede2aa08601799cf79dd627d51e8",
+      "kind": "pre-change-conflict-policy-source"
+    },
+    {
+      "identity": "mncs_environment_prechange_authority_scope_rule_7d86c34",
+      "repository": "mncs-environment",
+      "commit": "7d86c343a1cd9d2f0052bc1299f3cf32fd1dea65",
+      "path": "mncs_env/authority.py",
+      "sha256": "e404e20325583a9f62ad7626119515003804e9acf5cbb15cfc32a80b67322b0b",
+      "kind": "pre-change-operation-scope-source"
+    }
+  ],
+  "not_measured": [
+    "live agent encounter with this exact conflict",
+    "cross-session or cross-repository recurrence",
+    "long-term change in agent experience"
+  ]
+}

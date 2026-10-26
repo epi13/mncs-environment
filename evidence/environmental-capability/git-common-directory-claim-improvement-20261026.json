@@ -1,0 +1,86 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_git_common_directory_claim_improvement_20261026",
+  "captured_at": "2026-10-26T23:26:33Z",
+  "measurement_basis": "committed-policy-change-linked-to-independent-targeted-verification",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment proposal authority and worktree claim coordination",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_independent_clone_claim_conflict_20261026",
+      "implementation_commit": "ac1628b81920688065fd51e9977765c7dbb15ab0",
+      "verification_observation_identity": "ev_environment_git_common_directory_claim_verification_20261026",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "Claim overlap evaluation now distinguishes the same branch name in the same observed Git common directory from that name in a separate clone. Exact operation scopes inherit common-directory identity from fresh checkout facts when callers omit it. Missing identity remains conservative, and same-checkout conflicts remain blocking.",
+      "verified_change": "The claims, authority, scope-narrowing, and registered checkout identity tests passed. The change is committed and pushed to mncs-environment main at ac1628b81920688065fd51e9977765c7dbb15ab0.",
+      "effectiveness_assessment": "policy-behavior-verified; subsequent-agent-impact-not-assessed",
+      "interpretation_limit": "No historical agent denial was attributed to this exact condition, and no later agent activity has been observed to measure reduced coordination friction."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "last_confirmed_campaign_state_checkpoint_id": "chk_ea186dea95e4c1f5",
+    "last_confirmed_campaign_evidence_count": 97,
+    "current_campaign_state_read_status": "not-revalidated-control-transport-closed"
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_independent_clone_claim_conflict_20261026",
+    "addresses_hypothesis_identity": "ph_environment_independent_clone_claim_conflict_20261026",
+    "implementation_reference": {
+      "identity": "mncs_environment_git_common_identity_claim_rule_ac1628b",
+      "repository": "mncs-environment",
+      "commit": "ac1628b81920688065fd51e9977765c7dbb15ab0",
+      "path": "mncs_env/claims.py",
+      "sha256": "52bed967769f83921330c5d5d55b3a769ed4d80d2d4a4a8670ddd8ee3d1f7da0",
+      "kind": "committed-implementation"
+    },
+    "verification_observation_identity": "ev_environment_git_common_directory_claim_verification_20261026",
+    "subsequent_observation_identity": null,
+    "basis": "The code-level coordination rule is verified against shared and distinct Git common-directory identities, and missing identity remains fail-closed. The evidence establishes the policy behavior but does not claim an observed agent-experience improvement.",
+    "not_measured": [
+      "live frequency of this conflict",
+      "subsequent agent activity or experience",
+      "cross-session coordination overhead",
+      "remote integration outcomes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_git_common_identity_claim_rule_ac1628b",
+      "repository": "mncs-environment",
+      "commit": "ac1628b81920688065fd51e9977765c7dbb15ab0",
+      "path": "mncs_env/claims.py",
+      "sha256": "52bed967769f83921330c5d5d55b3a769ed4d80d2d4a4a8670ddd8ee3d1f7da0",
+      "kind": "committed-implementation"
+    },
+    {
+      "identity": "mncs_environment_git_common_identity_tests_ac1628b",
+      "repository": "mncs-environment",
+      "commit": "ac1628b81920688065fd51e9977765c7dbb15ab0",
+      "path": "tests/test_environment.py",
+      "sha256": "d3b982b9abf145bf671c01ab41b68ca485e9b6be82aff765c2a09babd52cec0b",
+      "kind": "committed-regression-tests"
+    }
+  ],
+  "not_measured": [
+    "long-term pressure resolution",
+    "empirical reduction in agent coordination work",
+    "behavior under concurrent remote updates"
+  ]
+}
