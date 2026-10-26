@@ -673,6 +673,38 @@ def _compact_native_capability_correspondences(value: Any) -> list[dict[str, Any
             )
             if isinstance(item.get(key), str)
         }
+        source_work_context = item.get("source_work_context")
+        if isinstance(source_work_context, dict):
+            compact_work_context = {
+                key: _short_text(source_work_context.get(key), limit)
+                for key, limit in (
+                    ("status", 96), ("basis", 128),
+                    ("objective_capture_status", 96),
+                    ("campaign_id", 160), ("session_id", 160),
+                    ("work_intent_id", 160), ("work_intent_goal", 256),
+                    ("campaign_objective", 256), ("environment_id", 160),
+                    ("definition_id", 160), ("environment_version", 96),
+                    ("source_observation_identity", 160),
+                )
+                if isinstance(source_work_context.get(key), str)
+            }
+            for key in (
+                "campaign_id_truncated", "session_id_truncated",
+                "work_intent_id_truncated", "work_intent_goal_truncated",
+                "campaign_objective_truncated", "environment_id_truncated",
+                "definition_id_truncated", "environment_version_truncated",
+            ):
+                if type(source_work_context.get(key)) is bool:
+                    compact_work_context[key] = source_work_context[key]
+            source_reference = _validate_reference(
+                source_work_context.get("source_observation_reference"),
+            )
+            if source_reference is not None:
+                compact_work_context["source_observation_reference"] = (
+                    source_reference
+                )
+            if compact_work_context:
+                compact["source_work_context"] = compact_work_context
         role_groups = item.get("source_evidence_by_role")
         compact_groups = {}
         if isinstance(role_groups, dict):
@@ -5584,6 +5616,58 @@ def _native_capability_consumer_evidence_projection(
     }
 
 
+def _native_capability_source_work_context(
+    record: dict[str, Any],
+) -> dict[str, Any]:
+    """Retain the originating observation's bounded, source-declared work context."""
+    raw_work = record.get("related_work")
+    raw_work = raw_work if isinstance(raw_work, dict) else {}
+    result: dict[str, Any] = {
+        "status": "not-recorded-in-source-observation",
+        "basis": "native-capability-observation.related_work",
+        "objective_capture_status": (
+            "objectives-not-recorded-in-source-observation"
+        ),
+    }
+    field_limits = {
+        "campaign_id": 160,
+        "session_id": 160,
+        "work_intent_id": 160,
+        "work_intent_goal": 256,
+        "campaign_objective": 256,
+        "environment_id": 160,
+        "definition_id": 160,
+        "environment_version": 96,
+    }
+    captured = {}
+    for key, limit in field_limits.items():
+        value = raw_work.get(key)
+        if isinstance(value, str) and value:
+            captured[key] = _short_text(value, limit)
+            if len(value) > limit:
+                captured[f"{key}_truncated"] = True
+    if captured:
+        result.update(captured)
+        result["status"] = "recorded-in-source-observation"
+    objective_fields = [
+        key for key in ("work_intent_goal", "campaign_objective")
+        if isinstance(raw_work.get(key), str) and raw_work[key]
+    ]
+    if len(objective_fields) == 2:
+        result["objective_capture_status"] = (
+            "work-intent-and-campaign-objective-recorded"
+        )
+    elif objective_fields:
+        result["objective_capture_status"] = "partial-objective-context-recorded"
+    source_reference = _validate_reference(record.get("evidence_reference"))
+    if source_reference is not None:
+        result["source_observation_reference"] = source_reference
+    source_identity = record.get("identity")
+    if isinstance(source_identity, str) and source_identity:
+        result["source_observation_identity"] = _short_text(source_identity, 160)
+    return result
+
+
 def _native_capability_correspondence_projection(
     observations: list[dict[str, Any]],
     source_integrity: dict[tuple[str, str, str, str], str] | None = None,
@@ -5684,6 +5768,7 @@ def _native_capability_correspondence_projection(
         verification = verification if isinstance(verification, dict) else {}
         result = {
             "identity": record.get("identity"),
+            "source_work_context": _native_capability_source_work_context(record),
             "target_pressure_identity": _short_text(pressure_identity, 160),
             "native_capability_identity": _short_text(
                 outcome.get("native_capability_identity"), 192,

@@ -226,6 +226,14 @@ test result remains distinct from source presence, consumer integration,
 agent usage, causal attribution, and migration readiness. These statuses stay
 `not-measured` or `not-established` until independent evidence supports them.
 
+Each correspondence also retains a bounded `source_work_context` from that
+observation's own `related_work` record, including campaign, session, work
+intent, environment, and version identities when recorded. It carries the exact
+campaign evidence pointer so an agent can inspect the originating observation.
+`objective_capture_status` distinguishes recorded work intent and campaign
+objectives from source records that omitted them; the selected session's
+campaign charter is not substituted for missing historical context.
+
 A correspondence may also expose `consumer_evidence` when an authenticated
 campaign observation links it to exact Commons family-pressure records. The
 projection accepts only the bounded Commons pressure-record and

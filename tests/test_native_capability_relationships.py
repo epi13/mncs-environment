@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 
-from mncs_env import capability_relationships, capability_intelligence, projections
+from mncs_env import capability_intelligence, capability_relationships, projections
 
 
 def _pointer(*, sha256: str = "b" * 64, integrity: str = "content-integrity-verified"):
@@ -935,6 +935,93 @@ def test_native_capability_projection_correlates_verified_commons_consumer_obser
     assert len(json.dumps(compact, separators=(",", ":")).encode()) < (
         capability_intelligence.MAX_RESULT_BYTES
     )
+
+
+def test_native_correspondence_retains_bounded_source_work_context_and_provenance():
+    record = _raw_native_correspondence_record()
+    record["related_work"] = {
+        "campaign_id": "cmp_native_process",
+        "session_id": "ses_native_process",
+        "work_intent_id": "int_native_process",
+        "work_intent_goal": "Measure a native process API consumer.",
+        "campaign_objective": "Connect compiler capability to real consumer evidence.",
+        "environment_id": "env_native_process",
+        "definition_id": "definition_native_process",
+        "environment_version": "0.18",
+        "unrelated_private_field": "must not enter the projection",
+    }
+    record["evidence_reference"] = {
+        "identity": record["identity"],
+        "repository": "mncs-environment",
+        "commit": "c" * 40,
+        "path": "evidence/environmental-capability/native-process.json",
+        "sha256": "d" * 64,
+    }
+
+    projected = capability_intelligence._native_capability_correspondence_projection(
+        [record], {}, {},
+    )
+    source_work = projected[0]["source_work_context"]
+
+    assert source_work["status"] == "recorded-in-source-observation"
+    assert source_work["objective_capture_status"] == (
+        "work-intent-and-campaign-objective-recorded"
+    )
+    assert source_work["campaign_id"] == "cmp_native_process"
+    assert source_work["session_id"] == "ses_native_process"
+    assert source_work["work_intent_goal"] == (
+        "Measure a native process API consumer."
+    )
+    assert source_work["campaign_objective"] == (
+        "Connect compiler capability to real consumer evidence."
+    )
+    assert source_work["source_observation_reference"] == {
+        "identity": record["identity"],
+        "repository": "mncs-environment",
+        "commit": "c" * 40,
+        "path": "evidence/environmental-capability/native-process.json",
+        "sha256": "d" * 64,
+    }
+    assert "unrelated_private_field" not in source_work
+
+    compact = capability_intelligence._compact_native_capability_correspondences(
+        projected,
+    )
+    compact_work = compact[0]["source_work_context"]
+    assert compact_work["campaign_id"] == "cmp_native_process"
+    assert compact_work["objective_capture_status"] == (
+        "work-intent-and-campaign-objective-recorded"
+    )
+    assert compact_work["source_observation_reference"]["sha256"] == "d" * 64
+
+
+def test_native_correspondence_marks_missing_source_objectives_without_inference():
+    record = _raw_native_correspondence_record()
+    record["related_work"] = {
+        "campaign_id": "cmp_native_process",
+        "session_id": "ses_native_process",
+        "environment_id": "env_native_process",
+    }
+    record["evidence_reference"] = {
+        "identity": record["identity"],
+        "repository": "mncs-environment",
+        "commit": "c" * 40,
+        "path": "evidence/environmental-capability/native-process.json",
+        "sha256": "d" * 64,
+    }
+
+    projected = capability_intelligence._native_capability_correspondence_projection(
+        [record], {}, {},
+    )
+
+    source_work = projected[0]["source_work_context"]
+    assert source_work["status"] == "recorded-in-source-observation"
+    assert source_work["objective_capture_status"] == (
+        "objectives-not-recorded-in-source-observation"
+    )
+    assert "work_intent_goal" not in source_work
+    assert "campaign_objective" not in source_work
+    assert source_work["source_observation_identity"] == record["identity"]
 
 
 def test_native_capability_consumer_projection_rejects_unverified_and_mismatched_records():
