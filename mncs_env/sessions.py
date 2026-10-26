@@ -3579,9 +3579,11 @@ class Session:
                 return False
 
         # A campaign's base repository is already in its authenticated intent.
-        # Preserve it when one exact, live claim from this session anchors a
-        # registered worktree inside the campaign workspace. This keeps the
-        # base compiler available when owner grants extend the provider set.
+        # Preserve it when one or more exact, live claims from this session
+        # anchor the same registered worktree inside the campaign workspace.
+        # Disjoint path claims remain separate coordination records, but they
+        # describe one checkout and must not make its provider closure
+        # ambiguous.
         rights = self.snapshot.get("rights") or {}
         right_subjects = rights.get("subjects") if isinstance(rights, dict) else None
         for repository in base_repositories:
@@ -3616,9 +3618,50 @@ class Session:
                     malformed_claim_scope = True
                     continue
                 if normalized_scope.get("kind") == "worktree":
+                    if not claim_record_matches_scope(
+                        claim, repository, normalized_scope,
+                    ):
+                        malformed_claim_scope = True
+                        continue
                     owned_claims.append((claim, normalized_scope))
 
-            if malformed_claim_scope or len(owned_claims) != 1:
+            candidate_claims = owned_claims
+            if isinstance(prior, dict):
+                raw_prior_path = prior.get("path")
+                if not isinstance(raw_prior_path, str) or not raw_prior_path:
+                    candidate_claims = []
+                else:
+                    prior_path = Path(raw_prior_path)
+                    if not prior_path.is_absolute():
+                        prior_path = workspace_root / prior_path
+                    try:
+                        prior_path = prior_path.resolve()
+                        candidate_claims = [
+                            pair for pair in owned_claims
+                            if Path(str(pair[1].get("checkout", ""))).resolve()
+                            == prior_path
+                        ]
+                    except OSError:
+                        candidate_claims = []
+
+            checkout_paths = {
+                str(scope.get("checkout")) for _claim, scope in candidate_claims
+            }
+            stable_identity_sets = {
+                tuple(scope.get(field) for field in (
+                    "checkout_identity", "git_common_directory_identity",
+                ))
+                for _claim, scope in candidate_claims
+            }
+            identities_complete = all(
+                isinstance(value, str) and value
+                for identity_values in stable_identity_sets
+                for value in identity_values
+            )
+            if (malformed_claim_scope or not candidate_claims
+                    or len(checkout_paths) != 1
+                    or len(stable_identity_sets) != 1
+                    or (len(candidate_claims) > 1 and not identities_complete)):
                 report["base_intent_skipped"].append({
                     "repository": repository,
                     "reason": (
@@ -3629,19 +3672,12 @@ class Session:
                 })
                 continue
 
-            claim, target_scope = owned_claims[0]
+            checkout_path = next(iter(checkout_paths))
+            claim_scopes = [scope for _claim, scope in candidate_claims]
             try:
-                if claim.get("claim_id") != claims_module.claim_identity(
-                    repository, target_scope,
-                ):
-                    raise ValueError("claim identity does not bind its exact scope")
-                expected_claim = claims_module._with_identity(claim)
-                if claim.get("identity") != expected_claim.get("identity"):
-                    raise ValueError("claim record identity is invalid")
                 raw_selected = {
                     "repository": repository,
-                    "path": target_scope["checkout"],
-                    "branch": target_scope.get("branch"),
+                    "path": checkout_path,
                 }
                 resolved_checkout, checkout_facts = _verified_scope_checkout(
                     workspace_root, repository, raw_selected,
@@ -3657,6 +3693,16 @@ class Session:
                 current_identity = _repository_checkout_identity(
                     workspace_root, repository, resolved_checkout,
                 )
+                for target_scope in claim_scopes:
+                    for field in (
+                        "checkout_identity", "git_common_directory_identity",
+                    ):
+                        recorded = target_scope.get(field)
+                        if (isinstance(recorded, str)
+                                and recorded != current_identity[field]):
+                            raise ValueError(
+                                "live claim no longer identifies the selected checkout"
+                            )
             except (OSError, RuntimeError, TypeError, ValueError,
                     workspace_module.WorkspaceResolutionError):
                 report["base_intent_skipped"].append({
@@ -3673,11 +3719,14 @@ class Session:
                     same_path = prior_path.resolve() == resolved_checkout
                 except OSError:
                     same_path = False
-                prior_identity = prior.get("checkout_identity")
-                if (not same_path
-                        or (isinstance(prior_identity, str)
-                            and prior_identity
-                            != current_identity["checkout_identity"])):
+                identity_changed = any(
+                    isinstance(prior.get(field), str)
+                    and prior.get(field) != current_identity.get(field)
+                    for field in (
+                        "checkout_identity", "git_common_directory_identity",
+                    )
+                )
+                if not same_path or identity_changed:
                     report["skipped"].append({
                         "repository": repository,
                         "reason": "selected-checkout-identity-conflict",
@@ -3698,19 +3747,59 @@ class Session:
                 except (TypeError, ValueError):
                     malformed_conflict = True
                     continue
-                if claims_module.scopes_conflict(target_scope, current_scope):
+                same_session_checkout = (
+                    item.get("session_id") == self.session_id
+                    and item.get("consumer_id")
+                    == self.snapshot.get("consumer_id")
+                    and current_scope.get("kind") == "worktree"
+                    and current_scope.get("checkout") == str(resolved_checkout)
+                    and item.get("claim_id") in {
+                        claim.get("claim_id") for claim, _scope in candidate_claims
+                    }
+                    and claim_record_matches_scope(item, repository, current_scope)
+                    and all(
+                        current_scope.get(field) == current_identity.get(field)
+                        for field in (
+                            "checkout_identity", "git_common_directory_identity",
+                        )
+                    )
+                )
+                if same_session_checkout:
+                    continue
+                rebased_scope = dict(current_scope)
+                if rebased_scope.get("kind") == "worktree":
+                    # A branch advance on the same exact checkout does not
+                    # change who made these claims. Compare concurrent work
+                    # against the branch now observed in the live worktree.
+                    rebased_scope["branch"] = observed.branch
+                if any(
+                    claims_module.scopes_conflict(target, rebased_scope)
+                    for target in (
+                        {**scope, "branch": observed.branch}
+                        for scope in claim_scopes
+                    )
+                ):
                     conflicting_claims.append(item)
-            if (malformed_conflict or len(conflicting_claims) != 1
-                    or conflicting_claims[0].get("claim_id")
-                    != claim.get("claim_id")):
+            if malformed_conflict or conflicting_claims:
                 report["base_intent_skipped"].append({
                     "repository": repository,
                     "reason": (
-                        "malformed-live-claim-scope" if malformed_conflict else
-                        "base-intent-checkout-conflict"
+                        "malformed-live-claim-scope" if malformed_conflict
+                        else "base-intent-checkout-conflict"
                     ),
                 })
                 continue
+
+            claim, claim_scope = max(
+                candidate_claims,
+                key=lambda pair: (
+                    (pair[1].get("branch") or None) == (observed.branch or None),
+                    (pair[0].get("version", 0)
+                     if type(pair[0].get("version", 0)) is int else 0),
+                    str(pair[0].get("acquired_at", "")),
+                    str(pair[0].get("claim_id", "")),
+                ),
+            )
 
             composition = {
                 "session_id": self.session_id,
@@ -3719,6 +3808,9 @@ class Session:
                 "scope_grant_identity": None,
                 "claim_id": claim.get("claim_id"),
                 "claim_version": claim.get("version"),
+                "supporting_claim_ids": sorted(
+                    str(item.get("claim_id")) for item, _scope in candidate_claims
+                ),
                 "repository": repository,
                 "checkout_identity": current_identity["checkout_identity"],
                 "git_common_directory_identity": current_identity[
@@ -5322,6 +5414,30 @@ class Session:
             selected_checkouts.get(repository)
             if isinstance(selected_checkouts, dict) else None
         )
+        if not isinstance(selected, dict):
+            # A prior interrupted or ambiguous projection may have dropped a
+            # checkout that is still supported by this session's live exact
+            # worktree claim. Rebuild the selection through the ordinary
+            # revalidation and claim-composition path before deciding whether
+            # claim acquisition is eligible.
+            root_value = workspace_root or (self.snapshot.get("workspace") or {}).get("root")
+            if not isinstance(root_value, str) or not root_value:
+                return
+            request_id = "req_claim_checkout_restore_" + digest_hex({
+                "session_id": self.session_id,
+                "repository": repository,
+                "event_count": len(self._log()),
+            }, length=24)
+            self.revalidate(
+                request_id=request_id,
+                request_operation="claims/acquire/restore-selected-checkout",
+                workspace_root=root_value,
+            )
+            selected_checkouts = self.snapshot.get("selected_checkouts")
+            selected = (
+                selected_checkouts.get(repository)
+                if isinstance(selected_checkouts, dict) else None
+            )
         if (not isinstance(selected, dict)
                 or selected.get("source_ref") == "authenticated-scope-grant"):
             return
@@ -5856,14 +5972,13 @@ class Session:
                 "branch": inspected.branch,
                 "exclusive": False,
             }
-            if declared_provider is not None:
-                for identity_key in (
-                    "git_common_directory_identity", "checkout_identity",
-                    "manifest_identity",
-                ):
-                    identity_value = declared_provider.get(identity_key)
-                    if isinstance(identity_value, str) and identity_value:
-                        scope[identity_key] = identity_value
+            for identity_key in (
+                "git_common_directory_identity", "checkout_identity",
+                "manifest_identity",
+            ):
+                identity_value = checkout_identity.get(identity_key)
+                if isinstance(identity_value, str) and identity_value:
+                    scope[identity_key] = identity_value
             if checkout_facts is None:
                 checkout_facts = {
                     "head": inspected.head,

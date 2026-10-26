@@ -644,10 +644,59 @@ class ClaimTests(unittest.TestCase):
             session.snapshot["workspace"]["selection"] = ["mncs-forge"]
             session._save()
             try:
+                prior_claims = [
+                    session.acquire_claim(
+                        "mncs-forge",
+                        reason=f"retain one worktree path claim for {path}",
+                        scope={
+                            "kind": "worktree",
+                            "checkout": str(selected_root),
+                            "paths": [path],
+                        },
+                    )
+                    for path in ("README.md", ".mncs/project.json")
+                ]
+                self.assertNotEqual(
+                    prior_claims[0]["claim_id"], prior_claims[1]["claim_id"],
+                )
+                self.assertEqual(
+                    prior_claims[0]["scope"]["checkout_identity"],
+                    selected_identity["checkout_identity"],
+                )
+                self.assertEqual(
+                    prior_claims[1]["scope"]["git_common_directory_identity"],
+                    selected_identity["git_common_directory_identity"],
+                )
+                session.snapshot["selected_checkouts"]["mncs-forge"][
+                    "source_ref"
+                ] = "authenticated-intent-claim"
+                session._save()
                 initial_head = subprocess.run(
                     ["git", "-C", str(selected_root), "rev-parse", "HEAD"],
                     check=True, text=True, capture_output=True,
                 ).stdout.strip()
+                session.snapshot["selected_checkouts"].pop("mncs-forge")
+                session._save()
+                restored_claim = session.acquire_claim(
+                    "mncs-forge", reason="restore exact checkout from live session claims",
+                    scope={
+                        "kind": "worktree", "checkout": str(selected_root),
+                        "paths": ["restore-checkout.txt"],
+                    },
+                )
+                self.assertEqual(
+                    restored_claim["scope"]["branch"], "campaign/initial",
+                )
+                self.assertEqual(
+                    session.snapshot["selected_checkouts"]["mncs-forge"]["head"],
+                    initial_head,
+                )
+                self.assertEqual(
+                    session.snapshot["selected_checkouts"]["mncs-forge"][
+                        "source_ref"
+                    ],
+                    "authenticated-intent-claim",
+                )
                 subprocess.run([
                     "git", "-C", str(selected_root), "switch", "-q", "-c",
                     "campaign/checkout-drift",
@@ -655,6 +704,10 @@ class ClaimTests(unittest.TestCase):
 
                 branch_claim = session.acquire_claim(
                     "mncs-forge", reason="claim after branch selection",
+                    scope={
+                        "kind": "worktree", "checkout": str(selected_root),
+                        "paths": ["advance.txt"],
+                    },
                 )
 
                 self.assertEqual(branch_claim["scope"]["branch"], "campaign/checkout-drift")
@@ -684,18 +737,42 @@ class ClaimTests(unittest.TestCase):
 
                 advanced_claim = session.acquire_claim(
                     "mncs-forge", reason="claim after forward commit",
+                    scope={
+                        "kind": "worktree", "checkout": str(selected_root),
+                        "paths": ["followup.txt"],
+                    },
                 )
 
-                self.assertEqual(advanced_claim["claim_id"], branch_claim["claim_id"])
-                self.assertEqual(advanced_claim["version"], branch_claim["version"] + 1)
+                self.assertNotEqual(advanced_claim["claim_id"], branch_claim["claim_id"])
+                self.assertEqual(advanced_claim["version"], 1)
                 self.assertEqual(
                     session.snapshot["selected_checkouts"]["mncs-forge"]["head"],
                     advanced_head,
                 )
                 self.assertEqual(
+                    session.snapshot["selected_checkouts"]["mncs-forge"][
+                        "source_ref"
+                    ],
+                    "authenticated-intent-claim",
+                )
+                self.assertEqual(
                     sum(event.get("type") == "session.revalidated"
                         for event in session._log()),
-                    2,
+                    3,
+                )
+                composed = [
+                    event for event in session._log()
+                    if event.get("type") == "workspace.checkout-composed"
+                    and event.get("payload", {}).get("composition", {}).get(
+                        "repository"
+                    ) == "mncs-forge"
+                ]
+                self.assertTrue(composed)
+                self.assertGreaterEqual(
+                    len(composed[-1]["payload"]["composition"][
+                        "supporting_claim_ids"
+                    ]),
+                    4,
                 )
                 self.assertFalse(any(
                     event.get("type") in {"lease.transferred", "lease.owner-recovered"}
@@ -1368,6 +1445,11 @@ class ClaimTests(unittest.TestCase):
 
             self.assertEqual(code, 0, stderr.getvalue())
             claim = json.loads(stdout.getvalue())
+            checkout_identity = workspace.verify_registered_checkout(
+                checkout,
+                repository="fixture",
+                workspace_root=workspace_root,
+            )
             self.assertEqual(claim["scope"], {
                 "kind": "worktree",
                 "checkout": str(checkout),
@@ -1375,6 +1457,11 @@ class ClaimTests(unittest.TestCase):
                 "paths": ["src/component.mncs"],
                 "exclusive": False,
                 "repository": "fixture",
+                "checkout_identity": checkout_identity["checkout_identity"],
+                "git_common_directory_identity": checkout_identity[
+                    "git_common_directory_identity"
+                ],
+                "manifest_identity": checkout_identity["manifest_identity"],
             })
 
     def test_claim_can_target_another_registered_worktree_within_authorized_repo(self) -> None:

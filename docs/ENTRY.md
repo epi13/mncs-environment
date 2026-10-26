@@ -78,6 +78,14 @@ rights, transfer another session's claim, adopt dirty work, or bypass live
 scope conflicts. If checkout identity changes or revalidation cannot establish
 a stable state, acquisition fails closed.
 
+Worktree claims preserve stable checkout and Git common-directory identities.
+Several claims held by the same session for one exact checkout can therefore
+compose that checkout once, while each claim continues to cover only its own
+paths and overlapping claims from other sessions remain subject to conflict
+checks. If a selected checkout projection is missing, claim acquisition may
+reconstruct it from those live same-session claims through normal
+revalidation; the claims do not confer rights beyond their recorded scopes.
+
 For a repository that is already writable in the campaign, `claims acquire`
 can target a registered linked worktree directly with `--worktree` and an
 optional `--paths` subset. This records ownership at that exact branch and
