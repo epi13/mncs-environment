@@ -379,6 +379,14 @@ authority, an exact operation scope, and the refreshed overlap observation.
 Claims describe coordination but do not grant or deny integration eligibility.
 An overlap is retained as advisory coordination evidence instead of persistent
 exclusive control, and a claim need not be held by the acting agent.
+For repeated overlapping-claim denials, `decision_claim_state_summary` counts
+the validated event-time blocker status, recovery verdict, and freshness among
+structured denials; it separately counts missing, invalid, and legacy state.
+Compact summaries preserve blocker-status and recovery-verdict counts while
+omitting freshness from each count group. The candidate's supporting event
+references allow inspection of the underlying decisions. These counts describe
+what the checks observed; they do not establish that each denial was necessary
+or identify a cause.
 When a current `Session.check` observes a mutation or verification conflict,
 it attaches a separate `current_claim_state` with the claim version and
 bounded owner liveness, and whether safe recovery is eligible on a normal

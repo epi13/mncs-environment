@@ -3653,6 +3653,40 @@ def _compact_projection(
             compact_item["interpretation"] = _short_text(
                 item["interpretation"], 256,
             )
+        decision_summary = item.get("decision_claim_state_summary")
+        if isinstance(decision_summary, dict):
+            compact_decision_summary = {
+                key: decision_summary[key]
+                for key in (
+                    "status", "structured_denial_count", "validated_count",
+                    "invalid_count", "not_recorded_count", "legacy_denial_count",
+                )
+                if key in decision_summary
+            }
+            raw_state_counts = decision_summary.get("state_counts")
+            if isinstance(raw_state_counts, list):
+                compact_decision_summary["state_counts"] = [
+                    {
+                        key: state_count[key]
+                        for key in (
+                            "blocking_status", "recovery_verdict",
+                            "occurrence_count",
+                        )
+                        if key in state_count
+                    }
+                    for state_count in raw_state_counts[:4]
+                    if isinstance(state_count, dict)
+                ]
+                if len(raw_state_counts) > 4:
+                    compact_decision_summary[
+                        "state_counts_truncated"
+                    ] = True
+                    compact_decision_summary[
+                        "state_counts_omitted_count"
+                    ] = len(raw_state_counts) - 4
+            compact_item["decision_claim_state_summary"] = (
+                compact_decision_summary
+            )
         conflict_reasons = item.get("conflict_reasons")
         if isinstance(conflict_reasons, list):
             compact_item["conflict_reasons"] = [
@@ -11355,10 +11389,12 @@ def _session_activity(
             ],
         }
         if reason_class == "overlapping-claim":
-            recorded_conflicts = [
-                item["claim_conflict"] for item in group
+            structured_denials = [
+                (item, item["claim_conflict"])
+                for item in group
                 if isinstance(item.get("claim_conflict"), dict)
             ]
+            recorded_conflicts = [conflict for _, conflict in structured_denials]
             candidate["claim_conflict_evidence_status"] = (
                 "recorded-for-all-denials"
                 if len(recorded_conflicts) == len(group) else (
@@ -11381,6 +11417,70 @@ def _session_activity(
                     "separate point-in-time observation; whether the overlap "
                     "required blocking and broader cause remain unestablished."
                 )
+            decision_state_counts: dict[
+                tuple[str, str, str | None], int
+            ] = {}
+            validated_decision_state_count = 0
+            invalid_decision_state_count = 0
+            missing_decision_state_count = 0
+            for _, conflict_record in structured_denials:
+                state = conflict_record.get("decision_claim_state")
+                state_status = conflict_record.get(
+                    "decision_claim_state_status",
+                )
+                if (state_status == "recorded-and-validated"
+                        and isinstance(state, dict)):
+                    blocking_status = state.get("blocking_status")
+                    recovery_verdict = state.get("recovery_verdict")
+                    freshness = state.get("freshness")
+                    if (isinstance(blocking_status, str)
+                            and isinstance(recovery_verdict, str)
+                            and (freshness is None or isinstance(freshness, str))):
+                        key = (blocking_status, recovery_verdict, freshness)
+                        decision_state_counts[key] = (
+                            decision_state_counts.get(key, 0) + 1
+                        )
+                        validated_decision_state_count += 1
+                    else:
+                        invalid_decision_state_count += 1
+                elif state_status == "invalid-event-observation":
+                    invalid_decision_state_count += 1
+                else:
+                    missing_decision_state_count += 1
+            if validated_decision_state_count == len(structured_denials):
+                decision_state_status = (
+                    "recorded-for-all-structured-denials"
+                    if structured_denials else "not-recorded-on-event"
+                )
+            elif validated_decision_state_count:
+                decision_state_status = "partially-recorded"
+            elif invalid_decision_state_count:
+                decision_state_status = "invalid-event-observation"
+            else:
+                decision_state_status = "not-recorded-on-event"
+            candidate["decision_claim_state_summary"] = {
+                "status": decision_state_status,
+                "structured_denial_count": len(structured_denials),
+                "validated_count": validated_decision_state_count,
+                "invalid_count": invalid_decision_state_count,
+                "not_recorded_count": missing_decision_state_count,
+                "legacy_denial_count": len(group) - len(structured_denials),
+                "state_counts": [
+                    {
+                        "blocking_status": blocking_status,
+                        "recovery_verdict": recovery_verdict,
+                        "freshness": freshness,
+                        "occurrence_count": count,
+                    }
+                    for (blocking_status, recovery_verdict, freshness), count
+                    in sorted(
+                        decision_state_counts.items(),
+                        key=lambda item: (
+                            item[0][0], item[0][1], item[0][2] or "",
+                        ),
+                    )[:4]
+                ],
+            }
             blockers: dict[tuple[str, str], dict[str, Any]] = {}
             for conflict_record in recorded_conflicts:
                 blocker = conflict_record.get("blocking_claim")

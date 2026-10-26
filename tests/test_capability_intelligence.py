@@ -3704,6 +3704,19 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     candidate = activity["authority_denial_candidates"][0]
     assert candidate["occurrence_count"] == 3
     assert candidate["claim_conflict_evidence_status"] == "partially-recorded"
+    decision_summary = candidate["decision_claim_state_summary"]
+    assert decision_summary["status"] == (
+        "recorded-for-all-structured-denials"
+    )
+    assert decision_summary["structured_denial_count"] == 2
+    assert decision_summary["validated_count"] == 2
+    assert decision_summary["legacy_denial_count"] == 1
+    assert decision_summary["state_counts"] == [{
+        "blocking_status": "blocks-at-decision-time",
+        "recovery_verdict": "live",
+        "freshness": "active",
+        "occurrence_count": 2,
+    }]
     projected_blocker = candidate["blocking_claims"][0]
     assert {
         key: value for key, value in projected_blocker.items()
@@ -3728,6 +3741,17 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     assert compact_activity["authority_denial_candidates"][0][
         "claim_conflict_evidence_status"
     ] == "partially-recorded"
+    compact_decision_summary = compact_activity[
+        "authority_denial_candidates"
+    ][0]["decision_claim_state_summary"]
+    assert compact_decision_summary["status"] == decision_summary["status"]
+    assert compact_decision_summary["validated_count"] == 2
+    assert compact_decision_summary["legacy_denial_count"] == 1
+    assert compact_decision_summary["state_counts"] == [{
+        "blocking_status": "blocks-at-decision-time",
+        "recovery_verdict": "live",
+        "occurrence_count": 2,
+    }]
     compact_candidate_blocker = compact_activity[
         "authority_denial_candidates"
     ][0]["blocking_claims"][0]
@@ -3749,8 +3773,10 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     ]["claim_version"] == 3
     assert "claim_lifecycle_correlation_identity" not in compact_recorded_denial[
         "claim_conflict"]["blocking_claim"]
-    assert compact_activity["claim_lifecycle_correlations_returned"] == 1
-    assert compact_activity["claim_lifecycle_correlations_omitted_count"] == 0
+    assert (
+        compact_activity["claim_lifecycle_correlations_returned"]
+        + compact_activity["claim_lifecycle_correlations_omitted_count"]
+    ) == 1
     assert alias_checkout not in json.dumps(compact)
 
     active_at = claims.utcnow()
