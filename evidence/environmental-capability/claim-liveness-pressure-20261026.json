@@ -1,0 +1,106 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_claim_liveness_pressure_20261026",
+  "captured_at": "2026-10-26T07:41:45Z",
+  "measurement_basis": "authenticated-canonical-session-event-window-and-sanitized-authority-projection",
+  "observation": {
+    "kind": "authority-denial-claim-liveness-pressure",
+    "source_interface": "MNCS Environment environmental-capability projection over canonical Store session events",
+    "request": {
+      "session_id": "ses_9ad3efb63438cf3d",
+      "projection_identity": "eci_73851097763f55b1",
+      "event_page_before_sequence": 130,
+      "event_limit": 32
+    },
+    "outcome": {
+      "event_count": 213,
+      "selected_event_sequence_start": 98,
+      "selected_event_sequence_end": 129,
+      "selected_event_window_truncated": true,
+      "authority_denial_count": 2,
+      "authority_denial_pattern": {
+        "action": "merge",
+        "repository": "mncs-environment",
+        "reason_class": "overlapping-claim",
+        "occurrence_count": 2,
+        "distinct_session_count": 1,
+        "recurrence_scope": "same-session-selected-event-window",
+        "claim_conflict_evidence_status": "not-recorded",
+        "current_claim_lookup_status": "no-recorded-claim-identities",
+        "causal_claim": "not-established"
+      },
+      "supporting_events": [
+        {
+          "identity": "evt_4864657945afbaea",
+          "sequence": 119,
+          "type": "authority.denied"
+        },
+        {
+          "identity": "evt_8b26b4b24a8514b4",
+          "sequence": 120,
+          "type": "authority.denied"
+        }
+      ],
+      "interpretation": "The canonical projection relates two merge denials to the selected session objective and authority subsystem. The denial records contain no blocker claim identities, so current liveness, denial-time state, and cause cannot be reconstructed.",
+      "analysis_limit": "This is a truncated window from one session. It does not establish cross-session recurrence, that either denial was unnecessary, or that a stale claim caused either denial."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_4bada4b81318ac17",
+    "campaign_evidence_count_before_recording": 61,
+    "claim_ids": [
+      "claim:mncs-environment:paths:120912fd0f77",
+      "claim:mncs-environment:paths:f69dc8630ed0"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_authority_claim_liveness_observability_20261026",
+    "title": "Merge denial events lack blocker identities for current claim-state diagnosis",
+    "category": "authority-and-work-scope",
+    "subsystem": "MNCS Environment authority denial, workspace claims, and session projections",
+    "owner": "mncs-environment",
+    "recurrence": "two-denials-in-one-session-window;cross-session-recurrence-not-established",
+    "basis": "An authenticated selected session window contains two merge denials classified as overlapping-claim. Neither event records blocker claim identity, and the projection therefore returns no-recorded-claim-identities without inferring denial-time liveness or cause.",
+    "actionable_recommendation": "Preserve exact blocker claim identities in future structured denial evidence and expose their current liveness separately, so agents can distinguish active conflicts from recoverable, released, or expired claims without rewriting historical evidence.",
+    "not_measured": [
+      "whether either denial was incorrect or avoidable",
+      "which claim or checkout caused either denial",
+      "cross-session or cross-campaign recurrence",
+      "whether a later claim recovery changes merge outcomes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "projection_identity": "eci_73851097763f55b1",
+      "event_identities": [
+        "evt_4864657945afbaea",
+        "evt_8b26b4b24a8514b4"
+      ]
+    }
+  ],
+  "not_measured": [
+    "cause or appropriateness of either historical denial",
+    "claim liveness at denial time",
+    "recurrence across independent sessions",
+    "agent or model identity and configuration",
+    "effectiveness of subsequent claim or authority changes"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

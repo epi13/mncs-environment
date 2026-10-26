@@ -1,0 +1,103 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_claim_liveness_readback_20261026",
+  "captured_at": "2026-10-26T07:41:45Z",
+  "measurement_basis": "authenticated-bounded-eci-projection-readback-over-canonical-session-history",
+  "observation": {
+    "kind": "authority-claim-liveness-projection-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 1 --evidence-limit 1 --session-event-before-sequence 130 --session-event-limit 32",
+      "projection_identity": "eci_73851097763f55b1",
+      "implementation_commit": "e57535e",
+      "event_page_before_sequence": 130,
+      "event_limit": 32,
+      "campaign_state_checkpoint_id": "chk_4bada4b81318ac17",
+      "evidence_count": 61,
+      "pressure_identity": "ph_authority_claim_liveness_observability_20261026",
+      "improvement_relation_identity": "im_environment_claim_liveness_recovery_20261026"
+    },
+    "outcome": {
+      "projection_status": "ready",
+      "event_count": 213,
+      "selected_event_window": {
+        "sequence_start": 98,
+        "sequence_end": 129,
+        "truncated": true,
+        "event_types": {
+          "authority.denied": 2,
+          "lease.acquired": 4,
+          "lease.released": 5,
+          "session.checkpointed": 4,
+          "session.resumed": 17
+        }
+      },
+      "authority_denials": {
+        "count": 2,
+        "sequences": [119, 120],
+        "repository": "mncs-environment",
+        "action": "merge",
+        "reason_class": "overlapping-claim",
+        "claim_conflict_evidence_status": "not-recorded",
+        "current_claim_lookup_status": "no-recorded-claim-identities",
+        "current_claim_lookup_count": 0
+      },
+      "recovery_observation": {
+        "status": "no-event-in-selected-window",
+        "interpretation": "No lease.recovered-and-acquired event occurred in this authentic selected window; the projection does not claim that a real recovery has already improved campaign work."
+      },
+      "interpretation": "The real session's prior merge denials remain discoverable and traceable, while missing blocker identities and the absence of recovery activity remain explicit. The projection does not infer denial-time claim state from current claims or from the reason text."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_4bada4b81318ac17",
+    "campaign_evidence_count_before_recording": 61,
+    "claim_ids": [
+      "claim:mncs-environment:paths:120912fd0f77",
+      "claim:mncs-environment:paths:f69dc8630ed0"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "projection_identity": "eci_73851097763f55b1",
+      "event_identities": [
+        "evt_4864657945afbaea",
+        "evt_8b26b4b24a8514b4"
+      ]
+    },
+    {
+      "identity": "mncs_environment_claim_liveness_projection_e57535e",
+      "kind": "committed-projection-implementation",
+      "repository": "mncs-environment",
+      "commit": "e57535e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "09eb3737b4fd09a35f3b060d2375f3a89a6563dc690eee66c91ceee26a52a57c"
+    }
+  ],
+  "not_measured": [
+    "whether either denial was inappropriate",
+    "cross-session recurrence",
+    "agent discovery or use of the new current-state and recovery views",
+    "effectiveness of later claim recovery"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

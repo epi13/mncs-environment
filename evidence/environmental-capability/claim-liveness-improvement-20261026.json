@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_claim_liveness_improvement_20261026",
+  "captured_at": "2026-10-26T07:41:45Z",
+  "measurement_basis": "committed-claim-liveness-recovery-and-session-activity-projection-linked-to-independent-verification",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment claims, canonical Store identity reads, session events, and environmental-capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_authority_claim_liveness_observability_20261026",
+      "implementation_commit": "e57535e",
+      "verification_observation_identity": "ev_environment_claim_liveness_verification_20261026",
+      "subsequent_observation_identity": "ev_environment_claim_liveness_readback_20261026"
+    },
+    "outcome": {
+      "implementation_change": "Ordinary claim acquisition now supersedes overlapping claims only when the existing owner-liveness classifier marks every conflict recoverable, publishing superseded versions and the new claim in one Store compare-and-swap. The transition records recovered_from provenance and a lease.recovered-and-acquired event. The environmental projection reads only the latest selected claim record for up to four recorded blocker IDs and exposes bounded recovery events.",
+      "verified_change": "The full Environment suite, focused claim and projection tests, claim-scope compatibility tests, vertical proof, and multi-agent campaign proofs pass. Live, unresolved nonterminal, and quiet exclusive claims remain blocked; event-tail incompleteness fails closed.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The two authentic historical merge denials lack blocker claim IDs, so this implementation cannot reconstruct their denial-time liveness or cause. No later real recovery event is present in the selected session window; the test results verify behavior but do not establish reduced operator or agent coordination effort."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_4bada4b81318ac17",
+    "campaign_evidence_count_before_recording": 61,
+    "claim_ids": [
+      "claim:mncs-environment:paths:120912fd0f77",
+      "claim:mncs-environment:paths:f69dc8630ed0"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_claim_liveness_recovery_20261026",
+    "addresses_hypothesis_identity": "ph_authority_claim_liveness_observability_20261026",
+    "implementation_reference": {
+      "identity": "mncs_environment_recoverable_claim_transition_e57535e",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "e57535e",
+      "path": "mncs_env/claims.py",
+      "sha256": "c6f300fc1dbf5717c41f93faad8097d9b67f378a2df653c0c6b70bd7b00d1377"
+    },
+    "verification_observation_identity": "ev_environment_claim_liveness_verification_20261026",
+    "subsequent_observation_identity": "ev_environment_claim_liveness_readback_20261026",
+    "basis": "The implementation makes recorded blocker identities queryable against current claim state, adds provenance for safe liveness-classified acquisition recovery, and exposes that transition through the existing session-activity projection. The verified historical window still has no blocker IDs and no recovery event, so it demonstrates the observability gap without establishing that either denial was caused by stale ownership or that the new path has reduced coordination overhead.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "whether either historical denial was unnecessary",
+      "whether later agents use the current-state or recovery projection",
+      "whether automatic recoveries reduce tool calls or waiting",
+      "whether follow-up development outcomes improve"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_recoverable_claim_transition_e57535e",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "e57535e",
+      "path": "mncs_env/claims.py",
+      "sha256": "c6f300fc1dbf5717c41f93faad8097d9b67f378a2df653c0c6b70bd7b00d1377"
+    },
+    {
+      "identity": "mncs_environment_claim_liveness_projection_e57535e",
+      "kind": "committed-projection-and-session-tests",
+      "repository": "mncs-environment",
+      "commit": "e57535e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "09eb3737b4fd09a35f3b060d2375f3a89a6563dc690eee66c91ceee26a52a57c"
+    },
+    {
+      "identity": "ev_environment_claim_liveness_verification_20261026",
+      "kind": "verified-projection-observation"
+    }
+  ],
+  "not_measured": [
+    "authentic automatic claim recovery in a later development session",
+    "cross-session recurrence or reduction of authority friction",
+    "host process termination or OS-level fencing",
+    "long-term effectiveness after the underlying work resumes"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
