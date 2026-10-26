@@ -1,0 +1,104 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_selected_proposal_worktree_preflight_improvement_20261026",
+  "captured_at": "2026-10-26T21:22:23Z",
+  "measurement_basis": "committed-environment-change-linked-to-focused-authority-and-projection-verification",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "campaign_work_intent_alignment_status": "current campaign objective differs from the session's persisted WorkIntent goal",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_5fa9632706f1530b",
+    "campaign_evidence_count_before_recording": 79
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_selected_proposal_preflight_repeats_checkout_or_claim",
+      "implementation_commit": "d8f70959ca7ee1a4ad4059f6f625d6ebf410597c",
+      "verification_observation_identity": "ev_environment_selected_proposal_worktree_preflight_verification_20261026",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "For repository-name local preflight requests, Environment now refreshes and uses the session's exact selected checkout. An attached non-main linked worktree is eligible as a proposal surface without a persistent claim; broad claims remain visible as coordination evidence. Dirty main remains behind its existing claim gate.",
+      "implementation_scope": "mncs_env.Session.check and mncs_env.authority proposal-worktree eligibility",
+      "verified_change": "33 focused authority tests and three environmental-capability projection tests passed. The selected-checkout case records a bounded preflight preimage and operation_executed=false.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The tests verify the selected-worktree eligibility contract and projection compatibility. They do not show an independent agent discovering or using the path, a completed edit or integration, reduced coordination overhead, or safe recovery from an in-flight concurrent operation."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_selected_proposal_preflight_repeats_checkout_or_claim",
+    "addresses_hypothesis_identity": "ph_environment_selected_proposal_preflight_repeats_checkout_or_claim",
+    "implementation_reference": {
+      "identity": "mncs_environment_selected_proposal_scope_d8f7095",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "d8f70959ca7ee1a4ad4059f6f625d6ebf410597c",
+      "path": "mncs_env/sessions.py",
+      "sha256": "c77d9be0caee127c9a42f15a1544526fc142fd59ea8b3046aa9119e34c2f78ef"
+    },
+    "verification_observation_identity": "ev_environment_selected_proposal_worktree_preflight_verification_20261026",
+    "subsequent_observation_identity": null,
+    "basis": "Session.check now resolves a repository-name local preflight through the selected checkout, refreshes its registered identity and Git state, derives the exact worktree scope, and records a claimless proposal-eligibility event. Authority and projection tests verify the behavior and preserve the dirty-main gate. The behavior's effect on real agent workflows remains unmeasured.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "whether a later independent agent can discover and use the selected-checkout path",
+      "whether agents make fewer coordination calls after this change",
+      "whether actual same-checkout and in-flight conflicts are handled with adequate fencing",
+      "whether the original reported pressure recurs"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_selected_proposal_scope_d8f7095",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "d8f70959ca7ee1a4ad4059f6f625d6ebf410597c",
+      "path": "mncs_env/sessions.py",
+      "sha256": "c77d9be0caee127c9a42f15a1544526fc142fd59ea8b3046aa9119e34c2f78ef"
+    },
+    {
+      "identity": "mncs_environment_authority_proposal_scope_d8f7095",
+      "kind": "committed-authority-implementation",
+      "repository": "mncs-environment",
+      "commit": "d8f70959ca7ee1a4ad4059f6f625d6ebf410597c",
+      "path": "mncs_env/authority.py",
+      "sha256": "e404e20325583a9f62ad7626119515003804e9acf5cbb15cfc32a80b67322b0b"
+    },
+    {
+      "identity": "mncs_environment_proposal_scope_verification_d8f7095",
+      "kind": "committed-verification-tests",
+      "repository": "mncs-environment",
+      "commit": "d8f70959ca7ee1a4ad4059f6f625d6ebf410597c",
+      "path": "tests/test_environment.py",
+      "sha256": "11dc9e0e681405beb22c4cc8cb81c37205c2e471949e8ccd658cf6b4ec7aa02d"
+    },
+    {
+      "identity": "mncs_environment_proposal_preflight_projection_tests_d8f7095",
+      "kind": "committed-projection-verification-tests",
+      "repository": "mncs-environment",
+      "commit": "d8f70959ca7ee1a4ad4059f6f625d6ebf410597c",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "0a2823659b3d4372e2bcc35901048779c6668987892eeb553e82a024e388b914"
+    }
+  ],
+  "not_measured": [
+    "independent agent adoption of the selected-checkout preflight",
+    "accepted edits, merges, or pushes after the eligibility decision",
+    "coordination overhead before and after the change",
+    "long-term effectiveness or recurrence"
+  ]
+}
