@@ -4566,6 +4566,7 @@ class Session:
         observed_facts = authority_module.repository_facts_for_snapshot(
             self.snapshot, repo_facts,
         )
+        current_claim_records: dict[str, dict[str, Any]] = {}
         repository = authority_module.repository_for_target(target, observed_facts)
         if repository is None:
             repository = "" if os.path.isabs(target) else target
@@ -4573,11 +4574,16 @@ class Session:
             target, observed_facts,
         )
         normalized_scope = self._canonical_scope(repository, scope)
-        if action in ("write", "mutate", "execute", "publish", "merge", "delete", "retire"):
-            # Current entry observations are not a mutation lease. Re-read
-            # claims and the exact selected target at the authority boundary;
-            # broad discovery is unnecessary on a quiet observational entry.
-            self._refresh_holders()
+        if action in (
+            "write", "mutate", "execute", "publish", "merge", "delete",
+            "retire", "verify",
+        ):
+            # Current entry observations are not a mutation or verification
+            # lease. Re-read claims at the effect boundary; broad discovery
+            # is unnecessary on a quiet observational entry.
+            refreshed_claims = self._refresh_holders()
+            if isinstance(refreshed_claims, dict):
+                current_claim_records = refreshed_claims
             selected = self.snapshot.get("selected_checkouts", {}).get(repository)
             selected_target = False
             if isinstance(selected, dict) and selected.get("path"):
@@ -4895,6 +4901,67 @@ class Session:
             repo_facts=observed_facts,
             scope=normalized_scope,
         )
+        claim_conflict = verdict.get("claim_conflict")
+        if isinstance(claim_conflict, dict):
+            blocker = claim_conflict.get("blocking_claim")
+            claim_id = blocker.get("claim_id") if isinstance(blocker, dict) else None
+            record = (
+                current_claim_records.get(claim_id)
+                if isinstance(claim_id, str) else None
+            )
+            if (
+                isinstance(record, dict)
+                and record.get("session_id") == blocker.get("session_id")
+                and record.get("repository") == claim_conflict.get("repository")
+            ):
+                observed_at = datetime.now(timezone.utc)
+                owner_states: dict[str, dict[str, Any]] = {}
+                owner_liveness = claims_module.owner_liveness_summary(
+                    record,
+                    self.store,
+                    owner_states,
+                    now=observed_at,
+                    is_active=True,
+                    owner_session_limit=1,
+                    require_bounded_events=True,
+                )
+                recovery = owner_liveness.get("recovery_eligibility")
+                if recovery == "recoverable":
+                    blocking_status = "eligible-for-safe-recovery-on-acquisition"
+                    guidance_status = "stale-claim-recoverable-on-acquisition"
+                elif recovery in {"live", "not-recoverable"}:
+                    blocking_status = "blocks-at-decision-time"
+                    guidance_status = "scope-currently-blocked"
+                else:
+                    blocking_status = "not-established"
+                    guidance_status = "refresh-claim-state-before-retrying"
+                current_claim_state = {
+                    "lookup_status": "found",
+                    "basis": "active-claim-store-read-before-authority-check",
+                    "observed_at": observed_at.isoformat(
+                        timespec="seconds"
+                    ).replace("+00:00", "Z"),
+                    "claim_version": (
+                        record.get("version")
+                        if type(record.get("version")) is int else None
+                    ),
+                    "record_status": record.get("status"),
+                    "blocking_status": blocking_status,
+                    "recovery_verdict": recovery,
+                    "freshness": owner_liveness.get("freshness"),
+                    "owner_liveness": owner_liveness,
+                    "scope_relation_status": "overlap-observed-at-authority-check",
+                }
+                claim_conflict["current_claim_state"] = current_claim_state
+                claim_conflict["coordination_guidance"] = {
+                    "basis": "current-claim-state-at-authorization-check",
+                    "status": guidance_status,
+                    "next_step": owner_liveness.get(
+                        "recommended_operation",
+                        "refresh-scope-and-acquire",
+                    ),
+                    "claim_mutated": False,
+                }
         if verdict["verdict"] == "deny":
             denial = {
                 "action": action,
@@ -5500,9 +5567,10 @@ class Session:
 
     # -- claims ---------------------------------------------------------------
 
-    def _refresh_holders(self) -> None:
+    def _refresh_holders(self) -> dict[str, dict[str, Any]]:
+        active = claims_module.active_claims(self.store.read_claims())
         grouped: dict[str, list[dict[str, Any]]] = {}
-        for record in claims_module.active_claims(self.store.read_claims()).values():
+        for record in active.values():
             grouped.setdefault(str(record.get("repository", "")), []).append(
                 {
                     "claim_id": str(record.get("claim_id", "")),
@@ -5514,6 +5582,7 @@ class Session:
             )
         self.snapshot["claim_holders"] = grouped
         self.snapshot.setdefault("authority", {})["claim_holders"] = dict(grouped)
+        return active
 
     def _campaign_repository_refs(
         self, live_claims: dict[str, dict[str, Any]]

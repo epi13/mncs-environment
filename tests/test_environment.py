@@ -295,6 +295,131 @@ class AuthorityTests(unittest.TestCase):
                 "claim:mncs-atlas:paths:shared",
             )
 
+    def test_session_check_explains_recoverable_claim_without_mutating_it(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(
+                Path(directory),
+                intent={
+                    "goal": "edit an isolated source path",
+                    "repositories": ["mncs-atlas"],
+                },
+            )
+            try:
+                owner_id = "ses_quiet_authority_blocker"
+                session.store.save_snapshot(
+                    owner_id, {"session_id": owner_id, "lifecycle": "active"},
+                )
+                quiet_activity = datetime.now(timezone.utc) - timedelta(hours=3)
+                session.store.put_event(owner_id, 1, {
+                    "session_id": owner_id,
+                    "sequence": 1,
+                    "type": "test.agent_activity",
+                    "observed_at": quiet_activity.isoformat(timespec="seconds"),
+                    "payload": {},
+                })
+                claim = claims.acquire(
+                    session.store,
+                    repository="mncs-atlas",
+                    session_id=owner_id,
+                    consumer_id="quiet-authority-blocker",
+                    basis=claims.BASIS_EXPLICIT,
+                    reason="authority denial liveness test",
+                    scope={
+                        "kind": "paths",
+                        "paths": ["src/shared.mn"],
+                        "exclusive": False,
+                    },
+                )
+                claim_count_before = len(session.store.read_claims())
+
+                verdict = session.check(
+                    action="write",
+                    target="mncs-atlas/src/shared.mn",
+                    repo_facts=DIRTY_FACTS,
+                    scope={"kind": "paths", "paths": ["src/shared.mn"]},
+                )
+
+                self.assertEqual(verdict["verdict"], "deny")
+                conflict = verdict["claim_conflict"]
+                current = conflict["current_claim_state"]
+                self.assertEqual(current["claim_version"], claim["version"])
+                self.assertEqual(
+                    current["blocking_status"],
+                    "eligible-for-safe-recovery-on-acquisition",
+                )
+                self.assertEqual(
+                    current["owner_liveness"]["recovery_eligibility"],
+                    "recoverable",
+                )
+                self.assertEqual(
+                    conflict["coordination_guidance"]["next_step"],
+                    "retry-exact-scoped-acquisition",
+                )
+                self.assertFalse(
+                    conflict["coordination_guidance"]["claim_mutated"]
+                )
+                self.assertEqual(
+                    len(session.store.read_claims()), claim_count_before,
+                )
+                event = session._log()[-1]
+                self.assertEqual(
+                    event["payload"]["claim_conflict"]["current_claim_state"],
+                    current,
+                )
+            finally:
+                session.close()
+
+    def test_session_check_refreshes_claims_before_verification(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(
+                Path(directory),
+                intent={
+                    "goal": "verify an isolated source path",
+                    "repositories": ["mncs-atlas"],
+                },
+            )
+            try:
+                owner_id = "ses_verification_scope_owner"
+                session.store.save_snapshot(
+                    owner_id, {"session_id": owner_id, "lifecycle": "active"},
+                )
+                session.store.put_event(owner_id, 1, {
+                    "session_id": owner_id,
+                    "sequence": 1,
+                    "type": "test.agent_activity",
+                    "observed_at": claims.utcnow(),
+                    "payload": {},
+                })
+                claim = claims.acquire(
+                    session.store,
+                    repository="mncs-atlas",
+                    session_id=owner_id,
+                    consumer_id="verification-scope-owner",
+                    basis=claims.BASIS_EXPLICIT,
+                    reason="verification freshness test",
+                    scope={"kind": "paths", "paths": ["src/checked.mn"]},
+                )
+
+                verdict = session.check(
+                    action="verify",
+                    target="mncs-atlas/src/checked.mn",
+                    repo_facts=DIRTY_FACTS,
+                    scope={"kind": "paths", "paths": ["src/checked.mn"]},
+                )
+
+                self.assertEqual(verdict["verdict"], "deny")
+                self.assertEqual(
+                    verdict["claim_conflict"]["current_claim_state"]["claim_version"],
+                    claim["version"],
+                )
+                self.assertEqual(
+                    verdict["claim_conflict"]["current_claim_state"][
+                        "owner_liveness"]["recovery_eligibility"],
+                    "live",
+                )
+            finally:
+                session.close()
+
     def test_releasing_claim_changes_authority(self) -> None:
         before = authority.evaluate(
             context_for(), action="write", target="mncs-atlas", session_id="ses_mine",

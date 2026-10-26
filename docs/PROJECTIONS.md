@@ -379,6 +379,14 @@ authority, an exact operation scope, and the refreshed overlap observation.
 Claims describe coordination but do not grant or deny integration eligibility.
 An overlap is retained as advisory coordination evidence instead of persistent
 exclusive control, and a claim need not be held by the acting agent.
+When a current `Session.check` observes a mutation or verification conflict,
+it attaches a separate `current_claim_state` with the claim version and
+bounded owner liveness, and whether safe recovery is eligible on a normal
+acquisition. Its
+`coordination_guidance` gives the next scoped operation without mutating the
+claim or changing the denial. This is derived from the same classifier used by
+claim queries; providers without bounded owner-event reads report incomplete
+liveness rather than scanning full session history or inferring staleness.
 Each allowed preflight emits a bounded `authority.integration-eligible` event.
 `session_activity.integration_eligibility` exposes its action, repository,
 sanitized scope, separate rights and eligibility bases, bounded overlap
