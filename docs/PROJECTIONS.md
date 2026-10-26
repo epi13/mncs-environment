@@ -685,6 +685,16 @@ keeps environmental-capability JSON within the same byte limit; it omits
 indentation when pretty formatting would exceed the bound and refuses a
 compact payload that still exceeds it.
 
+Before dropping environmental observation summaries to meet this bound, the
+compactor can omit nested owner-audit source-detail entries one at a time.
+`source_audit_details_truncated` and
+`source_audit_details_omitted_count` make that reduction explicit; the owner
+audit's exact supporting references remain available for source inspection.
+This gives linked pressure hypotheses and improvement relations room to remain
+inspectable in a compact response. If their observation summaries are omitted,
+the relation and hypothesis still carry exact evidence references when present
+in the selected view.
+
 ## What the ambient pass refuses
 
 - **Occupied checkouts.** Foreign claims, unknown dirt, foreign branches,

@@ -5387,6 +5387,105 @@ def test_improvement_relation_links_pressure_change_verification_and_followup(
     )
 
 
+def test_compact_projection_preserves_improvement_path_before_owner_audit_detail(
+    tmp_path: Path,
+) -> None:
+    pressure = _observation(
+        "ev_environment_compaction_pressure", "ses_agent", "cmp_agent",
+    )
+    pressure["pressure_hypothesis"]["identity"] = "ph_compaction_priority"
+    change = _observation(
+        "ev_environment_compaction_change", "ses_environment", "cmp_environment",
+    )
+    change.pop("pressure_hypothesis")
+    verification = _observation(
+        "ev_environment_compaction_verification",
+        "ses_environment",
+        "cmp_environment",
+    )
+    verification.pop("pressure_hypothesis")
+    followup = _observation(
+        "ev_environment_compaction_followup", "ses_agent_later", "cmp_agent",
+    )
+    followup.pop("pressure_hypothesis")
+    implementation = {
+        "identity": "ev_environment_compaction_implementation",
+        "repository": "mncs-environment",
+        "commit": "a" * 40,
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "b" * 64,
+    }
+    change["improvement_relation"] = {
+        "identity": "im_compaction_priority",
+        "addresses_hypothesis_identity": "ph_compaction_priority",
+        "implementation_reference": implementation,
+        "verification_observation_identity": verification["identity"],
+        "subsequent_observation_identity": followup["identity"],
+        "basis": "Bounded projection retains a verified improvement path.",
+        "not_measured": ["whether later pressure recurrence decreases"],
+    }
+    session, _ = _session(
+        tmp_path,
+        [pressure, change, verification, followup],
+        extra_refs=[implementation],
+    )
+    projection = capability_intelligence.project(session)
+    projection["implementation_accountability"] = {
+        "schema_version": capability_intelligence.IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
+        "sample_count": 0,
+        "samples": [],
+        "owner_audit_evidence": {
+            "observed_audit_record_count": 1,
+            "audits": [{
+                "identity": "ev_environment_large_owner_audit",
+                "evidence_reference": implementation,
+                "source_audit_details": [
+                    {
+                        "identity": f"owner_source_detail_{record_index}",
+                        "remaining_host_responsibilities": [
+                            {
+                                "area": "a" * 180,
+                                "classification": "b" * 180,
+                                "eliminating_capability": "c" * 180,
+                                "canonical_owner": "d" * 180,
+                            }
+                            for _ in range(8)
+                        ],
+                    }
+                    for record_index in range(4)
+                ],
+            }],
+        },
+    }
+
+    compact = capability_intelligence._compact_projection(
+        projection, 100_000, 18_000,
+    )
+
+    assert len(json.dumps(compact, ensure_ascii=False).encode()) <= 18_000
+    assert compact["improvement_relation_count"] == 1
+    relation = compact["improvement_relations"][0]
+    assert relation["identity"] == "im_compaction_priority"
+    assert relation["verification_evidence_reference"]["identity"] == (
+        verification["identity"]
+    )
+    assert relation["subsequent_evidence_reference"]["identity"] == (
+        followup["identity"]
+    )
+    assert [item["identity"] for item in compact["pressure_hypotheses"]] == [
+        "ph_compaction_priority",
+    ]
+    assert any(
+        item["identity"] == "ev_environment_compaction_pressure"
+        for item in compact["observations"]
+    )
+    owner_audit = compact["implementation_accountability"][
+        "owner_audit_evidence"
+    ]["audits"][0]
+    assert owner_audit["source_audit_details_truncated"] is True
+    assert owner_audit["source_audit_details_omitted_count"] > 0
+
+
 def test_improvement_relation_without_followup_preserves_unassessed_status(
     tmp_path: Path,
 ) -> None:

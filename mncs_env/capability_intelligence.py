@@ -3208,6 +3208,35 @@ def _compact_projection(
             activity_result["capabilities"].pop()
             activity_result["capabilities_truncated"] = True
             continue
+        accountability = result.get("implementation_accountability")
+        owner_audit = (
+            accountability.get("owner_audit_evidence")
+            if isinstance(accountability, dict) else None
+        )
+        owner_audits = (
+            owner_audit.get("audits")
+            if isinstance(owner_audit, dict) else None
+        )
+        if isinstance(owner_audits, list):
+            source_audit_to_trim = next(
+                (
+                    audit for audit in reversed(owner_audits)
+                    if isinstance(audit, dict)
+                    and audit.get("source_audit_details")
+                ),
+                None,
+            )
+            if source_audit_to_trim is not None:
+                source_audit_to_trim["source_audit_details"].pop()
+                source_audit_to_trim[
+                    "source_audit_details_truncated"
+                ] = True
+                source_audit_to_trim[
+                    "source_audit_details_omitted_count"
+                ] = source_audit_to_trim.get(
+                    "source_audit_details_omitted_count", 0,
+                ) + 1
+                continue
         if result["observations"]:
             result["observations"].pop(0)
         elif any(
