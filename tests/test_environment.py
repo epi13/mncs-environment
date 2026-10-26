@@ -8108,6 +8108,9 @@ class SessionTests(unittest.TestCase):
                     else:
                         second_provider_started.set()
                     time.sleep(0.04)
+                    proposal = checkout / "proposals" / f"{argv[0]}.txt"
+                    proposal.parent.mkdir(exist_ok=True)
+                    proposal.write_text(f"accepted proposal from {argv[0]}\n")
                     return {"status": "ok", "returncode": 0, "stdout": "ok"}
                 finally:
                     with counter_lock:
@@ -8136,6 +8139,14 @@ class SessionTests(unittest.TestCase):
                     self.assertEqual(second_result.result(timeout=4)["status"], "ok")
 
             self.assertEqual(max_active, 1)
+            self.assertEqual(
+                (checkout / "proposals" / "first.txt").read_text(),
+                "accepted proposal from first\n",
+            )
+            self.assertEqual(
+                (checkout / "proposals" / "second.txt").read_text(),
+                "accepted proposal from second\n",
+            )
             self.assertFalse(first.snapshot["claim_holders"].get("MNCS-Commons"))
             self.assertFalse(second.snapshot["claim_holders"].get("MNCS-Commons"))
             busy_lease = mock.MagicMock()
