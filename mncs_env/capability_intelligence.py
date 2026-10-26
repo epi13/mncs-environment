@@ -2623,6 +2623,7 @@ def _compact_projection(
             "proposal_eligibility_records_returned",
             "proposal_eligibility_records_omitted",
             "proposal_eligibility_records_invalid",
+            "proposal_preflight_state_observations_invalid",
             "proposal_eligibility_selection_policy",
         )
         if key in activity_source
@@ -3691,10 +3692,26 @@ def _compact_projection(
             for key in (
                 "identity", "action", "repository", "authorization_basis",
                 "eligibility_basis", "campaign_id", "work_intent_id",
-                "work_intent_reference_status",
+                "work_intent_reference_status", "preflight_state_status",
             )
             if isinstance(item.get(key), str)
         }
+        preflight_state = item.get("proposal_preflight_state")
+        if isinstance(preflight_state, dict):
+            compact_item["proposal_preflight_state"] = {
+                key: preflight_state[key]
+                for key in (
+                    "schema_version", "observation_basis", "checkout_identity",
+                    "branch", "branch_status", "head", "head_status",
+                    "working_tree_status",
+                )
+                if key in preflight_state
+            }
+            limit = item.get("preflight_state_interpretation_limit")
+            if isinstance(limit, str):
+                compact_item["preflight_state_interpretation_limit"] = (
+                    _short_text(limit, 320)
+                )
         for key in (
             "persistent_claim_required", "operation_executed",
             "coordination_only_claim_count", "coordination_only_claims_truncated",
@@ -9442,15 +9459,16 @@ def _authority_conflict_scope(
     return result
 
 
-def _authority_integration_preflight_state(value: Any) -> dict[str, Any] | None:
-    """Validate the bounded direct checkout preimage recorded at preflight."""
+def _authority_checkout_preflight_state(
+    value: Any, *, schema_version: str,
+) -> dict[str, Any] | None:
+    """Validate a bounded checkout preimage recorded at an effect boundary."""
     expected = {
         "schema_version", "observation_basis", "checkout_identity", "branch",
         "branch_status", "head", "head_status", "working_tree_status",
     }
     if (not isinstance(value, dict) or set(value) != expected
-            or value.get("schema_version")
-            != "mncs.environment.integration-preflight-state/1"
+            or value.get("schema_version") != schema_version
             or value.get("observation_basis")
             != "fresh-registered-checkout-inspection"):
         return None
@@ -9485,7 +9503,7 @@ def _authority_integration_preflight_state(value: Any) -> dict[str, Any] | None:
     if working_tree_status not in {"clean", "dirty", "unavailable"}:
         return None
     return {
-        "schema_version": "mncs.environment.integration-preflight-state/1",
+        "schema_version": schema_version,
         "observation_basis": "fresh-registered-checkout-inspection",
         "checkout_identity": checkout_identity,
         "branch": branch,
@@ -9494,6 +9512,22 @@ def _authority_integration_preflight_state(value: Any) -> dict[str, Any] | None:
         "head_status": head_status,
         "working_tree_status": working_tree_status,
     }
+
+
+def _authority_integration_preflight_state(value: Any) -> dict[str, Any] | None:
+    """Validate the bounded integration destination checkout preimage."""
+    return _authority_checkout_preflight_state(
+        value,
+        schema_version="mncs.environment.integration-preflight-state/1",
+    )
+
+
+def _authority_proposal_preflight_state(value: Any) -> dict[str, Any] | None:
+    """Validate the bounded proposal checkout state observed at preflight."""
+    return _authority_checkout_preflight_state(
+        value,
+        schema_version="mncs.environment.proposal-preflight-state/1",
+    )
 
 
 def _authority_decision_claim_state(
@@ -11897,6 +11931,7 @@ def _session_activity(
     )
     proposal_eligibility_records: list[dict[str, Any]] = []
     invalid_proposal_eligibility_event_count = 0
+    invalid_proposal_preflight_state_count = 0
     valid_proposal_eligibility_count = 0
     for event in reversed(proposal_eligibility_events):
         reference = _event_reference(event)
@@ -11977,6 +12012,17 @@ def _session_activity(
         if invalid_coordination_claim:
             invalid_proposal_eligibility_event_count += 1
             continue
+        raw_preflight_state = payload.get("proposal_preflight_state")
+        preflight_state = _authority_proposal_preflight_state(
+            raw_preflight_state,
+        )
+        if raw_preflight_state is None:
+            preflight_state_status = "not-recorded-on-event"
+        elif preflight_state is None:
+            preflight_state_status = "invalid-event-observation"
+            invalid_proposal_preflight_state_count += 1
+        else:
+            preflight_state_status = "recorded-and-validated"
         valid_proposal_eligibility_count += 1
         if len(proposal_eligibility_records) >= (
             MAX_SESSION_ACTIVITY_PROPOSAL_ELIGIBILITY
@@ -11994,6 +12040,7 @@ def _session_activity(
             "eligibility_basis": eligibility_basis,
             "persistent_claim_required": False,
             "operation_executed": False,
+            "preflight_state_status": preflight_state_status,
             "coordination_only_claim_count": raw_claim_count,
             "coordination_only_claims": coordination_claims,
             "coordination_only_claims_truncated": raw_claims_truncated,
@@ -12005,6 +12052,16 @@ def _session_activity(
             ),
             "event_reference": reference,
         })
+        if preflight_state is not None:
+            proposal_eligibility_records[-1]["proposal_preflight_state"] = (
+                preflight_state
+            )
+            proposal_eligibility_records[-1][
+                "preflight_state_interpretation_limit"
+            ] = (
+                "This is the local proposal checkout state at preflight; it "
+                "does not establish an executed edit, verification, or outcome."
+            )
     proposal_eligibility_records_omitted = max(
         0,
         valid_proposal_eligibility_count - len(proposal_eligibility_records),
@@ -12377,6 +12434,9 @@ def _session_activity(
                 ),
                 "proposal_eligibility_records_invalid": (
                     invalid_proposal_eligibility_event_count
+                ),
+                "proposal_preflight_state_observations_invalid": (
+                    invalid_proposal_preflight_state_count
                 ),
                 "proposal_eligibility_selection_policy": (
                     "newest-validated-proposal-preflights-in-selected-session-window"

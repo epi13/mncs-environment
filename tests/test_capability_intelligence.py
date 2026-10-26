@@ -3044,6 +3044,16 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
                 "disposition": "coordination-only-repository-path-claim",
             }],
             "coordination_only_claims_truncated": False,
+            "proposal_preflight_state": {
+                "schema_version": "mncs.environment.proposal-preflight-state/1",
+                "observation_basis": "fresh-registered-checkout-inspection",
+                "checkout_identity": "checkout:proposal",
+                "branch": "campaign/proposal",
+                "branch_status": "attached",
+                "head": "e" * 40,
+                "head_status": "measured",
+                "working_tree_status": "dirty",
+            },
             "campaign_id": campaign_id,
             "work_intent_id": work_intent_id,
         },
@@ -3058,6 +3068,7 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
     result = capability_intelligence.project(session)
     activity = result["session_activity"]
     assert activity["source"]["proposal_eligibility_records_returned"] == 1
+    assert activity["source"]["proposal_preflight_state_observations_invalid"] == 0
     assert activity["proposal_eligibility_count"] == 1
     eligible = activity["proposal_eligibility"][0]
     assert eligible["action"] == "write"
@@ -3066,6 +3077,11 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
     assert eligible["work_intent_id"] == work_intent_id
     assert eligible["persistent_claim_required"] is False
     assert eligible["operation_executed"] is False
+    assert eligible["preflight_state_status"] == "recorded-and-validated"
+    assert eligible["proposal_preflight_state"]["head"] == "e" * 40
+    assert eligible["proposal_preflight_state"]["checkout_identity"] == (
+        "checkout:proposal"
+    )
     assert eligible["coordination_only_claim_count"] == 2
     assert eligible["coordination_only_claims"][0]["claim_id"] == (
         "claim:mncs-environment"
@@ -3084,6 +3100,8 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
     )
     compact_eligible = compact["session_activity"]["proposal_eligibility"][0]
     assert compact_eligible["persistent_claim_required"] is False
+    assert compact_eligible["preflight_state_status"] == "recorded-and-validated"
+    assert compact_eligible["proposal_preflight_state"]["head"] == "e" * 40
     assert compact_eligible["event_reference"]["identity"] == (
         "evt_proposal_eligible_7"
     )
@@ -3093,6 +3111,43 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
     assert compact_eligible["coordination_only_claims"][1]["claim_id"] == (
         "claim:mncs-environment:paths:shared"
     )
+
+    event_without_preflight = json.loads(json.dumps(event))
+    event_without_preflight["identity"] = "evt_proposal_eligible_8"
+    event_without_preflight["payload"].pop("proposal_preflight_state")
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": 1,
+        "events": [event_without_preflight][-limit:],
+        "truncated": False,
+        "next_before_sequence": None,
+    }
+    without_preflight = capability_intelligence.project(session)[
+        "session_activity"
+    ]["proposal_eligibility"][0]
+    assert without_preflight["preflight_state_status"] == (
+        "not-recorded-on-event"
+    )
+
+    event_with_invalid_preflight = json.loads(json.dumps(event))
+    event_with_invalid_preflight["identity"] = "evt_proposal_eligible_9"
+    event_with_invalid_preflight["payload"]["proposal_preflight_state"][
+        "schema_version"
+    ] = "mncs.environment.unknown-preflight-state/1"
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": 1,
+        "events": [event_with_invalid_preflight][-limit:],
+        "truncated": False,
+        "next_before_sequence": None,
+    }
+    invalid_preflight_projection = capability_intelligence.project(session)[
+        "session_activity"
+    ]
+    assert invalid_preflight_projection["source"][
+        "proposal_preflight_state_observations_invalid"
+    ] == 1
+    assert invalid_preflight_projection["proposal_eligibility"][0][
+        "preflight_state_status"
+    ] == "invalid-event-observation"
 
 
 def test_scoped_integration_preflight_projects_without_claim_or_success(

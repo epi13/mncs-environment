@@ -440,8 +440,15 @@ The bounded `session_activity.proposal_eligibility` projection exposes
 validated `authority.proposal-eligible` records, their objective references,
 observed worktree scope, and repository-wide or repository-relative path
 claims treated as coordination-only.
+When an absolute target resolves to a registered checkout and the Environment
+refreshes that checkout at the preflight boundary, the event also records a
+validated `proposal_preflight_state` containing checkout identity, branch,
+HEAD, and working-tree status. Older events and preflights without a freshly
+inspected checkout expose `preflight_state_status:
+not-recorded-on-event`; this state identifies the local checkout preimage only.
 These are preflight observations: they do not prove that an operation ran,
-that its changes were accepted, or that the change improved the environment.
+that its changes were accepted, verified, or beneficial. The projection keeps
+the source event reference so an agent can inspect the underlying evidence.
 When an exact registered destination was refreshed before a merge or publish
 denial, that `authority.denied` event also carries its repository identity and
 the same bounded local preimage. The projection exposes it as

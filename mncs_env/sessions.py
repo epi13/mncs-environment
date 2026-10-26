@@ -4785,7 +4785,8 @@ class Session:
                     if isinstance(checkout_identity.get(key), str):
                         fresh_facts[repository][key] = checkout_identity[key]
                 observed_facts = {**observed_facts, **fresh_facts}
-                if integration_action:
+                if (integration_action
+                        or action in authority_module.PROPOSAL_WORKTREE_ACTIONS):
                     observed_head = record.get("head")
                     valid_head = (
                         isinstance(observed_head, str)
@@ -4821,6 +4822,8 @@ class Session:
                         preflight_state_observation = {
                             "schema_version": (
                                 "mncs.environment.integration-preflight-state/1"
+                                if integration_action else
+                                "mncs.environment.proposal-preflight-state/1"
                             ),
                             "observation_basis": (
                                 "fresh-registered-checkout-inspection"
@@ -5071,6 +5074,10 @@ class Session:
                 ),
                 **self._authority_event_context(),
             }
+            if preflight_state_observation is not None:
+                payload["proposal_preflight_state"] = (
+                    preflight_state_observation
+                )
             self._emit(
                 "authority.proposal-eligible", "environment", payload,
             )

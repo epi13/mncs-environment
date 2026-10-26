@@ -394,8 +394,10 @@ existing clean-state or claim requirements. A repository-wide claim remains
 visible as coordination context but does not reserve every proposal branch;
 claims naming the same checkout, overlapping paths, or the same attached
 branch still block. Retiring a checkout remains claim-gated. Each accepted
-proposal preflight is recorded as `authority.proposal-eligible`; it records
-eligibility, not an executed edit or its outcome.
+proposal preflight is recorded as `authority.proposal-eligible`; when an
+absolute target is freshly inspected, the event also records bounded checkout
+identity, branch, HEAD, and working-tree status at preflight. This records
+eligibility and a local preimage, not an executed edit or its outcome.
 
 For up to four unique recorded blocker claim IDs, the projection also performs
 a bounded targeted read of current claim records and exposes a separate
