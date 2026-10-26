@@ -6196,8 +6196,20 @@ class SessionTests(unittest.TestCase):
                 "identity": "ev_environment_campaign_charter_task_selector_20261013",
                 "repository": "mncs-environment",
                 "commit": "b" * 40,
-                "path": "evidence/campaign-charter-task-selector.json",
+                "path": (
+                    "evidence/campaign-charters/"
+                    "ev_environment_campaign_charter_task_selector_20261013.json"
+                ),
                 "sha256": "2" * 64,
+            }, {
+                "identity": "ev_environment_campaign_charter_projection_readback_20261013",
+                "repository": "mncs-environment",
+                "commit": "e" * 40,
+                "path": (
+                    "evidence/environmental-capability/"
+                    "campaign-charter-projection-readback-20261013.json"
+                ),
+                "sha256": "5" * 64,
             }]
             evidence.extend({
                 "identity": f"ev_charter_index_fill_{index:03d}",

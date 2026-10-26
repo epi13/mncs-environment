@@ -27,6 +27,7 @@ from .identity import digest_hex
 from .sessions import (
     MAX_RPC_READ_ACTIVITY_OBSERVATIONS,
     LifecycleError,
+    is_campaign_charter_evidence_path,
     is_valid_context_response_summary,
 )
 from .store_backend import StoreIntegrityFailure, StoreUnavailable
@@ -4399,7 +4400,7 @@ def _campaign_charter_context(
             incomplete = True
             continue
         examined += 1
-        if "campaign_charter" not in pointer["identity"]:
+        if not is_campaign_charter_evidence_path(pointer["path"]):
             continue
         if root is None:
             incomplete = True

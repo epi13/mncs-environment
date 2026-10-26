@@ -56,6 +56,21 @@ SESSION_SCHEMA = "mncs.environment.session/2"
 ENVIRONMENT_SCHEMA = "mncs.environment.resolved/1"
 CHECKPOINT_SCHEMA = "mncs.environment.checkpoint/1"
 HANDOFF_SCHEMA = "mncs.environment.handoff/1"
+CAMPAIGN_CHARTER_EVIDENCE_PREFIX = "evidence/campaign-charters/"
+LEGACY_CAMPAIGN_CHARTER_EVIDENCE_PREFIX = "evidence/campaign-charter-"
+
+
+def is_campaign_charter_evidence_path(path: Any) -> bool:
+    """Accept canonical charter paths and the bounded legacy top-level path."""
+    if not isinstance(path, str) or not path.endswith(".json"):
+        return False
+    return (
+        path.startswith(CAMPAIGN_CHARTER_EVIDENCE_PREFIX)
+        or (
+            path.startswith(LEGACY_CAMPAIGN_CHARTER_EVIDENCE_PREFIX)
+            and path.count("/") == 1
+        )
+    )
 
 MAX_EMIT_RETRIES = 16
 MAX_RPC_ACTIVITY_RECONCILIATION_EVENTS = 256
@@ -7425,7 +7440,7 @@ class Session:
         state = checkpoint["campaign_state"]
         charter_references = [
             item for item in all_evidence
-            if "campaign_charter" in item.get("identity", "")
+            if is_campaign_charter_evidence_path(item.get("path"))
         ]
         charter_reference_index = {
             "references": charter_references[:CAMPAIGN_CHARTER_EVIDENCE_MAX],

@@ -1234,6 +1234,38 @@ def test_project_does_not_choose_between_multiple_verified_campaign_charters(
     assert "objective" not in charter
 
 
+def test_project_ignores_non_charter_readback_path_in_legacy_charter_index(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_campaign_charter_legacy_index",
+        "ses_charter_legacy_index",
+        "cmp_projection_reader",
+    )
+    session, state = _session(tmp_path, [record])
+    objective = "Preserve one verified campaign objective."
+    pointer = _add_campaign_charter(
+        session, state, "ev_environment_campaign_charter_real", objective,
+    )
+    decoy = {
+        "identity": "ev_environment_campaign_charter_projection_readback",
+        "repository": "mncs-environment",
+        "commit": "f" * 40,
+        "path": "evidence/environmental-capability/campaign-charter-projection-readback.json",
+        "sha256": "e" * 64,
+    }
+    state["campaign_charter_evidence"]["references"].append(decoy)
+    state["campaign_charter_evidence"]["count"] = 2
+
+    charter = capability_intelligence.project(session)["subject"]["campaign_charter"]
+
+    assert charter["status"] == "verified"
+    assert charter["identity"] == pointer["identity"]
+    assert charter["objective"] == objective
+    assert charter["candidate_reference_count"] == 2
+    assert charter["references_examined"] == 2
+
+
 def test_project_marks_unverified_campaign_charter_pointer_partial(tmp_path: Path) -> None:
     record = _observation(
         "ev_environment_campaign_charter_bad_digest",

@@ -515,7 +515,10 @@ distinct statuses; the projection does not select among conflicting
 objectives. Compact responses retain the charter status and exact evidence
 reference while bounding the objective text. The generic session Work Intent
 continues to describe the current agent task and is never overwritten by the
-campaign objective.
+campaign objective. The durable charter candidate index is path-scoped to the
+canonical `evidence/campaign-charters/` directory, with support for the earlier
+top-level `evidence/campaign-charter-*.json` path. An observation whose identity
+mentions `campaign_charter` does not become a charter candidate by name alone.
 
 When observations reuse one pressure identity but record different titles,
 categories, subsystems, owners, or recommendations, the projection reports
