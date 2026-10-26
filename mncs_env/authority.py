@@ -350,17 +350,18 @@ def evaluate(
 ) -> dict[str, Any]:
     """Return {verdict: allow|deny|escalate, reason} for one requested action.
 
-    Writable intent and explicit operation scope govern repository integration.
+    Writable intent and explicit operation scope govern repository mutations.
     ``merge`` and ``publish`` require a writable repository and an exact scope
     observed or supplied for this operation. The current claim view is checked
     for overlapping foreign work; claims describe coordination but never grant
-    integration eligibility. Repository operations must still use their native
-    concurrency checks (for example, fast-forward-only merges and non-forcing
-    reference updates). ``write``,
-    ``mutate``, ``execute``, and ``retire`` retain their existing claim or
-    clean-main rules. Protected, forbidden, and fenced scope denies. A claim
-    overlap blocks ordinary mutations but is surfaced as coordination evidence
-    for merge and publish, whose repository-native update must resolve actual
+    repository write eligibility or integration eligibility. Repository
+    operations must still use their native concurrency checks (for example,
+    fast-forward-only merges and non-forcing reference updates). ``write``,
+    ``mutate``, ``execute``, and ``retire`` require writable scope before their
+    existing claim or clean-main checks. Protected, forbidden, and fenced scope
+    denies. A claim overlap blocks ordinary mutations but is recorded
+    separately from authorization; for merge and publish it remains
+    coordination evidence while the repository-native update resolves actual
     conflicts. Escalate and deny never authorize execution.
     """
     if action not in ACTIONS:
@@ -421,6 +422,31 @@ def evaluate(
                     f"{fence.get('fencing_generation')} superseded this session"
                 ),
             }
+    if repo in context.get("protected_repositories", []) and action in (
+        "write",
+        "mutate",
+        "merge",
+        "delete",
+        "retire",
+        "execute",
+        "publish",
+        "verify",
+    ):
+        return {
+            "verdict": "deny",
+            "decision_domain": "protected-policy",
+            "reason": f"{repo} is protected scope for this session",
+        }
+    # A coordination claim cannot grant repository write eligibility. Check
+    # the session's writable scope before looking at claims so a stale or
+    # overlapping lease cannot obscure the actual authorization boundary.
+    if (action in MUTATING_ACTIONS or action in ("publish", "merge")) \
+            and repo not in context.get("writable", []):
+        return {
+            "verdict": "deny",
+            "decision_domain": "writable-scope-policy",
+            "reason": f"{repo} is outside this session's writable authority",
+        }
     holders = _holder_list(
         claims if claims is not None else context.get("claim_holders", {}), repo)
     others = [h for h in holders if h["session_id"] != session_id]
@@ -470,22 +496,16 @@ def evaluate(
                     "conflict_reason": conflict,
                     "requested_scope": _scope_evidence(requested or {}, repo),
                     "blocking_claim": blocking_claim,
+                    "decision_basis": {
+                        "decision_domain": "coordination",
+                        "authorization_basis": "session-writable-scope",
+                        "authorization_status": "eligible",
+                        "eligibility_status": "blocked-by-overlapping-scope",
+                        "coordination_status": "scoped-mutation-lease-conflict",
+                        "persistent_authority_required": False,
+                    },
                 },
             }
-    if repo in context.get("protected_repositories", []) and action in (
-        "write",
-        "mutate",
-        "merge",
-        "delete",
-        "retire",
-        "execute",
-        "publish",
-        "verify",
-    ):
-        return {
-            "verdict": "deny",
-            "reason": f"{repo} is protected scope for this session",
-        }
     if action in ("publish", "merge"):
         if repo not in context.get("writable", []):
             return {"verdict": "deny",
@@ -564,9 +584,18 @@ def evaluate(
         owned = any(_covers(h.get("scope") or {}, requested or {}) for h in own)
         if owned:
             return {"verdict": "allow",
+                    "decision_domain": "eligibility",
+                    "authorization_basis": "session-writable-scope",
+                    "coordination_status": "scoped-mutation-lease-held",
+                    "persistent_authority_required": False,
                     "reason": f"{target} retirement by scoped claim"}
         return {"verdict": "escalate",
                 "required_authorization": "session-claim",
+                "required_coordination": "scoped-mutation-lease",
+                "decision_domain": "coordination",
+                "authorization_basis": "session-writable-scope",
+                "coordination_status": "exact-scope-lease-required",
+                "persistent_authority_required": False,
                 "next_step": "acquire-exact-claim",
                 "reason": f"{target} retirement requires a current claim covering the requested scope"}
     if action in MUTATING_ACTIONS:
@@ -584,13 +613,30 @@ def evaluate(
             if not facts:
                 return {"verdict": "escalate",
                         "required_authorization": "session-claim",
+                        "required_coordination": "scoped-mutation-lease",
+                        "decision_domain": "coordination",
+                        "authorization_basis": "session-writable-scope",
+                        "coordination_status": "exact-scope-lease-required",
+                        "persistent_authority_required": False,
                         "next_step": "acquire-exact-claim",
                         "reason": f"{repo} has no observed workspace facts; claim it first"}
             return {"verdict": "escalate",
                     "required_authorization": "session-claim",
+                    "required_coordination": "scoped-mutation-lease",
+                    "decision_domain": "coordination",
+                    "authorization_basis": "session-writable-scope",
+                    "coordination_status": "exact-scope-lease-required",
+                    "persistent_authority_required": False,
                     "next_step": "acquire-exact-claim",
                     "reason": f"{repo} is not owned scope (dirty/foreign/off-branch); claim it first"}
         return {"verdict": "allow",
+                "decision_domain": "eligibility",
+                "authorization_basis": "session-writable-scope",
+                "coordination_status": (
+                    "scoped-mutation-lease-held" if owned
+                    else "clean-main-no-lease-needed"
+                ),
+                "persistent_authority_required": False,
                 "reason": f"{target} mutation by claim" if owned else f"{target} is owned clean scope"}
     if action == "verify":
         return {"verdict": "allow",

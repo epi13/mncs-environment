@@ -362,7 +362,12 @@ caused it. New overlapping-claim denials also include bounded
 conflict rule, and both repository-relative scopes. Absolute checkout paths
 are omitted. Historical overlapping-claim events without this evidence report
 `claim_conflict_evidence_status: not-recorded`; the projection does not infer
-the missing claim or scope. New authority denials and integration preflights
+the missing claim or scope. New overlapping-claim records include a validated
+`decision_basis` that separates eligible writable session scope from the
+coordination lease conflict; repeated-denial candidates summarize this split
+while retaining missing and invalid historical coverage. This does not
+establish that a lease was necessary or what happened after the denial. New
+authority denials and integration preflights
 include campaign and WorkIntent identities when available; projections retain
 these references without copying objective prose. Older records remain
 explicitly unlinked rather than being assigned the current objective. Absolute
@@ -391,8 +396,15 @@ events with the new claim and superseded claim versions. This records that the
 claim transition completed; it does not claim later development work succeeded.
 
 Authority decisions distinguish integration eligibility from coordination
-state. Merge and publish need an exact destination scope and writable
-repository authority, but do not require a persistent claim. With an observed
+state. A claim never grants writable repository authority: protected-scope and
+writable-scope policy is evaluated before claim overlap, so an old or foreign
+claim cannot make an otherwise ineligible write appear to be a coordination
+problem. When a writable session is blocked by an overlapping claim, the event
+records that authorization is eligible while shared-mutation coordination is
+blocked; this does not require an ownership transfer. A claim remains a bounded
+coordination lease used to protect shared mutable state. Merge and publish need
+an exact destination scope and writable repository authority, but do not
+require a persistent claim. With an observed
 checkout, evaluate the operation directly:
 
 ```sh

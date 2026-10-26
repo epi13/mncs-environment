@@ -3584,6 +3584,14 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
                 "exclusive": False,
             },
         },
+        "decision_basis": {
+            "decision_domain": "coordination",
+            "authorization_basis": "session-writable-scope",
+            "authorization_status": "eligible",
+            "eligibility_status": "blocked-by-overlapping-scope",
+            "coordination_status": "scoped-mutation-lease-conflict",
+            "persistent_authority_required": False,
+        },
         "current_claim_state": {
             "lookup_status": "found",
             "basis": "active-claim-store-read-before-authority-check",
@@ -3665,6 +3673,12 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
         for item in activity["authority_denials"]
     }
     assert by_sequence[42]["claim_conflict_evidence_status"] == "recorded"
+    assert by_sequence[42]["claim_conflict"]["decision_basis_status"] == (
+        "recorded-and-validated"
+    )
+    assert by_sequence[42]["claim_conflict"]["decision_basis"][
+        "authorization_status"
+    ] == "eligible"
     assert by_sequence[42]["claim_conflict"]["blocking_claim"]["claim_id"] == (
         "claim:mncs-environment:paths:abc123"
     )
@@ -3717,6 +3731,11 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
         "freshness": "active",
         "occurrence_count": 2,
     }]
+    basis_summary = candidate["decision_basis_summary"]
+    assert basis_summary["status"] == "recorded-for-all-structured-denials"
+    assert basis_summary["structured_denial_count"] == 2
+    assert basis_summary["validated_count"] == 2
+    assert basis_summary["writable_scope_eligible_block_count"] == 2
     projected_blocker = candidate["blocking_claims"][0]
     assert {
         key: value for key, value in projected_blocker.items()
@@ -3752,6 +3771,10 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
         "recovery_verdict": "live",
         "occurrence_count": 2,
     }]
+    compact_basis_summary = compact_activity["authority_denial_candidates"][0][
+        "decision_basis_summary"
+    ]
+    assert compact_basis_summary["writable_scope_eligible_block_count"] == 2
     compact_candidate_blocker = compact_activity[
         "authority_denial_candidates"
     ][0]["blocking_claims"][0]
@@ -3771,6 +3794,9 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     assert compact_recorded_denial["claim_conflict"][
         "decision_claim_state"
     ]["claim_version"] == 3
+    assert compact_recorded_denial["claim_conflict"]["decision_basis"][
+        "authorization_status"
+    ] == "eligible"
     assert "claim_lifecycle_correlation_identity" not in compact_recorded_denial[
         "claim_conflict"]["blocking_claim"]
     assert (

@@ -144,8 +144,11 @@ class AuthorityTests(unittest.TestCase):
     def test_protected_write_denied(self) -> None:
         verdict = authority.evaluate(context_for(), action="write",
                                      target="mncs-language", session_id="ses_x",
+                                     claims={"mncs-language": "ses_other"},
                                      repo_facts=CLEAN_FACTS)
         self.assertEqual(verdict["verdict"], "deny")
+        self.assertEqual(verdict["decision_domain"], "protected-policy")
+        self.assertNotIn("claim_conflict", verdict)
 
     def test_protected_read_allowed(self) -> None:
         verdict = authority.evaluate(context_for(), action="read",
@@ -163,6 +166,11 @@ class AuthorityTests(unittest.TestCase):
         verdict = authority.evaluate(context_for(), action="write", target="mncs-atlas",
                                      session_id="ses_x", repo_facts=DIRTY_FACTS)
         self.assertEqual(verdict["verdict"], "escalate")
+        self.assertEqual(verdict["decision_domain"], "coordination")
+        self.assertEqual(
+            verdict["coordination_status"], "exact-scope-lease-required",
+        )
+        self.assertFalse(verdict["persistent_authority_required"])
 
     def test_owned_clean_repo_mutable(self) -> None:
         verdict = authority.evaluate(context_for(), action="write", target="mncs-atlas",
@@ -174,6 +182,21 @@ class AuthorityTests(unittest.TestCase):
             context_for(), action="write", target="mncs-atlas", session_id="ses_mine",
             claims={"mncs-atlas": "ses_mine"}, repo_facts=DIRTY_FACTS)
         self.assertEqual(verdict["verdict"], "allow")
+        self.assertEqual(verdict["authorization_basis"], "session-writable-scope")
+        self.assertEqual(verdict["coordination_status"], "scoped-mutation-lease-held")
+        self.assertFalse(verdict["persistent_authority_required"])
+
+    def test_claim_does_not_replace_writable_scope(self) -> None:
+        verdict = authority.evaluate(
+            {**context_for(), "writable": []},
+            action="write", target="mncs-atlas", session_id="ses_mine",
+            claims={"mncs-atlas": "ses_mine"}, repo_facts=DIRTY_FACTS,
+        )
+
+        self.assertEqual(verdict["verdict"], "deny")
+        self.assertEqual(verdict["decision_domain"], "writable-scope-policy")
+        self.assertIn("outside this session's writable authority", verdict["reason"])
+        self.assertNotIn("claim_conflict", verdict)
 
     def test_competing_claim_denies(self) -> None:
         verdict = authority.evaluate(
@@ -187,6 +210,17 @@ class AuthorityTests(unittest.TestCase):
         self.assertEqual(
             verdict["claim_conflict"]["conflict_reason"],
             "repository-wide scope overlaps every checkout",
+        )
+        self.assertEqual(
+            verdict["claim_conflict"]["decision_basis"],
+            {
+                "decision_domain": "coordination",
+                "authorization_basis": "session-writable-scope",
+                "authorization_status": "eligible",
+                "eligibility_status": "blocked-by-overlapping-scope",
+                "coordination_status": "scoped-mutation-lease-conflict",
+                "persistent_authority_required": False,
+            },
         )
 
     def test_disjoint_claimed_paths_allow_concurrent_local_work(self) -> None:
@@ -293,6 +327,12 @@ class AuthorityTests(unittest.TestCase):
             self.assertEqual(
                 event["payload"]["claim_conflict"]["blocking_claim"]["claim_id"],
                 "claim:mncs-atlas:paths:shared",
+            )
+            self.assertEqual(
+                event["payload"]["claim_conflict"]["decision_basis"][
+                    "authorization_status"
+                ],
+                "eligible",
             )
 
     def test_session_check_explains_recoverable_claim_without_mutating_it(self) -> None:

@@ -3461,6 +3461,16 @@ def _compact_projection(
                 if blocker_scope is not None:
                     compact_blocker["scope"] = blocker_scope
                 compact_conflict["blocking_claim"] = compact_blocker
+            decision_basis = raw_conflict.get("decision_basis")
+            if isinstance(decision_basis, dict):
+                compact_conflict["decision_basis"] = {
+                    key: decision_basis[key]
+                    for key in (
+                        "authorization_status", "eligibility_status",
+                        "persistent_authority_required",
+                    )
+                    if key in decision_basis
+                }
             decision_state = raw_conflict.get("decision_claim_state")
             if isinstance(decision_state, dict):
                 compact_conflict["decision_claim_state"] = {
@@ -3649,10 +3659,16 @@ def _compact_projection(
         for key in ("occurrence_count", "distinct_session_count"):
             if type(item.get(key)) is int:
                 compact_item[key] = item[key]
-        if isinstance(item.get("interpretation"), str):
-            compact_item["interpretation"] = _short_text(
-                item["interpretation"], 256,
-            )
+        basis_summary = item.get("decision_basis_summary")
+        if isinstance(basis_summary, dict):
+            compact_item["decision_basis_summary"] = {
+                key: basis_summary[key]
+                for key in (
+                    "status", "validated_count",
+                    "writable_scope_eligible_block_count",
+                )
+                if key in basis_summary
+            }
         decision_summary = item.get("decision_claim_state_summary")
         if isinstance(decision_summary, dict):
             compact_decision_summary = {
@@ -9447,6 +9463,38 @@ def _authority_decision_claim_state(
     }, "recorded-and-validated"
 
 
+def _authority_claim_decision_basis(
+    value: Any,
+) -> tuple[dict[str, Any] | None, str]:
+    """Validate the authorization/coordination split recorded at decision time."""
+    if value is None:
+        return None, "not-recorded-on-event"
+    expected = {
+        "decision_domain", "authorization_basis", "authorization_status",
+        "eligibility_status", "coordination_status",
+        "persistent_authority_required",
+    }
+    if not isinstance(value, dict) or set(value) != expected:
+        return None, "invalid-event-observation"
+    if (
+        value.get("decision_domain") != "coordination"
+        or value.get("authorization_basis") != "session-writable-scope"
+        or value.get("authorization_status") != "eligible"
+        or value.get("eligibility_status") != "blocked-by-overlapping-scope"
+        or value.get("coordination_status") != "scoped-mutation-lease-conflict"
+        or value.get("persistent_authority_required") is not False
+    ):
+        return None, "invalid-event-observation"
+    return {
+        "decision_domain": "coordination",
+        "authorization_basis": "session-writable-scope",
+        "authorization_status": "eligible",
+        "eligibility_status": "blocked-by-overlapping-scope",
+        "coordination_status": "scoped-mutation-lease-conflict",
+        "persistent_authority_required": False,
+    }, "recorded-and-validated"
+
+
 def _authority_claim_conflict(
     value: Any, repository: str | None,
 ) -> dict[str, Any] | None:
@@ -9505,6 +9553,12 @@ def _authority_claim_conflict(
     conflict["decision_claim_state_status"] = decision_status
     if decision_state is not None:
         conflict["decision_claim_state"] = decision_state
+    decision_basis, decision_basis_status = _authority_claim_decision_basis(
+        value.get("decision_basis"),
+    )
+    conflict["decision_basis_status"] = decision_basis_status
+    if decision_basis is not None:
+        conflict["decision_basis"] = decision_basis
     return conflict
 
 
@@ -11480,6 +11534,49 @@ def _session_activity(
                         ),
                     )[:4]
                 ],
+            }
+            decision_basis_validated = 0
+            decision_basis_invalid = 0
+            decision_basis_missing = 0
+            writable_scope_eligible_count = 0
+            for _, conflict_record in structured_denials:
+                basis = conflict_record.get("decision_basis")
+                basis_status = conflict_record.get("decision_basis_status")
+                if (basis_status == "recorded-and-validated"
+                        and isinstance(basis, dict)):
+                    decision_basis_validated += 1
+                    if basis.get("authorization_status") == "eligible":
+                        writable_scope_eligible_count += 1
+                elif basis_status == "invalid-event-observation":
+                    decision_basis_invalid += 1
+                else:
+                    decision_basis_missing += 1
+            if decision_basis_validated == len(structured_denials):
+                decision_basis_summary_status = (
+                    "recorded-for-all-structured-denials"
+                    if structured_denials else "not-recorded-on-event"
+                )
+            elif decision_basis_validated:
+                decision_basis_summary_status = "partially-recorded"
+            elif decision_basis_invalid:
+                decision_basis_summary_status = "invalid-event-observation"
+            else:
+                decision_basis_summary_status = "not-recorded-on-event"
+            candidate["decision_basis_summary"] = {
+                "status": decision_basis_summary_status,
+                "structured_denial_count": len(structured_denials),
+                "validated_count": decision_basis_validated,
+                "invalid_count": decision_basis_invalid,
+                "not_recorded_count": decision_basis_missing,
+                "writable_scope_eligible_block_count": (
+                    writable_scope_eligible_count
+                ),
+                "interpretation": (
+                    "Validated decision evidence distinguishes a writable session "
+                    "scope from the coordination lease that blocked mutation; it "
+                    "does not establish whether the lease was necessary or what "
+                    "happened after the denial."
+                ),
             }
             blockers: dict[tuple[str, str], dict[str, Any]] = {}
             for conflict_record in recorded_conflicts:
