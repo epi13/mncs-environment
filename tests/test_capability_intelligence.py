@@ -2277,6 +2277,15 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
                     "checkout": "/private/selected-checkout",
                     "branch": "campaign/compiler",
                     "checkout_identity": "checkout:campaign",
+                    "operation_lease": {
+                        "identity": "op_fixture",
+                        "kind": "checkout-directory-flock",
+                        "scope": "one-provider-invocation",
+                        "status": "held",
+                        "waited_ms": 11,
+                        "releases_on": "result-publication-or-process-exit",
+                        "checkout_identity": "checkout:campaign",
+                    },
                     "preflight_event": {
                         "identity": "evt_authority_proposal_1",
                         "sequence": 9,
@@ -2292,6 +2301,17 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
             "payload": {
                 "capability": "mncs-compiler:build", "status": "failed",
                 "returncode": 2, "provider_request_id": request_id,
+                "effect_target": {
+                    "operation_lease": {
+                        "identity": "op_fixture",
+                        "kind": "checkout-directory-flock",
+                        "scope": "one-provider-invocation",
+                        "status": "released",
+                        "waited_ms": 11,
+                        "held_ms": 201,
+                        "checkout_identity": "checkout:campaign",
+                    },
+                },
             },
         },
         {
@@ -2302,6 +2322,21 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
                 "capability": "mncs-compiler:build",
                 "provider_request_id": "req_compiler_activity_pending",
                 "argv": ["build", "private-source-path"],
+            },
+        },
+        {
+            "identity": "evt_effect_operation_deferred_1", "sequence": 14,
+            "type": "effect.operation-deferred", "producer": "environment",
+            "observed_at": "2026-10-24T01:02:00Z",
+            "payload": {
+                "action": "write",
+                "repository": "mncs-compiler",
+                "branch": "campaign/compiler",
+                "checkout_identity": "checkout:campaign",
+                "waited_ms": 15000,
+                "operation_executed": False,
+                "reason": "same-checkout-operation-in-progress",
+                "next": "retry or select an isolated worktree",
             },
         },
     ]
@@ -2336,9 +2371,31 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
             "sequence": 9,
             "type": "authority.proposal-eligible",
         },
+        "operation_lease": {
+            "identity": "op_fixture",
+            "kind": "checkout-directory-flock",
+            "scope": "one-provider-invocation",
+            "acquisition_status": "recorded",
+            "release_status": "released-after-completion",
+            "checkout_identity": "checkout:campaign",
+            "waited_ms": 11,
+            "held_ms": 201,
+        },
     }
     assert prior["invocation_event"]["identity"] == "evt_capability_invoked_1"
     assert prior["completion_event"]["identity"] == "evt_invocation_completed_1"
+    assert activity["operation_deferral_count"] == 1
+    deferral = activity["operation_deferrals"][0]
+    assert deferral["identity"].startswith("opdef_")
+    assert deferral["action"] == "write"
+    assert deferral["repository"] == "mncs-compiler"
+    assert deferral["reason"] == "same-checkout-operation-in-progress"
+    assert deferral["waited_ms"] == 15000
+    assert deferral["operation_executed"] is False
+    assert deferral["event_reference"]["identity"] == (
+        "evt_effect_operation_deferred_1"
+    )
+    assert deferral["checkout_identity"] == "checkout:campaign"
     assert activity["capabilities"] == [{
         "capability": "mncs-compiler:build",
         "invocation_count": 2,
@@ -2410,7 +2467,23 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
             "sequence": 9,
             "type": "authority.proposal-eligible",
         },
+        "operation_lease": {
+            "identity": "op_fixture",
+            "kind": "checkout-directory-flock",
+            "scope": "one-provider-invocation",
+            "acquisition_status": "recorded",
+            "release_status": "released-after-completion",
+            "checkout_identity": "checkout:campaign",
+            "waited_ms": 11,
+            "held_ms": 201,
+        },
     }
+    assert compact["session_activity"]["operation_deferrals"][0][
+        "event_reference"
+    ]["identity"] == "evt_effect_operation_deferred_1"
+    assert "/private" not in json.dumps(
+        compact["session_activity"]["operation_deferrals"],
+    )
     assert compact["session_activity"]["capability_delivery"][
         "discoverability_status"
     ] == "not-measured"

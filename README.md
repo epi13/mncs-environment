@@ -39,6 +39,9 @@ The selected Forge must publish its resident descriptors. Provider effects
 still require the session's applicable rights and fresh scope eligibility;
 isolated selected non-main linked worktree effects do not require a persistent
 claim, while shared main and whole-tree Doctor remediation remain claim-gated.
+Environment-mediated provider writes to one checkout are serialized by a
+kernel-scoped lock for the invocation and exposed with release evidence;
+separate worktrees can progress independently.
 
 ## Why this exists
 

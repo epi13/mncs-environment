@@ -231,6 +231,7 @@ MAX_SESSION_ACTIVITY_REPOSITORY_REF_TRANSITIONS = 16
 MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES = 8
 MAX_SESSION_ACTIVITY_CLAIM_COORDINATION = 16
 MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 8
+MAX_SESSION_ACTIVITY_OPERATION_DEFERRALS = 8
 MAX_COMPACT_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 1
 MAX_SESSION_CLAIM_OWNER_EVENT_SESSIONS = 4
 MAX_SESSION_CLAIM_OWNER_EVENT_PAGE = 32
@@ -2920,6 +2921,18 @@ def _compact_projection(
             )
             if key in activity_source
         })
+    if activity_source.get("operation_deferral_events_considered", 0):
+        compact_activity_source.update({
+            key: activity_source[key]
+            for key in (
+                "operation_deferral_events_considered",
+                "operation_deferral_records_returned",
+                "operation_deferral_records_omitted",
+                "operation_deferral_records_invalid",
+                "operation_deferral_selection_policy",
+            )
+            if key in activity_source
+        })
     claim_lifecycle_source = activity_source.get(
         "claim_lifecycle_correlation",
     )
@@ -4105,6 +4118,32 @@ def _compact_projection(
                 if isinstance(reference, dict)
             ]
         compact_authority_candidates.append(compact_item)
+    raw_operation_deferrals = activity.get("operation_deferrals")
+    raw_operation_deferrals = (
+        raw_operation_deferrals if isinstance(raw_operation_deferrals, list) else []
+    )
+    compact_operation_deferrals = []
+    for item in raw_operation_deferrals[:MAX_SESSION_ACTIVITY_OPERATION_DEFERRALS]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item[key], 160)
+            for key in ("identity", "action", "repository", "reason", "branch",
+                        "checkout_identity")
+            if isinstance(item.get(key), str)
+        }
+        if type(item.get("waited_ms")) is int and item["waited_ms"] >= 0:
+            compact_item["waited_ms"] = item["waited_ms"]
+        if item.get("operation_executed") is False:
+            compact_item["operation_executed"] = False
+        reference = item.get("event_reference")
+        if isinstance(reference, dict):
+            compact_item["event_reference"] = {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in reference
+            }
+        compact_operation_deferrals.append(compact_item)
     compact_activity = {
         "status": _short_text(activity.get("status"), 96),
         "source": compact_activity_source,
@@ -4120,6 +4159,11 @@ def _compact_projection(
             len(raw_interactions) > len(compact_activity_interactions)
         ),
     }
+    if activity_source.get("operation_deferral_events_considered", 0):
+        compact_activity["operation_deferral_count"] = activity.get(
+            "operation_deferral_count", 0,
+        )
+        compact_activity["operation_deferrals"] = compact_operation_deferrals
     if compact_activity_capabilities:
         compact_activity["capabilities"] = compact_activity_capabilities
         if activity.get("source", {}).get("capability_summaries_omitted", 0):
@@ -9000,7 +9044,9 @@ def _invocation_binding_identity(value: Any) -> dict[str, Any]:
     return {"status": status, **identity}
 
 
-def _invocation_effect_target(value: Any) -> dict[str, Any] | None:
+def _invocation_effect_target(
+    value: Any, completion_value: Any = None,
+) -> dict[str, Any] | None:
     """Project an explicit provider effect target without exposing checkout paths."""
     if not isinstance(value, dict):
         return None
@@ -9031,6 +9077,63 @@ def _invocation_effect_target(value: Any) -> dict[str, Any] | None:
     preflight_event = _event_reference(value.get("preflight_event"))
     if preflight_event is not None:
         result["preflight_event"] = preflight_event
+    operation_lease = value.get("operation_lease")
+    if isinstance(operation_lease, dict):
+        lease_identity = bounded_identity(operation_lease.get("identity"), 160)
+        lease_kind = operation_lease.get("kind")
+        lease_scope = operation_lease.get("scope")
+        lease_checkout = bounded_identity(
+            operation_lease.get("checkout_identity"), 160,
+        )
+        if (lease_identity is not None
+                and lease_kind == "checkout-directory-flock"
+                and lease_scope == "one-provider-invocation"):
+            projected_lease: dict[str, Any] = {
+                "identity": lease_identity,
+                "kind": lease_kind,
+                "scope": lease_scope,
+                "acquisition_status": operation_lease.get(
+                    "acquisition_status",
+                    "recorded" if operation_lease.get("status") == "held"
+                    else "invalid",
+                ),
+                "release_status": operation_lease.get(
+                    "release_status", "completion-not-recorded",
+                ),
+            }
+            if lease_checkout is not None:
+                projected_lease["checkout_identity"] = lease_checkout
+            waited_ms = operation_lease.get("waited_ms")
+            if type(waited_ms) is int and 0 <= waited_ms <= 3_600_000:
+                projected_lease["waited_ms"] = waited_ms
+            completion_lease = (
+                completion_value.get("operation_lease")
+                if isinstance(completion_value, dict) else None
+            )
+            if (isinstance(completion_lease, dict)
+                    and completion_lease.get("identity") == lease_identity
+                    and completion_lease.get("kind") == lease_kind
+                    and completion_lease.get("scope") == lease_scope
+                    and completion_lease.get("status") == "released"
+                    and completion_lease.get("checkout_identity") == lease_checkout):
+                projected_lease["release_status"] = "released-after-completion"
+                held_ms = completion_lease.get("held_ms")
+                if type(held_ms) is int and 0 <= held_ms <= 86_400_000:
+                    projected_lease["held_ms"] = held_ms
+            elif completion_value is not None:
+                projected_lease["release_status"] = "release-not-correlated"
+            for key, maximum in (("waited_ms", 3_600_000), ("held_ms", 86_400_000)):
+                measured = operation_lease.get(key)
+                if type(measured) is int and 0 <= measured <= maximum:
+                    projected_lease[key] = measured
+            if projected_lease["acquisition_status"] not in {"recorded", "invalid"}:
+                projected_lease["acquisition_status"] = "invalid"
+            if projected_lease["release_status"] not in {
+                "released-after-completion", "completion-not-recorded",
+                "release-not-correlated",
+            }:
+                projected_lease["release_status"] = "release-not-correlated"
+            result["operation_lease"] = projected_lease
     return result
 
 
@@ -12047,6 +12150,52 @@ def _session_activity(
         raw_events,
         key=lambda item: item.get("sequence") if type(item.get("sequence")) is int else -1,
     )
+    operation_deferral_events = [
+        event for event in events
+        if event.get("type") == "effect.operation-deferred"
+    ]
+    operation_deferrals: list[dict[str, Any]] = []
+    invalid_operation_deferral_count = 0
+    valid_operation_deferral_count = 0
+    for event in reversed(operation_deferral_events):
+        payload = event.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        reference = _event_reference(event)
+        repository = payload.get("repository")
+        action = payload.get("action")
+        reason = payload.get("reason")
+        waited_ms = payload.get("waited_ms")
+        if (reference is None
+                or not isinstance(repository, str) or not _is_repository_identity(repository)
+                or not isinstance(action, str)
+                or action not in {"write", "mutate", "execute", "verify", "merge", "publish"}
+                or reason != "same-checkout-operation-in-progress"
+                or type(waited_ms) is not int or not 0 <= waited_ms <= 300_000
+                or payload.get("operation_executed") is not False):
+            invalid_operation_deferral_count += 1
+            continue
+        item = {
+            "identity": "opdef_" + digest_hex({
+                "session_id": session.session_id,
+                "event": reference["identity"],
+            }, length=16),
+            "action": action,
+            "repository": repository,
+            "reason": reason,
+            "waited_ms": waited_ms,
+            "operation_executed": False,
+            "event_reference": reference,
+        }
+        for key in ("branch", "checkout_identity"):
+            value = payload.get(key)
+            if isinstance(value, str) and 0 < len(value) <= 160:
+                item[key] = value
+        valid_operation_deferral_count += 1
+        if len(operation_deferrals) < MAX_SESSION_ACTIVITY_OPERATION_DEFERRALS:
+            operation_deferrals.append(item)
+    operation_deferrals_omitted = max(
+        0, valid_operation_deferral_count - len(operation_deferrals),
+    )
     claim_recovery_events = [
         event for event in events
         if event.get("type") == "lease.recovered-and-acquired"
@@ -12191,7 +12340,10 @@ def _session_activity(
             "completion_event": completion_reference,
             "binding_identity": _invocation_binding_identity(payload),
         }
-        effect_target = _invocation_effect_target(payload.get("effect_target"))
+        effect_target = _invocation_effect_target(
+            payload.get("effect_target"),
+            completion_payload.get("effect_target") if completion is not None else None,
+        )
         if effect_target is not None:
             interaction["effect_target"] = effect_target
         interactions.append(interaction)
@@ -13591,6 +13743,15 @@ def _session_activity(
                 != "not-applicable" else {}),
             "invocation_events_considered": len(invocation_events),
             "completion_events_considered": len(completion_events),
+            **({
+                "operation_deferral_events_considered": len(operation_deferral_events),
+                "operation_deferral_records_returned": len(operation_deferrals),
+                "operation_deferral_records_omitted": operation_deferrals_omitted,
+                "operation_deferral_records_invalid": invalid_operation_deferral_count,
+                "operation_deferral_selection_policy": (
+                    "newest-validated-operation-deferrals-in-selected-session-window"
+                ),
+            } if operation_deferral_events else {}),
             "invocation_records_omitted": invocations_omitted,
             "capability_summaries_omitted": capabilities_omitted,
             "selection_policy": "newest-invocation-events-by-session-sequence",
@@ -13629,6 +13790,10 @@ def _session_activity(
         ),
         "completion_without_invocation_count": unpaired_completion_count,
         "interactions": interactions,
+        **({
+            "operation_deferral_count": valid_operation_deferral_count,
+            "operation_deferrals": operation_deferrals,
+        } if operation_deferral_events else {}),
         "rpc_operation_count": len(rpc_operations),
         "rpc_operations": rpc_operations,
         **({"rpc_operation_summary": rpc_operation_summary} if rpc_events else {}),

@@ -3894,6 +3894,26 @@ class StoreTransportDiagnosticsTests(unittest.TestCase):
 
 
 class WorkspaceTests(unittest.TestCase):
+    def test_checkout_operation_lease_releases_after_owner_process_exit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            checkout = Path(directory) / "checkout"
+            checkout.mkdir()
+            lock_and_exit = (
+                "import fcntl, os, sys; "
+                "fd=os.open(sys.argv[1], os.O_RDONLY|os.O_DIRECTORY); "
+                "fcntl.flock(fd, fcntl.LOCK_EX); os._exit(0)"
+            )
+            subprocess.run(
+                [sys.executable, "-c", lock_and_exit, str(checkout)],
+                check=True, capture_output=True, text=True,
+            )
+            with workspace.checkout_operation_lease(checkout, wait_seconds=0) as lease:
+                self.assertEqual(lease["status"], "held")
+                self.assertEqual(lease["scope"], "one-provider-invocation")
+                self.assertEqual(list(checkout.iterdir()), [])
+            self.assertEqual(lease["status"], "released")
+            self.assertIn("held_ms", lease)
+
     def test_discovers_real_repositories(self) -> None:
         view = workspace.discover_workspace(FAMILY, repositories=[name for name in ("mncs-atlas", "mncs-compiler", "mncs-language") if (FAMILY / name / ".git").exists()])
         names = {repo["name"] for repo in view["repositories"]}
@@ -7854,10 +7874,12 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(invoke.call_count, 1)
             self.assertIsNone(verify_checkout.call_args.kwargs["expected_branch"])
             self.assertFalse(session.snapshot["claim_holders"].get("MNCS-Commons"))
-            proposal_event = next(
+            proposal_events = [
                 event for event in session._log()
                 if event.get("type") == "authority.proposal-eligible"
-            )
+            ]
+            self.assertGreaterEqual(len(proposal_events), 2)
+            proposal_event = proposal_events[-1]
             self.assertFalse(
                 proposal_event["payload"]["persistent_claim_required"],
             )
@@ -7967,10 +7989,12 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(result["status"], "ok")
             self.assertEqual(invoke.call_count, 1)
             self.assertFalse(session.snapshot["claim_holders"].get("MNCS-Commons"))
-            eligibility = next(
+            eligibility_events = [
                 event for event in session._log()
                 if event.get("type") == "authority.proposal-eligible"
-            )
+            ]
+            self.assertGreaterEqual(len(eligibility_events), 2)
+            eligibility = eligibility_events[-1]
             self.assertFalse(eligibility["payload"]["persistent_claim_required"])
             invocation = next(
                 event for event in session._log()
@@ -7987,6 +8011,193 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(
                 effect_target["preflight_event"]["identity"],
                 eligibility["identity"],
+            )
+
+    def test_provider_effects_serialize_on_selected_worktree_without_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository_root = root / "MNCS-Commons"
+            checkout = repository_root / ".worktrees" / "campaign"
+            (repository_root / ".mncs").mkdir(parents=True)
+            (repository_root / ".mncs" / "project.json").write_text(
+                json.dumps({"repository": "MNCS-Commons"}) + "\n"
+            )
+            (repository_root / "seed.txt").write_text("operation lease fixture\n")
+            subprocess.run(
+                ["git", "-C", str(repository_root), "init", "-b", "main"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "config", "user.name", "MNCS test"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "config", "user.email", "mncs-test@example.invalid"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "add", ".mncs/project.json", "seed.txt"],
+                check=True, capture_output=True, text=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repository_root), "commit", "-m", "seed operation lease fixture"],
+                check=True, capture_output=True, text=True,
+            )
+            checkout.parent.mkdir(parents=True)
+            branch = "campaign/commons-parity"
+            subprocess.run(
+                ["git", "-C", str(repository_root), "worktree", "add", "-b",
+                 branch, str(checkout), "HEAD"],
+                check=True, capture_output=True, text=True,
+            )
+
+            def configured_session(state_root: Path) -> sessions.Session:
+                session = make_session(
+                    state_root,
+                    intent={"goal": "exercise concurrent provider effects",
+                            "repositories": ["MNCS-Commons"]},
+                )
+                session.snapshot["workspace"]["root"] = str(root)
+                session.snapshot["workspace"]["repositories"] = [{
+                    "name": "MNCS-Commons",
+                    "path": str(repository_root),
+                    "manifest_repository": "MNCS-Commons",
+                    "branch": "main",
+                }, {
+                    "name": "MNCS-Commons@campaign",
+                    "path": str(checkout),
+                    "manifest_repository": "MNCS-Commons",
+                    "worktree_of": "MNCS-Commons",
+                    "branch": branch,
+                }]
+                session.snapshot["authority"]["writable"] = ["MNCS-Commons"]
+                session.snapshot["selected_checkouts"] = {"MNCS-Commons": {
+                    "path": str(checkout), "branch": branch,
+                }}
+                binding = capabilities.probe_availability(
+                    capabilities.bind(
+                        provider="mncs-commons", capability="campaign-writer",
+                        contract_revision="1", entrypoint="e", address="/bin/echo",
+                        effects=["write"], provider_root=str(checkout),
+                        provenance={"checkout": {
+                            "path": str(checkout), "branch": branch,
+                        }},
+                    ))
+                session.snapshot["bindings"].append(binding)
+                return session
+
+            first = configured_session(root / "state-first")
+            second = configured_session(root / "state-second")
+            provider_started = threading.Event()
+            release_first = threading.Event()
+            second_provider_started = threading.Event()
+            counter_lock = threading.Lock()
+            active = 0
+            max_active = 0
+
+            def provider(binding, argv, **kwargs):
+                nonlocal active, max_active
+                with counter_lock:
+                    active += 1
+                    max_active = max(max_active, active)
+                try:
+                    if argv == ["first"]:
+                        provider_started.set()
+                        if not release_first.wait(3):
+                            raise TimeoutError("test did not release the first provider")
+                    else:
+                        second_provider_started.set()
+                    time.sleep(0.04)
+                    return {"status": "ok", "returncode": 0, "stdout": "ok"}
+                finally:
+                    with counter_lock:
+                        active -= 1
+
+            target = {
+                "repository": "MNCS-Commons",
+                "checkout": str(checkout),
+                "branch": branch,
+            }
+            with mock.patch.object(sessions.capabilities_module, "invoke", side_effect=provider):
+                with ThreadPoolExecutor(max_workers=2) as pool:
+                    first_result = pool.submit(
+                        first.invoke, "campaign-writer", ["first"],
+                        effect_target=target,
+                    )
+                    self.assertTrue(provider_started.wait(2))
+                    second_result = pool.submit(
+                        second.invoke, "campaign-writer", ["second"],
+                        effect_target=target,
+                    )
+                    time.sleep(0.1)
+                    self.assertFalse(second_provider_started.is_set())
+                    release_first.set()
+                    self.assertEqual(first_result.result(timeout=4)["status"], "ok")
+                    self.assertEqual(second_result.result(timeout=4)["status"], "ok")
+
+            self.assertEqual(max_active, 1)
+            self.assertFalse(first.snapshot["claim_holders"].get("MNCS-Commons"))
+            self.assertFalse(second.snapshot["claim_holders"].get("MNCS-Commons"))
+            busy_lease = mock.MagicMock()
+            busy_lease.__enter__.side_effect = workspace.WorkspaceResolutionError(
+                "selected checkout is busy",
+                diagnostics={
+                    "status": "operation-lease-busy", "waited_ms": 15000,
+                },
+            )
+            with mock.patch.object(
+                sessions.workspace_module, "checkout_operation_lease",
+                return_value=busy_lease,
+            ), mock.patch.object(
+                sessions.capabilities_module, "invoke",
+            ) as not_invoked, mock.patch.object(
+                first, "_emit", wraps=first._emit,
+            ) as event_emit:
+                with self.assertRaises(workspace.WorkspaceResolutionError) as busy_error:
+                    first.invoke("campaign-writer", ["deferred"], effect_target=target)
+            self.assertEqual(str(busy_error.exception), "selected checkout is busy")
+            self.assertEqual(
+                busy_error.exception.diagnostics.get("status"),
+                "operation-lease-busy",
+            )
+            self.assertIn(
+                "effect.operation-deferred",
+                [call.args[0] for call in event_emit.call_args_list],
+            )
+            busy_lease.__enter__.assert_called_once()
+            not_invoked.assert_not_called()
+            deferred_events = [
+                event for event in first._log()
+                if event.get("type") == "effect.operation-deferred"
+            ]
+            self.assertTrue(
+                deferred_events,
+                [event.get("type") for event in first._log()],
+            )
+            deferred = deferred_events[0]
+            self.assertEqual(deferred["payload"]["repository"], "MNCS-Commons")
+            self.assertEqual(deferred["payload"]["waited_ms"], 15000)
+            self.assertFalse(deferred["payload"]["operation_executed"])
+            invocations = [
+                next(event for event in session._log()
+                     if event.get("type") == "capability.invoked")
+                for session in (first, second)
+            ]
+            completions = [
+                next(event for event in session._log()
+                     if event.get("type") == "invocation.completed")
+                for session in (first, second)
+            ]
+            for invocation, completion in zip(invocations, completions):
+                acquired = invocation["payload"]["effect_target"]["operation_lease"]
+                released = completion["payload"]["effect_target"]["operation_lease"]
+                self.assertEqual(acquired["status"], "held")
+                self.assertEqual(released["status"], "released")
+                self.assertEqual(acquired["identity"], released["identity"])
+                self.assertTrue(acquired["checkout_identity"])
+            self.assertGreater(
+                invocations[1]["payload"]["effect_target"]["operation_lease"]["waited_ms"],
+                0,
             )
 
     def test_relative_worktree_claim_matches_bound_absolute_provider_path(self) -> None:

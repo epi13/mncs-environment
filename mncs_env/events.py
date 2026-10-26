@@ -46,6 +46,7 @@ TYPES = (
     "capability.unavailable",
     "capability.unknown",
     "capability.invoked",
+    "effect.operation-deferred",
     "invocation.completed",
     "environment.rpc.read_observed",
     "authority.denied",

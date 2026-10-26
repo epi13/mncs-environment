@@ -5733,6 +5733,8 @@ class Session:
         executor = self._executor_identity(binding)
         admitted_effect_target: dict[str, Any] | None = None
         checked_effect_repository: str | None = None
+        effect_check_scope: dict[str, Any] | None = None
+        operation_checkout_path: str | None = None
         if required != "read":
             if effect_target is not None:
                 effect_repository, effect_scope = self._admit_effect_target(
@@ -5756,6 +5758,8 @@ class Session:
                     if selected_path == effect_scope.get("checkout")
                     else effect_scope
                 )
+                if effect_scope.get("kind") == "worktree":
+                    operation_checkout_path = effect_scope["checkout"]
                 effect_verdict = self.check(
                     action=required, target=effect_repository,
                     scope=effect_check_scope,
@@ -5809,10 +5813,16 @@ class Session:
                         effect_scope["branch"] = branch
                     checked_effect_repository = provider
                     admitted_effect_target = {"repository": provider}
+                if (isinstance(effect_scope, dict)
+                        and effect_scope.get("kind") == "worktree"):
+                    operation_checkout_path = effect_scope["checkout"]
+                effect_check_scope = (
+                    None if selected_checkout is not None else effect_scope
+                )
                 effect_verdict = self.check(
                     action=required,
                     target=provider,
-                    scope=(None if selected_checkout is not None else effect_scope),
+                    scope=effect_check_scope,
                 )
             if effect_verdict["verdict"] == "deny":
                 raise AuthorityDenied(effect_verdict["reason"])
@@ -5863,46 +5873,121 @@ class Session:
             {key: value for key, value in item.items() if key != "content"}
             for item in prepared_inputs
         ]
-        with invocation_artifacts_module.InvocationArtifactWorkspace(
-            self, capability, binding.get("binding_id")
-        ) as artifact_workspace:
-            with invocation_artifacts_module.ProviderInputArtifactWorkspace(
-                self.session_id, prepared_inputs,
-            ) as input_workspace:
-                invocation_env = dict(env or {})
-                invocation_env.update(self._selected_runtime_environment(binding))
-                invocation_env["MNCS_ENV_SESSION_ARTIFACT_DIR"] = str(artifact_workspace.path)
-                invocation_env.update(input_workspace.environment())
-                parent_request_id = os.environ.get("MNCS_ENV_RPC_REQUEST_ID")
-                if (not isinstance(parent_request_id, str)
-                        or not re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", parent_request_id)):
-                    parent_request_id = None
-                child_request = {
-                    "kind": "provider-invocation",
-                    "session_id": self.session_id,
-                    "capability": capability,
-                    "binding_id": binding.get("binding_id"),
-                    "argv": list(argv),
-                    "input_artifacts": input_provenance,
-                }
-                if parent_request_id is not None:
-                    child_request["parent_request_id"] = parent_request_id
-                else:
-                    child_request["nonce"] = secrets.token_hex(20)
-                provider_request_id = "req_" + digest_hex(child_request, length=48)
-                invocation_env["MNCS_ENV_RPC_REQUEST_ID"] = provider_request_id
-                self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
-                           {"capability": capability, "argv": argv, "executor": executor,
-                            **binding_identity,
-                            "effect_target": admitted_effect_target,
-                            "input_artifacts": input_provenance,
-                            "parent_request_id": parent_request_id,
-                            "provider_request_id": provider_request_id})
-                self._save()
-                result = capabilities_module.invoke(
-                    binding, argv, cwd=cwd, timeout_seconds=timeout_seconds,
-                    output_limit_bytes=output_limit_bytes, env=invocation_env)
-            artifact_fields = artifact_workspace.publish()
+        operation_lease_context = None
+        try:
+            if operation_checkout_path is not None:
+                lease_context = workspace_module.checkout_operation_lease(
+                    operation_checkout_path,
+                )
+                try:
+                    operation_lease = lease_context.__enter__()
+                except workspace_module.WorkspaceResolutionError as error:
+                    if error.diagnostics.get("status") == "operation-lease-busy":
+                        self._emit(
+                            "effect.operation-deferred", "environment", {
+                                "action": required,
+                                "repository": checked_effect_repository,
+                                "checkout_identity": admitted_effect_target.get(
+                                    "checkout_identity"
+                                ) if admitted_effect_target is not None else None,
+                                "branch": admitted_effect_target.get("branch")
+                                if admitted_effect_target is not None else None,
+                                "waited_ms": error.diagnostics.get("waited_ms"),
+                                "operation_executed": False,
+                                "reason": "same-checkout-operation-in-progress",
+                                "next": "retry or select an isolated worktree",
+                            },
+                        )
+                        self._save()
+                    raise
+                operation_lease_context = lease_context
+                operation_lease["identity"] = "op_" + secrets.token_hex(12)
+                fresh_verdict = self.check(
+                    action=required,
+                    target=checked_effect_repository,
+                    scope=effect_check_scope,
+                )
+                if fresh_verdict["verdict"] == "deny":
+                    raise AuthorityDenied(fresh_verdict["reason"])
+                if fresh_verdict["verdict"] == "escalate":
+                    return self._pending(
+                        capability, argv, required, fresh_verdict["reason"],
+                    )
+                fresh_evidence = fresh_verdict.get("eligibility_evidence")
+                if isinstance(fresh_evidence, dict):
+                    fresh_scope = fresh_evidence.get("scope")
+                    fresh_reference = fresh_evidence.get("event_reference")
+                    if isinstance(fresh_scope, dict):
+                        for key in (
+                            "branch", "checkout_identity",
+                            "git_common_directory_identity", "manifest_identity",
+                        ):
+                            value = fresh_scope.get(key)
+                            if isinstance(value, str) and value:
+                                admitted_effect_target[key] = value
+                        operation_lease["checkout_identity"] = fresh_scope.get(
+                            "checkout_identity",
+                        )
+                    if (isinstance(fresh_reference, dict)
+                            and fresh_reference.get("type") in {
+                                "authority.proposal-eligible",
+                                "authority.integration-eligible",
+                            }
+                            and isinstance(fresh_reference.get("identity"), str)
+                            and type(fresh_reference.get("sequence")) is int):
+                        admitted_effect_target["preflight_event"] = {
+                            key: fresh_reference[key]
+                            for key in ("identity", "sequence", "type")
+                        }
+                if admitted_effect_target is not None:
+                    admitted_effect_target["operation_lease"] = operation_lease
+            with invocation_artifacts_module.InvocationArtifactWorkspace(
+                self, capability, binding.get("binding_id")
+            ) as artifact_workspace:
+                with invocation_artifacts_module.ProviderInputArtifactWorkspace(
+                    self.session_id, prepared_inputs,
+                ) as input_workspace:
+                    invocation_env = dict(env or {})
+                    invocation_env.update(self._selected_runtime_environment(binding))
+                    invocation_env["MNCS_ENV_SESSION_ARTIFACT_DIR"] = str(artifact_workspace.path)
+                    invocation_env.update(input_workspace.environment())
+                    parent_request_id = os.environ.get("MNCS_ENV_RPC_REQUEST_ID")
+                    if (not isinstance(parent_request_id, str)
+                            or not re.fullmatch(r"req_[A-Za-z0-9_-]{1,76}", parent_request_id)):
+                        parent_request_id = None
+                    child_request = {
+                        "kind": "provider-invocation",
+                        "session_id": self.session_id,
+                        "capability": capability,
+                        "binding_id": binding.get("binding_id"),
+                        "argv": list(argv),
+                        "input_artifacts": input_provenance,
+                    }
+                    if parent_request_id is not None:
+                        child_request["parent_request_id"] = parent_request_id
+                    else:
+                        child_request["nonce"] = secrets.token_hex(20)
+                    provider_request_id = "req_" + digest_hex(child_request, length=48)
+                    invocation_env["MNCS_ENV_RPC_REQUEST_ID"] = provider_request_id
+                    self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
+                               {"capability": capability, "argv": argv, "executor": executor,
+                                **binding_identity,
+                                "effect_target": admitted_effect_target,
+                                "input_artifacts": input_provenance,
+                                "parent_request_id": parent_request_id,
+                                "provider_request_id": provider_request_id})
+                    self._save()
+                    result = capabilities_module.invoke(
+                        binding, argv, cwd=cwd, timeout_seconds=timeout_seconds,
+                        output_limit_bytes=output_limit_bytes, env=invocation_env)
+                artifact_fields = artifact_workspace.publish()
+                if operation_lease_context is not None:
+                    lease_context = operation_lease_context
+                    operation_lease_context = None
+                    lease_context.__exit__(None, None, None)
+        finally:
+            if operation_lease_context is not None:
+                operation_lease_context.__exit__(*sys.exc_info())
         # A declared provider may itself resume this Environment session and
         # publish domain state. Rebase the invocation result over that newer
         # snapshot instead of reusing our pre-execution CAS.
@@ -5927,6 +6012,7 @@ class Session:
         self._emit("invocation.completed", binding.get("provider", "unknown"),
                    {"capability": capability, "status": result["status"],
                     **binding_identity,
+                    "effect_target": admitted_effect_target,
                     "returncode": result["returncode"],
                     "input_artifacts": input_provenance,
                     "parent_request_id": parent_request_id,

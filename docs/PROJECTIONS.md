@@ -466,6 +466,17 @@ The bounded `session_activity.proposal_eligibility` projection exposes
 validated `authority.proposal-eligible` records, their objective references,
 observed worktree scope, and repository-wide or repository-relative path
 claims treated as coordination-only.
+For provider mutations, `session_activity.interactions[].effect_target` also
+relates the exact preflight event to a bounded, operation-scoped checkout
+lock. The projection reports its checkout identity, acquisition, wait, and
+release evidence without exposing a local path. A completion event linked by
+provider request identity establishes release after that invocation; a missing
+completion remains unknown. The lock is kernel-scoped and auto-released when
+the Environment process exits; it coordinates Environment-mediated provider
+calls and does not fence external shell or Git activity.
+Bounded `effect.operation-deferred` observations expose a checkout wait that
+expired without starting the provider, with exact event provenance and no local
+checkout path.
 When an absolute target resolves to a registered checkout and the Environment
 refreshes that checkout at the preflight boundary, the event also records a
 validated `proposal_preflight_state` containing checkout identity, branch,

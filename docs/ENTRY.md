@@ -605,6 +605,17 @@ checks. Provider-supplied ambient paths are not accepted. Direct
 `mncs-env invoke` calls can select the same boundary with
 `--effect-repository <selected-repository>`.
 
+Environment serializes provider mutations that resolve to the same checkout
+with a kernel-scoped directory lock acquired before the fresh eligibility
+check. The lock creates no file or persistent owner claim, waits at most 15
+seconds, and releases after result publication or process exit. Its invocation
+and completion events carry the operation identity, checkout identity, wait time,
+and release outcome. A bounded wait timeout emits `effect.operation-deferred`
+and launches no provider process. This coordinates Environment-mediated provider calls;
+direct shell or Git activity does not participate in the lock. Separate
+worktrees remain independently usable, while shared-main and other protected
+mutations retain their existing scoped checks.
+
 There are at most 16 service declarations. Each read probe has a three-second
 limit, within a 15-second aggregate probe budget; recovery has ten seconds per
 operation within a 20-second aggregate budget. A final probe pass verifies

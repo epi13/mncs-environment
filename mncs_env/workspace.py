@@ -13,6 +13,7 @@ import os
 import shutil
 import subprocess
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ MAX_REPOS = 500
 MAX_ROOT_DIRECTORIES = 64
 MAX_CASE_VARIANT_DIRECTORIES = 512
 WORKSPACE_SCAN_TIMEOUT_SECONDS = 10.0
+CHECKOUT_OPERATION_LEASE_WAIT_SECONDS = 15.0
 
 # MNCS Control bind-mounts the configured host workspace at /workspace and
 # exposes its host pathname inside the sandbox as a symlink to that mount.
@@ -77,6 +79,98 @@ class WorkspaceResolutionError(ValueError):
     def __init__(self, message: str, *, diagnostics: dict[str, Any] | None = None):
         super().__init__(message)
         self.diagnostics = diagnostics or {}
+
+
+@contextmanager
+def checkout_operation_lease(
+    path: Path | str,
+    *,
+    wait_seconds: float = CHECKOUT_OPERATION_LEASE_WAIT_SECONDS,
+):
+    """Serialize one Environment-mediated mutation of a checkout.
+
+    The lease is an advisory kernel directory lock. It creates no lock file or
+    persistent owner record and is released on normal return, exceptions, or
+    process exit. It coordinates callers that use this Environment primitive;
+    it does not fence direct filesystem or Git activity outside Environment.
+    """
+    import fcntl
+
+    if (type(wait_seconds) not in (int, float) or wait_seconds < 0
+            or wait_seconds > 300):
+        raise ValueError("checkout operation lease wait must be from 0 to 300 seconds")
+    directory_flag = getattr(os, "O_DIRECTORY", None)
+    if not isinstance(directory_flag, int):
+        raise WorkspaceResolutionError(
+            "checkout operation leases require directory-lock support"
+        )
+    try:
+        resolved = Path(path).resolve(strict=True)
+        descriptor = os.open(resolved, os.O_RDONLY | directory_flag)
+    except (OSError, RuntimeError, ValueError) as error:
+        raise WorkspaceResolutionError(
+            "selected checkout cannot be opened for an operation lease",
+            diagnostics={"error": type(error).__name__},
+        ) from None
+
+    acquired = False
+    held_since: float | None = None
+    started = time.monotonic()
+    try:
+        opened_identity = os.fstat(descriptor)
+    except OSError as error:
+        os.close(descriptor)
+        raise WorkspaceResolutionError(
+            "selected checkout operation lease descriptor is unavailable",
+            diagnostics={"error": type(error).__name__},
+        ) from None
+    lease = {
+        "kind": "checkout-directory-flock",
+        "scope": "one-provider-invocation",
+        "status": "acquiring",
+    }
+    try:
+        while True:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+                held_since = time.monotonic()
+                break
+            except BlockingIOError:
+                waited = time.monotonic() - started
+                if waited >= wait_seconds:
+                    raise WorkspaceResolutionError(
+                        "selected checkout is busy with another Environment-mediated effect; retry or use an isolated worktree",
+                        diagnostics={
+                            "status": "operation-lease-busy",
+                            "waited_ms": int(waited * 1000),
+                        },
+                    ) from None
+                time.sleep(min(0.025, max(0.0, wait_seconds - waited)))
+        current_identity = os.stat(resolved)
+        if ((opened_identity.st_dev, opened_identity.st_ino)
+                != (current_identity.st_dev, current_identity.st_ino)):
+            raise WorkspaceResolutionError(
+                "selected checkout changed while acquiring its operation lease",
+                diagnostics={"status": "checkout-identity-changed"},
+            )
+        lease.update({
+            "status": "held",
+            "waited_ms": int((time.monotonic() - started) * 1000),
+            "releases_on": "result-publication-or-process-exit",
+        })
+        yield lease
+    finally:
+        if acquired:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            finally:
+                os.close(descriptor)
+            lease["status"] = "released"
+            if held_since is not None:
+                lease["held_ms"] = int((time.monotonic() - held_since) * 1000)
+        else:
+            os.close(descriptor)
 
 
 def _is_control_workspace_mount(path: Path) -> bool:
