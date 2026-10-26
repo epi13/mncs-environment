@@ -1,0 +1,125 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_binding_id_attribution_live_readback_followup_20261026",
+  "captured_at": "2026-10-26T05:20:22Z",
+  "measurement_basis": "authenticated Control environmental-capability projections after source integration on main",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_96091aaae2238252",
+    "campaign_evidence_count_before_recording": 51,
+    "claim_ids": [
+      "claim:mncs-environment:paths:ab778ef9e4fd",
+      "claim:mncs-environment:paths:ff3316b8cc5e",
+      "claim:mncs-environment:worktree:370cbc78fb3c"
+    ],
+    "campaign_objective": "Improve how effectively MNCS's language, compiler, tooling, and environment serve and potentiate agents using authentic development evidence."
+  },
+  "observation": {
+    "kind": "context-response-binding-id-attribution-summary-live-readback-after-integration",
+    "source_interface": "MNCS Environment projections --interpret environmental-capability",
+    "request": {
+      "session_id": "ses_9ad3efb63438cf3d",
+      "campaign_evidence_count": 51,
+      "queries": [
+        {
+          "projection_identity": "eci_00033f448ff9d9a4",
+          "evidence_offset": 47,
+          "evidence_limit": 4,
+          "session_event_limit": 256
+        },
+        {
+          "projection_identity": "eci_81457d1e30f0d5cc",
+          "evidence_offset": 48,
+          "evidence_limit": 4,
+          "session_event_limit": 256
+        }
+      ],
+      "source_context_event_identity": "evt_de29b1e1b27f5e61"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "delivery_status": "ready",
+      "summary_schema": "mncs.environment.capability-binding-evidence-summary/2",
+      "binding_count": 9,
+      "context_response_inclusion_status_counts": {
+        "identity-tuple-in-matched-response": 9
+      },
+      "context_response_binding_id_attribution_status_counts": {
+        "binding-id-capture-incomplete": 9
+      },
+      "context_response_binding_id_list_status_counts": {
+        "partial": 9
+      },
+      "context_response_supporting_events": [
+        {
+          "identity": "evt_de29b1e1b27f5e61",
+          "sequence": 41,
+          "type": "environment.rpc.read_observed"
+        },
+        {
+          "identity": "evt_a855142abcedfb4d",
+          "sequence": 4,
+          "type": "environment.rpc.read_observed"
+        }
+      ],
+      "campaign_pressure_hypotheses_observed": [
+        "ph_environment_eci_context_binding_id_attribution_loss_under_compaction"
+      ],
+      "agent_receipt_status": "not-established",
+      "discoverability_status": "not-measured",
+      "use_status": "not-established"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_context_binding_id_attribution_loss_under_compaction",
+    "title": "Context-response binding ID attribution and provenance disappear when capability rows are compacted",
+    "category": "agent-capability-discovery-and-delivery",
+    "subsystem": "MNCS Environment capability-delivery projection compaction",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Preserve bounded attribution and response-ID-list status counts plus deduplicated source context-event references in the compact capability delivery summary; keep receipt, discovery, and use unestablished unless separately observed."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_binding_id_attribution_pressure_20261026",
+      "kind": "authenticated-pressure-observation",
+      "repository": "mncs-environment",
+      "commit": "6da4f5e59bede267a44dd6d121d581e19aea35d5",
+      "path": "evidence/environmental-capability/eci-binding-id-attribution-pressure-20261026.json",
+      "sha256": "3ae0bd8c301fcc5630df41cf65fe84ed8ce7d50c131c0d1b64ffaa34eef16cca"
+    },
+    {
+      "identity": "mncs_environment_context_binding_attribution_summary_3b50f67",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8747239df1dd93c7cafbe17bbf806363f23d9049a655b06c49547b1df5c44c88"
+    },
+    {
+      "identity": "evt_de29b1e1b27f5e61",
+      "kind": "authenticated-session-event",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "sequence": 41,
+      "type": "environment.rpc.read_observed"
+    }
+  ],
+  "measurement_limits": [
+    "A projection response showing nine tuple matches does not establish that the agent received, discovered, or used any particular capability.",
+    "Binding IDs remain incomplete in the source Control context response; the projection preserves that uncertainty and source events.",
+    "The service runtime source checkout was not independently identified by the projection response.",
+    "Long-term effectiveness requires later independent session activity."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

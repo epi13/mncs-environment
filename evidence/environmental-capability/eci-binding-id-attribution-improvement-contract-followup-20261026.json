@@ -1,0 +1,133 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_binding_id_attribution_improvement_contract_followup_20261026",
+  "captured_at": "2026-10-26T05:21:39Z",
+  "measurement_basis": "verified implementation commit, independent repository verification, and post-integration live projection readback",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_96091aaae2238252",
+    "campaign_evidence_count_before_recording": 51,
+    "claim_ids": [
+      "claim:mncs-environment:paths:ab778ef9e4fd",
+      "claim:mncs-environment:paths:ff3316b8cc5e",
+      "claim:mncs-environment:worktree:370cbc78fb3c"
+    ],
+    "campaign_objective": "Improve how effectively MNCS's language, compiler, tooling, and environment serve and potentiate agents using authentic development evidence."
+  },
+  "observation": {
+    "kind": "context-response-binding-id-attribution-compaction-improvement-contract-followup",
+    "source_interface": "MNCS Environment capability-intelligence projection, targeted and full repository verification, and authenticated Control readback",
+    "request": {
+      "pressure_hypothesis_identity": "ph_environment_eci_context_binding_id_attribution_loss_under_compaction",
+      "implementation_commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "verification_observation_identity": "ev_environment_eci_binding_id_attribution_verification_contract_followup_20261026",
+      "subsequent_observation_identity": "ev_environment_eci_binding_id_attribution_live_readback_followup_20261026",
+      "supersedes_interpretive_role_of_invalid_record": "ev_environment_eci_binding_id_attribution_improvement_20261026"
+    },
+    "outcome": {
+      "implementation_change": "The verified projection implementation preserves context-response binding-ID attribution counts, response ID-list status counts, and bounded source event references after per-binding rows are compacted.",
+      "verification_status": "implementation-and-live-projection-readback-verified",
+      "live_readback_schema": "mncs.environment.capability-binding-evidence-summary/2",
+      "source_binding_id_capture": "still-partial; not changed by this projection implementation",
+      "subsequent_effectiveness": "not-assessed for agent receipt, discoverability, use, or outcomes"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_context_binding_id_attribution_loss_under_compaction",
+    "title": "Context-response binding ID attribution and provenance disappear when capability rows are compacted",
+    "category": "agent-capability-discovery-and-delivery",
+    "subsystem": "MNCS Environment capability-delivery projection compaction",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Preserve bounded attribution and response-ID-list status counts plus deduplicated source context-event references in the compact capability delivery summary; keep receipt, discovery, and use unestablished unless separately observed."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_eci_binding_id_attribution_compaction_20261026",
+    "addresses_hypothesis_identity": "ph_environment_eci_context_binding_id_attribution_loss_under_compaction",
+    "implementation_reference": {
+      "identity": "mncs_environment_context_binding_attribution_summary_3b50f67",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8747239df1dd93c7cafbe17bbf806363f23d9049a655b06c49547b1df5c44c88"
+    },
+    "verification_observation_identity": "ev_environment_eci_binding_id_attribution_verification_contract_followup_20261026",
+    "subsequent_observation_identity": "ev_environment_eci_binding_id_attribution_live_readback_followup_20261026",
+    "basis": "Targeted regressions, full repository tests, vertical and campaign proofs, static checks, and a post-main-push authenticated projection verified schema /2 and preserved the nine partial binding-ID attribution states and bounded source context event references. This verifies projection behavior, not improved agent outcomes or complete Control capture.",
+    "not_measured": [
+      "whether agents received or discovered the capabilities",
+      "whether any agent used a capability through an external interface",
+      "whether capability delivery or development outcomes improved",
+      "why Control captured only a partial binding-ID list",
+      "long-term recurrence or effectiveness across other sessions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_context_binding_attribution_summary_3b50f67",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8747239df1dd93c7cafbe17bbf806363f23d9049a655b06c49547b1df5c44c88"
+    },
+    {
+      "identity": "mncs_environment_context_binding_attribution_regression_3b50f67",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "50c11ae7bd204e28515450dd053127d3ee290326d480818ebb6bb8d879186d4e"
+    },
+    {
+      "identity": "mncs_environment_context_binding_attribution_projection_docs_3b50f67",
+      "kind": "projection-documentation",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "67737fac393b781e8fc323d820d80fdc0f2f423e9dcc3591c953d6570e87c67a"
+    },
+    {
+      "identity": "ev_environment_eci_binding_id_attribution_improvement_20261026",
+      "kind": "prior-observation-contract-invalid-implementation-record",
+      "repository": "mncs-environment",
+      "commit": "6da4f5e59bede267a44dd6d121d581e19aea35d5",
+      "path": "evidence/environmental-capability/eci-binding-id-attribution-improvement-20261026.json",
+      "sha256": "cd4afb374d65adbf5d511d247478cef1755e4f45010a504f84bffce417e9366b"
+    },
+    {
+      "identity": "ev_environment_eci_binding_id_attribution_readback_20261026",
+      "kind": "prior-observation-contract-invalid-live-readback-record",
+      "repository": "mncs-environment",
+      "commit": "6da4f5e59bede267a44dd6d121d581e19aea35d5",
+      "path": "evidence/environmental-capability/eci-binding-id-attribution-readback-20261026.json",
+      "sha256": "38a97dacaab1113556c9b07d11f705039176f41e9e110986c4255d6fe98730b1"
+    },
+    {
+      "identity": "ev_environment_eci_binding_id_attribution_verification_20261026",
+      "kind": "prior-observation-contract-invalid-verification-record",
+      "repository": "mncs-environment",
+      "commit": "6da4f5e59bede267a44dd6d121d581e19aea35d5",
+      "path": "evidence/environmental-capability/eci-binding-id-attribution-verification-20261026.json",
+      "sha256": "ee5de6e176ffb19c2c85c6646460bcd8a7009861d5271b78e627ec8a276cbc0e"
+    }
+  ],
+  "measurement_limits": [
+    "The summary implementation changes projection retention, not Control response capture.",
+    "The live view remains partial and agent receipt/discoverability/use are unestablished.",
+    "The previous improvement record is retained with its contract-invalid diagnostic; this record is a new immutable follow-up."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

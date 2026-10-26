@@ -1,0 +1,155 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_binding_id_attribution_verification_contract_followup_20261026",
+  "captured_at": "2026-10-26T05:21:39Z",
+  "measurement_basis": "authenticated ECI projection contract diagnostics plus independent tests and proofs for the committed implementation",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_96091aaae2238252",
+    "campaign_evidence_count_before_recording": 51,
+    "claim_ids": [
+      "claim:mncs-environment:paths:ab778ef9e4fd",
+      "claim:mncs-environment:paths:ff3316b8cc5e",
+      "claim:mncs-environment:worktree:370cbc78fb3c"
+    ],
+    "campaign_objective": "Improve how effectively MNCS's language, compiler, tooling, and environment serve and potentiate agents using authentic development evidence."
+  },
+  "observation": {
+    "kind": "binding-id-attribution-implementation-verification-contract-followup",
+    "source_interface": "pytest, Ruff, Python bytecode compilation, Git validation, and MNCS Environment environmental-capability projection",
+    "request": {
+      "implementation_commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "full_test_command": "python3 -m pytest tests/ -q",
+      "vertical_proof_command": "python3 scripts/vertical_proof.py",
+      "campaign_proof_command": "python3 scripts/campaign_proofs.py",
+      "projection_readback_identities": [
+        "eci_00033f448ff9d9a4",
+        "eci_81457d1e30f0d5cc"
+      ],
+      "original_invalid_evidence_identities": [
+        "ev_environment_eci_binding_id_attribution_improvement_20261026",
+        "ev_environment_eci_binding_id_attribution_readback_20261026",
+        "ev_environment_eci_binding_id_attribution_verification_20261026"
+      ]
+    },
+    "outcome": {
+      "focused_regressions": "4 passed",
+      "full_repository_suite": "989 passed, 81 skipped in 697.13s",
+      "vertical_proof": "passed; 15 events, 3 checkpoints, 1 handoff",
+      "campaign_proofs": "14 passed, 2 skipped, 0 failed; language live-delta and Memory untouched skipped because dependencies were absent",
+      "static_checks": "compileall, Ruff, git diff check, and JSON validation passed",
+      "live_projection": {
+        "summary_schema": "mncs.environment.capability-binding-evidence-summary/2",
+        "binding_count": 9,
+        "context_response_inclusion_status_counts": {
+          "identity-tuple-in-matched-response": 9
+        },
+        "context_response_binding_id_attribution_status_counts": {
+          "binding-id-capture-incomplete": 9
+        },
+        "context_response_binding_id_list_status_counts": {
+          "partial": 9
+        },
+        "supporting_context_events": [
+          {
+            "identity": "evt_de29b1e1b27f5e61",
+            "sequence": 41,
+            "type": "environment.rpc.read_observed"
+          },
+          {
+            "identity": "evt_a855142abcedfb4d",
+            "sequence": 4,
+            "type": "environment.rpc.read_observed"
+          }
+        ],
+        "pressure_hypothesis_count": 1
+      },
+      "observation_contract_correction": "The first improvement, verification, and pre-integration readback records were rejected because their observation objects lacked required request/outcome or source_interface fields. This follow-up uses new immutable identities and leaves the rejected originals addressable.",
+      "agent_receipt_discovery_and_use": "not-established",
+      "long_term_effectiveness": "not-assessed"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_context_binding_id_attribution_loss_under_compaction",
+    "title": "Context-response binding ID attribution and provenance disappear when capability rows are compacted",
+    "category": "agent-capability-discovery-and-delivery",
+    "subsystem": "MNCS Environment capability-delivery projection compaction",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Preserve bounded attribution and response-ID-list status counts plus deduplicated source context-event references in the compact capability delivery summary; keep receipt, discovery, and use unestablished unless separately observed."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_context_binding_attribution_summary_3b50f67",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8747239df1dd93c7cafbe17bbf806363f23d9049a655b06c49547b1df5c44c88"
+    },
+    {
+      "identity": "mncs_environment_context_binding_attribution_regression_3b50f67",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "50c11ae7bd204e28515450dd053127d3ee290326d480818ebb6bb8d879186d4e"
+    },
+    {
+      "identity": "mncs_environment_context_binding_attribution_projection_docs_3b50f67",
+      "kind": "projection-documentation",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "67737fac393b781e8fc323d820d80fdc0f2f423e9dcc3591c953d6570e87c67a"
+    },
+    {
+      "identity": "ev_environment_eci_binding_id_attribution_improvement_20261026",
+      "kind": "prior-observation-contract-invalid-implementation-record",
+      "repository": "mncs-environment",
+      "commit": "6da4f5e59bede267a44dd6d121d581e19aea35d5",
+      "path": "evidence/environmental-capability/eci-binding-id-attribution-improvement-20261026.json",
+      "sha256": "cd4afb374d65adbf5d511d247478cef1755e4f45010a504f84bffce417e9366b"
+    },
+    {
+      "identity": "ev_environment_eci_binding_id_attribution_readback_20261026",
+      "kind": "prior-observation-contract-invalid-live-readback-record",
+      "repository": "mncs-environment",
+      "commit": "6da4f5e59bede267a44dd6d121d581e19aea35d5",
+      "path": "evidence/environmental-capability/eci-binding-id-attribution-readback-20261026.json",
+      "sha256": "38a97dacaab1113556c9b07d11f705039176f41e9e110986c4255d6fe98730b1"
+    },
+    {
+      "identity": "ev_environment_eci_binding_id_attribution_verification_20261026",
+      "kind": "prior-observation-contract-invalid-verification-record",
+      "repository": "mncs-environment",
+      "commit": "6da4f5e59bede267a44dd6d121d581e19aea35d5",
+      "path": "evidence/environmental-capability/eci-binding-id-attribution-verification-20261026.json",
+      "sha256": "ee5de6e176ffb19c2c85c6646460bcd8a7009861d5271b78e627ec8a276cbc0e"
+    },
+    {
+      "identity": "evt_de29b1e1b27f5e61",
+      "kind": "authenticated-session-event",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "sequence": 41,
+      "type": "environment.rpc.read_observed"
+    }
+  ],
+  "measurement_limits": [
+    "The full suite, vertical proof, and campaign proofs validate code and environment workflows but do not establish improved agent outcomes.",
+    "The live projection reports partial binding-ID capture; this change preserves uncertainty and provenance but does not change Control capture.",
+    "The original three malformed evidence records remain in campaign history with their diagnostic status; these follow-ups use new identities."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
