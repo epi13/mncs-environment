@@ -1,0 +1,122 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_native_host_role_accountability_readback_20261026",
+  "captured_at": "2026-10-26T04:02:41Z",
+  "measurement_basis": "authenticated-Control-session environmental-capability projection after the schema /3 change",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve how effectively MNCS language, compiler, tooling, and environment serve agents through evidence from real development.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_c2df44a0e57b27f1",
+    "campaign_evidence_count_before_recording": 39,
+    "claim_ids": [
+      "claim:mncs-environment:paths:87aa16e55f9e"
+    ]
+  },
+  "observation": {
+    "kind": "native-host-role-accountability-live-readback",
+    "source_interface": "MNCS Environment projections --interpret environmental-capability",
+    "request": {
+      "projection_identity": "eci_57fa722ed57366b4",
+      "campaign_state_checkpoint_id": "chk_c2df44a0e57b27f1",
+      "campaign_evidence_count": 39,
+      "evidence_page_offset": 0,
+      "evidence_page_limit": 4
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "accountability_link_schema": "mncs.environment.capability-accountability-links/3",
+      "link_status": "linked-source-context",
+      "exact_shared_pointer_match_count": 1,
+      "link_count": 1,
+      "links_truncated": false,
+      "correction_status": "applied-to-verified-target",
+      "shared_source_integrity": "verified-in-both-linked-observations",
+      "implementation_source_roles": [
+        "language_contract",
+        "compiler_support",
+        "host_runtime_provider"
+      ],
+      "implementation_ownership_status": "not-established",
+      "native_language_displacement_status": "not-established",
+      "agent_usage_status": "not-measured",
+      "causal_relation_status": "not-established",
+      "native_migration_readiness": "not-established",
+      "recurrence_status": "not-established"
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_native_host_source_role_ambiguity",
+    "title": "Native-labeled source references mix contract and host-provider roles",
+    "category": "native-capability-adoption-and-host-boundary",
+    "subsystem": "MNCS Environment capability-accountability projection",
+    "owner": "mncs-environment",
+    "basis": "Schema /2 named a mixed role list native implementation references while it included language_contract, compiler_support, and host_runtime_provider records. Role tags aid inspection, but the container name alone can imply ownership or displacement not established by the source evidence.",
+    "actionable_recommendation": "Use a role-neutral source-reference field and expose implementation ownership and native-language displacement explicitly as not-established until independent completeness and behavior evidence exists.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether agents interpreted the old field as an ownership claim",
+      "recurrence across other native correspondences",
+      "functional ownership or completeness by source role",
+      "host functionality displacement, agent use, or migration readiness"
+    ]
+  },
+  "measurement_limits": [
+    "This is one bounded live projection; its overall status remains partial.",
+    "It verifies field availability and exact source traceability, not agent interpretation, completeness, or displacement of host behavior."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_role_neutral_capability_source_references_c2431b4",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "c2431b4c6d61e65550def3e26e4564486fa5bb9a",
+      "path": "mncs_env/capability_relationships.py",
+      "sha256": "88b217a45bd92640bc6939f54482233c53c0412e54b84a953baf3b3b59bbb20b"
+    },
+    {
+      "identity": "mncs_environment_role_neutral_source_ownership_regression_c2431b4",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "c2431b4c6d61e65550def3e26e4564486fa5bb9a",
+      "path": "tests/test_native_capability_relationships.py",
+      "sha256": "71784a585cc7ee67698dac8d0ed5c89a613e18b0aeee8cce39c95065e93536f1"
+    },
+    {
+      "identity": "mncs_environment_native_host_role_projection_contract_c2431b4",
+      "kind": "committed-projection-documentation",
+      "repository": "mncs-environment",
+      "commit": "c2431b4c6d61e65550def3e26e4564486fa5bb9a",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "bef574c2a0a581596b8de692c0295ae01a09b04f39d9d61f2f5f29bfd32f1e82"
+    },
+    {
+      "identity": "ev_environment_native_process_capability_correspondence_20261025",
+      "kind": "native-capability-correspondence-observation",
+      "repository": "mncs-environment",
+      "commit": "85648827af074366ad5b1e638286fe0bdbe9ecba",
+      "path": "evidence/environmental-capability/native-process-capability-correspondence-20261025.json",
+      "sha256": "5ae1c4e92ddd250d2f9f567b991ab8c2b5bf400d3852cd02e550d8438b80270f"
+    },
+    {
+      "identity": "ev_environment_native_userland_accountability_correction_20261025",
+      "kind": "applied-owner-audit-correction",
+      "repository": "mncs-environment",
+      "commit": "ee6bf1db5d4d6f5d5c92add08d819a5ab3a1f64b",
+      "path": "evidence/environmental-capability/native-userland-accountability-correction-20261025.json",
+      "sha256": "556007f5f8ec9c713f931626d122b516239f4f489fff55079cf41f7b5b3511d5"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

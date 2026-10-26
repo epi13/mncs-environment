@@ -1,0 +1,108 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_native_host_role_accountability_pressure_20261026",
+  "captured_at": "2026-10-26T04:02:41Z",
+  "measurement_basis": "authenticated bounded projection plus source and regression-contract inspection",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve how effectively MNCS language, compiler, tooling, and environment serve agents through evidence from real development.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_c2df44a0e57b27f1",
+    "campaign_evidence_count_before_recording": 39,
+    "claim_ids": [
+      "claim:mncs-environment:paths:87aa16e55f9e"
+    ]
+  },
+  "observation": {
+    "kind": "native-source-role-label-ambiguity",
+    "source_interface": "MNCS Environment capability_accountability_links projection",
+    "request": {
+      "baseline_projection_identity": "eci_08bacde94869f099",
+      "baseline_schema": "mncs.environment.capability-accountability-links/2",
+      "field": "native_implementation_source_references"
+    },
+    "outcome": {
+      "observed_role_labels": [
+        "language_contract",
+        "compiler_support",
+        "host_runtime_provider"
+      ],
+      "assessment": "The field grouped source pointers with different declared roles under a native-implementation name. The roles were individually available, but the schema had no explicit ownership or language-displacement status.",
+      "interpretation_limit": "This is a projection-label ambiguity for one correspondence, not evidence that an agent misread it or that host functionality was displaced."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_native_host_source_role_ambiguity",
+    "title": "Native-labeled source references mix contract and host-provider roles",
+    "category": "native-capability-adoption-and-host-boundary",
+    "subsystem": "MNCS Environment capability-accountability projection",
+    "owner": "mncs-environment",
+    "basis": "Schema /2 named a mixed role list native implementation references while it included language_contract, compiler_support, and host_runtime_provider records. Role tags aid inspection, but the container name alone can imply ownership or displacement not established by the source evidence.",
+    "actionable_recommendation": "Use a role-neutral source-reference field and expose implementation ownership and native-language displacement explicitly as not-established until independent completeness and behavior evidence exists.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether agents interpreted the old field as an ownership claim",
+      "recurrence across other native correspondences",
+      "functional ownership or completeness by source role",
+      "host functionality displacement, agent use, or migration readiness"
+    ]
+  },
+  "measurement_limits": [
+    "One correspondence was examined; recurrence is not established.",
+    "The role labels are evidence classifications, not independent implementation ownership proof.",
+    "Agent interpretation, complete functionality ownership, host displacement, and migration readiness are not measured."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_schema2_native_labeled_source_reference_field",
+      "kind": "pre-change-implementation",
+      "repository": "mncs-environment",
+      "commit": "b7883ae7599ed74f39d9b38a96f48677f76f0b75",
+      "path": "mncs_env/capability_relationships.py",
+      "sha256": "1172468da6b116bbbb2f1728771776752a9c2f11654d4affb2cc2b28613b95e0"
+    },
+    {
+      "identity": "mncs_environment_schema2_role_reference_contract_test",
+      "kind": "pre-change-test",
+      "repository": "mncs-environment",
+      "commit": "b7883ae7599ed74f39d9b38a96f48677f76f0b75",
+      "path": "tests/test_native_capability_relationships.py",
+      "sha256": "8b1ecb7d996c1d4ee2d4b40c470fd0b31035dbfc8c714e5a632c66d7543f2e37"
+    },
+    {
+      "identity": "mncs_environment_schema2_role_documentation",
+      "kind": "pre-change-documentation",
+      "repository": "mncs-environment",
+      "commit": "b7883ae7599ed74f39d9b38a96f48677f76f0b75",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "7ee82ea37b2a196e5d238d3e28de9d40e14e3cd9a114cd0e6524428b1da9c0d2"
+    },
+    {
+      "identity": "ev_environment_native_process_capability_correspondence_20261025",
+      "kind": "native-capability-correspondence-observation",
+      "repository": "mncs-environment",
+      "commit": "85648827af074366ad5b1e638286fe0bdbe9ecba",
+      "path": "evidence/environmental-capability/native-process-capability-correspondence-20261025.json",
+      "sha256": "5ae1c4e92ddd250d2f9f567b991ab8c2b5bf400d3852cd02e550d8438b80270f"
+    },
+    {
+      "identity": "ev_environment_eci_correction_link_provenance_readback_20261026",
+      "kind": "pre-change-live-readback",
+      "repository": "mncs-environment",
+      "commit": "b7883ae7599ed74f39d9b38a96f48677f76f0b75",
+      "path": "evidence/environmental-capability/eci-correction-link-provenance-readback-20261026.json",
+      "sha256": "86ca96653e44281704e046da8988f75923cfc1dc92da4c0906e8938cfc779830"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
