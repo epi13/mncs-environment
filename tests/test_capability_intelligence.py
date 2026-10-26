@@ -940,9 +940,23 @@ def test_append_only_correction_completes_integrity_verified_invalid_observation
             "observation.request": {
                 "basis": "recorded from the original bounded CLI invocation",
                 "operation": "environmental-capability projection readback",
+                "projection_identity": "eci_contract_completion",
+                "source_event_identities": ["evt_contract_failure", "evt_contract_recovery"],
             },
             "observation.outcome": {
                 "basis": "recorded from the original CLI response",
+                "original_record_status": "observation-contract-invalid",
+                "original_contract_diagnostics": [
+                    "missing-observation-request",
+                    "missing-observation-outcome-or-projection-summary",
+                ],
+                "source_event_summary": {
+                    "failure": {
+                        "identity": "evt_contract_failure",
+                        "sequence": 5,
+                        "skip_reason": "missing-observation-request",
+                    },
+                },
                 "status": "partial",
                 "response_truncated": True,
             },
@@ -1009,9 +1023,27 @@ def test_append_only_correction_completes_integrity_verified_invalid_observation
         item for item in compact["observations"]
         if item["identity"] == target["identity"]
     )
+    assert compact_corrected["observation"]["request_summary"][
+        "projection_identity"
+    ] == "eci_contract_completion"
+    assert compact_corrected["observation"]["request_summary"][
+        "source_event_identities_count"
+    ] == 2
+    assert compact_corrected["observation"]["outcome_context"][
+        "original_record_status"
+    ] == "observation-contract-invalid"
+    assert compact_corrected["observation"]["outcome_context"][
+        "original_contract_diagnostics"
+    ] == [
+        "missing-observation-request",
+        "missing-observation-outcome-or-projection-summary",
+    ]
+    assert compact_corrected["observation"]["outcome_context"][
+        "source_event_summary"
+    ]["failure"]["identity"] == "evt_contract_failure"
     assert compact_corrected["record_correction"]["replacement_values"][
         "observation.request"
-    ]["key_count"] == 2
+    ]["key_count"] == 4
 
 
 def test_observation_contract_correction_requires_complete_contract(

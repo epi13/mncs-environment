@@ -551,6 +551,34 @@ def _compact_measurement_summary(outcome: Any) -> dict[str, Any] | None:
     return result or None
 
 
+def _compact_request_summary(request: Any) -> dict[str, Any] | None:
+    """Keep bounded request identifiers useful for navigating an observation."""
+    if not isinstance(request, dict):
+        return None
+    result: dict[str, Any] = {}
+    for key in (
+        "operation", "command", "projection_identity",
+        "target_observation_identity", "target_content_sha256",
+        "repository", "branch", "commit", "session_id", "work_intent_id",
+    ):
+        value = request.get(key)
+        if isinstance(value, str) and value:
+            result[key] = _short_text(value, 256 if key == "command" else 160)
+    for key in ("source_event_identities", "event_identities", "corrected_field_paths"):
+        values = request.get(key)
+        if not isinstance(values, list):
+            continue
+        selected = [
+            _short_text(value, 160) for value in values[:8]
+            if isinstance(value, str) and value
+        ]
+        if selected:
+            result[key] = selected
+            result[f"{key}_count"] = len(values)
+            result[f"{key}_truncated"] = len(values) > len(selected)
+    return result or None
+
+
 def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
     """Retain bounded outcome meaning when compacting a large observation."""
     if not isinstance(outcome, dict):
@@ -561,6 +589,7 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
         "interpretation_limit", "implementation_change",
         "effectiveness_assessment", "recurrence_status",
         "verification_record_status", "subsequent_record_status",
+        "original_record_status",
         "projection_status", "observation_identity", "source_campaign_id",
         "source_session_id", "compiler_source_status",
         "source_registration_status", "registration_scope",
@@ -655,6 +684,38 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
         result["sections"] = dict(sorted(compact_objects.items())[:4])
         if len(compact_objects) > len(result["sections"]):
             result["sections_truncated"] = True
+    diagnostics = outcome.get("original_contract_diagnostics")
+    if isinstance(diagnostics, list):
+        selected_diagnostics = [
+            _short_text(value, 128) for value in diagnostics[:8]
+            if isinstance(value, str) and value
+        ]
+        if selected_diagnostics:
+            result["original_contract_diagnostics"] = selected_diagnostics
+            result["original_contract_diagnostics_truncated"] = (
+                len(diagnostics) > len(selected_diagnostics)
+            )
+    raw_event_summary = outcome.get("source_event_summary")
+    if isinstance(raw_event_summary, dict):
+        event_summary = {}
+        for name, event in list(raw_event_summary.items())[:4]:
+            if not isinstance(name, str) or not isinstance(event, dict):
+                continue
+            values = {}
+            for key, value in list(event.items())[:12]:
+                if not isinstance(key, str) or not key or len(key) > 80:
+                    continue
+                if isinstance(value, str) and value:
+                    values[key] = _short_text(value, 160)
+                elif (type(value) in {bool, int} or value is None):
+                    values[key] = value
+            if values:
+                event_summary[_short_text(name, 64)] = values
+        if event_summary:
+            result["source_event_summary"] = event_summary
+            result["source_event_summary_truncated"] = (
+                len(raw_event_summary) > len(event_summary)
+            )
     return result or None
 
 
@@ -2149,6 +2210,11 @@ def _compact_projection(
             ] if isinstance(measurement_limits, list) else [],
             "evidence_reference": item["evidence_reference"],
         }
+        request_summary = _compact_request_summary(observation.get("request"))
+        if request_summary is not None:
+            compact_observation["observation"]["request_summary"] = (
+                request_summary
+            )
         pressure_hypothesis_role = item.get("pressure_hypothesis_role")
         if (isinstance(pressure_hypothesis_role, str)
                 and pressure_hypothesis_role in PRESSURE_HYPOTHESIS_ROLES):
