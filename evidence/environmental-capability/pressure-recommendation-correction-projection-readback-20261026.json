@@ -1,0 +1,118 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_recommendation_correction_projection_readback_20261026",
+  "captured_at": "2026-10-26T15:07:07Z",
+  "measurement_basis": "live bounded Environmental Capability projection over the corrected campaign evidence page",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_af915b467b1d66a9",
+    "campaign_evidence_count_before_recording": 13
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "projection_identity": "eci_5eeac9bee9147bb9",
+      "campaign_state_checkpoint_id": "chk_af915b467b1d66a9",
+      "history_pages": 1,
+      "evidence_offset": 8,
+      "evidence_limit": 5,
+      "session_event_before_sequence": 108,
+      "session_event_limit": 2
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_truncated": true,
+      "campaign_evidence_count": 13,
+      "observation_records_considered": 5,
+      "observation_records_verified": 5,
+      "observation_records_unavailable": 0,
+      "source_pointer_content_integrity_verified_count": 4,
+      "record_corrections_applied_count": 1,
+      "record_corrections_unverified_count": 0,
+      "corrected_target_identity": "ev_environment_session_selection_claim_coordination_projection_readback_20261026",
+      "correction_observation_identity": "ev_environment_session_selection_claim_coordination_projection_readback_correction_20261026",
+      "corrected_field_path": "pressure_hypothesis.actionable_recommendation",
+      "target_record_status": "completed-by-append-only-record",
+      "correction_record_status": "applied-to-integrity-verified-contract-invalid-target",
+      "target_sha256_preserved": "44909ad15921b07bc6f0d107c24bc5c71f24484813ae5d140ab0abaeaae0902d",
+      "correction_improvement_relation_identity": "im_environment_pressure_recommendation_correction_20261026",
+      "correction_improvement_verification_status": "record-integrity-verified-in-projection",
+      "correction_improvement_effectiveness_assessment": "not-assessed",
+      "session_activity_status": "partial-no-invocations-in-selected-window",
+      "limits": [
+        "the projection response remains bounded and truncated",
+        "no capability invocation appears in the selected session activity page",
+        "successful correction of this evidence record does not establish live-agent benefit or resolve the underlying session-selection pressure"
+      ]
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_pressure_recommendation_correction_gap_20261026",
+    "title": "The observation correction contract cannot restore a missing pressure recommendation",
+    "category": "evidence-provenance",
+    "subsystem": "mncs_env.capability_intelligence observation-correction projection",
+    "owner": "mncs-environment",
+    "basis": "This is a readback of the correction and improvement relation, not another independent contract-gap occurrence.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Allow exact-field append-only correction of a missing actionable recommendation only after target integrity verification and full contract revalidation.",
+    "not_measured": [
+      "whether an agent uses the repaired campaign evidence",
+      "whether later projection pages expose other correction gaps",
+      "whether the underlying session-selection pressure is reduced in practice"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_pressure_recommendation_correction_verification_20261026",
+      "kind": "committed-verification-observation",
+      "repository": "mncs-environment",
+      "commit": "c5c4e838f246571110132e7324014e695695161e",
+      "path": "evidence/environmental-capability/pressure-recommendation-correction-verification-20261026.json",
+      "sha256": "ffbfbf2e0ec5c38561117ebbab3a089d01e47688030f529f2bec15a1c969c38b"
+    },
+    {
+      "identity": "ev_environment_session_selection_claim_coordination_projection_readback_correction_20261026",
+      "kind": "applied-observation-correction-record",
+      "repository": "mncs-environment",
+      "commit": "c5c4e838f246571110132e7324014e695695161e",
+      "path": "evidence/environmental-capability/session-selection-projection-readback-correction-20261026.json",
+      "sha256": "be3c536a05195191a839c69dff5f447a462096f8bc7f5e1d834ff867fcd9b6c9"
+    },
+    {
+      "identity": "ev_environment_session_selection_claim_coordination_projection_readback_20261026",
+      "kind": "corrected-observation-target",
+      "repository": "mncs-environment",
+      "commit": "9864597db9fe50add70679c4ea3a1c69a8431093",
+      "path": "evidence/environmental-capability/session-selection-claim-coordination-projection-readback-20261026.json",
+      "sha256": "44909ad15921b07bc6f0d107c24bc5c71f24484813ae5d140ab0abaeaae0902d"
+    },
+    {
+      "identity": "mncs_environment_pressure_recommendation_correction_implementation_415c13f",
+      "kind": "implementation-source-verified-in-projection",
+      "repository": "mncs-environment",
+      "commit": "415c13f461b28ade49fb51645c2a07e590aa7930",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "a571ac098b538571b69229821a52a02c970252d2f64e32990a7d4202483e9123"
+    }
+  ],
+  "not_measured": [
+    "whether subsequent agent work uses the repaired recommendation",
+    "whether the project-selection change reduces actual coordination steps",
+    "whether longer-term development confirms the pressure has been reduced"
+  ]
+}
