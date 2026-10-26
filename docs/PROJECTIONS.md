@@ -658,7 +658,14 @@ Published observation records are content-addressed and are not rewritten when
 a transcription or relation needs correction. A later record can use the
 `mncs.environment.observation-correction/1` contract to point to the exact
 target evidence reference, name corrected fields, and provide their replacement
-values. The first supported fields are `supporting_sources` and `not_measured`.
+values. Supported fields include `supporting_sources`, `not_measured`, and
+`pressure_hypothesis_role`. A pressure hypothesis can have role `occurrence` or
+`supporting-context`; records without an explicit role retain the historical
+`occurrence` default. A verification or improvement record that repeats a
+hypothesis only to describe the change should use `supporting-context`, so the
+same declaration is not counted as another observed pressure occurrence. An
+append-only correction can fix a previously published role while preserving the
+original record and its pointer.
 Each replacement source must appear in the selected campaign evidence window
 and have verified content integrity. A non-observation source in another
 workspace repository may remain `outside-selected-session` when the bounded,

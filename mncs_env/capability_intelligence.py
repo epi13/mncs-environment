@@ -35,6 +35,7 @@ from .store_backend import StoreIntegrityFailure, StoreUnavailable
 SCHEMA = "mncs.environment.capability-intelligence/1"
 OBSERVATION_SCHEMA = "mncs.environment.environmental-observation/1"
 OBSERVATION_CORRECTION_SCHEMA = "mncs.environment.observation-correction/1"
+PRESSURE_HYPOTHESIS_ROLES = frozenset({"occurrence", "supporting-context"})
 EVIDENCE_REFERENCE_CORRECTION_SCHEMA = (
     "mncs.environment.evidence-reference-correction/1"
 )
@@ -2058,6 +2059,12 @@ def _compact_projection(
             ] if isinstance(measurement_limits, list) else [],
             "evidence_reference": item["evidence_reference"],
         }
+        pressure_hypothesis_role = item.get("pressure_hypothesis_role")
+        if (isinstance(pressure_hypothesis_role, str)
+                and pressure_hypothesis_role in PRESSURE_HYPOTHESIS_ROLES):
+            compact_observation["pressure_hypothesis_role"] = (
+                pressure_hypothesis_role
+            )
         pointer_correction = item.get("evidence_reference_correction")
         if isinstance(pointer_correction, dict):
             compact_pointer_correction = {
@@ -2227,6 +2234,14 @@ def _compact_projection(
                         for value in replacement_limits[:16]
                         if isinstance(value, str)
                     ]
+                replacement_role = replacement_values.get(
+                    "pressure_hypothesis_role",
+                )
+                if (isinstance(replacement_role, str)
+                        and replacement_role in PRESSURE_HYPOTHESIS_ROLES):
+                    compact_replacements["pressure_hypothesis_role"] = (
+                        replacement_role
+                    )
                 compact_correction["replacement_values"] = compact_replacements
             compact_observation["record_correction"] = compact_correction
         compact_sources = []
@@ -4302,6 +4317,12 @@ def _observation_contract_diagnostics(record: dict[str, Any]) -> list[str]:
         owner = hypothesis.get("owner")
         if owner is not None and (not isinstance(owner, str) or not owner):
             diagnostics.append("invalid-pressure-hypothesis-owner")
+    hypothesis_role = record.get("pressure_hypothesis_role")
+    if (hypothesis_role is not None
+            and (not isinstance(hypothesis_role, str)
+                 or hypothesis_role not in PRESSURE_HYPOTHESIS_ROLES
+                 or not isinstance(hypothesis, dict))):
+        diagnostics.append("invalid-pressure-hypothesis-role")
     return diagnostics[:16] or ["invalid-observation-contract"]
 
 
@@ -4406,6 +4427,15 @@ def _load_observation(
                        if key in recorder)
             ))
             or (hypothesis is not None and not isinstance(hypothesis, dict))):
+        record["_projection_contract_diagnostics"] = (
+            _observation_contract_diagnostics(record)
+        )
+        return record, "observation-contract-invalid"
+    hypothesis_role = record.get("pressure_hypothesis_role")
+    if (hypothesis_role is not None
+            and (not isinstance(hypothesis_role, str)
+                 or hypothesis_role not in PRESSURE_HYPOTHESIS_ROLES
+                 or not isinstance(hypothesis, dict))):
         record["_projection_contract_diagnostics"] = (
             _observation_contract_diagnostics(record)
         )
@@ -6410,7 +6440,10 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
             or not isinstance(fields, list) or not 1 <= len(fields) <= 2
             or any(
                 not isinstance(field, str)
-                or field not in {"supporting_sources", "not_measured"}
+                or field not in {
+                    "supporting_sources", "not_measured",
+                    "pressure_hypothesis_role",
+                }
                 for field in fields
             )
             or len(set(fields)) != len(fields)
@@ -6433,6 +6466,11 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
                 or any(not isinstance(item, str) or not item or len(item) > 512
                        for item in limits)):
             return None
+    if ("pressure_hypothesis_role" in fields
+            and (not isinstance(replacements["pressure_hypothesis_role"], str)
+                 or replacements["pressure_hypothesis_role"]
+                 not in PRESSURE_HYPOTHESIS_ROLES)):
+        return None
     return {
         "schema_version": OBSERVATION_CORRECTION_SCHEMA,
         "target_reference": target,
@@ -6482,9 +6520,12 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for observation in observations:
         hypothesis = observation["pressure_hypothesis"]
         if (not isinstance(hypothesis, dict)
-                or observation.get("improvement_relation_identity") is not None):
+                or observation.get("improvement_relation_identity") is not None
+                or observation.get("pressure_hypothesis_role", "occurrence")
+                != "occurrence"):
             # An implementation record may restate the pressure it addresses.
-            # That link is context for the change, not a second occurrence.
+            # Its linked hypothesis is context for the change, not a second
+            # occurrence. Other supporting records can state that role too.
             continue
         identity = hypothesis.get("identity")
         if isinstance(identity, str) and identity:
@@ -9460,6 +9501,9 @@ def project(
         )
         effective_sources = sources
         effective_measurement_limits = record.get("not_measured", [])
+        effective_pressure_hypothesis_role = record.get(
+            "pressure_hypothesis_role", "occurrence",
+        )
         if correction_for_target is not None:
             correction_record, correction, correction_reference = correction_for_target
             corrected_fields = correction["corrected_field_paths"]
@@ -9468,6 +9512,10 @@ def project(
                 effective_sources = replacement_values["supporting_sources"]
             if "not_measured" in corrected_fields:
                 effective_measurement_limits = replacement_values["not_measured"]
+            if "pressure_hypothesis_role" in corrected_fields:
+                effective_pressure_hypothesis_role = replacement_values[
+                    "pressure_hypothesis_role"
+                ]
             if record_correction_summary is None:
                 record_correction_summary = {
                     "status": "corrected-by-verified-record",
@@ -9630,6 +9678,9 @@ def project(
                             "not_measured")
                 if hypothesis.get(key) is not None
             } if hypothesis is not None else None),
+            **({
+                "pressure_hypothesis_role": effective_pressure_hypothesis_role,
+            } if hypothesis is not None else {}),
             "supporting_sources": [
                 {
                     **_source_status(source, references),
