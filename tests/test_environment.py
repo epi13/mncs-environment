@@ -665,7 +665,7 @@ class AuthorityTests(unittest.TestCase):
                 proposal_scope["checkout"], json.dumps(event["payload"]),
             )
 
-    def test_session_check_records_fresh_proposal_checkout_preimage(self) -> None:
+    def test_selected_proposal_checkout_needs_no_claim_or_absolute_target(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(
                 Path(directory),
@@ -684,8 +684,24 @@ class AuthorityTests(unittest.TestCase):
                     "name": "mncs-atlas",
                     "path": root,
                     "manifest_repository": "mncs-atlas",
+                }, {
+                    "name": "mncs-atlas@proposal",
+                    "path": checkout,
+                    "manifest_repository": "mncs-atlas",
+                    "worktree_of": "mncs-atlas",
+                    "branch": branch,
                 }],
             }
+            session.snapshot["selected_checkouts"] = {"mncs-atlas": {
+                "repository": "mncs-atlas",
+                "path": checkout,
+                "branch": branch,
+                "head": "c" * 40,
+                "clean": False,
+                "checkout_identity": "checkout:proposal",
+                "git_common_directory_identity": "git-common:atlas",
+                "manifest_identity": "manifest:atlas",
+            }}
             session.snapshot["repo_facts"] = {
                 "mncs-atlas": {
                     "repository": "mncs-atlas",
@@ -714,15 +730,6 @@ class AuthorityTests(unittest.TestCase):
                     "exclusive": True,
                 },
             }]}
-            scope = {
-                "kind": "worktree",
-                "checkout": checkout,
-                "branch": branch,
-                "checkout_identity": "checkout:proposal",
-                "git_common_directory_identity": "git-common:atlas",
-                "manifest_identity": "manifest:atlas",
-                "exclusive": False,
-            }
             checkout_identity = {
                 "path": checkout,
                 "branch": branch,
@@ -748,13 +755,17 @@ class AuthorityTests(unittest.TestCase):
                 sessions.workspace_module, "inspect_repo", return_value=inspected,
             ):
                 verdict = session.check(
-                    action="write",
-                    target=f"{checkout}/src/proposal.mn",
-                    scope=scope,
+                    action="write", target="mncs-atlas",
                 )
 
             self.assertEqual(verdict["verdict"], "allow", verdict)
+            self.assertEqual(
+                verdict["eligibility_basis"],
+                authority.PROPOSAL_WORKTREE_ELIGIBILITY,
+            )
+            self.assertFalse(verdict["persistent_claim_required"])
             verify_checkout.assert_called_once()
+            self.assertIsNone(verify_checkout.call_args.kwargs["expected_branch"])
             event = session._log()[-1]
             self.assertEqual(event["type"], "authority.proposal-eligible")
             self.assertFalse(event["payload"]["operation_executed"])
@@ -789,6 +800,64 @@ class AuthorityTests(unittest.TestCase):
                 },
             )
             self.assertNotIn(checkout, json.dumps(event["payload"]))
+
+    def test_selected_dirty_main_checkout_keeps_claim_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(
+                Path(directory),
+                intent={
+                    "goal": "preserve shared main checkout state",
+                    "repositories": ["mncs-atlas"],
+                },
+            )
+            checkout = "/workspace/mncs-atlas"
+            session.snapshot["workspace"] = {
+                "root": "/workspace",
+                "repositories": [{
+                    "name": "mncs-atlas",
+                    "path": checkout,
+                    "manifest_repository": "mncs-atlas",
+                    "branch": "main",
+                }],
+            }
+            session.snapshot["selected_checkouts"] = {"mncs-atlas": {
+                "repository": "mncs-atlas",
+                "path": checkout,
+                "branch": "main",
+                "clean": False,
+            }}
+            inspected = sessions.workspace_module.RepoState(
+                name="mncs-atlas",
+                path=checkout,
+                manifest_repository="mncs-atlas",
+                manifest_revision=1,
+                branch="main",
+                head="e" * 40,
+                dirty=True,
+            )
+            identity = {
+                "path": checkout,
+                "branch": "main",
+                "checkout_identity": "checkout:atlas-root",
+                "git_common_directory_identity": "git-common:atlas",
+                "manifest_identity": "manifest:atlas",
+            }
+            with mock.patch.object(
+                session, "_refresh_holders", return_value={},
+            ), mock.patch.object(
+                sessions.workspace_module, "verify_registered_checkout",
+                return_value=identity,
+            ), mock.patch.object(
+                sessions.workspace_module, "inspect_repo", return_value=inspected,
+            ):
+                verdict = session.check(action="write", target="mncs-atlas")
+
+            self.assertEqual(verdict["verdict"], "escalate", verdict)
+            self.assertEqual(verdict["required_authorization"], "session-claim")
+            self.assertEqual(
+                verdict["coordination_status"], "exact-scope-lease-required",
+            )
+            self.assertEqual(session._log()[-1]["type"], "authority.escalated")
 
     def test_session_check_explains_recoverable_claim_without_mutating_it(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

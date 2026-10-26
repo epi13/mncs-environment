@@ -359,7 +359,6 @@ def _worktree_scope_matches_observation(
 def _is_proposal_worktree(
     scope: dict[str, Any] | None,
     repo: str,
-    target: str,
     repo_facts: dict[str, dict[str, Any]] | None,
 ) -> bool:
     """Whether an operation names a currently observed, non-main checkout.
@@ -370,8 +369,7 @@ def _is_proposal_worktree(
     Checkout-bound claims for the same checkout or attached branch are still
     checked separately as concurrency evidence.
     """
-    if (not isinstance(scope, dict) or scope.get("kind") != "worktree"
-            or not os.path.isabs(target)):
+    if not isinstance(scope, dict) or scope.get("kind") != "worktree":
         return False
     branch = scope.get("branch")
     if not isinstance(branch, str) or not branch or branch in {"main", "master"}:
@@ -526,7 +524,7 @@ def evaluate(
     )
     proposal_worktree = (
         action in PROPOSAL_WORKTREE_ACTIONS
-        and _is_proposal_worktree(requested, repo, target, repo_facts)
+        and _is_proposal_worktree(requested, repo, repo_facts)
     )
     nonblocking_coordination_claims: list[dict[str, Any]] = []
     nonblocking_coordination_claim_count = 0

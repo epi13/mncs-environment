@@ -4830,6 +4830,14 @@ class Session:
                 and normalized_scope is None
                 and (target == repository or selected_target)
             )
+            needs_selected_proposal_scope = (
+                action in authority_module.PROPOSAL_WORKTREE_ACTIONS
+                and normalized_scope is None
+                and target == repository
+                and isinstance(selected, dict)
+                and isinstance(selected.get("path"), str)
+                and bool(selected.get("path"))
+            )
             needs_absolute_target_validation = (
                 target_checkout is not None
                 and (
@@ -4850,7 +4858,8 @@ class Session:
                 and bool(explicit_worktree_checkout)
             )
             needs_selected_checkout_observation = (
-                needs_selected_scope and isinstance(selected, dict)
+                (needs_selected_scope or needs_selected_proposal_scope)
+                and isinstance(selected, dict)
                 and isinstance(selected.get("path"), str)
                 and bool(selected.get("path"))
             )
@@ -4944,7 +4953,7 @@ class Session:
                         and not (os.path.isabs(target)
                                  and target_checkout is not None)):
                     expected_branch = normalized_scope.get("branch")
-                elif needs_selected_scope:
+                elif needs_selected_scope or needs_selected_proposal_scope:
                     # The selected path/repository is the operation boundary;
                     # its cached branch is only an earlier observation. Read
                     # the current registered checkout below and derive the
@@ -5065,7 +5074,9 @@ class Session:
                                 )
                             ),
                         }
-                if normalized_scope is None and needs_selected_scope:
+                if (normalized_scope is None
+                        and (needs_selected_scope
+                             or needs_selected_proposal_scope)):
                     normalized_scope = self._canonical_scope(repository, {
                         "kind": "worktree",
                         "checkout": checkout_identity["path"],
