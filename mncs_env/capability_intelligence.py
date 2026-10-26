@@ -3119,7 +3119,8 @@ def _compact_projection(
             key: _short_text(item.get(key), 160)
             for key in (
                 "identity", "action", "outcome_status", "reason_class", "repository",
-                "claim_conflict_evidence_status",
+                "claim_conflict_evidence_status", "campaign_id", "work_intent_id",
+                "work_intent_reference_status",
             )
             if isinstance(item.get(key), str)
         }
@@ -3146,7 +3147,8 @@ def _compact_projection(
             key: _short_text(item.get(key), 160)
             for key in (
                 "identity", "action", "repository", "authorization_basis",
-                "eligibility_basis",
+                "eligibility_basis", "campaign_id", "work_intent_id",
+                "work_intent_reference_status",
             )
             if isinstance(item.get(key), str)
         }
@@ -8396,6 +8398,24 @@ def _authority_denial_reason_class(reason: Any) -> str:
                  if fragment in normalized), "other-denial")
 
 
+def _authority_event_objective_context(payload: dict[str, Any]) -> dict[str, str]:
+    """Project stable objective references carried by one authority event."""
+    result: dict[str, str] = {}
+    identifier = re.compile(r"[A-Za-z0-9][A-Za-z0-9:._-]{0,159}")
+    campaign_id = payload.get("campaign_id")
+    if isinstance(campaign_id, str) and identifier.fullmatch(campaign_id):
+        result["campaign_id"] = campaign_id
+    work_intent_id = payload.get("work_intent_id")
+    if isinstance(work_intent_id, str) and identifier.fullmatch(work_intent_id):
+        result["work_intent_id"] = work_intent_id
+        result["work_intent_reference_status"] = "recorded-on-event"
+    elif work_intent_id is None:
+        result["work_intent_reference_status"] = "not-recorded-on-event"
+    else:
+        result["work_intent_reference_status"] = "invalid-event-reference"
+    return result
+
+
 def _authority_conflict_scope(
     value: Any, repository: str,
 ) -> dict[str, Any] | None:
@@ -9620,6 +9640,7 @@ def _session_activity(
             "action": action,
             "outcome_status": "denied",
             "reason_class": reason_class,
+            **_authority_event_objective_context(payload),
             "claim_conflict_evidence_status": (
                 "recorded" if claim_conflict is not None else (
                     "not-recorded" if reason_class == "overlapping-claim"
@@ -9844,6 +9865,7 @@ def _session_activity(
             }, length=16),
             "action": action,
             "repository": repository,
+            **_authority_event_objective_context(payload),
             "authorization_basis": authorization_basis,
             "eligibility_basis": eligibility_basis,
             "persistent_claim_required": False,

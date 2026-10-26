@@ -2439,6 +2439,8 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
             ),
             "persistent_claim_required": False,
             "operation_executed": False,
+            "campaign_id": session.snapshot["campaign"]["identity"],
+            "work_intent_id": session.snapshot["intent"]["identity"],
             "coordination_overlap_count": 5,
             "coordination_overlaps": [{
                 "session_id": f"ses_other_coordinator_{index}",
@@ -2467,6 +2469,8 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
                 f"{checkout} overlaps scope claimed by another session "
                 "(ses_other_coordinator_0): repository-relative paths overlap"
             ),
+            "campaign_id": session.snapshot["campaign"]["identity"],
+            "work_intent_id": session.snapshot["intent"]["identity"],
             "claim_conflict": {
                 "schema_version": (
                     capability_intelligence.authority_module.CLAIM_CONFLICT_SCHEMA
@@ -2538,6 +2542,9 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
     )
     assert eligibility["persistent_claim_required"] is False
     assert eligibility["operation_executed"] is False
+    assert eligibility["campaign_id"] == session.snapshot["campaign"]["identity"]
+    assert eligibility["work_intent_id"] == session.snapshot["intent"]["identity"]
+    assert eligibility["work_intent_reference_status"] == "recorded-on-event"
     assert eligibility["coordination_overlap_count"] == 5
     assert eligibility["coordination_overlaps"][0]["session_id"] == (
         "ses_other_coordinator_0"
@@ -2551,6 +2558,10 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
         "does-not-block-at-projection-time"
     )
     assert activity["authority_denial_count"] == 1
+    denial = activity["authority_denials"][0]
+    assert denial["campaign_id"] == session.snapshot["campaign"]["identity"]
+    assert denial["work_intent_id"] == session.snapshot["intent"]["identity"]
+    assert denial["work_intent_reference_status"] == "recorded-on-event"
     denial_followup = activity["authority_denials"][0]["claim_conflict"][
         "subsequent_integration_preflight"
     ]
@@ -2605,6 +2616,9 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
         "evt_integration_eligible"
     )
     assert compact_eligibility["operation_executed"] is False
+    assert compact_eligibility["work_intent_id"] == session.snapshot["intent"]["identity"]
+    compact_denial = compact["session_activity"]["authority_denials"][0]
+    assert compact_denial["work_intent_reference_status"] == "recorded-on-event"
     assert compact_eligibility["coordination_overlap_count"] == 5
     assert compact_eligibility["coordination_overlap_records_returned"] == 4
     assert compact_eligibility[

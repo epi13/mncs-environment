@@ -344,7 +344,11 @@ caused it. New overlapping-claim denials also include bounded
 conflict rule, and both repository-relative scopes. Absolute checkout paths
 are omitted. Historical overlapping-claim events without this evidence report
 `claim_conflict_evidence_status: not-recorded`; the projection does not infer
-the missing claim or scope. Absolute checkout targets are attributed only
+the missing claim or scope. New authority denials and integration preflights
+include campaign and WorkIntent identities when available; projections retain
+these references without copying objective prose. Older records remain
+explicitly unlinked rather than being assigned the current objective. Absolute
+checkout targets are attributed only
 through observed checkout paths. Merge and publish decisions require writable
 repository authority and an exact operation scope; an agent's persistent claim
 is not required. Overlapping claims remain visible as coordination evidence,

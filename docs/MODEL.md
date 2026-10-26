@@ -133,6 +133,13 @@ Suggested fields:
 
 Invariant: absence of a grant must not silently become permission.
 
+Coordination claims describe active work and scoped shared-mutation protection;
+they do not replace action authority. Merge and publish eligibility derives
+from writable repository rights plus an exact operation scope, while Git's
+native reference update guards decide whether the proposed integration can
+still be applied. The projection preserves claim overlaps as coordination
+evidence without making a persistent claim an integration prerequisite.
+
 ## EventSubscription
 
 Connects the session to typed state changes from providers.

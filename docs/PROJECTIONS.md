@@ -367,7 +367,12 @@ exclusive control, and a claim need not be held by the acting agent.
 Each allowed preflight emits a bounded `authority.integration-eligible` event.
 `session_activity.integration_eligibility` exposes its action, repository,
 sanitized scope, separate rights and eligibility bases, bounded overlap
-evidence, and event reference. The record says
+evidence, event reference, and campaign/WorkIntent identities when the event
+recorded them. Authority-denial rows carry the same stable objective
+references. These are identifiers only: the projection does not copy goal
+prose, reconstruct missing historical references, or infer that an objective
+caused a denial. Older events without an objective reference report
+`work_intent_reference_status: not-recorded-on-event`. The record says
 `operation_executed: false`: it does not reserve the scope or assert that a
 merge or publication succeeded, leaving concurrent ref updates to Git's own
 checks. Event records retain up to eight overlap references and the total

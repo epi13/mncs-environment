@@ -2679,6 +2679,22 @@ class Session:
         self._log_cache = None
         self._log_cache_key = None
 
+    def _authority_event_context(self) -> dict[str, str]:
+        """Return stable campaign and work-intent references for authority evidence."""
+        campaign = self.snapshot.get("campaign")
+        campaign = campaign if isinstance(campaign, dict) else {}
+        intent = self.snapshot.get("intent")
+        intent = intent if isinstance(intent, dict) else {}
+        context: dict[str, str] = {}
+        for field, value in (
+            ("campaign_id", campaign.get("identity")),
+            ("work_intent_id", intent.get("identity")),
+        ):
+            if (isinstance(value, str) and value and len(value) <= 160
+                    and "\x00" not in value):
+                context[field] = value
+        return context
+
     def _emit(
         self,
         event_type: str,
@@ -4539,7 +4555,9 @@ class Session:
                     }
                     self._emit(
                         "authority.denied", "environment",
-                        {"action": action, "target": target, "reason": verdict["reason"]},
+                        {"action": action, "target": target,
+                         "reason": verdict["reason"],
+                         **self._authority_event_context()},
                     )
                     return verdict
             elif (
@@ -4584,10 +4602,13 @@ class Session:
             claim_conflict = verdict.get("claim_conflict")
             if isinstance(claim_conflict, dict):
                 denial["claim_conflict"] = claim_conflict
+            denial.update(self._authority_event_context())
             self._emit("authority.denied", "environment", denial)
         elif verdict["verdict"] == "escalate":
             self._emit("authority.escalated", "environment",
-                       {"action": action, "target": target, "reason": verdict["reason"]})
+                       {"action": action, "target": target,
+                        "reason": verdict["reason"],
+                        **self._authority_event_context()})
         elif action in ("merge", "publish"):
             requested_scope = authority_module._requested_scope(
                 repository, target, normalized_scope, observed_facts,
@@ -4608,6 +4629,7 @@ class Session:
                 ),
                 "persistent_claim_required": False,
                 "operation_executed": False,
+                **self._authority_event_context(),
             }
             if type(verdict.get("coordination_overlap_count")) is int:
                 payload.update({
@@ -5153,7 +5175,8 @@ class Session:
 
     def _pending(self, capability: str, argv: list[str], action: str, reason: str) -> dict[str, Any]:
         self._emit("authority.escalated", "environment",
-                   {"action": action, "target": capability, "reason": reason, "argv": argv})
+                   {"action": action, "target": capability, "reason": reason,
+                    "argv": argv, **self._authority_event_context()})
         self._save()
         return {
             "binding_id": None,

@@ -4052,6 +4052,9 @@ class SessionTests(unittest.TestCase):
                 intent={"goal": "integrate one scoped checkout",
                         "repositories": ["mncs-atlas"]},
             )
+            session.snapshot["campaign"] = {
+                "identity": "cmp_authority_event_context_test",
+            }
             checkout = "/selected/mncs-atlas/.worktrees/destination"
             session.snapshot["selected_checkouts"] = {"mncs-atlas": {
                 "path": checkout, "branch": "campaign/destination",
@@ -4141,6 +4144,14 @@ class SessionTests(unittest.TestCase):
                 integration_event["payload"]["persistent_claim_required"],
             )
             self.assertFalse(integration_event["payload"]["operation_executed"])
+            self.assertEqual(
+                integration_event["payload"]["campaign_id"],
+                session.snapshot["campaign"]["identity"],
+            )
+            self.assertEqual(
+                integration_event["payload"]["work_intent_id"],
+                session.snapshot["intent"]["identity"],
+            )
             self.assertEqual(
                 integration_event["payload"]["coordination_overlap_count"], 1,
             )

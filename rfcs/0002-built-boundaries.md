@@ -43,22 +43,25 @@ escalation never spawn provider processes. Sensitive invocation effects
 require the corresponding action authority. Rights/provenance evaluation
 composes the owning provider's host gate; unknown rights remain explicit.
 
-`merge` and `publish` are claim-required actions, not unconditional approval
-gates. They require declared writable intent and a current session claim that
-covers the exact destination checkout or narrower path. Selected-checkout
-resolution supplies that destination when the caller names only the
-repository; explicit scopes remain available for a separate merge target.
-An already-writable repository may bind a different Control-verified registered
-checkout without a second owner token. This changes the checkout selected for
-existing repository authority, not the repository set. New repository scope
-still requires an exact owner-approved grant. Claims continue to fence the
-selected destination, and overlapping foreign claims deny mutation.
+`merge` and `publish` are integration-eligibility checks, not claim-required
+actions or unconditional approval gates. They require declared writable
+repository authority and an exact observed or explicit operation scope. A
+persistent claim is optional; overlapping claims are recorded as coordination
+evidence and do not establish an exclusive right to block integration. The
+actual Git operation must still enforce repository-native concurrent reference
+updates. Selected-checkout resolution supplies the destination when the caller
+names only the repository; explicit scopes remain available for a separate
+integration target. An already-writable repository may bind a different
+Control-verified registered checkout without a second owner token. This
+changes the checkout selected for existing repository authority, not the
+repository set. New repository scope still requires an exact owner-approved
+grant. Overlapping foreign claims continue to block ordinary shared-scope
+mutations.
 When an isolated campaign needs a destination outside its checkout directory,
 Environment accepts only a registered worktree anchored to the selected
 checkout's same Git common directory and repository manifest identity; it does
-not widen authority to unrelated repositories or symlink aliases.
-Overlapping foreign claims deny the operation, while independent worktrees
-remain eligible to proceed. `delete` remains escalation-gated.
+not widen authority to unrelated repositories or symlink aliases. `delete`
+remains escalation-gated.
 
 Local Git retirement is a separate `retire` action. It requires declared
 writable intent and a current session-owned claim covering the requested

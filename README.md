@@ -137,7 +137,7 @@ A stable binding from a session to a capability provided by another MNCS service
 
 ### AuthorityContext
 
-The explicit limits under which the session operates: readable and writable resources, executable capabilities, protected work, actions that always require escalation, actions that require a current scoped claim, and provenance expectations. `merge` and `publish` need a claim covering the exact selected destination checkout; disjoint worktrees remain independent. An isolated campaign may claim a different registered checkout only when it is anchored to the selected checkout's same Git common directory and repository identity. `delete` remains escalation-gated.
+The explicit limits under which the session operates: readable and writable resources, executable capabilities, protected work, actions that always require escalation, actions that require a current scoped claim, and provenance expectations. `merge` and `publish` require writable repository rights and an exact observed or explicit operation scope; they do not require a persistent claim. Overlapping claims remain coordination evidence, while Git enforces its native concurrent reference update checks. Claims still protect ordinary shared-worktree mutation and scoped retirement; `delete` remains escalation-gated. An isolated campaign may select a different registered checkout only when it is anchored to the selected checkout's same Git common directory and repository identity.
 
 ### Event / Trigger
 
@@ -223,6 +223,9 @@ state, not prose. The hardening campaign added:
   discoverable, reactive, continuous, or adaptive, and the campaign
   order for Language Service, Actions, Memory, and RAVEL
   (`docs/AMBIENCE.md`).
+- authority denials and claim-free integration preflights retain campaign and
+  WorkIntent identities, allowing projections to relate coordination pressure
+  to the objective it affected without copying its prose.
 
 ## Entering an environment
 
@@ -230,8 +233,10 @@ The checked-in development definition selects Environment, Language,
 Compiler, Test, Store, Forge, Automation, Doc, Debug, and the read-only
 System Monitor resource-sample capability from the sibling workspace without
 inspecting unselected repositories. Only Environment is in its writable intent;
-provider mutations still pass through claims and authority. Availability and
-readiness are observations, not permission to modify a checkout.
+provider mutations still pass through action authority, while shared-worktree
+edits use scoped claims and merge/publish use exact operation scope plus Git's
+native concurrency checks. Availability and readiness are observations, not
+permission to modify a checkout.
 
 For the focused environmental capability campaign, use
 `.mncs/environment-observation.json`. It selects Environment, Store,
