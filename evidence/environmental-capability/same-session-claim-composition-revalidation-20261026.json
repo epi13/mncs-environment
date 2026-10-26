@@ -1,0 +1,311 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_same_session_claim_composition_revalidation_20261026",
+  "captured_at": "2026-10-26T11:20:05Z",
+  "measurement_basis": "authenticated-Environment-session-events-live-Store-claim-readback-bounded-environmental-capability-projection-and-targeted-verification",
+  "related_work": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "session_id": "ses_a07d4236d818e24f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_5719f1dc85592a13",
+    "definition_id": "env_712fb160746dea51",
+    "repository": "mncs-environment",
+    "session_snapshot_branch": "campaign/claim-resolution-guidance-20261026",
+    "session_snapshot_head": "8a70d5038efb926f9800097dca6cdf8eebc786ec",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:805fdf26a126",
+      "claim:mncs-environment:worktree:761726a07d5a",
+      "claim:mncs-environment:worktree:d3ae33b27f0a",
+      "claim:mncs-environment:worktree:b67324cda6d2"
+    ],
+    "campaign_state_checkpoint_id_before_recording": "chk_4ed2c02f6e81178b",
+    "campaign_evidence_count_before_recording": 9
+  },
+  "recorder": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "session_id": "ses_a07d4236d818e24f",
+    "consumer_id": "codex-environment-capability",
+    "environment_id": "renv_5719f1dc85592a13",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "same-session-claim-composition-and-checkout-revalidation",
+    "source_interface": "MNCS Environment claim acquisition, revalidation, authenticated session events, and environmental-capability projection",
+    "pressure": {
+      "event_identity": "evt_46da9deab607ccc8",
+      "sequence": 76,
+      "observed_at": "2026-10-26T10:57:52+00:00",
+      "revalidation_request_id": "req_claim_checkout_refresh_c8dce5138df990c5a09e54ea",
+      "scope_composition_status": "ready",
+      "selected_checkout_removed": ["mncs-environment"],
+      "skip_reason": "ambiguous-base-intent-checkout",
+      "capabilities_unbound": [
+        "mncs-environment:ambient-projection-coherence",
+        "mncs-environment:campaign-state-inspection",
+        "mncs-environment:projection-evidence-inspection",
+        "mncs-environment:test/environment-incremental-coherence",
+        "mncs-environment:test/environment-unit-tests",
+        "mncs-environment:test/environment-worktree-claim-paths",
+        "mncs-environment:test/selected-toolchain-binding",
+        "mncs-environment:workspace-discovery",
+        "mncs-environment:workspace-readiness"
+      ],
+      "interpretation": "The active campaign had three nonexclusive path claims from one session, all anchored to the same registered checkout and stable Git identities. The composition path treated claim multiplicity as checkout ambiguity, removed the selected Environment checkout, and unbound its nine capabilities. The Store event proves the projection failure; it does not indicate a foreign ownership conflict."
+    },
+    "same_session_claims": [
+      {
+        "claim_id": "claim:mncs-environment:worktree:805fdf26a126",
+        "paths": [
+          "docs/PROJECTIONS.md",
+          "mncs_env/capability_intelligence.py",
+          "tests/test_capability_intelligence.py"
+        ],
+        "exclusive": false
+      },
+      {
+        "claim_id": "claim:mncs-environment:worktree:761726a07d5a",
+        "paths": [
+          "docs/ENTRY.md",
+          "mncs_env/sessions.py",
+          "tests/test_environment.py"
+        ],
+        "exclusive": false
+      },
+      {
+        "claim_id": "claim:mncs-environment:worktree:d3ae33b27f0a",
+        "paths": [
+          "evidence/environmental-capability/authority-coordination-guidance-readback-20261026.json"
+        ],
+        "exclusive": false
+      }
+    ],
+    "recovery": {
+      "event_identity": "evt_85b22b0268de88ac",
+      "sequence": 117,
+      "observed_at": "2026-10-26T11:04:37+00:00",
+      "request_id": "req_claim_checkout_restore_8c3acd90e0a8090dad060d14",
+      "request_operation": "claims/acquire/restore-selected-checkout",
+      "claim_composition": {
+        "status": "ready",
+        "composed": ["mncs-environment"],
+        "removed": [],
+        "supporting_claim_count": 3
+      },
+      "capabilities_rebound": 9,
+      "capabilities_unbound": 0,
+      "reprobed": 27,
+      "reused": 22,
+      "claim_event_identity": "evt_55fddce6db4ccc18",
+      "claim_event_sequence": 118,
+      "claim_identity": "claim:mncs-environment:worktree:d3ae33b27f0a",
+      "claim_version": 2,
+      "manual_reconcile_performed": false,
+      "owner_transfer_performed": false
+    },
+    "post_commit_verification": {
+      "implementation_commits": [
+        "e036e5506cdb79e09fae5284a17c883236f5e914",
+        "8a70d5038efb926f9800097dca6cdf8eebc786ec"
+      ],
+      "selected_checkout": {
+        "repository": "mncs-environment",
+        "path": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/eci-control-main-20261026",
+        "branch": "campaign/claim-resolution-guidance-20261026",
+        "head": "8a70d5038efb926f9800097dca6cdf8eebc786ec",
+        "checkout_identity": "checkout:2a7e2e251ba34246",
+        "git_common_directory_identity": "git-common:8bf6635617971eae",
+        "source_ref": "authenticated-intent-claim"
+      },
+      "revalidation_event_identity": "evt_067e00b413d872e5",
+      "revalidation_event_sequence": 131,
+      "revalidation_request_id": "req_claim_checkout_refresh_9b39058cb298ca5759104832",
+      "claim_composition": {
+        "status": "ready",
+        "retained": ["mncs-environment"],
+        "removed": [],
+        "supporting_claim_count": 3
+      },
+      "revalidation_result": {
+        "capabilities_bound": 0,
+        "capabilities_changed": 0,
+        "capabilities_unbound": 0,
+        "reprobed": 9,
+        "reused": 40,
+        "rights_context_changed": false
+      },
+      "claim_event_identity": "evt_285a27e6ae886f0b",
+      "claim_event_sequence": 132,
+      "claim_identity": "claim:mncs-environment:worktree:d3ae33b27f0a",
+      "claim_version": 3,
+      "claim_scope": {
+        "kind": "worktree",
+        "branch": "campaign/claim-resolution-guidance-20261026",
+        "paths": [
+          "evidence/environmental-capability/authority-coordination-guidance-readback-20261026.json"
+        ],
+        "exclusive": false,
+        "checkout_identity": "checkout:2a7e2e251ba34246",
+        "git_common_directory_identity": "git-common:8bf6635617971eae"
+      },
+      "manual_reconcile_performed": false,
+      "owner_transfer_or_recovery_performed": false
+    },
+    "environmental_capability_projection": {
+      "identity": "eci_99995085afddcfa5",
+      "status": "partial",
+      "event_page_before_sequence": 133,
+      "event_page_limit": 20,
+      "binding_count": 49,
+      "availability_counts": {
+        "available": 31,
+        "unknown": 18
+      },
+      "discoverability_status": "not-measured",
+      "response_truncated": true,
+      "limit": "The bounded projection summarized current binding availability but did not establish agent receipt, discovery, or use; its response was truncated."
+    },
+    "verification": {
+      "command": "python3 -m pytest tests/test_environment.py tests/test_claim_recovery.py tests/test_entry.py -q",
+      "passed": 340,
+      "failed": 0,
+      "duration_seconds": 399.07,
+      "additional_projection_tests": {
+        "command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "passed": 114,
+        "failed": 0,
+        "duration_seconds": 4.61,
+        "note": "The environmental-capability projection code was unchanged by the claim-composition commits."
+      },
+      "compileall": "passed",
+      "git_diff_check": "passed"
+    },
+    "interpretation_limit": "A single authenticated session establishes the stale-selection failure and a later exact-checkout recovery path. The claim revalidation after the implementation commit retained the checkout and all nine Environment bindings, but long-term recurrence reduction and effects across other sessions have not been measured."
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_same_session_claim_multiplicity_20261026",
+    "title": "Multiple nonexclusive path claims on one exact checkout are mistaken for competing checkout ownership during revalidation",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment claim composition, selected-checkout continuity, and capability binding refresh",
+    "basis": "An authenticated revalidation event reports ambiguous-base-intent-checkout and removes the selected repository while nine capabilities become unbound. The live claims at that checkout belong to the same session and consumer and have the same stable checkout and Git common-directory identities.",
+    "recurrence": "not-established-across-sessions",
+    "actionable_recommendation": "Compose exact same-session claims by registered checkout identity, preserve path-level mutation scopes, and evaluate foreign overlapping claims against live branch and path state. Reconstruct a missing selected-checkout projection only through the same validated live-claim path.",
+    "not_measured": [
+      "frequency of this failure across sessions",
+      "agent time or tool-call overhead caused by the original ambiguity",
+      "long-term claim expiration and abandoned worktree recovery outcomes"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_same_session_claim_composition_revalidation_20261026",
+    "addresses_hypothesis_identity": "ph_environment_same_session_claim_multiplicity_20261026",
+    "implementation_references": [
+      {
+        "repository": "mncs-environment",
+        "commit": "e036e5506cdb79e09fae5284a17c883236f5e914",
+        "path": "mncs_env/sessions.py",
+        "sha256": "8c9014782f428849b74ccdf0b3a3576b34e50b2249dad8c64c622a8b7c9aa7b5"
+      },
+      {
+        "repository": "mncs-environment",
+        "commit": "8a70d5038efb926f9800097dca6cdf8eebc786ec",
+        "path": "mncs_env/sessions.py",
+        "sha256": "8c9014782f428849b74ccdf0b3a3576b34e50b2249dad8c64c622a8b7c9aa7b5"
+      }
+    ],
+    "verification_references": [
+      {
+        "repository": "mncs-environment",
+        "commit": "8a70d5038efb926f9800097dca6cdf8eebc786ec",
+        "path": "tests/test_environment.py",
+        "sha256": "3d5c4e37c953bcf560a3c9b85cf1fdadd57cbfa88e21194e928e46161bb04a8a"
+      }
+    ],
+    "basis": "The regression test recovers a missing selection from multiple same-session claims on a nested registered worktree, then verifies claim acquisition after branch switch and fast-forward commit. The full environment, claim recovery, and entry suite passes. In the live campaign, a post-commit revalidation retains the exact checkout and all bound capabilities, and a scoped nonexclusive claim is acquired without manual reconcile or claim transfer.",
+    "effectiveness_assessment": "single-session-path-verified; longitudinal-effectiveness-not-assessed",
+    "not_measured": [
+      "cross-session recurrence reduction",
+      "changes in human or agent tool-call overhead",
+      "success of unrelated external authorization or protected side-effect paths"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-revalidation-event",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7cee66bc5d834dad",
+      "session_id": "ses_a07d4236d818e24f",
+      "event_identities": [
+        "evt_46da9deab607ccc8",
+        "evt_85b22b0268de88ac",
+        "evt_067e00b413d872e5"
+      ]
+    },
+    {
+      "kind": "authenticated-session-claim-events",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7cee66bc5d834dad",
+      "session_id": "ses_a07d4236d818e24f",
+      "event_identities": [
+        "evt_55fddce6db4ccc18",
+        "evt_285a27e6ae886f0b"
+      ]
+    },
+    {
+      "kind": "authenticated-environmental-capability-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7cee66bc5d834dad",
+      "session_id": "ses_a07d4236d818e24f",
+      "projection_identity": "eci_99995085afddcfa5",
+      "status": "partial"
+    },
+    {
+      "identity": "ev_environment_same_session_claim_refresh_implementation_e036e55",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "e036e5506cdb79e09fae5284a17c883236f5e914",
+      "path": "mncs_env/sessions.py",
+      "sha256": "8c9014782f428849b74ccdf0b3a3576b34e50b2249dad8c64c622a8b7c9aa7b5"
+    },
+    {
+      "identity": "ev_environment_same_session_claim_composition_implementation_8a70d50",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "8a70d5038efb926f9800097dca6cdf8eebc786ec",
+      "path": "mncs_env/sessions.py",
+      "sha256": "8c9014782f428849b74ccdf0b3a3576b34e50b2249dad8c64c622a8b7c9aa7b5"
+    },
+    {
+      "identity": "ev_environment_same_session_claim_composition_tests_8a70d50",
+      "kind": "committed-verification-tests",
+      "repository": "mncs-environment",
+      "commit": "8a70d5038efb926f9800097dca6cdf8eebc786ec",
+      "path": "tests/test_environment.py",
+      "sha256": "3d5c4e37c953bcf560a3c9b85cf1fdadd57cbfa88e21194e928e46161bb04a8a"
+    },
+    {
+      "identity": "ev_environment_same_session_claim_composition_contract_8a70d50",
+      "kind": "committed-contract-documentation",
+      "repository": "mncs-environment",
+      "commit": "8a70d5038efb926f9800097dca6cdf8eebc786ec",
+      "path": "docs/ENTRY.md",
+      "sha256": "1e4946ea7a7099fbaaf90c0d50b5e1be0c4e1ff5e251c882a64a1fc68c2a06cd"
+    }
+  ],
+  "measurement_availability": {
+    "session_event_provenance": "authenticated-canonical-Store-events",
+    "claim_checkout_identity": "directly-recorded-and-Git-verified",
+    "environment_capability_projection": "bounded-readback-partial",
+    "verification": "direct-pytest-and-static-check-results",
+    "cross_session_recurrence": "unavailable",
+    "agent_time_or_tool_overhead": "unavailable",
+    "agent_receipt_and_capability_use": "unavailable"
+  },
+  "not_measured": [
+    "whether other agents encounter the same ambiguity",
+    "whether this change reduces human intervention or total tool calls over time",
+    "whether current binding availability led an agent to discover or use each capability",
+    "longitudinal outcomes after more sessions and worktrees use the updated mechanism"
+  ]
+}

@@ -1,0 +1,161 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_authority_coordination_guidance_readback_20261026",
+  "captured_at": "2026-10-26T10:29:50Z",
+  "measurement_basis": "authenticated-session-event-page-projection-and-current-store-claim-readback",
+  "observation": {
+    "kind": "authority-coordination-guidance-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --session-event-before-sequence 248 --session-event-limit 8",
+      "projection_identity": "eci_587a2bbb75d69a35",
+      "projection_status": "partial",
+      "implementation_commit": "892f1c9358599a88570acfb916a2fb9b5026343c",
+      "session_event_before_sequence": 248,
+      "session_event_limit": 8,
+      "selected_event_window": {
+        "sequence_start": 240,
+        "sequence_end": 247,
+        "event_count": 251,
+        "truncated": true
+      },
+      "source_campaign_state_checkpoint_id": "chk_d55083969e46d580",
+      "source_campaign_evidence_count": 79
+    },
+    "outcome": {
+      "authority_denial": {
+        "event_identity": "evt_712291ee6703374a",
+        "sequence": 246,
+        "action": "merge",
+        "reason_class": "overlapping-claim",
+        "work_intent_reference_status": "not-recorded-on-event",
+        "blocking_claim_identity": "claim:mncs-environment:paths:1070493f76b5"
+      },
+      "claim_state_at_projection_time": {
+        "claim_version": 1,
+        "record_status": "held",
+        "blocking_status": "eligible-for-safe-recovery-on-acquisition",
+        "recovery_verdict": "recoverable",
+        "freshness": "stale",
+        "owner_lifecycle": "active",
+        "last_activity_at": "2026-10-25T23:06:42+00:00",
+        "observed_at": "2026-10-26T10:29:50+00:00",
+        "interpretation_limit": "This current liveness read does not reconstruct claim state at the earlier denial time."
+      },
+      "coordination_guidance": {
+        "status": "integration-preflight-can-be-retried",
+        "next_step": "repeat-exact-scope-integration-preflight",
+        "ownership_transfer": "not-required-by-current-integration-policy",
+        "claim_mutated": false,
+        "limit": "preflight checks eligibility; it does not integrate the change"
+      },
+      "subsequent_integration_preflight": {
+        "event_identity": "evt_81d744cbeb430334",
+        "sequence": 247,
+        "persistent_claim_required": false,
+        "operation_executed": false,
+        "coordination_overlap_count": 17,
+        "coordination_overlaps_truncated": true,
+        "causal_resolution_status": "not-established"
+      },
+      "current_work_claim_acquisition": {
+        "event_identity": "evt_090fa1fe01f3c27d",
+        "sequence": 28,
+        "claim_identity": "claim:mncs-environment:worktree:805fdf26a126",
+        "recovered_claim_count": 3,
+        "recovery_mode": "owner-liveness-classified-and-cas-superseded",
+        "owner_transfer_performed": false
+      },
+      "verification": {
+        "command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "passed": 114,
+        "failed": 0,
+        "duration_seconds": 5.01,
+        "compileall": "passed",
+        "git_diff_check": "passed"
+      },
+      "interpretation": "The projection joins an authentic overlapping-claim merge denial to a current recoverability observation and exposes the claim-free integration preflight path. A later preflight event was recorded, but the projection preserves causal resolution as not established and operation execution as false. In this campaign, a separate exact worktree claim safely superseded three stale non-exclusive claims through ordinary acquisition without an owner transfer.",
+      "analysis_limits": [
+        "The historical denial and preflight events did not record campaign or WorkIntent identifiers.",
+        "The selected session event page is truncated and the integration overlap-state lookup reached its bounded allowance.",
+        "No Git merge or publication result is established by the eligibility event.",
+        "Long-term reduction in agent coordination overhead has not been measured."
+      ]
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_a07d4236d818e24f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_5719f1dc85592a13",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_4ed2c02f6e81178b",
+    "campaign_evidence_count_before_recording": 9,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:805fdf26a126"
+    ]
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": null,
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "projection_identity": "eci_587a2bbb75d69a35",
+      "event_identities": [
+        "evt_712291ee6703374a",
+        "evt_81d744cbeb430334"
+      ]
+    },
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7cee66bc5d834dad",
+      "session_id": "ses_a07d4236d818e24f",
+      "event_identities": [
+        "evt_090fa1fe01f3c27d"
+      ]
+    },
+    {
+      "identity": "mncs_environment_authority_coordination_guidance_projection_892f1c9",
+      "kind": "committed-projection-implementation",
+      "repository": "mncs-environment",
+      "commit": "892f1c9358599a88570acfb916a2fb9b5026343c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "faadf65a609ddc2234a1891d5bd8fca161149aab10016a80b290783861369342"
+    },
+    {
+      "identity": "mncs_environment_authority_coordination_guidance_tests_892f1c9",
+      "kind": "committed-verification-tests",
+      "repository": "mncs-environment",
+      "commit": "892f1c9358599a88570acfb916a2fb9b5026343c",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "df7ac1f426304b59d0158548e7ed5f9469792cfa536d493801897d60395a0be9"
+    },
+    {
+      "identity": "mncs_environment_authority_coordination_guidance_contract_892f1c9",
+      "kind": "committed-projection-contract-documentation",
+      "repository": "mncs-environment",
+      "commit": "892f1c9358599a88570acfb916a2fb9b5026343c",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "8a8e71f79aab00a30c3a67aa1ffaa7e0fdb148c28fd3b4f54f1d661ce7a33f4d"
+    }
+  ],
+  "not_measured": [
+    "whether the subsequent eligible integration preflight resulted in a Git merge",
+    "whether projection guidance was received or used by an agent",
+    "whether this reduces repeated tool calls or coordination time across sessions",
+    "whether the historical denial was inappropriate at the time it occurred"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "session_id": "ses_a07d4236d818e24f",
+    "consumer_id": "codex-environment-capability",
+    "environment_id": "renv_5719f1dc85592a13",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
