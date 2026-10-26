@@ -415,6 +415,21 @@ decision time; unreadable, malformed, and over-limit states stay explicit.
 Older denials without recorded claim IDs remain `not-recorded`, and current
 liveness does not establish whether a denial was technically necessary.
 
+For a structured denial with a resolved current claim, `claim_conflict` also
+includes bounded `coordination_guidance`. A stale non-exclusive claim eligible
+for ordinary recovery points to retrying the exact scoped acquisition; the
+acquisition path rechecks liveness and uses the Store compare-and-swap, so the
+projection itself does not transfer or mutate the claim. Released or expired
+claims point to refreshing scope and retrying. An active overlapping scope
+points to a disjoint scope, an independent registered branch where that avoids
+the recorded conflict, or waiting for the shared mutation to finish. An exact
+merge or publish denial points back to the current scoped integration
+preflight, where claims remain coordination evidence and no persistent claim is
+required. Incomplete current state remains fail-closed and points to refreshing
+the claim observation. These suggestions describe safe next operations from
+projection-time evidence; they do not grant rights, establish that an
+in-flight process stopped, or execute a change.
+
 `session_activity.claim_recoveries` exposes up to eight
 `lease.recovered-and-acquired` events from the selected page, including the
 new claim identity/version and up to eight superseded claim identities. It is

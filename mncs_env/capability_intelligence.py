@@ -8720,6 +8720,71 @@ def _session_activity_current_claim_states(
     return states, summary
 
 
+def _authority_claim_conflict_guidance(
+    action: str, conflict: dict[str, Any], current_state: dict[str, Any],
+) -> dict[str, Any]:
+    """Suggest the least administrative next step for a recorded overlap.
+
+    This is projection-time guidance only. It neither acquires nor releases a
+    claim, and any later mutation must repeat the Environment's current
+    authorization and Store-generation checks.
+    """
+    blocking_status = current_state.get("blocking_status")
+    guidance: dict[str, Any] = {
+        "basis": "current-claim-state-at-projection-time",
+        "claim_mutated": False,
+    }
+    if action in {"merge", "publish"}:
+        guidance.update({
+            "status": "integration-preflight-can-be-retried",
+            "next_step": "repeat-exact-scope-integration-preflight",
+            "ownership_transfer": "not-required-by-current-integration-policy",
+            "limit": "preflight checks eligibility; it does not integrate the change",
+        })
+        return guidance
+    if blocking_status == "eligible-for-safe-recovery-on-acquisition":
+        guidance.update({
+            "status": "stale-claim-recoverable-on-acquisition",
+            "next_step": "retry-exact-scope-acquisition",
+            "ownership_transfer": "not-required",
+            "limit": "acquisition rechecks current liveness and atomically publishes the claim",
+        })
+        return guidance
+    if blocking_status == "does-not-block-at-projection-time":
+        guidance.update({
+            "status": "claim-no-longer-blocks",
+            "next_step": "refresh-operation-scope-and-retry",
+            "ownership_transfer": "not-required",
+            "limit": "the claim may change again after this projection read",
+        })
+        return guidance
+    if blocking_status == "blocks-at-projection-time":
+        conflict_reason = conflict.get("conflict_reason")
+        if conflict_reason in {
+            "same checkout with overlapping paths",
+            "shared branch with overlapping paths across checkouts",
+        }:
+            next_step = "use-an-independent-registered-worktree-on-another-branch-or-wait"
+        elif conflict_reason == "repository-relative paths overlap":
+            next_step = "choose-a-nonoverlapping-scope-or-wait"
+        else:
+            next_step = "inspect-the-current-scope-and-wait-for-safe-release"
+        guidance.update({
+            "status": "active-shared-scope-conflict",
+            "next_step": next_step,
+            "ownership_transfer": "not-prescribed",
+            "limit": "the projection does not authorize mutation or prove an in-flight operation stopped",
+        })
+        return guidance
+    guidance.update({
+        "status": "claim-state-not-established",
+        "next_step": "refresh-claim-state-before-shared-mutation",
+        "ownership_transfer": "not-prescribed",
+        "limit": "incomplete claim or owner evidence remains fail-closed",
+    })
+    return guidance
+
+
 def _claim_recovery_event_projection(
     event: dict[str, Any], session_id: str,
 ) -> dict[str, Any] | None:
@@ -9667,6 +9732,13 @@ def _session_activity(
         )
         if isinstance(current_state, dict):
             conflict["current_claim_state"] = current_state
+            conflict["coordination_guidance"] = (
+                _authority_claim_conflict_guidance(
+                    str(denial.get("action") or ""),
+                    conflict,
+                    current_state,
+                )
+            )
     authority_denials = denial_records[:MAX_SESSION_ACTIVITY_AUTHORITY_DENIALS]
     authority_denials_omitted = max(0, len(denial_records) - len(authority_denials))
     denial_groups: dict[tuple[str, str, str], list[dict[str, Any]]] = {}

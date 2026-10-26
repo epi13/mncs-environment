@@ -2573,6 +2573,15 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
     )
     assert denial_followup["causal_resolution_status"] == "not-established"
     assert denial_followup["operation_executed"] is False
+    integration_guidance = denial["claim_conflict"]["coordination_guidance"]
+    assert integration_guidance["status"] == "integration-preflight-can-be-retried"
+    assert integration_guidance["next_step"] == (
+        "repeat-exact-scope-integration-preflight"
+    )
+    assert integration_guidance["ownership_transfer"] == (
+        "not-required-by-current-integration-policy"
+    )
+    assert integration_guidance["claim_mutated"] is False
     assert denial_followup["selection_basis"] == (
         "earliest-matching-returned-record-in-selected-session-window"
     )
@@ -2826,7 +2835,7 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
             "sequence": sequence,
             "type": "authority.denied",
             "payload": {
-                "action": "merge",
+                "action": "write",
                 "target": alias_checkout,
                 "reason": (
                     f"{alias_checkout} overlaps scope claimed by another session "
@@ -2866,6 +2875,13 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     )
     assert current_state["recorded_owner_relation"] == "same"
     assert isinstance(current_state["observed_at"], str)
+    stale_guidance = by_sequence[42]["claim_conflict"][
+        "coordination_guidance"
+    ]
+    assert stale_guidance["status"] == "stale-claim-recoverable-on-acquisition"
+    assert stale_guidance["next_step"] == "retry-exact-scope-acquisition"
+    assert stale_guidance["ownership_transfer"] == "not-required"
+    assert stale_guidance["claim_mutated"] is False
     assert "checkout" not in by_sequence[42]["claim_conflict"]["requested_scope"]
     assert by_sequence[43]["claim_conflict_evidence_status"] == "not-recorded"
     assert "claim_conflict" not in by_sequence[43]
@@ -2928,6 +2944,10 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     live_state = live_denial["claim_conflict"]["current_claim_state"]
     assert live_state["recovery_verdict"] == "live"
     assert live_state["blocking_status"] == "blocks-at-projection-time"
+    live_guidance = live_denial["claim_conflict"]["coordination_guidance"]
+    assert live_guidance["status"] == "active-shared-scope-conflict"
+    assert live_guidance["next_step"] == "choose-a-nonoverlapping-scope-or-wait"
+    assert live_guidance["claim_mutated"] is False
 
 
 def test_session_activity_discloses_bounded_event_and_interaction_windows(
