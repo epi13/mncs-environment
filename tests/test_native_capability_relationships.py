@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 
 from mncs_env import capability_intelligence, capability_relationships, projections
 
@@ -1005,6 +1006,157 @@ def test_native_capability_projection_correlates_verified_commons_consumer_obser
     assert len(json.dumps(compact, separators=(",", ":")).encode()) < (
         capability_intelligence.MAX_RESULT_BYTES
     )
+
+
+def test_native_capability_projection_joins_real_consumer_pressure_improvement_and_verification():
+    evidence_dir = (
+        Path(__file__).resolve().parents[1]
+        / "evidence"
+        / "environmental-capability"
+    )
+    evidence_records = [
+        json.loads((evidence_dir / name).read_text(encoding="utf-8"))
+        for name in (
+            "native-process-debug-consumer-pressure-20261026.json",
+            "native-process-debug-consumer-improvement-20261026.json",
+            "native-process-debug-consumer-verification-20261026.json",
+        )
+    ]
+    accountability = capability_intelligence._implementation_accountability_projection(
+        [_raw_native_correspondence_record(), *evidence_records],
+        native_proof_reference_present=False,
+    )
+
+    assert accountability["sample_count"] == 0
+    assert len(accountability["native_capability_correspondences"]) == 1
+    correspondence = accountability["native_capability_correspondences"][0]
+    activity = correspondence["native_consumer_activity"]
+    assert activity["status"] == "native-consumer-pressure-evidence-available"
+    assert activity["activities"][0]["native_capability_identity"] == (
+        "mncs.std.process.v1"
+    )
+    consumer = activity["activities"][0]
+    assert consumer["consumer_repository"] == "mncs-debug"
+    assert consumer["target_pressure_identity"] == (
+        "ph_environment_eci_debug_process_duplicate_stdlib_root"
+    )
+    assert consumer["integration_test_identity"] == (
+        "test_native_debug_process_effect_returns_typed_status_and_output"
+    )
+    assert consumer["source_observation_identity"] == (
+        "ev_environment_native_process_debug_consumer_pressure_20261026"
+    )
+    assert len(consumer["improvement_links"]) == 1
+    improvement = consumer["improvement_links"][0]
+    assert improvement["improvement_observation_identity"] == (
+        "ev_environment_native_process_debug_consumer_improvement_20261026"
+    )
+    assert improvement["addresses_hypothesis_identity"] == (
+        consumer["target_pressure_identity"]
+    )
+    assert improvement["verification_match_status"] == (
+        "exact-verification-observation-identity-match"
+    )
+    verification = improvement["verification_observation"]
+    assert verification["identity"] == (
+        "ev_environment_native_process_debug_consumer_verification_20261026"
+    )
+    assert verification["resolver_unit_tests"] == {"passed": 2, "failed": 0}
+    assert verification["native_core_suite"] == {"passed": 6, "failed": 0}
+    assert verification["integration_status"] == "failed-typed-success-assertion"
+    assert verification["compilation_status"].startswith("passed;")
+    assert verification["observed_typed_result"] == {
+        "success": False,
+        "has_exit_code": True,
+        "timed_out": False,
+        "exit_code": 0,
+        "subprocess_count": 1,
+        "stdout_truncated": False,
+        "stderr_truncated": False,
+    }
+    assert verification["reported_pressure_hypothesis"]["identity"] == (
+        "ph_environment_eci_process_result_success_cause_not_exposed"
+    )
+    assert improvement["effectiveness_assessment"] == "not-assessed"
+    assert activity["recurrence_status"] == "not-established"
+    assert activity["agent_usage_status"] == "not-established"
+    assert activity["native_migration_readiness"] == "not-established"
+    assert correspondence["native_migration_readiness"] == "not-established"
+
+    compact = capability_intelligence._compact_implementation_accountability(
+        accountability,
+    )
+    compact_activity = compact["native_capability_correspondences"][0][
+        "native_consumer_activity"
+    ]
+    compact_verification = compact_activity["activities"][0][
+        "improvement_links"
+    ][0]["verification_observation"]
+    assert compact_verification["observed_typed_result"]["success"] is False
+    assert compact_verification["reported_pressure_hypothesis"]["identity"] == (
+        "ph_environment_eci_process_result_success_cause_not_exposed"
+    )
+    assert compact_activity["activities"][0]["source_references"]
+    assert len(json.dumps(compact, separators=(",", ":")).encode()) < (
+        capability_intelligence.MAX_RESULT_BYTES
+    )
+
+
+def test_native_consumer_activity_requires_exact_capability_pressure_and_verification_links():
+    evidence_dir = (
+        Path(__file__).resolve().parents[1]
+        / "evidence"
+        / "environmental-capability"
+    )
+    evidence_records = [
+        json.loads((evidence_dir / name).read_text(encoding="utf-8"))
+        for name in (
+            "native-process-debug-consumer-pressure-20261026.json",
+            "native-process-debug-consumer-improvement-20261026.json",
+            "native-process-debug-consumer-verification-20261026.json",
+        )
+    ]
+    pressure, improvement, verification = evidence_records
+    pressure["observation"]["request"]["native_capability_identity"] = (
+        "mncs.std.different.v1"
+    )
+    assert capability_intelligence._native_capability_consumer_activity_projection(
+        [pressure, improvement, verification], "mncs.std.process.v1", {},
+    ) is None
+
+    pressure["observation"]["request"]["native_capability_identity"] = (
+        "mncs.std.process.v1"
+    )
+    improvement["observation"]["request"]["addresses_hypothesis_identity"] = (
+        "ph_environment_unrelated"
+    )
+    activity = capability_intelligence._native_capability_consumer_activity_projection(
+        [pressure, improvement, verification], "mncs.std.process.v1", {},
+    )
+    assert activity["activities"][0]["improvement_links"] == []
+
+    improvement["observation"]["request"]["addresses_hypothesis_identity"] = (
+        pressure["pressure_hypothesis"]["identity"]
+    )
+    improvement["observation"]["request"][
+        "verification_observation_identity"
+    ] = "ev_environment_unrelated_verification"
+    activity = capability_intelligence._native_capability_consumer_activity_projection(
+        [pressure, improvement, verification], "mncs.std.process.v1", {},
+    )
+    assert activity["activities"][0]["improvement_links"][0][
+        "verification_match_status"
+    ] == "improvement-request-and-relation-identity-mismatch"
+
+    improvement["improvement_relation"][
+        "verification_observation_identity"
+    ] = "ev_environment_unrelated_verification"
+    activity = capability_intelligence._native_capability_consumer_activity_projection(
+        [pressure, improvement, verification], "mncs.std.process.v1", {},
+    )
+    assert activity["activities"][0]["improvement_links"][0][
+        "verification_match_status"
+    ] == "referenced-verification-observation-unavailable"
 
 
 def test_native_correspondence_retains_bounded_source_work_context_and_provenance():

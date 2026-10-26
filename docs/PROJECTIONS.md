@@ -273,6 +273,23 @@ identity and record schema establishes traceability only; the projection keeps
 causality and migration readiness `not-established`. IDs mentioned only in
 free-text summaries are not treated as relationship keys.
 
+The same correspondence can expose bounded `native_consumer_activity` when the
+selected campaign evidence contains a native consumer pressure, an improvement
+relation, and its linked verification record. It joins the consumer request to
+the capability by exact `native_capability_identity`, joins an improvement to
+the consumer pressure by exact `pressure_hypothesis.identity` and
+`addresses_hypothesis_identity`, then resolves verification only by the exact
+`verification_observation_identity`. Each step retains the originating
+observation identity and bounded source references. For the recorded MNCS Debug
+process consumer, this makes its duplicate standard-library root pressure, the
+verified resolver change, and the remaining typed-success integration failure
+inspectable together. Passing unit checks remain separate from the failing
+integration assertion; its reported Language runtime pressure is surfaced as a
+separate investigation. The projection leaves agent discovery and usage,
+recurrence, causal attribution beyond the evidence's stated scope, long-term
+effectiveness, and native migration readiness `not-established`; systemwide
+native adoption remains `not-measured`.
+
 The bounded workspace-read-only source resolver first uses an exact checkout
 name. If the directory uses a case variant, it accepts the match only when the
 repository manifest declares the exact requested identity; ambiguous matches

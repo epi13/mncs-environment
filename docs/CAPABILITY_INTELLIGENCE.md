@@ -79,11 +79,21 @@ compiler support, and runtime provider. These references make the candidate
 implementation inspectable; they do not establish consumer integration or
 implementation responsibility for an owner-declared host task.
 
-For this candidate, the next investigation is to find an existing native MNCS
-consumer, establish how it discovers and invokes the API, and verify parity
-against a legitimate bounded host-tool operation before recommending migration.
-The relationship does not establish that the process pressure causes any
-particular owner-declared host responsibility.
+The selected campaign evidence now records an existing MNCS Debug consumer of
+`mncs.std.process.v1`, its duplicate-library-root compile pressure, the resolver
+change at Debug commit `a036a0042bd0529ef8401b952eb921146e01590d`, and the exact
+verification observation linked by the improvement relation. The projection
+joins these records by the exact capability identity, pressure-hypothesis
+identity, and verification-observation identity. The resolver unit tests (2/2)
+and native-core suite (6/6) passed; the consumer integration compiles and reaches
+native execution but still fails its typed-success assertion (`success=false`,
+exit code 0, expected output). A separate Language runtime pressure hypothesis
+records that the lifecycle reason is not exposed. The projection preserves this
+as an actionable follow-up and does not attribute the runtime result to the
+resolver change. Agent discovery and use, recurrence, long-term effectiveness,
+and native migration readiness remain unestablished. The relationship still
+does not establish that the process pressure caused any particular owner-declared
+host responsibility.
 
 When no exact join exists, `unmatched_source_pointer_context` shows bounded
 integrity-addressed owner-audit pressure sources beside the candidate native

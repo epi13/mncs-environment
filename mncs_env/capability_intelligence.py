@@ -159,6 +159,13 @@ MAX_NATIVE_USERLAND_AUDIT_ITEMS = 8
 NATIVE_CAPABILITY_CORRESPONDENCE_KIND = (
     "native-capability-pressure-correspondence"
 )
+NATIVE_CAPABILITY_CONSUMER_INTEGRATION_PRESSURE_KIND = (
+    "native-capability-consumer-integration-pressure"
+)
+NATIVE_PROCESS_CONSUMER_VERIFICATION_KIND = (
+    "native-process-consumer-integration-verification"
+)
+ENVIRONMENTAL_IMPROVEMENT_LINK_KIND = "environmental-improvement-link-record"
 NATIVE_CAPABILITY_CORRESPONDENCE_SOURCE_ROLES = {
     "native-language-capability-contract": "language_contract",
     "native-language-compiler-support": "compiler_support",
@@ -173,6 +180,9 @@ NATIVE_CAPABILITY_CORRESPONDENCE_SOURCE_ROLES = {
 }
 MAX_NATIVE_CAPABILITY_CORRESPONDENCES = 8
 MAX_NATIVE_CAPABILITY_SOURCE_REFERENCES = 16
+MAX_NATIVE_CONSUMER_ACTIVITY_RECORDS = 1
+MAX_NATIVE_CONSUMER_ACTIVITY_IMPROVEMENTS = 1
+MAX_NATIVE_CONSUMER_ACTIVITY_SOURCE_REFERENCES = 2
 MAX_EVIDENCE_REFS = 32
 MAX_EVIDENCE_HISTORY_PAGES = 4
 MAX_OBSERVATIONS = 16
@@ -877,8 +887,197 @@ def _compact_native_capability_correspondences(value: Any) -> list[dict[str, Any
         )
         if consumer_evidence is not None:
             compact["consumer_evidence"] = consumer_evidence
+        native_consumer_activity = _compact_native_capability_consumer_activity(
+            item.get("native_consumer_activity"),
+        )
+        if native_consumer_activity is not None:
+            compact["native_consumer_activity"] = native_consumer_activity
         compact_items.append(compact)
     return compact_items
+
+
+def _compact_selected_text_fields(
+    value: Any, fields: tuple[tuple[str, int], ...],
+) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        key: _short_text(value.get(key), limit)
+        for key, limit in fields if isinstance(value.get(key), str)
+    }
+
+
+def _compact_native_consumer_activity_source_references(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    references = []
+    for source in value[:MAX_NATIVE_CONSUMER_ACTIVITY_SOURCE_REFERENCES]:
+        if not isinstance(source, dict):
+            continue
+        reference = _compact_selected_text_fields(source, tuple(
+            (key, 192 if key == "path" else 160)
+            for key in (
+                "identity", "kind", "repository", "commit", "path", "sha256",
+                "content_integrity_status",
+            )
+        ))
+        if reference:
+            references.append(reference)
+    return references
+
+
+def _compact_native_process_consumer_verification(value: Any) -> dict[str, Any]:
+    result = _compact_selected_text_fields(value, (
+        ("identity", 160), ("kind", 128), ("integration_status", 96),
+        ("compilation_status", 256), ("assertion", 256),
+        ("interpretation_limit", 384),
+    ))
+    if not isinstance(value, dict):
+        return result
+    for suite in ("resolver_unit_tests", "native_core_suite"):
+        counts = value.get(suite)
+        if isinstance(counts, dict):
+            result[suite] = {
+                key: counts[key] for key in ("passed", "failed")
+                if type(counts.get(key)) is int and counts[key] >= 0
+            }
+    typed = value.get("observed_typed_result")
+    if isinstance(typed, dict):
+        result["observed_typed_result"] = {
+            key: typed[key]
+            for key in (
+                "success", "has_exit_code", "timed_out", "exit_code",
+                "subprocess_count", "stdout_truncated", "stderr_truncated",
+            )
+            if type(typed.get(key)) in {bool, int}
+        }
+    residual = value.get("reported_pressure_hypothesis")
+    if isinstance(residual, dict):
+        result["reported_pressure_hypothesis"] = _compact_selected_text_fields(
+            residual, (
+                ("identity", 160), ("title", 192), ("category", 96),
+                ("subsystem", 192), ("owner", 96), ("recurrence", 128),
+                ("actionable_recommendation", 320),
+            ),
+        )
+    result["source_references"] = _compact_native_consumer_activity_source_references(
+        value.get("source_references"),
+    )
+    if type(value.get("source_references_truncated")) is bool:
+        result["source_references_truncated"] = value["source_references_truncated"]
+    return result
+
+
+def _compact_native_capability_consumer_activity(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    result = _compact_selected_text_fields(value, (
+        ("status", 96), ("native_capability_identity", 192),
+        ("join_basis", 256), ("source_coverage_scope", 128),
+        ("recurrence_status", 96), ("agent_usage_status", 96),
+        ("causal_relation_status", 96), ("native_migration_readiness", 96),
+        ("actionable_observation", 256), ("interpretation_limit", 320),
+    ))
+    adoption_ratio = value.get("systemwide_native_adoption_ratio")
+    if isinstance(adoption_ratio, dict) and isinstance(adoption_ratio.get("status"), str):
+        result["systemwide_native_adoption_ratio"] = {
+            "status": _short_text(adoption_ratio["status"], 96),
+        }
+    raw_activities = value.get("activities")
+    if not isinstance(raw_activities, list):
+        return result or None
+    activities = []
+    for activity in raw_activities[:MAX_NATIVE_CONSUMER_ACTIVITY_RECORDS]:
+        if not isinstance(activity, dict):
+            continue
+        compact_activity = _compact_selected_text_fields(activity, (
+            ("source_observation_identity", 160), ("source_observation_kind", 128),
+            ("native_capability_identity", 192), ("target_pressure_identity", 160),
+            ("consumer_repository", 128), ("integration_test_identity", 160),
+            ("consumer_surface", 256), ("observed_limitation", 384),
+            ("environmental_pressure", 384), ("agent_impact", 160),
+            ("causal_scope", 256),
+        ))
+        pressure = activity.get("pressure_hypothesis")
+        if isinstance(pressure, dict):
+            compact_activity["pressure_hypothesis"] = _compact_selected_text_fields(
+                pressure, (
+                    ("title", 192), ("category", 96), ("subsystem", 192),
+                    ("owner", 96), ("recurrence", 128),
+                    ("actionable_recommendation", 320),
+                ),
+            )
+        work = activity.get("source_work_context")
+        if isinstance(work, dict):
+            compact_work = _compact_selected_text_fields(work, (
+                ("status", 80), ("basis", 96),
+                ("objective_capture_status", 80), ("campaign_id", 128),
+                ("session_id", 128), ("work_intent_id", 128),
+                ("work_intent_goal", 160), ("campaign_objective", 160),
+                ("environment_id", 128), ("definition_id", 128),
+                ("environment_version", 80),
+                ("source_observation_identity", 128),
+            ))
+            for key in (
+                "campaign_id_truncated", "session_id_truncated",
+                "work_intent_id_truncated", "work_intent_goal_truncated",
+                "campaign_objective_truncated", "environment_id_truncated",
+                "definition_id_truncated", "environment_version_truncated",
+            ):
+                if type(work.get(key)) is bool:
+                    compact_work[key] = work[key]
+            reference = _validate_reference(work.get("source_observation_reference"))
+            if reference is not None:
+                compact_work["source_observation_reference"] = reference
+            compact_activity["source_work_context"] = compact_work
+        compact_activity["source_references"] = _compact_native_consumer_activity_source_references(
+            activity.get("source_references"),
+        )
+        for key in ("source_references_truncated", "improvement_links_truncated"):
+            if type(activity.get(key)) is bool:
+                compact_activity[key] = activity[key]
+        raw_improvements = activity.get("improvement_links")
+        improvements = []
+        if isinstance(raw_improvements, list):
+            for improvement in raw_improvements[
+                :MAX_NATIVE_CONSUMER_ACTIVITY_IMPROVEMENTS
+            ]:
+                if not isinstance(improvement, dict):
+                    continue
+                compact_improvement = _compact_selected_text_fields(improvement, (
+                    ("improvement_observation_identity", 160),
+                    ("improvement_relation_identity", 160),
+                    ("addresses_hypothesis_identity", 160),
+                    ("implementation_commit", 64), ("implementation_scope", 192),
+                    ("implementation_change", 384), ("verified_change", 384),
+                    ("effectiveness_assessment", 96),
+                    ("subsequent_observation_identity", 160),
+                    ("verification_observation_identity", 160),
+                    ("improvement_record_consistency_status", 96),
+                    ("verification_match_status", 96),
+                    ("interpretation_limit", 320),
+                ))
+                compact_improvement["source_references"] = _compact_native_consumer_activity_source_references(
+                    improvement.get("source_references"),
+                )
+                if type(improvement.get("source_references_truncated")) is bool:
+                    compact_improvement["source_references_truncated"] = improvement[
+                        "source_references_truncated"
+                    ]
+                verification = improvement.get("verification_observation")
+                if isinstance(verification, dict):
+                    compact_improvement["verification_observation"] = (
+                        _compact_native_process_consumer_verification(verification)
+                    )
+                improvements.append(compact_improvement)
+        compact_activity["improvement_links"] = improvements
+        activities.append(compact_activity)
+    result["activities"] = activities
+    result["activities_truncated"] = (
+        value.get("activities_truncated") is True
+        or len(raw_activities) > len(activities)
+    )
+    return result or None
 
 
 def _compact_native_capability_consumer_evidence(
@@ -7008,6 +7207,361 @@ def _native_capability_source_work_context(
     return result
 
 
+def _native_consumer_activity_source_references(
+    record: dict[str, Any],
+    source_integrity: dict[tuple[str, str, str, str], str],
+) -> dict[str, Any]:
+    raw_sources = record.get("supporting_sources")
+    raw_sources = raw_sources if isinstance(raw_sources, list) else []
+    references = []
+    for source in raw_sources[:MAX_NATIVE_CONSUMER_ACTIVITY_SOURCE_REFERENCES]:
+        pointer = _validate_source_pointer(source)
+        if pointer is None:
+            continue
+        reference = dict(pointer)
+        kind = source.get("kind") if isinstance(source, dict) else None
+        if isinstance(kind, str):
+            reference["kind"] = _short_text(kind, 128)
+        reference["content_integrity_status"] = _source_integrity_status(
+            source, source_integrity,
+        )
+        references.append(reference)
+    return {
+        "source_references": references,
+        "source_references_truncated": (
+            len(raw_sources) > MAX_NATIVE_CONSUMER_ACTIVITY_SOURCE_REFERENCES
+        ),
+    }
+
+
+def _native_process_consumer_verification(
+    record: dict[str, Any],
+    source_integrity: dict[tuple[str, str, str, str], str],
+) -> dict[str, Any]:
+    observation = record.get("observation")
+    observation = observation if isinstance(observation, dict) else {}
+    outcome = observation.get("outcome")
+    outcome = outcome if isinstance(outcome, dict) else {}
+    integration = outcome.get("native_process_integration")
+    integration = integration if isinstance(integration, dict) else {}
+    typed_result = integration.get("observed_typed_result")
+    typed_result = typed_result if isinstance(typed_result, dict) else {}
+    result: dict[str, Any] = {
+        "identity": _short_text(record.get("identity"), 160),
+        "kind": NATIVE_PROCESS_CONSUMER_VERIFICATION_KIND,
+        "integration_status": _short_text(integration.get("status"), 96),
+        "compilation_status": _short_text(integration.get("compilation"), 256),
+        "assertion": _short_text(integration.get("assertion"), 256),
+        "interpretation_limit": _short_text(
+            integration.get("interpretation_limit"), 512,
+        ),
+    }
+    for name in ("resolver_unit_tests", "native_core_suite"):
+        counts = outcome.get(name)
+        if not isinstance(counts, dict):
+            continue
+        projected_counts = {
+            key: counts[key]
+            for key in ("passed", "failed")
+            if type(counts.get(key)) is int and counts[key] >= 0
+        }
+        if projected_counts:
+            result[name] = projected_counts
+    projected_typed_result = {}
+    for key in ("success", "has_exit_code", "timed_out"):
+        if type(typed_result.get(key)) is bool:
+            projected_typed_result[key] = typed_result[key]
+    for key in ("exit_code", "subprocess_count"):
+        if type(typed_result.get(key)) is int:
+            projected_typed_result[key] = typed_result[key]
+    for key in ("stdout_truncated", "stderr_truncated"):
+        if type(typed_result.get(key)) is bool:
+            projected_typed_result[key] = typed_result[key]
+    if projected_typed_result:
+        result["observed_typed_result"] = projected_typed_result
+    pressure = record.get("pressure_hypothesis")
+    if isinstance(pressure, dict):
+        residual = {
+            key: _short_text(pressure.get(key), limit)
+            for key, limit in (
+                ("identity", 160), ("title", 256), ("category", 128),
+                ("subsystem", 256), ("owner", 128), ("recurrence", 192),
+                ("actionable_recommendation", 512),
+            )
+            if isinstance(pressure.get(key), str)
+        }
+        if residual:
+            result["reported_pressure_hypothesis"] = residual
+    result.update(_native_consumer_activity_source_references(
+        record, source_integrity,
+    ))
+    return result
+
+
+def _native_capability_consumer_activity_projection(
+    observations: list[dict[str, Any]], native_capability_identity: Any,
+    source_integrity: dict[tuple[str, str, str, str], str],
+) -> dict[str, Any] | None:
+    """Join one native consumer pressure to its exact improvement and verification."""
+    if (not isinstance(native_capability_identity, str)
+            or not native_capability_identity
+            or len(native_capability_identity) > 192):
+        return None
+    selected = observations[:MAX_OBSERVATIONS]
+    consumer_pressure_records = []
+    for record in selected:
+        observation = record.get("observation")
+        observation = observation if isinstance(observation, dict) else {}
+        if observation.get("kind") != (
+            NATIVE_CAPABILITY_CONSUMER_INTEGRATION_PRESSURE_KIND
+        ):
+            continue
+        request = observation.get("request")
+        request = request if isinstance(request, dict) else {}
+        hypothesis = record.get("pressure_hypothesis")
+        hypothesis = hypothesis if isinstance(hypothesis, dict) else {}
+        hypothesis_identity = hypothesis.get("identity")
+        if (request.get("native_capability_identity")
+                != native_capability_identity
+                or not isinstance(hypothesis_identity, str)
+                or not hypothesis_identity or len(hypothesis_identity) > 160):
+            continue
+        consumer_pressure_records.append((record, request, hypothesis))
+    if not consumer_pressure_records:
+        return None
+
+    improvements_by_pressure: dict[str, list[dict[str, Any]]] = {}
+    for record in selected:
+        observation = record.get("observation")
+        observation = observation if isinstance(observation, dict) else {}
+        if observation.get("kind") != ENVIRONMENTAL_IMPROVEMENT_LINK_KIND:
+            continue
+        request = observation.get("request")
+        request = request if isinstance(request, dict) else {}
+        target = request.get("addresses_hypothesis_identity")
+        if not isinstance(target, str) or not target:
+            continue
+        improvements_by_pressure.setdefault(target, []).append(record)
+
+    verifications_by_identity: dict[str, list[dict[str, Any]]] = {}
+    for record in selected:
+        observation = record.get("observation")
+        observation = observation if isinstance(observation, dict) else {}
+        if observation.get("kind") != NATIVE_PROCESS_CONSUMER_VERIFICATION_KIND:
+            continue
+        identity = record.get("identity")
+        if isinstance(identity, str) and identity:
+            verifications_by_identity.setdefault(identity, []).append(record)
+
+    activities = []
+    for pressure_record, request, hypothesis in consumer_pressure_records[
+        :MAX_NATIVE_CONSUMER_ACTIVITY_RECORDS
+    ]:
+        pressure_observation = pressure_record.get("observation")
+        pressure_observation = (
+            pressure_observation if isinstance(pressure_observation, dict) else {}
+        )
+        pressure_outcome = pressure_observation.get("outcome")
+        pressure_outcome = (
+            pressure_outcome if isinstance(pressure_outcome, dict) else {}
+        )
+        pressure_identity = hypothesis["identity"]
+        linked_improvements = []
+        for improvement_record in improvements_by_pressure.get(
+            pressure_identity, [],
+        )[:MAX_NATIVE_CONSUMER_ACTIVITY_IMPROVEMENTS]:
+            improvement_observation = improvement_record.get("observation")
+            improvement_observation = (
+                improvement_observation
+                if isinstance(improvement_observation, dict) else {}
+            )
+            improvement_request = improvement_observation.get("request")
+            improvement_request = (
+                improvement_request if isinstance(improvement_request, dict) else {}
+            )
+            improvement_outcome = improvement_observation.get("outcome")
+            improvement_outcome = (
+                improvement_outcome if isinstance(improvement_outcome, dict) else {}
+            )
+            improvement_relation = improvement_record.get("improvement_relation")
+            improvement_relation = (
+                improvement_relation
+                if isinstance(improvement_relation, dict) else {}
+            )
+            verification_identity = improvement_request.get(
+                "verification_observation_identity",
+            )
+            relation_target = improvement_relation.get(
+                "addresses_hypothesis_identity",
+            )
+            relation_verification_identity = improvement_relation.get(
+                "verification_observation_identity",
+            )
+            declarations_match = (
+                improvement_request.get("addresses_hypothesis_identity")
+                == pressure_identity
+                and relation_target == pressure_identity
+                and isinstance(verification_identity, str)
+                and relation_verification_identity == verification_identity
+            )
+            verification_matches = (
+                verifications_by_identity.get(verification_identity, [])
+                if declarations_match else []
+            )
+            improvement: dict[str, Any] = {
+                "improvement_observation_identity": _short_text(
+                    improvement_record.get("identity"), 160,
+                ),
+                "improvement_relation_identity": _short_text(
+                    improvement_relation.get("identity"), 160,
+                ),
+                "addresses_hypothesis_identity": pressure_identity,
+                "implementation_commit": _short_text(
+                    improvement_request.get("implementation_commit"), 64,
+                ),
+                "implementation_scope": _short_text(
+                    improvement_outcome.get("implementation_scope"), 256,
+                ),
+                "implementation_change": _short_text(
+                    improvement_outcome.get("implementation_change"), 768,
+                ),
+                "verified_change": _short_text(
+                    improvement_outcome.get("verified_change"), 768,
+                ),
+                "effectiveness_assessment": _short_text(
+                    improvement_outcome.get("effectiveness_assessment"), 96,
+                ),
+                "subsequent_observation_identity": _short_text(
+                    improvement_request.get("subsequent_observation_identity"),
+                    160,
+                ),
+                "verification_observation_identity": _short_text(
+                    verification_identity, 160,
+                ),
+                "improvement_record_consistency_status": (
+                    "request-and-relation-identities-match"
+                    if declarations_match else (
+                        "improvement-request-and-relation-identity-mismatch"
+                    )
+                ),
+                "verification_match_status": (
+                    "improvement-request-and-relation-identity-mismatch"
+                    if not declarations_match else (
+                        "exact-verification-observation-identity-match"
+                        if len(verification_matches) == 1 else (
+                            "ambiguous-duplicate-verification-identities"
+                            if len(verification_matches) > 1 else (
+                                "referenced-verification-observation-unavailable"
+                            )
+                        )
+                    )
+                ),
+                "interpretation_limit": _short_text(
+                    improvement_outcome.get("interpretation_limit"), 512,
+                ),
+            }
+            if len(verification_matches) == 1:
+                improvement["verification_observation"] = (
+                    _native_process_consumer_verification(
+                        verification_matches[0], source_integrity,
+                    )
+                )
+            improvement.update(_native_consumer_activity_source_references(
+                improvement_record, source_integrity,
+            ))
+            linked_improvements.append(improvement)
+
+        pressure_sources = _native_consumer_activity_source_references(
+            pressure_record, source_integrity,
+        )
+        activity: dict[str, Any] = {
+            "source_observation_identity": _short_text(
+                pressure_record.get("identity"), 160,
+            ),
+            "source_observation_kind": (
+                NATIVE_CAPABILITY_CONSUMER_INTEGRATION_PRESSURE_KIND
+            ),
+            "native_capability_identity": native_capability_identity,
+            "target_pressure_identity": pressure_identity,
+            "consumer_repository": _short_text(
+                request.get("consumer_repository"), 128,
+            ),
+            "integration_test_identity": _short_text(
+                request.get("integration_test_identity"), 192,
+            ),
+            "consumer_surface": _short_text(
+                pressure_outcome.get("consumer_surface"), 512,
+            ),
+            "observed_limitation": _short_text(
+                pressure_outcome.get("observed_limitation"), 768,
+            ),
+            "environmental_pressure": _short_text(
+                pressure_outcome.get("environmental_pressure"), 768,
+            ),
+            "agent_impact": _short_text(
+                pressure_outcome.get("agent_impact"), 256,
+            ),
+            "causal_scope": _short_text(
+                pressure_outcome.get("causal_scope"), 512,
+            ),
+            "pressure_hypothesis": {
+                key: _short_text(hypothesis.get(key), limit)
+                for key, limit in (
+                    ("title", 256), ("category", 128),
+                    ("subsystem", 256), ("owner", 128),
+                    ("recurrence", 192),
+                    ("actionable_recommendation", 512),
+                )
+                if isinstance(hypothesis.get(key), str)
+            },
+            "source_work_context": _native_capability_source_work_context(
+                pressure_record,
+            ),
+            "improvement_links": linked_improvements,
+            "improvement_links_truncated": (
+                len(improvements_by_pressure.get(pressure_identity, []))
+                > len(linked_improvements)
+            ),
+            **pressure_sources,
+        }
+        activities.append(activity)
+
+    return {
+        "status": "native-consumer-pressure-evidence-available",
+        "native_capability_identity": native_capability_identity,
+        "join_basis": (
+            "Exact native_capability_identity in the consumer pressure request, "
+            "exact pressure_hypothesis.identity to improvement "
+            "addresses_hypothesis_identity, and exact verification observation "
+            "identity declared by that improvement."
+        ),
+        "source_coverage_scope": (
+            "bounded-selected-campaign-observations; not-an-exhaustive-consumer-"
+            "inventory"
+        ),
+        "activities": activities,
+        "activities_truncated": (
+            len(consumer_pressure_records) > len(activities)
+        ),
+        "recurrence_status": "not-established",
+        "agent_usage_status": "not-established",
+        "causal_relation_status": "not-established",
+        "native_migration_readiness": "not-established",
+        "systemwide_native_adoption_ratio": {"status": "not-measured"},
+        "actionable_observation": (
+            "Inspect the exact consumer pressure and linked verification result. "
+            "Treat any remaining typed-result or runtime limitation as a separate "
+            "investigation until its cause is established."
+        ),
+        "interpretation_limit": (
+            "Exact observation identities establish traceability within the "
+            "selected campaign evidence. They do not establish agent discovery, "
+            "recurrence, causality beyond each observation's stated scope, "
+            "long-term effectiveness, or native migration readiness."
+        ),
+    }
+
+
 def _native_capability_correspondence_projection(
     observations: list[dict[str, Any]],
     source_integrity: dict[tuple[str, str, str, str], str] | None = None,
@@ -7192,6 +7746,13 @@ def _native_capability_correspondence_projection(
                 "that agents can discover or use the API, or that migration is ready."
             ),
         }
+        native_consumer_activity = (
+            _native_capability_consumer_activity_projection(
+                observations, outcome.get("native_capability_identity"), integrity,
+            )
+        )
+        if native_consumer_activity is not None:
+            result["native_consumer_activity"] = native_consumer_activity
         consumer_evidence = _native_capability_consumer_evidence_projection(
             observations, pressure_identity,
             outcome.get("native_capability_identity"), integrity, payloads,

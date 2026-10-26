@@ -3221,6 +3221,14 @@ class Session:
             "kind": "worktree",
             "checkout": str(resolved_checkout),
             "branch": observed.branch,
+            **{
+                key: checkout_facts[key]
+                for key in (
+                    "git_common_directory_identity", "checkout_identity",
+                    "manifest_identity",
+                )
+                if isinstance(checkout_facts.get(key), str)
+            },
         }, repository)
         conflicting = []
         for item in competing:
@@ -3371,12 +3379,42 @@ class Session:
                     continue
                 if claims_module.scopes_conflict(requested_scope, existing_scope):
                     overlapping.append(item)
-            exact_claims = [
-                item for item in overlapping
-                if item.get("session_id") == self.session_id
-                and item.get("consumer_id") == self.snapshot.get("consumer_id")
-                and item.get("scope") == requested_scope
-            ]
+            def exact_grant_claim(item: dict[str, Any]) -> bool:
+                if (item.get("session_id") != self.session_id
+                        or item.get("consumer_id")
+                        != self.snapshot.get("consumer_id")):
+                    return False
+                try:
+                    existing_scope = claims_module.normalize_scope(
+                        item.get("scope")
+                        if isinstance(item.get("scope"), dict) else None,
+                        repository,
+                    )
+                except (TypeError, ValueError):
+                    return False
+                # Older exact-checkout claims may predate stable identity
+                # fields. Preserve them when their full visible scope still
+                # matches this freshly verified grant; every identity they do
+                # carry must agree with the current checkout.
+                return (
+                    all(
+                        existing_scope.get(field) == requested_scope.get(field)
+                        for field in (
+                            "kind", "repository", "checkout", "branch",
+                            "paths", "exclusive",
+                        )
+                    )
+                    and all(
+                        existing_scope.get(field) == requested_scope.get(field)
+                        for field in (
+                            "git_common_directory_identity", "checkout_identity",
+                            "manifest_identity",
+                        )
+                        if field in existing_scope
+                    )
+                )
+
+            exact_claims = [item for item in overlapping if exact_grant_claim(item)]
             target_claim_invalid = (
                 (len(overlapping) != 1 or len(exact_claims) != 1)
                 if not checkout_rebind else
@@ -3743,6 +3781,10 @@ class Session:
                 current_identity = _repository_checkout_identity(
                     workspace_root, repository, resolved_checkout,
                 )
+                if isinstance(checkout_facts.get("manifest_identity"), str):
+                    current_identity["manifest_identity"] = checkout_facts[
+                        "manifest_identity"
+                    ]
                 for target_scope in claim_scopes:
                     for field in (
                         "checkout_identity", "git_common_directory_identity",
@@ -4036,6 +4078,10 @@ class Session:
                 current_identity = _repository_checkout_identity(
                     identity_workspace, repository, resolved_checkout
                 )
+                if isinstance(checkout_facts.get("manifest_identity"), str):
+                    current_identity["manifest_identity"] = checkout_facts[
+                        "manifest_identity"
+                    ]
             except (OSError, RuntimeError, ValueError):
                 report["skipped"].append({
                     "repository": repository,
@@ -4204,8 +4250,11 @@ class Session:
                 })
                 continue
 
-            if any(expected_identity.get(field) != current_identity[field]
-                   for field in current_identity):
+            if any(
+                expected_identity[field] != value
+                for field, value in current_identity.items()
+                if field in expected_identity
+            ):
                 report["skipped"].append({
                     "repository": repository,
                     "reason": "checkout-identity-mismatch",
@@ -5759,6 +5808,45 @@ class Session:
             if isinstance(selected_checkouts, dict) else None
         )
         if not isinstance(selected, dict):
+            if (isinstance(scope, dict) and scope.get("kind") == "worktree"
+                    and isinstance(scope.get("checkout"), str)):
+                self._ensure_owned_claim_anchors_unambiguous(
+                    repository,
+                    workspace_root=(
+                        workspace_root
+                        or (self.snapshot.get("workspace") or {}).get("root")
+                    ),
+                )
+            # A campaign may bind an exact provider checkout without selecting
+            # it as the repository's default worktree. Resolve that declared
+            # target at the mutation boundary below instead of forcing a
+            # session-wide checkout projection first; the provider binding is
+            # descriptive, and the exact Git identity is still revalidated
+            # before the claim is published.
+            if (isinstance(scope, dict) and scope.get("kind") == "worktree"
+                    and isinstance(scope.get("checkout"), str)):
+                try:
+                    declared_checkout = Path(scope["checkout"])
+                    if not declared_checkout.is_absolute():
+                        root_value = (
+                            workspace_root
+                            or (self.snapshot.get("workspace") or {}).get("root")
+                        )
+                        if isinstance(root_value, str) and root_value:
+                            declared_checkout = Path(root_value) / declared_checkout
+                    declared_provider = _verified_declared_provider_checkout(
+                        self.snapshot, repository, declared_checkout,
+                        expected_branch=(
+                            scope.get("branch")
+                            if isinstance(scope.get("branch"), str) else None
+                        ),
+                        authority_scope_grants=self.authority_scope_grants(),
+                    )
+                except (OSError, TypeError, ValueError,
+                        workspace_module.WorkspaceResolutionError):
+                    declared_provider = None
+                if declared_provider is not None:
+                    return
             # A prior interrupted or ambiguous projection may have dropped a
             # checkout that is still supported by this session's live exact
             # worktree claim. Rebuild the selection through the ordinary
@@ -5866,6 +5954,88 @@ class Session:
                 or refreshed.get("head") != observed.head):
             raise AuthorityDenied(
                 f"{repository} checkout changed during automatic Environment revalidation"
+            )
+
+    def _ensure_owned_claim_anchors_unambiguous(
+        self, repository: str, *, workspace_root: str | None,
+    ) -> None:
+        """Reject explicit continuation when this session's live anchors disagree.
+
+        Revalidation can restore an authenticated grant's selected checkout
+        before claim acquisition examines retained lease history. Check the
+        current exact claims first so that restoration cannot hide evidence
+        that the session's repository alias spans unrelated Git roots.
+        """
+        if not isinstance(workspace_root, str) or not workspace_root:
+            return
+        try:
+            root = Path(workspace_root).resolve(strict=True)
+        except OSError:
+            return
+        latest: dict[str, dict[str, Any]] = {}
+        for record in claims_module.active_claims(self.store.read_claims()).values():
+            claim_id = record.get("claim_id")
+            if (record.get("repository") != repository
+                    or record.get("session_id") != self.session_id
+                    or record.get("consumer_id") != self.snapshot.get("consumer_id")
+                    or not isinstance(claim_id, str)):
+                continue
+            previous = latest.get(claim_id)
+            try:
+                version = int(record.get("version", 0))
+                previous_version = (
+                    int(previous.get("version", 0)) if previous is not None else -1
+                )
+            except (TypeError, ValueError):
+                continue
+            if previous is None or version > previous_version:
+                latest[claim_id] = record
+
+        anchors: list[dict[str, str]] = []
+        for record in latest.values():
+            scope = record.get("scope")
+            if (record.get("status") != "held"
+                    or not isinstance(scope, dict)
+                    or scope.get("kind") != "worktree"
+                    or not isinstance(scope.get("checkout"), str)
+                    or not isinstance(scope.get("branch"), str)):
+                continue
+            try:
+                facts = workspace_module.verify_registered_checkout(
+                    scope["checkout"], repository=repository,
+                    expected_branch=scope["branch"],
+                )
+                Path(facts["path"]).resolve(strict=True).relative_to(root)
+            except (OSError, ValueError, KeyError,
+                    workspace_module.WorkspaceResolutionError):
+                continue
+            if any(
+                isinstance(scope.get(field), str)
+                and scope[field] != facts.get(field)
+                for field in (
+                    "git_common_directory_identity", "checkout_identity",
+                    "manifest_identity",
+                )
+            ):
+                continue
+            anchors.append(facts)
+
+        common_directories = {facts["git_common_directory"] for facts in anchors}
+        if len(common_directories) > 1:
+            conflicts = sorted({
+                (
+                    facts["git_common_directory"],
+                    facts["git_common_directory_identity"],
+                    facts["path"],
+                )
+                for facts in anchors
+            })
+            raise ValueError(
+                "session-owned worktree claims resolve to multiple Git common directories: "
+                + ", ".join(
+                    f"{common_directory} ({identity}) at {path}"
+                    for common_directory, identity, path in conflicts
+                )
             )
 
     def acquire_claim(
@@ -7269,8 +7439,8 @@ class Session:
                     or not isinstance(current_identity.get("path"), str)):
                 continue
             if any(
-                isinstance(selected.get(field), str)
-                and selected.get(field) != selected_identity.get(field)
+                isinstance(selected_identity.get(field), str)
+                and selected.get(field) != selected_identity[field]
                 for field in (
                     "checkout_identity", "git_common_directory_identity",
                     "manifest_identity",
@@ -7321,6 +7491,12 @@ class Session:
              if name not in external_scope_repositories]
             if isinstance(selected_repositories, list) else selected_repositories
         )
+        if isinstance(scan_repositories, list) and not scan_repositories:
+            # Every selected repository is represented by an exact external
+            # scope grant. The campaign-root scanner has no local checkout to
+            # inspect; preserve its last complete observation and let the
+            # grant/claim composition pass refresh those exact paths below.
+            return []
         workspace = workspace_module.discover_workspace(
             workspace_root, repositories=scan_repositories)
         if workspace.get("error") or workspace.get("scan", {}).get("status") != "complete":

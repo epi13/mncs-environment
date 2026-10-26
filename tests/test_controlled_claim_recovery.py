@@ -388,8 +388,10 @@ class ControlledClaimRecoveryTests(unittest.TestCase):
                 },
                 "authority": {
                     "subject": consumer,
-                    "writable": (["mncs-fixture"]
-                                 if session_id == "ses_old_owner" else []),
+                    # Both sessions have independent campaign write scope.
+                    # Recovery transfers the exact coordination lease and
+                    # fences the prior generation; it does not confer rights.
+                    "writable": ["mncs-fixture"],
                     "protected_repositories": [],
                     "denied": [],
                     "claim_holders": {},

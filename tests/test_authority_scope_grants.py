@@ -313,6 +313,11 @@ def test_owner_authorized_worktree_inside_campaign_workspace_is_scoped_exactly(
             "paths": None,
             "repository": "mncs-vm",
             "exclusive": False,
+            "checkout_identity": owner_facts["checkout_identity"],
+            "git_common_directory_identity": (
+                owner_facts["git_common_directory_identity"]
+            ),
+            "manifest_identity": owner_facts["manifest_identity"],
         }
 
         outside_campaign = global_workspace / "other-campaign" / "mncs-vm"
@@ -2403,6 +2408,10 @@ def test_exact_declared_nested_provider_checkout_is_claimable_and_authorized(
         )
         assert verdict == {
             "verdict": "allow",
+            "decision_domain": "eligibility",
+            "authorization_basis": "session-writable-scope",
+            "coordination_status": "scoped-mutation-lease-held",
+            "persistent_authority_required": False,
             "reason": "mncs-forge mutation by claim",
         }
         mismatched_identity = session.check(
