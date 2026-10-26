@@ -1,0 +1,69 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_authority_objective_link_paginated_readback_20261026",
+  "captured_at": "2026-10-26T10:16:43Z",
+  "measurement_basis": "authenticated bounded-page readback from the active Environment session",
+  "observation": {
+    "kind": "session-event-reference-page-readback",
+    "source_interface": "MNCS Environment environmental-capability projection with bounded session-event pagination",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_289faad44392b57b",
+      "evidence_offset": 0,
+      "evidence_limit": 1,
+      "session_event_before_sequence": 4,
+      "session_event_limit": 4,
+      "target_event_identity": "evt_0a08891051b3a15b"
+    },
+    "outcome": {
+      "event_reference_status": "all-referenced-events-present",
+      "event_reference_matched_count": 1,
+      "authority_preflight": {
+        "action": "merge",
+        "repository": "mncs-environment",
+        "campaign_id": "cmp_7cee66bc5d834dad",
+        "work_intent_id": "int_e9a2959ffe2e952c",
+        "work_intent_reference_status": "recorded-on-event",
+        "persistent_claim_required": false,
+        "operation_executed": false,
+        "coordination_overlap_count": 25,
+        "coordination_overlaps_truncated": true
+      },
+      "interpretation": "The preflight event was older than the default recent session page after checkpoint and campaign-state writes. Selecting the page before sequence 4 restored the exact event-to-source match without reconstructing history or changing the immutable observation.",
+      "analysis_limit": "The requested event and its objective reference were present and matched. The preflight still does not establish that Git integration ran or succeeded."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_a07d4236d818e24f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_5719f1dc85592a13",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_289faad44392b57b",
+    "campaign_evidence_count_before_recording": 7
+  },
+  "recorder": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "session_id": "ses_a07d4236d818e24f",
+    "consumer_id": "codex-environment-capability",
+    "environment_id": "renv_5719f1dc85592a13",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7cee66bc5d834dad",
+      "session_id": "ses_a07d4236d818e24f",
+      "event_identities": [
+        "evt_0a08891051b3a15b"
+      ]
+    }
+  ],
+  "not_measured": [
+    "subsequent Git merge or publication success",
+    "whether other agents find the historical-page cursor without guidance",
+    "reduction in repeated session-history reconstruction across campaigns"
+  ]
+}

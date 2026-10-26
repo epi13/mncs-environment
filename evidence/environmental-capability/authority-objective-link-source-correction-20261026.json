@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_authority_objective_link_source_correction_20261026",
+  "captured_at": "2026-10-26T10:16:43Z",
+  "measurement_basis": "append-only correction validated against the selected campaign evidence window",
+  "observation": {
+    "kind": "observation-source-reference-correction",
+    "source_interface": "MNCS Environment evidence projection and observation correction contract",
+    "request": {
+      "target_observation_identity": "ev_environment_authority_objective_link_improvement_20261026",
+      "target_commit": "59baf5382fe1bb7a73922be3c7ec0d0e8c112b09",
+      "target_path": "evidence/environmental-capability/authority-objective-link-improvement-20261026.json"
+    },
+    "outcome": {
+      "corrected_limit": "The first improvement record used path and identity fields without the commit and content digest required by the source-reference contract. The projection preserved the improvement relation but marked those two evidence-file pointers source-reference-invalid.",
+      "correction": "An append-only correction supplies content-addressed pointers to the pressure observation, verification observation, and implementation projection source. The original improvement record remains immutable.",
+      "analysis_limit": "The correction repairs source attribution; it does not change the improvement assessment, verification result, or unresolved long-term outcomes."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_a07d4236d818e24f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_5719f1dc85592a13",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_289faad44392b57b",
+    "campaign_evidence_count_before_recording": 7
+  },
+  "recorder": {
+    "campaign_id": "cmp_7cee66bc5d834dad",
+    "session_id": "ses_a07d4236d818e24f",
+    "consumer_id": "codex-environment-capability",
+    "environment_id": "renv_5719f1dc85592a13",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_authority_objective_link_improvement_20261026",
+      "repository": "mncs-environment",
+      "commit": "59baf5382fe1bb7a73922be3c7ec0d0e8c112b09",
+      "path": "evidence/environmental-capability/authority-objective-link-improvement-20261026.json",
+      "sha256": "8bdba79de3997a344e1822823befb285bbf7704012c6841cd6c22b73094cee35"
+    },
+    "corrected_field_paths": [
+      "supporting_sources"
+    ],
+    "replacement_values": {
+      "supporting_sources": [
+        {
+          "identity": "ev_environment_authority_objective_link_pressure_20261026",
+          "repository": "mncs-environment",
+          "commit": "59baf5382fe1bb7a73922be3c7ec0d0e8c112b09",
+          "path": "evidence/environmental-capability/authority-objective-link-pressure-20261026.json",
+          "sha256": "b07beb19de0e3648c62eb2a9f7e70ba70fa0c5287b825bef97b73c9b43d9b867"
+        },
+        {
+          "identity": "ev_environment_authority_objective_link_verification_20261026",
+          "repository": "mncs-environment",
+          "commit": "59baf5382fe1bb7a73922be3c7ec0d0e8c112b09",
+          "path": "evidence/environmental-capability/authority-objective-link-verification-20261026.json",
+          "sha256": "807e3d47cdaa48cfcc511835bfd78435006bbb81ff055a46a4d25200ee8d206f"
+        },
+        {
+          "identity": "mncs_environment_authority_objective_projection_0b2bd4e",
+          "repository": "mncs-environment",
+          "commit": "0b2bd4e1ebe14ca8d42a6e5f088bcf2d20db890b",
+          "path": "mncs_env/capability_intelligence.py",
+          "sha256": "ba381a222c439dfc4f1ea13f5779255f8ba0858e570e4a6feb50a3dc678024b1"
+        }
+      ]
+    },
+    "reason": "The initial source entries could not be content-integrity checked because they omitted commit and SHA-256. This append-only correction supplies the exact committed references so the projection can validate the pressure, verification, and implementation sources independently."
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7cee66bc5d834dad",
+      "session_id": "ses_a07d4236d818e24f",
+      "event_identities": [
+        "evt_0a08891051b3a15b"
+      ]
+    }
+  ],
+  "not_measured": [
+    "subsequent integration result",
+    "long-term coordination effect",
+    "whether corrected source links reduce agent inspection work"
+  ]
+}
