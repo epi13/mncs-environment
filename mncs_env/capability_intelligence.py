@@ -9866,6 +9866,9 @@ def _session_activity(
     eligible_preflights_by_claim: dict[
         tuple[str, str, str], dict[str, dict[str, Any]],
     ] = {}
+    eligible_preflights_by_repository_action: dict[
+        tuple[str, str], dict[str, dict[str, Any]],
+    ] = {}
     for eligibility in integration_eligibility_records:
         reference = eligibility.get("event_reference")
         sequence = reference.get("sequence") if isinstance(reference, dict) else None
@@ -9874,13 +9877,17 @@ def _session_activity(
         if (type(sequence) is not int or not isinstance(repository, str)
                 or not isinstance(action, str)):
             continue
+        reference_identity = str(reference.get("identity"))
+        eligible_preflights_by_repository_action.setdefault(
+            (repository, action), {},
+        ).setdefault(reference_identity, eligibility)
         for overlap in eligibility.get("coordination_overlaps", []):
             claim_id = overlap.get("claim_id") if isinstance(overlap, dict) else None
             if not isinstance(claim_id, str):
                 continue
             key = (repository, action, claim_id)
             eligible_preflights_by_claim.setdefault(key, {}).setdefault(
-                str(reference.get("identity")), eligibility,
+                reference_identity, eligibility,
             )
     for denial in denial_records:
         conflict = denial.get("claim_conflict")
@@ -9899,6 +9906,18 @@ def _session_activity(
                 or type(denial_sequence) is not int
                 or not isinstance(repository, str) or not isinstance(action, str)):
             continue
+        later_preflights = [
+            eligibility for eligibility in
+            eligible_preflights_by_repository_action.get(
+                (repository, action), {},
+            ).values()
+            if isinstance(eligibility.get("event_reference"), dict)
+            and type(eligibility["event_reference"].get("sequence")) is int
+            and eligibility["event_reference"]["sequence"] > denial_sequence
+        ]
+        later_preflights.sort(
+            key=lambda item: item["event_reference"]["sequence"],
+        )
         candidates = [
             eligibility for eligibility in eligible_preflights_by_claim.get(
                 (repository, action, claim_id), {},
@@ -9907,22 +9926,105 @@ def _session_activity(
             and type(eligibility["event_reference"].get("sequence")) is int
             and eligibility["event_reference"]["sequence"] > denial_sequence
         ]
-        if not candidates:
-            continue
-        followup = min(
-            candidates,
-            key=lambda item: item["event_reference"]["sequence"],
+        record_window_incomplete = bool(
+            integration_eligibility_records_omitted
+            or invalid_integration_eligibility_event_count
         )
-        conflict["subsequent_integration_preflight"] = {
-            "event_reference": followup["event_reference"],
-            "eligibility_basis": followup["eligibility_basis"],
-            "persistent_claim_required": False,
-            "operation_executed": False,
-            "relation_basis": (
-                "later-event-same-repository-action-and-claim-identity"
-            ),
-            "causal_resolution_status": "not-established",
-        }
+        record_window_limits = []
+        if integration_eligibility_records_omitted:
+            record_window_limits.append("valid-preflight-records-omitted")
+        if invalid_integration_eligibility_event_count:
+            record_window_limits.append("invalid-preflight-records-present")
+        if candidates:
+            followup = min(
+                candidates,
+                key=lambda item: item["event_reference"]["sequence"],
+            )
+            followup_sequence = followup["event_reference"]["sequence"]
+            earlier_overlap_evidence_truncated = any(
+                item.get("coordination_overlaps_truncated") is True
+                and item["event_reference"]["sequence"] < followup_sequence
+                for item in later_preflights
+            )
+            if earlier_overlap_evidence_truncated:
+                record_window_limits.append("earlier-overlap-records-truncated")
+            conflict["subsequent_integration_preflight"] = {
+                "event_reference": followup["event_reference"],
+                "eligibility_basis": followup["eligibility_basis"],
+                "persistent_claim_required": False,
+                "operation_executed": False,
+                "relation_basis": (
+                    "later-event-same-repository-action-and-claim-identity"
+                ),
+                "selection_basis": (
+                    "earliest-matching-returned-record-in-selected-session-window"
+                ),
+                "search_completeness_status": (
+                    "partial" if record_window_limits else "complete-for-returned-records"
+                ),
+                "search_completeness_limits": record_window_limits,
+                "causal_resolution_status": "not-established",
+            }
+            continue
+
+        truncated_later_preflights = [
+            item for item in later_preflights
+            if item.get("coordination_overlaps_truncated") is True
+        ]
+        if truncated_later_preflights:
+            limited_preflight = truncated_later_preflights[0]
+            overlap_count = limited_preflight.get("coordination_overlap_count", 0)
+            overlap_records = limited_preflight.get("coordination_overlaps", [])
+            conflict["subsequent_integration_preflight_search"] = {
+                "status": "not-established-overlap-records-truncated",
+                "event_reference": limited_preflight["event_reference"],
+                "relation_basis": (
+                    "later-event-same-repository-and-action; claim-match-unestablished"
+                ),
+                "coordination_overlap_count": overlap_count,
+                "coordination_overlap_records_returned": len(overlap_records),
+                "coordination_overlap_records_omitted": max(
+                    0, overlap_count - len(overlap_records),
+                ),
+                "valid_preflight_records_omitted": (
+                    integration_eligibility_records_omitted
+                ),
+                "invalid_preflight_records_present": (
+                    invalid_integration_eligibility_event_count
+                ),
+                "causal_resolution_status": "not-established",
+            }
+        elif record_window_incomplete:
+            conflict["subsequent_integration_preflight_search"] = {
+                "status": "not-established-preflight-record-window-incomplete",
+                "relation_basis": (
+                    "later-event-search-limited-to-returned-valid-preflight-records"
+                ),
+                "valid_preflight_records_omitted": (
+                    integration_eligibility_records_omitted
+                ),
+                "invalid_preflight_records_present": (
+                    invalid_integration_eligibility_event_count
+                ),
+                "causal_resolution_status": "not-established",
+            }
+        elif later_preflights:
+            conflict["subsequent_integration_preflight_search"] = {
+                "status": "no-same-claim-overlap-observed-in-selected-window",
+                "event_reference": later_preflights[0]["event_reference"],
+                "relation_basis": (
+                    "later-event-same-repository-and-action; returned-overlaps-inspected"
+                ),
+                "causal_resolution_status": "not-established",
+            }
+        else:
+            conflict["subsequent_integration_preflight_search"] = {
+                "status": "no-later-preflight-observed-in-selected-window",
+                "relation_basis": (
+                    "later-event-search-within-selected-session-window"
+                ),
+                "causal_resolution_status": "not-established",
+            }
     integration_claim_ids = list(dict.fromkeys(
         overlap["claim_id"]
         for item in integration_eligibility_records

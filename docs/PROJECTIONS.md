@@ -373,12 +373,18 @@ merge or publication succeeded, leaving concurrent ref updates to Git's own
 checks. Event records retain up to eight overlap references and the total
 observed count; compact responses retain up to four and mark any projection
 truncation separately from overlap records omitted at capture time.
-When a later eligible preflight in the selected event window has the same
-repository, action, and overlapping claim identity as a structured denial,
-the denial may expose `claim_conflict.subsequent_integration_preflight` with
-the later event reference. This sequence relation does not establish that the
-earlier denial caused the later preflight, that the pressure was resolved, or
-that a merge or publication succeeded.
+When a later returned eligible preflight in the selected event window has the
+same repository, action, and overlapping claim identity as a structured
+denial, the denial may expose
+`claim_conflict.subsequent_integration_preflight` with the later event
+reference. `search_completeness_status` identifies omitted or truncated
+preflight evidence, so an observed match does not imply that it was the only
+or earliest match in the full event history. When no claim match is present,
+`subsequent_integration_preflight_search` distinguishes an unobserved match
+from a truncated overlap list or incomplete preflight record window. These
+sequence observations do not establish that the earlier denial caused a later
+preflight, that the pressure was resolved, or that a merge or publication
+succeeded.
 Compact responses retain up to one current claim state among returned overlap
 records and report other omitted states within those records with
 `current_claim_states_projection_truncated` and

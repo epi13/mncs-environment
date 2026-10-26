@@ -2562,6 +2562,12 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
     )
     assert denial_followup["causal_resolution_status"] == "not-established"
     assert denial_followup["operation_executed"] is False
+    assert denial_followup["selection_basis"] == (
+        "earliest-matching-returned-record-in-selected-session-window"
+    )
+    assert denial_followup["search_completeness_status"] == (
+        "complete-for-returned-records"
+    )
     assert activity["source"]["authority_claim_state_lookup"][
         "lookup_count"
     ] == 1
@@ -2624,6 +2630,105 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
         "lookup_omitted_count"
     ] == 1
     assert checkout not in json.dumps(compact)
+
+
+def test_preflight_followup_search_reports_truncated_overlap_evidence(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_truncated_preflight_followup",
+        "ses_environment_truncated_preflight_followup",
+        "cmp_environment_truncated_preflight_followup",
+    )
+    session, _ = _session(tmp_path, [record])
+    checkout = session.snapshot["selected_checkouts"]["mncs-environment"]["path"]
+    denial_scope = {
+        "kind": "paths",
+        "repository": "mncs-environment",
+        "paths": ["mncs_env/authority.py"],
+    }
+    events = [
+        {
+            "identity": "evt_denial_followup_search",
+            "sequence": 10,
+            "type": "authority.denied",
+            "payload": {
+                "action": "merge",
+                "target": checkout,
+                "reason": (
+                    f"{checkout} overlaps scope claimed by another session "
+                    "(ses_blocker): repository-relative paths overlap"
+                ),
+                "claim_conflict": {
+                    "schema_version": (
+                        capability_intelligence.authority_module.CLAIM_CONFLICT_SCHEMA
+                    ),
+                    "repository": "mncs-environment",
+                    "conflict_reason": "repository-relative paths overlap",
+                    "requested_scope": denial_scope,
+                    "blocking_claim": {
+                        "claim_id": "claim:mncs-environment:paths:missing",
+                        "session_id": "ses_blocker",
+                        "scope": denial_scope,
+                    },
+                },
+            },
+        },
+        {
+            "identity": "evt_truncated_eligible_preflight",
+            "sequence": 11,
+            "type": "authority.integration-eligible",
+            "payload": {
+                "action": "merge",
+                "repository": "mncs-environment",
+                "scope": {
+                    "kind": "worktree",
+                    "repository": "mncs-environment",
+                    "branch": "campaign/example",
+                    "exclusive": False,
+                },
+                "authorization_basis": "writable-repository-rights",
+                "eligibility_basis": (
+                    "exact-observed-scope-and-repository-native-concurrency"
+                ),
+                "persistent_claim_required": False,
+                "operation_executed": False,
+                "coordination_overlap_count": 9,
+                "coordination_overlaps": [{
+                    "session_id": f"ses_overlap_{index}",
+                    "claim_id": f"claim:mncs-environment:paths:other{index}",
+                    "scope": {
+                        "kind": "paths",
+                        "repository": "mncs-environment",
+                        "paths": [f"mncs_env/module_{index}.py"],
+                        "exclusive": False,
+                    },
+                    "overlap_reason": "repository-relative paths overlap",
+                } for index in range(8)],
+                "coordination_overlaps_truncated": True,
+                "target": checkout,
+            },
+        },
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events),
+        "events": events[-limit:],
+        "truncated": False,
+        "next_before_sequence": None,
+    }
+
+    activity = capability_intelligence.project(session)["session_activity"]
+    conflict = activity["authority_denials"][0]["claim_conflict"]
+    assert "subsequent_integration_preflight" not in conflict
+    search = conflict["subsequent_integration_preflight_search"]
+    assert search["status"] == "not-established-overlap-records-truncated"
+    assert search["event_reference"]["identity"] == (
+        "evt_truncated_eligible_preflight"
+    )
+    assert search["coordination_overlap_count"] == 9
+    assert search["coordination_overlap_records_returned"] == 8
+    assert search["coordination_overlap_records_omitted"] == 1
+    assert checkout not in json.dumps(activity)
 
 
 def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
