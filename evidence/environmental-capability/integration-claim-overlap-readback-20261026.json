@@ -1,0 +1,107 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_integration_claim_overlap_readback_20261026",
+  "captured_at": "2026-10-26T09:15:01Z",
+  "measurement_basis": "bounded-live-environmental-capability-projection-over-authenticated-session-events",
+  "observation": {
+    "kind": "environmental-integration-eligibility-projection-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_identity": "eci_1f2fdf0046419f0e",
+      "campaign_state_checkpoint_id": "chk_34f8392d9586320d",
+      "campaign_evidence_count": 75,
+      "session_event_before_sequence": 248,
+      "session_event_limit": 32,
+      "pressure_identity": "ph_environment_integration_claim_overlap_20261026",
+      "improvement_relation_identity": "im_environment_integration_claim_overlap_20261026"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "activity_status": "partial-no-invocations-in-selected-window",
+      "event_window": {
+        "event_count": 247,
+        "sequence_start": 216,
+        "sequence_end": 247,
+        "older_events_available": true
+      },
+      "prior_denial": {
+        "event_identity": "evt_712291ee6703374a",
+        "sequence": 246,
+        "reason_class": "overlapping-claim",
+        "blocking_claim_id": "claim:mncs-environment:paths:1070493f76b5",
+        "current_claim_freshness": "stale",
+        "current_claim_recovery_verdict": "recoverable",
+        "owner_lifecycle": "active",
+        "claim_state_observation_time": "2026-10-26T09:08:44+00:00"
+      },
+      "subsequent_eligibility": {
+        "event_identity": "evt_81d744cbeb430334",
+        "sequence": 247,
+        "action": "merge",
+        "authorization_basis": "writable-repository-rights",
+        "eligibility_basis": "exact-observed-scope-and-repository-native-concurrency",
+        "persistent_claim_required": false,
+        "coordination_overlap_count": 17,
+        "event_overlap_reference_limit": 8,
+        "compact_overlap_references_returned": 4,
+        "event_overlap_list_truncated": true,
+        "compact_projection_truncated": true,
+        "operation_executed": false
+      },
+      "source_reference_resolution": {
+        "status": "all-referenced-events-present",
+        "matched_categories": [
+          "authority_denial",
+          "integration_eligibility"
+        ]
+      },
+      "interpretation_limit": "The bounded projection makes the original overlap denial and the later claim-independent preflight relationship inspectable, including the current claim-state view and independent truncation limits. This is evidence that the preflight policy changed for this target; it does not establish that a Git merge or push was executed, succeeded, or will avoid conflict."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_34f8392d9586320d",
+    "campaign_evidence_count_before_recording": 75
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": null,
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "projection_identity": "eci_1f2fdf0046419f0e",
+      "event_identities": [
+        "evt_712291ee6703374a",
+        "evt_81d744cbeb430334"
+      ]
+    },
+    {
+      "identity": "mncs_environment_claim_independent_integration_d063c40",
+      "repository": "mncs-environment",
+      "commit": "d063c4008f58ed8d30688f5bb26b212d859da3c4",
+      "path": "mncs_env/authority.py",
+      "sha256": "1219ac464343e0ab246ef44cc5f05890c40ce8166c27051eb8ac16d264dd862b",
+      "kind": "committed-implementation"
+    }
+  ],
+  "not_measured": [
+    "actual Git merge and push outcomes",
+    "whether concurrent work would produce a Git conflict",
+    "cross-session recurrence",
+    "long-term effect on coordination overhead"
+  ]
+}

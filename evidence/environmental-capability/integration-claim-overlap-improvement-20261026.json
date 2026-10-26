@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_integration_claim_overlap_improvement_20261026",
+  "captured_at": "2026-10-26T09:15:01Z",
+  "measurement_basis": "committed-change-linked-to-independent-tests-and-authenticated-session-readback",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment authority evaluation and environmental-capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_integration_claim_overlap_20261026",
+      "implementation_commit": "d063c4008f58ed8d30688f5bb26b212d859da3c4",
+      "verification_observation_identity": "ev_environment_integration_claim_overlap_verification_20261026",
+      "subsequent_observation_identity": "ev_environment_integration_claim_overlap_readback_20261026"
+    },
+    "outcome": {
+      "implementation_change": "The Environment now separates writable repository rights from integration eligibility. Merge and publish require an exact observed or explicit scope; persistent claims neither grant nor veto eligibility. Overlapping claims remain bounded coordination evidence in the event and projection. The event records operation_executed false, and compact output distinguishes source overlap truncation from projection truncation.",
+      "verified_change": "The committed authority policy, session event producer, ECI projection, and regression tests passed the affected 361-test suite, compileall, and diff check. A live preflight for the previously denied target was then projected as eligible while retaining 17 overlapping claim records as bounded context.",
+      "effectiveness_assessment": "preflight-eligibility-change-observed; actual-repository-integration-not-assessed",
+      "interpretation_limit": "The live readback demonstrates that this scoped preflight no longer requires a claim and no longer vetoes on claim overlap. It does not show that a Git merge or push was executed or succeeded, and it does not establish long-term cross-session effectiveness."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_34f8392d9586320d",
+    "campaign_evidence_count_before_recording": 75
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_integration_claim_overlap_20261026",
+    "addresses_hypothesis_identity": "ph_environment_integration_claim_overlap_20261026",
+    "implementation_reference": {
+      "identity": "mncs_environment_claim_independent_integration_d063c40",
+      "repository": "mncs-environment",
+      "commit": "d063c4008f58ed8d30688f5bb26b212d859da3c4",
+      "path": "mncs_env/authority.py",
+      "sha256": "1219ac464343e0ab246ef44cc5f05890c40ce8166c27051eb8ac16d264dd862b",
+      "kind": "committed-implementation"
+    },
+    "verification_observation_identity": "ev_environment_integration_claim_overlap_verification_20261026",
+    "subsequent_observation_identity": "ev_environment_integration_claim_overlap_readback_20261026",
+    "basis": "The authority decision no longer treats persistent claim overlap as integration authority. The exact target that produced an authenticated overlapping-claim denial was evaluated again and appeared in the existing environmental-capability projection as eligible, with overlap count, event identity, and preflight-only status preserved.",
+    "not_measured": [
+      "whether a Git merge or push succeeds",
+      "whether the policy improves concurrent integration across active sessions",
+      "whether the change reduces coordination overhead over time",
+      "whether other claim-gated operations need a different consistency mechanism"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_claim_independent_integration_d063c40",
+      "repository": "mncs-environment",
+      "commit": "d063c4008f58ed8d30688f5bb26b212d859da3c4",
+      "path": "mncs_env/authority.py",
+      "sha256": "1219ac464343e0ab246ef44cc5f05890c40ce8166c27051eb8ac16d264dd862b",
+      "kind": "committed-implementation"
+    },
+    {
+      "identity": "mncs_environment_claim_independent_integration_regressions_d063c40",
+      "repository": "mncs-environment",
+      "commit": "d063c4008f58ed8d30688f5bb26b212d859da3c4",
+      "path": "tests/test_environment.py",
+      "sha256": "82062fbdd809b56135fa4de12e6457346eab92ed6a32783dc48bf65794886733",
+      "kind": "committed-regression-tests"
+    },
+    {
+      "identity": "mncs_environment_claim_independent_integration_projection_tests_d063c40",
+      "repository": "mncs-environment",
+      "commit": "d063c4008f58ed8d30688f5bb26b212d859da3c4",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "cfb0ff8f88a3917f7c919d6a3db3bc4ace4baa2ff8e2d5b0fa99b1d85d718727",
+      "kind": "committed-regression-tests"
+    }
+  ],
+  "not_measured": [
+    "actual Git integration outcome",
+    "cross-session pressure recurrence",
+    "long-term improvement in agent experience"
+  ]
+}
