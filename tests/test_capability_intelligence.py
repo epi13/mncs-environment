@@ -3831,16 +3831,81 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
 ) -> None:
     session, state = _session(tmp_path, [])
     reference = _add_compiler_native_application_proof_evidence(session, state)
+    binding_id = "cap_" + "a" * 64
+    available_identity = {
+        "capability": "test_artifact",
+        "contract_revision": "r1",
+        "provider": "mncs-test",
+    }
     session.snapshot["bindings"] = [{
-        "binding_id": "binding_test_artifact",
+        "binding_id": binding_id,
         "provider": "mncs-test",
         "capability": "test_artifact",
+        "contract_revision": "r1",
         "availability": {"status": "available"},
     }]
     events = [
         {
-            "identity": "evt_test_artifact_invoked",
+            "identity": "evt_test_artifact_context",
             "sequence": 1,
+            "type": "environment.rpc.read_observed",
+            "producer": "mncs-control-mcp",
+            "payload": {
+                "schema_version": "mncs.environment.rpc-read-activity/2",
+                "operation": "session.context",
+                "outcome_status": "succeeded",
+                "exit_code": 0,
+                "failure_code": None,
+                "request_id": "req_test_artifact_context",
+                "request_digest": "d" * 64,
+                "request_operation_digest": "d" * 64,
+                "request_event_digest": "e" * 16,
+                "caller": {
+                    "authenticated_principal_id": "ctrl_" + "a" * 32,
+                    "control_grant_id": "b" * 32,
+                    "process_identity": "proc_" + "c" * 32,
+                },
+                "context": {
+                    "repository": "mncs-environment",
+                    "repository_branch": "main",
+                    "repository_head": "f" * 40,
+                    "environment_id": "renv_projection_reader",
+                    "campaign_id": "cmp_projection_reader",
+                    "work_intent_id": "int_projection_reader",
+                },
+                "measurement_availability": {
+                    "model_identity": "unavailable",
+                    "token_usage": "unavailable",
+                    "control_dispatch_elapsed_ms": "measured",
+                    "resource_consumption": "unavailable",
+                    "cache_accounting": "unavailable",
+                },
+                "measurements": {"control_dispatch_elapsed_ms": 12.5},
+                "context_response_summary": {
+                    "schema_version": (
+                        "mncs.environment.context-response-summary/2"
+                    ),
+                    "capture_status": "captured",
+                    "capture_reason": None,
+                    "context_schema_version": "mncs.environment.entry-context/1",
+                    "available_count": 1,
+                    "listed_available_count": 1,
+                    "unavailable_count": 0,
+                    "unknown_count": 0,
+                    "capabilities_truncated": False,
+                    "available_identity_digest": hashlib.sha256(json.dumps(
+                        [available_identity], sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode()).hexdigest(),
+                    "identity_digest_status": "complete",
+                    "available_binding_ids": [binding_id],
+                    "binding_ids_status": "complete",
+                },
+            },
+        },
+        {
+            "identity": "evt_test_artifact_invoked",
+            "sequence": 2,
             "type": "capability.invoked",
             "producer": "local-agent",
             "observed_at": "2026-10-25T00:00:00Z",
@@ -3852,7 +3917,7 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
         },
         {
             "identity": "evt_test_artifact_completed",
-            "sequence": 2,
+            "sequence": 3,
             "type": "invocation.completed",
             "producer": "mncs-test",
             "observed_at": "2026-10-25T00:00:01Z",
@@ -4048,6 +4113,17 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
     assert delivery["runtime_alias_match_count"] == 1
     assert delivery["canonical_identity_match_count"] == 0
     assert delivery["binding_matches"][0]["availability_status"] == "available"
+    assert delivery["binding_matches"][0]["binding_id"] == binding_id
+    context_inclusion = delivery["binding_matches"][0][
+        "context_response_inclusion"
+    ]
+    assert context_inclusion["status"] == "exact-binding-id-in-response"
+    assert context_inclusion["binding_id_attribution_status"] == (
+        "exact-from-response"
+    )
+    assert context_inclusion["supporting_events"][0]["identity"] == (
+        "evt_test_artifact_context"
+    )
     assert delivery["binding_matches"][0]["invocation_count"] == 1
     assert delivery["binding_matches"][0]["completion_count"] == 1
     assert delivery["binding_matches"][0]["supporting_events"][0]["identity"] == (
@@ -4078,6 +4154,9 @@ def test_compiler_native_application_proof_projects_scoped_implementation_owners
         "selected_session_delivery_observation"
     ]
     assert compact_delivery["status"] == "runtime-alias-only-match"
+    assert compact_delivery["binding_matches"][0][
+        "context_response_inclusion"
+    ]["status"] == "exact-binding-id-in-response"
     assert compact_delivery["binding_matches"][0]["supporting_events"][0][
         "identity"
     ] == "evt_test_artifact_invoked"

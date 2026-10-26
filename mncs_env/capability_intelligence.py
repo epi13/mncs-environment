@@ -1227,6 +1227,35 @@ def _compiler_capability_contract_view(value: Any) -> dict[str, Any] | None:
     }
 
 
+def _compact_context_response_inclusion(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    compact = {
+        key: _short_text(value[key], 160)
+        for key in (
+            "status", "reason", "basis", "identity_basis",
+            "binding_id_attribution_status", "comparison_time_basis",
+            "scope", "event_window_status",
+        )
+        if isinstance(value.get(key), str)
+    }
+    omitted = value.get("response_summaries_omitted")
+    if type(omitted) is int:
+        compact["response_summaries_omitted"] = max(0, omitted)
+    references = value.get("supporting_events")
+    if isinstance(references, list):
+        compact["supporting_events"] = [
+            {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in reference
+            }
+            for reference in references[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+            if isinstance(reference, dict)
+        ]
+    return compact
+
+
 def _compact_delivery_binding(value: Any) -> dict[str, Any] | None:
     if not isinstance(value, dict):
         return None
@@ -1269,6 +1298,11 @@ def _compact_delivery_binding(value: Any) -> dict[str, Any] | None:
             for reference in references[:3]
             if isinstance(reference, dict)
         ]
+    context_inclusion = _compact_context_response_inclusion(
+        value.get("context_response_inclusion"),
+    )
+    if context_inclusion is not None:
+        result["context_response_inclusion"] = context_inclusion
     return result
 
 
@@ -2285,34 +2319,11 @@ def _compact_projection(
                 if isinstance(reference, dict)
             ]
         context_inclusion = item.get("context_response_inclusion")
-        if isinstance(context_inclusion, dict):
-            compact_context_inclusion = {
-                key: _short_text(context_inclusion[key], 160)
-                for key in (
-                    "status", "reason", "basis", "identity_basis",
-                    "binding_id_attribution_status", "comparison_time_basis",
-                    "scope", "event_window_status",
-                )
-                if isinstance(context_inclusion.get(key), str)
-            }
-            if type(context_inclusion.get("response_summaries_omitted")) is int:
-                compact_context_inclusion["response_summaries_omitted"] = max(
-                    0, context_inclusion["response_summaries_omitted"],
-                )
-            references = context_inclusion.get("supporting_events")
-            if isinstance(references, list):
-                compact_context_inclusion["supporting_events"] = [
-                    {
-                        key: reference[key]
-                        for key in ("identity", "sequence", "type")
-                        if key in reference
-                    }
-                    for reference in references[:MAX_CAPABILITY_SUPPORTING_EVENTS]
-                    if isinstance(reference, dict)
-                ]
-            compact_item["context_response_inclusion"] = (
-                compact_context_inclusion
-            )
+        compact_context_inclusion = _compact_context_response_inclusion(
+            context_inclusion,
+        )
+        if compact_context_inclusion is not None:
+            compact_item["context_response_inclusion"] = compact_context_inclusion
         sequence_relation = item.get("context_response_use_sequence_relation")
         if isinstance(sequence_relation, dict):
             compact_sequence_relation = {
