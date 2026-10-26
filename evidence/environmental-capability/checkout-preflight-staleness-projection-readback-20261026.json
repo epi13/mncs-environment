@@ -1,0 +1,109 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_checkout_preflight_staleness_projection_readback_20261026",
+  "captured_at": "2026-10-26T22:47:00Z",
+  "measurement_basis": "direct-canonical-environmental-capability-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_alignment_status": "the persisted WorkIntent predates the current environmental capability campaign objective",
+    "campaign_objective": "Make observations from legitimate development traceable to objectives, environmental limitations, implementation, verification, and subsequent evidence. Preserve uncertainty about recurrence and effectiveness.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id": "chk_10de7d71b67d8606",
+    "campaign_evidence_count": 92
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-readback",
+    "source_interface": "MNCS Environment campaign-state environmental-capability projection",
+    "request": {
+      "command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 1 --evidence-offset 89 --evidence-limit 3 --session-event-limit 4",
+      "projection_identity": "eci_e6018ce467e56acf",
+      "campaign_state_checkpoint_id": "chk_10de7d71b67d8606",
+      "evidence_page_offset": 89,
+      "evidence_page_limit": 3
+    },
+    "outcome": {
+      "response_status": "partial",
+      "response_truncated": true,
+      "response_byte_count": 49279,
+      "observation_records_considered": 3,
+      "observation_records_verified": 3,
+      "observation_records_unavailable": 0,
+      "source_pointer_content_integrity_verified_count": 4,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "pressure_hypothesis": {
+        "identity": "ph_environment_checkout_preflight_staleness_20261026",
+        "status": "present-in-projection",
+        "recurrence_status": "not-established",
+        "observation_count": 1,
+        "distinct_session_count": 1
+      },
+      "improvement_relation": {
+        "identity": "im_environment_checkout_preflight_staleness_20261026",
+        "pressure_hypothesis_status": "present-in-projection",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "effectiveness_assessment": "not-assessed",
+        "subsequent_record_status": "not-recorded"
+      },
+      "interpretation_limit": "The readback establishes discoverability and source integrity for this bounded evidence page. Its partial status is retained. The pressure originates in one controlled regression scenario, not an independently observed multi-agent incident, and the projection does not establish lower coordination overhead or long-term effectiveness."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_checkout_preflight_staleness_20261026",
+    "title": "Selected-checkout state can change between eligibility and provider effect",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment selected-worktree provider effect preflight",
+    "owner": "mncs-environment",
+    "basis": "This readback confirms the existing pressure and improvement records are available through the campaign projection. It is not a second occurrence.",
+    "recurrence": "one controlled test scenario; live operational recurrence not established",
+    "actionable_recommendation": "Keep pressure, implementation, verification, and later effectiveness evidence linked through the existing projection.",
+    "not_measured": [
+      "independent-agent occurrence",
+      "cross-session recurrence",
+      "effectiveness after operational use"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_checkout_preflight_staleness_pressure_20261026",
+      "kind": "verified-campaign-pressure-record",
+      "repository": "mncs-environment",
+      "commit": "8ec8d44db586cfb81f3c91afa55beab3e9a6d5a8",
+      "path": "evidence/environmental-capability/checkout-preflight-staleness-pressure-20261026.json",
+      "sha256": "7c7e75e55bfe6229432cdea2d87a59a8988252d7bf52ae9150dfb21c623a6ec9"
+    },
+    {
+      "identity": "ev_environment_checkout_preflight_staleness_verification_20261026",
+      "kind": "verified-environmental-observation",
+      "repository": "mncs-environment",
+      "commit": "8ec8d44db586cfb81f3c91afa55beab3e9a6d5a8",
+      "path": "evidence/environmental-capability/checkout-preflight-staleness-verification-20261026.json",
+      "sha256": "48cc7245d31b8ae7e4f2e62934e13e5d83dbdea29c8e7d510ce84f02a7fc694c"
+    },
+    {
+      "identity": "ev_environment_checkout_preflight_staleness_improvement_20261026",
+      "kind": "improvement-relation-record",
+      "repository": "mncs-environment",
+      "commit": "8ec8d44db586cfb81f3c91afa55beab3e9a6d5a8",
+      "path": "evidence/environmental-capability/checkout-preflight-staleness-improvement-20261026.json",
+      "sha256": "9411441c8788b96b54df8efd181fbfc327d984b70b5f671f2b61ad9087faa729"
+    }
+  ],
+  "not_measured": [
+    "operational race frequency",
+    "independent-agent discoverability or adoption",
+    "lower authority-related coordination effort",
+    "subsequent effectiveness or regression rate"
+  ]
+}
