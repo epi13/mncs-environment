@@ -90,6 +90,10 @@ The older authenticated session-event page can be inspected with:
   --session-event-before-sequence 42 --session-event-limit 1
 ```
 
+The bounded readback of this query and its separate current context view is
+preserved in
+[`session-context-delivery-readback-20261026.json`](../evidence/environmental-capability/session-context-delivery-readback-20261026.json).
+
 The projection for session `ses_9ad3efb63438cf3d` records work intent
 `int_8475157f281c835f` (“exercise canonical Environment persistence through the
 Control socket”). Its authenticated `session.context` event

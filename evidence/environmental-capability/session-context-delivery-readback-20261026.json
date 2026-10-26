@@ -1,0 +1,134 @@
+{
+  "captured_at": "2026-10-26T01:52:44+00:00",
+  "identity": "ev_environment_session_context_delivery_readback_20261026",
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "measurement_limits": [
+    "The sequence 41 event records no available binding IDs; the per-binding identity-tuple relation is derived from a matching digest and the current session snapshot, whose revision is not attached to the event.",
+    "The selected event page returns three binding rows and marks the binding list truncated; this readback is not a complete nine-binding list.",
+    "The separate current context view exposes nine binding IDs but is a projection-time snapshot, not the captured body of event sequence 41.",
+    "Agent receipt and subsequent capability use are not established by a successful context response or a matching digest.",
+    "The selected campaign evidence page contains no native capability correspondence, so this context observation is not linked to the candidate process API."
+  ],
+  "observation": {
+    "kind": "session-context-delivery-and-binding-inclusion-readback",
+    "outcome": {
+      "projection_route": "mncs-env projections --interpret environmental-capability",
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --session-event-before-sequence 42 --session-event-limit 1",
+      "implementation_commit": "97b996eb59cd0baa645c836d714a5810ab372b08",
+      "projection_bytes": 41896,
+      "projection_limit_bytes": 49152,
+      "relationship_projection_bytes": 2884,
+      "relationship_projection_limit_bytes": 8192,
+      "overall_projection_status": "partial",
+      "accountability_source_link_count": 0,
+      "accountability_source_link_status": "source-context-unavailable",
+      "session": {
+        "session_id": "ses_9ad3efb63438cf3d",
+        "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+        "work_intent": {
+          "identity": "int_8475157f281c835f",
+          "goal": "exercise canonical Environment persistence through the Control socket"
+        }
+      },
+      "selected_event_window": {
+        "event_count": 47,
+        "before_sequence": 42,
+        "sequence_start": 41,
+        "sequence_end": 41,
+        "truncated": true,
+        "rpc_operation_events_considered": 1,
+        "rpc_operation_records_returned": 1
+      },
+      "context_response_observation": {
+        "scope": "authenticated-Control-session.context-events-in-selected-window",
+        "activity_status": "partial",
+        "outcome": "succeeded",
+        "capture_status": "captured",
+        "event_reference": {
+          "identity": "evt_de29b1e1b27f5e61",
+          "sequence": 41,
+          "type": "environment.rpc.read_observed"
+        },
+        "response_schema": "mncs.environment.context-response-summary/2",
+        "context_schema": "mncs.environment.entry-context/1",
+        "available_count": 9,
+        "listed_available_count": 9,
+        "unavailable_count": 0,
+        "unknown_count": 0,
+        "capabilities_truncated": false,
+        "identity_digest_status": "complete",
+        "available_identity_digest": "f17577d81f1195126dd8df5c24829a91a9043d297c42236037abd4e579432ec9",
+        "binding_ids_status": "partial",
+        "available_binding_ids": [],
+        "binding_snapshot_comparison": {
+          "status": "matches-current-session-binding-snapshot",
+          "basis": "current-session-binding-snapshot-at-projection-time",
+          "available_count_matches": true,
+          "unavailable_count_matches": true,
+          "unknown_count_matches": true,
+          "available_identity_digest_matches": true
+        }
+      },
+      "binding_inclusion_projection": {
+        "path": "session_activity.capability_delivery.bindings[*].context_response_inclusion",
+        "returned_binding_count": 3,
+        "binding_list_truncated": true,
+        "sample": [
+          {
+            "capability": "mncs-environment:ambient-projection-coherence",
+            "binding_id": "cap_bce1ed9579aa6fe9",
+            "inclusion_status": "identity-tuple-in-matched-response",
+            "binding_id_attribution_status": "binding-id-capture-incomplete",
+            "supporting_event_sequence": 41
+          },
+          {
+            "capability": "mncs-environment:campaign-state-inspection",
+            "binding_id": "cap_68b98adbd7ade487",
+            "inclusion_status": "identity-tuple-in-matched-response",
+            "binding_id_attribution_status": "binding-id-capture-incomplete",
+            "supporting_event_sequence": 41
+          },
+          {
+            "capability": "mncs-environment:projection-evidence-inspection",
+            "binding_id": "cap_2c28e6c78817ce46",
+            "inclusion_status": "identity-tuple-in-matched-response",
+            "binding_id_attribution_status": "binding-id-capture-incomplete",
+            "supporting_event_sequence": 41
+          }
+        ]
+      },
+      "current_context_view": {
+        "source": "separate mncs-env context read at projection time",
+        "context_schema": "mncs.environment.entry-context/1",
+        "available_count": 9,
+        "listed_count": 9,
+        "exact_binding_ids_complete": true,
+        "truncated": false
+      },
+      "interpretation": {
+        "target_capability_attribution_status": "not-established",
+        "agent_receipt_status": "not-established",
+        "systemwide_native_adoption_ratio": "not-measured",
+        "next_investigation": "Inspect a subsequent authentic Control session.context event for exact binding IDs and compare it with the existing binding-level inclusion view; keep receipt and use distinct."
+      }
+    },
+    "verification": {
+      "command": "PYTHONPATH=. pytest -q tests/test_native_capability_relationships.py tests/test_capability_projection_cli.py",
+      "passed": 17,
+      "failed": 0,
+      "result": "passed",
+      "diff_check": "passed"
+    },
+    "related_control_capture_implementation": {
+      "repository": "mncs-control-mcp",
+      "commit": "4048ca22f7eba1f42de873afbf5fd5ae589e3de2",
+      "path": "src/mncs_control_mcp/environment_rpc.py",
+      "behavior": "bounded capture records available binding IDs when present in a session.context response and marks incomplete ID capture explicitly"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "campaign_objective": "Make authentic environmental observations useful for identifying and improving capability limitations affecting MNCS agents.",
+    "session_id": "ses_9ad3efb63438cf3d"
+  }
+}
