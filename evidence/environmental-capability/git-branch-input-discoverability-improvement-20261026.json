@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_git_branch_input_discoverability_improvement_20261026",
+  "captured_at": "2026-10-26T14:47:24Z",
+  "measurement_basis": "Control tool schema regression verification and source content reference",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Control MCP Git branch tools",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_git_push_ref_ambiguity_20261026",
+      "implementation_commit": "541ff0a65122314ebcac98adbbee6c5af91c6b47",
+      "verification_observation_identity": "ev_environment_git_branch_input_discoverability_verification_20261026",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "Tool descriptions for worktree add/prepare, create branch, checkout, merge, pull, and push state the short branch-name contract. MCP schema regression coverage verifies the descriptions are present.",
+      "effectiveness_assessment": "tool-description and schema contract verified; agent discovery and later live use not yet observed",
+      "analysis_limit": "This refinement improves capability discoverability but makes no claim that agents have used the new guidance or that the historical push failure has the same root cause."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_663d62625d70913a",
+    "campaign_evidence_count_before_recording": 7
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "improvement_relation": {
+    "identity": "im_environment_git_branch_input_discoverability_20261026",
+    "addresses_hypothesis_identity": "ph_environment_git_push_ref_ambiguity_20261026",
+    "implementation_reference": {
+      "identity": "mncs_control_git_branch_tool_guidance_541ff0a",
+      "repository": "mncs-control-mcp",
+      "commit": "541ff0a65122314ebcac98adbbee6c5af91c6b47",
+      "path": "src/mncs_control_mcp/server.py",
+      "sha256": "c690bbe6cc2aa92bc31107312537a3634d4d2dbb53e32659f721e5fc673c4b27",
+      "kind": "short-branch-input-guidance"
+    },
+    "verification_observation_identity": "ev_environment_git_branch_input_discoverability_verification_20261026",
+    "subsequent_observation_identity": null,
+    "basis": "Control now rejects namespace-prefixed branch arguments at its branch-oriented service boundaries and presents the short-name rule in all seven affected MCP tool descriptions. A protocol-level regression test checks the live tool list descriptions.",
+    "effectiveness_assessment": "implementation and immediate tool-schema behavior verified; agent discoverability and recurrence after change not assessed",
+    "not_measured": [
+      "cross-agent discovery of the branch-name contract",
+      "future live push and merge operation outcomes",
+      "relationship to historical authorization failures"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_git_branch_input_discoverability_verification_20261026",
+      "kind": "committed-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/git-branch-input-discoverability-verification-20261026.json"
+    },
+    {
+      "identity": "mncs_control_git_branch_tool_guidance_541ff0a",
+      "kind": "tool-interface-description",
+      "repository": "mncs-control-mcp",
+      "commit": "541ff0a65122314ebcac98adbbee6c5af91c6b47",
+      "path": "src/mncs_control_mcp/server.py",
+      "sha256": "c690bbe6cc2aa92bc31107312537a3634d4d2dbb53e32659f721e5fc673c4b27"
+    }
+  ],
+  "not_measured": [
+    "whether the clearer tool descriptions change agent behavior",
+    "whether later agents avoid the malformed input",
+    "long-term reduction in coordination effort"
+  ]
+}

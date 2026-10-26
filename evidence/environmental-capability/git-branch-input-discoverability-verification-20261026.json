@@ -1,0 +1,104 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_git_branch_input_discoverability_verification_20261026",
+  "captured_at": "2026-10-26T14:47:24Z",
+  "measurement_basis": "committed MCP tool description assertions, focused protocol test, and pushed source revision",
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Control Git branch-taking MCP tools",
+    "request": {
+      "implementation_commit": "541ff0a65122314ebcac98adbbee6c5af91c6b47",
+      "focused_test_command": "python -m pytest tests/test_mcp_server.py::test_stdio_mcp_end_to_end_developer_workspace -q",
+      "focused_test_result": {"passed": 1, "failed": 0},
+      "description_assertions": {
+        "test": "test_stdio_mcp_end_to_end_developer_workspace",
+        "tools_with_short_branch_guidance": [
+          "git_worktree_add",
+          "git_worktree_prepare",
+          "git_create_branch",
+          "git_checkout",
+          "git_merge",
+          "git_pull",
+          "git_push"
+        ],
+        "asserted_description_property": "contains short branch guidance"
+      },
+      "ruff": "python -m ruff check on changed files: passed",
+      "diff_check": "git diff --check: passed",
+      "remote_state": {
+        "repository": "mncs-control-mcp",
+        "ref": "refs/heads/main",
+        "head": "541ff0a65122314ebcac98adbbee6c5af91c6b47"
+      }
+    },
+    "outcome": {
+      "verified_behavior": "All seven branch-taking Control tools now describe the short-name requirement. The test checks this guidance through the live MCP tools/list schema, while the earlier regression test verifies qualified refs are rejected before Git is invoked.",
+      "interpretation_limit": "The schema and input boundary are verified. This does not measure whether agents notice the description, whether future live operations avoid the error, or whether the historical push command was recorded exactly."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_663d62625d70913a",
+    "campaign_evidence_count_before_recording": 7
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_git_push_ref_ambiguity_20261026",
+    "title": "A fully qualified local branch name makes a normal main push ambiguous",
+    "category": "tooling-interoperability",
+    "subsystem": "Git branch and ref handling in the MNCS workspace",
+    "owner": "mncs-environment",
+    "basis": "This is interface verification for the previously recorded push-ref observation, not a separate agent encounter. A controlled fixture and the Control regression test establish the qualified-input case while leaving the historical command attribution unresolved.",
+    "recurrence": "one-observed-push-failure;other-failures-not-attributed",
+    "actionable_recommendation": "Use short branch names at branch operation boundaries; inspect later live use before assessing recurrence or effectiveness.",
+    "not_measured": [
+      "which earlier operation created the malformed branch name",
+      "whether other reported authorization failures had the same cause",
+      "future agent discovery or use of the clarified interface"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_control_git_branch_name_boundary_541ff0a",
+      "kind": "branch-name-validation-source",
+      "repository": "mncs-control-mcp",
+      "commit": "541ff0a65122314ebcac98adbbee6c5af91c6b47",
+      "path": "src/mncs_control_mcp/git_adapter.py",
+      "sha256": "4bb36c8b1cafaf28643ca89e39583cf4a0817aba8a14e73e09155c307d94f004"
+    },
+    {
+      "identity": "mncs_control_git_branch_tool_guidance_541ff0a",
+      "kind": "branch-input-tool-description-source",
+      "repository": "mncs-control-mcp",
+      "commit": "541ff0a65122314ebcac98adbbee6c5af91c6b47",
+      "path": "src/mncs_control_mcp/server.py",
+      "sha256": "c690bbe6cc2aa92bc31107312537a3634d4d2dbb53e32659f721e5fc673c4b27"
+    },
+    {
+      "identity": "mncs_control_git_tool_guidance_test_541ff0a",
+      "kind": "MCP-tool-description-regression-test",
+      "repository": "mncs-control-mcp",
+      "commit": "541ff0a65122314ebcac98adbbee6c5af91c6b47",
+      "path": "tests/test_mcp_server.py",
+      "sha256": "8a00857e91e412b9ed32c81e305a7c91163986b935e35210998ce0704a08e4b4"
+    }
+  ],
+  "not_measured": [
+    "whether different agents or models discover the interface guidance",
+    "whether future attempts avoid qualified branch names",
+    "whether subsequent legitimate push activity demonstrates improved usability"
+  ]
+}
