@@ -561,7 +561,7 @@ def test_project_links_unselected_work_intent_repository_to_evidence_visibility(
     assert candidate["evidence_references"][0]["verification"] == (
         "outside-selected-session"
     )
-    assert "authorized session" in candidate["recommendation"]
+    assert "ordinary read or write access" in candidate["recommendation"]
 
     compact = capability_intelligence.project(session, max_result_bytes=6_000)
     assert compact["subject"]["workspace_alignment"][
@@ -574,6 +574,146 @@ def test_project_links_unselected_work_intent_repository_to_evidence_visibility(
     assert compact["context_pressure_candidates"][0]["evidence_references"][0][
         "identity"
     ] == "ev_environment_compiler_source_outside_selection"
+
+
+def test_unselected_repository_candidate_links_claimless_preflight_without_success(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_unselected_repository_preflight",
+        "ses_projection_reader",
+        "cmp_projection_reader",
+    )
+    session, _state = _session(tmp_path, [record])
+    session.snapshot["intent"]["repositories"] = ["mncs-compiler"]
+
+    def eligible_event(
+        identity: str,
+        sequence: int,
+        work_intent_id: str,
+        campaign_id: str | None = None,
+    ) -> dict:
+        return {
+            "identity": identity,
+            "sequence": sequence,
+            "type": "authority.integration-eligible",
+            "session_id": session.session_id,
+            "producer": "environment",
+            "payload": {
+                "action": "merge",
+                "repository": "mncs-compiler",
+                "scope": {
+                    "kind": "worktree",
+                    "repository": "mncs-compiler",
+                    "branch": "campaign/native-pressure",
+                    "exclusive": False,
+                },
+                "authorization_basis": "writable-repository-rights",
+                "eligibility_basis": (
+                    "exact-observed-scope-and-repository-native-concurrency"
+                ),
+                "persistent_claim_required": False,
+                "operation_executed": False,
+                "repository_preflight_state": {
+                    "schema_version": (
+                        "mncs.environment.integration-preflight-state/1"
+                    ),
+                    "observation_basis": (
+                        "fresh-registered-checkout-inspection"
+                    ),
+                    "checkout_identity": "checkout:compiler-campaign",
+                    "branch": "campaign/native-pressure",
+                    "branch_status": "attached",
+                    "head": "e" * 40,
+                    "head_status": "measured",
+                    "working_tree_status": "clean",
+                },
+                "campaign_id": campaign_id or session.snapshot["campaign"]["identity"],
+                "work_intent_id": work_intent_id,
+                "coordination_overlap_count": 0,
+                "coordination_overlaps": [],
+                "coordination_overlaps_truncated": False,
+            },
+        }
+
+    events = [
+        eligible_event(
+            "evt_preflight_other_campaign",
+            39,
+            session.snapshot["intent"]["identity"],
+            "cmp_another_campaign",
+        ),
+        eligible_event(
+            "evt_preflight_other_work_intent",
+            40,
+            "int_another_objective",
+        ),
+        eligible_event(
+            "evt_preflight_same_work_intent",
+            41,
+            session.snapshot["intent"]["identity"],
+        ),
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events), "events": events[-limit:],
+        "truncated": False, "next_before_sequence": None,
+    }
+
+    result = capability_intelligence.project(session)
+
+    candidate = result["context_pressure_candidates"][0]
+    assert candidate["affected_repository"] == "mncs-compiler"
+    assert candidate["interpretation"] == "hypothesis"
+    assert candidate["integration_preflight_search"]["status"] == (
+        "matching-preflight-observed-in-selected-window"
+    )
+    assert candidate["integration_preflight_search"]["matched_records_returned"] == 1
+    assert candidate["integration_preflight_observations"] == [{
+        "action": "merge",
+        "persistent_claim_required": False,
+        "operation_executed": False,
+        "scope": {
+            "kind": "worktree",
+            "repository": "mncs-compiler",
+            "branch": "campaign/native-pressure",
+            "exclusive": False,
+        },
+        "repository_preflight_state": {
+            "schema_version": "mncs.environment.integration-preflight-state/1",
+            "observation_basis": "fresh-registered-checkout-inspection",
+            "checkout_identity": "checkout:compiler-campaign",
+            "branch": "campaign/native-pressure",
+            "branch_status": "attached",
+            "head": "e" * 40,
+            "head_status": "measured",
+            "working_tree_status": "clean",
+        },
+        "preflight_state_interpretation_limit": (
+            "This is the local destination checkout preimage at preflight; it "
+            "does not establish source branch, remote ref state, later "
+            "execution, or integration outcome."
+        ),
+        "event_reference": {
+            "identity": "evt_preflight_same_work_intent",
+            "sequence": 41,
+            "type": "authority.integration-eligible",
+        },
+    }]
+    assert "did not execute integration" in candidate["recommendation"]
+    assert any(
+        "successful outcome" in item for item in candidate["not_measured"]
+    )
+
+    compact = capability_intelligence.project(session, max_result_bytes=6_000)
+    compact_candidate = compact["context_pressure_candidates"][0]
+    assert compact_candidate["integration_preflight_search"][
+        "matched_records_returned"
+    ] == 1
+    assert compact_candidate["integration_preflight_observations"][0][
+        "operation_executed"
+    ] is False
+    assert compact_candidate["integration_preflight_observations"][0][
+        "event_reference"]["identity"] == "evt_preflight_same_work_intent"
 
 
 def test_project_omits_diagnostics_when_work_intent_repositories_are_aligned(

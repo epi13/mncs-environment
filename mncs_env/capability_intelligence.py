@@ -2026,13 +2026,65 @@ def _compact_projection(
             candidate.get("evidence_references_truncated") is True
             or len(references) > len(compact_references)
         )
+        preflight_search = candidate.get("integration_preflight_search")
+        if isinstance(preflight_search, dict):
+            compact_candidate["integration_preflight_search"] = {
+                key: preflight_search[key]
+                for key in (
+                    "status", "matched_records_returned",
+                    "activity_records_omitted", "observation_records_truncated",
+                    "session_event_window_truncated",
+                    "event_page_before_sequence",
+                )
+                if key in preflight_search
+            }
+        raw_preflights = candidate.get("integration_preflight_observations")
+        raw_preflights = raw_preflights if isinstance(raw_preflights, list) else []
+        compact_preflights = []
+        for preflight in raw_preflights[:4]:
+            if not isinstance(preflight, dict):
+                continue
+            compact_preflight = {
+                key: _short_text(preflight[key], 160)
+                for key in ("action",)
+                if isinstance(preflight.get(key), str)
+            }
+            for key in ("persistent_claim_required", "operation_executed"):
+                if preflight.get(key) is False:
+                    compact_preflight[key] = False
+            scope = _authority_conflict_scope(
+                preflight.get("scope"), candidate.get("affected_repository"),
+            )
+            if scope is not None:
+                compact_preflight["scope"] = scope
+            preflight_state = preflight.get("repository_preflight_state")
+            if isinstance(preflight_state, dict):
+                compact_preflight["repository_preflight_state"] = {
+                    key: preflight_state[key]
+                    for key in ("checkout_identity", "head", "working_tree_status")
+                    if key in preflight_state
+                }
+            event_reference = preflight.get("event_reference")
+            if isinstance(event_reference, dict):
+                compact_preflight["event_reference"] = {
+                    key: event_reference[key]
+                    for key in ("identity", "sequence", "type")
+                    if key in event_reference
+                }
+            compact_preflights.append(compact_preflight)
+        if compact_preflights:
+            compact_candidate["integration_preflight_observations"] = (
+                compact_preflights
+            )
         not_measured = candidate.get("not_measured")
         if isinstance(not_measured, list):
             compact_candidate["not_measured"] = [
                 _short_text(value, 192)
-                for value in not_measured[:4]
+                for value in not_measured[:3]
                 if isinstance(value, str)
             ]
+            if len(not_measured) > 3:
+                compact_candidate["not_measured_truncated"] = True
         compact_context_candidates.append(compact_candidate)
 
     compact_hypotheses = []
@@ -3719,6 +3771,9 @@ def _compact_projection(
             result["pressure_hypotheses"].pop()
         elif result["improvement_relations"]:
             result["improvement_relations"].pop(0)
+        elif result["session_activity"].get("integration_eligibility"):
+            result["session_activity"]["integration_eligibility"].pop()
+            result["session_activity"]["integration_eligibility_truncated"] = True
         elif result.get("context_pressure_candidates"):
             result["context_pressure_candidates"].pop(0)
         elif isinstance(
@@ -3754,9 +3809,6 @@ def _compact_projection(
         elif result["session_activity"].get("authority_denials"):
             result["session_activity"]["authority_denials"].pop()
             result["session_activity"]["authority_denials_truncated"] = True
-        elif result["session_activity"].get("integration_eligibility"):
-            result["session_activity"]["integration_eligibility"].pop()
-            result["session_activity"]["integration_eligibility_truncated"] = True
         elif result["session_activity"].get("resource_samples", {}).get("observations"):
             result["session_activity"]["resource_samples"]["observations"].pop()
             result["session_activity"]["resource_samples"]["observations_truncated"] = True
@@ -5166,6 +5218,8 @@ def _context_pressure_candidates(
     evidence_visibility: dict[str, Any],
     observation_reference_diagnostics: Any,
     diagnostics_truncated: bool,
+    integration_eligibility: Any,
+    activity_source: Any,
 ) -> list[dict[str, Any]]:
     """Derive bounded, explicitly hypothetical candidates from session scope."""
     unselected = workspace_alignment.get("unselected_declared_repositories")
@@ -5177,10 +5231,90 @@ def _context_pressure_candidates(
     )
     selected = workspace_alignment.get("selected_repositories")
     selected = selected if isinstance(selected, list) else []
+    eligibility_records = (
+        integration_eligibility
+        if isinstance(integration_eligibility, list) else []
+    )
+    activity_source = activity_source if isinstance(activity_source, dict) else {}
+    matching_preflights_by_repository: dict[str, list[dict[str, Any]]] = {}
+    for item in eligibility_records:
+        if not isinstance(item, dict):
+            continue
+        repository = item.get("repository")
+        event_reference = item.get("event_reference")
+        raw_preflight_state = item.get("repository_preflight_state")
+        preflight_state = _authority_integration_preflight_state(
+            raw_preflight_state,
+        )
+        scope = _authority_conflict_scope(item.get("scope"), repository)
+        if (
+            not _is_repository_identity(repository)
+            or item.get("action") not in {"merge", "publish"}
+            or item.get("persistent_claim_required") is not False
+            or item.get("operation_executed") is not False
+            or item.get("preflight_state_status") != "recorded-and-validated"
+            or preflight_state is None
+            or scope is None
+            or item.get("campaign_id") != campaign_id
+            or item.get("work_intent_id") != work_intent_id
+            or item.get("work_intent_reference_status") != "recorded-on-event"
+            or not isinstance(event_reference, dict)
+                or not isinstance(
+                    event_reference.get("identity"), str,
+                )
+            or type(event_reference.get("sequence")) is not int
+            or not isinstance(event_reference.get("type"), str)
+        ):
+            continue
+        observation = {
+            "action": item["action"],
+            "persistent_claim_required": False,
+            "operation_executed": False,
+            "scope": scope,
+            "repository_preflight_state": preflight_state,
+            "preflight_state_interpretation_limit": _short_text(
+                item.get("preflight_state_interpretation_limit"), 320,
+            ),
+            "event_reference": {
+                key: event_reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in event_reference
+            },
+        }
+        matching_preflights_by_repository.setdefault(repository, []).append(
+            observation,
+        )
+    omitted_preflight_records = activity_source.get(
+        "integration_eligibility_records_omitted", 0,
+    )
+    if type(omitted_preflight_records) is not int or omitted_preflight_records < 0:
+        omitted_preflight_records = 0
     candidates: list[dict[str, Any]] = []
     for repository in unselected[:MAX_OBSERVATIONS]:
         if not _is_repository_identity(repository):
             continue
+        preflight_observations = matching_preflights_by_repository.get(
+            repository, [],
+        )
+        visible_preflights = preflight_observations[:4]
+        preflight_search = {
+            "status": (
+                "matching-preflight-observed-in-selected-window"
+                if preflight_observations
+                else "no-matching-preflight-observed-in-selected-window"
+            ),
+            "matched_records_returned": len(preflight_observations),
+            "activity_records_omitted": omitted_preflight_records,
+            "observation_records_truncated": (
+                len(preflight_observations) > len(visible_preflights)
+            ),
+            "session_event_window_truncated": (
+                activity_source.get("event_window_truncated") is True
+            ),
+        }
+        page_before_sequence = activity_source.get("event_page_before_sequence")
+        if type(page_before_sequence) is int and page_before_sequence >= 0:
+            preflight_search["event_page_before_sequence"] = page_before_sequence
         references: list[dict[str, str]] = []
         for diagnostic in diagnostics:
             if (
@@ -5205,8 +5339,12 @@ def _context_pressure_candidates(
             "evidence_reference_identities": [
                 reference.get("identity") for reference in visible_references
             ],
+            "integration_preflight_event_identities": [
+                item["event_reference"]["identity"]
+                for item in visible_preflights
+            ],
         }, length=16)
-        candidates.append({
+        candidate = {
             "identity": candidate_identity,
             "kind": "declared-repository-selection-gap",
             "interpretation": "hypothesis",
@@ -5239,16 +5377,27 @@ def _context_pressure_candidates(
                 len(references) > len(visible_references) or diagnostics_truncated
             ),
             "recommendation": (
-                "Confirm whether this repository is needed for the declared objective; "
-                "if so, use an authorized session that selects its exact checkout. "
-                "Keep its sources outside-selected until then."
+                "A scoped preflight required no persistent claim but did not "
+                "execute integration. Check whether broader checkout selection "
+                "is needed."
+                if preflight_observations else
+                "Confirm broader repository access is needed. Select its exact "
+                "checkout or use a scoped integration preflight; this does not "
+                "establish ordinary read or write access."
             ),
             "not_measured": [
+                "whether a preflight led to executed integration or a successful "
+                "outcome",
+                "whether ordinary repository read or write work was available",
+                "whether the same gap recurs in another session",
                 "whether the selection gap blocks or delays the declared objective",
                 "why the repository is absent from the selected checkout set",
-                "whether the same gap recurs in another session",
             ],
-        })
+        }
+        if preflight_observations or omitted_preflight_records:
+            candidate["integration_preflight_search"] = preflight_search
+            candidate["integration_preflight_observations"] = visible_preflights
+        candidates.append(candidate)
     return candidates
 
 
@@ -11729,6 +11878,8 @@ def project(
         diagnostics_truncated=(
             len(observation_reference_diagnostics) > MAX_OBSERVATIONS
         ),
+        integration_eligibility=activity.get("integration_eligibility"),
+        activity_source=activity.get("source"),
     )
     implementation_accountability = _implementation_accountability_projection(
         observations,

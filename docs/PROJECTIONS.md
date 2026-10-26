@@ -305,8 +305,14 @@ repository gap with bounded source-visibility diagnostics for that repository.
 They are labeled hypotheses, remain separate from recorded
 `pressure_hypotheses`, and do not establish that work was blocked or that the
 condition recurs. A candidate points to outside-selected sources but does not
-read them or authorize adding the repository; use an authorized session that
-selects the exact checkout when that evidence is needed.
+read them or authorize adding the repository. It may also link a validated,
+same-Work-Intent `authority.integration-eligible` event for that repository.
+That event records a scoped merge or publish preflight which required no
+persistent claim; it did not execute integration and does not establish
+ordinary repository access, source or remote state, or an integration outcome.
+The candidate keeps this evidence separate from the selection gap and reports
+the selected session-event window and omissions, so agents can inspect a narrow
+integration path without treating it as resolution of the broader gap.
 
 Session activity uses a separate bounded event page. To inspect older events,
 pass the `next_event_before_sequence` cursor from the projection source and
