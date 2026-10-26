@@ -9,6 +9,7 @@ processes or mutates state. Absence of a grant never becomes permission.
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 from . import claims as claims_module
@@ -56,6 +57,8 @@ MUTATING_ACTIONS = ("write", "mutate", "execute", "retire")
 # the authenticated authorization, not a reason to ask for another approval.
 ESCALATION_ACTIONS = ("delete",)
 CLAIM_REQUIRED_ACTIONS = ("delegate", "merge", "publish", "retire")
+CLAIM_CONFLICT_SCHEMA = "mncs.environment.authority-claim-conflict/1"
+_EVIDENCE_IDENTIFIER = re.compile(r"[A-Za-z0-9:._-]{1,160}")
 
 
 def build_context(
@@ -102,11 +105,52 @@ def _holder_list(holders: dict[str, Any], repo: str) -> list[dict[str, Any]]:
             scope = dict(item.get("scope") or {})
             scope.setdefault("kind", item.get("scope_kind", "repository"))
             scope.setdefault("repository", repo)
-            normalized.append({
+            holder = {
                 "session_id": str(item.get("session_id", "")),
                 "scope": scope,
-            })
+            }
+            claim_id = item.get("claim_id")
+            if isinstance(claim_id, str) and claim_id:
+                holder["claim_id"] = claim_id
+            normalized.append(holder)
     return normalized
+
+
+def _scope_evidence(scope: dict[str, Any], repository: str) -> dict[str, Any]:
+    """Return bounded, repository-relative scope facts for denial provenance."""
+    kind = scope.get("kind")
+    if kind not in {"repository", "worktree", "paths"}:
+        kind = "repository"
+    result: dict[str, Any] = {
+        "kind": kind,
+        "repository": repository,
+        "exclusive": bool(scope.get("exclusive", kind == "repository")),
+    }
+    branch = scope.get("branch")
+    if (isinstance(branch, str) and branch and len(branch) <= 160
+            and "\x00" not in branch and not branch.startswith("/")):
+        result["branch"] = branch
+    # Checkouts are intentionally omitted: they are absolute, machine-local
+    # paths. Stable checkout identities can distinguish linked worktrees
+    # without persisting those paths into session evidence.
+    for key in (
+        "checkout_identity", "git_common_directory_identity", "manifest_identity",
+    ):
+        value = scope.get(key)
+        if isinstance(value, str) and _EVIDENCE_IDENTIFIER.fullmatch(value):
+            result[key] = value
+    paths = scope.get("paths")
+    if isinstance(paths, list):
+        safe_paths = [
+            path for path in paths
+            if isinstance(path, str) and path and len(path) <= 240
+            and "\x00" not in path and "\\" not in path and not path.startswith("/")
+            and not any(part in {"", ".", ".."} for part in path.split("/"))
+        ]
+        result["paths"] = safe_paths[:8]
+        if len(safe_paths) > 8:
+            result["paths_omitted"] = len(safe_paths) - 8
+    return result
 
 
 def repository_facts_for_snapshot(
@@ -277,7 +321,7 @@ def evaluate(
     claims: dict[str, Any] | None = None,
     repo_facts: dict[str, dict[str, Any]] | None = None,
     scope: dict[str, Any] | None = None,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Return {verdict: allow|deny|escalate, reason} for one requested action.
 
     Ownership rule for mutation: naming a repository in intent is not
@@ -371,10 +415,24 @@ def evaluate(
         conflict = claims_module.scopes_conflict(
             requested or {}, other.get("scope") or {"kind": "repository"})
         if conflict is not None:
+            blocking_claim: dict[str, Any] = {
+                "session_id": other["session_id"],
+                "scope": _scope_evidence(other.get("scope") or {}, repo),
+            }
+            claim_id = other.get("claim_id")
+            if isinstance(claim_id, str) and claim_id:
+                blocking_claim["claim_id"] = claim_id
             return {
                 "verdict": "deny",
                 "reason": (f"{target} overlaps scope claimed by another session "
                            f"({other['session_id']}): {conflict}"),
+                "claim_conflict": {
+                    "schema_version": CLAIM_CONFLICT_SCHEMA,
+                    "repository": repo,
+                    "conflict_reason": conflict,
+                    "requested_scope": _scope_evidence(requested or {}, repo),
+                    "blocking_claim": blocking_claim,
+                },
             }
     if repo in context.get("protected_repositories", []) and action in (
         "write",

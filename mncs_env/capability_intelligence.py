@@ -3021,9 +3021,12 @@ def _compact_projection(
             key: _short_text(item.get(key), 160)
             for key in (
                 "identity", "action", "outcome_status", "reason_class", "repository",
+                "claim_conflict_evidence_status",
             )
             if isinstance(item.get(key), str)
         }
+        if isinstance(item.get("claim_conflict"), dict):
+            compact_item["claim_conflict"] = item["claim_conflict"]
         reference = item.get("event_reference")
         if isinstance(reference, dict):
             compact_item["event_reference"] = {
@@ -3045,6 +3048,7 @@ def _compact_projection(
             for key in (
                 "identity", "status", "subsystem", "action", "reason_class",
                 "repository", "recurrence_scope", "causal_claim",
+                "claim_conflict_evidence_status",
             )
             if isinstance(item.get(key), str)
         }
@@ -3055,6 +3059,19 @@ def _compact_projection(
             compact_item["interpretation"] = _short_text(
                 item["interpretation"], 256,
             )
+        conflict_reasons = item.get("conflict_reasons")
+        if isinstance(conflict_reasons, list):
+            compact_item["conflict_reasons"] = [
+                _short_text(reason, 160)
+                for reason in conflict_reasons[:4]
+                if isinstance(reason, str)
+            ]
+        blockers = item.get("blocking_claims")
+        if isinstance(blockers, list):
+            compact_item["blocking_claims"] = [
+                blocker for blocker in blockers[:4]
+                if isinstance(blocker, dict)
+            ]
         references = item.get("supporting_events")
         if isinstance(references, list):
             compact_item["supporting_events"] = [
@@ -8153,6 +8170,101 @@ def _authority_denial_reason_class(reason: Any) -> str:
                  if fragment in normalized), "other-denial")
 
 
+def _authority_conflict_scope(
+    value: Any, repository: str,
+) -> dict[str, Any] | None:
+    """Validate the bounded, path-sanitized scope attached to a denial."""
+    if not isinstance(value, dict) or value.get("repository") != repository:
+        return None
+    kind = value.get("kind")
+    if kind not in {"repository", "worktree", "paths"}:
+        return None
+    result: dict[str, Any] = {
+        "kind": kind,
+        "repository": repository,
+        "exclusive": value.get("exclusive") is True,
+    }
+    branch = value.get("branch")
+    if (isinstance(branch, str) and branch and len(branch) <= 160
+            and "\x00" not in branch and not branch.startswith("/")):
+        result["branch"] = branch
+    identifier = re.compile(r"[A-Za-z0-9][A-Za-z0-9:._-]{0,159}")
+    for key in (
+        "checkout_identity", "git_common_directory_identity", "manifest_identity",
+    ):
+        item = value.get(key)
+        if isinstance(item, str) and identifier.fullmatch(item):
+            result[key] = item
+    paths = value.get("paths")
+    if isinstance(paths, list):
+        safe_paths = [
+            item for item in paths
+            if isinstance(item, str) and item and len(item) <= 240
+            and "\x00" not in item and "\\" not in item and not item.startswith("/")
+            and PurePosixPath(item).as_posix() == item
+            and not any(part in {"", ".", ".."} for part in item.split("/"))
+        ]
+        result["paths"] = safe_paths[:8]
+        omitted = value.get("paths_omitted", 0)
+        if type(omitted) is int and 0 < omitted <= 100_000:
+            result["paths_omitted"] = omitted
+        if len(safe_paths) > 8:
+            result["paths_omitted"] = result.get("paths_omitted", 0) + len(safe_paths) - 8
+    return result
+
+
+def _authority_claim_conflict(
+    value: Any, repository: str | None,
+) -> dict[str, Any] | None:
+    """Validate structured authority evidence without exposing checkout paths."""
+    if not isinstance(value, dict):
+        return None
+    if value.get("schema_version") != authority_module.CLAIM_CONFLICT_SCHEMA:
+        return None
+    conflict_repository = value.get("repository")
+    if (not isinstance(conflict_repository, str) or not conflict_repository
+            or len(conflict_repository) > 160
+            or (repository is not None and conflict_repository != repository)):
+        return None
+    reasons = {
+        "repository-wide scope overlaps every checkout",
+        "repository-relative paths overlap",
+        "same checkout with overlapping paths",
+        "shared branch with overlapping paths across checkouts",
+    }
+    conflict_reason = value.get("conflict_reason")
+    if conflict_reason not in reasons:
+        return None
+    requested_scope = _authority_conflict_scope(
+        value.get("requested_scope"), conflict_repository,
+    )
+    blocker = value.get("blocking_claim")
+    if not isinstance(blocker, dict):
+        return None
+    blocker_session = blocker.get("session_id")
+    identifier = re.compile(r"[A-Za-z0-9][A-Za-z0-9:._-]{0,159}")
+    if not isinstance(blocker_session, str) or not identifier.fullmatch(blocker_session):
+        return None
+    blocker_scope = _authority_conflict_scope(
+        blocker.get("scope"), conflict_repository,
+    )
+    if requested_scope is None or blocker_scope is None:
+        return None
+    conflict: dict[str, Any] = {
+        "repository": conflict_repository,
+        "conflict_reason": conflict_reason,
+        "requested_scope": requested_scope,
+        "blocking_claim": {
+            "session_id": blocker_session,
+            "scope": blocker_scope,
+        },
+    }
+    claim_id = blocker.get("claim_id")
+    if isinstance(claim_id, str) and identifier.fullmatch(claim_id):
+        conflict["blocking_claim"]["claim_id"] = claim_id
+    return conflict
+
+
 def _resource_sample_payload(value: Any) -> tuple[dict[str, Any] | None, str | None]:
     """Select the privacy-minimized, bounded fields from one Monitor sample."""
     if not isinstance(value, dict) or value.get("schema") != SYSTEM_RESOURCE_SAMPLE_SCHEMA:
@@ -8942,17 +9054,30 @@ def _session_activity(
             authority_module.repository_for_target(target, snapshot_facts)
             if isinstance(target, str) and target else None
         )
-        denial_records.append({
+        reason_class = _authority_denial_reason_class(reason)
+        claim_conflict = _authority_claim_conflict(
+            payload.get("claim_conflict"), repository,
+        )
+        denial = {
             "identity": "authdeny_" + digest_hex({
                 "session_id": session.session_id,
                 "event": reference["identity"],
             }, length=16),
             "action": action,
             "outcome_status": "denied",
-            "reason_class": _authority_denial_reason_class(reason),
+            "reason_class": reason_class,
+            "claim_conflict_evidence_status": (
+                "recorded" if claim_conflict is not None else (
+                    "not-recorded" if reason_class == "overlapping-claim"
+                    else "not-applicable"
+                )
+            ),
             **({"repository": repository} if repository else {}),
             "event_reference": reference,
-        })
+        }
+        if claim_conflict is not None:
+            denial["claim_conflict"] = claim_conflict
+        denial_records.append(denial)
     authority_denials = denial_records[:MAX_SESSION_ACTIVITY_AUTHORITY_DENIALS]
     authority_denials_omitted = max(0, len(denial_records) - len(authority_denials))
     denial_groups: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
@@ -8994,6 +9119,63 @@ def _session_activity(
                 )[:8]
             ],
         }
+        if reason_class == "overlapping-claim":
+            recorded_conflicts = [
+                item["claim_conflict"] for item in group
+                if isinstance(item.get("claim_conflict"), dict)
+            ]
+            candidate["claim_conflict_evidence_status"] = (
+                "recorded-for-all-denials"
+                if len(recorded_conflicts) == len(group) else (
+                    "partially-recorded" if recorded_conflicts
+                    else "not-recorded"
+                )
+            )
+            if len(recorded_conflicts) == len(group):
+                candidate["interpretation"] = (
+                    "Structured requested and blocking scopes were recorded for "
+                    "every denial in this session window. Current claim liveness, "
+                    "whether the overlap required blocking, and broader cause "
+                    "remain unestablished."
+                )
+            elif recorded_conflicts:
+                candidate["interpretation"] = (
+                    "Structured requested and blocking scopes were recorded for "
+                    "some denials in this session window; older records lack "
+                    "those details. Current claim liveness, whether the overlap "
+                    "required blocking, and broader cause remain unestablished."
+                )
+            blockers: dict[tuple[str, str], dict[str, Any]] = {}
+            for conflict_record in recorded_conflicts:
+                blocker = conflict_record.get("blocking_claim")
+                if not isinstance(blocker, dict):
+                    continue
+                blocker_session = blocker.get("session_id")
+                blocker_claim_id = blocker.get("claim_id")
+                if not isinstance(blocker_session, str):
+                    continue
+                blocker_key = (
+                    str(blocker_claim_id or "claim-id-unavailable"),
+                    blocker_session,
+                )
+                summary = blockers.setdefault(blocker_key, {
+                    "session_id": blocker_session,
+                    "occurrence_count": 0,
+                    "scope": blocker.get("scope"),
+                })
+                if isinstance(blocker_claim_id, str):
+                    summary["claim_id"] = blocker_claim_id
+                summary["occurrence_count"] += 1
+            if blockers:
+                candidate["blocking_claims"] = list(blockers.values())[:4]
+            conflict_reasons = sorted({
+                item["claim_conflict"]["conflict_reason"]
+                for item in recorded_conflicts
+                if isinstance(item.get("claim_conflict"), dict)
+                and isinstance(item["claim_conflict"].get("conflict_reason"), str)
+            })
+            if conflict_reasons:
+                candidate["conflict_reasons"] = conflict_reasons[:4]
         if repository != "repository-unavailable":
             candidate["repository"] = repository
         authority_denial_candidates.append(candidate)

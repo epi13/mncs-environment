@@ -329,9 +329,14 @@ reason class, and the source event reference. Raw target paths and free-form
 reason text are omitted. Repeated denial patterns in one session window appear
 as `authority_denial_candidates`; they identify an interaction to inspect but
 do not establish that a denial was inappropriate or that the environment
-caused it. Absolute checkout targets are attributed only through observed
-checkout paths, and merge or publish still requires a live claim covering the
-resolved checkout scope.
+caused it. New overlapping-claim denials also include bounded
+`claim_conflict` evidence: the blocking claim and session identities, the
+conflict rule, and both repository-relative scopes. Absolute checkout paths
+are omitted. Historical overlapping-claim events without this evidence report
+`claim_conflict_evidence_status: not-recorded`; the projection does not infer
+the missing claim or scope. Absolute checkout targets are attributed only
+through observed checkout paths, and merge or publish still requires a live
+claim covering the resolved checkout scope.
 
 Authority decisions distinguish the lease needed to continue from an owner
 approval. A missing exact claim for merge, publish, retire, or another scoped

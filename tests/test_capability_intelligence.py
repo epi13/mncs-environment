@@ -2396,6 +2396,111 @@ def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Pat
     assert "private-reason-echo" not in json.dumps(compact)
 
 
+def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_claim_conflict_activity",
+        "ses_environment_claim_conflict_activity",
+        "cmp_environment_claim_conflict_activity",
+    )
+    session, _ = _session(tmp_path, [record])
+    checkout = session.snapshot["selected_checkouts"]["mncs-environment"]["path"]
+    alias_checkout = str(Path(checkout) / ".worktrees" / "main-target")
+    session.snapshot["repo_facts"] = {"mncs-environment@main-target": {
+        "path": alias_checkout, "branch": "main",
+    }}
+    session.snapshot["workspace"]["repositories"] = [{
+        "name": "mncs-environment@main-target",
+        "path": alias_checkout,
+        "branch": "main",
+        "manifest_repository": "mncs-environment",
+        "worktree_of": "mncs-environment",
+    }]
+    conflict = {
+        "schema_version": "mncs.environment.authority-claim-conflict/1",
+        "repository": "mncs-environment",
+        "conflict_reason": "repository-relative paths overlap",
+        "requested_scope": {
+            "kind": "worktree",
+            "repository": "mncs-environment",
+            "checkout": alias_checkout,
+            "branch": "main",
+            "paths": ["mncs_env/sessions.py"],
+            "exclusive": False,
+        },
+        "blocking_claim": {
+            "claim_id": "claim:mncs-environment:paths:abc123",
+            "session_id": "ses_blocker",
+            "scope": {
+                "kind": "paths",
+                "repository": "mncs-environment",
+                "checkout": "/private/other-checkout",
+                "paths": ["mncs_env/sessions.py"],
+                "exclusive": False,
+            },
+        },
+    }
+    events = [
+        {
+            "identity": f"evt_claim_conflict_{sequence}",
+            "sequence": sequence,
+            "type": "authority.denied",
+            "payload": {
+                "action": "merge",
+                "target": alias_checkout,
+                "reason": (
+                    f"{alias_checkout} overlaps scope claimed by another session "
+                    "(ses_blocker): repository-relative paths overlap"
+                ),
+                **({"claim_conflict": conflict} if sequence < 43 else {}),
+            },
+        }
+        for sequence in (41, 42, 43)
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events), "events": events[-limit:],
+        "truncated": False, "next_before_sequence": None,
+    }
+
+    result = capability_intelligence.project(session)
+    activity = result["session_activity"]
+    assert activity["authority_denial_count"] == 3
+    by_sequence = {
+        item["event_reference"]["sequence"]: item
+        for item in activity["authority_denials"]
+    }
+    assert by_sequence[42]["claim_conflict_evidence_status"] == "recorded"
+    assert by_sequence[42]["claim_conflict"]["blocking_claim"]["claim_id"] == (
+        "claim:mncs-environment:paths:abc123"
+    )
+    assert "checkout" not in by_sequence[42]["claim_conflict"]["requested_scope"]
+    assert by_sequence[43]["claim_conflict_evidence_status"] == "not-recorded"
+    candidate = activity["authority_denial_candidates"][0]
+    assert candidate["occurrence_count"] == 3
+    assert candidate["claim_conflict_evidence_status"] == "partially-recorded"
+    assert candidate["blocking_claims"] == [{
+        "session_id": "ses_blocker",
+        "occurrence_count": 2,
+        "scope": {
+            "kind": "paths",
+            "repository": "mncs-environment",
+            "exclusive": False,
+            "paths": ["mncs_env/sessions.py"],
+        },
+        "claim_id": "claim:mncs-environment:paths:abc123",
+    }]
+    assert alias_checkout not in json.dumps(result)
+    assert "/private/other-checkout" not in json.dumps(result)
+
+    compact = capability_intelligence.project(session, max_result_bytes=10_000)
+    compact_activity = compact["session_activity"]
+    assert compact_activity["authority_denial_candidates"][0][
+        "claim_conflict_evidence_status"
+    ] == "partially-recorded"
+    assert alias_checkout not in json.dumps(compact)
+
+
 def test_session_activity_discloses_bounded_event_and_interaction_windows(
     tmp_path: Path,
 ) -> None:

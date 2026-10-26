@@ -4404,7 +4404,7 @@ class Session:
         target: str,
         repo_facts: dict[str, dict[str, Any]] | None = None,
         scope: dict[str, Any] | None = None,
-    ) -> dict[str, str]:
+    ) -> dict[str, Any]:
         observed_facts = authority_module.repository_facts_for_snapshot(
             self.snapshot, repo_facts,
         )
@@ -4576,8 +4576,15 @@ class Session:
             scope=normalized_scope,
         )
         if verdict["verdict"] == "deny":
-            self._emit("authority.denied", "environment",
-                       {"action": action, "target": target, "reason": verdict["reason"]})
+            denial = {
+                "action": action,
+                "target": target,
+                "reason": verdict["reason"],
+            }
+            claim_conflict = verdict.get("claim_conflict")
+            if isinstance(claim_conflict, dict):
+                denial["claim_conflict"] = claim_conflict
+            self._emit("authority.denied", "environment", denial)
         elif verdict["verdict"] == "escalate":
             self._emit("authority.escalated", "environment",
                        {"action": action, "target": target, "reason": verdict["reason"]})

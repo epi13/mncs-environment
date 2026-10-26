@@ -179,6 +179,120 @@ class AuthorityTests(unittest.TestCase):
             context_for(), action="write", target="mncs-atlas", session_id="ses_mine",
             claims={"mncs-atlas": "ses_other"}, repo_facts=CLEAN_FACTS)
         self.assertEqual(verdict["verdict"], "deny")
+        self.assertEqual(
+            verdict["claim_conflict"]["blocking_claim"]["session_id"],
+            "ses_other",
+        )
+        self.assertEqual(
+            verdict["claim_conflict"]["conflict_reason"],
+            "repository-wide scope overlaps every checkout",
+        )
+
+    def test_disjoint_claimed_paths_allow_concurrent_local_work(self) -> None:
+        requested = {
+            "kind": "worktree",
+            "checkout": "/workspace/mncs-atlas/.worktrees/second",
+            "branch": "campaign/second",
+            "paths": ["src/second.mn"],
+        }
+        blocker = {
+            "kind": "worktree",
+            "checkout": "/workspace/mncs-atlas/.worktrees/first",
+            "branch": "campaign/first",
+            "paths": ["src/first.mn"],
+        }
+        verdict = authority.evaluate(
+            context_for(), action="write", target="mncs-atlas",
+            session_id="ses_second",
+            claims={"mncs-atlas": [{
+                "claim_id": "claim:mncs-atlas:paths:first",
+                "session_id": "ses_first",
+                "scope": blocker,
+            }]},
+            repo_facts=CLEAN_FACTS,
+            scope=requested,
+        )
+
+        self.assertEqual(verdict["verdict"], "allow", verdict)
+
+    def test_competing_claim_denial_records_bounded_scope_evidence(self) -> None:
+        target_checkout = "/private/workspace/mncs-atlas/.worktrees/target"
+        requested = {
+            "kind": "worktree",
+            "checkout": target_checkout,
+            "branch": "campaign/target",
+            "checkout_identity": "checkout:" + "a" * 64,
+            "paths": ["src/shared.mn"],
+            "exclusive": False,
+        }
+        blocker = {
+            "kind": "paths",
+            "repository": "mncs-atlas",
+            "paths": ["src/shared.mn"],
+            "exclusive": False,
+        }
+        verdict = authority.evaluate(
+            context_for(), action="write", target="mncs-atlas",
+            session_id="ses_requester",
+            claims={"mncs-atlas": [{
+                "claim_id": "claim:mncs-atlas:paths:shared",
+                "session_id": "ses_blocker",
+                "scope": blocker,
+            }]},
+            repo_facts=DIRTY_FACTS,
+            scope=requested,
+        )
+
+        self.assertEqual(verdict["verdict"], "deny")
+        conflict = verdict["claim_conflict"]
+        self.assertEqual(
+            conflict["schema_version"], authority.CLAIM_CONFLICT_SCHEMA,
+        )
+        self.assertEqual(
+            conflict["conflict_reason"], "repository-relative paths overlap",
+        )
+        self.assertEqual(
+            conflict["blocking_claim"]["claim_id"],
+            "claim:mncs-atlas:paths:shared",
+        )
+        self.assertEqual(
+            conflict["blocking_claim"]["scope"]["paths"], ["src/shared.mn"],
+        )
+        self.assertNotIn(target_checkout, json.dumps(conflict))
+
+    def test_session_check_persists_claim_conflict_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(
+                Path(directory),
+                intent={
+                    "goal": "edit an isolated source path",
+                    "repositories": ["mncs-atlas"],
+                },
+            )
+            session.snapshot["claim_holders"]["mncs-atlas"] = [{
+                "claim_id": "claim:mncs-atlas:paths:shared",
+                "session_id": "ses_blocker",
+                "scope": {
+                    "kind": "paths",
+                    "repository": "mncs-atlas",
+                    "paths": ["src/shared.mn"],
+                    "exclusive": False,
+                },
+            }]
+            with mock.patch.object(session, "_refresh_holders"):
+                verdict = session.check(
+                    action="write",
+                    target="mncs-atlas/src/shared.mn",
+                    repo_facts=DIRTY_FACTS,
+                )
+
+            self.assertEqual(verdict["verdict"], "deny")
+            event = session._log()[-1]
+            self.assertEqual(event["type"], "authority.denied")
+            self.assertEqual(
+                event["payload"]["claim_conflict"]["blocking_claim"]["claim_id"],
+                "claim:mncs-atlas:paths:shared",
+            )
 
     def test_releasing_claim_changes_authority(self) -> None:
         before = authority.evaluate(

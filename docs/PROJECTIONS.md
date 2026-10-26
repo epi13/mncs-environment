@@ -350,12 +350,17 @@ remain visible in the separate invalid count.
 The selected page can also expose bounded `authority_denials`: action,
 observed repository when resolvable, normalized reason class, and the exact
 source event reference. The projection omits raw target paths and free-form
-reason text. A repeated pattern is an investigation candidate scoped to this
-session window; it does not establish that the denied action was appropriate,
-that the environment caused it, or that the pattern recurs across sessions.
-For absolute targets, repository attribution uses observed checkout paths.
-Merge and publish authorization still requires a live claim covering the
-resolved scope.
+reason text. New overlapping-claim denials also carry `claim_conflict` evidence
+with the blocking claim and session identities, conflict rule, and bounded
+repository-relative requested and blocking scopes. Absolute checkout paths
+are omitted. Older overlapping-claim events without structured evidence are
+marked `claim_conflict_evidence_status: not-recorded`; their missing blocker
+and scopes are not reconstructed. Repeated patterns remain investigation
+candidates scoped to the selected session window. They do not establish that a
+denial was inappropriate, that the environment caused it, or that the pattern
+recurs across sessions. For absolute targets, repository attribution uses
+observed checkout paths. Merge and publish authorization still requires a live
+claim covering the resolved scope.
 
 The same session activity view exposes up to four newest successful
 `mncs-system-monitor:system-resource-sample` artifacts, one per binding. The
