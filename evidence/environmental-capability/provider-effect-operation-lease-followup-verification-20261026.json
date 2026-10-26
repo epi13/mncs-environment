@@ -1,0 +1,113 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_provider_effect_claimless_proposal_write_verification_20261026",
+  "captured_at": "2026-10-26T22:26:45Z",
+  "measurement_basis": "targeted-environment-session-invocation-test-writing-to-real-linked-git-worktree",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_alignment_status": "the persisted WorkIntent predates the current environmental capability campaign objective",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_309fd6412f29330f",
+    "campaign_evidence_count_before_recording": 83
+  },
+  "observation": {
+    "kind": "environmental-provider-effect-claimless-concurrent-proposal-write-verification",
+    "source_interface": "MNCS Environment Session.invoke, selected-worktree preflight, and operation-scoped checkout lock",
+    "request": {
+      "implementation_commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "verification_commit": "174065964d2c4593577dd2240bf9bf37ebd4b733",
+      "test": "SessionTests.test_provider_effects_serialize_on_selected_worktree_without_claim",
+      "fixture": "two independent Environment session objects invoke a mocked provider against one actual temporary linked Git worktree",
+      "persistent_claim_required": false
+    },
+    "outcome": {
+      "compatible_concurrent_work": {
+        "session_objects": 2,
+        "same_selected_linked_worktree": true,
+        "separate_proposal_paths": true,
+        "maximum_provider_concurrency": 1,
+        "invocation_results": ["ok", "ok"],
+        "both_proposal_files_present_with_expected_contents": true,
+        "persistent_claims_acquired": false
+      },
+      "verification": {
+        "command": "PYTHONPATH=.:tests python3 -m unittest test_environment.SessionTests.test_provider_effects_serialize_on_selected_worktree_without_claim",
+        "status": "passed",
+        "passed": 1,
+        "failed": 0
+      },
+      "interpretation": "This exercises actual file creation through Session.invoke in an isolated temporary linked worktree. The provider executor remains a test double, so this does not establish behavior of an external provider, independent-agent discovery, lower coordination overhead, or conflict reconciliation for overlapping edits."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "prs_f117146a6f28e4dd",
+    "title": "Manifest verification commands cannot execute under session authority in dirty/foreign checkouts",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment provider effect eligibility and verification",
+    "owner": "mncs-environment (authority/verification effects); owning providers (test contracts)",
+    "basis": "The source pressure registry records a prior dirty/off-branch verification invocation that required a persistent claim and fell back to direct tests. This test verifies a claimless Environment invocation path on a selected linked worktree; it does not repeat the historical agent encounter.",
+    "recurrence": "one prior session in the source registry; cross-session system recurrence is not established",
+    "actionable_recommendation": "Use current writable rights, exact selected-worktree identity, a fresh preflight, and bounded operation-scoped serialization for Environment-mediated effects without requiring persistent component ownership.",
+    "not_measured": [
+      "external provider mutation through the new path",
+      "conflicting modifications to the same path",
+      "direct shell or Git operations outside Environment mediation",
+      "independent-agent discoverability or adoption",
+      "whether authorization-related tool calls decline in subsequent work"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_selected_worktree_concurrent_provider_write_test_1740659",
+      "kind": "committed-concurrency-and-interruption-verification-tests",
+      "repository": "mncs-environment",
+      "commit": "174065964d2c4593577dd2240bf9bf37ebd4b733",
+      "path": "tests/test_environment.py",
+      "sha256": "7c292a4626af8859a58ad7cf2e07ab25122d4b81b2f2172b366758febd536ff8"
+    },
+    {
+      "identity": "mncs_environment_operation_scoped_provider_effect_lease_311164a",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "mncs_env/sessions.py",
+      "sha256": "6f68e6a5ffc5449c7aa6b93233747aa0102c38e4bae9c8095baff5db7b539f9d"
+    },
+    {
+      "identity": "mncs_environment_checkout_operation_lease_311164a",
+      "kind": "committed-operation-lease-implementation",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "mncs_env/workspace.py",
+      "sha256": "2a1260fde28a43fcbb122e5a8026e426012998cb3337dd405438d90630f396f7"
+    },
+    {
+      "identity": "prs_f117146a6f28e4dd",
+      "kind": "existing-pressure-registry-record",
+      "repository": "mncs-environment",
+      "commit": "311164ab446f72b40f5f0d52915c24ca29036179",
+      "path": "pressures/registry.json",
+      "sha256": "22eb64f1e897adfc521840c305b00ab5fe4c8aaa1cbc598ccbf9cce818091807"
+    }
+  ],
+  "not_measured": [
+    "a live non-test agent using the path",
+    "the external provider's behavior under concurrent work",
+    "resolution or rejection of incompatible overlapping modifications",
+    "authorization and coordination overhead after this change",
+    "long-term recurrence or effectiveness"
+  ]
+}
