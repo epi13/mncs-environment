@@ -1,0 +1,118 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_source_registration_improvement_validated_20261026",
+  "captured_at": "2026-10-26T03:42:00Z",
+  "measurement_basis": "committed-correction-integrity-change-targeted-regression-and-live-projection",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve how effectively MNCS language, compiler, tooling, and environment serve and potentiate agents through evidence from real development.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_d354e135f724089a"
+    }
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "pressure_identity": "ph_environment_eci_correction_source_registration",
+      "implementation_commit": "2bca5ce0305ad9d6ab38982075e17453d8220a1f",
+      "verification_observation_identity": "ev_environment_eci_correction_source_registration_verification_validated_20261026",
+      "live_projection_identity": "eci_a4e363910f8d6bbb"
+    },
+    "outcome": {
+      "implementation_change": "Correction validation now accepts a non-observation source whose exact content was verified by the bounded read-only workspace lookup even when it is absent from the selected campaign evidence page. The projection retains page-local registration status separately from content integrity.",
+      "implementation_scope": "mncs_env.capability_intelligence.project correction replacement validation",
+      "observed_after_change": {
+        "campaign_checkpoint_id": "chk_441534e7cb9a2a4c",
+        "campaign_evidence_count": 29,
+        "evidence_page_offset": 0,
+        "evidence_page_limit": 4,
+        "correction_status": "applied-to-verified-target",
+        "corrections_applied_count": 1,
+        "corrections_unverified_count": 0,
+        "accountability_projection_status": "linked-source-context",
+        "verified_exact_shared_source_pointer": "MNCS-TEST-P-001",
+        "native_capability_identity": "mncs.std.process.v1",
+        "causal_relation_status": "not-established",
+        "native_migration_readiness": "not-established"
+      },
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The live page shows that the prior exact correction and native-capability source link now resolve. It does not establish that the pressure caused a specific host boundary, that agents used the native API, or that migration is ready."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_correction_source_registration",
+    "title": "Page-local evidence registration can mask independently verified correction sources",
+    "category": "environmental-observation",
+    "subsystem": "MNCS Environment campaign correction validation and capability-accountability projection",
+    "owner": "mncs-environment",
+    "basis": "The authenticated page-zero projection rejected one correction while its P-001 replacement source was independently digest-verified from a read-only workspace checkout and explicitly absent only from the selected campaign evidence page.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Keep page-local registration separate from content integrity: allow a non-observation replacement source when its exact blob is independently verified through bounded read-only workspace access, while preserving both statuses in the projection.",
+    "not_measured": [
+      "how often other append-only corrections use sources absent from their selected campaign pages",
+      "whether an agent relied on the rejected correction or missing accountability link",
+      "whether this behavior occurs in other projection or repository workflows",
+      "cross-session recurrence or long-term improvement effectiveness"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_correction_source_registration_validated",
+    "addresses_hypothesis_identity": "ph_environment_eci_correction_source_registration",
+    "implementation_reference": {
+      "identity": "mncs_environment_accept_verified_campaign_external_correction_source_2bca5ce",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "2bca5ce0305ad9d6ab38982075e17453d8220a1f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "cfd8c9a0d767d4536d1fcbf99869f946b9b4f125b0014d1b270c8def534dcdd8"
+    },
+    "verification_observation_identity": "ev_environment_eci_correction_source_registration_verification_validated_20261026",
+    "subsequent_observation_identity": null,
+    "basis": "The validator distinguishes campaign-page registration from independently verified source content. A focused regression covers an exact digest-verified source absent from the page, and the authenticated live projection applies the prior correction and exposes the native-capability source relationship.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "whether later agents discover or use the linked capability",
+      "whether later campaigns encounter the same correction pattern",
+      "whether this change improves migration readiness or changes host implementation ownership",
+      "long-term behavior across other source kinds and workspace configurations"
+    ]
+  },
+  "measurement_limits": [
+    "The live projection covers a bounded evidence page and has partial status.",
+    "The correction establishes exact provenance and source integrity, not causal blocking or implementation ownership.",
+    "No subsequent independent session has established lasting effectiveness."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_accept_verified_campaign_external_correction_source_2bca5ce",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "2bca5ce0305ad9d6ab38982075e17453d8220a1f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "cfd8c9a0d767d4536d1fcbf99869f946b9b4f125b0014d1b270c8def534dcdd8"
+    },
+    {
+      "identity": "mncs_environment_test_verified_campaign_page_external_source_2bca5ce",
+      "kind": "committed-test-source",
+      "repository": "mncs-environment",
+      "commit": "2bca5ce0305ad9d6ab38982075e17453d8220a1f",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "6636ead10f2c81312610dfa2f0ee03b6cf0fc5c7b797d6e130a864388e677380"
+    },
+    {
+      "identity": "mncs_environment_docs_correction_registration_integrity_2bca5ce",
+      "kind": "committed-documentation-source",
+      "repository": "mncs-environment",
+      "commit": "2bca5ce0305ad9d6ab38982075e17453d8220a1f",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "dede4858806962b9b68ce5ff949007bef12ffbabd7950c6077810d1210a055d3"
+    }
+  ]
+}

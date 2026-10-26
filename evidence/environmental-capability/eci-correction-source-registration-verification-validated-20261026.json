@@ -1,0 +1,136 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_source_registration_verification_validated_20261026",
+  "captured_at": "2026-10-26T03:42:00Z",
+  "measurement_basis": "targeted-regression-suite-and-post-push-authenticated-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve how effectively MNCS language, compiler, tooling, and environment serve and potentiate agents through evidence from real development.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "latest_checkpoint": {
+      "identity": "chk_d354e135f724089a"
+    }
+  },
+  "observation": {
+    "kind": "environmental-improvement-verification",
+    "source_interface": "MNCS Environment environmental-capability projection and existing test suite",
+    "request": {
+      "implementation_commit": "2bca5ce0305ad9d6ab38982075e17453d8220a1f",
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 1 --evidence-limit 4 --evidence-offset 0",
+      "test_commands": [
+        "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py tests/test_native_capability_relationships.py",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "python -m py_compile mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "tests": {
+        "passed": 130,
+        "failed": 0,
+        "elapsed_seconds": 4.89
+      },
+      "ruff": "passed",
+      "python_syntax_compilation": "passed",
+      "git_diff_check": "passed",
+      "post_push_projection": {
+        "identity": "eci_a4e363910f8d6bbb",
+        "campaign_checkpoint_id": "chk_441534e7cb9a2a4c",
+        "campaign_evidence_count": 29,
+        "status": "partial",
+        "evidence_page_offset": 0,
+        "evidence_page_limit": 4,
+        "observation_records_verified": 4,
+        "observation_records_unavailable": 0,
+        "record_corrections_applied_count": 1,
+        "record_corrections_unverified_count": 0,
+        "target_correction_status": "applied-to-verified-target",
+        "target_source_registration_status": "not-present-in-selected-campaign-evidence-window",
+        "target_source_integrity_status": "workspace-read-only-content-integrity-verified",
+        "capability_accountability_links": {
+          "status": "linked-source-context",
+          "exact_shared_pointer_match_count": 2,
+          "link_count": 1,
+          "unverified_shared_pointer_match_count": 0,
+          "links_truncated": true,
+          "relationship_kind": "exact-shared-source-pointer",
+          "owner_audit_identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+          "native_correspondence_identity": "ev_environment_native_process_capability_correspondence_20261025",
+          "native_capability_identity": "mncs.std.process.v1",
+          "target_pressure_identity": "MNCS-TOOLING-B665F138D324",
+          "shared_source_identity": "MNCS-TEST-P-001",
+          "shared_source_integrity": "verified-in-both-linked-observations",
+          "causal_relation_status": "not-established",
+          "native_migration_readiness": "not-established",
+          "agent_usage_status": "not-measured"
+        },
+        "session_context_delivery_status": "no-response-summary-in-selected-window",
+        "agent_receipt_status": "not-established"
+      },
+      "interpretation": "After push to main, the prior exact owner-audit correction applies. Its P-001 source remains absent from this campaign evidence page while its content integrity is independently verified. The existing projection then returns a verified exact source link between the owner audit and the mncs.std.process.v1 correspondence. The projection is partial and reports a truncated link set; the displayed link establishes traceability only.",
+      "effectiveness_assessment": "not-assessed",
+      "subsequent_observation_identity": null
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_correction_source_registration",
+    "title": "Page-local evidence registration can mask independently verified correction sources",
+    "category": "environmental-observation",
+    "subsystem": "MNCS Environment campaign correction validation and capability-accountability projection",
+    "owner": "mncs-environment",
+    "basis": "The authenticated page-zero projection rejected one correction while its P-001 replacement source was independently digest-verified from a read-only workspace checkout and explicitly absent only from the selected campaign evidence page.",
+    "recurrence": "not-established",
+    "actionable_recommendation": "Keep page-local registration separate from content integrity: allow a non-observation replacement source when its exact blob is independently verified through bounded read-only workspace access, while preserving both statuses in the projection.",
+    "not_measured": [
+      "how often other append-only corrections use sources absent from their selected campaign pages",
+      "whether an agent relied on the rejected correction or missing accountability link",
+      "whether this behavior occurs in other projection or repository workflows",
+      "cross-session recurrence or long-term improvement effectiveness"
+    ]
+  },
+  "measurement_limits": [
+    "The 130 passing tests verify selected modules and do not establish whole-system behavior.",
+    "The projection is a bounded page with partial status and links_truncated=true.",
+    "A source-pointer link does not establish causal responsibility, agent discovery or use, or safe host-code migration.",
+    "No later independent session or post-change workload is available to establish lasting effectiveness."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_accept_verified_campaign_external_correction_source_2bca5ce",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "2bca5ce0305ad9d6ab38982075e17453d8220a1f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "cfd8c9a0d767d4536d1fcbf99869f946b9b4f125b0014d1b270c8def534dcdd8"
+    },
+    {
+      "identity": "mncs_environment_test_verified_campaign_page_external_source_2bca5ce",
+      "kind": "committed-test-source",
+      "repository": "mncs-environment",
+      "commit": "2bca5ce0305ad9d6ab38982075e17453d8220a1f",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "6636ead10f2c81312610dfa2f0ee03b6cf0fc5c7b797d6e130a864388e677380"
+    },
+    {
+      "identity": "ev_environment_native_userland_accountability_correction_20261025",
+      "kind": "environmental-observation-correction-source",
+      "repository": "mncs-environment",
+      "commit": "ee6bf1db5d4d6f5d5c92add08d819a5ab3a1f64b",
+      "path": "evidence/environmental-capability/native-userland-accountability-correction-20261025.json",
+      "sha256": "556007f5f8ec9c713f931626d122b516239f4f489fff55079cf41f7b5b3511d5"
+    },
+    {
+      "identity": "MNCS-TEST-P-001",
+      "kind": "repository-owner-runtime-and-tooling-pressure",
+      "repository": "mncs-test",
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "path": "pressures/MNCS-TEST-P-001.json",
+      "sha256": "38cb0494d2362b9b9b760ab3c76a4f27c6bd6595ca337b15765564e8ad0975de"
+    }
+  ]
+}
