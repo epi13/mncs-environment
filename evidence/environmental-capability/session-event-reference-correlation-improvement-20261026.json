@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_event_join_improvement_20261026",
+  "captured_at": "2026-10-26T08:22:33Z",
+  "measurement_basis": "committed-projection-change-linked-to-authentic-session-evidence-and-independent-tests",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_session_event_reference_correlation_20261026",
+      "implementation_commit": "bcfa8e247becf0dc677c03aee0a1f7f93e6275a9",
+      "verification_observation_identity": "ev_environment_session_event_join_verification_20261026",
+      "subsequent_observation_identity": "ev_environment_session_event_join_readback_20261026"
+    },
+    "outcome": {
+      "implementation_change": "The projection resolves selected activity event identities against the existing RPC, authority-denial, and claim-recovery records and reports matched categories without treating a missing mixed-view event as absent from complete history.",
+      "verified_change": "The complete capability-intelligence test module passed 112 tests, including positive and partial joins for RPC, claim-recovery, and authority-denial records. A bounded live projection resolved the authentic recovery event to claim_recovery.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The live observation verifies that the relationship is now inspectable for this selected historical page. It does not establish cross-session recurrence, reduced coordination overhead, or subsequent agent behavior."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_701f8afcbd1b6c47",
+    "campaign_evidence_count_before_recording": 71,
+    "claim_ids": [
+      "claim:mncs-environment:paths:120912fd0f77",
+      "claim:mncs-environment:worktree:2d61988fa1d6"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": null,
+  "improvement_relation": {
+    "identity": "im_environment_session_event_reference_correlation_20261026",
+    "addresses_hypothesis_identity": "ph_environment_session_event_reference_correlation_20261026",
+    "implementation_reference": {
+      "identity": "mncs_environment_cross_category_activity_event_join_bcfa8e2",
+      "repository": "mncs-environment",
+      "commit": "bcfa8e247becf0dc677c03aee0a1f7f93e6275a9",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8204a162c5775bfd0edb17a1a3222a03df420986ff373e6aedc3dcf33377f5d5",
+      "kind": "committed-implementation"
+    },
+    "verification_observation_identity": "ev_environment_session_event_join_verification_20261026",
+    "subsequent_observation_identity": "ev_environment_session_event_join_readback_20261026",
+    "basis": "The source resolver now uses the event records the Environment already projects, and independent tests cover complete and partial joins. The follow-up live projection matched an authentic claim-recovery event from the selected bounded page.",
+    "not_measured": [
+      "cross-session recurrence",
+      "whether the unresolved link changed an agent decision",
+      "whether the join gap caused duplicated investigation or coordination work",
+      "long-term effect across different agents and models"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_cross_category_activity_event_join_bcfa8e2",
+      "repository": "mncs-environment",
+      "commit": "bcfa8e247becf0dc677c03aee0a1f7f93e6275a9",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8204a162c5775bfd0edb17a1a3222a03df420986ff373e6aedc3dcf33377f5d5",
+      "kind": "committed-implementation"
+    },
+    {
+      "identity": "mncs_environment_cross_category_activity_event_tests_bcfa8e2",
+      "repository": "mncs-environment",
+      "commit": "bcfa8e247becf0dc677c03aee0a1f7f93e6275a9",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "a0c74ada1797f0c753d7b7355180d33f928a26f93c526feb99d453004297fe4b",
+      "kind": "committed-regression-tests"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence",
+    "whether the unresolved link changed an agent decision",
+    "whether the join gap caused duplicated investigation or coordination work",
+    "long-term effect across different agents and models"
+  ]
+}

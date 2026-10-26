@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_event_join_pressure_20261026",
+  "captured_at": "2026-10-26T08:22:33Z",
+  "measurement_basis": "bounded-authenticated-session-projection-and-pre-change-source-inspection",
+  "observation": {
+    "kind": "environmental-event-reference-correlation-pressure",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "baseline_projection_identity": "eci_1f87a86f04eec06a",
+      "baseline_source_event_identity": "evt_281f329226ce8875",
+      "baseline_source_event_status": "unresolved-in-bounded-session-view",
+      "baseline_source_implementation_commit": "6830a20c7c003339dafdf0e6dac13e1126766a67"
+    },
+    "outcome": {
+      "observed_record": "The same bounded session activity projection exposed the referenced lease.recovered-and-acquired event under claim_recoveries, while environmental observation source resolution searched rpc_operations only.",
+      "interpretation": "The mismatch hid an already-projected coordination event from the evidence relationship. It was a projection correlation limitation, not evidence that the claim transition itself was invalid or unsuccessful.",
+      "analysis_limit": "One selected session projection was observed; cross-session recurrence and impacts on agent decisions are not established."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_701f8afcbd1b6c47",
+    "campaign_evidence_count_before_recording": 71,
+    "claim_ids": [
+      "claim:mncs-environment:paths:120912fd0f77",
+      "claim:mncs-environment:worktree:2d61988fa1d6"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_session_event_reference_correlation_20261026",
+    "title": "Environmental evidence references omit projected coordination events",
+    "category": "evidence-provenance-coverage",
+    "subsystem": "MNCS Environment capability-intelligence session activity correlation",
+    "owner": "mncs-environment",
+    "recurrence": "one-bounded-projection-reference;cross-session-recurrence-not-established",
+    "basis": "A recorded event identity remained unresolved although its claim-recovery record was present in the same selected session activity page. Source inspection confirmed that the join only searched RPC operation records.",
+    "actionable_recommendation": "Resolve recorded session event identities against existing bounded RPC, authority-denial, and claim-recovery projections, and expose the matched record category while keeping absent events unresolved when coverage is incomplete.",
+    "not_measured": [
+      "cross-session recurrence",
+      "whether the unresolved link changed an agent decision",
+      "whether the join gap caused duplicated investigation or coordination work",
+      "long-term effect across different agents and models"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_event_reference_resolver_before_6830a20",
+      "repository": "mncs-environment",
+      "commit": "6830a20c7c003339dafdf0e6dac13e1126766a67",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "09eb3737b4fd09a35f3b060d2375f3a89a6563dc690eee66c91ceee26a52a57c",
+      "kind": "pre-change-implementation"
+    },
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "projection_identity": "eci_1f87a86f04eec06a",
+      "event_identities": [
+        "evt_281f329226ce8875"
+      ]
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence",
+    "whether the unresolved link changed an agent decision",
+    "whether the join gap caused duplicated investigation or coordination work",
+    "long-term effect across different agents and models"
+  ]
+}
