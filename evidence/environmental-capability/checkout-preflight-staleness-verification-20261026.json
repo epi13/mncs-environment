@@ -1,0 +1,116 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_checkout_preflight_staleness_verification_20261026",
+  "captured_at": "2026-10-26T22:43:39Z",
+  "measurement_basis": "targeted-concurrent-session-and-environmental-projection-regressions",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_alignment_status": "the persisted WorkIntent predates the current environmental capability campaign objective",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Preserve evidence relating objectives, capabilities, verification, and subsequent consequences.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_661d1d98e417005b",
+    "campaign_evidence_count_before_recording": 89
+  },
+  "observation": {
+    "kind": "environmental-selected-checkout-stale-preflight-verification",
+    "source_interface": "MNCS Environment Session.invoke and environmental-capability session-activity projection",
+    "request": {
+      "implementation_commit": "34a44591dffc8068066164a63892bfc61cfe55ef",
+      "tests": [
+        "tests/test_environment.py::SessionTests.test_provider_effects_serialize_on_selected_worktree_without_claim",
+        "tests/test_capability_intelligence.py"
+      ],
+      "commands": [
+        "PYTHONPATH=.:tests python3 -m unittest test_environment.SessionTests.test_provider_effects_serialize_on_selected_worktree_without_claim",
+        "python3 -m pytest -q tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "stale_checkout_scenario": {
+        "method": "The test commits a file while entering the operation lease, after the first eligibility check and before the locked fresh check.",
+        "changed_field": "head",
+        "provider_invoked": false,
+        "capability_invocation_recorded": false,
+        "deferral_reason": "checkout-state-changed-since-preflight",
+        "both_preflight_event_references_recorded": true,
+        "persistent_claim_required": false
+      },
+      "compatible_concurrent_work": {
+        "independent_session_objects": 2,
+        "selected_checkout_shared": true,
+        "separate_uncommitted_output_paths": true,
+        "maximum_provider_concurrency": 1,
+        "both_results_succeeded": true,
+        "persistent_claims_acquired": false
+      },
+      "verification": {
+        "capability_intelligence_tests": "passed: 128",
+        "selected_worktree_session_test": "passed: 1",
+        "diff_check": "passed"
+      },
+      "projection_contract": "The capability-intelligence fixture verifies that a stale-state deferral requires valid initial and locked preflight references, preserves changed field names in the full and compact projection, and records that no provider operation executed.",
+      "interpretation_limit": "The projection assertion uses a bounded test fixture, not a live persisted stale-preflight event. The provider executor is a test double. This verifies the Environment contract and evidence projection, not independent-agent adoption, fewer coordination steps, external provider behavior, overlapping dirty-path conflict handling, or direct shell/Git fencing."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_checkout_preflight_staleness_20261026",
+    "title": "Selected-checkout state can change between eligibility and provider effect",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment selected-worktree provider effect preflight",
+    "owner": "mncs-environment",
+    "basis": "Supporting verification for the controlled regression; this record is not another operational incident.",
+    "recurrence": "one controlled test scenario; live operational recurrence not established",
+    "actionable_recommendation": "Compare bounded state at both preflight boundaries and preserve the deferral evidence when it changes.",
+    "not_measured": [
+      "live multi-agent race frequency",
+      "long-term impact on coordination overhead",
+      "semantic conflict resolution"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_checkout_state_preflight_implementation_34a4459",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "34a44591dffc8068066164a63892bfc61cfe55ef",
+      "path": "mncs_env/sessions.py",
+      "sha256": "1cd9dd18c2258344459c872ae6b198cbce69c53ab0cdb83e6960386937993420"
+    },
+    {
+      "identity": "mncs_environment_checkout_state_preflight_regression_34a4459",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "34a44591dffc8068066164a63892bfc61cfe55ef",
+      "path": "tests/test_environment.py",
+      "sha256": "a578ab7fd8c35b43f51a5c1ee72871bd0e982354db5e215a812c7796e1e48bc9"
+    },
+    {
+      "identity": "mncs_environment_stale_preflight_projection_regression_34a4459",
+      "kind": "committed-projection-regression-test",
+      "repository": "mncs-environment",
+      "commit": "34a44591dffc8068066164a63892bfc61cfe55ef",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "ac47b9994e56bb59c4257c2eafeffab456a9b57486ff4adf6e5a61c61cded421"
+    }
+  ],
+  "not_measured": [
+    "live incident recurrence or cross-session generality",
+    "external provider operation behavior",
+    "overlapping uncommitted-path conflict detection",
+    "direct shell or Git concurrency",
+    "independent-agent discoverability and use"
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_checkout_preflight_staleness_improvement_20261026",
+  "captured_at": "2026-10-26T22:43:39Z",
+  "measurement_basis": "committed-environment-change-linked-to-targeted-regressions",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_alignment_status": "the persisted WorkIntent predates the current environmental capability campaign objective",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Preserve provenance between environmental limitations, implementation, verification, and later observations.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_661d1d98e417005b",
+    "campaign_evidence_count_before_recording": 89
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment Session.invoke and environmental-capability session-activity projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_checkout_preflight_staleness_20261026",
+      "implementation_commit": "34a44591dffc8068066164a63892bfc61cfe55ef",
+      "verification_observation_identity": "ev_environment_checkout_preflight_staleness_verification_20261026",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "The Environment carries the initial bounded checkout observation through eligibility evidence. After acquiring the selected checkout's operation-scoped lock, it runs fresh eligibility again and compares checkout identity, branch, branch status, committed HEAD, and HEAD availability. A changed value emits effect.operation-deferred with both preflight event references and the changed fields, starts no provider, and records no capability invocation. The existing ECI session-activity projection validates and exposes these stale-state deferrals in both normal and compact output. Compatible separate uncommitted outputs remain serializable without a persistent claim; clean/dirty status alone is intentionally ignored.",
+      "verified_change": "The controlled regression changed HEAD between the initial and locked checks and observed a stale-state deferral before provider invocation. The same test retained successful serialized writes to separate paths through two unassigned session objects. All 128 capability-intelligence tests, the selected-worktree session test, and git diff --check passed.",
+      "effectiveness_assessment": "verified-stale-state-deferral-contract; real-world coordination effect not-assessed",
+      "interpretation_limit": "The test verifies a deliberate state-change scenario, not an independently observed agent race. Environment's advisory lock does not fence shell/Git changes outside its operation path. Same-path edits inside an already-dirty checkout remain unresolved. No reduction in live authorization interactions or coordination overhead has been measured."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_checkout_preflight_staleness_20261026",
+    "title": "Selected-checkout state can change between eligibility and provider effect",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment selected-worktree provider effect preflight",
+    "owner": "mncs-environment",
+    "basis": "The implementation addresses a controlled race scenario and retains explicit uncertainty about operational recurrence.",
+    "recurrence": "one controlled test scenario; live operational recurrence not established",
+    "actionable_recommendation": "Retain both preflight event references and defer when bounded checkout identity, branch, or committed HEAD changes.",
+    "not_measured": [
+      "cross-session or live recurrence",
+      "long-term coordination overhead",
+      "same-path edits in already-dirty worktrees",
+      "changes performed outside Environment mediation"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_checkout_preflight_staleness_20261026",
+    "addresses_hypothesis_identity": "ph_environment_checkout_preflight_staleness_20261026",
+    "implementation_reference": {
+      "identity": "mncs_environment_checkout_state_preflight_implementation_34a4459",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "34a44591dffc8068066164a63892bfc61cfe55ef",
+      "path": "mncs_env/sessions.py",
+      "sha256": "1cd9dd18c2258344459c872ae6b198cbce69c53ab0cdb83e6960386937993420"
+    },
+    "verification_observation_identity": "ev_environment_checkout_preflight_staleness_verification_20261026",
+    "subsequent_observation_identity": null,
+    "basis": "A targeted Environment regression exercised an intervening committed HEAD change and verified that the selected checkout operation is deferred before its provider runs; ECI regression coverage verifies that both preflight references and changed fields remain inspectable.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "frequency of live checkout races",
+      "independent-agent use or adoption",
+      "semantic resolution of conflicting modifications",
+      "whether future coordination effort declines"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_checkout_state_preflight_regression_34a4459",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "34a44591dffc8068066164a63892bfc61cfe55ef",
+      "path": "tests/test_environment.py",
+      "sha256": "a578ab7fd8c35b43f51a5c1ee72871bd0e982354db5e215a812c7796e1e48bc9"
+    },
+    {
+      "identity": "mncs_environment_stale_preflight_projection_regression_34a4459",
+      "kind": "committed-projection-regression-test",
+      "repository": "mncs-environment",
+      "commit": "34a44591dffc8068066164a63892bfc61cfe55ef",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "ac47b9994e56bb59c4257c2eafeffab456a9b57486ff4adf6e5a61c61cded421"
+    },
+    {
+      "identity": "mncs_environment_stale_preflight_projection_implementation_34a4459",
+      "kind": "committed-projection-implementation",
+      "repository": "mncs-environment",
+      "commit": "34a44591dffc8068066164a63892bfc61cfe55ef",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "0c6115ac4458dea2a146c7f32d87fc2ba98aeed8a2fd5441fcb2fa0055ac10a7"
+    }
+  ],
+  "not_measured": [
+    "actual production provider behavior during a live race",
+    "changes made outside Environment operations",
+    "overlapping dirty-path conflicts",
+    "cross-session reduction in coordination work"
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_checkout_preflight_staleness_pressure_20261026",
+  "captured_at": "2026-10-26T22:43:39Z",
+  "measurement_basis": "controlled-selected-worktree-race-regression",
+  "observation": {
+    "kind": "selected-checkout-state-can-change-between-eligibility-and-effect",
+    "source_interface": "MNCS Environment Session.check, Session.invoke, and selected-worktree operation lease",
+    "request": {
+      "scenario": "A committed HEAD change is injected between initial eligibility preflight and the fresh preflight held under the selected-checkout operation lock.",
+      "repository_state_change": "HEAD changes while the selected checkout identity remains fixed.",
+      "measurement_status": "controlled regression scenario; no live multi-agent occurrence was observed"
+    },
+    "outcome": {
+      "observed_limit": "The effect boundary needed an explicit relationship between initial eligibility evidence and checkout state observed again under the operation lock. Without that relationship, the environment could not explain whether an operation was still based on the checkout state first examined.",
+      "interpretation": "This is a consistency and accountability pressure in Environment-mediated provider effects, not evidence of a failed real-agent operation or a general authority denial.",
+      "actionable_opportunity": "Compare bounded checkout identity, branch, and committed HEAD fields across the two preflight events; defer when those fields differ and retain both references.",
+      "recurrence": "one controlled scenario in one test; operational and cross-session recurrence not established"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_alignment_status": "the persisted WorkIntent predates the current environmental capability campaign objective",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Preserve uncertainty, respect active work, and verify environmental changes independently.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_661d1d98e417005b",
+    "campaign_evidence_count_before_recording": 89
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_checkout_preflight_staleness_20261026",
+    "title": "Selected-checkout state can change between eligibility and provider effect",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment selected-worktree provider effect preflight",
+    "owner": "mncs-environment",
+    "basis": "A controlled regression changes the selected checkout's committed HEAD between the initial eligibility check and the locked fresh check. The scenario identifies state that should remain causally visible at the effect boundary; it does not establish that a live agent encountered this race.",
+    "recurrence": "one controlled test scenario; live operational recurrence not established",
+    "actionable_recommendation": "Retain both bounded preflight references and defer the provider effect when checkout identity, branch, or committed HEAD changes between them.",
+    "not_measured": [
+      "live multi-agent race frequency",
+      "overlapping edits within an already-dirty checkout",
+      "direct shell or Git changes outside Environment mediation",
+      "whether this safeguard reduces coordination work or improves long-term outcomes"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_checkout_state_preflight_implementation_34a4459",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "34a44591dffc8068066164a63892bfc61cfe55ef",
+      "path": "mncs_env/sessions.py",
+      "sha256": "1cd9dd18c2258344459c872ae6b198cbce69c53ab0cdb83e6960386937993420"
+    },
+    {
+      "identity": "mncs_environment_checkout_state_preflight_regression_34a4459",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "34a44591dffc8068066164a63892bfc61cfe55ef",
+      "path": "tests/test_environment.py",
+      "sha256": "a578ab7fd8c35b43f51a5c1ee72871bd0e982354db5e215a812c7796e1e48bc9"
+    }
+  ],
+  "not_measured": [
+    "an independently observed agent encounter",
+    "conflict resolution for overlapping changes",
+    "effects initiated outside Session.invoke",
+    "long-term environmental effectiveness"
+  ]
+}
