@@ -5305,6 +5305,109 @@ class Session:
         return sorted(observed, key=lambda item: (
             str(item.get("repository", "")), str(item.get("observed_path", ""))))[:64]
 
+    def _revalidate_selected_checkout_for_claim(
+        self, repository: str, *, scope: dict[str, Any] | None,
+        workspace_root: str | None,
+    ) -> None:
+        """Refresh stale selected-checkout bindings before an ordinary claim.
+
+        A branch or HEAD change in the same registered checkout is observable
+        state, not a reason to make the caller run a separate reconciliation
+        command. Revalidate capabilities and Rights before claim acquisition;
+        stable checkout identity must still match, and the ordinary claim
+        checks below remain authoritative for the requested scope.
+        """
+        selected_checkouts = self.snapshot.get("selected_checkouts")
+        selected = (
+            selected_checkouts.get(repository)
+            if isinstance(selected_checkouts, dict) else None
+        )
+        if (not isinstance(selected, dict)
+                or selected.get("source_ref") == "authenticated-scope-grant"):
+            return
+        if (not isinstance(selected.get("branch"), str)
+                or not isinstance(selected.get("head"), str)):
+            # Without a complete prior observation, this may be first-time
+            # checkout adoption rather than ordinary revision drift.
+            return
+        raw_path = selected.get("path")
+        root_value = workspace_root or (self.snapshot.get("workspace") or {}).get("root")
+        if not isinstance(raw_path, str) or not raw_path or not isinstance(root_value, str):
+            return
+        root = Path(root_value)
+        candidate = Path(raw_path)
+        if not candidate.is_absolute():
+            candidate = root / candidate
+        try:
+            candidate = workspace_module.resolve_control_workspace_alias(candidate)
+            root = workspace_module.resolve_control_workspace_alias(root)
+        except (OSError, ValueError, workspace_module.WorkspaceResolutionError):
+            return
+
+        if scope is not None:
+            if scope.get("kind") == "worktree":
+                requested_path = scope.get("checkout")
+                if not isinstance(requested_path, str) or not requested_path:
+                    return
+                requested = Path(requested_path)
+                if not requested.is_absolute():
+                    requested = root / requested
+                try:
+                    requested = workspace_module.resolve_control_workspace_alias(requested)
+                except (OSError, ValueError, workspace_module.WorkspaceResolutionError):
+                    return
+                if requested != candidate:
+                    return
+            elif scope.get("kind") not in {"paths"}:
+                return
+
+        try:
+            identity = workspace_module.verify_registered_checkout(
+                candidate,
+                repository=repository,
+                workspace_root=root,
+            )
+        except (OSError, TypeError, ValueError,
+                workspace_module.WorkspaceResolutionError):
+            return
+        for key in ("checkout_identity", "git_common_directory_identity"):
+            recorded = selected.get(key)
+            if not isinstance(recorded, str) or identity.get(key) != recorded:
+                # A replacement or re-registered checkout needs an explicit
+                # workspace observation; it is not a normal branch advance.
+                return
+
+        observed = workspace_module.inspect_repo(candidate, _refresh=True)
+        if (observed is None or observed.git_error
+                or observed.manifest_repository != repository
+                or (observed.head == selected.get("head")
+                    and observed.branch == selected.get("branch"))):
+            return
+
+        request_id = "req_claim_checkout_refresh_" + digest_hex({
+            "session_id": self.session_id,
+            "repository": repository,
+            "checkout_identity": identity.get("checkout_identity"),
+            "branch": observed.branch,
+            "head": observed.head,
+        }, length=24)
+        self.revalidate(
+            request_id=request_id,
+            request_operation="claims/acquire/revalidate-selected-checkout",
+            workspace_root=str(root),
+        )
+        refreshed_checkouts = self.snapshot.get("selected_checkouts")
+        refreshed = (
+            refreshed_checkouts.get(repository)
+            if isinstance(refreshed_checkouts, dict) else None
+        )
+        if (not isinstance(refreshed, dict)
+                or refreshed.get("branch") != observed.branch
+                or refreshed.get("head") != observed.head):
+            raise AuthorityDenied(
+                f"{repository} checkout changed during automatic Environment revalidation"
+            )
+
     def acquire_claim(
         self, repository: str, *, basis: str = claims_module.BASIS_EXPLICIT,
         reason: str = "", ttl_hours: int = 24,
@@ -5320,6 +5423,9 @@ class Session:
         # knowing a repository alias must not let a session reserve another
         # campaign's scope. Preserve idempotent readback after an ambiguous
         # publication even if the session's authority has since changed.
+        self._revalidate_selected_checkout_for_claim(
+            repository, scope=scope, workspace_root=workspace_root,
+        )
         prior_request = (
             any(
                 record.get("provenance", {}).get("operation_request_id") == request_id
@@ -6744,6 +6850,34 @@ class Session:
                     None,
                 )
                 if match is None:
+                    # Workspace discovery scans immediate repositories, while
+                    # a selected campaign checkout may be a registered Git
+                    # worktree nested beneath one. Use Git's already-observed
+                    # worktree registry to refresh that exact path instead of
+                    # marking it missing and forcing a manual reconcile.
+                    registered_worktree = next((
+                        worktree
+                        for item in workspace.get("repositories", [])
+                        if item.get("manifest_repository") == name
+                        for worktree in item.get("worktrees", [])
+                        if (isinstance(worktree, dict)
+                            and Path(str(worktree.get("path", ""))).resolve()
+                            == selected_path.resolve())
+                    ), None)
+                    if registered_worktree is not None:
+                        exact = workspace_module.inspect_repo(
+                            selected_path, _refresh=True,
+                        )
+                        if (exact is not None and not exact.git_error
+                                and exact.manifest_repository == name
+                                and exact.head is not None):
+                            match = {
+                                "path": str(selected_path),
+                                "head": exact.head,
+                                "branch": exact.branch,
+                                "dirty": exact.dirty,
+                            }
+                if match is None:
                     if name in external_scope_repositories:
                         # This exact owner-granted checkout is intentionally
                         # outside the campaign root. Preserve its last complete
@@ -6756,10 +6890,13 @@ class Session:
                             "missing": True,
                         }
                 else:
+                    branch = match.get("branch")
+                    if isinstance(branch, str) and branch.startswith("refs/heads/"):
+                        branch = branch.removeprefix("refs/heads/")
                     current_checkouts[name] = {
                         **previous_checkout,
                         "head": match.get("head"),
-                        "branch": match.get("branch"),
+                        "branch": branch,
                         "clean": not bool(match.get("dirty")),
                         "missing": False,
                     }

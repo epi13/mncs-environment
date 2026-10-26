@@ -594,6 +594,116 @@ class AuthorityTests(unittest.TestCase):
 
 
 class ClaimTests(unittest.TestCase):
+    def test_claim_acquisition_revalidates_same_checkout_branch_and_head_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            state = base / "state"
+            workspace_root = base / "workspace"
+            workspace_root.mkdir()
+            repository_root = CapabilityTests._git_checkout(
+                workspace_root / "mncs-forge", "mncs-forge", {"schema_version": 1},
+            )
+            selected_root = workspace_root / "worktrees" / "campaign"
+            selected_root.parent.mkdir()
+            subprocess.run([
+                "git", "-C", str(repository_root), "worktree", "add", "-q", "-b",
+                "campaign/initial", str(selected_root), "HEAD",
+            ], check=True)
+            store = open_store(state, "file", verify_on_open=False)
+            environment = sessions.resolve_environment(
+                definition=definition(intent={
+                    "goal": "claim the current registered branch after Git advances",
+                    "repositories": ["mncs-forge"],
+                }),
+                workspace_root=workspace_root,
+                state_dir=state,
+                consumer_id="checkout-drift-claim-test",
+                store=store,
+            )
+            session = sessions.Session.create(
+                state_dir=state,
+                environment=environment,
+                consumer_id="checkout-drift-claim-test",
+                backend="file",
+                store=store,
+            )
+            session.transition("resolving", "checkout drift claim test")
+            session.transition("ready", "checkout drift claim test")
+            session.transition("active", "checkout drift claim test")
+            selected_identity = workspace.verify_registered_checkout(
+                selected_root,
+                repository="mncs-forge",
+                workspace_root=workspace_root,
+            )
+            session.snapshot["selected_checkouts"] = {
+                "mncs-forge": {
+                    **selected_identity,
+                    "source_ref": "current-working-checkout",
+                }
+            }
+            session.snapshot["workspace"]["selection"] = ["mncs-forge"]
+            session._save()
+            try:
+                initial_head = subprocess.run(
+                    ["git", "-C", str(selected_root), "rev-parse", "HEAD"],
+                    check=True, text=True, capture_output=True,
+                ).stdout.strip()
+                subprocess.run([
+                    "git", "-C", str(selected_root), "switch", "-q", "-c",
+                    "campaign/checkout-drift",
+                ], check=True)
+
+                branch_claim = session.acquire_claim(
+                    "mncs-forge", reason="claim after branch selection",
+                )
+
+                self.assertEqual(branch_claim["scope"]["branch"], "campaign/checkout-drift")
+                self.assertEqual(
+                    session.snapshot["selected_checkouts"]["mncs-forge"]["head"],
+                    initial_head,
+                )
+                self.assertTrue(any(
+                    event.get("type") == "session.revalidated"
+                    for event in session._log()
+                ))
+
+                (selected_root / "advance.txt").write_text("forward commit\n")
+                subprocess.run(
+                    ["git", "-C", str(selected_root), "add", "advance.txt"],
+                    check=True,
+                )
+                subprocess.run([
+                    "git", "-C", str(selected_root), "-c", "user.name=Environment Test",
+                    "-c", "user.email=environment-test@example.invalid", "commit", "-qm",
+                    "advance selected branch",
+                ], check=True)
+                advanced_head = subprocess.run(
+                    ["git", "-C", str(selected_root), "rev-parse", "HEAD"],
+                    check=True, text=True, capture_output=True,
+                ).stdout.strip()
+
+                advanced_claim = session.acquire_claim(
+                    "mncs-forge", reason="claim after forward commit",
+                )
+
+                self.assertEqual(advanced_claim["claim_id"], branch_claim["claim_id"])
+                self.assertEqual(advanced_claim["version"], branch_claim["version"] + 1)
+                self.assertEqual(
+                    session.snapshot["selected_checkouts"]["mncs-forge"]["head"],
+                    advanced_head,
+                )
+                self.assertEqual(
+                    sum(event.get("type") == "session.revalidated"
+                        for event in session._log()),
+                    2,
+                )
+                self.assertFalse(any(
+                    event.get("type") in {"lease.transferred", "lease.owner-recovered"}
+                    for event in session._log()
+                ))
+            finally:
+                session.close()
+
     def test_claim_lease_is_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = open_store(directory, "file")

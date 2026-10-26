@@ -68,6 +68,16 @@ repository-relative claim should intentionally conflict across every checkout.
 An unanchored path claim requires that explicit flag, so a missing checkout
 cannot silently create a repository-wide blocker.
 
+Before acquiring a claim from the session's selected checkout, Environment
+compares the live registered branch and HEAD with the session binding. If they
+changed while the exact checkout and repository identities still match, it
+revalidates capabilities and Rights in the same operation, then applies the
+ordinary claim checks to the refreshed state. This handles a branch selection
+or commit without a separate manual reconcile. It does not add repository
+rights, transfer another session's claim, adopt dirty work, or bypass live
+scope conflicts. If checkout identity changes or revalidation cannot establish
+a stable state, acquisition fails closed.
+
 For a repository that is already writable in the campaign, `claims acquire`
 can target a registered linked worktree directly with `--worktree` and an
 optional `--paths` subset. This records ownership at that exact branch and
