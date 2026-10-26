@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_pressure_recommendation_correction_verification_20261026",
+  "captured_at": "2026-10-26T15:03:51Z",
+  "measurement_basis": "focused append-only correction tests, static checks, and a prior live projection contract diagnostic",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_d29b1bcdc67d10ad",
+    "campaign_evidence_count_before_recording": 10
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-improvement-verification",
+    "source_interface": "mncs_env.capability_intelligence observation correction projection",
+    "request": {
+      "implementation_commit": "415c13f461b28ade49fb51645c2a07e590aa7930",
+      "focused_test_command": "python -m pytest tests/test_capability_intelligence.py -q -k 'observation_contract_correction or observation_correction_cannot_rewrite_valid_pressure_recommendation or append_only_pressure_role_correction'",
+      "focused_test_result": {
+        "passed": 5,
+        "failed": 0
+      },
+      "static_checks": {
+        "ruff": "passed",
+        "compileall": "passed",
+        "git_diff_check": "passed"
+      },
+      "triggering_projection_identity": "eci_4dec2d8bbb58a12b",
+      "triggering_diagnostic": "missing-pressure-hypothesis-actionable-recommendation"
+    },
+    "outcome": {
+      "verified_behavior": "The append-only observation-correction contract can restore one bounded actionable recommendation on an integrity-verified record, revalidate the complete pressure hypothesis contract, preserve the original record pointer, and expose the applied replacement in compact projection output.",
+      "preservation_boundary": "The correction changes only the projection's effective value. It does not rewrite the target blob or permit rewriting a valid target.",
+      "interpretation_limit": "The focused tests establish correction behavior. They do not show that an agent used the repaired projection or that the represented pressure has been eliminated."
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_pressure_recommendation_correction_gap_20261026",
+    "title": "The observation correction contract cannot restore a missing pressure recommendation",
+    "category": "evidence-provenance",
+    "subsystem": "mncs_env.capability_intelligence observation-correction projection",
+    "owner": "mncs-environment",
+    "basis": "A live Environmental Capability projection excluded an integrity-addressable readback record with missing-pressure-hypothesis-actionable-recommendation. The correction allowlist had no exact path for that field, so its contract-invalid record had no append-only recovery route.",
+    "recurrence": "one-projection-contract-gap-observed; broader recurrence-not-established",
+    "actionable_recommendation": "Allow exact-field append-only correction of a missing actionable recommendation only after target integrity verification and full contract revalidation.",
+    "not_measured": [
+      "whether any agent depended on the excluded readback before correction support existed",
+      "whether other missing pressure fields require distinct safe correction paths",
+      "whether the repaired record changes future agent decisions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_pressure_recommendation_correction_implementation_415c13f",
+      "kind": "observation-correction-implementation",
+      "repository": "mncs-environment",
+      "commit": "415c13f461b28ade49fb51645c2a07e590aa7930",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "a571ac098b538571b69229821a52a02c970252d2f64e32990a7d4202483e9123"
+    },
+    {
+      "identity": "mncs_environment_pressure_recommendation_correction_tests_415c13f",
+      "kind": "observation-correction-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "415c13f461b28ade49fb51645c2a07e590aa7930",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "2ebc8d49d15f52e303f6bf9957a204a83e45e3a0e710da6761907eaca700de8f"
+    },
+    {
+      "identity": "ev_environment_session_selection_claim_coordination_projection_readback_20261026",
+      "kind": "projection-contract-diagnostic-source",
+      "repository": "mncs-environment",
+      "commit": "9864597db9fe50add70679c4ea3a1c69a8431093",
+      "path": "evidence/environmental-capability/session-selection-claim-coordination-projection-readback-20261026.json",
+      "sha256": "44909ad15921b07bc6f0d107c24bc5c71f24484813ae5d140ab0abaeaae0902d"
+    }
+  ],
+  "not_measured": [
+    "production frequency of missing recommendation diagnostics",
+    "agent-visible reduction in repeated reconstruction or context loss",
+    "whether the affected coordination pressure recurs after correction"
+  ]
+}

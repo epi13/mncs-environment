@@ -1,0 +1,67 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_selection_claim_coordination_projection_readback_correction_20261026",
+  "captured_at": "2026-10-26T15:03:51Z",
+  "measurement_basis": "append-only correction applied to an integrity-verified observation by the Environmental Capability projection",
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "source_interface": "MNCS Environment observation-correction contract",
+    "request": {
+      "target_observation_identity": "ev_environment_session_selection_claim_coordination_projection_readback_20261026",
+      "corrected_field": "pressure_hypothesis.actionable_recommendation"
+    },
+    "outcome": {
+      "replacement_value": "Keep the verified session-selection change discoverable and assess future agent use before judging coordination benefit.",
+      "reason": "The bounded projection identified a missing actionable recommendation. The exact-field append-only correction restores it while preserving the original target bytes and its partial coverage limits."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_d29b1bcdc67d10ad",
+    "campaign_evidence_count_before_recording": 10
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_session_selection_claim_coordination_projection_readback_20261026",
+      "repository": "mncs-environment",
+      "commit": "9864597db9fe50add70679c4ea3a1c69a8431093",
+      "path": "evidence/environmental-capability/session-selection-claim-coordination-projection-readback-20261026.json",
+      "sha256": "44909ad15921b07bc6f0d107c24bc5c71f24484813ae5d140ab0abaeaae0902d"
+    },
+    "corrected_field_paths": [
+      "pressure_hypothesis.actionable_recommendation"
+    ],
+    "replacement_values": {
+      "pressure_hypothesis.actionable_recommendation": "Keep the verified session-selection change discoverable and assess future agent use before judging coordination benefit."
+    },
+    "reason": "The target digest is unchanged. Restore only the required actionable recommendation and revalidate the full observation contract in projection."
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_session_selection_claim_coordination_projection_readback_20261026",
+      "kind": "corrected-observation-target",
+      "repository": "mncs-environment",
+      "commit": "9864597db9fe50add70679c4ea3a1c69a8431093",
+      "path": "evidence/environmental-capability/session-selection-claim-coordination-projection-readback-20261026.json",
+      "sha256": "44909ad15921b07bc6f0d107c24bc5c71f24484813ae5d140ab0abaeaae0902d"
+    }
+  ],
+  "not_measured": [
+    "whether later agents will use this projection to continue work",
+    "whether the change reduces coordination overhead in actual multi-agent use"
+  ]
+}
