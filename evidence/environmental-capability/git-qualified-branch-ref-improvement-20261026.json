@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_git_qualified_branch_ref_improvement_20261026",
+  "captured_at": "2026-10-26T14:39:00Z",
+  "measurement_basis": "pushed Control implementation with focused regression verification",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Control GitService branch APIs and MCP tool descriptions",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_git_push_ref_ambiguity_20261026",
+      "implementation_commit": "b8710a9444dca75f1ac68d19f4755df65fadef39",
+      "verification_observation_identity": "ev_environment_git_qualified_branch_ref_verification_20261026",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "Control now rejects refs/... values at branch creation, checkout, merge, push, pull, and worktree branch boundaries. Tool descriptions state that branch arguments use short names. This prevents the reproduced fully qualified-looking input from reaching Git through those APIs.",
+      "effectiveness_assessment": "input-boundary regression verified; subsequent agent use and reduction in ref failures not yet observed",
+      "analysis_limit": "The bounded Git fixture shows that refs/heads/main as an input causes the exact ambiguity, while main succeeds on the current Git version. The historical command/error pairing remains unresolved; this implementation prevents the qualified input but does not establish the cause of that earlier recorded operation."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_9ab9dbfa80434c3e",
+    "campaign_evidence_count_before_recording": 4
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "improvement_relation": {
+    "identity": "im_environment_git_qualified_branch_ref_20261026",
+    "addresses_hypothesis_identity": "ph_environment_git_push_ref_ambiguity_20261026",
+    "implementation_reference": {
+      "identity": "mncs_control_git_branch_name_boundary_b8710a9",
+      "repository": "mncs-control-mcp",
+      "commit": "b8710a9444dca75f1ac68d19f4755df65fadef39",
+      "path": "src/mncs_control_mcp/git_adapter.py",
+      "sha256": "4bb36c8b1cafaf28643ca89e39583cf4a0817aba8a14e73e09155c307d94f004",
+      "kind": "short-branch-name-validation"
+    },
+    "verification_observation_identity": "ev_environment_git_qualified_branch_ref_verification_20261026",
+    "subsequent_observation_identity": null,
+    "basis": "Control's public branch operations previously passed refs/... strings through to Git. A controlled local bare-remote fixture reproduced the ambiguous refspec when refs/heads/main was passed, and a committed regression test verifies that all branch-oriented API boundaries now reject the prefix before Git is invoked.",
+    "effectiveness_assessment": "implementation and immediate input-boundary behavior verified; future recurrence and agent discoverability not assessed",
+    "not_measured": [
+      "whether future agents avoid namespace-prefixed branch arguments",
+      "whether this prevents a recurrence in live Git operations",
+      "whether other reported push or merge failures share this cause"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_git_qualified_branch_ref_verification_20261026",
+      "kind": "committed-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/git-qualified-branch-ref-verification-20261026.json"
+    },
+    {
+      "identity": "mncs_control_git_branch_name_boundary_b8710a9",
+      "kind": "implementation-source",
+      "repository": "mncs-control-mcp",
+      "commit": "b8710a9444dca75f1ac68d19f4755df65fadef39",
+      "path": "src/mncs_control_mcp/git_adapter.py",
+      "sha256": "4bb36c8b1cafaf28643ca89e39583cf4a0817aba8a14e73e09155c307d94f004"
+    }
+  ],
+  "not_measured": [
+    "longitudinal reduction in ambiguous ref operations",
+    "agent success rate for Git operations across different models",
+    "the root cause of historical authorization failures unrelated to this controlled ref case"
+  ]
+}

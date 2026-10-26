@@ -1,0 +1,123 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_git_qualified_branch_ref_verification_20261026",
+  "captured_at": "2026-10-26T14:39:00Z",
+  "measurement_basis": "controlled local Git refspec reproduction, committed Control regression tests, and source revision verification",
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Control Git branch APIs and Git refspec resolution",
+    "request": {
+      "prior_observation_identity": "ev_environment_git_push_ref_ambiguity_20261026",
+      "controlled_git_version": "git version 2.55.0",
+      "controlled_ref_fixture": {
+        "local_branches": ["main", "refs/heads/main"],
+        "remote": "temporary local bare repository",
+        "short_branch_push": {
+          "command": "git push origin main",
+          "exit_code": 0
+        },
+        "qualified_name_push": {
+          "command": "git push origin refs/heads/main",
+          "exit_code": 1,
+          "stderr": "error: src refspec refs/heads/main matches more than one"
+        }
+      },
+      "historical_command_attribution": {
+        "prior_recorded_command": "git push origin main",
+        "prior_recorded_error_refspec": "refs/heads/main",
+        "status": "not-reproduced-as-recorded",
+        "interpretation": "The current controlled fixture reproduces the recorded error only when the fully qualified-looking branch string is passed. The prior duplicate local ref is authentic, but the historical command and error cannot be causally joined from available evidence."
+      },
+      "implementation_commit": {
+        "repository": "mncs-control-mcp",
+        "commit": "b8710a9444dca75f1ac68d19f4755df65fadef39",
+        "remote_ref": "refs/heads/main",
+        "remote_head": "b8710a9444dca75f1ac68d19f4755df65fadef39"
+      },
+      "verification": {
+        "focused_test_command": "python -m pytest tests/test_git_and_projects.py -q",
+        "focused_test_result": {"passed": 8, "failed": 0},
+        "regression_test": "test_branch_operations_reject_fully_qualified_ref_names",
+        "covered_operations": ["create", "checkout", "merge", "push", "pull", "worktree-add", "worktree-prepare"],
+        "ruff": "python -m ruff check on changed files: passed",
+        "compile_check": "python -m compileall on changed files: passed",
+        "diff_check": "git diff --check: passed"
+      }
+    },
+    "outcome": {
+      "verified_behavior": "Control branch-oriented APIs reject refs/... inputs with INVALID_GIT_REF before invoking Git. Short branch names such as main and campaign/short-name remain accepted. The MCP descriptions explain the short-name contract.",
+      "historical_cause_status": "not-established",
+      "interpretation_limit": "This prevents the reproduced qualified-name input through the Control branch APIs. It does not prove that the recorded historical command was passed to Git exactly as written, explain other authorization failures, or establish future agent discoverability."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_9ab9dbfa80434c3e",
+    "campaign_evidence_count_before_recording": 4
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_git_push_ref_ambiguity_20261026",
+    "title": "Fully qualified branch strings can collide with Git branch ref names",
+    "category": "tooling-interoperability",
+    "subsystem": "MNCS Control Git branch APIs",
+    "owner": "mncs-control-mcp",
+    "basis": "A bounded local fixture reproduced the ambiguous-ref error for a qualified-looking branch string while the short main name succeeded. Control previously accepted refs/... at branch-oriented API boundaries.",
+    "recurrence": "one-controlled-reproduction;historical-command-attribution-unresolved",
+    "actionable_recommendation": "Keep branch-oriented interfaces short-name-only, reject namespace-prefixed inputs before Git invocation, and preserve uncertainty when recorded command text and Git stderr do not match a controlled reproduction."
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_git_push_ref_ambiguity_20261026",
+      "kind": "prior-environmental-observation",
+      "repository": "mncs-environment",
+      "commit": "bfab516736ad05a01dd011d5194735e461ce941a",
+      "path": "evidence/environmental-capability/git-push-ref-ambiguity-20261026.json",
+      "sha256": "829f3b7ea7161a8f25bd0f3488506738003e4635d11e2c2848d3cd04afc83578"
+    },
+    {
+      "identity": "mncs_control_git_branch_name_boundary_b8710a9",
+      "kind": "implementation-source",
+      "repository": "mncs-control-mcp",
+      "commit": "b8710a9444dca75f1ac68d19f4755df65fadef39",
+      "path": "src/mncs_control_mcp/git_adapter.py",
+      "sha256": "4bb36c8b1cafaf28643ca89e39583cf4a0817aba8a14e73e09155c307d94f004"
+    },
+    {
+      "identity": "mncs_control_git_branch_name_contract_b8710a9",
+      "kind": "tool-interface-description",
+      "repository": "mncs-control-mcp",
+      "commit": "b8710a9444dca75f1ac68d19f4755df65fadef39",
+      "path": "src/mncs_control_mcp/server.py",
+      "sha256": "4d978f22fa6c327c47ba17bb1f59b36a62c3dc8510e1640b3fb7b01781950549"
+    },
+    {
+      "identity": "mncs_control_git_branch_name_regression_b8710a9",
+      "kind": "regression-test",
+      "repository": "mncs-control-mcp",
+      "commit": "b8710a9444dca75f1ac68d19f4755df65fadef39",
+      "path": "tests/test_git_and_projects.py",
+      "sha256": "eb7ad0bc57a17a1582523e02c1d4a9d1b10917347ed283a280ff633207b64a36"
+    }
+  ],
+  "not_measured": [
+    "the exact command arguments used for the earlier ambiguous push",
+    "whether the earlier branch was created through an MNCS Control API or another Git path",
+    "whether other repositories contain similarly named branches",
+    "whether agents will discover and follow the clarified short-name interface",
+    "whether this changes authorization-related coordination overhead"
+  ]
+}
