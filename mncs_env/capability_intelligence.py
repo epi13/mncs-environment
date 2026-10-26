@@ -17,6 +17,7 @@ import re
 import selectors
 import subprocess
 import time
+from datetime import timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -217,6 +218,7 @@ MAX_SESSION_ACTIVITY_INTEGRATION_OVERLAPS = 8
 MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES = 8
 MAX_SESSION_ACTIVITY_CLAIM_COORDINATION = 16
 MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 8
+MAX_COMPACT_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 1
 MAX_SESSION_CLAIM_OWNER_EVENT_SESSIONS = 4
 MAX_SESSION_CLAIM_OWNER_EVENT_PAGE = 32
 MAX_SESSION_CLAIM_LIFECYCLE_EVENTS_PER_CORRELATION = 4
@@ -3358,7 +3360,7 @@ def _compact_projection(
         if isinstance(raw_claim_lifecycle_correlations, list) else []
     )
     for item in raw_claim_lifecycle_correlations[
-        :MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS
+        :MAX_COMPACT_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS
     ]:
         if not isinstance(item, dict):
             continue
@@ -3434,10 +3436,70 @@ def _compact_projection(
             if isinstance(item.get(key), str)
         }
         if isinstance(item.get("claim_conflict"), dict):
-            compact_conflict = dict(item["claim_conflict"])
-            blocker = compact_conflict.get("blocking_claim")
+            raw_conflict = item["claim_conflict"]
+            compact_conflict = {
+                key: raw_conflict[key]
+                for key in ("repository", "conflict_reason")
+                if isinstance(raw_conflict.get(key), str)
+            }
+            requested_scope = _authority_conflict_scope(
+                raw_conflict.get("requested_scope"),
+                raw_conflict.get("repository"),
+            )
+            if requested_scope is not None:
+                compact_conflict["requested_scope"] = requested_scope
+            blocker = raw_conflict.get("blocking_claim")
             if isinstance(blocker, dict):
-                compact_conflict["blocking_claim"] = dict(blocker)
+                compact_blocker = {
+                    key: _short_text(blocker[key], 160)
+                    for key in ("session_id", "claim_id")
+                    if isinstance(blocker.get(key), str)
+                }
+                blocker_scope = _authority_conflict_scope(
+                    blocker.get("scope"), raw_conflict.get("repository"),
+                )
+                if blocker_scope is not None:
+                    compact_blocker["scope"] = blocker_scope
+                compact_conflict["blocking_claim"] = compact_blocker
+            decision_state = raw_conflict.get("decision_claim_state")
+            if isinstance(decision_state, dict):
+                compact_conflict["decision_claim_state"] = {
+                    key: decision_state[key]
+                    for key in (
+                        "observed_at", "claim_version", "blocking_status",
+                        "recovery_verdict", "freshness", "recommended_operation",
+                    )
+                    if key in decision_state
+                }
+            decision_status = raw_conflict.get(
+                "decision_claim_state_status",
+            )
+            if isinstance(decision_status, str):
+                compact_conflict["decision_claim_state_status"] = decision_status
+            current_state = raw_conflict.get("current_claim_state")
+            if isinstance(current_state, dict):
+                compact_conflict["current_claim_state"] = {
+                    key: current_state[key]
+                    for key in (
+                        "lookup_status", "basis", "claim_version",
+                        "blocking_status", "recovery_verdict", "freshness",
+                        "owner_liveness_evidence_status",
+                        "recorded_owner_relation",
+                    )
+                    if key in current_state
+                }
+            guidance = raw_conflict.get("coordination_guidance")
+            if isinstance(guidance, dict):
+                compact_guidance = {
+                    key: guidance[key]
+                    for key in (
+                        "status", "next_step", "claim_mutated",
+                        "ownership_transfer",
+                    )
+                    if key in guidance
+                }
+                if compact_guidance:
+                    compact_conflict["coordination_guidance"] = compact_guidance
             compact_item["claim_conflict"] = compact_conflict
         preflight_state = item.get("repository_preflight_state")
         if isinstance(preflight_state, dict):
@@ -9266,6 +9328,91 @@ def _authority_integration_preflight_state(value: Any) -> dict[str, Any] | None:
     }
 
 
+def _authority_decision_claim_state(
+    value: Any,
+    *,
+    claim_id: str | None,
+    owner_session_id: str,
+    repository: str,
+) -> tuple[dict[str, Any] | None, str]:
+    """Validate the claim observation captured at the authority boundary."""
+    if value is None:
+        return None, "not-recorded-on-event"
+    if not isinstance(value, dict):
+        return None, "invalid-event-observation"
+    observed = claims_module._parse_time(value.get("observed_at"))
+    claim_version = value.get("claim_version")
+    blocking_status = value.get("blocking_status")
+    recovery = value.get("recovery_verdict")
+    freshness = value.get("freshness")
+    owner_liveness = value.get("owner_liveness")
+    scope_relation = value.get("scope_relation_status")
+    if (
+        value.get("lookup_status") != "found"
+        or value.get("basis") != "active-claim-store-read-before-authority-check"
+        or value.get("claim_id") != claim_id
+        or value.get("owner_session_id") != owner_session_id
+        or value.get("repository") != repository
+        or observed is None
+        or type(claim_version) is not int or claim_version < 1
+        or value.get("record_status") != "held"
+        or not isinstance(recovery, str)
+        or recovery not in {
+            "live", "recoverable", "not-recoverable", "expired", "unknown",
+        }
+        or (freshness is not None and not isinstance(freshness, str))
+        or freshness not in {None, "active", "idle", "stale"}
+        or scope_relation != "overlap-observed-at-authority-check"
+        or not isinstance(owner_liveness, dict)
+    ):
+        return None, "invalid-event-observation"
+    inspection_status = owner_liveness.get("inspection_status")
+    owner_recovery = owner_liveness.get("recovery_eligibility")
+    owner_freshness = owner_liveness.get("freshness")
+    recommended = owner_liveness.get("recommended_operation")
+    if (
+        not isinstance(inspection_status, str)
+        or inspection_status not in {
+            "observed", "owner-unknown", "owner-state-unavailable",
+            "inspection-limit-reached",
+        }
+        or (owner_freshness is not None and not isinstance(owner_freshness, str))
+        or owner_freshness not in {None, "active", "idle", "stale"}
+        or not isinstance(recommended, str)
+        or owner_recovery != recovery
+        or owner_freshness != freshness
+        or recommended not in {
+            "retry-exact-scoped-acquisition",
+            "use-disjoint-scope-or-wait",
+            "preserve-scope-and-inspect-owner",
+            "inspect-owner-state-before-acquiring",
+            "refresh-scope-and-acquire",
+        }
+    ):
+        return None, "invalid-event-observation"
+    expected_blocking_status = (
+        "eligible-for-safe-recovery-on-acquisition"
+        if recovery == "recoverable" else (
+            "blocks-at-decision-time"
+            if recovery in {"live", "not-recoverable"}
+            else "not-established"
+        )
+    )
+    if blocking_status != expected_blocking_status:
+        return None, "invalid-event-observation"
+    return {
+        "observed_at": observed.astimezone(timezone.utc).isoformat(
+            timespec="seconds"
+        ).replace("+00:00", "Z"),
+        "claim_version": claim_version,
+        "blocking_status": blocking_status,
+        "recovery_verdict": recovery,
+        "freshness": freshness,
+        "inspection_status": inspection_status,
+        "recommended_operation": recommended,
+    }, "recorded-and-validated"
+
+
 def _authority_claim_conflict(
     value: Any, repository: str | None,
 ) -> dict[str, Any] | None:
@@ -9315,6 +9462,15 @@ def _authority_claim_conflict(
     claim_id = blocker.get("claim_id")
     if isinstance(claim_id, str) and identifier.fullmatch(claim_id):
         conflict["blocking_claim"]["claim_id"] = claim_id
+    decision_state, decision_status = _authority_decision_claim_state(
+        value.get("current_claim_state"),
+        claim_id=conflict["blocking_claim"].get("claim_id"),
+        owner_session_id=blocker_session,
+        repository=conflict_repository,
+    )
+    conflict["decision_claim_state_status"] = decision_status
+    if decision_state is not None:
+        conflict["decision_claim_state"] = decision_state
     return conflict
 
 

@@ -362,8 +362,18 @@ class AuthorityTests(unittest.TestCase):
                     len(session.store.read_claims()), claim_count_before,
                 )
                 event = session._log()[-1]
+                decision_state = event["payload"]["claim_conflict"][
+                    "current_claim_state"
+                ]
+                self.assertEqual(decision_state["claim_id"], claim["claim_id"])
+                self.assertEqual(decision_state["owner_session_id"], owner_id)
+                self.assertEqual(decision_state["repository"], "mncs-atlas")
                 self.assertEqual(
-                    event["payload"]["claim_conflict"]["current_claim_state"],
+                    decision_state["basis"],
+                    "active-claim-store-read-before-authority-check",
+                )
+                self.assertEqual(
+                    decision_state,
                     current,
                 )
             finally:

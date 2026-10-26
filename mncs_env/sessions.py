@@ -4938,6 +4938,9 @@ class Session:
                 current_claim_state = {
                     "lookup_status": "found",
                     "basis": "active-claim-store-read-before-authority-check",
+                    "claim_id": record.get("claim_id"),
+                    "owner_session_id": record.get("session_id"),
+                    "repository": record.get("repository"),
                     "observed_at": observed_at.isoformat(
                         timespec="seconds"
                     ).replace("+00:00", "Z"),

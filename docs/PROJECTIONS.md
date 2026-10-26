@@ -387,6 +387,17 @@ acquisition. Its
 claim or changing the denial. This is derived from the same classifier used by
 claim queries; providers without bounded owner-event reads report incomplete
 liveness rather than scanning full session history or inferring staleness.
+The `authority.denied` event preserves that observation with its claim,
+owner-session, and repository identities. `decision_claim_state` in the
+projection validates and retains the decision-time claim version, recovery
+verdict, and bounded liveness recommendation separately from the later
+`current_claim_state` lookup. The two states answer different questions: what
+the check observed and what the canonical claim store reports at projection
+time. Validation establishes the event observation's shape and binding; it
+does not prove the denial was necessary or that either observation predicts
+later state. Legacy events without the event-time snapshot report
+`decision_claim_state_status: not-recorded-on-event`; malformed or mismatched
+snapshots are identified as invalid rather than reconstructed.
 Each allowed preflight emits a bounded `authority.integration-eligible` event.
 `session_activity.integration_eligibility` exposes its action, repository,
 sanitized scope, separate rights and eligibility bases, bounded overlap
@@ -512,7 +523,8 @@ the records refer to the same claim; it does not establish why a denial
 occurred, that a preflight followed because of that denial, the claim's current
 state, or a successful integration. Current claim state remains a separate
 point-in-time observation. The compact view retains the latest lifecycle event
-reference and reports when earlier matching transitions were omitted.
+reference in one relation and reports when other relations or earlier matching
+transitions were omitted.
 
 Environmental observation sources that retain authenticated session event
 identities are resolved against the bounded RPC, authority-denial,

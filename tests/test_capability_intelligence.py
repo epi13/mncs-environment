@@ -3235,6 +3235,10 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
     denial_followup = activity["authority_denials"][0]["claim_conflict"][
         "subsequent_integration_preflight"
     ]
+    assert denial["claim_conflict"]["decision_claim_state_status"] == (
+        "not-recorded-on-event"
+    )
+    assert "decision_claim_state" not in denial["claim_conflict"]
     assert denial_followup["event_reference"]["identity"] == (
         "evt_integration_eligible"
     )
@@ -3358,12 +3362,13 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
     assert compact_eligibility[
         "coordination_overlaps_projection_truncated"
     ] is True
-    assert compact_eligibility[
-        "coordination_overlap_details_projection_truncated"
-    ] is True
-    assert compact_eligibility[
-        "coordination_overlap_detail_fields_omitted_count"
-    ] > 0
+    assert not compact_eligibility.get(
+        "coordination_overlap_details_projection_truncated", False,
+    )
+    assert all(
+        "scope" in overlap and "overlap_reason" in overlap
+        for overlap in compact_eligibility["coordination_overlaps"]
+    )
     assert compact_eligibility["coordination_overlaps"][0]["claim_id"] == (
         "claim:mncs-environment:paths:sample0"
     )
@@ -3579,6 +3584,26 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
                 "exclusive": False,
             },
         },
+        "current_claim_state": {
+            "lookup_status": "found",
+            "basis": "active-claim-store-read-before-authority-check",
+            "claim_id": "claim:mncs-environment:paths:abc123",
+            "owner_session_id": "ses_blocker",
+            "repository": "mncs-environment",
+            "observed_at": claims.utcnow(),
+            "claim_version": 3,
+            "record_status": "held",
+            "blocking_status": "blocks-at-decision-time",
+            "recovery_verdict": "live",
+            "freshness": "active",
+            "owner_liveness": {
+                "inspection_status": "observed",
+                "freshness": "active",
+                "recovery_eligibility": "live",
+                "recommended_operation": "use-disjoint-scope-or-wait",
+            },
+            "scope_relation_status": "overlap-observed-at-authority-check",
+        },
     }
     now = claims.utcnow()
     current_claim = {
@@ -3656,6 +3681,15 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     )
     assert current_state["recorded_owner_relation"] == "same"
     assert isinstance(current_state["observed_at"], str)
+    decision_state = by_sequence[42]["claim_conflict"]["decision_claim_state"]
+    assert by_sequence[42]["claim_conflict"]["decision_claim_state_status"] == (
+        "recorded-and-validated"
+    )
+    assert decision_state["claim_version"] == 3
+    assert decision_state["recovery_verdict"] == "live"
+    assert decision_state["blocking_status"] == "blocks-at-decision-time"
+    assert current_state["claim_version"] == 4
+    assert current_state["recovery_verdict"] == "recoverable"
     stale_guidance = by_sequence[42]["claim_conflict"][
         "coordination_guidance"
     ]
@@ -3710,9 +3744,13 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     assert compact_recorded_denial["claim_conflict"][
         "current_claim_state"
     ]["recovery_verdict"] == "recoverable"
+    assert compact_recorded_denial["claim_conflict"][
+        "decision_claim_state"
+    ]["claim_version"] == 3
     assert "claim_lifecycle_correlation_identity" not in compact_recorded_denial[
         "claim_conflict"]["blocking_claim"]
-    assert compact_activity["claim_lifecycle_correlations_omitted_count"] == 1
+    assert compact_activity["claim_lifecycle_correlations_returned"] == 1
+    assert compact_activity["claim_lifecycle_correlations_omitted_count"] == 0
     assert alias_checkout not in json.dumps(compact)
 
     active_at = claims.utcnow()
