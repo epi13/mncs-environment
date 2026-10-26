@@ -50,8 +50,11 @@ persistent claim is optional; overlapping claims are recorded as coordination
 evidence and do not establish an exclusive right to block integration. The
 actual Git operation must still enforce repository-native concurrent reference
 updates. Selected-checkout resolution supplies the destination when the caller
-names only the repository; explicit scopes remain available for a separate
-integration target. An already-writable repository may bind a different
+names only the repository. If no selected checkout is projected, Environment
+uses a unique matching workspace root or the registered checkout containing
+the session's `.mncs` definition. Each implicit destination is freshly
+verified; an explicit scope retains its branch constraint. Explicit scopes
+remain available for a separate integration target. An already-writable repository may bind a different
 Control-verified registered checkout without a second owner token. This
 changes the checkout selected for existing repository authority, not the
 repository set. New repository scope still requires an exact owner-approved

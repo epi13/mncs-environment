@@ -4591,7 +4591,9 @@ class Session:
                 workspace = workspace if isinstance(workspace, dict) else {}
                 workspace_root = workspace.get("root", ".")
                 if not isinstance(workspace_root, str):
-                    raise LifecycleError("absolute checkout target workspace is unavailable")
+                    raise LifecycleError(
+                        "absolute checkout target workspace is unavailable"
+                    )
                 if (os.path.isabs(target) and target_checkout is not None
                         and needs_absolute_target_validation):
                     observed_checkout = target_checkout[1]
@@ -4610,9 +4612,30 @@ class Session:
                         and row.get("manifest_repository") == repository
                         and isinstance(row.get("path"), str)
                     ]
-                    root_row = repository_roots[0] if len(repository_roots) == 1 else {}
-                    observed_checkout = {"branch": root_row.get("branch")}
-                    checkout_path = root_row.get("path")
+                    if len(repository_roots) == 1:
+                        root_row = repository_roots[0]
+                        observed_checkout = {"branch": root_row.get("branch")}
+                        checkout_path = root_row.get("path")
+                    else:
+                        configuration = self.snapshot.get("configuration", {})
+                        configuration = (
+                            configuration if isinstance(configuration, dict) else {}
+                        )
+                        source = configuration.get("source")
+                        source_path = None
+                        if isinstance(source, str):
+                            try:
+                                source_path = Path(source).resolve(strict=True)
+                            except (OSError, RuntimeError):
+                                source_path = None
+                        if (source_path is not None
+                                and source_path.is_file()
+                                and source_path.parent.name == ".mncs"):
+                            observed_checkout = {}
+                            checkout_path = str(source_path.parent.parent)
+                        else:
+                            observed_checkout = {}
+                            checkout_path = None
                 else:
                     observed_checkout = selected or {}
                     checkout_path = observed_checkout.get("path")
@@ -4632,6 +4655,9 @@ class Session:
                     ]
                     if len(roots) == 1:
                         expected_repository_root = roots[0]
+                    elif (needs_workspace_root_observation
+                          and isinstance(checkout_path, str)):
+                        expected_repository_root = checkout_path
                 expected_branch = observed_checkout.get("branch")
                 if (needs_explicit_integration_scope
                         and not (os.path.isabs(target)
@@ -4695,8 +4721,9 @@ class Session:
                     observed_head = record.get("head")
                     valid_head = (
                         isinstance(observed_head, str)
-                        and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", observed_head)
-                        is not None
+                        and re.fullmatch(
+                            r"(?:[0-9a-f]{40}|[0-9a-f]{64})", observed_head
+                        ) is not None
                     )
                     observed_branch = record.get("branch")
                     valid_branch = (

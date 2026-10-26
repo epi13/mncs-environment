@@ -400,6 +400,13 @@ checkout, evaluate the operation directly:
   --target "$CHECKOUT"
 ```
 
+When the target is the repository name, Environment resolves its destination
+from the session's selected checkout or a unique matching workspace root. If
+neither is projected, it may use the registered checkout containing the
+session's `.mncs` definition. The destination is checked against the repository
+identity and refreshed before evaluation; a cached branch is not treated as a
+lease. An explicit operation scope continues to enforce its named branch.
+
 The check refreshes claim holders and the observed checkout, records any
 overlapping claim scopes as coordination evidence, and records the decision.
 It does not reserve the scope; the repository operation must enforce its own
@@ -407,10 +414,11 @@ concurrent ref update. Supplying `--claim-id` is optional and uses only a live
 claim owned by the selected session. Claims remain available to describe
 concurrent work and to protect ordinary writes, delegated work, and retirement;
 they do not grant merge or publish eligibility. Missing operation scope reports
-`required_authorization: operation-scope` and asks the agent to select an
-observed checkout or provide a repository-relative target, without asking for
-another agent's claim. Protected repositories, claim fences, and repositories
-outside the campaign's writable authority remain blocking conditions. Foreign
+`required_authorization: operation-scope` only when Environment cannot resolve
+one registered destination from those sources; an explicit operation scope can
+then be supplied without asking for another agent's claim. Protected
+repositories, claim fences, and repositories outside the campaign's writable
+authority remain blocking conditions. Foreign
 overlap claims still block ordinary mutations; they are advisory for merge and
 publish, where Git's ref-update checks enforce concurrent integration.
 `retire` and `delegate` retain their existing claim requirements; `delete`
