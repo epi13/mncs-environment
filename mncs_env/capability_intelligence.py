@@ -9419,7 +9419,10 @@ def _claim_coordination_event_projection(
     """Sanitize one recorded claim lifecycle transition for session activity."""
     reference = _event_reference(event)
     event_type = event.get("type")
-    action = CLAIM_COORDINATION_EVENT_ACTIONS.get(event_type)
+    action = (
+        CLAIM_COORDINATION_EVENT_ACTIONS.get(event_type)
+        if isinstance(event_type, str) else None
+    )
     payload = event.get("payload")
     payload = payload if isinstance(payload, dict) else {}
     if reference is None or action is None:
@@ -9958,7 +9961,8 @@ def _session_activity(
     )
     claim_coordination_events = [
         event for event in events
-        if event.get("type") in CLAIM_COORDINATION_EVENT_ACTIONS
+        if isinstance(event.get("type"), str)
+        and event.get("type") in CLAIM_COORDINATION_EVENT_ACTIONS
     ]
     claim_coordination = []
     invalid_claim_coordination_event_count = 0

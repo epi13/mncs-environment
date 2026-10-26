@@ -3613,6 +3613,12 @@ def test_claim_coordination_projects_bounded_objective_linked_transitions(
                 "reason": "legacy event has no objective reference",
             },
         },
+        {
+            "identity": "evt_untyped_event_name",
+            "sequence": 6,
+            "type": [],
+            "payload": {},
+        },
     ]
     session.recent_events = lambda *, limit, before_sequence=None: {
         "event_count": len(events), "events": events[-limit:],
