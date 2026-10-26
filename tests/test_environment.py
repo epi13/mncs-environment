@@ -311,7 +311,7 @@ class AuthorityTests(unittest.TestCase):
         self.assertEqual(verdict["verdict"], "deny")
         self.assertIn("outside this session's writable authority", verdict["reason"])
 
-    def test_absolute_checkout_merge_uses_observed_repo_and_exact_claim(self) -> None:
+    def test_absolute_checkout_merge_uses_observed_repo_without_persistent_claim(self) -> None:
         checkout = "/workspace/mncs-atlas/.worktrees/destination"
         facts = {"mncs-atlas@destination": {
             "path": checkout, "branch": "campaign/destination",
@@ -329,13 +329,26 @@ class AuthorityTests(unittest.TestCase):
             session_id="ses_mine", claims=owned, repo_facts=facts,
         )
         self.assertEqual(allowed["verdict"], "allow", allowed)
+        self.assertFalse(allowed["persistent_claim_required"])
+        self.assertEqual(
+            allowed["authorization_basis"],
+            "writable-repository-rights",
+        )
+        self.assertEqual(
+            allowed["eligibility_basis"],
+            "exact-observed-scope-and-repository-native-concurrency",
+        )
 
         unclaimed = authority.evaluate(
             context_for(), action="merge", target=checkout,
             session_id="ses_mine", claims={}, repo_facts=facts,
         )
-        self.assertEqual(unclaimed["verdict"], "escalate", unclaimed)
-        self.assertIn("current session claim", unclaimed["reason"])
+        self.assertEqual(unclaimed["verdict"], "allow", unclaimed)
+        self.assertFalse(unclaimed["persistent_claim_required"])
+        self.assertEqual(
+            unclaimed["authorization_basis"],
+            "writable-repository-rights",
+        )
 
         unknown = authority.evaluate(
             context_for(), action="merge", target="/outside/unregistered/checkout",
@@ -352,11 +365,11 @@ class AuthorityTests(unittest.TestCase):
         )
         self.assertEqual(mismatched_scope["verdict"], "deny")
 
-    def test_scoped_claim_authorizes_merge_and_publish_without_escalation(self) -> None:
+    def test_scoped_integration_eligibility_does_not_depend_on_claim(self) -> None:
         context = context_for()
         self.assertNotIn("merge", context["escalation_required"])
         self.assertNotIn("publish", context["escalation_required"])
-        self.assertTrue({"merge", "publish"}.issubset(
+        self.assertFalse({"merge", "publish"}.intersection(
             context["claim_required_actions"]))
         scope = {
             "kind": "worktree",
@@ -367,6 +380,12 @@ class AuthorityTests(unittest.TestCase):
             "exclusive": False,
         }
         owned = {"mncs-atlas": [{"session_id": "ses_mine", "scope": scope}]}
+        observed_facts = {"mncs-atlas": {
+            **DIRTY_FACTS["mncs-atlas"],
+            "path": scope["checkout"],
+            "branch": scope["branch"],
+            "repository": "mncs-atlas",
+        }}
         for action in ("merge", "publish"):
             with self.subTest(action=action):
                 verdict = authority.evaluate(
@@ -375,12 +394,17 @@ class AuthorityTests(unittest.TestCase):
                     target="mncs-atlas",
                     session_id="ses_mine",
                     claims=owned,
-                    repo_facts=DIRTY_FACTS,
+                    repo_facts=observed_facts,
                     scope=scope,
                 )
                 self.assertEqual(verdict["verdict"], "allow", verdict)
+                self.assertFalse(verdict["persistent_claim_required"])
+                self.assertEqual(
+                    verdict["authorization_basis"],
+                    "writable-repository-rights",
+                )
 
-    def test_scoped_merge_and_publish_preserve_concurrent_writer_checks(self) -> None:
+    def test_integration_claim_overlaps_are_advisory_and_other_writes_still_block(self) -> None:
         context = context_for()
         destination = {
             "kind": "worktree", "repository": "mncs-atlas",
@@ -397,47 +421,110 @@ class AuthorityTests(unittest.TestCase):
             {"session_id": "ses_mine", "scope": destination},
             {"session_id": "ses_other", "scope": unrelated},
         ]}
+        independent_foreign_only = {"mncs-atlas": [
+            {"session_id": "ses_other", "scope": unrelated},
+        ]}
         overlapping_holders = {"mncs-atlas": [
             {"session_id": "ses_mine", "scope": destination},
-            {"session_id": "ses_other", "scope": destination},
+            {"session_id": "ses_other",
+             "claim_id": "claim:mncs-atlas:worktree:overlap",
+             "scope": destination},
         ]}
+        overlapping_foreign_only = {"mncs-atlas": [
+            {"session_id": "ses_other",
+             "claim_id": "claim:mncs-atlas:worktree:overlap",
+             "scope": destination},
+        ]}
+        observed_facts = {"mncs-atlas": {
+            **DIRTY_FACTS["mncs-atlas"],
+            "path": destination["checkout"],
+            "branch": destination["branch"],
+            "repository": "mncs-atlas",
+        }}
         for action in ("merge", "publish"):
             with self.subTest(action=action, case="independent"):
                 verdict = authority.evaluate(
                     context, action=action, target="mncs-atlas",
                     session_id="ses_mine", claims=independent_holders,
-                    repo_facts=DIRTY_FACTS, scope=destination,
+                    repo_facts=observed_facts, scope=destination,
+                )
+                self.assertEqual(verdict["verdict"], "allow", verdict)
+            with self.subTest(action=action, case="no own claim and independent activity"):
+                verdict = authority.evaluate(
+                    context, action=action, target="mncs-atlas",
+                    session_id="ses_mine", claims=independent_foreign_only,
+                    repo_facts=observed_facts, scope=destination,
                 )
                 self.assertEqual(verdict["verdict"], "allow", verdict)
             with self.subTest(action=action, case="overlap"):
                 verdict = authority.evaluate(
                     context, action=action, target="mncs-atlas",
                     session_id="ses_mine", claims=overlapping_holders,
-                    repo_facts=DIRTY_FACTS, scope=destination,
+                    repo_facts=observed_facts, scope=destination,
                 )
-                self.assertEqual(verdict["verdict"], "deny", verdict)
+                self.assertEqual(verdict["verdict"], "allow", verdict)
+                self.assertEqual(verdict["coordination_overlap_count"], 1)
+                self.assertEqual(
+                    verdict["coordination_overlaps"][0]["claim_id"],
+                    "claim:mncs-atlas:worktree:overlap",
+                )
+            with self.subTest(action=action, case="no own claim and overlapping activity"):
+                verdict = authority.evaluate(
+                    context, action=action, target="mncs-atlas",
+                    session_id="ses_mine", claims=overlapping_foreign_only,
+                    repo_facts=observed_facts, scope=destination,
+                )
+                self.assertEqual(verdict["verdict"], "allow", verdict)
+                self.assertEqual(verdict["coordination_overlap_count"], 1)
+                self.assertEqual(
+                    verdict["coordination_overlaps"][0]["session_id"],
+                    "ses_other",
+                )
 
-    def test_merge_and_publish_need_writable_exact_claims_even_on_clean_main(self) -> None:
+        ordinary_write = authority.evaluate(
+            context, action="write", target="mncs-atlas",
+            session_id="ses_mine", claims=overlapping_foreign_only,
+            repo_facts=observed_facts, scope=destination,
+        )
+        self.assertEqual(ordinary_write["verdict"], "deny")
+
+    def test_merge_and_publish_need_writable_exact_scope_but_not_a_claim(self) -> None:
         context = context_for()
         scope = {
             "kind": "worktree", "repository": "mncs-atlas",
             "checkout": "/workspace/mncs-atlas/.worktrees/destination",
             "branch": "main", "paths": None, "exclusive": False,
         }
+        observed_facts = {"mncs-atlas": {
+            **CLEAN_FACTS["mncs-atlas"],
+            "path": scope["checkout"],
+            "branch": scope["branch"],
+            "repository": "mncs-atlas",
+        }}
         for action in ("merge", "publish"):
             with self.subTest(action=action, case="missing claim"):
                 verdict = authority.evaluate(
                     context, action=action, target="mncs-atlas",
-                    session_id="ses_mine", claims={}, repo_facts=CLEAN_FACTS,
+                    session_id="ses_mine", claims={}, repo_facts=observed_facts,
                     scope=scope,
                 )
+                self.assertEqual(verdict["verdict"], "allow", verdict)
+                self.assertFalse(verdict["persistent_claim_required"])
+            with self.subTest(action=action, case="missing operation scope"):
+                verdict = authority.evaluate(
+                    context, action=action, target="mncs-atlas",
+                    session_id="ses_mine", claims={}, repo_facts=observed_facts,
+                )
                 self.assertEqual(verdict["verdict"], "escalate", verdict)
+                self.assertEqual(
+                    verdict["required_authorization"], "operation-scope",
+                )
             with self.subTest(action=action, case="outside writable intent"):
                 verdict = authority.evaluate(
                     {**context, "writable": []}, action=action,
                     target="mncs-atlas", session_id="ses_mine",
                     claims={"mncs-atlas": [{"session_id": "ses_mine", "scope": scope}]},
-                    repo_facts=CLEAN_FACTS, scope=scope,
+                    repo_facts=observed_facts, scope=scope,
                 )
                 self.assertEqual(verdict["verdict"], "deny", verdict)
 
@@ -3955,10 +4042,10 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(authority_context["escalation_required"], [])
             self.assertEqual(
                 authority_context["claim_required_actions"],
-                ["delegate", "merge", "publish", "retire"],
+                ["delegate", "retire"],
             )
 
-    def test_merge_and_publish_use_the_selected_worktree_claim(self) -> None:
+    def test_merge_and_publish_use_the_selected_worktree_as_operation_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(
                 Path(directory),
@@ -4011,6 +4098,59 @@ class SessionTests(unittest.TestCase):
                 )
                 self.assertEqual(mismatch["verdict"], "deny")
                 self.assertIn("does not match", mismatch["reason"])
+
+            session.snapshot["claim_holders"]["mncs-atlas"] = [{
+                "session_id": "ses_other",
+                "claim_id": "claim:mncs-atlas:worktree:overlap",
+                "scope": {
+                    "kind": "worktree",
+                    "repository": "mncs-atlas",
+                    "checkout": checkout,
+                    "branch": "campaign/feature",
+                    "exclusive": False,
+                },
+            }]
+            with mock.patch.object(session, "_refresh_holders"), mock.patch.object(
+                sessions.workspace_module, "inspect_repo", return_value=inspected,
+            ), mock.patch.object(
+                sessions.workspace_module, "verify_registered_checkout",
+                return_value=checkout_identity,
+            ):
+                for action in ("merge", "publish"):
+                    with self.subTest(action=action, case="no persistent claim"):
+                        verdict = session.check(action=action, target=checkout)
+                        self.assertEqual(verdict["verdict"], "allow", verdict)
+                        self.assertFalse(verdict["persistent_claim_required"])
+                        self.assertEqual(
+                            verdict["coordination_overlap_count"], 1,
+                        )
+            integration_event = session._log()[-1]
+            self.assertEqual(
+                integration_event["type"], "authority.integration-eligible",
+            )
+            self.assertEqual(integration_event["payload"]["action"], "publish")
+            self.assertEqual(
+                integration_event["payload"]["authorization_basis"],
+                "writable-repository-rights",
+            )
+            self.assertEqual(
+                integration_event["payload"]["eligibility_basis"],
+                "exact-observed-scope-and-repository-native-concurrency",
+            )
+            self.assertFalse(
+                integration_event["payload"]["persistent_claim_required"],
+            )
+            self.assertFalse(integration_event["payload"]["operation_executed"])
+            self.assertEqual(
+                integration_event["payload"]["coordination_overlap_count"], 1,
+            )
+            self.assertEqual(
+                integration_event["payload"]["coordination_overlaps"][0][
+                    "claim_id"
+                ],
+                "claim:mncs-atlas:worktree:overlap",
+            )
+            self.assertNotIn(checkout, json.dumps(integration_event["payload"]))
             self.assertEqual(inspect_repo.call_count, 5)
             self.assertEqual(verify_checkout.call_count, 3)
 
@@ -4018,7 +4158,7 @@ class SessionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(
                 Path(directory),
-                intent={"goal": "merge only into a claimed checkout",
+                intent={"goal": "merge into an observed checkout without persistent ownership",
                         "repositories": ["mncs-atlas"]},
             )
             root = "/workspace/mncs-atlas"
@@ -4069,8 +4209,11 @@ class SessionTests(unittest.TestCase):
             ):
                 verdict = session.check(action="merge", target=destination)
 
-            self.assertEqual(verdict["verdict"], "escalate", verdict)
-            self.assertIn("current session claim", verdict["reason"])
+            self.assertEqual(verdict["verdict"], "allow", verdict)
+            self.assertEqual(
+                verdict["authorization_basis"],
+                "writable-repository-rights",
+            )
             verify_checkout.assert_called_once_with(
                 destination,
                 repository="mncs-atlas",
@@ -4078,7 +4221,7 @@ class SessionTests(unittest.TestCase):
                 expected_repository_root=root,
                 expected_branch="main",
             )
-            self.assertEqual(
+            self.assertNotEqual(
                 session._log()[-1]["type"], "authority.escalated",
             )
 

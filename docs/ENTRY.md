@@ -345,8 +345,14 @@ conflict rule, and both repository-relative scopes. Absolute checkout paths
 are omitted. Historical overlapping-claim events without this evidence report
 `claim_conflict_evidence_status: not-recorded`; the projection does not infer
 the missing claim or scope. Absolute checkout targets are attributed only
-through observed checkout paths, and merge or publish still requires a live
-claim covering the resolved checkout scope.
+through observed checkout paths. Merge and publish decisions require writable
+repository authority and an exact operation scope; an agent's persistent claim
+is not required. Overlapping claims remain visible as coordination evidence,
+but they do not establish a persistent exclusive right to block integration.
+Actual conflicts are left to the repository operation's native concurrency
+protection, such as a fast-forward-only merge and a non-forcing push. The
+preflight does not reserve the scope or guarantee that the operation will
+succeed.
 
 For up to four unique recorded blocker claim IDs, the projection also performs
 a bounded targeted read of current claim records and exposes a separate
@@ -362,29 +368,31 @@ unresolved and claim recovery fails closed.
 events with the new claim and superseded claim versions. This records that the
 claim transition completed; it does not claim later development work succeeded.
 
-Authority decisions distinguish the lease needed to continue from an owner
-approval. A missing exact claim for merge, publish, retire, or another scoped
-mutation reports `required_authorization: session-claim` and
-`next_step: acquire-exact-claim`; acquire the available scope through the
-normal claims operation, then re-evaluate authority with its claim identity:
+Authority decisions distinguish integration eligibility from coordination
+state. Merge and publish need an exact destination scope and writable
+repository authority, but do not require a persistent claim. With an observed
+checkout, evaluate the operation directly:
 
 ```sh
 ./scripts/mncs-env authority "$SESSION" --action merge \
-  --target "$CHECKOUT" --claim-id "$CLAIM_ID"
+  --target "$CHECKOUT"
 ```
 
-`--claim-id` uses the selected session's current live claim scope and refuses
-claims owned by another session. This does not request a second user approval.
-Ordinary claim acquisition now supersedes a conflicting lease in the same
-compare-and-swap only when the existing owner-liveness rules classify it as
-recoverable. The new claim records the superseded identity and version, and
-the session emits `lease.recovered-and-acquired`. Live, unreadable, incomplete,
-or quietly-held exclusive scopes still block acquisition; dirty-work adoption
-and owner-approved recovery keep their existing explicit boundaries.
-Other foreign overlapping claims, protected repositories, or scope outside
-the campaign's writable repositories remain blocking conditions. Decisions
-that actually require owner approval identify that separately as
-`required_authorization: owner-approval`.
+The check refreshes claim holders and the observed checkout, records any
+overlapping claim scopes as coordination evidence, and records the decision.
+It does not reserve the scope; the repository operation must enforce its own
+concurrent ref update. Supplying `--claim-id` is optional and uses only a live
+claim owned by the selected session. Claims remain available to describe
+concurrent work and to protect ordinary writes, delegated work, and retirement;
+they do not grant merge or publish eligibility. Missing operation scope reports
+`required_authorization: operation-scope` and asks the agent to select an
+observed checkout or provide a repository-relative target, without asking for
+another agent's claim. Protected repositories, claim fences, and repositories
+outside the campaign's writable authority remain blocking conditions. Foreign
+overlap claims still block ordinary mutations; they are advisory for merge and
+publish, where Git's ref-update checks enforce concurrent integration.
+`retire` and `delegate` retain their existing claim requirements; `delete`
+remains owner-approval gated.
 
 Observation source summaries keep registration status separate from
 `content_integrity_status`. A selected source blob is marked

@@ -359,8 +359,20 @@ and scopes are not reconstructed. Repeated patterns remain investigation
 candidates scoped to the selected session window. They do not establish that a
 denial was inappropriate, that the environment caused it, or that the pattern
 recurs across sessions. For absolute targets, repository attribution uses
-observed checkout paths. Merge and publish authorization still requires a live
-claim covering the resolved scope.
+observed checkout paths. Merge and publish decisions use writable repository
+authority, an exact operation scope, and the refreshed overlap observation.
+Claims describe coordination but do not grant or deny integration eligibility.
+An overlap is retained as advisory coordination evidence instead of persistent
+exclusive control, and a claim need not be held by the acting agent.
+Each allowed preflight emits a bounded `authority.integration-eligible` event.
+`session_activity.integration_eligibility` exposes its action, repository,
+sanitized scope, separate rights and eligibility bases, bounded overlap
+evidence, and event reference. The record says
+`operation_executed: false`: it does not reserve the scope or assert that a
+merge or publication succeeded, leaving concurrent ref updates to Git's own
+checks. Event records retain up to eight overlap references and the total
+observed count; compact responses retain up to four and mark any projection
+truncation separately from overlap records omitted at capture time.
 
 When structured evidence includes blocker claim IDs, the projection performs
 targeted reads for at most four unique current claim records and adds
@@ -382,13 +394,14 @@ causal provenance for an accepted claim transition, not evidence that the
 subsequent implementation objective succeeded.
 
 Environmental observation sources that retain authenticated session event
-identities are resolved against the bounded RPC, authority-denial, and claim-
-recovery records in that same session view. A matched source reports which
-record categories contain its events. Finding the event establishes that the
-record is present in the selected projection; it does not establish the event's
-cause or downstream success. Missing references remain unresolved when the
-selected window or a record collection is bounded, including mixed views where
-the projection does not retain every event identity.
+identities are resolved against the bounded RPC, authority-denial,
+integration-eligibility, and claim-recovery records in that same session view.
+A matched source reports which record categories contain its events. Finding
+the event establishes that the record is present in the selected projection;
+it does not establish the event's cause or downstream success. Missing
+references remain unresolved when the selected window or a record collection
+is bounded, including mixed views where the projection does not retain every
+event identity.
 
 The same session activity view exposes up to four newest successful
 `mncs-system-monitor:system-resource-sample` artifacts, one per binding. The

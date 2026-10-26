@@ -52,13 +52,14 @@ EFFECT_ACTIONS = {
 
 MUTATING_ACTIONS = ("write", "mutate", "execute", "retire")
 
-# These are invariant user-approval gates. Repository-integrating actions
-# instead require a live claim over the exact destination scope; a claim is
-# the authenticated authorization, not a reason to ask for another approval.
+# These are invariant user-approval gates. Claims remain coordination and
+# recovery evidence; they are not a persistent privilege required to integrate
+# an explicitly scoped change into a writable repository.
 ESCALATION_ACTIONS = ("delete",)
-CLAIM_REQUIRED_ACTIONS = ("delegate", "merge", "publish", "retire")
+CLAIM_REQUIRED_ACTIONS = ("delegate", "retire")
 CLAIM_CONFLICT_SCHEMA = "mncs.environment.authority-claim-conflict/1"
 _EVIDENCE_IDENTIFIER = re.compile(r"[A-Za-z0-9:._-]{1,160}")
+MAX_INTEGRATION_COORDINATION_OVERLAPS = 8
 
 
 def build_context(
@@ -312,6 +313,31 @@ def _requested_scope(repo: str, target: str,
     return claims_module.normalize_scope(None, repo)
 
 
+def _worktree_scope_matches_observation(
+    scope: dict[str, Any], repo: str,
+    repo_facts: dict[str, dict[str, Any]] | None,
+) -> bool:
+    """Require an operation worktree scope to match an observed checkout."""
+    checkout = scope.get("checkout")
+    if not isinstance(checkout, str) or not os.path.isabs(checkout):
+        return False
+    match = checkout_facts_for_target(checkout, repo_facts)
+    if match is None or match[0] != repo:
+        return False
+    observed = match[1]
+    if os.path.normpath(str(observed.get("path", ""))) != os.path.normpath(checkout):
+        return False
+    for key in (
+        "branch", "checkout_identity", "git_common_directory_identity",
+        "manifest_identity",
+    ):
+        declared = scope.get(key)
+        actual = observed.get(key)
+        if isinstance(declared, str) and declared and actual != declared:
+            return False
+    return True
+
+
 def evaluate(
     context: dict[str, Any],
     *,
@@ -324,17 +350,18 @@ def evaluate(
 ) -> dict[str, Any]:
     """Return {verdict: allow|deny|escalate, reason} for one requested action.
 
-    Ownership rule for mutation: naming a repository in intent is not
-    ownership. A mutating action is allowed only when the requested scope
-    is covered by this session's live claim, or when the repository is
-    clean, on its main branch, shows no foreign-work signals, sits in
-    declared writable scope, and no other session holds an overlapping
-    scope. Anything else escalates; protected, forbidden, or
-    foreign-claimed scope denies. ``merge`` and ``publish`` require a current
-    claim covering the exact destination scope; a clean checkout alone is
-    insufficient. Escalate and deny never authorize execution. The separate
-    ``retire`` action also requires a current claim covering its exact
-    repository or worktree scope; generic ``delete`` remains escalation-gated.
+    Writable intent and explicit operation scope govern repository integration.
+    ``merge`` and ``publish`` require a writable repository and an exact scope
+    observed or supplied for this operation. The current claim view is checked
+    for overlapping foreign work; claims describe coordination but never grant
+    integration eligibility. Repository operations must still use their native
+    concurrency checks (for example, fast-forward-only merges and non-forcing
+    reference updates). ``write``,
+    ``mutate``, ``execute``, and ``retire`` retain their existing claim or
+    clean-main rules. Protected, forbidden, and fenced scope denies. A claim
+    overlap blocks ordinary mutations but is surfaced as coordination evidence
+    for merge and publish, whose repository-native update must resolve actual
+    conflicts. Escalate and deny never authorize execution.
     """
     if action not in ACTIONS:
         return {"verdict": "deny", "reason": f"unknown action {action!r}"}
@@ -409,6 +436,8 @@ def evaluate(
         _requested_scope(repo, target, scope, repo_facts)
         if conflict_checked else None
     )
+    integration_coordination_overlaps: list[dict[str, Any]] = []
+    integration_coordination_overlap_count = 0
     for other in others:
         if not conflict_checked:
             continue
@@ -422,6 +451,15 @@ def evaluate(
             claim_id = other.get("claim_id")
             if isinstance(claim_id, str) and claim_id:
                 blocking_claim["claim_id"] = claim_id
+            if action in ("merge", "publish"):
+                integration_coordination_overlap_count += 1
+                if (len(integration_coordination_overlaps)
+                        < MAX_INTEGRATION_COORDINATION_OVERLAPS):
+                    integration_coordination_overlaps.append({
+                        **blocking_claim,
+                        "overlap_reason": conflict,
+                    })
+                continue
             return {
                 "verdict": "deny",
                 "reason": (f"{target} overlaps scope claimed by another session "
@@ -452,20 +490,60 @@ def evaluate(
         if repo not in context.get("writable", []):
             return {"verdict": "deny",
                     "reason": f"{repo} is outside this session's writable authority"}
-        owned = any(
-            _covers(holder.get("scope") or {}, requested or {}) for holder in own
-        )
-        if not owned:
+        requested_kind = (requested or {}).get("kind")
+        if requested_kind == "worktree":
+            operation_scope_explicit = (
+                _worktree_scope_matches_observation(
+                    requested or {}, repo, repo_facts,
+                )
+            )
+        elif os.path.isabs(target):
+            operation_scope_explicit = target_checkout is not None
+        elif target != repo:
+            operation_scope_explicit = target.startswith(f"{repo}/")
+        else:
+            operation_scope_explicit = (
+                scope is not None
+                and requested_kind in {"repository", "paths"}
+            )
+        if not operation_scope_explicit:
             return {
                 "verdict": "escalate",
-                "required_authorization": "session-claim",
-                "next_step": "acquire-exact-claim",
+                "required_authorization": "operation-scope",
+                "next_step": "select-an-observed-checkout-or-explicit-scope",
                 "reason": (
-                    f"{action} requires a current session claim covering the "
-                    "exact destination scope"
+                    f"{action} requires an exact observed or explicit destination "
+                    "scope; a persistent claim is optional"
                 ),
             }
-        return {"verdict": "allow", "reason": f"{action} by scoped claim on {repo}"}
+        decision = {
+            "verdict": "allow",
+            "reason": (
+                f"{action} eligible within writable scope on {repo}; "
+                "claim overlaps are coordination evidence"
+            ),
+            "authorization_basis": "writable-repository-rights",
+            "eligibility_basis": (
+                "exact-observed-scope-and-repository-native-concurrency"
+            ),
+            "persistent_claim_required": False,
+            "concurrency_note": (
+                "This decision does not reserve the scope; the integration "
+                "operation must enforce its repository-native reference update"
+            ),
+        }
+        if integration_coordination_overlap_count:
+            decision.update({
+                "coordination_overlap_count": (
+                    integration_coordination_overlap_count
+                ),
+                "coordination_overlaps": integration_coordination_overlaps,
+                "coordination_overlaps_truncated": (
+                    integration_coordination_overlap_count
+                    > len(integration_coordination_overlaps)
+                ),
+            })
+        return decision
     if action == "delegate":
         # Asking an external system to verify a repository scope the
         # session owns is explicit intent, like publish. Anything else

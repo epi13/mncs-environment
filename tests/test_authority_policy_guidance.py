@@ -15,7 +15,7 @@ def _context() -> dict:
         "protected_repositories": [],
         "claim_holders": {},
         "escalation_required": ["delete"],
-        "claim_required_actions": ["merge", "publish", "retire"],
+        "claim_required_actions": ["delegate", "retire"],
     }
 
 
@@ -30,7 +30,7 @@ def _scope() -> dict:
     }
 
 
-def test_delivery_claim_requirement_directs_to_claim_without_owner_reapproval() -> None:
+def test_scoped_delivery_uses_writable_rights_without_persistent_claim() -> None:
     context = _context()
     scope = _scope()
     repo_facts = {
@@ -41,7 +41,7 @@ def test_delivery_claim_requirement_directs_to_claim_without_owner_reapproval() 
         },
     }
 
-    for action in ("merge", "publish", "retire", "write"):
+    for action in ("merge", "publish"):
         decision = authority.evaluate(
             context,
             action=action,
@@ -52,10 +52,39 @@ def test_delivery_claim_requirement_directs_to_claim_without_owner_reapproval() 
             scope=scope,
         )
 
+        assert decision["verdict"] == "allow"
+        assert decision["persistent_claim_required"] is False
+        assert decision["authorization_basis"] == (
+            "writable-repository-rights"
+        )
+        assert decision["eligibility_basis"] == (
+            "exact-observed-scope-and-repository-native-concurrency"
+        )
+
+    for action in ("retire", "write"):
+        decision = authority.evaluate(
+            context,
+            action=action,
+            target="mncs-environment",
+            session_id="ses_campaign",
+            claims={},
+            repo_facts=repo_facts,
+            scope=scope,
+        )
         assert decision["verdict"] == "escalate"
         assert decision["required_authorization"] == "session-claim"
         assert decision["next_step"] == "acquire-exact-claim"
-        assert "approval" not in decision["next_step"]
+
+    unscoped = authority.evaluate(
+        context,
+        action="merge",
+        target="mncs-environment",
+        session_id="ses_campaign",
+        claims={},
+        repo_facts=repo_facts,
+    )
+    assert unscoped["verdict"] == "escalate"
+    assert unscoped["required_authorization"] == "operation-scope"
 
 
 def test_owner_approval_remains_explicit_for_delete_escalation() -> None:

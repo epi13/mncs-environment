@@ -50,6 +50,7 @@ TYPES = (
     "environment.rpc.read_observed",
     "authority.denied",
     "authority.escalated",
+    "authority.integration-eligible",
     "authority.scope-granted",
     "lease.acquired",
     "lease.recovered-and-acquired",

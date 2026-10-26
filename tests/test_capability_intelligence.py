@@ -2396,6 +2396,123 @@ def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Pat
     assert "private-reason-echo" not in json.dumps(compact)
 
 
+def test_scoped_integration_preflight_projects_without_claim_or_success(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_unclaimed_integration_preflight",
+        "ses_projection_reader",
+        "cmp_projection_reader",
+    )
+    record["supporting_sources"].append({
+        "kind": "authenticated-session-activity-projection",
+        "repository": "mncs-environment",
+        "campaign_id": "cmp_projection_reader",
+        "session_id": "ses_projection_reader",
+        "event_identities": ["evt_integration_eligible"],
+    })
+    session, _ = _session(tmp_path, [record])
+    checkout = str(
+        Path(session.snapshot["selected_checkouts"]["mncs-environment"]["path"])
+        / ".worktrees" / "integration-target"
+    )
+    events = [{
+        "identity": "evt_integration_eligible",
+        "sequence": 41,
+        "type": "authority.integration-eligible",
+        "session_id": session.session_id,
+        "producer": "environment",
+        "payload": {
+            "action": "merge",
+            "repository": "mncs-environment",
+            "scope": {
+                "kind": "worktree",
+                "repository": "mncs-environment",
+                "branch": "campaign/example",
+                "exclusive": False,
+            },
+            "authorization_basis": (
+                "writable-repository-rights"
+            ),
+            "eligibility_basis": (
+                "exact-observed-scope-and-repository-native-concurrency"
+            ),
+            "persistent_claim_required": False,
+            "operation_executed": False,
+            "coordination_overlap_count": 5,
+            "coordination_overlaps": [{
+                "session_id": f"ses_other_coordinator_{index}",
+                "claim_id": f"claim:mncs-environment:paths:sample{index}",
+                "scope": {
+                    "kind": "paths",
+                    "repository": "mncs-environment",
+                    "paths": [f"mncs_env/source_{index}.py"],
+                    "exclusive": False,
+                },
+                "overlap_reason": "repository-relative paths overlap",
+            } for index in range(5)],
+            "coordination_overlaps_truncated": False,
+            "target": checkout,
+        },
+    }]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events), "events": events[-limit:],
+        "truncated": False, "next_before_sequence": None,
+    }
+
+    result = capability_intelligence.project(session)
+    activity = result["session_activity"]
+    eligibility = activity["integration_eligibility"][0]
+    assert activity["integration_eligibility_count"] == 1
+    assert eligibility["action"] == "merge"
+    assert eligibility["authorization_basis"] == (
+        "writable-repository-rights"
+    )
+    assert eligibility["eligibility_basis"] == (
+        "exact-observed-scope-and-repository-native-concurrency"
+    )
+    assert eligibility["persistent_claim_required"] is False
+    assert eligibility["operation_executed"] is False
+    assert eligibility["coordination_overlap_count"] == 5
+    assert eligibility["coordination_overlaps"][0]["session_id"] == (
+        "ses_other_coordinator_0"
+    )
+    assert eligibility["event_reference"]["identity"] == (
+        "evt_integration_eligible"
+    )
+    assert checkout not in json.dumps(result)
+    source = next(
+        item for item in result["observations"][0]["supporting_sources"]
+        if item.get("kind") == "authenticated-session-activity-projection"
+    )
+    assert source["event_reference_status"] == "all-referenced-events-present"
+    assert source["event_reference_match_categories"] == [
+        "integration_eligibility",
+    ]
+    assert any(
+        "preflight decisions" in limit
+        for limit in activity["measurement_limits"]
+    )
+
+    compact = capability_intelligence.project(session, max_result_bytes=5_000)
+    compact_eligibility = compact["session_activity"][
+        "integration_eligibility"
+    ][0]
+    assert compact_eligibility["event_reference"]["identity"] == (
+        "evt_integration_eligible"
+    )
+    assert compact_eligibility["operation_executed"] is False
+    assert compact_eligibility["coordination_overlap_count"] == 5
+    assert compact_eligibility["coordination_overlap_records_returned"] == 4
+    assert compact_eligibility[
+        "coordination_overlaps_projection_truncated"
+    ] is True
+    assert compact_eligibility["coordination_overlaps"][0]["claim_id"] == (
+        "claim:mncs-environment:paths:sample0"
+    )
+    assert checkout not in json.dumps(compact)
+
+
 def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     tmp_path: Path,
 ) -> None:

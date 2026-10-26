@@ -4588,6 +4588,43 @@ class Session:
         elif verdict["verdict"] == "escalate":
             self._emit("authority.escalated", "environment",
                        {"action": action, "target": target, "reason": verdict["reason"]})
+        elif action in ("merge", "publish"):
+            requested_scope = authority_module._requested_scope(
+                repository, target, normalized_scope, observed_facts,
+            )
+            payload = {
+                "action": action,
+                "repository": repository,
+                "scope": authority_module._scope_evidence(
+                    requested_scope, repository,
+                ),
+                "authorization_basis": verdict.get(
+                    "authorization_basis",
+                    "writable-repository-rights",
+                ),
+                "eligibility_basis": verdict.get(
+                    "eligibility_basis",
+                    "exact-observed-scope-and-repository-native-concurrency",
+                ),
+                "persistent_claim_required": False,
+                "operation_executed": False,
+            }
+            if type(verdict.get("coordination_overlap_count")) is int:
+                payload.update({
+                    "coordination_overlap_count": verdict[
+                        "coordination_overlap_count"
+                    ],
+                    "coordination_overlaps": verdict.get(
+                        "coordination_overlaps", [],
+                    ),
+                    "coordination_overlaps_truncated": verdict.get(
+                        "coordination_overlaps_truncated", False,
+                    ),
+                })
+            self._emit(
+                "authority.integration-eligible", "environment",
+                payload,
+            )
         return verdict
 
     def last_activity_at(self) -> str | None:

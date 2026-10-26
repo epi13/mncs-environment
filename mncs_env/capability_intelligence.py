@@ -212,6 +212,8 @@ MAX_SESSION_ACTIVITY_RPC_SUMMARY_GROUPS = 32
 MAX_SESSION_ACTIVITY_RPC_SUMMARY_REFERENCES = 3
 MAX_SESSION_ACTIVITY_AUTHORITY_DENIALS = 16
 MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES = 8
+MAX_SESSION_ACTIVITY_INTEGRATION_ELIGIBILITY = 16
+MAX_SESSION_ACTIVITY_INTEGRATION_OVERLAPS = 8
 MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES = 8
 MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS = 4
 SOURCE_INTEGRITY_VERIFIED = frozenset({
@@ -2495,6 +2497,17 @@ def _compact_projection(
             )
             if key in activity_source
         })
+    if activity_source.get("integration_eligibility_events_considered", 0):
+        compact_activity_source.update({
+            key: activity_source[key]
+            for key in (
+                "integration_eligibility_events_considered",
+                "integration_eligibility_records_returned",
+                "integration_eligibility_records_omitted",
+                "integration_eligibility_records_invalid",
+            )
+            if key in activity_source
+        })
     compact_activity_interactions = []
     raw_interactions = activity.get("interactions")
     raw_interactions = raw_interactions if isinstance(raw_interactions, list) else []
@@ -3110,6 +3123,70 @@ def _compact_projection(
                 if key in reference
             }
         compact_authority_denials.append(compact_item)
+    compact_integration_eligibility = []
+    raw_integration_eligibility = activity.get("integration_eligibility")
+    raw_integration_eligibility = (
+        raw_integration_eligibility
+        if isinstance(raw_integration_eligibility, list) else []
+    )
+    for item in raw_integration_eligibility[:8]:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: _short_text(item.get(key), 160)
+            for key in (
+                "identity", "action", "repository", "authorization_basis",
+                "eligibility_basis",
+            )
+            if isinstance(item.get(key), str)
+        }
+        if item.get("persistent_claim_required") is False:
+            compact_item["persistent_claim_required"] = False
+        if item.get("operation_executed") is False:
+            compact_item["operation_executed"] = False
+        if type(item.get("coordination_overlap_count")) is int:
+            compact_item["coordination_overlap_count"] = item[
+                "coordination_overlap_count"
+            ]
+        if item.get("coordination_overlaps_truncated") is True:
+            compact_item["coordination_overlaps_truncated"] = True
+        compact_overlaps = []
+        raw_overlaps = item.get("coordination_overlaps")
+        raw_overlaps = raw_overlaps if isinstance(raw_overlaps, list) else []
+        for overlap in raw_overlaps[:4]:
+            if not isinstance(overlap, dict):
+                continue
+            compact_overlap = {
+                key: _short_text(overlap.get(key), 160)
+                for key in ("session_id", "claim_id", "overlap_reason")
+                if isinstance(overlap.get(key), str)
+            }
+            scope = _authority_conflict_scope(
+                overlap.get("scope"), item.get("repository"),
+            )
+            if scope is not None:
+                compact_overlap["scope"] = scope
+            compact_overlaps.append(compact_overlap)
+        if compact_overlaps:
+            compact_item["coordination_overlaps"] = compact_overlaps
+            compact_item["coordination_overlap_records_returned"] = len(
+                compact_overlaps,
+            )
+            if len(compact_overlaps) < len(raw_overlaps):
+                compact_item["coordination_overlaps_projection_truncated"] = True
+        scope = _authority_conflict_scope(
+            item.get("scope"), item.get("repository"),
+        )
+        if scope is not None:
+            compact_item["scope"] = scope
+        reference = item.get("event_reference")
+        if isinstance(reference, dict):
+            compact_item["event_reference"] = {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in reference
+            }
+        compact_integration_eligibility.append(compact_item)
     compact_authority_candidates = []
     raw_authority_candidates = activity.get("authority_denial_candidates")
     raw_authority_candidates = (
@@ -3214,6 +3291,15 @@ def _compact_projection(
         compact_activity["authority_denials"] = compact_authority_denials
         if len(raw_authority_denials) > len(compact_authority_denials):
             compact_activity["authority_denials_truncated"] = True
+    if raw_integration_eligibility:
+        compact_activity["integration_eligibility_count"] = activity.get(
+            "integration_eligibility_count", len(raw_integration_eligibility),
+        )
+        compact_activity["integration_eligibility"] = (
+            compact_integration_eligibility
+        )
+        if len(raw_integration_eligibility) > len(compact_integration_eligibility):
+            compact_activity["integration_eligibility_truncated"] = True
     if raw_authority_candidates:
         compact_activity["authority_denial_candidates"] = compact_authority_candidates
         if len(raw_authority_candidates) > len(compact_authority_candidates):
@@ -3522,6 +3608,9 @@ def _compact_projection(
         elif result["session_activity"].get("authority_denials"):
             result["session_activity"]["authority_denials"].pop()
             result["session_activity"]["authority_denials_truncated"] = True
+        elif result["session_activity"].get("integration_eligibility"):
+            result["session_activity"]["integration_eligibility"].pop()
+            result["session_activity"]["integration_eligibility_truncated"] = True
         elif result["session_activity"].get("resource_samples", {}).get("observations"):
             result["session_activity"]["resource_samples"]["observations"].pop()
             result["session_activity"]["resource_samples"]["observations_truncated"] = True
@@ -6557,6 +6646,7 @@ def _authenticated_session_event_reference_resolution(
         ("rpc_operation", "rpc_operations"),
         ("claim_recovery", "claim_recoveries"),
         ("authority_denial", "authority_denials"),
+        ("integration_eligibility", "integration_eligibility"),
     )
     matched_categories_by_event: dict[str, set[str]] = {}
     non_rpc_records_present = False
@@ -9424,6 +9514,15 @@ def _session_activity(
     denial_events = [
         event for event in events if event.get("type") == "authority.denied"
     ]
+    integration_eligibility_events = [
+        event for event in events
+        if event.get("type") == "authority.integration-eligible"
+    ]
+    if integration_eligibility_events:
+        limits.append(
+            "Integration eligibility records are preflight decisions; they do "
+            "not establish that a Git merge or publication was executed or succeeded."
+        )
     if denial_events:
         limits.append(
             "Authority-denial projections compare recorded blocker identities "
@@ -9602,6 +9701,118 @@ def _session_activity(
             MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES
         ):
             break
+    integration_eligibility_records = []
+    invalid_integration_eligibility_event_count = 0
+    valid_integration_eligibility_count = 0
+    for event in reversed(integration_eligibility_events):
+        reference = _event_reference(event)
+        payload = event.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        action = payload.get("action")
+        repository = payload.get("repository")
+        scope = _authority_conflict_scope(payload.get("scope"), repository)
+        authorization_basis = payload.get("authorization_basis")
+        eligibility_basis = payload.get("eligibility_basis")
+        if (
+            reference is None
+            or action not in {"merge", "publish"}
+            or not _is_repository_identity(repository)
+            or scope is None
+            or authorization_basis != "writable-repository-rights"
+            or eligibility_basis != (
+                "exact-observed-scope-and-repository-native-concurrency"
+            )
+            or payload.get("persistent_claim_required") is not False
+            or payload.get("operation_executed") is not False
+        ):
+            invalid_integration_eligibility_event_count += 1
+            continue
+        raw_overlap_count = payload.get("coordination_overlap_count", 0)
+        raw_overlaps = payload.get("coordination_overlaps", [])
+        if (
+            type(raw_overlap_count) is not int
+            or not 0 <= raw_overlap_count <= 100_000
+            or not isinstance(raw_overlaps, list)
+            or len(raw_overlaps) > MAX_SESSION_ACTIVITY_INTEGRATION_OVERLAPS
+            or raw_overlap_count < len(raw_overlaps)
+        ):
+            invalid_integration_eligibility_event_count += 1
+            continue
+        coordination_overlaps = []
+        invalid_overlap = False
+        for overlap in raw_overlaps:
+            if not isinstance(overlap, dict):
+                invalid_overlap = True
+                break
+            overlap_scope = _authority_conflict_scope(
+                overlap.get("scope"), repository,
+            )
+            session_id = overlap.get("session_id")
+            claim_id = overlap.get("claim_id")
+            overlap_reason = overlap.get("overlap_reason")
+            if (
+                overlap_scope is None
+                or not isinstance(session_id, str) or not session_id
+                or len(session_id) > 160
+                or (claim_id is not None and (
+                    not isinstance(claim_id, str) or not claim_id
+                    or len(claim_id) > 192
+                ))
+                or not isinstance(overlap_reason, str)
+                or not overlap_reason or len(overlap_reason) > 160
+            ):
+                invalid_overlap = True
+                break
+            coordination_overlaps.append({
+                "session_id": session_id,
+                **({"claim_id": claim_id} if claim_id is not None else {}),
+                "scope": overlap_scope,
+                "overlap_reason": overlap_reason,
+            })
+        truncated_overlaps = raw_overlap_count > len(coordination_overlaps)
+        if (
+            invalid_overlap
+            or ("coordination_overlaps_truncated" in payload
+                and payload.get("coordination_overlaps_truncated")
+                is not truncated_overlaps)
+        ):
+            invalid_integration_eligibility_event_count += 1
+            continue
+        valid_integration_eligibility_count += 1
+        if len(integration_eligibility_records) >= (
+            MAX_SESSION_ACTIVITY_INTEGRATION_ELIGIBILITY
+        ):
+            continue
+        integration_eligibility_records.append({
+            "identity": "inteligible_" + digest_hex({
+                "session_id": session.session_id,
+                "event": reference["identity"],
+            }, length=16),
+            "action": action,
+            "repository": repository,
+            "authorization_basis": authorization_basis,
+            "eligibility_basis": eligibility_basis,
+            "persistent_claim_required": False,
+            "operation_executed": False,
+            "coordination_overlap_count": raw_overlap_count,
+            "coordination_overlaps": coordination_overlaps,
+            "coordination_overlaps_truncated": truncated_overlaps,
+            "scope": scope,
+            "interpretation": (
+                "The Environment found this scoped merge or publish eligible "
+                "at preflight time. No integration result is recorded by this event."
+            ),
+            "event_reference": reference,
+        })
+    integration_eligibility_records_omitted = max(
+        0,
+        valid_integration_eligibility_count
+        - len(integration_eligibility_records),
+    )
+    if ((integration_eligibility_records_omitted
+         or invalid_integration_eligibility_event_count)
+            and not status.startswith("partial")):
+        status = "partial"
     unpaired_completion_count = 0
     for event in completion_events:
         payload = event.get("payload")
@@ -9666,6 +9877,23 @@ def _session_activity(
                 "newest-sanitized-denials-in-selected-event-window"
             ),
             **({
+                "integration_eligibility_events_considered": len(
+                    integration_eligibility_events,
+                ),
+                "integration_eligibility_records_returned": len(
+                    integration_eligibility_records,
+                ),
+                "integration_eligibility_records_omitted": (
+                    integration_eligibility_records_omitted
+                ),
+                "integration_eligibility_records_invalid": (
+                    invalid_integration_eligibility_event_count
+                ),
+                "integration_eligibility_selection_policy": (
+                    "newest-sanitized-preflight-decisions-in-selected-session-window"
+                ),
+            } if integration_eligibility_events else {}),
+            **({
                 "authority_claim_state_lookup": claim_state_lookup,
             } if denial_events else {}),
             **({
@@ -9724,6 +9952,12 @@ def _session_activity(
         "authority_denial_count": len(authority_denials),
         "authority_denials": authority_denials,
         "authority_denial_candidates": authority_denial_candidates,
+        **({
+            "integration_eligibility_count": len(
+                integration_eligibility_records,
+            ),
+            "integration_eligibility": integration_eligibility_records,
+        } if integration_eligibility_events else {}),
         **({
             "claim_recovery_count": len(claim_recoveries),
             "claim_recoveries": claim_recoveries,
