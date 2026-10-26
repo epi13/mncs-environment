@@ -1,0 +1,147 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_link_provenance_verification_20261026",
+  "captured_at": "2026-10-26T03:52:29Z",
+  "measurement_basis": "targeted-regression-tests, static checks, and authenticated bounded live projection",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve how effectively MNCS language, compiler, tooling, and environment serve and potentiate agents through evidence from real development.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_abd90b1d3b0432ca",
+    "campaign_evidence_count_before_recording": 35,
+    "claim_ids": [
+      "claim:mncs-environment:paths:5a20ce42c97d"
+    ]
+  },
+  "observation": {
+    "kind": "applied-correction-link-provenance-regression-verification",
+    "source_interface": "pytest, ruff, py_compile, git diff check, and MNCS Environment projection",
+    "request": {
+      "implementation_commit": "075334dd91f6e07ba94a74331f25d0721ce6e1a7",
+      "baseline_commit": "910f71c05f4613faf13c003e3d2fbf48c473387e",
+      "projection_identity": "eci_ba37539b82c93eb6",
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 1 --evidence-limit 4 --evidence-offset 0",
+      "commands": [
+        "PYTHONPATH=. pytest -q tests/test_native_capability_relationships.py",
+        "ruff check mncs_env/capability_relationships.py tests/test_native_capability_relationships.py",
+        "python -m py_compile mncs_env/capability_relationships.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "tests": {
+        "status": "passed",
+        "passed": 22,
+        "failed": 0
+      },
+      "ruff": "passed",
+      "py_compile": "passed",
+      "git_diff_check": "passed",
+      "live_projection": {
+        "status": "partial",
+        "relation_status": "linked-source-context",
+        "exact_shared_pointer_match_count": 1,
+        "link_count": 1,
+        "links_truncated": false,
+        "relationship_kind": "audit-correction-to-native-source-pointer",
+        "correction_identity": "ev_environment_native_userland_accountability_correction_20261025",
+        "correction_status": "applied-to-verified-target",
+        "target_match_status": "exact-reference-match",
+        "shared_source": {
+          "identity": "MNCS-TEST-P-001",
+          "repository": "mncs-test",
+          "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+          "path": "pressures/MNCS-TEST-P-001.json",
+          "sha256": "38cb0494d2362b9b9b760ab3c76a4f27c6bd6595ca337b15765564e8ad0975de"
+        },
+        "source_integrity_status": "verified-in-both-linked-observations",
+        "agent_usage_status": "not-measured",
+        "causal_relation_status": "not-established",
+        "native_migration_readiness": "not-established",
+        "recurrence_status": "not-established"
+      },
+      "interpretation_limit": "The projection status remains partial because the overall selected session and evidence window are bounded. The exact correction link is verified in the returned relation, but measurement limits remain unchanged."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_correction_link_provenance",
+    "title": "Applied correction provenance can be hidden by duplicate exact-pointer links under the response budget",
+    "category": "environmental-observation",
+    "subsystem": "MNCS Environment capability-accountability relationship projection and bounded result serialization",
+    "owner": "mncs-environment",
+    "basis": "A bounded live projection after the correction was applied counted the same exact source through direct and correction-backed paths. Its response budget retained one link but truncated the correction-backed path, leaving the applied correction provenance unavailable on the returned link.",
+    "actionable_recommendation": "When an applied correction supplies the exact pointer already present in the effective owner audit, emit one correction-backed link and prioritize applied-correction provenance before bounded link pruning.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "recurrence across other accountability projections, source types, and campaigns",
+      "whether an agent relied on the correction provenance or used the linked native capability",
+      "whether the source pressure causally blocks a host responsibility or makes migration ready",
+      "long-term effectiveness across independent sessions and environmental versions"
+    ]
+  },
+  "measurement_limits": [
+    "The test covers one owner-audit and correction pointer combination plus the existing module tests.",
+    "The live query selected one bounded evidence page; it does not establish all campaign evidence is complete.",
+    "No independent future session has assessed whether the relationship is used or the limitation recurs."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_preserve_applied_correction_link_provenance_075334d",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "075334dd91f6e07ba94a74331f25d0721ce6e1a7",
+      "path": "mncs_env/capability_relationships.py",
+      "sha256": "1172468da6b116bbbb2f1728771776752a9c2f11654d4affb2cc2b28613b95e0"
+    },
+    {
+      "identity": "mncs_environment_correction_provenance_duplicate_link_regression_075334d",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "075334dd91f6e07ba94a74331f25d0721ce6e1a7",
+      "path": "tests/test_native_capability_relationships.py",
+      "sha256": "8b1ecb7d996c1d4ee2d4b40c470fd0b31035dbfc8c714e5a632c66d7543f2e37"
+    },
+    {
+      "identity": "mncs_environment_correction_provenance_projection_contract_075334d",
+      "kind": "committed-projection-documentation",
+      "repository": "mncs-environment",
+      "commit": "075334dd91f6e07ba94a74331f25d0721ce6e1a7",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "7ee82ea37b2a196e5d238d3e28de9d40e14e3cd9a114cd0e6524428b1da9c0d2"
+    },
+    {
+      "identity": "ev_environment_native_userland_accountability_correction_20261025",
+      "repository": "mncs-environment",
+      "commit": "ee6bf1db5d4d6f5d5c92add08d819a5ab3a1f64b",
+      "path": "evidence/environmental-capability/native-userland-accountability-correction-20261025.json",
+      "sha256": "556007f5f8ec9c713f931626d122b516239f4f489fff55079cf41f7b5b3511d5"
+    },
+    {
+      "identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+      "repository": "mncs-environment",
+      "commit": "fa06cc9d56648c48d17594d7af65f0babd2c35c8",
+      "path": "evidence/environmental-capability/native-userland-accountability-20261025.json",
+      "sha256": "14af1e6885b24b324491af644f7a9a4bb589e60d391d4649b9c93c49832b6b66"
+    },
+    {
+      "identity": "MNCS-TEST-P-001",
+      "repository": "mncs-test",
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "path": "pressures/MNCS-TEST-P-001.json",
+      "sha256": "38cb0494d2362b9b9b760ab3c76a4f27c6bd6595ca337b15765564e8ad0975de",
+      "kind": "verified-shared-source"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

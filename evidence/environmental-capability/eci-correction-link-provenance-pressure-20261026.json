@@ -1,0 +1,110 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_link_provenance_pressure_20261026",
+  "captured_at": "2026-10-26T03:52:29Z",
+  "measurement_basis": "bounded authenticated campaign projection, source inspection, and differential regression verification",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve how effectively MNCS language, compiler, tooling, and environment serve and potentiate agents through evidence from real development.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_abd90b1d3b0432ca",
+    "campaign_evidence_count_before_recording": 35,
+    "claim_ids": [
+      "claim:mncs-environment:paths:5a20ce42c97d"
+    ]
+  },
+  "observation": {
+    "kind": "applied-correction-provenance-pruned-under-accountability-response-budget",
+    "source_interface": "MNCS Environment environmental-capability projection capability_accountability_links view",
+    "request": {
+      "projection_command": "./scripts/mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 1 --evidence-limit 4 --evidence-offset 0",
+      "baseline_implementation_commit": "910f71c05f4613faf13c003e3d2fbf48c473387e",
+      "baseline_projection_identity": "not-retained-in-campaign-evidence",
+      "target_correction_identity": "ev_environment_native_userland_accountability_correction_20261025",
+      "shared_source_identity": "MNCS-TEST-P-001"
+    },
+    "outcome": {
+      "baseline_projection_status": "partial",
+      "exact_shared_pointer_match_count": 2,
+      "link_count": 1,
+      "links_truncated": true,
+      "retained_link_kind": "direct exact-pointer match without correction reference",
+      "correction_status": "applied-to-verified-target",
+      "interpretation": "The direct pointer and the applied correction represented the same source. Duplicate representation consumed the bounded link budget and hid the correction provenance on the retained link."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_correction_link_provenance",
+    "title": "Applied correction provenance can be hidden by duplicate exact-pointer links under the response budget",
+    "category": "environmental-observation",
+    "subsystem": "MNCS Environment capability-accountability relationship projection and bounded result serialization",
+    "owner": "mncs-environment",
+    "basis": "A bounded live projection after the correction was applied counted the same exact source through direct and correction-backed paths. Its response budget retained one link but truncated the correction-backed path, leaving the applied correction provenance unavailable on the returned link.",
+    "actionable_recommendation": "When an applied correction supplies the exact pointer already present in the effective owner audit, emit one correction-backed link and prioritize applied-correction provenance before bounded link pruning.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "recurrence across other accountability projections, source types, and campaigns",
+      "whether an agent relied on the correction provenance or used the linked native capability",
+      "whether the source pressure causally blocks a host responsibility or makes migration ready",
+      "long-term effectiveness across independent sessions and environmental versions"
+    ]
+  },
+  "measurement_limits": [
+    "The pre-change live result was a bounded campaign projection; its projection identity was not retained as a separate historical evidence record.",
+    "This is one observed correction-backed relationship; recurrence is not established.",
+    "The link omission does not establish agent impact, causal blocking, implementation ownership, or native migration readiness."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_native_userland_accountability_correction_20261025",
+      "repository": "mncs-environment",
+      "commit": "ee6bf1db5d4d6f5d5c92add08d819a5ab3a1f64b",
+      "path": "evidence/environmental-capability/native-userland-accountability-correction-20261025.json",
+      "sha256": "556007f5f8ec9c713f931626d122b516239f4f489fff55079cf41f7b5b3511d5",
+      "kind": "applied-owner-audit-correction"
+    },
+    {
+      "identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+      "repository": "mncs-environment",
+      "commit": "fa06cc9d56648c48d17594d7af65f0babd2c35c8",
+      "path": "evidence/environmental-capability/native-userland-accountability-20261025.json",
+      "sha256": "14af1e6885b24b324491af644f7a9a4bb589e60d391d4649b9c93c49832b6b66",
+      "kind": "owner-audit-source-record"
+    },
+    {
+      "identity": "MNCS-TEST-P-001",
+      "repository": "mncs-test",
+      "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+      "path": "pressures/MNCS-TEST-P-001.json",
+      "sha256": "38cb0494d2362b9b9b760ab3c76a4f27c6bd6595ca337b15765564e8ad0975de",
+      "kind": "repository-owner-pressure-source"
+    },
+    {
+      "identity": "mncs_environment_pre_change_bounded_accountability_link_projection_910f71c",
+      "kind": "pre-change-projection-implementation",
+      "repository": "mncs-environment",
+      "commit": "910f71c05f4613faf13c003e3d2fbf48c473387e",
+      "path": "mncs_env/capability_relationships.py",
+      "sha256": "0b2698629359fb1ddf50d6c40fc84b5f1eee5f2f1a5fc806eaec56b8d0b14d10"
+    },
+    {
+      "identity": "ev_environment_eci_correction_source_registration_readback_20261026",
+      "kind": "prior-authenticated-correction-live-readback",
+      "repository": "mncs-environment",
+      "commit": "910f71c05f4613faf13c003e3d2fbf48c473387e",
+      "path": "evidence/environmental-capability/eci-correction-source-registration-readback-20261026.json",
+      "sha256": "83165c6b015033c028445c0711c05d9523344fa975c3f24fe1512ef932c43bf6"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
