@@ -231,7 +231,10 @@ state, not prose. The hardening campaign added:
   (`docs/AMBIENCE.md`).
 - authority denials and claim-free integration preflights retain campaign and
   WorkIntent identities, allowing projections to relate coordination pressure
-  to the objective it affected without copying its prose.
+  to the objective it affected without copying its prose; campaign
+  reconciliation records bounded before/after repository-ref observations and
+  the environmental-capability projection links a later observation to an
+  exact prior preflight without asserting causation.
 
 ## Entering an environment
 

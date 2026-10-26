@@ -210,6 +210,7 @@ CONTINUATION_MAX_CAMPAIGN_EVIDENCE = 32
 CAMPAIGN_DELIVERY_REPOSITORIES_MAX = 16
 CAMPAIGN_STATE_INPUT_MAX_BYTES = 48 * 1024
 CAMPAIGN_STATE_READ_MAX_BYTES = 56 * 1024
+CAMPAIGN_REPOSITORY_REF_TRANSITIONS_MAX = 16
 MAX_PRESERVED_CAMPAIGN_EVIDENCE_FILES = 32
 MAX_PRESERVED_CAMPAIGN_EVIDENCE_FILE_BYTES = 1024 * 1024
 MAX_PRESERVED_CAMPAIGN_EVIDENCE_TOTAL_BYTES = 8 * 1024 * 1024
@@ -218,6 +219,144 @@ _CAMPAIGN_REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
 _CAMPAIGN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$")
 _GIT_OBJECT_ID_PATTERN = re.compile(r"^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$")
 _SHA256_PATTERN = re.compile(r"^[0-9a-fA-F]{64}$")
+
+
+def _campaign_repository_ref_transitions(
+    before_refs: Any,
+    after_refs: Any,
+    *,
+    workspace_root: Path,
+) -> tuple[list[dict[str, Any]], int]:
+    """Return bounded, sanitized repository-ref observations between snapshots.
+
+    These deltas describe what Environment observed. They do not attribute a
+    change to an agent, authority preflight, or Git operation.
+    """
+    def records(value: Any) -> dict[tuple[str, str], dict[str, Any]]:
+        if not isinstance(value, list):
+            return {}
+        result: dict[tuple[str, str], dict[str, Any]] = {}
+        for item in value[:64]:
+            if not isinstance(item, dict):
+                continue
+            repository = item.get("repository")
+            raw_path = item.get("observed_path", item.get("path"))
+            if (not isinstance(repository, str)
+                    or not _CAMPAIGN_REPOSITORY_PATTERN.fullmatch(repository)
+                    or not isinstance(raw_path, str) or not raw_path
+                    or len(raw_path) > 1024 or "\\" in raw_path
+                    or "\x00" in raw_path):
+                continue
+            path = Path(raw_path)
+            if path.is_absolute():
+                try:
+                    observed_path = path.resolve().relative_to(
+                        workspace_root.resolve()
+                    ).as_posix()
+                except (OSError, ValueError):
+                    continue
+            else:
+                observed_path = PurePosixPath(raw_path).as_posix()
+            if (not observed_path or observed_path in {".", ".."}
+                    or observed_path.startswith("/")
+                    or any(part in {"", ".", ".."}
+                           for part in observed_path.split("/"))):
+                continue
+            observed: dict[str, Any] = {
+                "repository": repository,
+                "observed_path": observed_path,
+            }
+            for key in (
+                "checkout_identity", "git_common_directory_identity",
+            ):
+                identity = item.get(key)
+                if (isinstance(identity, str) and len(identity) <= 160
+                        and re.fullmatch(r"[A-Za-z0-9:._-]+", identity)):
+                    observed[key] = identity
+            branch = item.get("branch")
+            if (isinstance(branch, str) and branch and len(branch) <= 160
+                    and "\x00" not in branch and not branch.startswith("/")):
+                observed["branch"] = branch
+            elif branch is None:
+                observed["branch"] = None
+            head = item.get("head")
+            if isinstance(head, str) and _GIT_OBJECT_ID_PATTERN.fullmatch(head):
+                observed["head"] = head.lower()
+            elif head is None:
+                observed["head"] = None
+            clean = item.get("clean")
+            if type(clean) is bool:
+                observed["clean"] = clean
+            dirty_count = item.get("dirty_entry_count")
+            if (type(dirty_count) is int and 0 <= dirty_count <= 30_000):
+                observed["dirty_entry_count"] = dirty_count
+            observation = item.get("observation")
+            if observation in {"current", "unavailable_current_namespace"}:
+                observed["observation"] = observation
+            result[(repository, observed_path)] = observed
+        return result
+
+    before = records(before_refs)
+    after = records(after_refs)
+    transitions: list[dict[str, Any]] = []
+    for key in sorted(set(before) | set(after)):
+        prior = before.get(key)
+        current = after.get(key)
+        kinds: list[str] = []
+        state_delta = False
+        if prior is None:
+            kinds.append("first-observed")
+        elif current is None:
+            kinds.append("no-longer-observed")
+        else:
+            for field, kind in (
+                ("head", "head-changed"),
+                ("branch", "branch-changed"),
+                ("clean", "clean-state-changed"),
+                ("dirty_entry_count", "dirty-entry-count-changed"),
+                ("checkout_identity", "checkout-identity-changed"),
+                ("git_common_directory_identity", "git-common-directory-changed"),
+            ):
+                old_value = prior.get(field)
+                new_value = current.get(field)
+                if old_value is not None and new_value is not None and old_value != new_value:
+                    kinds.append(kind)
+                    state_delta = True
+            old_observation = prior.get("observation")
+            new_observation = current.get("observation")
+            if (old_observation is not None and new_observation is not None
+                    and old_observation != new_observation):
+                kinds.append("availability-changed")
+                state_delta = True
+            newly_observed_fields = sorted(
+                field for field, value in current.items()
+                if field not in {"repository", "observed_path"}
+                and prior.get(field) is None and value is not None
+            )
+            if newly_observed_fields:
+                kinds.append("observation-enriched")
+            if not kinds:
+                continue
+        transition = {
+            "schema_version": "mncs.environment.repository-ref-transition/1",
+            "repository": key[0],
+            "observed_path": key[1],
+            "change_kinds": kinds,
+            "state_change_status": (
+                "observed-delta" if state_delta
+                else "initial-or-enriched-observation"
+            ),
+            "causal_status": "not-established",
+        }
+        if prior is not None:
+            transition["before"] = prior
+        if current is not None:
+            transition["after"] = current
+        transitions.append(transition)
+    return (
+        transitions[:CAMPAIGN_REPOSITORY_REF_TRANSITIONS_MAX],
+        max(0, len(transitions) - CAMPAIGN_REPOSITORY_REF_TRANSITIONS_MAX),
+    )
 
 
 def _preserved_campaign_evidence(
@@ -2559,6 +2698,17 @@ class Session:
         }
         repository_refs = self._campaign_repository_refs(own_claims)
         refs_changed = repository_refs != prior_repository_refs
+        workspace_root_value = (self.snapshot.get("workspace") or {}).get("root")
+        repository_ref_transitions: list[dict[str, Any]] = []
+        repository_ref_transitions_omitted = 0
+        if refs_changed and isinstance(workspace_root_value, str):
+            repository_ref_transitions, repository_ref_transitions_omitted = (
+                _campaign_repository_ref_transitions(
+                    prior_repository_refs,
+                    repository_refs,
+                    workspace_root=Path(workspace_root_value),
+                )
+            )
         campaign["repository_refs"] = repository_refs
         if missing:
             pressures = list(campaign.get("unresolved_pressures", []))
@@ -2598,10 +2748,23 @@ class Session:
                 or repaired_acceptance or campaign_state_changed):
             self._emit("campaign.reconciled", "environment", {
                 "campaign_id": campaign.get("identity"),
+                "work_intent_id": (self.snapshot.get("intent") or {}).get(
+                    "identity"
+                ),
                 "recovered_checkpoints": recovered,
                 "unavailable_checkpoints": missing,
                 "claim_ids": claims,
                 "repository_refs_changed": refs_changed,
+                **({
+                    "repository_ref_transition_count": (
+                        len(repository_ref_transitions)
+                        + repository_ref_transitions_omitted
+                    ),
+                    "repository_ref_transitions": repository_ref_transitions,
+                    "repository_ref_transitions_omitted": (
+                        repository_ref_transitions_omitted
+                    ),
+                } if refs_changed else {}),
                 "campaign_state_checkpoint_id": (
                     campaign_state_record.get("identity")
                     if campaign_state_record else None
@@ -2614,6 +2777,13 @@ class Session:
                 "campaign_state_checkpoint_id": (
                     campaign_state_record.get("identity")
                     if campaign_state_record else None
+                ),
+                "repository_ref_transition_count": (
+                    len(repository_ref_transitions)
+                    + repository_ref_transitions_omitted
+                ),
+                "repository_ref_transitions_omitted": (
+                    repository_ref_transitions_omitted
                 ),
                 "campaign_state_changed": campaign_state_changed,
                 "changed": bool(recovered or prior_claims != claims or missing

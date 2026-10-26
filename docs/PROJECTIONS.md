@@ -475,6 +475,19 @@ not-recorded-on-event`; this state identifies the local checkout preimage only.
 These are preflight observations: they do not prove that an operation ran,
 that its changes were accepted, verified, or beneficial. The projection keeps
 the source event reference so an agent can inspect the underlying evidence.
+Campaign continuity now records bounded `repository_ref_transitions` when a
+reconciliation observes a change in its tracked checkout refs or worktree
+state. Each transition carries workspace-relative repository/check-out
+identity, branch and HEAD observations, clean state, and dirty-entry count;
+absolute paths and remote URLs are not copied. Initial observations and
+newly available fields are marked as baseline/enrichment rather than as a
+development change. `session_activity.repository_ref_transitions` validates
+these records and relates them to an earlier proposal or integration preflight
+only when the exact checkout identity and HEAD match the recorded before-state
+in the selected session event window. The relation is a traceable sequence of
+observations, not proof that the eligible operation caused the later state,
+that a remote publication succeeded, or that the change was verified or
+beneficial. An absent match in a bounded page may exist on an older page.
 When an exact registered destination was refreshed before a merge or publish
 denial, that `authority.denied` event also carries its repository identity and
 the same bounded local preimage. The projection exposes it as

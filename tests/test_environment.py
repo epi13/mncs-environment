@@ -2594,6 +2594,41 @@ class CampaignContinuityTests(unittest.TestCase):
             finally:
                 session.close()
 
+    def test_repository_ref_enrichment_is_not_reported_as_state_change(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            transitions, omitted = sessions._campaign_repository_ref_transitions(
+                [{
+                    "repository": "mncs-environment",
+                    "path": str(root / "mncs-environment"),
+                    "branch": "main",
+                    "head": "a" * 40,
+                    "clean": True,
+                }],
+                [{
+                    "repository": "mncs-environment",
+                    "observed_path": "mncs-environment",
+                    "branch": "main",
+                    "head": "a" * 40,
+                    "clean": True,
+                    "dirty_entry_count": 0,
+                    "checkout_identity": "checkout:observed",
+                    "git_common_directory_identity": "git-common:observed",
+                    "observation": "current",
+                }],
+                workspace_root=root,
+            )
+
+            self.assertEqual(omitted, 0)
+            self.assertEqual(len(transitions), 1)
+            self.assertIn("observation-enriched", transitions[0]["change_kinds"])
+            self.assertEqual(
+                transitions[0]["state_change_status"],
+                "initial-or-enriched-observation",
+            )
+            self.assertNotIn("head-changed", transitions[0]["change_kinds"])
+            self.assertEqual(transitions[0]["causal_status"], "not-established")
+
     def test_owned_claim_rebuilds_portable_repository_capsule(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
@@ -2670,6 +2705,31 @@ class CampaignContinuityTests(unittest.TestCase):
                 self.assertTrue(reference["clean"])
                 self.assertTrue(reference["git_common_directory_identity"].startswith("git-common:"))
                 self.assertTrue(reference["checkout_identity"].startswith("checkout:"))
+
+                (checkout / "source.mncs").write_text(
+                    "module test;\n// observed follow-up\n", encoding="utf-8",
+                )
+                git("add", "source.mncs")
+                git("commit", "-q", "-m", "observed repository follow-up")
+                next_head = git("rev-parse", "HEAD")
+                reconciled = session.reconcile_campaign_continuity()
+                self.assertEqual(reconciled["repository_ref_transition_count"], 1)
+                event = next(
+                    item for item in reversed(
+                        session.store.read_events(session.session_id)
+                    )
+                    if item.get("type") == "campaign.reconciled"
+                )
+                transition = event["payload"]["repository_ref_transitions"][0]
+                self.assertEqual(event["payload"]["work_intent_id"], "intent_test_identity")
+                self.assertEqual(transition["repository"], "mncs-control-mcp")
+                self.assertEqual(transition["observed_path"], "mncs-control-mcp")
+                self.assertIn("head-changed", transition["change_kinds"])
+                self.assertEqual(transition["state_change_status"], "observed-delta")
+                self.assertEqual(transition["before"]["head"], head)
+                self.assertEqual(transition["after"]["head"], next_head)
+                self.assertEqual(transition["causal_status"], "not-established")
+                self.assertNotIn(str(root), json.dumps(transition))
             finally:
                 session.close()
 

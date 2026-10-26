@@ -3610,6 +3610,161 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
     assert len(json.dumps(compact, ensure_ascii=False).encode("utf-8")) <= 15_000
 
 
+def test_repository_ref_followup_matches_exact_preflight_without_claiming_cause(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_ref_transition_followup",
+        "ses_projection_reader",
+        "cmp_projection_reader",
+    )
+    session, _ = _session(tmp_path, [record])
+    repository = "mncs-environment"
+    checkout_identity = "checkout:observed-target"
+    branch = "campaign/observed-target"
+    before_head = "c" * 40
+    after_head = "d" * 40
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": 2,
+        "events": [
+            {
+                "identity": "evt_ref_transition_preflight",
+                "sequence": 41,
+                "type": "authority.integration-eligible",
+                "session_id": session.session_id,
+                "payload": {
+                    "action": "merge",
+                    "repository": repository,
+                    "scope": {
+                        "kind": "worktree",
+                        "repository": repository,
+                        "branch": branch,
+                        "exclusive": False,
+                    },
+                    "authorization_basis": "writable-repository-rights",
+                    "eligibility_basis": (
+                        "exact-observed-scope-and-repository-native-concurrency"
+                    ),
+                    "persistent_claim_required": False,
+                    "operation_executed": False,
+                    "repository_preflight_state": {
+                        "schema_version": (
+                            "mncs.environment.integration-preflight-state/1"
+                        ),
+                        "observation_basis": (
+                            "fresh-registered-checkout-inspection"
+                        ),
+                        "checkout_identity": checkout_identity,
+                        "branch": branch,
+                        "branch_status": "attached",
+                        "head": before_head,
+                        "head_status": "measured",
+                        "working_tree_status": "clean",
+                    },
+                    "campaign_id": session.snapshot["campaign"]["identity"],
+                    "work_intent_id": session.snapshot["intent"]["identity"],
+                    "coordination_overlap_count": 0,
+                    "coordination_overlaps": [],
+                    "coordination_overlaps_truncated": False,
+                },
+            },
+            {
+                "identity": "evt_ref_transition_observed",
+                "sequence": 42,
+                "type": "campaign.reconciled",
+                "session_id": session.session_id,
+                "payload": {
+                    "campaign_id": session.snapshot["campaign"]["identity"],
+                    "work_intent_id": session.snapshot["intent"]["identity"],
+                    "repository_refs_changed": True,
+                    "repository_ref_transition_count": 1,
+                    "repository_ref_transitions_omitted": 0,
+                    "repository_ref_transitions": [{
+                        "schema_version": (
+                            "mncs.environment.repository-ref-transition/1"
+                        ),
+                        "repository": repository,
+                        "observed_path": (
+                            "mncs-environment/.worktrees/observed-target"
+                        ),
+                        "change_kinds": ["head-changed"],
+                        "state_change_status": "observed-delta",
+                        "causal_status": "not-established",
+                        "before": {
+                            "repository": repository,
+                            "observed_path": (
+                                "mncs-environment/.worktrees/observed-target"
+                            ),
+                            "checkout_identity": checkout_identity,
+                            "branch": branch,
+                            "head": before_head,
+                            "clean": True,
+                            "dirty_entry_count": 0,
+                            "observation": "current",
+                        },
+                        "after": {
+                            "repository": repository,
+                            "observed_path": (
+                                "mncs-environment/.worktrees/observed-target"
+                            ),
+                            "checkout_identity": checkout_identity,
+                            "branch": branch,
+                            "head": after_head,
+                            "clean": True,
+                            "dirty_entry_count": 0,
+                            "observation": "current",
+                        },
+                    }],
+                },
+            },
+        ],
+        "truncated": False,
+        "next_before_sequence": None,
+    }
+
+    projection = capability_intelligence.project(
+        session, session_event_limit=8,
+    )
+    activity = projection["session_activity"]
+    transition = activity["repository_ref_transitions"][0]
+
+    assert activity["integration_eligibility"][0][
+        "persistent_claim_required"
+    ] is False
+    assert transition["campaign_id"] == session.snapshot["campaign"]["identity"]
+    assert transition["work_intent_id"] == session.snapshot["intent"]["identity"]
+    assert transition["before"]["head"] == before_head
+    assert transition["after"]["head"] == after_head
+    assert transition["causal_status"] == "not-established"
+    assert transition["preflight_relation"]["status"] == (
+        "exact-preimage-match-after-preflight"
+    )
+    assert transition["preflight_relation"]["matches"][0]["event_reference"][
+        "identity"
+    ] == "evt_ref_transition_preflight"
+    mismatched_intent = {
+        **activity["integration_eligibility"][0],
+        "work_intent_id": "int_unrelated_objective",
+    }
+    assert capability_intelligence._repository_ref_preflight_relation(
+        transition,
+        integration_records=[mismatched_intent],
+        proposal_records=[],
+    )["status"] == "no-exact-preflight-match-in-selected-window"
+    assert "does not establish that the operation caused the change" in (
+        transition["interpretation"]
+    )
+    compact = capability_intelligence._compact_projection(
+        projection, original_size=100_000, max_result_bytes=10_000,
+    )
+    compact_transition = compact["session_activity"][
+        "repository_ref_transitions"
+    ][0]
+    assert compact_transition["preflight_relation"]["matches"][0][
+        "event_reference"
+    ]["identity"] == "evt_ref_transition_preflight"
+
+
 def test_claim_owner_history_uses_only_bounded_read_interfaces() -> None:
     def unbounded_read_events(_session_id):
         raise AssertionError("unbounded event history must not be read")

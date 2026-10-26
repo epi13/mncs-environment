@@ -227,6 +227,7 @@ MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES = 8
 MAX_SESSION_ACTIVITY_INTEGRATION_ELIGIBILITY = 16
 MAX_SESSION_ACTIVITY_INTEGRATION_OVERLAPS = 8
 MAX_SESSION_ACTIVITY_PROPOSAL_ELIGIBILITY = 16
+MAX_SESSION_ACTIVITY_REPOSITORY_REF_TRANSITIONS = 16
 MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES = 8
 MAX_SESSION_ACTIVITY_CLAIM_COORDINATION = 16
 MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 8
@@ -2848,6 +2849,12 @@ def _compact_projection(
             "proposal_eligibility_records_invalid",
             "proposal_preflight_state_observations_invalid",
             "proposal_eligibility_selection_policy",
+            "repository_ref_transition_events_considered",
+            "repository_ref_transition_records_returned",
+            "repository_ref_transition_records_omitted",
+            "repository_ref_transition_records_invalid",
+            "repository_ref_transition_events_invalid",
+            "repository_ref_transition_selection_policy",
         )
         if key in activity_source
         and (key not in {"event_page_before_sequence", "next_event_before_sequence"}
@@ -4196,6 +4203,91 @@ def _compact_projection(
         compact_activity["proposal_eligibility"] = compact_proposal_eligibility
         if len(raw_proposal_eligibility) > len(compact_proposal_eligibility):
             compact_activity["proposal_eligibility_truncated"] = True
+    raw_repository_ref_transitions = activity.get("repository_ref_transitions")
+    raw_repository_ref_transitions = (
+        raw_repository_ref_transitions
+        if isinstance(raw_repository_ref_transitions, list) else []
+    )
+    compact_repository_ref_transitions = []
+    for item in raw_repository_ref_transitions[
+        :MAX_SESSION_ACTIVITY_REPOSITORY_REF_TRANSITIONS
+    ]:
+        if not isinstance(item, dict):
+            continue
+        repository = item.get("repository")
+        observed_path = item.get("observed_path")
+        if not _is_repository_identity(repository):
+            continue
+        if (not isinstance(observed_path, str) or not observed_path
+                or len(observed_path) > 240 or "\\" in observed_path
+                or observed_path.startswith("/")
+                or PurePosixPath(observed_path).as_posix() != observed_path
+                or any(part in {"", ".", ".."}
+                       for part in observed_path.split("/"))):
+            continue
+        compact_item = {
+            key: item[key]
+            for key in (
+                "identity", "repository", "observed_path", "change_kinds",
+                "state_change_status", "causal_status", "campaign_id",
+                "work_intent_id", "work_intent_reference_status",
+            )
+            if key in item
+        }
+        for key in ("before", "after"):
+            observation = _authority_repository_ref_observation(
+                item.get(key), repository=repository,
+                observed_path=observed_path,
+            )
+            if observation is not None:
+                compact_item[key] = observation
+        relation = item.get("preflight_relation")
+        if isinstance(relation, dict):
+            compact_relation = {
+                key: relation[key]
+                for key in ("status", "matching_preflight_count", "matches_truncated")
+                if key in relation
+            }
+            matches = relation.get("matches")
+            if isinstance(matches, list):
+                compact_matches = []
+                for match in matches[:2]:
+                    if not isinstance(match, dict):
+                        continue
+                    compact_match = {
+                        key: match[key]
+                        for key in ("kind", "action", "match_basis")
+                        if key in match
+                    }
+                    reference = match.get("event_reference")
+                    if isinstance(reference, dict):
+                        compact_match["event_reference"] = {
+                            key: reference[key]
+                            for key in ("identity", "sequence", "type")
+                            if key in reference
+                        }
+                    compact_matches.append(compact_match)
+                compact_relation["matches"] = compact_matches
+            compact_item["preflight_relation"] = compact_relation
+        reference = item.get("event_reference")
+        if isinstance(reference, dict):
+            compact_item["event_reference"] = {
+                key: reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in reference
+            }
+        compact_repository_ref_transitions.append(compact_item)
+    if (raw_repository_ref_transitions or activity_source.get(
+        "repository_ref_transition_events_considered", 0,
+    )):
+        compact_activity["repository_ref_transition_count"] = activity.get(
+            "repository_ref_transition_count", len(raw_repository_ref_transitions),
+        )
+        compact_activity["repository_ref_transitions"] = (
+            compact_repository_ref_transitions
+        )
+        if len(raw_repository_ref_transitions) > len(compact_repository_ref_transitions):
+            compact_activity["repository_ref_transitions_truncated"] = True
     if raw_authority_candidates:
         compact_activity["authority_denial_candidates"] = compact_authority_candidates
         if len(raw_authority_candidates) > len(compact_authority_candidates):
@@ -4585,6 +4677,11 @@ def _compact_projection(
         elif result["session_activity"].get("integration_eligibility"):
             result["session_activity"]["integration_eligibility"].pop()
             result["session_activity"]["integration_eligibility_truncated"] = True
+        elif result["session_activity"].get("repository_ref_transitions"):
+            result["session_activity"]["repository_ref_transitions"].pop()
+            result["session_activity"][
+                "repository_ref_transitions_truncated"
+            ] = True
         elif result.get("context_pressure_candidates"):
             result["context_pressure_candidates"].pop(0)
         elif isinstance(
@@ -10211,6 +10308,205 @@ def _authority_proposal_preflight_state(value: Any) -> dict[str, Any] | None:
     )
 
 
+def _authority_repository_ref_observation(
+    value: Any, *, repository: str, observed_path: str,
+) -> dict[str, Any] | None:
+    """Validate a bounded checkout observation without absolute machine paths."""
+    allowed = {
+        "repository", "observed_path", "checkout_identity",
+        "git_common_directory_identity", "branch", "head", "clean",
+        "dirty_entry_count", "observation",
+    }
+    if (not isinstance(value, dict) or set(value) - allowed
+            or value.get("repository") != repository
+            or value.get("observed_path") != observed_path):
+        return None
+    result: dict[str, Any] = {
+        "repository": repository,
+        "observed_path": observed_path,
+    }
+    identifier = re.compile(r"[A-Za-z0-9:._-]{1,160}")
+    for key in ("checkout_identity", "git_common_directory_identity"):
+        identity = value.get(key)
+        if identity is not None:
+            if not isinstance(identity, str) or not identifier.fullmatch(identity):
+                return None
+            result[key] = identity
+    branch = value.get("branch")
+    if branch is not None and (
+        not isinstance(branch, str) or not branch or len(branch) > 160
+        or "\x00" in branch or branch.startswith("/")
+    ):
+        return None
+    result["branch"] = branch
+    head = value.get("head")
+    if head is not None and (
+        not isinstance(head, str)
+        or re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", head) is None
+    ):
+        return None
+    result["head"] = head
+    clean = value.get("clean")
+    if clean is not None and type(clean) is not bool:
+        return None
+    result["clean"] = clean
+    dirty_count = value.get("dirty_entry_count")
+    if dirty_count is not None and (
+        type(dirty_count) is not int or not 0 <= dirty_count <= 30_000
+    ):
+        return None
+    result["dirty_entry_count"] = dirty_count
+    observation = value.get("observation")
+    if observation is not None and observation not in {
+        "current", "unavailable_current_namespace",
+    }:
+        return None
+    result["observation"] = observation
+    return result
+
+
+def _authority_repository_ref_transition(
+    value: Any, *, event_reference: dict[str, Any], index: int,
+) -> dict[str, Any] | None:
+    """Sanitize one observed repository delta from a campaign event."""
+    if not isinstance(value, dict):
+        return None
+    repository = value.get("repository")
+    observed_path = value.get("observed_path")
+    if (value.get("schema_version")
+            != "mncs.environment.repository-ref-transition/1"
+            or not _is_repository_identity(repository)
+            or not isinstance(observed_path, str) or not observed_path
+            or len(observed_path) > 240 or "\\" in observed_path
+            or "\x00" in observed_path or observed_path.startswith("/")
+            or PurePosixPath(observed_path).as_posix() != observed_path
+            or any(part in {"", ".", ".."} for part in observed_path.split("/"))
+            or value.get("causal_status") != "not-established"):
+        return None
+    allowed_kinds = {
+        "first-observed", "no-longer-observed", "head-changed",
+        "branch-changed", "clean-state-changed",
+        "dirty-entry-count-changed", "checkout-identity-changed",
+        "git-common-directory-changed", "availability-changed",
+        "observation-enriched",
+    }
+    kinds = value.get("change_kinds")
+    if (not isinstance(kinds, list) or not kinds or len(kinds) > 10
+            or any(kind not in allowed_kinds for kind in kinds)
+            or len(set(kinds)) != len(kinds)):
+        return None
+    state_change_status = value.get("state_change_status")
+    if state_change_status not in {
+        "observed-delta", "initial-or-enriched-observation",
+    }:
+        return None
+    before = None
+    after = None
+    if "before" in value:
+        before = _authority_repository_ref_observation(
+            value.get("before"), repository=repository,
+            observed_path=observed_path,
+        )
+        if before is None:
+            return None
+    if "after" in value:
+        after = _authority_repository_ref_observation(
+            value.get("after"), repository=repository,
+            observed_path=observed_path,
+        )
+        if after is None:
+            return None
+    if before is None and after is None:
+        return None
+    if state_change_status == "observed-delta" and (before is None or after is None):
+        return None
+    result: dict[str, Any] = {
+        "identity": "reftxn_" + digest_hex({
+            "event": event_reference["identity"],
+            "index": index,
+        }, length=16),
+        "repository": repository,
+        "observed_path": observed_path,
+        "change_kinds": list(kinds),
+        "state_change_status": state_change_status,
+        "causal_status": "not-established",
+        "event_reference": event_reference,
+    }
+    if before is not None:
+        result["before"] = before
+    if after is not None:
+        result["after"] = after
+    return result
+
+
+def _repository_ref_preflight_relation(
+    transition: dict[str, Any], *,
+    integration_records: list[dict[str, Any]],
+    proposal_records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Relate a later ref observation only to an exact recorded preimage."""
+    before = transition.get("before")
+    transition_event = transition.get("event_reference")
+    transition_sequence = (
+        transition_event.get("sequence")
+        if isinstance(transition_event, dict) else None
+    )
+    if (transition.get("state_change_status") != "observed-delta"
+            or not isinstance(before, dict)
+            or type(transition_sequence) is not int):
+        return {
+            "status": "not-applicable-without-observed-state-delta",
+            "matching_preflight_count": 0,
+            "matches": [],
+        }
+    candidates = [
+        ("integration-eligibility", integration_records, "repository_preflight_state"),
+        ("proposal-eligibility", proposal_records, "proposal_preflight_state"),
+    ]
+    matches: list[dict[str, Any]] = []
+    for relation_kind, records, state_key in candidates:
+        for record in records:
+            event_reference = record.get("event_reference")
+            preflight_sequence = (
+                event_reference.get("sequence")
+                if isinstance(event_reference, dict) else None
+            )
+            state = record.get(state_key)
+            if (
+                type(preflight_sequence) is not int
+                or preflight_sequence >= transition_sequence
+                or record.get("repository") != transition.get("repository")
+                or record.get("campaign_id") != transition.get("campaign_id")
+                or record.get("work_intent_id") != transition.get("work_intent_id")
+                or record.get("preflight_state_status") != "recorded-and-validated"
+                or not isinstance(state, dict)
+                or not isinstance(before.get("checkout_identity"), str)
+                or state.get("checkout_identity") != before.get("checkout_identity")
+                or state.get("head_status") != "measured"
+                or state.get("head") != before.get("head")
+            ):
+                continue
+            matches.append({
+                "kind": relation_kind,
+                "action": record.get("action"),
+                "match_basis": "exact-checkout-identity-and-head-preimage",
+                "event_reference": event_reference,
+            })
+    matches.sort(key=lambda item: (
+        item["event_reference"]["sequence"], item["kind"],
+    ))
+    return {
+        "status": (
+            "exact-preimage-match-after-preflight" if len(matches) == 1
+            else "ambiguous-exact-preflight-match" if matches
+            else "no-exact-preflight-match-in-selected-window"
+        ),
+        "matching_preflight_count": len(matches),
+        "matches": matches[:4],
+        "matches_truncated": len(matches) > 4,
+    }
+
+
 def _authority_decision_claim_state(
     value: Any,
     *,
@@ -12142,6 +12438,12 @@ def _session_activity(
         event for event in events
         if event.get("type") == "authority.proposal-eligible"
     ]
+    repository_ref_transition_events = [
+        event for event in events
+        if event.get("type") == "campaign.reconciled"
+        and isinstance(event.get("payload"), dict)
+        and isinstance(event["payload"].get("repository_ref_transitions"), list)
+    ]
     if integration_eligibility_events:
         limits.append(
             "Integration eligibility records are preflight decisions; they do "
@@ -12152,6 +12454,13 @@ def _session_activity(
             "Proposal-worktree eligibility records show a writable-scope and "
             "checkout decision only; they do not establish that an edit or "
             "verification was executed, accepted, or beneficial."
+        )
+    if repository_ref_transition_events:
+        limits.append(
+            "Repository ref transitions are Environment observations. An exact "
+            "preflight match establishes a later observation of the same checkout "
+            "preimage, not that the eligible operation caused the change or that "
+            "a remote publication succeeded."
         )
     if denial_events:
         limits.append(
@@ -12747,6 +13056,67 @@ def _session_activity(
         0,
         valid_proposal_eligibility_count - len(proposal_eligibility_records),
     )
+    repository_ref_transition_records: list[dict[str, Any]] = []
+    invalid_repository_ref_transition_event_count = 0
+    invalid_repository_ref_transition_record_count = 0
+    repository_ref_transitions_omitted = 0
+    valid_repository_ref_transition_count = 0
+    for event in reversed(repository_ref_transition_events):
+        reference = _event_reference(event)
+        payload = event.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        raw_count = payload.get("repository_ref_transition_count")
+        raw_transitions = payload.get("repository_ref_transitions")
+        raw_omitted = payload.get("repository_ref_transitions_omitted")
+        if (
+            reference is None
+            or type(raw_count) is not int or not 0 <= raw_count <= 100_000
+            or not isinstance(raw_transitions, list)
+            or len(raw_transitions) > MAX_SESSION_ACTIVITY_REPOSITORY_REF_TRANSITIONS
+            or type(raw_omitted) is not int or not 0 <= raw_omitted <= 100_000
+            or raw_count != len(raw_transitions) + raw_omitted
+        ):
+            invalid_repository_ref_transition_event_count += 1
+            continue
+        repository_ref_transitions_omitted += raw_omitted
+        for index, raw_transition in enumerate(raw_transitions):
+            transition = _authority_repository_ref_transition(
+                raw_transition, event_reference=reference, index=index,
+            )
+            if transition is None:
+                invalid_repository_ref_transition_record_count += 1
+                continue
+            transition.update(_authority_event_objective_context(payload))
+            transition["preflight_relation"] = _repository_ref_preflight_relation(
+                transition,
+                integration_records=integration_eligibility_records,
+                proposal_records=proposal_eligibility_records,
+            )
+            transition["interpretation"] = (
+                "Environment observed this bounded checkout state after its prior "
+                "observation. An exact preflight match establishes the same "
+                "checkout identity and head as a prior eligibility preimage; it "
+                "does not establish that the operation caused the change."
+            )
+            valid_repository_ref_transition_count += 1
+            if len(repository_ref_transition_records) < (
+                MAX_SESSION_ACTIVITY_REPOSITORY_REF_TRANSITIONS
+            ):
+                repository_ref_transition_records.append(transition)
+            else:
+                repository_ref_transitions_omitted += 1
+    if (invalid_repository_ref_transition_event_count
+            or invalid_repository_ref_transition_record_count
+            or repository_ref_transitions_omitted):
+        partial = True
+        if not status.startswith("partial"):
+            status = "partial"
+    if repository_ref_transition_events:
+        limits.append(
+            "Repository ref transition correlation uses only exact checkout "
+            "identity and head preimages in the selected session event window; "
+            "an absent match may be outside the bounded window."
+        )
     claim_lifecycle_correlations, claim_lifecycle_correlation_source = (
         _session_claim_lifecycle_correlations(
             session,
@@ -13124,6 +13494,26 @@ def _session_activity(
                 ),
             } if proposal_eligibility_events else {}),
             **({
+                "repository_ref_transition_events_considered": len(
+                    repository_ref_transition_events,
+                ),
+                "repository_ref_transition_records_returned": len(
+                    repository_ref_transition_records,
+                ),
+                "repository_ref_transition_records_omitted": (
+                    repository_ref_transitions_omitted
+                ),
+                "repository_ref_transition_records_invalid": (
+                    invalid_repository_ref_transition_record_count
+                ),
+                "repository_ref_transition_events_invalid": (
+                    invalid_repository_ref_transition_event_count
+                ),
+                "repository_ref_transition_selection_policy": (
+                    "newest-validated-observed-ref-deltas-in-selected-session-window"
+                ),
+            } if repository_ref_transition_events else {}),
+            **({
                 "authority_claim_state_lookup": claim_state_lookup,
             } if denial_events else {}),
             **({
@@ -13216,6 +13606,13 @@ def _session_activity(
             "proposal_eligibility_count": len(proposal_eligibility_records),
             "proposal_eligibility": proposal_eligibility_records,
         } if proposal_eligibility_events else {}),
+        **({
+            "repository_ref_transition_count": (
+                valid_repository_ref_transition_count
+                + repository_ref_transitions_omitted
+            ),
+            "repository_ref_transitions": repository_ref_transition_records,
+        } if repository_ref_transition_events else {}),
         **({
             "claim_recovery_count": len(claim_recoveries),
             "claim_recoveries": claim_recoveries,
