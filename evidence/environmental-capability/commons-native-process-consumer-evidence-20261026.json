@@ -1,0 +1,68 @@
+{
+  "captured_at": "2026-10-26T02:27:40+00:00",
+  "identity": "ev_environment_commons_native_process_consumer_evidence_20261026",
+  "measurement_basis": "A bounded Environment workspace-read-only lookup resolved the mncs-commons repository by its exact manifest identity despite its MNCS-Commons directory spelling. The source content is pinned to the fetched Commons origin/main commit and will be digest- and schema-checked by the environmental-capability projection.",
+  "not_measured": [
+    "whether the listed source observations exhaust all consumers of mncs.std.process.v1",
+    "whether agents received, discovered, or used the capability beyond the source-recorded canaries",
+    "whether any shared failure has one cause across consumers",
+    "whether host functionality is ready to migrate or has been displaced",
+    "current status beyond the records at the pinned Commons commit"
+  ],
+  "observation": {
+    "kind": "native-capability-consumer-evidence",
+    "outcome": {
+      "native_capability_identity": "mncs.std.process.v1",
+      "source_revision": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+      "target_pressure_identity": "MNCS-TOOLING-B665F138D324"
+    },
+    "request": {
+      "join_key": "commons.mncs.dev/family-pressure-observation/v1.pressureId",
+      "native_capability_identity": "mncs.std.process.v1",
+      "source_record_limit": 4,
+      "target_pressure_identity": "MNCS-TOOLING-B665F138D324"
+    },
+    "source_interface": "MNCS Commons family pressure record and consumer observations"
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "objective": "Connect authentic environmental and compiler evidence to provenance-aware, actionable projections.",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+      "identity": "MNCS-TOOLING-B665F138D324",
+      "kind": "commons-family-pressure-record-source",
+      "path": "pressures/records/MNCS-TOOLING-B665F138D324.json",
+      "repository": "mncs-commons",
+      "sha256": "8f7078c1c18b8a4bb5bb27c726917dc3c27ad26067750c6b532f49bfc88ba550"
+    },
+    {
+      "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+      "identity": "MNCS-TOOLING-B665F138D324--OBS-B8EF1F4A281D",
+      "kind": "commons-family-pressure-observation-source",
+      "path": "pressures/observations/MNCS-TOOLING-B665F138D324--OBS-B8EF1F4A281D.json",
+      "repository": "mncs-commons",
+      "sha256": "1e6f3dc20521af092527169fa650ce2fde460e8a0e609c96aebe9dd8cc7a802f"
+    },
+    {
+      "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+      "identity": "MNCS-TOOLING-B665F138D324--OBS-5DC50E462638",
+      "kind": "commons-family-pressure-observation-source",
+      "path": "pressures/observations/MNCS-TOOLING-B665F138D324--OBS-5DC50E462638.json",
+      "repository": "mncs-commons",
+      "sha256": "bde38ec6dbb2d70afae210fd10b2c68ac97a27f54f425092e95a12358bcd74e5"
+    },
+    {
+      "commit": "857400802b8b29a438bffd2f9cc82b939fa316a7",
+      "identity": "MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41",
+      "kind": "commons-family-pressure-observation-source",
+      "path": "pressures/observations/MNCS-TOOLING-B665F138D324--OBS-E57B43F44F41.json",
+      "repository": "mncs-commons",
+      "sha256": "1a4d54f1328475e4cfadfbfd62a8d19384b90eeba5816a2a771c3a209ebd8bf2"
+    }
+  ]
+}

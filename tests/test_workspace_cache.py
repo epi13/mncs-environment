@@ -1,4 +1,5 @@
 """Per-process git-fact sharing: fewer launches, no stale post-write reads."""
+import json
 import subprocess
 from pathlib import Path
 
@@ -42,6 +43,45 @@ def test_quick_facts_are_shared_then_invalidated(tmp_path):
 def test_git_spawns_skip_path_search():
     binary = workspace._git_binary()
     assert binary == "git" or Path(binary).is_absolute()
+
+
+def test_selected_checkout_resolves_case_variant_only_when_manifest_identity_matches(tmp_path):
+    repo = _repo(tmp_path / "MNCS-Commons")
+    manifest = repo / ".mncs" / "project.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"repository": "mncs-commons"}))
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True,
+                   capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.name=t",
+                    "-c", "user.email=t@t", "commit", "-qm", "manifest"],
+                   check=True, capture_output=True)
+
+    discovered = workspace.discover_workspace(
+        tmp_path, repositories=["mncs-commons"],
+    )
+
+    assert discovered["scan"]["status"] == "complete"
+    assert discovered["repositories"][0]["path"] == str(repo)
+    assert discovered["repositories"][0]["manifest_repository"] == "mncs-commons"
+
+
+def test_selected_checkout_does_not_resolve_case_variant_with_wrong_manifest(tmp_path):
+    repo = _repo(tmp_path / "MNCS-Commons")
+    manifest = repo / ".mncs" / "project.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"repository": "other-repo"}))
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True,
+                   capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.name=t",
+                    "-c", "user.email=t@t", "commit", "-qm", "manifest"],
+                   check=True, capture_output=True)
+
+    discovered = workspace.discover_workspace(
+        tmp_path, repositories=["mncs-commons"],
+    )
+
+    assert discovered["scan"]["status"] == "invalid"
+    assert discovered["repositories"] == []
 
 
 def test_store_fallback_follows_worktree_to_main(tmp_path):

@@ -226,6 +226,28 @@ test result remains distinct from source presence, consumer integration,
 agent usage, causal attribution, and migration readiness. These statuses stay
 `not-measured` or `not-established` until independent evidence supports them.
 
+A correspondence may also expose `consumer_evidence` when an authenticated
+campaign observation links it to exact Commons family-pressure records. The
+projection accepts only the bounded Commons pressure-record and
+pressure-observation pointer kinds, verifies each source blob, checks its
+Commons schema, and requires exact `id`/`pressureId` equality with the
+correspondence target. The result preserves each consumer repository, observed
+date, source-recorded validation and migration state, reproduction result,
+workaround, missing-contract list, and source pointer. It also keeps the
+pressure record's own affected-repository list beside the repositories in the
+observations, so coverage differences remain visible. These are bounded source
+records rather than an exhaustive consumer inventory; multiple records do not
+by themselves establish recurring failure, agent usage, a common cause, or
+host migration readiness. An actionable interpretation directs agents to
+inspect the source-declared per-consumer migration state and missing contracts.
+
+The bounded workspace-read-only source resolver first uses an exact checkout
+name. If the directory uses a case variant, it accepts the match only when the
+repository manifest declares the exact requested identity; ambiguous matches
+and case variants with a different or missing manifest identity fail closed.
+The name-only fallback inspects at most 512 immediate directories and performs
+no repository-wide Git scan.
+
 Source pointers up to 512 KiB may be loaded when the projection needs their
 bounded payload for parsing or schema checks. Larger generic source pointers
 that only need digest verification are streamed through Git in 64 KiB chunks,

@@ -6219,7 +6219,7 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     assert hypothesis["recurrence_status"] == "observed-across-sessions"
     assert hypothesis["observation_count"] == 16
     assert hypothesis["distinct_session_count"] == 2
-    assert len(hypothesis["evidence"]) == 16
+    assert len(hypothesis["evidence_references"]) == 16
     assert projection["source"]["evidence_history_pages_requested"] == 2
     assert projection["source"]["evidence_history_pages_read"] == 2
     assert projection["source"]["evidence_history_page_offsets"] == [9, 0]
@@ -6228,7 +6228,7 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     assert projection["session_activity"]["source"][
         "event_page_before_sequence"
     ] == 12
-    assert projection["session_activity"]["source"]["event_window_limit"] == 64
+    assert "event_window_limit" not in projection["session_activity"]["source"]
     assert projection["source"]["evidence_history_observation_budgets_by_page"] == [
         {
             "offset": 9,

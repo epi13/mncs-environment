@@ -23,6 +23,7 @@ GIT_TIMEOUT_SECONDS = 3
 MAX_PORCELAIN_LINES = 200
 MAX_REPOS = 500
 MAX_ROOT_DIRECTORIES = 64
+MAX_CASE_VARIANT_DIRECTORIES = 512
 WORKSPACE_SCAN_TIMEOUT_SECONDS = 10.0
 
 # MNCS Control bind-mounts the configured host workspace at /workspace and
@@ -839,7 +840,47 @@ def repository_selection(definition: dict[str, Any] | None) -> list[str] | None:
 def _selected_directories(base: Path, repositories: list[str] | None) -> list[Path]:
     if repositories is None:
         return [base] if (base / ".git").exists() else _candidate_directories(base)
-    candidates = [base / name for name in repositories]
+    candidates = []
+    for name in repositories:
+        candidate = base / name
+        if not candidate.exists():
+            try:
+                directories = []
+                for entry in base.iterdir():
+                    if entry.is_dir():
+                        directories.append(entry)
+                    if len(directories) > MAX_CASE_VARIANT_DIRECTORIES:
+                        break
+            except OSError as error:
+                raise WorkspaceResolutionError(
+                    f"workspace root is unreadable: {base} ({error})",
+                    diagnostics={"code": "workspace-unreadable", "root": str(base)},
+                ) from error
+            if len(directories) > MAX_CASE_VARIANT_DIRECTORIES:
+                raise WorkspaceResolutionError(
+                    f"workspace root is too broad for case-insensitive checkout resolution: {base}",
+                    diagnostics={
+                        "code": "workspace-too-broad",
+                        "root": str(base),
+                        "candidate_directories": len(directories),
+                        "max_candidate_directories": MAX_CASE_VARIANT_DIRECTORIES,
+                        "inspected_directories": 0,
+                    },
+                )
+            matches = [
+                entry for entry in directories
+                if entry.name.casefold() == name.casefold()
+                and entry.is_dir() and not entry.is_symlink()
+            ]
+            if len(matches) != 1:
+                candidate = base / name
+            else:
+                candidate = matches[0]
+                manifest = _manifest(candidate)
+                if (manifest is None
+                        or manifest.get("repository") != name):
+                    candidate = base / name
+        candidates.append(candidate)
     for candidate in candidates:
         if candidate.is_symlink() or not candidate.is_dir() or not (candidate / ".git").exists():
             raise WorkspaceResolutionError(f"selected checkout is missing, a symbolic link, or not a Git repository: {candidate}",

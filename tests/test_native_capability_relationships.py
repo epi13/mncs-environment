@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 
 from mncs_env import capability_relationships, capability_intelligence, projections
 
@@ -27,6 +28,125 @@ def _native_source(identity: str, path: str, sha256: str) -> dict[str, str]:
         "sha256": sha256,
         "content_integrity_status": "workspace-read-only-content-integrity-verified",
     }
+
+
+def _commons_source(identity: str, kind: str, payload: dict) -> tuple[dict, bytes]:
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    if kind == capability_intelligence.COMMONS_PRESSURE_RECORD_SOURCE_KIND:
+        path = f"pressures/records/{identity}.json"
+    else:
+        path = f"pressures/observations/{identity}.json"
+    pointer = {
+        "identity": identity,
+        "kind": kind,
+        "repository": capability_intelligence.COMMONS_PRESSURE_SOURCE_REPOSITORY,
+        "commit": "f" * 40,
+        "path": path,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+    return pointer, raw
+
+
+def _raw_native_correspondence_record() -> dict:
+    return {
+        "identity": "ev_environment_native_process_correspondence",
+        "supporting_sources": [],
+        "observation": {
+            "kind": capability_intelligence.NATIVE_CAPABILITY_CORRESPONDENCE_KIND,
+            "outcome": {
+                "target_pressure_identity": "MNCS-TOOLING-B665F138D324",
+                "native_capability_identity": "mncs.std.process.v1",
+            },
+        },
+    }
+
+
+def _commons_consumer_evidence_fixture():
+    pressure_id = "MNCS-TOOLING-B665F138D324"
+    sources = []
+    payloads = {}
+    integrity = {}
+
+    def add(identity: str, kind: str, payload: dict):
+        pointer, raw = _commons_source(identity, kind, payload)
+        sources.append(pointer)
+        key = capability_intelligence._source_pointer_key(pointer)
+        payloads[key] = raw
+        integrity[key] = "workspace-read-only-content-integrity-verified"
+
+    add(pressure_id, capability_intelligence.COMMONS_PRESSURE_RECORD_SOURCE_KIND, {
+        "schema": capability_intelligence.COMMONS_PRESSURE_RECORD_SCHEMA,
+        "id": pressure_id,
+        "initialStatus": "discovered",
+        "title": "No process spawning / capture / exit status",
+        "summary": "Imported legacy tooling pressure.",
+        "requiredBehavior": "Confirm the imported requirement.",
+        "affectedRepositories": ["mncs-doctor"],
+    })
+    consumer_records = [
+        {
+            "id": pressure_id + "--OBS-B8EF1F4A281D",
+            "kind": "observation",
+            "repository": "mncs-actions",
+            "observedAt": "2026-09-15T00:00:00Z",
+            "languageProfile": "0.17",
+            "agent": "Luna Max",
+            "metadata": {"currentValidation": True},
+            "reproduction": {"status": "PASS"},
+            "workaround": {"active": True, "removed": False},
+            "summary": "Bounded process capability canary passed; entrypoint gap remains.",
+        },
+        {
+            "id": pressure_id + "--OBS-5DC50E462638",
+            "kind": "verification",
+            "repository": "mncs-debug",
+            "observedAt": "2026-09-17T10:53:22Z",
+            "languageProfile": "0.18",
+            "metadata": {"capabilityState": "available", "consumerMigration": "open"},
+            "reproduction": {"status": "PASS"},
+            "workaround": {"active": True, "removed": False},
+            "summary": "Process replay canary passed; host diagnostic loop remains.",
+        },
+        {
+            "id": pressure_id + "--OBS-E57B43F44F41",
+            "kind": "observation",
+            "repository": "mncs-forge",
+            "observedAt": "2026-09-23T10:03:09Z",
+            "languageProfile": "0.18",
+            "metadata": {
+                "consumer_status": "CONSUMER_DEBT",
+                "missing": ["aggregate cgroup resource envelope", "cancellable process handle"],
+            },
+            "reproduction": {"status": "UNKNOWN"},
+            "workaround": {"active": True},
+            "evidence": [{
+                "kind": "language-pressure",
+                "ref": "MNCS-LANG-64AD712CD2DE",
+                "summary": "Compatible resource and cancellation contract is missing.",
+            }],
+            "summary": "Consumer remains on host adapter due to resource and cancellation gaps.",
+        },
+    ]
+    for item in consumer_records:
+        item["schema"] = capability_intelligence.COMMONS_PRESSURE_OBSERVATION_SCHEMA
+        item["pressureId"] = pressure_id
+        add(
+            item["id"],
+            capability_intelligence.COMMONS_PRESSURE_OBSERVATION_SOURCE_KIND,
+            item,
+        )
+    collector = {
+        "identity": "ev_environment_commons_process_consumer_evidence",
+        "supporting_sources": sources,
+        "observation": {
+            "kind": "native-capability-consumer-evidence",
+            "outcome": {
+                "target_pressure_identity": pressure_id,
+                "native_capability_identity": "mncs.std.process.v1",
+            },
+        },
+    }
+    return collector, payloads, integrity
 
 
 def _accountability(pointer: dict[str, str]) -> dict:
@@ -738,3 +858,87 @@ def test_existing_environmental_capability_route_exposes_bounded_relationships(
     assert len(json.dumps(result, separators=(",", ":")).encode()) < (
         capability_intelligence.MAX_RESULT_BYTES
     )
+
+
+def test_native_capability_projection_correlates_verified_commons_consumer_observations():
+    collector, payloads, integrity = _commons_consumer_evidence_fixture()
+
+    projected = capability_intelligence._native_capability_correspondence_projection(
+        [_raw_native_correspondence_record(), collector], integrity, payloads,
+    )
+    assert len(projected) == 1
+    evidence = projected[0]["consumer_evidence"]
+    assert evidence["status"] == "verified-commons-consumer-evidence-available"
+    assert evidence["cross_consumer_status"] == (
+        "multiple-consumer-repositories-recorded"
+    )
+    assert evidence["consumer_repositories_observed"] == [
+        "mncs-actions", "mncs-debug", "mncs-forge",
+    ]
+    assert evidence["recorded_affected_repositories"] == ["mncs-doctor"]
+    assert evidence["source_observation_count"] == 3
+    assert evidence["passing_reproduction_observation_count"] == 2
+    assert evidence["workaround_active_observation_count"] == 3
+    assert evidence["related_pressure_identities"] == ["MNCS-LANG-64AD712CD2DE"]
+    assert evidence["pressure_record"]["recorded_status"] == "discovered"
+    forge = next(
+        item for item in evidence["observations"]
+        if item["consumer_repository"] == "mncs-forge"
+    )
+    assert forge["consumer_status"] == "CONSUMER_DEBT"
+    assert forge["missing_contracts"] == [
+        "aggregate cgroup resource envelope", "cancellable process handle",
+    ]
+    assert forge["source_reference"]["identity"].endswith("OBS-E57B43F44F41")
+    assert evidence["recurrence_status"] == "not-established"
+    assert evidence["causal_relation_status"] == "not-established"
+    assert evidence["native_migration_readiness"] == "not-established"
+
+    compact = capability_intelligence._compact_native_capability_correspondences(
+        projected,
+    )
+    assert compact[0]["consumer_evidence"]["observations"][2][
+        "consumer_repository"
+    ] == "mncs-forge"
+    assert len(json.dumps(compact, separators=(",", ":")).encode()) < (
+        capability_intelligence.MAX_RESULT_BYTES
+    )
+
+
+def test_native_capability_consumer_projection_rejects_unverified_and_mismatched_records():
+    collector, payloads, integrity = _commons_consumer_evidence_fixture()
+    forge_pointer = next(
+        source for source in collector["supporting_sources"]
+        if source["identity"].endswith("OBS-E57B43F44F41")
+    )
+    forge_key = capability_intelligence._source_pointer_key(forge_pointer)
+    forge_payload = json.loads(payloads[forge_key])
+    forge_payload["pressureId"] = "MNCS-OTHER-000000000000"
+    mismatched = json.dumps(
+        forge_payload, sort_keys=True, separators=(",", ":"),
+    ).encode()
+    del payloads[forge_key]
+    del integrity[forge_key]
+    forge_pointer["sha256"] = hashlib.sha256(mismatched).hexdigest()
+    mismatched_key = capability_intelligence._source_pointer_key(forge_pointer)
+    payloads[mismatched_key] = mismatched
+    integrity[mismatched_key] = "workspace-read-only-content-integrity-verified"
+
+    debug_pointer = next(
+        source for source in collector["supporting_sources"]
+        if source["identity"].endswith("OBS-5DC50E462638")
+    )
+    integrity.pop(capability_intelligence._source_pointer_key(debug_pointer))
+
+    result = capability_intelligence._native_capability_consumer_evidence_projection(
+        [collector],
+        "MNCS-TOOLING-B665F138D324",
+        "mncs.std.process.v1",
+        integrity,
+        payloads,
+    )
+    assert result["source_observation_count"] == 1
+    assert result["consumer_repositories_observed"] == ["mncs-actions"]
+    assert result["unverified_source_count"] == 1
+    assert result["invalid_source_count"] == 1
+    assert result["recurrence_status"] == "not-established"

@@ -132,9 +132,20 @@ NATIVE_USERLAND_AUDIT_SOURCE_REPOSITORIES = frozenset({
 NATIVE_USERLAND_PRESSURE_SCHEMA = "mncs-test.pressure/1"
 MAX_NATIVE_USERLAND_AUDIT_RECORDS = 4
 MAX_NATIVE_USERLAND_PRESSURE_SOURCE_RECORDS = 8
+COMMONS_PRESSURE_SOURCE_REPOSITORY = "mncs-commons"
+COMMONS_PRESSURE_RECORD_SOURCE_KIND = "commons-family-pressure-record-source"
+COMMONS_PRESSURE_OBSERVATION_SOURCE_KIND = (
+    "commons-family-pressure-observation-source"
+)
+COMMONS_PRESSURE_RECORD_SCHEMA = "commons.mncs.dev/family-pressure/v1"
+COMMONS_PRESSURE_OBSERVATION_SCHEMA = (
+    "commons.mncs.dev/family-pressure-observation/v1"
+)
+MAX_COMMONS_PRESSURE_SOURCE_PAYLOADS = 9
 MAX_NATIVE_USERLAND_SOURCE_PAYLOADS = (
     MAX_NATIVE_USERLAND_AUDIT_RECORDS
     + MAX_NATIVE_USERLAND_PRESSURE_SOURCE_RECORDS
+    + MAX_COMMONS_PRESSURE_SOURCE_PAYLOADS
 )
 MAX_NATIVE_USERLAND_AUDIT_ITEMS = 8
 NATIVE_CAPABILITY_CORRESPONDENCE_KIND = (
@@ -338,7 +349,8 @@ def _workspace_read_only_checkout(
     matches = [
         record for record in records
         if isinstance(record, dict)
-        and record.get("name") == repository
+            and (record.get("name") == repository
+                 or record.get("manifest_repository") == repository)
         and record.get("worktree_of") is None
     ]
     if not matches:
@@ -360,7 +372,8 @@ def _workspace_read_only_checkout(
         matches = [
             record for record in discovered
             if isinstance(record, dict)
-            and record.get("name") == repository
+            and (record.get("name") == repository
+                 or record.get("manifest_repository") == repository)
             and record.get("worktree_of") is None
         ]
     if len(matches) != 1:
@@ -379,15 +392,17 @@ def _workspace_read_only_checkout(
         relative = checkout.relative_to(trusted_root)
     except (OSError, ValueError):
         return None
-    if (len(relative.parts) != 1 or relative.parts[0] != repository
-            or checkout.name != repository or not checkout.is_dir()
+    manifest_repository = record.get("manifest_repository")
+    if (len(relative.parts) != 1 or not checkout.is_dir()
             or not (checkout / ".git").exists()
             or record.get("git_error") is not None
             or not isinstance(record.get("head"), str)
             or not record["head"]):
         return None
-    manifest_repository = record.get("manifest_repository")
     if (manifest_repository is not None
+            and manifest_repository != repository):
+        return None
+    if (checkout.name != repository
             and manifest_repository != repository):
         return None
     return checkout
@@ -736,8 +751,125 @@ def _compact_native_capability_correspondences(value: Any) -> list[dict[str, Any
                 if type(verification.get(key)) is bool:
                     compact_verification[key] = verification[key]
             compact["verification_observation"] = compact_verification
+        consumer_evidence = _compact_native_capability_consumer_evidence(
+            item.get("consumer_evidence"),
+        )
+        if consumer_evidence is not None:
+            compact["consumer_evidence"] = consumer_evidence
         compact_items.append(compact)
     return compact_items
+
+
+def _compact_native_capability_consumer_evidence(
+    value: Any,
+) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    result = {
+        key: _short_text(value.get(key), 192)
+        for key in (
+            "status", "join_basis", "source_coverage_scope",
+            "cross_consumer_status", "recurrence_status",
+            "causal_relation_status", "native_migration_readiness",
+            "actionable_observation",
+        )
+        if isinstance(value.get(key), str)
+    }
+    for key in (
+        "source_observation_count", "consumer_repository_count",
+        "passing_reproduction_observation_count",
+        "workaround_active_observation_count", "unverified_source_count",
+    ):
+        if type(value.get(key)) is int and value[key] >= 0:
+            result[key] = value[key]
+    for key in ("recorded_affected_repositories", "consumer_repositories_observed",
+                "consumer_migration_states", "related_pressure_identities"):
+        values = value.get(key)
+        if isinstance(values, list):
+            result[key] = [
+                _short_text(item, 160) for item in values[:8]
+                if isinstance(item, str)
+            ]
+            if len(values) > 8:
+                result[f"{key}_truncated"] = True
+    pressure_record = value.get("pressure_record")
+    if isinstance(pressure_record, dict):
+        compact_record = {
+            key: _short_text(pressure_record.get(key), 384)
+            for key in ("status", "identity", "recorded_status", "title", "summary")
+            if isinstance(pressure_record.get(key), str)
+        }
+        reference = _validate_reference(pressure_record.get("source_reference"))
+        if reference is not None:
+            compact_record["source_reference"] = reference
+        if compact_record:
+            result["pressure_record"] = compact_record
+    raw_observations = value.get("observations")
+    if isinstance(raw_observations, list):
+        observations = []
+        for item in raw_observations[:4]:
+            if not isinstance(item, dict):
+                continue
+            compact_item = {
+                key: _short_text(item.get(key), 320 if key == "summary" else 160)
+                for key in (
+                    "identity", "record_kind", "consumer_repository",
+                    "observed_at", "language_profile", "source_recorded_agent",
+                    "current_validation", "reproduction_status",
+                    "capability_state", "consumer_migration", "consumer_status",
+                    "classification", "summary",
+                )
+                if isinstance(item.get(key), str)
+            }
+            if type(item.get("current_validation")) is bool:
+                compact_item["current_validation"] = item["current_validation"]
+            workaround = item.get("workaround")
+            if isinstance(workaround, dict):
+                compact_workaround = {
+                    key: workaround[key]
+                    for key in ("active", "removed")
+                    if type(workaround.get(key)) is bool
+                }
+                if compact_workaround:
+                    compact_item["workaround"] = compact_workaround
+            for key in ("missing_contracts", "source_declared_related_pressure_identities"):
+                values = item.get(key)
+                if isinstance(values, list):
+                    compact_item[key] = [
+                        _short_text(entry, 192) for entry in values[:4]
+                        if isinstance(entry, str)
+                    ]
+                    if len(values) > 4:
+                        compact_item[f"{key}_truncated"] = True
+            reference = _validate_reference(item.get("source_reference"))
+            if reference is not None:
+                compact_item["source_reference"] = reference
+            if compact_item:
+                observations.append(compact_item)
+        result["observations"] = observations
+        result["observations_truncated"] = (
+            value.get("observations_truncated") is True
+            or len(raw_observations) > len(observations)
+        )
+    raw_unverified = value.get("unverified_source_references")
+    if isinstance(raw_unverified, list):
+        result["unverified_source_references"] = [
+            {
+                **{
+                    key: _short_text(source.get(key), 192 if key == "path" else 160)
+                    for key in ("identity", "kind", "repository", "commit", "path", "sha256")
+                    if isinstance(source.get(key), str)
+                },
+                "content_integrity_status": _short_text(
+                    source.get("content_integrity_status"), 96,
+                ),
+            }
+            for source in raw_unverified[:4]
+            if isinstance(source, dict)
+        ]
+        if len(raw_unverified) > 4:
+            result["unverified_source_references_truncated"] = True
+    return result or None
 
 
 def _compact_implementation_accountability(value: Any) -> dict[str, Any] | None:
@@ -4461,6 +4593,7 @@ def _verify_source_pointer(
     preserve_userland_source_payload = (
         _is_native_userland_audit_source_pointer(pointer)
         or _is_native_userland_pressure_source_pointer(pointer, source)
+        or _is_commons_pressure_source_pointer(pointer, source)
     )
     wants_source_payload = (
         source_payloads is not None
@@ -4578,6 +4711,32 @@ def _is_native_userland_pressure_source_pointer(
         and isinstance(kind, str) and "pressure" in kind.lower()
         and match is not None and match.group(1) == identity
     )
+
+
+def _is_commons_pressure_source_pointer(
+    pointer: dict[str, str], source: Any,
+) -> bool:
+    if pointer.get("repository") != COMMONS_PRESSURE_SOURCE_REPOSITORY:
+        return False
+    kind = source.get("kind") if isinstance(source, dict) else None
+    identity = pointer.get("identity", "")
+    pressure_id = r"MNCS-[A-Z]+-[0-9A-F]{12}"
+    if kind == COMMONS_PRESSURE_RECORD_SOURCE_KIND:
+        return (
+            re.fullmatch(pressure_id, identity) is not None
+            and pointer.get("path") == f"pressures/records/{identity}.json"
+            and isinstance(pointer.get("sha256"), str)
+        )
+    if kind == COMMONS_PRESSURE_OBSERVATION_SOURCE_KIND:
+        match = re.fullmatch(
+            rf"({pressure_id})--OBS-([0-9A-F]{{12}})", identity,
+        )
+        return (
+            match is not None
+            and pointer.get("path") == f"pressures/observations/{identity}.json"
+            and isinstance(pointer.get("sha256"), str)
+        )
+    return False
 
 
 def _bounded_source_strings(value: Any) -> tuple[list[str], bool]:
@@ -4927,6 +5086,288 @@ def _owner_declared_pressure_links(
     }
 
 
+def _commons_consumer_observation(
+    pointer: dict[str, str], source: dict[str, Any], target_pressure_identity: str,
+    source_integrity: dict[tuple[str, str, str, str], str],
+    source_payloads: dict[tuple[str, str, str, str], bytes],
+) -> dict[str, Any]:
+    """Project one digest-verified Commons pressure or consumer record."""
+    reference = {
+        key: pointer[key]
+        for key in ("identity", "repository", "commit", "path", "sha256")
+    }
+    reference["kind"] = source.get("kind")
+    integrity = _source_integrity_status(source, source_integrity)
+    result: dict[str, Any] = {
+        "source_reference": reference,
+        "content_integrity_status": integrity,
+    }
+    if integrity not in SOURCE_INTEGRITY_VERIFIED:
+        result["status"] = "source-content-not-verified"
+        return result
+    raw = source_payloads.get(_source_pointer_key(pointer))
+    if raw is None:
+        result["status"] = "verified-payload-unavailable"
+        return result
+    try:
+        record = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        result["status"] = "verified-content-not-json"
+        return result
+    if not isinstance(record, dict):
+        result["status"] = "verified-json-is-not-an-object"
+        return result
+
+    kind = source.get("kind")
+    if kind == COMMONS_PRESSURE_RECORD_SOURCE_KIND:
+        if (record.get("schema") != COMMONS_PRESSURE_RECORD_SCHEMA
+                or record.get("id") != target_pressure_identity
+                or record.get("id") != pointer.get("identity")):
+            result["status"] = "verified-pressure-record-schema-or-identity-mismatch"
+            return result
+        result.update({
+            "status": "source-integrity-schema-and-pressure-identity-verified",
+            "identity": record["id"],
+            "recorded_status": _short_text(record.get("initialStatus"), 96),
+            "title": _short_text(record.get("title"), 256),
+            "summary": _short_text(record.get("summary"), 512),
+            "required_behavior": _short_text(record.get("requiredBehavior"), 512),
+        })
+        affected = record.get("affectedRepositories")
+        if isinstance(affected, list):
+            result["affected_repositories"] = [
+                _short_text(item, 128) for item in affected[:8]
+                if _is_repository_identity(item)
+            ]
+            result["affected_repositories_truncated"] = len(affected) > 8
+        return result
+
+    if kind != COMMONS_PRESSURE_OBSERVATION_SOURCE_KIND:
+        result["status"] = "unsupported-source-kind"
+        return result
+    consumer_repository = record.get("repository")
+    if (record.get("schema") != COMMONS_PRESSURE_OBSERVATION_SCHEMA
+            or record.get("pressureId") != target_pressure_identity
+            or record.get("id") != pointer.get("identity")
+            or not _is_repository_identity(consumer_repository)):
+        result["status"] = "verified-consumer-observation-schema-or-identity-mismatch"
+        return result
+
+    metadata = record.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    reproduction = record.get("reproduction")
+    reproduction = reproduction if isinstance(reproduction, dict) else {}
+    workaround = record.get("workaround")
+    workaround = workaround if isinstance(workaround, dict) else {}
+    projected: dict[str, Any] = {
+        "status": "source-integrity-schema-and-pressure-identity-verified",
+        "identity": record["id"],
+        "record_kind": _short_text(record.get("kind"), 64),
+        "consumer_repository": consumer_repository,
+        "observed_at": _short_text(record.get("observedAt"), 96),
+        "language_profile": _short_text(record.get("languageProfile"), 64),
+        "source_recorded_agent": _short_text(record.get("agent"), 96),
+        "reproduction_status": _short_text(reproduction.get("status"), 64),
+        "capability_state": _short_text(metadata.get("capabilityState"), 96),
+        "consumer_migration": _short_text(metadata.get("consumerMigration"), 96),
+        "consumer_status": _short_text(metadata.get("consumer_status"), 96),
+        "classification": _short_text(metadata.get("classification"), 128),
+        "summary": _short_text(record.get("summary"), 768),
+        "source_reference": reference,
+    }
+    if type(metadata.get("currentValidation")) is bool:
+        projected["current_validation"] = metadata["currentValidation"]
+    projected_workaround = {
+        key: workaround[key]
+        for key in ("active", "removed")
+        if type(workaround.get(key)) is bool
+    }
+    if projected_workaround:
+        projected["workaround"] = projected_workaround
+    missing = metadata.get("missing")
+    if isinstance(missing, list):
+        projected["missing_contracts"] = [
+            _short_text(item, 256) for item in missing[:8]
+            if isinstance(item, str)
+        ]
+        projected["missing_contracts_truncated"] = len(missing) > 8
+    related_pressure_ids: list[str] = []
+    related_pressure_pattern = re.compile(r"MNCS-[A-Z]+-[0-9A-F]{12}")
+    evidence = record.get("evidence")
+    if isinstance(evidence, list):
+        for item in evidence[:8]:
+            if not isinstance(item, dict):
+                continue
+            if item.get("kind") != "language-pressure":
+                continue
+            for field in ("ref", "summary"):
+                value = item.get(field)
+                if not isinstance(value, str):
+                    continue
+                for match in related_pressure_pattern.findall(value):
+                    if match not in related_pressure_ids:
+                        related_pressure_ids.append(match)
+    if related_pressure_ids:
+        projected["source_declared_related_pressure_identities"] = (
+            related_pressure_ids[:4]
+        )
+    return projected
+
+
+def _native_capability_consumer_evidence_projection(
+    observations: list[dict[str, Any]], target_pressure_identity: Any,
+    native_capability_identity: Any,
+    source_integrity: dict[tuple[str, str, str, str], str] | None,
+    source_payloads: dict[tuple[str, str, str, str], bytes] | None,
+) -> dict[str, Any] | None:
+    """Join Commons consumer reports to one declared capability pressure ID."""
+    if (not isinstance(target_pressure_identity, str)
+            or not target_pressure_identity
+            or not isinstance(native_capability_identity, str)
+            or not native_capability_identity):
+        return None
+    integrity = source_integrity or {}
+    payloads = source_payloads or {}
+    linked_records: list[dict[str, Any]] = []
+    references: dict[tuple[str, str, str, str], tuple[
+        dict[str, str], dict[str, Any],
+    ]] = {}
+    for record in observations[:MAX_OBSERVATIONS]:
+        observation = record.get("observation")
+        observation = observation if isinstance(observation, dict) else {}
+        if observation.get("kind") != "native-capability-consumer-evidence":
+            continue
+        outcome = observation.get("outcome")
+        outcome = outcome if isinstance(outcome, dict) else {}
+        if (outcome.get("target_pressure_identity") != target_pressure_identity
+                or outcome.get("native_capability_identity")
+                != native_capability_identity):
+            continue
+        linked_records.append(record)
+        raw_sources = record.get("supporting_sources")
+        raw_sources = raw_sources if isinstance(raw_sources, list) else []
+        for source in raw_sources[:MAX_COMMONS_PRESSURE_SOURCE_PAYLOADS]:
+            pointer = _validate_source_pointer(source)
+            if pointer is None or not _is_commons_pressure_source_pointer(pointer, source):
+                continue
+            key = _source_pointer_key(pointer)
+            references.setdefault(key, (pointer, source))
+
+    pressure_record: dict[str, Any] | None = None
+    consumer_observations: list[dict[str, Any]] = []
+    unverified: list[dict[str, Any]] = []
+    invalid_count = 0
+    for pointer, source in list(references.values())[:MAX_COMMONS_PRESSURE_SOURCE_PAYLOADS]:
+        projected = _commons_consumer_observation(
+            pointer, source, target_pressure_identity, integrity, payloads,
+        )
+        if projected.get("status") != (
+            "source-integrity-schema-and-pressure-identity-verified"
+        ):
+            if projected.get("status") in {
+                "source-content-not-verified", "verified-payload-unavailable",
+            }:
+                unverified.append(projected)
+            else:
+                invalid_count += 1
+            continue
+        if source.get("kind") == COMMONS_PRESSURE_RECORD_SOURCE_KIND:
+            pressure_record = projected
+        elif source.get("kind") == COMMONS_PRESSURE_OBSERVATION_SOURCE_KIND:
+            consumer_observations.append(projected)
+
+    if not linked_records and not references:
+        return None
+    consumer_repositories = sorted({
+        item["consumer_repository"] for item in consumer_observations
+        if isinstance(item.get("consumer_repository"), str)
+    })
+    migration_states = sorted({
+        item["consumer_migration"] for item in consumer_observations
+        if isinstance(item.get("consumer_migration"), str)
+    })
+    related_pressure_ids = sorted({
+        identity
+        for item in consumer_observations
+        for identity in item.get("source_declared_related_pressure_identities", [])
+        if isinstance(identity, str)
+    })
+    recorded_affected = (
+        pressure_record.get("affected_repositories", [])
+        if isinstance(pressure_record, dict) else []
+    )
+    if len(consumer_repositories) > 1:
+        cross_consumer_status = "multiple-consumer-repositories-recorded"
+    elif consumer_repositories:
+        cross_consumer_status = "one-consumer-repository-recorded"
+    else:
+        cross_consumer_status = "consumer-repositories-unavailable"
+    passing_count = sum(
+        isinstance(item.get("reproduction_status"), str)
+        and item["reproduction_status"].upper() == "PASS"
+        for item in consumer_observations
+    )
+    workaround_active_count = sum(
+        isinstance(item.get("workaround"), dict)
+        and item["workaround"].get("active") is True
+        for item in consumer_observations
+    )
+    actionable_observation = (
+        "Inspect the source-declared consumer migration states and missing contracts "
+        "per repository. These records show consumer-specific implementation "
+        "conditions; they do not establish a common cause or authorize migration."
+        if consumer_observations else (
+            "Inspect the exact source references and resolve the unavailable or "
+            "unverified consumer evidence before drawing a capability conclusion."
+        )
+    )
+    return {
+        "status": (
+            "verified-commons-consumer-evidence-available"
+            if consumer_observations else "consumer-evidence-unavailable-or-unverified"
+        ),
+        "join_basis": (
+            "Exact target_pressure_identity and native_capability_identity in the "
+            "campaign observation, followed by exact Commons pressureId checks "
+            "against the capability correspondence."
+        ),
+        "source_coverage_scope": (
+            "bounded-source-references-in-authenticated-campaign-observations; "
+            "not-an-exhaustive-consumer-inventory"
+        ),
+        "source_observation_count": len(consumer_observations),
+        "consumer_repository_count": len(consumer_repositories),
+        "consumer_repositories_observed": consumer_repositories[:8],
+        "recorded_affected_repositories": recorded_affected[:8],
+        "consumer_migration_states": migration_states[:8],
+        "passing_reproduction_observation_count": passing_count,
+        "workaround_active_observation_count": workaround_active_count,
+        "related_pressure_identities": related_pressure_ids[:8],
+        "cross_consumer_status": cross_consumer_status,
+        "recurrence_status": "not-established",
+        "causal_relation_status": "not-established",
+        "native_migration_readiness": "not-established",
+        "pressure_record": pressure_record or {
+            "status": "pressure-record-not-integrity-and-schema-verified",
+        },
+        "observations": consumer_observations[:8],
+        "observations_truncated": len(consumer_observations) > 8,
+        "unverified_source_count": len(unverified),
+        "unverified_source_references": unverified[:4],
+        "invalid_source_count": invalid_count,
+        "collector_observation_identities": [
+            record.get("identity") for record in linked_records[:4]
+            if isinstance(record.get("identity"), str)
+        ],
+        "actionable_observation": actionable_observation,
+        "interpretation_limit": (
+            "Digest and schema checks establish traceable source-record content, not "
+            "agent use, source truth, recurring failure, causality, complete consumer "
+            "coverage, or readiness to migrate host functionality."
+        ),
+    }
+
+
 def _native_capability_correspondence_projection(
     observations: list[dict[str, Any]],
     source_integrity: dict[tuple[str, str, str, str], str] | None = None,
@@ -5110,6 +5551,12 @@ def _native_capability_correspondence_projection(
                 "that agents can discover or use the API, or that migration is ready."
             ),
         }
+        consumer_evidence = _native_capability_consumer_evidence_projection(
+            observations, pressure_identity,
+            outcome.get("native_capability_identity"), integrity, payloads,
+        )
+        if consumer_evidence is not None:
+            result["consumer_evidence"] = consumer_evidence
         if isinstance(outcome.get("measurement_limits"), list):
             result["measurement_limits"] = [
                 _short_text(value, 384)
