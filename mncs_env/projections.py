@@ -1199,6 +1199,8 @@ def interpretation(
                 capability_relationships.project(
                     result.get("implementation_accountability"),
                     observations=result.get("observations"),
+                    session_activity=result.get("session_activity"),
+                    subject=result.get("subject"),
                 )
             )
         return result

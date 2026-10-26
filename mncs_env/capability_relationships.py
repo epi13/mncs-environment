@@ -11,9 +11,9 @@ import json
 import re
 from typing import Any
 
-SCHEMA = "mncs.environment.capability-accountability-links/1"
+SCHEMA = "mncs.environment.capability-accountability-links/2"
 MAX_LINKS = 4
-MAX_RESULT_BYTES = 5 * 1024
+MAX_RESULT_BYTES = 8 * 1024
 MAX_RESULT_RESERVE_BYTES = MAX_RESULT_BYTES
 VERIFIED_SOURCE_STATUSES = frozenset({
     "content-integrity-verified",
@@ -169,9 +169,190 @@ def _native_implementation_sources(
     return result
 
 
+def _session_context_delivery_observation(
+    session_activity: Any, subject: Any,
+) -> dict[str, Any] | None:
+    """Expose bounded, session-level context delivery evidence.
+
+    The context summary is evidence that a response was captured and can be
+    compared with the current binding snapshot. Unless exact binding IDs are
+    present, it cannot establish delivery of a particular capability, receipt
+    by an agent, or subsequent use.
+    """
+    activity = session_activity if isinstance(session_activity, dict) else {}
+    delivery = activity.get("capability_delivery")
+    delivery = delivery if isinstance(delivery, dict) else {}
+    context = delivery.get("context_operation_activity")
+    if not isinstance(context, dict):
+        return None
+
+    observation: dict[str, Any] = {
+        "scope": _text(context.get("scope"), 128) or "unavailable",
+        "status": _text(context.get("status"), 96) or "unavailable",
+        "agent_receipt_status": (
+            _text(context.get("agent_receipt_status"), 96)
+            or "not-established"
+        ),
+        "target_capability_attribution_status": "not-established",
+        "binding_inclusion_projection_path": (
+            "session_activity.capability_delivery.bindings[*].context_response_inclusion"
+        ),
+    }
+    subject = subject if isinstance(subject, dict) else {}
+    for key in ("session_id", "campaign_id", "environment_id"):
+        value = _text(subject.get(key), 128)
+        if value is not None:
+            observation[key] = value
+    work_intent = subject.get("work_intent")
+    if isinstance(work_intent, dict):
+        intent = {
+            key: _text(work_intent.get(key), limit)
+            for key, limit in (("identity", 128), ("goal", 192))
+            if isinstance(work_intent.get(key), str)
+        }
+        if intent:
+            observation["work_intent"] = intent
+
+    source = activity.get("source")
+    if isinstance(source, dict):
+        window = {
+            key: source[key]
+            for key in (
+                "event_window_sequence_start", "event_window_sequence_end",
+                "event_page_before_sequence", "event_window_truncated",
+            )
+            if type(source.get(key)) in {int, bool}
+        }
+        if window:
+            observation["selected_event_window"] = window
+
+    raw_summaries = context.get("response_summaries")
+    raw_summaries = raw_summaries if isinstance(raw_summaries, list) else []
+    summaries: list[dict[str, Any]] = []
+    for raw in raw_summaries[:1]:
+        if not isinstance(raw, dict):
+            continue
+        summary: dict[str, Any] = {}
+        for key in (
+            "schema_version", "capture_status", "capture_reason",
+            "context_schema_version", "identity_digest_status",
+            "available_identity_digest", "binding_ids_status",
+        ):
+            value = _text(raw.get(key), 128)
+            if value is not None:
+                summary[key] = value
+        for key in (
+            "available_count", "listed_available_count", "unavailable_count",
+            "unknown_count",
+        ):
+            value = raw.get(key)
+            if type(value) is int and 0 <= value <= 1_000_000:
+                summary[key] = value
+        if type(raw.get("capabilities_truncated")) is bool:
+            summary["capabilities_truncated"] = raw["capabilities_truncated"]
+        binding_ids = raw.get("available_binding_ids")
+        if isinstance(binding_ids, list):
+            summary["available_binding_ids"] = [
+                value[:80] for value in binding_ids[:20]
+                if isinstance(value, str)
+            ]
+            if len(binding_ids) > 20:
+                summary["available_binding_ids_truncated"] = True
+        event_reference = raw.get("event_reference")
+        if isinstance(event_reference, dict):
+            reference: dict[str, Any] = {}
+            for key in ("identity", "type"):
+                value = _text(event_reference.get(key), 128)
+                if value is not None:
+                    reference[key] = value
+            if type(event_reference.get("sequence")) is int:
+                reference["sequence"] = event_reference["sequence"]
+            if reference:
+                summary["event_reference"] = reference
+        comparison = raw.get("binding_snapshot_comparison")
+        if isinstance(comparison, dict):
+            compact_comparison = {
+                key: _text(comparison.get(key), 128)
+                for key in ("status", "basis", "reason")
+                if isinstance(comparison.get(key), str)
+            }
+            for key in (
+                "available_count_matches", "unavailable_count_matches",
+                "unknown_count_matches", "available_identity_digest_matches",
+            ):
+                if type(comparison.get(key)) is bool:
+                    compact_comparison[key] = comparison[key]
+            if compact_comparison:
+                summary["binding_snapshot_comparison"] = compact_comparison
+        summaries.append(summary)
+    observation["response_summaries"] = summaries
+    summary_count = max(0, len(raw_summaries))
+    omitted = context.get("response_summaries_omitted")
+    omitted = max(0, omitted) if type(omitted) is int else 0
+    omitted += max(0, summary_count - len(summaries))
+    observation["response_summaries_omitted"] = omitted
+    if summary_count > len(summaries):
+        observation["response_summaries_truncated"] = True
+    no_response_in_window = (
+        not summaries
+        and observation["status"] == "not-observed-in-selected-event-window"
+    )
+    captured_summaries = [
+        item for item in summaries if item.get("capture_status") == "captured"
+    ]
+    summary_capture_incomplete = bool(summaries) and not captured_summaries
+    partial_binding_ids = bool(captured_summaries) and any(
+        item.get("binding_ids_status") != "complete"
+        for item in captured_summaries
+    )
+    if partial_binding_ids:
+        interpretation_status = "partial-binding-id-attribution"
+        next_investigation = (
+            "Inspect the next authentic Control session.context event for exact binding IDs "
+            "and compare it with the binding-level inclusion view; keep agent receipt and use "
+            "as separate observations."
+        )
+    elif captured_summaries:
+        interpretation_status = "binding-identifiers-captured-receipt-unestablished"
+        next_investigation = (
+            "Correlate the captured binding-ID set with subsequent authenticated invocation "
+            "events to investigate use; do not infer agent receipt from delivery alone."
+        )
+    elif summary_capture_incomplete:
+        interpretation_status = "response-summary-unavailable-or-incomplete"
+        next_investigation = (
+            "Inspect the underlying authenticated event and capture-status records before "
+            "assessing capability discoverability; the available summary does not establish "
+            "whether a context response was captured."
+        )
+    elif no_response_in_window:
+        interpretation_status = "no-response-summary-in-selected-window"
+        next_investigation = (
+            "Inspect an event window containing session.context activity before assessing "
+            "capability discoverability; absence from this selected window is not evidence "
+            "that no context response occurred."
+        )
+    else:
+        interpretation_status = "response-summary-unavailable-or-incomplete"
+        next_investigation = (
+            "Inspect the underlying authenticated event and capture-status records before "
+            "assessing capability discoverability; the available summary does not establish "
+            "whether a context response was captured."
+        )
+    observation["interpretation"] = {
+        "status": interpretation_status,
+        "basis": "bounded authenticated session.context response summaries",
+        "next_investigation": next_investigation,
+    }
+    return observation
+
+
 def project(
     implementation_accountability: Any,
     observations: Any = None,
+    *,
+    session_activity: Any = None,
+    subject: Any = None,
 ) -> dict[str, Any]:
     """Join owner audits and native capabilities using exact evidence pointers.
 
@@ -379,12 +560,16 @@ def project(
         "unverified_shared_pointer_match_count": unverified_matches,
         "links_truncated": overflow or total_matches > len(links),
         "links": links,
+        "session_context_delivery_observation": (
+            _session_context_delivery_observation(session_activity, subject)
+        ),
         "systemwide_native_adoption_ratio": {"status": "not-measured"},
         "recurrence_status": "not-established",
         "measurement_limits": [
             "Exact source pointers provide traceability, not causal blocking or safe replacement.",
             "Owner declarations and append-only correction values remain unverified as implementation ownership or an applied change.",
-            "Agent discovery/use, recurrence, migration readiness, and systemwide adoption are not measured.",
+            "Session context responses are not proof of agent receipt or capability use; target-capability attribution requires exact binding evidence.",
+            "Recurrence, migration readiness, and systemwide adoption are not measured.",
         ],
     }
     result["status"] = (

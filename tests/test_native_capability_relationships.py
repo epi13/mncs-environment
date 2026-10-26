@@ -238,6 +238,204 @@ def test_derived_relationship_output_stays_within_reserved_projection_budget():
     )
 
 
+def _context_activity(summary: dict | None, *, status: str = "partial") -> dict:
+    return {
+        "source": {
+            "event_window_sequence_start": 28,
+            "event_window_sequence_end": 43,
+            "event_window_truncated": True,
+        },
+        "capability_delivery": {
+            "context_operation_activity": {
+                "scope": "authenticated-Control-session.context-events-in-selected-window",
+                "status": status,
+                "agent_receipt_status": "not-established",
+                "response_summaries": [summary] if summary else [],
+                "response_summaries_omitted": 0,
+            },
+        },
+    }
+
+
+def test_context_delivery_observation_preserves_partial_session_evidence_without_target_attribution():
+    summary = {
+        "schema_version": "mncs.environment.context-response-summary/2",
+        "capture_status": "captured",
+        "context_schema_version": "mncs.environment.entry-context/1",
+        "identity_digest_status": "complete",
+        "available_identity_digest": "f" * 64,
+        "available_count": 9,
+        "listed_available_count": 9,
+        "unavailable_count": 0,
+        "unknown_count": 0,
+        "capabilities_truncated": False,
+        "available_binding_ids": [],
+        "binding_ids_status": "partial",
+        "event_reference": {
+            "identity": "evt_de29b1e1b27f5e61",
+            "sequence": 41,
+            "type": "environment.rpc.read_observed",
+        },
+        "binding_snapshot_comparison": {
+            "status": "matches-current-session-binding-snapshot",
+            "basis": "current-session-binding-snapshot-at-projection-time",
+            "available_count_matches": True,
+            "available_identity_digest_matches": True,
+        },
+    }
+
+    result = capability_relationships.project(
+        {},
+        session_activity=_context_activity(summary),
+        subject={
+            "session_id": "ses_9ad3efb63438cf3d",
+            "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+            "environment_id": "renv_4c126896d339c0ce",
+            "work_intent": {
+                "identity": "int_8475157f281c835f",
+                "goal": "exercise canonical Environment persistence through the Control socket",
+            },
+        },
+    )
+
+    observation = result["session_context_delivery_observation"]
+    assert observation["session_id"] == "ses_9ad3efb63438cf3d"
+    assert observation["work_intent"]["identity"] == "int_8475157f281c835f"
+    assert observation["target_capability_attribution_status"] == "not-established"
+    assert observation["agent_receipt_status"] == "not-established"
+    assert observation["binding_inclusion_projection_path"] == (
+        "session_activity.capability_delivery.bindings[*].context_response_inclusion"
+    )
+    captured = observation["response_summaries"][0]
+    assert captured["event_reference"]["sequence"] == 41
+    assert captured["binding_ids_status"] == "partial"
+    assert captured["available_binding_ids"] == []
+    assert captured["binding_snapshot_comparison"]["status"] == (
+        "matches-current-session-binding-snapshot"
+    )
+    assert observation["interpretation"]["status"] == (
+        "partial-binding-id-attribution"
+    )
+
+
+def test_context_delivery_absence_is_scoped_to_selected_event_window():
+    observation = capability_relationships.project(
+        {}, session_activity=_context_activity(
+            None, status="not-observed-in-selected-event-window",
+        ),
+    )["session_context_delivery_observation"]
+
+    assert observation["selected_event_window"] == {
+        "event_window_sequence_start": 28,
+        "event_window_sequence_end": 43,
+        "event_window_truncated": True,
+    }
+    assert observation["response_summaries"] == []
+    assert observation["interpretation"]["status"] == (
+        "no-response-summary-in-selected-window"
+    )
+    assert "not evidence" in observation["interpretation"]["next_investigation"]
+
+
+def test_context_delivery_partial_status_does_not_infer_no_response():
+    observation = capability_relationships.project(
+        {}, session_activity=_context_activity(None, status="partial"),
+    )["session_context_delivery_observation"]
+
+    assert observation["interpretation"]["status"] == (
+        "response-summary-unavailable-or-incomplete"
+    )
+    assert "underlying authenticated event" in observation["interpretation"][
+        "next_investigation"
+    ]
+
+
+def test_complete_context_binding_ids_do_not_establish_agent_receipt_or_use():
+    summary = {
+        "capture_status": "captured",
+        "binding_ids_status": "complete",
+        "available_binding_ids": ["cap_" + "a" * 64],
+        "event_reference": {"identity": "evt_context", "sequence": 9},
+    }
+
+    observation = capability_relationships.project(
+        {}, session_activity=_context_activity(summary),
+    )["session_context_delivery_observation"]
+
+    assert observation["interpretation"]["status"] == (
+        "binding-identifiers-captured-receipt-unestablished"
+    )
+    assert observation["agent_receipt_status"] == "not-established"
+    assert observation["target_capability_attribution_status"] == "not-established"
+    assert "subsequent authenticated invocation events" in observation[
+        "interpretation"
+    ]["next_investigation"]
+
+
+def test_uncaptured_context_response_is_not_misclassified_as_partial_ids():
+    summary = {
+        "capture_status": "unavailable",
+        "capture_reason": "response-too-large",
+        "binding_ids_status": "unavailable",
+        "event_reference": {"identity": "evt_context", "sequence": 9},
+    }
+
+    observation = capability_relationships.project(
+        {}, session_activity=_context_activity(summary),
+    )["session_context_delivery_observation"]
+
+    assert observation["interpretation"]["status"] == (
+        "response-summary-unavailable-or-incomplete"
+    )
+
+
+def test_context_delivery_observation_stays_bounded_at_response_summary_limits():
+    summary = {
+        "schema_version": "s" * 128,
+        "capture_status": "captured",
+        "capture_reason": "r" * 128,
+        "context_schema_version": "c" * 128,
+        "identity_digest_status": "complete",
+        "available_identity_digest": "d" * 64,
+        "binding_ids_status": "complete",
+        "available_count": 20,
+        "listed_available_count": 20,
+        "unavailable_count": 0,
+        "unknown_count": 0,
+        "capabilities_truncated": False,
+        "available_binding_ids": ["cap_" + "a" * 64 for _ in range(20)],
+        "event_reference": {
+            "identity": "i" * 128, "sequence": 42, "type": "t" * 128,
+        },
+        "binding_snapshot_comparison": {
+            "status": "m" * 128, "basis": "b" * 128,
+            "reason": "q" * 128,
+            "available_count_matches": True,
+            "unavailable_count_matches": True,
+            "unknown_count_matches": True,
+            "available_identity_digest_matches": True,
+        },
+    }
+    activity = _context_activity(summary)
+    activity["capability_delivery"]["context_operation_activity"][
+        "response_summaries"
+    ] = [summary, summary]
+
+    result = capability_relationships.project(
+        {}, session_activity=activity,
+        subject={
+            "session_id": "s" * 128,
+            "campaign_id": "c" * 128,
+            "environment_id": "e" * 128,
+            "work_intent": {"identity": "i" * 128, "goal": "g" * 192},
+        },
+    )
+
+    assert len(json.dumps(result, separators=(",", ":")).encode()) <= (
+        capability_relationships.MAX_RESULT_BYTES
+    )
+
+
 def test_existing_environmental_capability_route_exposes_bounded_relationships(
     monkeypatch,
 ):
@@ -263,6 +461,13 @@ def test_existing_environmental_capability_route_exposes_bounded_relationships(
     source_projection = {
         "implementation_accountability": accountability,
         "observations": [correction],
+        "session_activity": _context_activity({
+            "capture_status": "captured",
+            "binding_ids_status": "partial",
+            "available_binding_ids": [],
+            "event_reference": {"sequence": 41},
+        }),
+        "subject": {"session_id": "ses_projection-test"},
     }
     requested_budgets = []
 
@@ -279,6 +484,12 @@ def test_existing_environmental_capability_route_exposes_bounded_relationships(
     assert relation["links"][0]["audit_correction_target_match_status"] == (
         "exact-reference-match"
     )
+    assert relation["session_context_delivery_observation"]["session_id"] == (
+        "ses_projection-test"
+    )
+    assert relation["session_context_delivery_observation"][
+        "target_capability_attribution_status"
+    ] == "not-established"
     assert requested_budgets == [
         capability_intelligence.MAX_RESULT_BYTES
         - capability_relationships.MAX_RESULT_RESERVE_BYTES

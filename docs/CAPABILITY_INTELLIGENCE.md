@@ -17,9 +17,24 @@ repository, commit, path, and SHA-256 relationships, along with their source
 references, the owner audit's declared host responsibilities, the candidate
 native capability, the existing next-investigation text, and one bounded
 source reference for its language contract, compiler support, and host runtime
-provider where those records are available. It is bounded to four links and
-5 KiB. Exact pointers provide traceability, not proof of causation or migration
+provider where those records are available. It also includes a bounded,
+session-scoped context-delivery observation when authenticated session events
+provide one. The relationship view is bounded to four source links and 8 KiB.
+Exact pointers provide traceability, not proof of causation or migration
 suitability.
+
+`session_context_delivery_observation` preserves the session ID, work intent,
+selected event window, and response event reference beside the captured
+binding summary. A complete identity digest and matching aggregate counts can
+show that the response summary matches the current binding snapshot, but
+partial binding IDs do not provide direct binding-ID attribution. The existing
+per-binding projection may derive identity-tuple membership from a matching
+digest; inspect it at
+`session_activity.capability_delivery.bindings[*].context_response_inclusion`.
+Even complete identifiers establish a delivered set only; agent receipt and
+use remain separate observations. When the selected event window has no
+context response, the projection labels that absence as window-scoped rather
+than concluding that the session received no context.
 
 ## Current evidence path
 
@@ -57,9 +72,45 @@ particular owner-declared host responsibility.
 
 - Systemwide native adoption remains `not-measured`; these observations are not
   a complete implementation inventory or denominator.
-- Agent discovery and successful or failed use of the capability are not
-  measured by this evidence path.
+- The captured context response below is session-level evidence and is not
+  attributed to the candidate process API. Agent receipt and successful or
+  failed use of that capability remain unmeasured.
 - Recurrence across sessions is not established by shared owner or pressure
   records.
 - A future implementation or migration requires independent correctness and
   reliability verification. This projection does not declare success.
+
+## Live context-delivery evidence
+
+The older authenticated session-event page can be inspected with:
+
+```sh
+./scripts/mncs-env projections ses_9ad3efb63438cf3d \
+  --interpret environmental-capability \
+  --session-event-before-sequence 42 --session-event-limit 1
+```
+
+The projection for session `ses_9ad3efb63438cf3d` records work intent
+`int_8475157f281c835f` (“exercise canonical Environment persistence through the
+Control socket”). Its authenticated `session.context` event
+`evt_de29b1e1b27f5e61` at sequence 41 has a captured response summary for nine
+available bindings. The digest and aggregate availability counts match the
+current session binding snapshot, while the exact binding ID list is marked
+partial and contains no IDs. The projection therefore exposes a concrete
+capability-delivery measurement gap, but does not claim that any particular
+capability was absent, received by the agent, or used. In this selected page,
+the per-binding inclusion view reports `identity-tuple-in-matched-response`
+for returned binding rows and
+`binding_id_attribution_status=binding-id-capture-incomplete`. This is a
+derived identity-tuple relation to the response digest and current session
+snapshot, not a direct binding-ID observation; the binding list is truncated
+in this page. Agent receipt and use remain unestablished.
+
+The current `mncs-env context` view exposes all nine available binding IDs,
+and Control's bounded capture code persists IDs when they are present in a
+`session.context` response. That does not retroactively change event 41. The
+next useful observation is a subsequent authentic Control context event, so
+the projection can verify whether its summary contains exact IDs and compare
+that event's binding-level view. The assessment remains session-scoped and
+`target_capability_attribution_status` remains `not-established` until a
+specific target capability is linked by adequate evidence.
