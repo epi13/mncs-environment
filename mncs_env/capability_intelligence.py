@@ -2344,6 +2344,13 @@ def _compact_projection(
                             "content_integrity_status", "event_reference_status")
                 if isinstance(source.get(key), str)
             }
+            match_categories = source.get("event_reference_match_categories")
+            if isinstance(match_categories, list):
+                compact_supporting_source["event_reference_match_categories"] = [
+                    _short_text(category, 48)
+                    for category in match_categories[:4]
+                    if isinstance(category, str)
+                ]
             for key in (
                 "event_reference_count", "event_reference_matched_count",
             ):
@@ -6536,7 +6543,7 @@ def _validate_captured_session_activity_reference(source: Any) -> bool:
 def _authenticated_session_event_reference_resolution(
     source: Any, *, selected_session_id: str, activity: dict[str, Any],
 ) -> dict[str, Any]:
-    """Resolve a captured event pointer only against the selected bounded view."""
+    """Resolve a captured event pointer against selected bounded activity records."""
     if not _validate_captured_session_activity_reference(source):
         return {"event_reference_status": "invalid-source-reference"}
     expected_event_ids = set(source["event_identities"])
@@ -6546,18 +6553,36 @@ def _authenticated_session_event_reference_resolution(
             "event_reference_count": len(expected_event_ids),
             "event_reference_matched_count": 0,
         }
-    raw_operations = activity.get("rpc_operations")
-    raw_operations = raw_operations if isinstance(raw_operations, list) else []
-    visible_event_ids = {
-        reference.get("identity")
-        for operation in raw_operations
-        if isinstance(operation, dict)
-        and isinstance(reference := operation.get("event_reference"), dict)
-        and isinstance(reference.get("identity"), str)
-    }
-    matched_event_ids = expected_event_ids & visible_event_ids
+    record_collections = (
+        ("rpc_operation", "rpc_operations"),
+        ("claim_recovery", "claim_recoveries"),
+        ("authority_denial", "authority_denials"),
+    )
+    matched_categories_by_event: dict[str, set[str]] = {}
+    non_rpc_records_present = False
+    for category, collection_key in record_collections:
+        raw_records = activity.get(collection_key)
+        if not isinstance(raw_records, list):
+            continue
+        if category != "rpc_operation" and raw_records:
+            non_rpc_records_present = True
+        for record in raw_records:
+            if not isinstance(record, dict):
+                continue
+            reference = record.get("event_reference")
+            identity = reference.get("identity") if isinstance(reference, dict) else None
+            if isinstance(identity, str) and identity in expected_event_ids:
+                matched_categories_by_event.setdefault(identity, set()).add(category)
+    matched_event_ids = set(matched_categories_by_event)
+    matched_categories = sorted({
+        category
+        for categories in matched_categories_by_event.values()
+        for category in categories
+    })
     activity_source = activity.get("source")
     activity_source = activity_source if isinstance(activity_source, dict) else None
+    raw_operations = activity.get("rpc_operations")
+    raw_operations = raw_operations if isinstance(raw_operations, list) else []
     records_omitted = (
         activity_source.get("rpc_operation_records_omitted")
         if activity_source is not None else None
@@ -6586,6 +6611,7 @@ def _authenticated_session_event_reference_resolution(
         or type(records_returned) is not int
         or events_considered != records_returned
         or records_returned != len(raw_operations)
+        or non_rpc_records_present
     )
     if matched_event_ids == expected_event_ids:
         status = "all-referenced-events-present"
@@ -6601,6 +6627,8 @@ def _authenticated_session_event_reference_resolution(
         "event_reference_status": status,
         "event_reference_count": len(expected_event_ids),
         "event_reference_matched_count": len(matched_event_ids),
+        **({"event_reference_match_categories": matched_categories}
+           if matched_categories else {}),
     }
 
 

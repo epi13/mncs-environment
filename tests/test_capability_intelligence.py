@@ -6210,12 +6210,16 @@ def test_campaign_state_bootstrap_pressure_projects_live_events_and_unassessed_f
     )
     assert event_source["event_reference_count"] == 3
     assert event_source["event_reference_matched_count"] == 3
+    assert event_source["event_reference_match_categories"] == ["rpc_operation"]
     assert compact["observations"][0]["supporting_sources"][0][
         "event_reference_status"
     ] == "all-referenced-events-present"
     assert compact["observations"][0]["supporting_sources"][0][
         "event_reference_matched_count"
     ] == 3
+    assert compact["observations"][0]["supporting_sources"][0][
+        "event_reference_match_categories"
+    ] == ["rpc_operation"]
 
     assert result["improvement_relation_count"] == 1
     relation = result["improvement_relations"][0]
@@ -6381,6 +6385,7 @@ def test_session_event_reference_status_preserves_selection_and_window_limits() 
         "event_reference_status": "some-present-others-unresolved-in-bounded-view",
         "event_reference_count": 2,
         "event_reference_matched_count": 1,
+        "event_reference_match_categories": ["rpc_operation"],
     }
     assert capability_intelligence._authenticated_session_event_reference_resolution(
         source,
@@ -6428,6 +6433,81 @@ def test_session_event_reference_status_preserves_selection_and_window_limits() 
         selected_session_id="ses_event_reference_status",
         activity=activity,
     )["event_reference_status"] == "invalid-source-reference"
+
+
+def test_session_event_reference_resolution_includes_claim_recoveries() -> None:
+    source = {
+        "kind": "authenticated-session-activity-projection",
+        "repository": "mncs-environment",
+        "campaign_id": "cmp_claim_recovery_reference",
+        "session_id": "ses_claim_recovery_reference",
+        "event_identities": ["evt_recovery_one", "evt_recovery_two"],
+    }
+    activity = {
+        "source": {
+            "event_window_truncated": False,
+            "claim_recovery_events_considered": 1,
+            "claim_recovery_records_returned": 1,
+            "claim_recovery_records_omitted": 0,
+            "claim_recovery_records_invalid": 0,
+        },
+        "claim_recoveries": [{
+            "event_reference": {
+                "identity": "evt_recovery_one",
+                "type": "lease.recovered-and-acquired",
+            },
+        }],
+    }
+
+    complete_match = (
+        capability_intelligence._authenticated_session_event_reference_resolution(
+            {**source, "event_identities": ["evt_recovery_one"]},
+            selected_session_id="ses_claim_recovery_reference",
+            activity=activity,
+        )
+    )
+    assert complete_match == {
+        "event_reference_status": "all-referenced-events-present",
+        "event_reference_count": 1,
+        "event_reference_matched_count": 1,
+        "event_reference_match_categories": ["claim_recovery"],
+    }
+
+    denial_match = (
+        capability_intelligence._authenticated_session_event_reference_resolution(
+            {**source, "event_identities": ["evt_denial_one"]},
+            selected_session_id="ses_claim_recovery_reference",
+            activity={
+                "source": {"event_window_truncated": False},
+                "authority_denials": [{
+                    "event_reference": {
+                        "identity": "evt_denial_one",
+                        "type": "authority.denied",
+                    },
+                }],
+            },
+        )
+    )
+    assert denial_match == {
+        "event_reference_status": "all-referenced-events-present",
+        "event_reference_count": 1,
+        "event_reference_matched_count": 1,
+        "event_reference_match_categories": ["authority_denial"],
+    }
+
+    partial_match = (
+        capability_intelligence._authenticated_session_event_reference_resolution(
+            source,
+            selected_session_id="ses_claim_recovery_reference",
+            activity=activity,
+        )
+    )
+    assert partial_match == {
+        "event_reference_status": "some-present-others-unresolved-in-bounded-view",
+        "event_reference_count": 2,
+        "event_reference_matched_count": 1,
+        "event_reference_match_categories": ["claim_recovery"],
+    }
 
 
 def test_improvement_record_does_not_count_as_another_pressure_occurrence(

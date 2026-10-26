@@ -381,6 +381,15 @@ new claim identity/version and up to eight superseded claim identities. It is
 causal provenance for an accepted claim transition, not evidence that the
 subsequent implementation objective succeeded.
 
+Environmental observation sources that retain authenticated session event
+identities are resolved against the bounded RPC, authority-denial, and claim-
+recovery records in that same session view. A matched source reports which
+record categories contain its events. Finding the event establishes that the
+record is present in the selected projection; it does not establish the event's
+cause or downstream success. Missing references remain unresolved when the
+selected window or a record collection is bounded, including mixed views where
+the projection does not retain every event identity.
+
 The same session activity view exposes up to four newest successful
 `mncs-system-monitor:system-resource-sample` artifacts, one per binding. The
 Environment definition selects this read-only capability, but sampling remains
