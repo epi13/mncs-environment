@@ -2435,6 +2435,32 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
                 "next": "retry or select an isolated worktree",
             },
         },
+        {
+            "identity": "evt_effect_preflight_stale_1", "sequence": 15,
+            "type": "effect.operation-deferred", "producer": "environment",
+            "observed_at": "2026-10-24T01:03:00Z",
+            "payload": {
+                "action": "write",
+                "repository": "mncs-compiler",
+                "branch": "campaign/compiler",
+                "checkout_identity": "checkout:campaign",
+                "waited_ms": 23,
+                "operation_executed": False,
+                "reason": "checkout-state-changed-since-preflight",
+                "changed_fields": ["head"],
+                "initial_preflight_event": {
+                    "identity": "evt_proposal_preflight_initial",
+                    "sequence": 8,
+                    "type": "authority.proposal-eligible",
+                },
+                "locked_preflight_event": {
+                    "identity": "evt_proposal_preflight_locked",
+                    "sequence": 13,
+                    "type": "authority.proposal-eligible",
+                },
+                "next": "refresh the proposal against the current checkout state",
+            },
+        },
     ]
     session.recent_events = lambda *, limit: {
         "event_count": len(events), "events": events[-limit:], "truncated": False,
@@ -2480,18 +2506,30 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
     }
     assert prior["invocation_event"]["identity"] == "evt_capability_invoked_1"
     assert prior["completion_event"]["identity"] == "evt_invocation_completed_1"
-    assert activity["operation_deferral_count"] == 1
-    deferral = activity["operation_deferrals"][0]
-    assert deferral["identity"].startswith("opdef_")
-    assert deferral["action"] == "write"
-    assert deferral["repository"] == "mncs-compiler"
-    assert deferral["reason"] == "same-checkout-operation-in-progress"
-    assert deferral["waited_ms"] == 15000
-    assert deferral["operation_executed"] is False
-    assert deferral["event_reference"]["identity"] == (
+    assert activity["operation_deferral_count"] == 2
+    stale_deferral, busy_deferral = activity["operation_deferrals"]
+    assert stale_deferral["reason"] == "checkout-state-changed-since-preflight"
+    assert stale_deferral["changed_fields"] == ["head"]
+    assert stale_deferral["initial_preflight_event"]["identity"] == (
+        "evt_proposal_preflight_initial"
+    )
+    assert stale_deferral["locked_preflight_event"]["identity"] == (
+        "evt_proposal_preflight_locked"
+    )
+    assert stale_deferral["operation_executed"] is False
+    assert stale_deferral["event_reference"]["identity"] == (
+        "evt_effect_preflight_stale_1"
+    )
+    assert busy_deferral["identity"].startswith("opdef_")
+    assert busy_deferral["action"] == "write"
+    assert busy_deferral["repository"] == "mncs-compiler"
+    assert busy_deferral["reason"] == "same-checkout-operation-in-progress"
+    assert busy_deferral["waited_ms"] == 15000
+    assert busy_deferral["operation_executed"] is False
+    assert busy_deferral["event_reference"]["identity"] == (
         "evt_effect_operation_deferred_1"
     )
-    assert deferral["checkout_identity"] == "checkout:campaign"
+    assert busy_deferral["checkout_identity"] == "checkout:campaign"
     assert activity["capabilities"] == [{
         "capability": "mncs-compiler:build",
         "invocation_count": 2,
@@ -2574,9 +2612,11 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
             "held_ms": 201,
         },
     }
-    assert compact["session_activity"]["operation_deferrals"][0][
-        "event_reference"
-    ]["identity"] == "evt_effect_operation_deferred_1"
+    compact_stale_deferral = next(
+        item for item in compact["session_activity"]["operation_deferrals"]
+        if item["reason"] == "checkout-state-changed-since-preflight"
+    )
+    assert compact_stale_deferral["changed_fields"] == ["head"]
     assert "/private" not in json.dumps(
         compact["session_activity"]["operation_deferrals"],
     )

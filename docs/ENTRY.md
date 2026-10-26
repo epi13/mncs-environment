@@ -611,10 +611,15 @@ check. The lock creates no file or persistent owner claim, waits at most 15
 seconds, and releases after result publication or process exit. Its invocation
 and completion events carry the operation identity, checkout identity, wait time,
 and release outcome. A bounded wait timeout emits `effect.operation-deferred`
-and launches no provider process. This coordinates Environment-mediated provider calls;
-direct shell or Git activity does not participate in the lock. Separate
-worktrees remain independently usable, while shared-main and other protected
-mutations retain their existing scoped checks.
+and launches no provider process. After acquiring the lock, Environment also
+compares the initial and locked preflight fields; a changed checkout identity,
+branch, or HEAD defers the provider and records both preflight events. Changes
+in clean/dirty status alone do not block compatible uncommitted work. This
+detects only changes visible in those bounded fields; overlapping edits within
+an already-dirty tree may remain indistinguishable. The lock and
+preflight do not fence direct shell or Git activity or resolve semantic
+conflicts. Separate worktrees remain independently usable, while shared-main
+and other protected mutations retain their existing scoped checks.
 
 There are at most 16 service declarations. Each read probe has a three-second
 limit, within a 15-second aggregate probe budget; recovery has ten seconds per

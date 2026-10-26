@@ -4143,6 +4143,20 @@ def _compact_projection(
                 for key in ("identity", "sequence", "type")
                 if key in reference
             }
+        changed_fields = item.get("changed_fields")
+        if isinstance(changed_fields, list):
+            compact_item["changed_fields"] = [
+                field for field in changed_fields[:6]
+                if isinstance(field, str)
+            ]
+        for key in ("initial_preflight_event", "locked_preflight_event"):
+            preflight_reference = item.get(key)
+            if isinstance(preflight_reference, dict):
+                compact_item[key] = {
+                    field: preflight_reference[field]
+                    for field in ("identity", "sequence", "type")
+                    if field in preflight_reference
+                }
         compact_operation_deferrals.append(compact_item)
     compact_activity = {
         "status": _short_text(activity.get("status"), 96),
@@ -12165,13 +12179,50 @@ def _session_activity(
         action = payload.get("action")
         reason = payload.get("reason")
         waited_ms = payload.get("waited_ms")
+        changed_fields = payload.get("changed_fields")
+        initial_preflight = _event_reference(
+            payload.get("initial_preflight_event"),
+        ) if isinstance(payload.get("initial_preflight_event"), dict) else None
+        locked_preflight = _event_reference(
+            payload.get("locked_preflight_event"),
+        ) if isinstance(payload.get("locked_preflight_event"), dict) else None
+        stale_fields = {
+            "checkout_identity", "branch", "branch_status", "head",
+            "head_status",
+        }
+        stale_preflight_valid = (
+            isinstance(changed_fields, list)
+            and 1 <= len(changed_fields) <= len(stale_fields)
+            and all(isinstance(field, str) and field in stale_fields
+                    for field in changed_fields)
+            and len(set(changed_fields)) == len(changed_fields)
+            and initial_preflight is not None
+            and locked_preflight is not None
+            and initial_preflight.get("type") in {
+                "authority.proposal-eligible",
+                "authority.integration-eligible",
+            }
+            and locked_preflight.get("type") in {
+                "authority.proposal-eligible",
+                "authority.integration-eligible",
+            }
+            and initial_preflight["sequence"] < reference["sequence"]
+            and locked_preflight["sequence"] < reference["sequence"]
+        ) if reference is not None else False
         if (reference is None
                 or not isinstance(repository, str) or not _is_repository_identity(repository)
                 or not isinstance(action, str)
                 or action not in {"write", "mutate", "execute", "verify", "merge", "publish"}
-                or reason != "same-checkout-operation-in-progress"
+                or reason not in {
+                    "same-checkout-operation-in-progress",
+                    "checkout-state-changed-since-preflight",
+                }
                 or type(waited_ms) is not int or not 0 <= waited_ms <= 300_000
                 or payload.get("operation_executed") is not False):
+            invalid_operation_deferral_count += 1
+            continue
+        if (reason == "checkout-state-changed-since-preflight"
+                and not stale_preflight_valid):
             invalid_operation_deferral_count += 1
             continue
         item = {
@@ -12186,6 +12237,10 @@ def _session_activity(
             "operation_executed": False,
             "event_reference": reference,
         }
+        if reason == "checkout-state-changed-since-preflight":
+            item["changed_fields"] = changed_fields
+            item["initial_preflight_event"] = initial_preflight
+            item["locked_preflight_event"] = locked_preflight
         for key in ("branch", "checkout_identity"):
             value = payload.get(key)
             if isinstance(value, str) and 0 < len(value) <= 160:

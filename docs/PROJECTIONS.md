@@ -474,9 +474,15 @@ provider request identity establishes release after that invocation; a missing
 completion remains unknown. The lock is kernel-scoped and auto-released when
 the Environment process exits; it coordinates Environment-mediated provider
 calls and does not fence external shell or Git activity.
-Bounded `effect.operation-deferred` observations expose a checkout wait that
-expired without starting the provider, with exact event provenance and no local
-checkout path.
+Bounded `effect.operation-deferred` observations expose either a checkout wait
+that expired or a selected checkout whose identity, branch, or HEAD changed
+between the initial and locked preflight. Both cases
+record that the provider did not start. Stale-state deferrals retain the two
+preflight event references and the changed field names without local paths.
+The checkout comparison ignores clean/dirty changes to allow compatible
+uncommitted work to proceed; it does not detect overlapping edits within an
+already-dirty tree, resolve semantic conflicts, or fence direct shell/Git
+activity.
 When an absolute target resolves to a registered checkout and the Environment
 refreshes that checkout at the preflight boundary, the event also records a
 validated `proposal_preflight_state` containing checkout identity, branch,

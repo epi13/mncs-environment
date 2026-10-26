@@ -8211,6 +8211,75 @@ class SessionTests(unittest.TestCase):
                 0,
             )
 
+            real_lease_factory = sessions.workspace_module.checkout_operation_lease
+
+            class CommitBeforeLockedPreflight:
+                def __init__(self) -> None:
+                    self.lease_context = None
+
+                def __enter__(self):
+                    self.lease_context = real_lease_factory(checkout)
+                    lease = self.lease_context.__enter__()
+                    subprocess.run(
+                        ["git", "-C", str(checkout), "add", "proposals"],
+                        check=True, capture_output=True, text=True,
+                    )
+                    subprocess.run(
+                        ["git", "-C", str(checkout), "commit", "-m",
+                         "concurrent proposal commit before fresh preflight"],
+                        check=True, capture_output=True, text=True,
+                    )
+                    return lease
+
+                def __exit__(self, *exception_details):
+                    return self.lease_context.__exit__(*exception_details)
+
+            invocations_before_stale_attempt = sum(
+                event.get("type") == "capability.invoked"
+                for event in first._log()
+            )
+            with mock.patch.object(
+                sessions.workspace_module,
+                "checkout_operation_lease",
+                side_effect=lambda *_args, **_kwargs: CommitBeforeLockedPreflight(),
+            ), mock.patch.object(
+                sessions.capabilities_module, "invoke",
+            ) as stale_provider:
+                with self.assertRaises(workspace.WorkspaceResolutionError) as stale:
+                    first.invoke(
+                        "campaign-writer", ["stale"], effect_target=target,
+                    )
+            self.assertEqual(
+                stale.exception.diagnostics.get("status"),
+                "operation-preflight-stale",
+            )
+            self.assertIn("head", stale.exception.diagnostics["changed_fields"])
+            stale_provider.assert_not_called()
+            self.assertEqual(
+                sum(event.get("type") == "capability.invoked" for event in first._log()),
+                invocations_before_stale_attempt,
+            )
+            self.assertFalse(first.snapshot["claim_holders"].get("MNCS-Commons"))
+            stale_events = [
+                event for event in first._log()
+                if event.get("type") == "effect.operation-deferred"
+                and event.get("payload", {}).get("reason")
+                == "checkout-state-changed-since-preflight"
+            ]
+            self.assertEqual(len(stale_events), 1)
+            stale_payload = stale_events[0]["payload"]
+            self.assertEqual(
+                stale_payload["changed_fields"], ["head"],
+            )
+            self.assertEqual(
+                stale_payload["initial_preflight_event"]["type"],
+                "authority.proposal-eligible",
+            )
+            self.assertEqual(
+                stale_payload["locked_preflight_event"]["type"],
+                "authority.proposal-eligible",
+            )
+
     def test_relative_worktree_claim_matches_bound_absolute_provider_path(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

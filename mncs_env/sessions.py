@@ -5289,6 +5289,10 @@ class Session:
                     if key in emitted
                 },
             }
+            if preflight_state_observation is not None:
+                eligibility_evidence["preflight_state"] = (
+                    preflight_state_observation
+                )
         elif (
             verdict.get("verdict") == "allow"
             and action in authority_module.PROPOSAL_WORKTREE_ACTIONS
@@ -5339,6 +5343,10 @@ class Session:
                     if key in emitted
                 },
             }
+            if preflight_state_observation is not None:
+                eligibility_evidence["preflight_state"] = (
+                    preflight_state_observation
+                )
         if eligibility_evidence is not None:
             verdict["eligibility_evidence"] = eligibility_evidence
         return verdict
@@ -5735,6 +5743,8 @@ class Session:
         checked_effect_repository: str | None = None
         effect_check_scope: dict[str, Any] | None = None
         operation_checkout_path: str | None = None
+        initial_preflight_state: dict[str, Any] | None = None
+        initial_preflight_event: dict[str, Any] | None = None
         if required != "read":
             if effect_target is not None:
                 effect_repository, effect_scope = self._admit_effect_target(
@@ -5838,6 +5848,9 @@ class Session:
                 ):
                     preflight_scope = evidence.get("scope")
                     event_reference = evidence.get("event_reference")
+                    preflight_state = evidence.get("preflight_state")
+                    if isinstance(preflight_state, dict):
+                        initial_preflight_state = dict(preflight_state)
                     if isinstance(preflight_scope, dict):
                         if preflight_scope.get("kind") in {"repository", "worktree"}:
                             admitted_effect_target["scope_kind"] = preflight_scope["kind"]
@@ -5857,10 +5870,13 @@ class Session:
                         and isinstance(event_reference.get("identity"), str)
                         and type(event_reference.get("sequence")) is int
                     ):
-                        admitted_effect_target["preflight_event"] = {
+                        initial_preflight_event = {
                             key: event_reference[key]
                             for key in ("identity", "sequence", "type")
                         }
+                        admitted_effect_target["preflight_event"] = (
+                            initial_preflight_event
+                        )
         prepared_inputs = self._read_provider_input_artifacts(input_artifacts)
         binding_identity = {
             key: binding[key]
@@ -5917,6 +5933,55 @@ class Session:
                 if isinstance(fresh_evidence, dict):
                     fresh_scope = fresh_evidence.get("scope")
                     fresh_reference = fresh_evidence.get("event_reference")
+                    fresh_preflight_state = fresh_evidence.get("preflight_state")
+                    if (isinstance(initial_preflight_state, dict)
+                            and isinstance(fresh_preflight_state, dict)):
+                        state_fields = (
+                            "checkout_identity", "branch", "branch_status",
+                            "head", "head_status",
+                        )
+                        changed_fields = [
+                            key for key in state_fields
+                            if initial_preflight_state.get(key)
+                            != fresh_preflight_state.get(key)
+                        ]
+                        if changed_fields:
+                            locked_preflight_event = (
+                                {
+                                    key: fresh_reference[key]
+                                    for key in ("identity", "sequence", "type")
+                                }
+                                if isinstance(fresh_reference, dict)
+                                and isinstance(fresh_reference.get("identity"), str)
+                                and type(fresh_reference.get("sequence")) is int
+                                and isinstance(fresh_reference.get("type"), str)
+                                else None
+                            )
+                            self._emit(
+                                "effect.operation-deferred", "environment", {
+                                    "action": required,
+                                    "repository": checked_effect_repository,
+                                    "checkout_identity": initial_preflight_state.get(
+                                        "checkout_identity",
+                                    ),
+                                    "branch": initial_preflight_state.get("branch"),
+                                    "waited_ms": operation_lease.get("waited_ms", 0),
+                                    "operation_executed": False,
+                                    "reason": "checkout-state-changed-since-preflight",
+                                    "changed_fields": changed_fields,
+                                    "initial_preflight_event": initial_preflight_event,
+                                    "locked_preflight_event": locked_preflight_event,
+                                    "next": "refresh the proposal against the current checkout state",
+                                },
+                            )
+                            self._save()
+                            raise workspace_module.WorkspaceResolutionError(
+                                "selected checkout changed after proposal preflight",
+                                diagnostics={
+                                    "status": "operation-preflight-stale",
+                                    "changed_fields": changed_fields,
+                                },
+                            )
                     if isinstance(fresh_scope, dict):
                         for key in (
                             "branch", "checkout_identity",
