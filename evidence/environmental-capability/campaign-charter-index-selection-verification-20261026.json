@@ -1,0 +1,112 @@
+{
+  "captured_at": "2026-10-26T02:51:51+00:00",
+  "identity": "ev_environment_charter_index_selection_verification_20261026",
+  "measurement_basis": "After tightening Environment's existing charter index to charter file paths, the live projection re-read the same campaign evidence. The previously counted environmental-capability readback no longer appears as a charter candidate; the single campaign charter still verifies against its content, campaign identity, commit, and digest.",
+  "measurement_limits": [
+    "This read verifies charter selection for the current campaign state only.",
+    "The projection keeps the campaign charter separate from the session Work Intent; the active session still reports its older task goal.",
+    "A verified charter preserves user-directed purpose but does not establish development effectiveness or grant repository authority."
+  ],
+  "observation": {
+    "kind": "campaign-charter-index-selection-verification",
+    "outcome": {
+      "campaign_charter": {
+        "candidate_reference_count": 1,
+        "identity": "ev_environment_campaign_charter_capability_intelligence_20261026",
+        "references_examined": 1,
+        "status": "verified"
+      },
+      "excluded_non_charter_readback_identity": "ev_environment_campaign_charter_projection_readback_20261026",
+      "index_selection_basis": "canonical-evidence-campaign-charters-path-or-legacy-top-level-campaign-charter-path",
+      "live_projection": {
+        "checkpoint_id": "chk_3b754b17df2baf38",
+        "evidence_count": 13,
+        "projection_status": "ready",
+        "session_id": "ses_9ad3efb63438cf3d"
+      },
+      "session_work_intent": {
+        "goal": "exercise canonical Environment persistence through the Control socket",
+        "identity": "int_8475157f281c835f"
+      },
+      "verification": {
+        "campaign_charter_projection_tests": "3 passed",
+        "campaign_state_index_test": "1 passed",
+        "related_pressure_projection_tests": "19 passed"
+      }
+    },
+    "request": {
+      "evidence_limit": 1,
+      "evidence_offset": 12,
+      "history_pages": 1,
+      "interpretation": "environmental-capability",
+      "operation": "projections",
+      "session_event_limit": 1,
+      "session_id": "ses_9ad3efb63438cf3d"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection and campaign evidence index"
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "consumer_id": "local-agent",
+    "definition_id": "env_d479727df8e9d3ef",
+    "environment_id": "renv_4c126896d339c0ce",
+    "session_id": "ses_9ad3efb63438cf3d"
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "objective": "Connect authentic environmental and compiler evidence to provenance-aware, actionable projections.",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "17b9ff569986e252895a45d073cfda09021cd476",
+      "identity": "ev_environment_campaign_charter_capability_intelligence_20261026",
+      "kind": "campaign-charter-source",
+      "path": "evidence/campaign-charters/ev_environment_campaign_charter_capability_intelligence_20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "75d22a96c24f26bda80e9c19297d6a9fb320e1ef491c17e6eca52c9e08f42efa"
+    },
+    {
+      "commit": "03fcdaf5493c717e12100f131f57744d77392987",
+      "identity": "ev_environment_campaign_charter_projection_readback_20261026",
+      "kind": "campaign-charter-projection-readback-source",
+      "path": "evidence/environmental-capability/campaign-charter-projection-readback-20261026.json",
+      "repository": "mncs-environment",
+      "sha256": "11a532e4b80009c1ccae1d02958a4d8f23327a65135d0b09fec1e072640d74fc"
+    },
+    {
+      "commit": "bd5822a825e8dce42abd7121017c463dd17af248",
+      "identity": "mncs_environment_campaign_charter_path_sessions_bd5822a",
+      "kind": "committed-implementation-source",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "3bc35e4c3c6b7918aede3ce35da40e285b841b5ca1d9100fc980cd6e133db6fd"
+    },
+    {
+      "commit": "bd5822a825e8dce42abd7121017c463dd17af248",
+      "identity": "mncs_environment_campaign_charter_path_projection_bd5822a",
+      "kind": "committed-implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "66423e39fe315f37e832eb42914c5138cfa35b92cb15966d3f58dfa404e4d084"
+    },
+    {
+      "commit": "bd5822a825e8dce42abd7121017c463dd17af248",
+      "identity": "mncs_environment_campaign_charter_path_test_source",
+      "kind": "committed-verification-source",
+      "path": "tests/test_environment.py",
+      "repository": "mncs-environment",
+      "sha256": "9b39303e21630f9957f1bf2a499cad981b1da8051042a96f7e95bdef1b2cae5a"
+    },
+    {
+      "commit": "bd5822a825e8dce42abd7121017c463dd17af248",
+      "identity": "mncs_environment_campaign_charter_path_projection_test_source",
+      "kind": "committed-verification-source",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "58eec77228fddf778615c2f6881fb220951205941e630a72e6c79bf4bceb8a1d"
+    }
+  ]
+}
