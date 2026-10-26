@@ -1,0 +1,205 @@
+{
+  "captured_at": "2026-10-26T01:31:17+00:00",
+  "identity": "ev_environment_native_capability_evidence_links_readback_20261026",
+  "measurement_limits": [
+    "The owner-audit classifications and responsibility boundaries remain owner-declared.",
+    "The append-only correction target is an exact reference match, but its status is replacement-values-unverified-or-unchanged and the improvement relation is not recorded.",
+    "The shared P-001 source pointer is integrity-verified in both linked observations; this does not establish that the pressure causes a specific host responsibility.",
+    "Native API agent discovery, use, parity, and migration readiness are not established.",
+    "The evidence is a small owner-audit and capability-correspondence sample, not a complete implementation inventory or adoption denominator.",
+    "Recurrence across independent sessions is not established."
+  ],
+  "observation": {
+    "kind": "capability-accountability-projection-readback",
+    "outcome": {
+      "exact_shared_pointer_match_count": 1,
+      "full_projection_bytes": 46521,
+      "full_projection_limit_bytes": 49152,
+      "implementation_commit": "fb3340912aa6ba4ca2b904c9d2c365f6159be81d",
+      "native_capability_source_evidence": {
+        "compiler_support": {
+          "source_references": [
+            {
+              "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+              "content_integrity_status": "workspace-read-only-content-integrity-verified",
+              "identity": "mncs_language_process_compiler_inventory_6a3f6907",
+              "kind": "native-language-compiler-support",
+              "path": "crates/mncs-compiler/src/inventory.rs",
+              "repository": "mncs-language",
+              "sha256": "f6aada06a0a16a303c41133d4193f8acadcec6e21d7f32e6d61792c65eb9a019"
+            },
+            {
+              "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+              "content_integrity_status": "workspace-read-only-content-integrity-verified",
+              "identity": "mncs_language_process_compiler_frontend_6a3f6907",
+              "kind": "native-language-compiler-support",
+              "path": "crates/mncs-compiler/src/frontend.rs",
+              "repository": "mncs-language",
+              "sha256": "9adf10dfa8796edcf7f229a878ffbb7579d709b28478008f8640f5d1153d8377"
+            }
+          ],
+          "status": "content-integrity-verified",
+          "verified_reference_count": 2
+        },
+        "host_runtime_dispatch": {
+          "source_references": [
+            {
+              "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+              "content_integrity_status": "workspace-read-only-content-integrity-verified",
+              "identity": "mncs_language_process_execution_dispatch_6a3f6907",
+              "kind": "native-runtime-operation-dispatch",
+              "path": "crates/mncs-model/src/execution.rs",
+              "repository": "mncs-language",
+              "sha256": "23e6d9fb3a051aeff9a74a087e0ffa85e113fbb99ac34709bb113a0d8f3c7e05"
+            },
+            {
+              "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+              "content_integrity_status": "workspace-read-only-content-integrity-verified",
+              "identity": "mncs_language_process_ssa_dispatch_6a3f6907",
+              "kind": "native-runtime-operation-dispatch",
+              "path": "crates/mncs-model/src/ssa_execution.rs",
+              "repository": "mncs-language",
+              "sha256": "80f619468b65580258fbcf20a4b796f6adc1a762890a46057e14292fb0985434"
+            }
+          ],
+          "status": "content-integrity-verified",
+          "verified_reference_count": 2
+        },
+        "host_runtime_provider": {
+          "source_references": [
+            {
+              "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+              "content_integrity_status": "workspace-read-only-content-integrity-verified",
+              "identity": "mncs_language_process_runtime_6a3f6907",
+              "kind": "native-runtime-provider-implementation",
+              "path": "crates/mncs-model/src/process_runtime.rs",
+              "repository": "mncs-language",
+              "sha256": "61fd703075fa711fa9bcafdc822bde33ba06cfe39a11d4de03686d79ed50ae41"
+            }
+          ],
+          "status": "content-integrity-verified",
+          "verified_reference_count": 1
+        },
+        "language_contract": {
+          "source_references": [
+            {
+              "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+              "content_integrity_status": "workspace-read-only-content-integrity-verified",
+              "identity": "mncs_language_process_contract_6a3f6907",
+              "kind": "native-language-capability-contract",
+              "path": "library/std/process.mncs",
+              "repository": "mncs-language",
+              "sha256": "c1261785be0bb78292ba5262dd082a28521338daafcd32e3ff0388f6f4ff0e30"
+            }
+          ],
+          "status": "content-integrity-verified",
+          "verified_reference_count": 1
+        },
+        "native_language_test_source": {
+          "source_references": [
+            {
+              "commit": "6a3f6907e4acd4a98afd4a9421548a978ff266e6",
+              "content_integrity_status": "workspace-read-only-content-integrity-verified",
+              "identity": "mncs_language_process_lifecycle_test_6a3f6907",
+              "kind": "native-language-lifecycle-test-source",
+              "path": "tests/process_lifecycle_effect.mncs",
+              "repository": "mncs-language",
+              "sha256": "e3663a5f2437f403d708c58363b9bfdbcc4ae91957c6db1e0d0f21df115ddd90"
+            }
+          ],
+          "status": "content-integrity-verified",
+          "verified_reference_count": 1
+        },
+        "target_pressure_source": {
+          "source_references": [
+            {
+              "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+              "content_integrity_status": "workspace-read-only-content-integrity-verified",
+              "identity": "MNCS-TEST-P-001",
+              "kind": "native-userland-pressure-source",
+              "path": "pressures/MNCS-TEST-P-001.json",
+              "repository": "mncs-test",
+              "sha256": "38cb0494d2362b9b9b760ab3c76a4f27c6bd6595ca337b15765564e8ad0975de"
+            }
+          ],
+          "status": "content-integrity-verified",
+          "verified_reference_count": 1
+        }
+      },
+      "observation_count": 4,
+      "overall_projection_status": "partial",
+      "projection_route": "mncs-env projections --interpret environmental-capability",
+      "relationship": {
+        "agent_usage_status": "not-measured",
+        "audit_correction_target_match_status": "exact-reference-match",
+        "causal_relation_status": "not-established",
+        "correction_observation_reference": {
+          "commit": "ee6bf1db5d4d6f5d5c92add08d819a5ab3a1f64b",
+          "identity": "ev_environment_native_userland_accountability_correction_20261025",
+          "path": "evidence/environmental-capability/native-userland-accountability-correction-20261025.json",
+          "repository": "mncs-environment",
+          "sha256": "556007f5f8ec9c713f931626d122b516239f4f489fff55079cf41f7b5b3511d5"
+        },
+        "correction_record_status": "replacement-values-unverified-or-unchanged",
+        "improvement_relation_status": "not-recorded",
+        "interpretation_limit": "Exact source pointers establish traceability only. They do not prove that the pressure causes a specific host responsibility or that the candidate native capability is a safe replacement.",
+        "native_capability_identity": "mncs.std.process.v1",
+        "native_correspondence_identity": "ev_environment_native_process_capability_correspondence_20261025",
+        "native_migration_readiness": "not-established",
+        "next_investigation": "Establish how an existing native MNCS consumer discovers and invokes this capability, then measure parity against a legitimate bounded host-tool operation before any migration recommendation.",
+        "owner_audit_context": {
+          "owner_declared_native_surface": "test inventory selection, typed TestResult construction, test/suite projections, and retained-session aggregation",
+          "owner_declared_next_native_slice": "apply compiler-owned bounded structured projection to Commons pressure query materialization",
+          "owner_declared_status": "native_canonical",
+          "remaining_host_responsibilities": [
+            "external TestResult and CheckResult JSON envelopes",
+            "compiler inventory/run identity materialization",
+            "artifact publication and canonical JSON projection"
+          ],
+          "remaining_host_responsibilities_truncated": true,
+          "repository": "mncs-test",
+          "source_record_status": "content-integrity-verified-owner-declaration"
+        },
+        "owner_audit_identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+        "owner_audit_reference": {
+          "commit": "fa06cc9d56648c48d17594d7af65f0babd2c35c8",
+          "identity": "ev_environment_native_userland_owner_audit_correlation_20261025",
+          "path": "evidence/environmental-capability/native-userland-accountability-20261025.json",
+          "repository": "mncs-environment",
+          "sha256": "14af1e6885b24b324491af644f7a9a4bb589e60d391d4649b9c93c49832b6b66"
+        },
+        "pressure_source_integrity_status": "verified-in-both-linked-observations",
+        "relationship_assessment": "candidate-correspondence; not a causal finding or migration decision",
+        "relationship_kind": "audit-correction-to-native-source-pointer",
+        "responsibility_match_status": "not-established",
+        "shared_pressure_source_reference": {
+          "commit": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+          "identity": "MNCS-TEST-P-001",
+          "path": "pressures/MNCS-TEST-P-001.json",
+          "repository": "mncs-test",
+          "sha256": "38cb0494d2362b9b9b760ab3c76a4f27c6bd6595ca337b15765564e8ad0975de"
+        },
+        "source_reference_provenance": "correction.supporting_sources; correction target matches owner audit evidence_reference",
+        "target_pressure_identity": "MNCS-TOOLING-B665F138D324"
+      },
+      "relationship_link_count": 1,
+      "relationship_projection_bytes": 3977,
+      "relationship_projection_limit_bytes": 4096,
+      "relationship_projection_status": "linked-source-context"
+    },
+    "verification": {
+      "command": "PYTHONPATH=. pytest -q tests/test_native_capability_relationships.py tests/test_capability_projection_cli.py",
+      "diff_check": "passed",
+      "failed": 0,
+      "passed": 11,
+      "python_compileall": "passed",
+      "result": "passed"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "campaign_objective": "Make authentic environmental observations useful for identifying and improving capability limitations affecting MNCS agents.",
+    "session_id": "ses_9ad3efb63438cf3d"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1"
+}
