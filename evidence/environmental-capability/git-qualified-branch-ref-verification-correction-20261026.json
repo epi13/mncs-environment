@@ -1,0 +1,63 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_git_qualified_branch_ref_verification_correction_20261026",
+  "captured_at": "2026-10-26T14:43:08Z",
+  "measurement_basis": "append-only correction applied by the environmental-capability projection to an integrity-verified campaign record",
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "source_interface": "MNCS Environment observation-correction contract",
+    "request": {
+      "target_observation_identity": "ev_environment_git_qualified_branch_ref_verification_20261026",
+      "corrected_field": "pressure_hypothesis_role"
+    },
+    "outcome": {
+      "replacement_value": "supporting-context",
+      "reason": "The target is a controlled reproduction and implementation verification, not a separate live pressure occurrence. Retain it as supporting evidence without adding recurrence or a competing pressure definition."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_8945548a87d98ed5",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_c2631faf6a18a097",
+    "campaign_evidence_count_before_recording": 6
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8945548a87d98ed5",
+    "consumer_id": "codex-env-capability-20261026",
+    "environment_id": "renv_035e509f514a60a8",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_git_qualified_branch_ref_verification_20261026",
+      "repository": "mncs-environment",
+      "commit": "7d7cef0cf2c51605fc4e83477bcb86cb5392acef",
+      "path": "evidence/environmental-capability/git-qualified-branch-ref-verification-20261026.json",
+      "sha256": "ef51cf6c186356ab8ec42a7492b7a9146200450a2ab42b2de58eb3e5f6d5de2e"
+    },
+    "corrected_field_paths": ["pressure_hypothesis_role"],
+    "replacement_values": {"pressure_hypothesis_role": "supporting-context"},
+    "reason": "The controlled reproduction verifies the earlier hypothesis and implementation boundary but is not an independent agent encounter. Classify it as supporting context so pressure recurrence and definitions remain grounded in the original observed event."
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_git_qualified_branch_ref_verification_20261026",
+      "kind": "corrected-observation-target",
+      "repository": "mncs-environment",
+      "commit": "7d7cef0cf2c51605fc4e83477bcb86cb5392acef",
+      "path": "evidence/environmental-capability/git-qualified-branch-ref-verification-20261026.json",
+      "sha256": "ef51cf6c186356ab8ec42a7492b7a9146200450a2ab42b2de58eb3e5f6d5de2e"
+    }
+  ],
+  "not_measured": [
+    "future live agent encounters with qualified branch arguments",
+    "whether later successful pushes demonstrate improved discoverability or reduced coordination overhead"
+  ]
+}
