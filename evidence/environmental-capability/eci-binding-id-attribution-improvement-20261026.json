@@ -1,0 +1,117 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_binding_id_attribution_improvement_20261026",
+  "captured_at": "2026-10-26T04:58:28Z",
+  "measurement_basis": "committed projection-summary implementation and focused regression coverage",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents, using provenance-linked observations from authentic development and preserving uncertainty.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "pressure_hypothesis_identity": "ph_environment_eci_context_binding_id_attribution_loss_under_compaction",
+    "pressure_evidence_identity": "ev_environment_eci_binding_id_attribution_pressure_20261026",
+    "campaign_state_checkpoint_id_before_recording": "chk_227a10c47620d1e7",
+    "campaign_evidence_count_before_recording": 47,
+    "claim_ids": [
+      "claim:mncs-environment:paths:ab778ef9e4fd",
+      "claim:mncs-environment:paths:ff3316b8cc5e",
+      "claim:mncs-environment:worktree:370cbc78fb3c"
+    ]
+  },
+  "observation": {
+    "kind": "bounded-capability-binding-attribution-summary",
+    "source_interface": "MNCS Environment capability-intelligence projection",
+    "implementation": {
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "paths": [
+        "mncs_env/capability_intelligence.py",
+        "tests/test_capability_intelligence.py",
+        "docs/PROJECTIONS.md"
+      ],
+      "summary_schema": "mncs.environment.capability-binding-evidence-summary/2",
+      "changes": [
+        "Aggregate context-response binding-ID attribution status counts and response ID-list status counts.",
+        "Retain bounded, deduplicated context-response source event references and exact-binding invocation source event references, with omitted counts.",
+        "Preserve response_binding_ids_status in compact per-binding inclusion rows."
+      ]
+    },
+    "verification_at_recording": {
+      "focused_test_command": "python3 -m pytest tests/test_capability_intelligence.py -q -k 'capability_use_is_attributed_to_the_exact_historical_binding or capability_binding_summary_survives_response_budget_trimming or session_activity_correlates_authenticated_control_read_operations or context_response_inclusion_uses_exact_bounded_binding_ids'",
+      "focused_test_result": "4 passed",
+      "static_checks": [
+        "python3 -m compileall -q mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "git diff --check"
+      ],
+      "static_checks_result": "passed",
+      "full_repository_suite": {
+        "command": "python3 -m pytest tests/ -q",
+        "result": "989 passed, 81 skipped in 697.13s"
+      },
+      "vertical_proof": {
+        "command": "python3 scripts/vertical_proof.py",
+        "result": "passed; 15 events, 3 checkpoints, 1 handoff"
+      },
+      "campaign_proofs": {
+        "command": "python3 scripts/campaign_proofs.py",
+        "result": "14 passed, 2 skipped, 0 failed",
+        "skip_reasons": [
+          "language.live-delta: host binary absent",
+          "memory.untouched: mncs-memory checkout absent"
+        ]
+      }
+    },
+    "status": "implemented"
+  },
+  "improvement_relation": {
+    "pressure": "ph_environment_eci_context_binding_id_attribution_loss_under_compaction",
+    "implementation_commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+    "verification": "focused regression tests (4 passed), full repository suite (989 passed, 81 skipped), vertical proof (passed), campaign proofs (14 passed, 2 skipped, 0 failed), and static checks passed",
+    "subsequent_effectiveness": "not-assessed",
+    "interpretation": "The Environment projection now keeps the observed partial binding-ID capture status and source event identity available after per-binding rows are compacted. This improves inspectability of the pressure; it does not make Control capture a complete binding-ID list."
+  },
+  "measurement_limits": [
+    "This implementation preserves existing evidence; it does not change Control's response capture behavior.",
+    "Agent receipt, discoverability, understanding, and use remain unmeasured.",
+    "Longer-term effectiveness requires independent subsequent session activity."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_binding_id_attribution_pressure_20261026",
+      "kind": "pressure-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-binding-id-attribution-pressure-20261026.json"
+    },
+    {
+      "identity": "mncs_environment_context_binding_attribution_summary_3b50f67",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "mncs_env/capability_intelligence.py"
+    },
+    {
+      "identity": "mncs_environment_context_binding_attribution_regression_3b50f67",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "tests/test_capability_intelligence.py"
+    },
+    {
+      "identity": "mncs_environment_context_binding_attribution_projection_docs_3b50f67",
+      "kind": "projection-documentation",
+      "repository": "mncs-environment",
+      "commit": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a",
+      "path": "docs/PROJECTIONS.md"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}

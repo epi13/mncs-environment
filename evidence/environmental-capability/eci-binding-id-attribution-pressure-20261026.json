@@ -1,0 +1,110 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_binding_id_attribution_pressure_20261026",
+  "captured_at": "2026-10-26T04:57:39Z",
+  "measurement_basis": "bounded live Environmental Capability Intelligence projections of authenticated session history, with source-code comparison against the pre-change projection compactor",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_227a10c47620d1e7",
+    "campaign_evidence_count_before_recording": 47,
+    "claim_ids": [
+      "claim:mncs-environment:paths:ab778ef9e4fd",
+      "claim:mncs-environment:paths:ff3316b8cc5e",
+      "claim:mncs-environment:worktree:370cbc78fb3c"
+    ]
+  },
+  "observation": {
+    "kind": "context-response-binding-id-attribution-partial-under-compaction",
+    "source_interface": "MNCS Environment projections --interpret environmental-capability",
+    "request": {
+      "historical_session_event": {
+        "identity": "evt_de29b1e1b27f5e61",
+        "sequence": 41,
+        "type": "environment.rpc.read_observed"
+      },
+      "focused_event_window": "sequence 41 only",
+      "full_history_event_limit": 256,
+      "implementation_commit_under_review": "3b50f6789ef23d9a348e08f1d0dbeefb1ec3397a"
+    },
+    "outcome": {
+      "focused_projection_status": "partial",
+      "full_history_status": "complete-session-history",
+      "binding_count": 9,
+      "focused_context_response_inclusion_status_counts": {
+        "identity-tuple-in-matched-response": 9
+      },
+      "focused_binding_id_attribution_status_counts": {
+        "binding-id-capture-incomplete": 9
+      },
+      "focused_response_binding_ids_status_counts": {
+        "partial": 9
+      },
+      "full_history_binding_rows_returned": 5,
+      "full_history_binding_rows_omitted": 4,
+      "full_history_bindings_truncated": true,
+      "pre_change_compacted_summary_retained_binding_id_capture_status": false,
+      "pre_change_compacted_summary_retained_source_context_event_reference": false,
+      "assessment": "The authenticated historical context response matched all nine current capability tuples while its binding-ID list status was partial. Under full-history projection compaction, binding rows were trimmed and the prior aggregate summary omitted both ID-capture attribution counts and source context event references. The implementation made this known uncertainty and its provenance difficult to inspect after compaction."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_context_binding_id_attribution_loss_under_compaction",
+    "title": "Context-response binding ID attribution and provenance disappear when capability rows are compacted",
+    "category": "agent-capability-discovery-and-delivery",
+    "subsystem": "MNCS Environment capability-delivery projection compaction",
+    "owner": "mncs-environment",
+    "basis": "A genuine historical Environment RPC event showed tuple-level matches for nine capability bindings and a partial binding-ID list. Source inspection found that the previous compact binding summary did not retain binding-ID attribution/list-status counts or source context-event references when detailed rows were removed.",
+    "actionable_recommendation": "Preserve bounded attribution and response-ID-list status counts plus deduplicated source context-event references in the compact capability delivery summary; keep agent receipt, discovery, and use unestablished unless separately observed.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether agents received or discovered the capabilities",
+      "whether any capability was used through an external interface",
+      "why Control captured only a partial binding-ID list in event 41",
+      "recurrence of partial binding-ID capture across other sessions",
+      "whether the projection response budget caused any agent to abandon work"
+    ]
+  },
+  "measurement_limits": [
+    "No complete pre-change projection response was retained as an immutable observation; the pre-change compaction omission was checked in source.",
+    "Tuple-level inclusion is not exact binding-ID attribution when the response ID list is partial.",
+    "The source event is an authenticated session.context response observation; it does not prove that an agent received, understood, or used the response.",
+    "The full-history readback is bounded by the Environment response budget even though the selected event history was complete."
+  ],
+  "supporting_sources": [
+    {
+      "identity": "evt_de29b1e1b27f5e61",
+      "kind": "authenticated-session-event",
+      "session_id": "ses_9ad3efb63438cf3d",
+      "sequence": 41,
+      "type": "environment.rpc.read_observed"
+    },
+    {
+      "identity": "ev_environment_eci_binding_summary_budget_pressure_20261026",
+      "kind": "prior-pressure-evidence",
+      "repository": "mncs-environment",
+      "commit": "660bfce587d685d2f23b1eaf519b5028dd570995",
+      "path": "evidence/environmental-capability/eci-binding-summary-budget-pressure-20261026.json",
+      "sha256": "f07295e12f3ce2c8420f2b4faf1f561959ebf66bcde022c9aa7d358c1e331d01"
+    },
+    {
+      "identity": "mncs_environment_pre_change_context_binding_compaction_dcd35db",
+      "kind": "pre-change-projection-implementation",
+      "repository": "mncs-environment",
+      "commit": "dcd35dbaf9fba0aa55effc52115dc6236b44ec5c",
+      "path": "mncs_env/capability_intelligence.py"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  }
+}
