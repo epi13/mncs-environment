@@ -6228,6 +6228,8 @@ class SessionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)
             session = make_session(state)
+            session.snapshot["intent"]["repositories"] = ["p"]
+            session.snapshot["authority"]["writable"] = ["p"]
             canary = state / "canary.txt"
             binding = capabilities.probe_availability(
                 capabilities.bind(provider="p", capability="canary", contract_revision="1",
@@ -7739,6 +7741,8 @@ class SessionTests(unittest.TestCase):
             checkout.mkdir(parents=True)
             session = make_session(root)
             session.snapshot["workspace"]["root"] = str(root)
+            session.snapshot["intent"]["repositories"] = ["MNCS-Commons"]
+            session.snapshot["authority"]["writable"] = ["MNCS-Commons"]
             session.snapshot["selected_checkouts"] = {"MNCS-Commons": {
                 "path": "MNCS-Commons/.worktrees/campaign",
                 "branch": "campaign/commons-parity",
