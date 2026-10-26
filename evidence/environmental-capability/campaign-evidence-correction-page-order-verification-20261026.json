@@ -1,0 +1,134 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_campaign_correction_page_order_verification_20261026",
+  "captured_at": "2026-10-26T22:34:01Z",
+  "measurement_basis": "targeted-multi-page-correction-regression-and-live-environmental-capability-projection",
+  "related_work": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "work_intent_id": "int_8475157f281c835f",
+    "work_intent_goal": "exercise canonical Environment persistence through the Control socket",
+    "work_intent_alignment_status": "the persisted WorkIntent predates the current environmental capability campaign objective",
+    "campaign_objective": "Improve MNCS's ability to understand and improve how effectively its language, compiler, tooling, and environment serve and potentiate agents. Use provenance-linked observations from authentic development to relate agent objectives, capability implementation, discoverability and use, environmental conditions, language and compiler pressures, verification, and outcomes. Make remaining host implementations and native opportunities inspectable only where authoritative evidence supports them. Treat usage and resource measures as diagnostic evidence, not agent scores or adoption targets. Preserve uncertainty, respect active compiler ownership, and verify environmental changes independently through existing mechanisms.",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef",
+    "campaign_state_checkpoint_id_before_recording": "chk_a5ef65bd73120c02",
+    "campaign_evidence_count_before_recording": 87
+  },
+  "observation": {
+    "kind": "environmental-campaign-evidence-correction-order-verification",
+    "source_interface": "MNCS Environmental Capability multi-page campaign evidence projection",
+    "request": {
+      "implementation_commit": "a105261994a356dcf2d7bd3b24f1be1fa71fd2fb",
+      "pre_change_observation": {
+        "history_pages": 2,
+        "evidence_page_offsets": [85, 83],
+        "corrections_recorded": 2,
+        "corrections_applied": 0,
+        "corrections_unverified": 2,
+        "reason": "target-not-prior-to-correction"
+      },
+      "change": "Sort bounded selected references by their absolute campaign ledger position before processing append-only corrections; retain each page's original read-budget selection and the verification order within each page.",
+      "verification": {
+        "command": "PYTHONPATH=.:tests python3 -m pytest -q tests/test_capability_intelligence.py -k 'append_only_evidence_reference_correction or improvement_relation'",
+        "status": "passed",
+        "passed": 6,
+        "failed": 0
+      },
+      "projection_readback": {
+        "command": "mncs-env projections ses_9ad3efb63438cf3d --interpret environmental-capability --history-pages 3 --evidence-offset 85 --evidence-limit 2 --session-event-limit 4",
+        "projection_identity": "eci_1361008ff48b7b1e",
+        "campaign_state_checkpoint_id": "chk_a5ef65bd73120c02",
+        "history_page_offsets": [85, 83, 81],
+        "history_checkpoint_consistent": true,
+        "observation_records_considered": 6,
+        "observation_records_verified": 6,
+        "observation_records_unavailable": 0,
+        "append_only_corrections_recorded": 2,
+        "append_only_corrections_applied": 2,
+        "append_only_corrections_unverified": 0,
+        "source_pointers_verified": 10,
+        "source_pointers_unverified": 0,
+        "registry_linked_improvement_relation": {
+          "identity": "im_environment_provider_effect_operation_lease_registry_link_20261026",
+          "pressure_hypothesis_status": "present-in-projection",
+          "verification_record_status": "record-integrity-verified-in-projection",
+          "effectiveness_assessment": "not-assessed",
+          "subsequent_observation_status": "not-recorded"
+        },
+        "response_status": "partial",
+        "response_truncated": true,
+        "response_byte_count": 74505,
+        "interpretation_limit": "The requested three-page projection exceeded the compact response budget. Its selected records, exact pointer corrections, source integrity results, and improvement relation status were present in the returned projection, but this is not a complete unabridged history view."
+      }
+    },
+    "outcome": {
+      "verified_contract": "Append-only corrections whose targets and corrections lie on adjacent selected pages are now processed in ledger order. Both exact targets were recovered from their corrected commits, their recorded SHA-256 values were preserved, and neither historical record was rewritten.",
+      "interpretation_limit": "The regression and readback verify this bounded correction path. They do not prove all multi-page correction layouts, independent-agent use, or long-term reduction in recovery effort."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_campaign_evidence_correction_page_order_20261026",
+    "title": "Append-only evidence corrections across selected pages were evaluated before their targets",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment Environmental Capability multi-page evidence projection",
+    "owner": "mncs-environment",
+    "basis": "In this campaign, two correction records on a newer evidence page could not recover their exact targets on the immediately older page because references were processed newest-page-first. The same authenticated projection succeeded after selected references were ordered by ledger position.",
+    "recurrence": "one projection run affected two adjacent-page corrections in one session; cross-session recurrence is not established",
+    "actionable_recommendation": "Process selected campaign references in append order before applying corrections, while retaining bounded per-page read selection and exact source verification.",
+    "not_measured": [
+      "correction behavior across every possible page budget and history depth",
+      "whether unrelated agents encounter the same layout",
+      "whether recovery effort or time declines in subsequent campaigns",
+      "long-term correction reliability"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_env_capability_intelligence_continuation_codex_20261025",
+    "session_id": "ses_9ad3efb63438cf3d",
+    "consumer_id": "local-agent",
+    "environment_id": "renv_4c126896d339c0ce",
+    "definition_id": "env_d479727df8e9d3ef"
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_cross_page_correction_projection_implementation_a105261",
+      "kind": "committed-environment-projection",
+      "repository": "mncs-environment",
+      "commit": "a105261994a356dcf2d7bd3b24f1be1fa71fd2fb",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "73840e3e2094d01b3d26331aea4711d7ca2b0eaf0c4ec9bdc1dac61de94f2aa8"
+    },
+    {
+      "identity": "mncs_environment_cross_page_correction_regression_test_a105261",
+      "kind": "committed-projection-verification-tests",
+      "repository": "mncs-environment",
+      "commit": "a105261994a356dcf2d7bd3b24f1be1fa71fd2fb",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "acd6295a6822c58d6b5263f86ae7a908ec650688613d89c9822875b952d12d23"
+    },
+    {
+      "identity": "ev_environment_provider_effect_proposal_write_pointer_correction_20261026",
+      "kind": "verified-append-only-correction-observation",
+      "repository": "mncs-environment",
+      "commit": "3ab1ea97806ef53db8dfa8c8bc41b5889130c052",
+      "path": "evidence/environmental-capability/provider-effect-proposal-write-pointer-correction-20261026.json",
+      "sha256": "b04288f7d8a8acd652baa6a3352d4bc8d33cd2261eb8040bff9fddccf49105dc"
+    },
+    {
+      "identity": "ev_environment_provider_effect_pressure_link_pointer_correction_20261026",
+      "kind": "verified-append-only-correction-observation",
+      "repository": "mncs-environment",
+      "commit": "3ab1ea97806ef53db8dfa8c8bc41b5889130c052",
+      "path": "evidence/environmental-capability/provider-effect-pressure-link-pointer-correction-20261026.json",
+      "sha256": "8f9f23f9fce9aea47478d1952fe48f18ade1d1044bb41ad360820723b3193c84"
+    }
+  ],
+  "not_measured": [
+    "effectiveness after other agents use the corrected projection",
+    "cross-session recurrence of this projection failure",
+    "effectiveness of the claimless provider path for live external providers",
+    "conflicting modifications and direct shell/Git concurrency"
+  ]
+}
