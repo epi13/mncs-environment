@@ -74,6 +74,13 @@ pressure sources. The comparison uses the same repository, commit, path, and
 SHA-256 tuple as the positive link. It makes missing provenance inspectable;
 it does not conclude that the sources are unrelated or causally connected.
 
+If the owner source details and native correspondence declare the same pressure
+ID but the owner side lacks its pressure source pointer,
+`pressure_identity_context` exposes that identity-level match beside both
+inspectable source records and the missing-pointer status. It leaves
+responsibility matching, causality, and native migration readiness
+`not-established`.
+
 ## Measurement limits
 
 - Systemwide native adoption remains `not-measured`; these observations are not
@@ -134,5 +141,18 @@ references and leaves causality `not-established`. Their SHA-256 values were
 also rechecked against the three source files at the recorded MNCS-Test commit.
 This is a provenance gap
 for further inspection, not evidence that the records describe unrelated
-work. The current readback is preserved in
+work. The MNCS-Actions source audit also declares pressure identity
+`MNCS-TOOLING-B665F138D324`, which matches the process correspondence target;
+its owner pressure-link record says
+`no-matching-supporting-source-reference`. The new `pressure_identity_context`
+exposes this ID-level traceability beside the verified MNCS-Actions audit and
+MNCS-Test P-001 source pointers without asserting that the process capability
+resolves a particular host responsibility. The source audit's remaining host
+responsibility mentions selected consumer/provider invocation and identifies
+typed process/filesystem effects as an eliminating capability. The projection
+surfaces this as `candidate-text-overlap-only` for the process API, while
+`responsibility_match_status` remains `not-established`; the textual overlap is
+a lead for inspection, not a migration conclusion. The readback is preserved in
 [`unmatched-native-pressure-context-readback-20261026.json`](../evidence/environmental-capability/unmatched-native-pressure-context-readback-20261026.json).
+The expanded identity and responsibility view is in
+[`pressure-identity-context-readback-20261026.json`](../evidence/environmental-capability/pressure-identity-context-readback-20261026.json).

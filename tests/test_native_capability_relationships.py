@@ -175,7 +175,28 @@ def test_pointer_with_same_identity_but_different_digest_does_not_link():
             sha256="f" * 64,
         )
 
-    result = capability_relationships.project(accountability)
+    result = capability_relationships.project(
+        accountability,
+        session_activity=_context_activity({
+            "capture_status": "captured",
+            "binding_ids_status": "complete",
+            "available_binding_ids": ["cap_" + "e" * 64 for _ in range(20)],
+            "available_identity_digest": "f" * 64,
+            "identity_digest_status": "complete",
+            "available_count": 20,
+            "listed_available_count": 20,
+            "unavailable_count": 0,
+            "unknown_count": 0,
+            "capabilities_truncated": False,
+            "event_reference": {"identity": "evt_pressure", "sequence": 41},
+        }),
+        subject={
+            "session_id": "s" * 128,
+            "campaign_id": "c" * 128,
+            "environment_id": "e" * 128,
+            "work_intent": {"identity": "i" * 128, "goal": "g" * 192},
+        },
+    )
 
     assert result["status"] == "no-exact-shared-source-pointer"
     assert result["link_count"] == 0
@@ -226,6 +247,115 @@ def test_unmatched_pressure_sources_are_exposed_without_claiming_a_relationship(
         "repository+commit+path+sha256"
     )
     assert comparison["causal_relation_status"] == "not-established"
+    assert len(json.dumps(result, separators=(",", ":")).encode()) <= (
+        capability_relationships.MAX_RESULT_BYTES
+    )
+
+
+def test_shared_owner_pressure_identity_exposes_missing_pointer_without_causality():
+    accountability = _accountability(_pointer())
+    audit = accountability["owner_audit_evidence"]["audits"][0]
+    audit["supporting_source_references"] = [
+        {
+            "identity": "audit_mncs_actions_native_userland_20261025",
+            "kind": "repository-owner-native-userland-audit",
+            "repository": "mncs-actions",
+            "commit": "c" * 40,
+            "path": "native-userland-audit.json",
+            "sha256": "d" * 64,
+            "content_integrity_status": (
+                "workspace-read-only-content-integrity-verified"
+            ),
+        },
+        {
+            **_pointer(sha256="4" * 64),
+            "identity": "MNCS-TEST-P-004",
+            "path": "pressures/MNCS-TEST-P-004.json",
+        },
+        {
+            **_pointer(sha256="5" * 64),
+            "identity": "MNCS-TEST-P-006",
+            "path": "pressures/MNCS-TEST-P-006.json",
+        },
+    ]
+    audit["source_audit_details"].append({
+        "identity": "audit_mncs_actions_native_userland_20261025",
+        "repository": "mncs-actions",
+        "source_record_status": "content-integrity-verified-owner-declaration",
+        "remaining_host_responsibilities": [{
+            "area": "selected consumer/provider invocation and source artifact acquisition",
+            "classification": "application_effect_orchestration_blocker",
+            "eliminating_capability": (
+                "native application entry context plus typed process/filesystem effects"
+            ),
+        }],
+        "existing_pressures": ["MNCS-TOOLING-B665F138D324"],
+        "pressure_source_links": {
+            "status": "partially-linked",
+            "supporting_source_count_examined": 4,
+            "links": [{
+                "identity": "MNCS-TOOLING-B665F138D324",
+                "status": "no-matching-supporting-source-reference",
+                "causal_relation_status": "not-established",
+            }],
+        },
+    })
+
+    result = capability_relationships.project(
+        accountability,
+        session_activity=_context_activity({
+            "capture_status": "captured",
+            "binding_ids_status": "complete",
+            "available_binding_ids": ["cap_" + "e" * 64 for _ in range(20)],
+            "available_identity_digest": "f" * 64,
+            "identity_digest_status": "complete",
+            "available_count": 20,
+            "listed_available_count": 20,
+            "unavailable_count": 0,
+            "unknown_count": 0,
+            "capabilities_truncated": False,
+            "event_reference": {"identity": "evt_pressure", "sequence": 41},
+        }),
+        subject={
+            "session_id": "s" * 128,
+            "campaign_id": "c" * 128,
+            "environment_id": "e" * 128,
+            "work_intent": {"identity": "i" * 128, "goal": "g" * 192},
+        },
+    )
+
+    assert result["link_count"] == 0
+    assert result["status"] == "no-exact-shared-source-pointer"
+    context = result["pressure_identity_context"]
+    assert context["status"] == "shared-pressure-identity-with-source-pointer-gap"
+    match = context["matches"][0]
+    assert match["pressure_identity_match_status"] == "exact-declared-id-match"
+    assert match["shared_pressure_identity"] == "MNCS-TOOLING-B665F138D324"
+    assert match["native_capability_identity"] == "mncs.std.process.v1"
+    assert match["owner_pressure_source_link_status"] == (
+        "no-matching-supporting-source-reference"
+    )
+    assert match["owner_source_audit_reference"]["identity"] == (
+        "audit_mncs_actions_native_userland_20261025"
+    )
+    assert match["owner_responsibility_candidates"]["status"] == (
+        "candidate-text-overlap-only"
+    )
+    assert match["owner_responsibility_candidates"]["candidates"][0][
+        "eliminating_capability"
+    ] == (
+        "native application entry context plus typed process/filesystem effects"
+    )
+    assert "eliminating_capability" in match[
+        "owner_responsibility_candidates"]["candidates"][0][
+            "textual_match_fields"
+        ]
+    assert match["candidate_pressure_source_reference"]["identity"] == (
+        "MNCS-TEST-P-001"
+    )
+    assert match["responsibility_match_status"] == "not-established"
+    assert match["causal_relation_status"] == "not-established"
+    assert match["native_migration_readiness"] == "not-established"
     assert len(json.dumps(result, separators=(",", ":")).encode()) <= (
         capability_relationships.MAX_RESULT_BYTES
     )
@@ -537,6 +667,11 @@ def test_context_delivery_observation_stays_bounded_at_response_summary_limits()
         },
     )
 
+    summary_projection = result["session_context_delivery_observation"][
+        "response_summaries"
+    ][0]
+    assert len(summary_projection["available_binding_ids"]) == 8
+    assert summary_projection["available_binding_ids_truncated"] is True
     assert len(json.dumps(result, separators=(",", ":")).encode()) <= (
         capability_relationships.MAX_RESULT_BYTES
     )

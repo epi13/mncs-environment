@@ -17,6 +17,7 @@ MAX_RESULT_BYTES = 8 * 1024
 MAX_RESULT_RESERVE_BYTES = MAX_RESULT_BYTES
 MAX_UNMATCHED_OWNER_PRESSURE_REFERENCES = 2
 MAX_UNMATCHED_PRESSURE_REFERENCES = 1
+MAX_PRESSURE_IDENTITY_MATCHES = 2
 VERIFIED_SOURCE_STATUSES = frozenset({
     "content-integrity-verified",
     "workspace-read-only-content-integrity-verified",
@@ -270,6 +271,192 @@ def _unmatched_source_pointer_context(
     }
 
 
+def _textual_responsibility_candidates(
+    detail: dict[str, Any], capability_identity: str,
+) -> dict[str, Any]:
+    """Surface source-declared responsibility text with lexical overlap only."""
+    terms = {
+        term for term in re.findall(r"[a-z]{4,}", capability_identity.lower())
+        if term not in {"mncs", "standard"}
+    }
+    responsibilities = detail.get("remaining_host_responsibilities")
+    responsibilities = responsibilities if isinstance(responsibilities, list) else []
+    candidates = []
+    for item in responsibilities[:8]:
+        if not isinstance(item, dict):
+            continue
+        text_fields = {
+            key: value[:160]
+            for key, value in item.items()
+            if key in {"area", "classification", "eliminating_capability"}
+            and isinstance(value, str)
+        }
+        matched_fields = [
+            key for key, value in text_fields.items()
+            if any(term in value.lower() for term in terms)
+        ]
+        if not matched_fields:
+            continue
+        candidates.append({
+            **text_fields,
+            "textual_match_fields": matched_fields,
+        })
+        if len(candidates) == 2:
+            break
+    return {
+        "status": (
+            "candidate-text-overlap-only"
+            if candidates else "no-text-overlap-in-bounded-source-detail"
+        ),
+        "selection_basis": "case-insensitive-substring-overlap-with-native-capability-identity",
+        "responsibility_match_status": "not-established",
+        "candidates": candidates,
+    }
+
+
+def _pressure_identity_context(
+    audits: list[Any], correspondences: list[Any],
+) -> dict[str, Any] | None:
+    """Relate exact declared pressure IDs while keeping pointer gaps visible."""
+    matches: list[dict[str, Any]] = []
+    total_matches = 0
+    for audit in audits[:4]:
+        if not isinstance(audit, dict):
+            continue
+        details = audit.get("source_audit_details")
+        details = details if isinstance(details, list) else []
+        audit_sources = audit.get("supporting_source_references")
+        audit_sources = audit_sources if isinstance(audit_sources, list) else []
+        sources_by_identity = {
+            source.get("identity"): source
+            for source in audit_sources[:8]
+            if isinstance(source, dict) and isinstance(source.get("identity"), str)
+        }
+        for detail in details[:4]:
+            if not isinstance(detail, dict):
+                continue
+            declared = detail.get("existing_pressures")
+            declared = declared if isinstance(declared, list) else []
+            owner_links = detail.get("pressure_source_links")
+            owner_links = owner_links if isinstance(owner_links, dict) else {}
+            raw_owner_links = owner_links.get("links")
+            raw_owner_links = raw_owner_links if isinstance(raw_owner_links, list) else []
+            owner_links_by_identity = {
+                link.get("identity"): link
+                for link in raw_owner_links[:16]
+                if isinstance(link, dict) and isinstance(link.get("identity"), str)
+            }
+            for correspondence in correspondences[:4]:
+                if not isinstance(correspondence, dict):
+                    continue
+                target = _text(correspondence.get("target_pressure_identity"), 128)
+                if target is None or target not in declared[:16]:
+                    continue
+                candidate_link = next(
+                    (item for item in _correspondence_links(correspondence)
+                     if item.get("identity") == target),
+                    None,
+                )
+                if candidate_link is None:
+                    continue
+                total_matches += 1
+                if len(matches) >= MAX_PRESSURE_IDENTITY_MATCHES:
+                    continue
+                owner_link = owner_links_by_identity.get(target)
+                owner_link = owner_link if isinstance(owner_link, dict) else {}
+                owner_pointer = owner_link.get("source_reference")
+                candidate_pointer = candidate_link.get("source_reference")
+                owner_pointer_key = _pointer_key(owner_pointer)
+                candidate_pointer_key = _pointer_key(candidate_pointer)
+                if owner_pointer_key is not None and candidate_pointer_key is not None:
+                    pointer_status = (
+                        "exact-source-pointer-match"
+                        if owner_pointer_key == candidate_pointer_key
+                        else "different-source-pointers"
+                    )
+                else:
+                    pointer_status = (
+                        "owner-pressure-source-pointer-unavailable"
+                        if owner_pointer_key is None
+                        else "candidate-pressure-source-pointer-unavailable"
+                    )
+                source_detail_identity = _text(detail.get("identity"), 128)
+                owner_source = sources_by_identity.get(source_detail_identity)
+                owner_source_reference = _diagnostic_reference(owner_source)
+                candidate_source_reference = _reference(candidate_pointer)
+                matches.append({
+                    "owner_audit_identity": (
+                        _text(audit.get("identity"), 128) or "unknown-audit"
+                    ),
+                    "owner_repository": (
+                        _text(detail.get("repository"), 120) or "unavailable"
+                    ),
+                    "owner_source_audit_identity": (
+                        source_detail_identity or "unavailable"
+                    ),
+                    "owner_source_record_status": (
+                        _text(detail.get("source_record_status"), 128)
+                        or "unavailable"
+                    ),
+                    "owner_responsibility_candidates": (
+                        _textual_responsibility_candidates(
+                            detail,
+                            _text(correspondence.get(
+                                "native_capability_identity",
+                            ), 128) or "",
+                        )
+                    ),
+                    "owner_source_audit_reference": owner_source_reference,
+                    "native_correspondence_identity": (
+                        _text(correspondence.get("identity"), 128)
+                        or "unknown-correspondence"
+                    ),
+                    "native_capability_identity": (
+                        _text(correspondence.get("native_capability_identity"), 128)
+                        or "unavailable"
+                    ),
+                    "shared_pressure_identity": target,
+                    "pressure_identity_match_status": "exact-declared-id-match",
+                    "owner_pressure_source_link_status": (
+                        _text(owner_link.get("status"), 128) or "not-recorded"
+                    ),
+                    "owner_pressure_source_reference": (
+                        _reference(owner_pointer)
+                    ),
+                    "candidate_pressure_source_reference": (
+                        candidate_source_reference
+                    ),
+                    "candidate_pressure_source_integrity_status": (
+                        _text(candidate_link.get(
+                            "source_content_integrity_status",
+                        ), 128) or "not-established"
+                    ),
+                    "source_pointer_match_status": pointer_status,
+                    "responsibility_match_status": "not-established",
+                    "causal_relation_status": "not-established",
+                    "native_migration_readiness": "not-established",
+                    "owner_supporting_source_count_examined": (
+                        owner_links.get("supporting_source_count_examined")
+                        if type(owner_links.get("supporting_source_count_examined")) is int
+                        else None
+                    ),
+                })
+    if total_matches == 0:
+        return None
+    return {
+        "status": "shared-pressure-identity-with-source-pointer-gap",
+        "match_count": len(matches),
+        "matches_truncated": total_matches > len(matches),
+        "matches": matches,
+        "interpretation_limit": (
+            "An exact declared pressure ID connects the records for traceability, but the owner source pointer is missing or differs; responsibility, causality, and migration readiness remain unestablished."
+        ),
+        "next_investigation": (
+            "Inspect the owner source-audit record and candidate pressure record, then add a verified source pointer or explicit provenance relation only if those records support it."
+        ),
+    }
+
+
 def _session_context_delivery_observation(
     session_activity: Any, subject: Any,
 ) -> dict[str, Any] | None:
@@ -354,10 +541,10 @@ def _session_context_delivery_observation(
         binding_ids = raw.get("available_binding_ids")
         if isinstance(binding_ids, list):
             summary["available_binding_ids"] = [
-                value[:80] for value in binding_ids[:20]
+                value[:80] for value in binding_ids[:8]
                 if isinstance(value, str)
             ]
-            if len(binding_ids) > 20:
+            if len(binding_ids) > 8:
                 summary["available_binding_ids_truncated"] = True
         event_reference = raw.get("event_reference")
         if isinstance(event_reference, dict):
@@ -665,6 +852,10 @@ def project(
             _unmatched_source_pointer_context(
                 audits, correspondences, observations,
             )
+            if total_matches == 0 else None
+        ),
+        "pressure_identity_context": (
+            _pressure_identity_context(audits, correspondences)
             if total_matches == 0 else None
         ),
         "session_context_delivery_observation": (
