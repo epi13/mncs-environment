@@ -1,0 +1,81 @@
+{
+  "captured_at": "2026-10-27T10:35:02Z",
+  "identity": "ev_environment_claim_rejection_event_improvement_20261027",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_claim_rejection_context_unobservable",
+    "basis": "A typed event reuses the existing append-only session history and existing ECI claim-coordination projection.",
+    "effectiveness_assessment": "not-assessed",
+    "identity": "im_environment_claim_rejection_context_observability",
+    "implementation_reference": {
+      "commit": "0d23c4f3a2292f88fa91f0f7782a6e8ab7889d15",
+      "identity": "mncs_environment_claim_rejection_event_0d23c4f",
+      "kind": "committed-implementation",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "6b6415b45cf75397b11d6bd65a0810e5b6d17a53d97220c0d87921d4b4a15bb6"
+    },
+    "not_measured": [
+      "future independent rejected claim behavior",
+      "agent intervention reduction",
+      "cross-session recurrence"
+    ],
+    "subsequent_observation_identity": null,
+    "verification_observation_identity": "ev_environment_claim_rejection_event_verification_20261027"
+  },
+  "measurement_basis": "committed session-event implementation linked to the bounded rejection projection",
+  "not_measured": [
+    "future independent rejected claim behavior",
+    "agent intervention reduction",
+    "cross-session recurrence"
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "effectiveness_assessment": "not-assessed",
+      "generation_fence": "Rejected generation-fenced requests do not append a second event, preserving the caller Store generation precondition.",
+      "idempotency": "A repeated rejected request with the same request identity reuses the same event.",
+      "implementation_change": "Session.acquire_claim appends lease.acquisition-rejected for supported prepublication eligibility, adoption, conflict, and checkout-validation failures. The event keeps validated repository identity, failure code/category, scope kind, and explicit-versus-omitted branch state; it excludes reason text and checkout paths.",
+      "interpretation_limit": "Tests establish event creation, redaction, projection, idempotency, and generation-fence behavior. They do not establish real-world intervention reduction or recurrence.",
+      "subsequent_observation_identity": null,
+      "verification_observation_identity": "ev_environment_claim_rejection_event_verification_20261027"
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_claim_rejection_context_unobservable",
+      "implementation_commit": "0d23c4f3a2292f88fa91f0f7782a6e8ab7889d15",
+      "operation": "record safe evidence for a prepublication claim rejection"
+    },
+    "source_interface": "MNCS Environment session claim transition and ECI claim-coordination projection"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "0d23c4f3a2292f88fa91f0f7782a6e8ab7889d15",
+      "kind": "committed-implementation",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "6b6415b45cf75397b11d6bd65a0810e5b6d17a53d97220c0d87921d4b4a15bb6"
+    },
+    {
+      "commit": "0f86b10cde1e9ac38cb6f176fba9f19faa8cb020",
+      "identity": "ev_environment_claim_cli_stale_branch_pressure_20261027",
+      "path": "evidence/environmental-capability/claim-cli-stale-branch-pressure-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "b31b356a4dec9eb5870672e9fb26557c2b82d7ca754454976ad95b25597f0e47"
+    }
+  ]
+}

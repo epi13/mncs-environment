@@ -1,0 +1,87 @@
+{
+  "captured_at": "2026-10-27T10:35:02Z",
+  "identity": "ev_environment_claim_rejection_event_verification_20261027",
+  "measurement_basis": "focused claim, ECI projection, event-sequence, and briefing regression suites",
+  "not_measured": [
+    "future production event volume or failure distribution",
+    "agent intervention reduction",
+    "cross-session recurrence",
+    "causal improvement beyond event visibility"
+  ],
+  "observation": {
+    "kind": "claim-acquisition-rejection-event-verification",
+    "outcome": {
+      "authorization_and_conflict_rejections": "Typed rejection event recorded before publication; claims store remains unchanged.",
+      "effectiveness_assessment": "not-assessed",
+      "generation_fence": "A generation-fenced rejection does not append a separate event or advance the Store generation.",
+      "privacy": "Projection exposes failure category/code and scope kind; free-text reason and checkout path are omitted.",
+      "projection": "lease.acquisition-rejected is represented in bounded session_activity.claim_coordination with objective links when present.",
+      "request_replay": "Repeated identical rejected request does not duplicate its event.",
+      "tests": {
+        "failed": 0,
+        "passed": 213
+      }
+    },
+    "request": {
+      "implementation_commit": "0d23c4f3a2292f88fa91f0f7782a6e8ab7889d15",
+      "test_command": "python3 -m pytest tests/test_environment.py::ClaimTests tests/test_capability_intelligence.py tests/test_claim_generation_cas.py tests/test_briefing.py tests/test_event_sequence_retry.py -q"
+    },
+    "source_interface": "MNCS Environment Session event stream and environmental-capability projection"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "0d23c4f3a2292f88fa91f0f7782a6e8ab7889d15",
+      "kind": "committed-regression-test",
+      "path": "tests/test_environment.py",
+      "repository": "mncs-environment"
+    },
+    {
+      "commit": "0d23c4f3a2292f88fa91f0f7782a6e8ab7889d15",
+      "kind": "committed-regression-test",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment"
+    },
+    {
+      "commit": "0d23c4f3a2292f88fa91f0f7782a6e8ab7889d15",
+      "kind": "committed-regression-test",
+      "path": "tests/test_claim_generation_cas.py",
+      "repository": "mncs-environment"
+    },
+    {
+      "commit": "0d23c4f3a2292f88fa91f0f7782a6e8ab7889d15",
+      "kind": "committed-regression-test",
+      "path": "tests/test_briefing.py",
+      "repository": "mncs-environment"
+    },
+    {
+      "commit": "0d23c4f3a2292f88fa91f0f7782a6e8ab7889d15",
+      "kind": "committed-regression-test",
+      "path": "tests/test_event_sequence_retry.py",
+      "repository": "mncs-environment"
+    },
+    {
+      "commit": "0f86b10cde1e9ac38cb6f176fba9f19faa8cb020",
+      "identity": "ev_environment_claim_cli_stale_branch_pressure_20261027",
+      "kind": "prior-authentic-pressure-observation",
+      "path": "evidence/environmental-capability/claim-cli-stale-branch-pressure-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "b31b356a4dec9eb5870672e9fb26557c2b82d7ca754454976ad95b25597f0e47"
+    }
+  ]
+}

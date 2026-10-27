@@ -1,0 +1,67 @@
+{
+  "captured_at": "2026-10-27T10:35:02Z",
+  "identity": "ev_environment_claim_rejection_evidence_gap_20261027",
+  "measurement_basis": "historical claim-failure record plus pre-change CLI source inspection; one workflow only",
+  "not_measured": [
+    "cross-session or cross-agent recurrence",
+    "manual recovery time and tool-call cost",
+    "whether later event evidence reduces diagnostic work"
+  ],
+  "observation": {
+    "kind": "claim-acquisition-rejection-context-gap",
+    "outcome": {
+      "agent_intervention": "The caller inspected cached-scope construction and reconciled the session before a later claim succeeded.",
+      "claim_published": false,
+      "context_not_recorded": "The failed command event did not establish whether the branch precondition came from an explicit option or cached session selection; that origin was inferred from source code.",
+      "diagnostic_code": "working-checkout-unavailable",
+      "interpretation_limit": "One observed claim workflow; no recurrence, general failure frequency, or attributable time/tool-call cost is established."
+    },
+    "request": {
+      "explicit_branch_option": "omitted",
+      "operation": "acquire a scoped claim after a registered worktree branch change",
+      "repository": "mncs-environment",
+      "session_id": "ses_a752e1c55fb4ca6f"
+    },
+    "source_interface": "MNCS Environment claim CLI and session evidence"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Append a bounded typed event for claim rejection before publication, retaining a safe failure category/code and scope shape while omitting free-text reasons and checkout paths. Do not issue a separate Store write after generation-fenced rejection.",
+    "basis": "A real rejected claim returned a checkout-mismatch diagnostic, but its session evidence did not preserve whether the branch precondition originated from the caller or cached checkout selection.",
+    "category": "coordination-and-continuity",
+    "identity": "ph_environment_claim_rejection_context_unobservable",
+    "not_measured": [
+      "cross-session or cross-agent recurrence",
+      "manual recovery time and tool-call cost",
+      "whether later event evidence reduces diagnostic work"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "one observed workflow; recurrence not established",
+    "subsystem": "MNCS Environment claim acquisition and session evidence",
+    "title": "Rejected claim attempts omit bounded context needed to inspect coordination friction"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "0f86b10cde1e9ac38cb6f176fba9f19faa8cb020",
+      "identity": "ev_environment_claim_cli_stale_branch_pressure_20261027",
+      "path": "evidence/environmental-capability/claim-cli-stale-branch-pressure-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "b31b356a4dec9eb5870672e9fb26557c2b82d7ca754454976ad95b25597f0e47"
+    }
+  ]
+}
