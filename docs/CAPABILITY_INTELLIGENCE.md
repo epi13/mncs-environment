@@ -101,6 +101,11 @@ agent-attributed resource consumption, a pressure finding, or evidence that the
 preflight executed a Git operation. The readback keeps coordination overlap
 visible beside eligibility without treating the overlap as a persistent
 ownership requirement.
+The bounded live projection result is preserved in
+[`resource-sample-observation-live-readback-20261027.json`](../evidence/environmental-capability/resource-sample-observation-live-readback-20261027.json).
+It shows the exact sample, event, artifact-digest, and Work Intent joins while
+retaining the distinction between a preflight observation and an executed
+integration.
 
 The 2026-10-27
 [`coordination-aware-diagnostic-deferral-20261027.json`](../evidence/environmental-capability/coordination-aware-diagnostic-deferral-20261027.json)
