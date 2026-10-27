@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_resource_sample_absence_compact_projection_improvement_20261027",
+  "captured_at": "2026-10-27T13:06:34Z",
+  "measurement_basis": "Integrity-addressed implementation, regression result, and live projection after-readback linked to the recorded compact-resource-status pressure.",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "repository": "mncs-environment"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection and capability-intelligence compact projection",
+    "request": {
+      "operation": "link the missing resource-sample status pressure to the compact projection implementation and live verification",
+      "implementation_commit": "8c9713f0f03a94b76207c015249796af96ad170c",
+      "pressure_hypothesis_identity": "ph_environment_compact_resource_sample_absence_unstated_20261027",
+      "verification_observation_identity": "ev_environment_resource_sample_absence_compact_projection_20261027"
+    },
+    "outcome": {
+      "relationship_recorded": true,
+      "verification_record_status": "live-after-readback-and-regression-recorded",
+      "effectiveness_assessment": "not-assessed",
+      "subsequent_observation_status": "not-recorded"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_compact_resource_sample_absence_unstated_20261027",
+    "title": "A size-compacted capability projection omitted the explicit status when the selected session had no resource sample",
+    "category": "resource-and-operational-observation",
+    "subsystem": "MNCS Environment capability-intelligence compact projection and Monitor sample relation",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Preserve the bounded no-sample status and measured zero sample count when an empty artifact window is complete and the compact response budget has room."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_compact_resource_sample_absence_20261027",
+    "addresses_hypothesis_identity": "ph_environment_compact_resource_sample_absence_unstated_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_resource_sample_absence_compaction_8c9713f",
+      "repository": "mncs-environment",
+      "commit": "8c9713f0f03a94b76207c015249796af96ad170c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "9f1e121b9f070797b6cd03f679182f963cb91f53072593111af93ff7c7b8d24d",
+      "kind": "committed-implementation"
+    },
+    "verification_observation_identity": "ev_environment_resource_sample_absence_compact_projection_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "The compact ECI projection now retains not-captured-in-session and measured zero sample counts for a complete empty resource artifact window when the summary fits. A real post-change projection shows those fields while correctly remaining partial and making no claim about resource consumption. Regression tests preserve existing evidence retention under tighter budgets.",
+    "not_measured": [
+      "Whether future sessions capture Monitor samples when useful.",
+      "Whether agents use the explicit status to reduce context reconstruction.",
+      "Agent-attributed resource use, intervention burden, ambient fulfillment, and downstream outcome quality."
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_resource_sample_absence_compaction_8c9713f",
+      "repository": "mncs-environment",
+      "commit": "8c9713f0f03a94b76207c015249796af96ad170c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "9f1e121b9f070797b6cd03f679182f963cb91f53072593111af93ff7c7b8d24d",
+      "kind": "committed-implementation"
+    },
+    {
+      "identity": "mncs_environment_resource_sample_absence_compaction_tests_8c9713f",
+      "repository": "mncs-environment",
+      "commit": "8c9713f0f03a94b76207c015249796af96ad170c",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "e7f61d65723337b4ecd60cfa12720542a0c7c93a1c4d63c5a7f09f9edf9e8295",
+      "kind": "committed-regression-tests"
+    }
+  ],
+  "not_measured": [
+    "Whether agents discover and benefit from the explicit compact resource status in future projections.",
+    "Whether resource capture or agent intervention changes after this projection improvement.",
+    "Longitudinal environmental effectiveness."
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_resource_sample_absence_compact_projection_20261027",
+  "captured_at": "2026-10-27T13:06:34Z",
+  "measurement_basis": "Before-and-after live Environmental Capability projection readbacks, bounded resource-sample status fields, and incremental plus capability-intelligence regressions.",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "repository": "mncs-environment"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "observation": {
+    "kind": "resource-sample-absence-compact-projection-verification",
+    "source_interface": "MNCS Environment environmental-capability projection and session resource-sample activity view",
+    "request": {
+      "operation": "preserve explicit resource-sample absence status in a size-compacted Environmental Capability response when it fits the response budget",
+      "repository": "mncs-environment",
+      "implementation_commit": "8c9713f0f03a94b76207c015249796af96ad170c",
+      "before_projection_identity": "eci_1bb65972a2482bee",
+      "after_projection_identity": "eci_dc8c37dcc13a3794",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "work_intent_id": "int_e9a2959ffe2e952c",
+      "test_command": "python3 -m pytest tests/test_incremental.py tests/test_capability_intelligence.py -q"
+    },
+    "outcome": {
+      "before": {
+        "projection_status": "partial",
+        "response_byte_count": 123608,
+        "response_truncated": true,
+        "resource_samples_field": "omitted-from-compact-session-activity",
+        "resource_sample_identity_digest": "4f53cda18c2baa0c",
+        "event_window_sequence_start": 410,
+        "event_window_sequence_end": 417,
+        "event_window_truncated": true,
+        "invocation_events_considered": 0
+      },
+      "after": {
+        "projection_status": "partial",
+        "response_byte_count": 112047,
+        "response_truncated": true,
+        "resource_samples": {
+          "status": "not-captured-in-session",
+          "observation_count": 0,
+          "records_examined": 0
+        },
+        "event_window_sequence_start": 425,
+        "event_window_sequence_end": 432,
+        "event_window_truncated": true,
+        "invocation_events_considered": 0
+      },
+      "implemented_behavior": "The compact ECI view retains a minimal resource-sample status and measured counts for an empty, non-truncated artifact window only when the compact result still fits its response budget. Existing compact evidence priorities remain in effect when the summary will not fit.",
+      "verification": {
+        "duration_seconds": 5.76,
+        "modules": [
+          "tests/test_incremental.py",
+          "tests/test_capability_intelligence.py"
+        ],
+        "tests_failed": 0,
+        "tests_passed": 171,
+        "tests_skipped": 21,
+        "py_compile": "passed",
+        "git_diff_check": "passed"
+      },
+      "effectiveness_assessment": "The before-and-after compact projection behavior and regression coverage are verified. A status of not-captured-in-session establishes absence of a recorded sample in the selected artifact window; it does not establish zero resource use or agent burden."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_compact_resource_sample_absence_unstated_20261027",
+    "title": "A size-compacted capability projection omitted the explicit status when the selected session had no resource sample",
+    "category": "resource-and-operational-observation",
+    "subsystem": "MNCS Environment capability-intelligence compact projection and Monitor sample relation",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Preserve the bounded no-sample status and measured zero sample count when an empty artifact window is complete and the compact response budget has room."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_resource_sample_absence_compaction_8c9713f",
+      "repository": "mncs-environment",
+      "commit": "8c9713f0f03a94b76207c015249796af96ad170c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "9f1e121b9f070797b6cd03f679182f963cb91f53072593111af93ff7c7b8d24d",
+      "kind": "committed-implementation"
+    },
+    {
+      "identity": "mncs_environment_resource_sample_absence_compaction_tests_8c9713f",
+      "repository": "mncs-environment",
+      "commit": "8c9713f0f03a94b76207c015249796af96ad170c",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "e7f61d65723337b4ecd60cfa12720542a0c7c93a1c4d63c5a7f09f9edf9e8295",
+      "kind": "committed-regression-tests"
+    },
+    {
+      "identity": "mncs_environment_resource_sample_absence_compaction_contract_8c9713f",
+      "repository": "mncs-environment",
+      "commit": "8c9713f0f03a94b76207c015249796af96ad170c",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "fce3f72606e955042b6ca9860b17556a97f17b8adf6ff93c006747ce8a828eb0",
+      "kind": "committed-contract-documentation"
+    }
+  ],
+  "not_measured": [
+    "Agent-attributed resource consumption or the amount of resource use when no Monitor sample is recorded.",
+    "Resource use represented by invocations outside the Environment session artifact window.",
+    "Whether agents make better decisions after seeing explicit no-sample status.",
+    "Whether the compact status reduces intervention burden or improves service outcomes."
+  ]
+}
