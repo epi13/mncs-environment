@@ -1,0 +1,91 @@
+{
+  "captured_at": "2026-10-27T10:16:57Z",
+  "identity": "ev_environment_claim_cli_live_branch_refresh_improvement_20261027",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_claim_cli_stale_branch_precondition",
+    "basis": "The CLI now leaves branch unset when the caller omitted --branch, allowing Environment claim acquisition to refresh and verify the live registered checkout before resolving branch identity. Regression tests exercise that exact CLI path while retaining strict validation for explicit branch values.",
+    "effectiveness_assessment": "not-assessed",
+    "identity": "im_environment_claim_cli_live_branch_refresh",
+    "implementation_reference": {
+      "commit": "97941b6b30367bb9efe223848f72b8b3110ea37b",
+      "identity": "mncs_environment_claim_cli_live_branch_refresh_97941b6",
+      "kind": "committed-implementation",
+      "path": "mncs_env/cli.py",
+      "repository": "mncs-environment",
+      "sha256": "0e7712c609d6abe5cb6e60491ab542add2d4ab97cd7f017226f746aa0fa499d1"
+    },
+    "not_measured": [
+      "independent future session behavior after this change",
+      "recurrence or intervention-rate change",
+      "the agent-visible cost of prior reconciliation steps"
+    ],
+    "subsequent_observation_identity": null,
+    "verification_observation_identity": "ev_environment_claim_cli_live_branch_refresh_verification_20261027"
+  },
+  "measurement_basis": "committed-cli-scope-change-linked-to-branch-drift-regression",
+  "not_measured": [
+    "independent future session behavior after this change",
+    "recurrence or intervention-rate change",
+    "the agent-visible cost of prior reconciliation steps"
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "effectiveness_assessment": "not-assessed",
+      "implementation_change": "cmd_claims no longer copies an entry-time branch into a worktree scope when --branch was omitted. An explicitly supplied branch remains an exact precondition checked against the live registered checkout after claim acquisition refresh.",
+      "implementation_scope": "mncs_env.cli.cmd_claims",
+      "interpretation_limit": "The regression verifies the stale-precondition path and preserves exact checkout verification. It does not establish a reduction in real-world intervention frequency, time, or tool calls.",
+      "verified_change": "The claim CLI regression now changes a registered checkout branch after session selection, omits --branch, and acquires a claim on the live branch through ordinary claim acquisition without an explicit reconcile. Explicit branch and unselected worktree cases are also covered."
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_claim_cli_stale_branch_precondition",
+      "implementation_commit": "97941b6b30367bb9efe223848f72b8b3110ea37b",
+      "subsequent_observation_identity": null,
+      "verification_observation_identity": "ev_environment_claim_cli_live_branch_refresh_verification_20261027"
+    },
+    "source_interface": "MNCS Environment claim CLI"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Leave branch unspecified when the caller omitted --branch. Let claim acquisition refresh and verify the exact registered checkout, then derive its current branch. Continue treating an explicit --branch as an exact live precondition.",
+    "basis": "A real claim attempt after a registered checkout branch change failed with working-checkout-unavailable because the CLI had included an entry-time branch in the exact worktree scope. The same campaign later succeeded after explicit session reconciliation. Source inspection showed that cmd_claims copied the selected-checkout branch whenever --branch was omitted.",
+    "category": "coordination-and-continuity",
+    "identity": "ph_environment_claim_cli_stale_branch_precondition",
+    "not_measured": [
+      "frequency across agents, sessions, or repositories",
+      "time or tool-call cost attributable to the manual reconcile",
+      "whether every branch-drift failure follows this same scope-construction path",
+      "whether the fix reduces coordination burden in subsequent independent workflows"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "one observed workflow; recurrence not established",
+    "subsystem": "MNCS Environment claim CLI and selected-checkout refresh",
+    "title": "Implicit scoped claims can carry an entry-time branch into live refresh"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_state_checkpoint_id_before_recording": "chk_ec84f95395de0581",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "97941b6b30367bb9efe223848f72b8b3110ea37b",
+      "kind": "committed-implementation",
+      "path": "mncs_env/cli.py",
+      "repository": "mncs-environment",
+      "sha256": "0e7712c609d6abe5cb6e60491ab542add2d4ab97cd7f017226f746aa0fa499d1"
+    }
+  ]
+}

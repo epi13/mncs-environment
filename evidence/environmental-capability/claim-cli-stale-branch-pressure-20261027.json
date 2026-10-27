@@ -1,0 +1,76 @@
+{
+  "captured_at": "2026-10-27T10:16:57Z",
+  "identity": "ev_environment_claim_cli_stale_branch_pressure_20261027",
+  "measurement_basis": "direct-scoped-claim-failure-and-read-only-checkout-state-inspection",
+  "not_measured": [
+    "frequency across agents, sessions, or repositories",
+    "time or tool-call cost attributable to the manual reconcile",
+    "whether every branch-drift failure follows this same scope-construction path",
+    "whether the fix reduces coordination burden in subsequent independent workflows"
+  ],
+  "observation": {
+    "agent_impact": "One observed workflow required the agent to diagnose and explicitly reconcile stale checkout context. No general frequency or cost is established.",
+    "causal_attribution": "The command's failure text identified a branch-or-revision mismatch. Source inspection at the pre-change commit showed cmd_claims copied the selected branch when --branch was omitted; the later reconcile and successful registered-worktree claim establish the recovery sequence, not recurrence.",
+    "environmental_pressure": "The claim CLI materialized a cached branch from the session snapshot before Session.acquire_claim performed its live checkout refresh. The stale exact-scope precondition prevented the refresh from completing the intended branch-drift workflow.",
+    "kind": "scoped-claim-stale-branch-precondition",
+    "outcome": {
+      "claim_status": "refused",
+      "diagnostic": "registered worktree branch or revision does not match the observed checkout",
+      "diagnostic_code": "working-checkout-unavailable",
+      "diagnostic_path": "/home/epi13/Documents/Projects/mncs-environment",
+      "observed_recovery": "A later bounded mncs-env reconcile refreshed the session checkout selection; a claim on the registered proposal worktree then succeeded.",
+      "scope_branch_source": "inferred from the pre-change cmd_claims implementation and the omitted --branch request; not separately captured in the failed command's session event payload"
+    },
+    "request": {
+      "branch_change": "campaign/eci-pressure-compaction-20261027",
+      "checkout": "/home/epi13/Documents/Projects/mncs-environment",
+      "claim_scope": "selected-worktree paths; --branch omitted",
+      "repository": "mncs-environment",
+      "session_id": "ses_a752e1c55fb4ca6f"
+    },
+    "source_interface": "mncs-env claims, session inspection, and registered Git checkout verification"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Leave branch unspecified when the caller omitted --branch. Let claim acquisition refresh and verify the exact registered checkout, then derive its current branch. Continue treating an explicit --branch as an exact live precondition.",
+    "basis": "A real claim attempt after a registered checkout branch change failed with working-checkout-unavailable because the CLI had included an entry-time branch in the exact worktree scope. The same campaign later succeeded after explicit session reconciliation. Source inspection showed that cmd_claims copied the selected-checkout branch whenever --branch was omitted.",
+    "category": "coordination-and-continuity",
+    "identity": "ph_environment_claim_cli_stale_branch_precondition",
+    "not_measured": [
+      "frequency across agents, sessions, or repositories",
+      "time or tool-call cost attributable to the manual reconcile",
+      "whether every branch-drift failure follows this same scope-construction path",
+      "whether the fix reduces coordination burden in subsequent independent workflows"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "one observed workflow; recurrence not established",
+    "subsystem": "MNCS Environment claim CLI and selected-checkout refresh",
+    "title": "Implicit scoped claims can carry an entry-time branch into live refresh"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_state_checkpoint_id_before_recording": "chk_ec84f95395de0581",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "376c492b62414f5446c5996cfedf887d9b578732",
+      "kind": "committed-source-before-change",
+      "path": "mncs_env/cli.py",
+      "repository": "mncs-environment",
+      "sha256": "0b717e995fe999ca8cc1af2579edf7b2f9a5717b4a0273c4a62c550c87ba2c30"
+    }
+  ]
+}

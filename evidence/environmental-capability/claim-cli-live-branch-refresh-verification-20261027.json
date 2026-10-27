@@ -1,0 +1,80 @@
+{
+  "captured_at": "2026-10-27T10:16:57Z",
+  "identity": "ev_environment_claim_cli_live_branch_refresh_verification_20261027",
+  "measurement_basis": "targeted-claim-cli-and-registered-checkout-regression-tests",
+  "not_measured": [
+    "agent intervention reduction in a later non-test workflow",
+    "cross-agent or cross-session recurrence",
+    "time and tool-call savings"
+  ],
+  "observation": {
+    "kind": "claim-cli-live-branch-refresh-verification",
+    "outcome": {
+      "branch_drift_assertion": "The test invokes cli.cmd_claims after the registered checkout branch changes while the session retains the prior selection; the returned claim records the current branch without a manual reconcile.",
+      "claim_cli_suite": {
+        "failed": 0,
+        "passed": 24
+      },
+      "diff_check": "passed",
+      "explicit_branch_assertion": "A supplied --branch is passed as an exact precondition for live Environment validation.",
+      "independent_runtime_observation": "not-yet-recorded",
+      "syntax_check": "passed",
+      "unselected_worktree_assertion": "An unselected worktree claim does not inherit the selected checkout's branch."
+    },
+    "request": {
+      "claim_cli_suite": "python3 -m pytest tests/test_claim_scope_narrowing.py tests/test_workspace_root_alias.py tests/test_claim_generation_cas.py tests/test_environment.py::ClaimTests::test_claim_acquisition_revalidates_same_checkout_branch_and_head_drift -q",
+      "diff_check": "git diff --check",
+      "implementation_commit": "97941b6b30367bb9efe223848f72b8b3110ea37b",
+      "syntax_check": "python3 -m py_compile mncs_env/cli.py"
+    },
+    "source_interface": "MNCS Environment claim CLI and registered-checkout tests"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Leave branch unspecified when the caller omitted --branch. Let claim acquisition refresh and verify the exact registered checkout, then derive its current branch. Continue treating an explicit --branch as an exact live precondition.",
+    "basis": "A real claim attempt after a registered checkout branch change failed with working-checkout-unavailable because the CLI had included an entry-time branch in the exact worktree scope. The same campaign later succeeded after explicit session reconciliation. Source inspection showed that cmd_claims copied the selected-checkout branch whenever --branch was omitted.",
+    "category": "coordination-and-continuity",
+    "identity": "ph_environment_claim_cli_stale_branch_precondition",
+    "not_measured": [
+      "frequency across agents, sessions, or repositories",
+      "time or tool-call cost attributable to the manual reconcile",
+      "whether every branch-drift failure follows this same scope-construction path",
+      "whether the fix reduces coordination burden in subsequent independent workflows"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "one observed workflow; recurrence not established",
+    "subsystem": "MNCS Environment claim CLI and selected-checkout refresh",
+    "title": "Implicit scoped claims can carry an entry-time branch into live refresh"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_state_checkpoint_id_before_recording": "chk_ec84f95395de0581",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "97941b6b30367bb9efe223848f72b8b3110ea37b",
+      "kind": "committed-regression-test",
+      "path": "tests/test_environment.py",
+      "repository": "mncs-environment"
+    },
+    {
+      "commit": "97941b6b30367bb9efe223848f72b8b3110ea37b",
+      "kind": "committed-regression-test",
+      "path": "tests/test_claim_generation_cas.py",
+      "repository": "mncs-environment"
+    }
+  ]
+}
