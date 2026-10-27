@@ -4625,6 +4625,7 @@ class CapabilityTests(unittest.TestCase):
                         {"contract": "mncs-doctor.projection-health"},
                         {"contract": "mncs-doctor.mixed-effect"},
                         {"contract": "mncs-doc.documentation-projection"},
+                        {"contract": "mncs-commons.family-change"},
                     ]},
                 },
             )
@@ -4697,6 +4698,29 @@ class CapabilityTests(unittest.TestCase):
                 "-c", "user.email=environment-test@example.invalid", "commit", "-qm",
                 "documentation projection contract",
             ], check=True)
+            commons_provider = self._git_checkout(
+                workspace_root / "MNCS-Commons", "mncs-commons", {
+                    "contracts": {"provides": [{
+                        "contract": "family-change",
+                        "version": "1",
+                        "effects": ["read"],
+                        "invocation": {
+                            "kind": "executable",
+                            "path": "tools/family-change.sh",
+                        },
+                    }]},
+                },
+            )
+            commons_script = commons_provider / "tools" / "family-change.sh"
+            commons_script.parent.mkdir(parents=True, exist_ok=True)
+            commons_script.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            commons_script.chmod(0o755)
+            subprocess.run(["git", "-C", str(commons_provider), "add", "."], check=True)
+            subprocess.run([
+                "git", "-C", str(commons_provider), "-c", "user.name=Environment Test",
+                "-c", "user.email=environment-test@example.invalid", "commit", "-qm",
+                "family change contract",
+            ], check=True)
             consumer_head = workspace.inspect_repo(consumer, _refresh=True).head
             selected_roots = {"mncs-environment": consumer}
             selected_facts = {"mncs-environment": {
@@ -4738,6 +4762,7 @@ class CapabilityTests(unittest.TestCase):
             }
             self.assertIn("mncs-doctor:projection-health", bindings)
             self.assertIn("mncs-doc:documentation-projection", bindings)
+            self.assertIn("mncs-commons:family-change", bindings)
             self.assertEqual(
                 bindings["mncs-doctor:projection-health"]["effects"], ["read"],
             )
@@ -4750,6 +4775,10 @@ class CapabilityTests(unittest.TestCase):
             )
             self.assertEqual(
                 bindings["mncs-doc:documentation-projection"]["availability"]["status"],
+                "available",
+            )
+            self.assertEqual(
+                bindings["mncs-commons:family-change"]["availability"]["status"],
                 "available",
             )
             self.assertEqual(
@@ -4776,7 +4805,7 @@ class CapabilityTests(unittest.TestCase):
             )
             self.assertEqual(
                 [item["capability"] for item in dirty_bindings],
-                ["mncs-doctor:projection-health"],
+                ["mncs-commons:family-change", "mncs-doctor:projection-health"],
             )
             self.assertIn(
                 {
@@ -4806,7 +4835,7 @@ class CapabilityTests(unittest.TestCase):
             )
             self.assertEqual(
                 [item["capability"] for item in symlink_bindings],
-                ["mncs-doc:documentation-projection"],
+                ["mncs-commons:family-change", "mncs-doc:documentation-projection"],
             )
             self.assertIn(
                 "provider-path-symlink",

@@ -205,10 +205,13 @@ for identity, revisions, tools, and state. Selection persists into resume,
 health, and reconciliation; bindings and toolchains use those exact roots.
 Store routing is persisted for fresh-process continuation.
 
-A selected consumer may also bind a capability it explicitly declares from an
-exact, clean direct workspace repository when that capability declares only
-the `read` effect. Environment records this as a read-only dependency; the
-provider does not enter selected checkouts or gain mutation scope.
+A selected consumer may also bind a capability it explicitly declares from a
+clean direct workspace repository when that capability declares only the
+`read` effect. Resolution uses the exact repository directory name first, then
+bounded workspace discovery for an unambiguous case variant whose manifest
+declares the exact repository identity. Environment records this as a read-only
+dependency; the provider does not enter selected checkouts or gain mutation
+scope.
 Mixed-effect, write-effect, dirty, ambiguous, or symlinked providers are not
 bound through this path. The resume revalidation report includes bounded
 reason codes for consumed providers that were not bound.

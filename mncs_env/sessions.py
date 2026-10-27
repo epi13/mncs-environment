@@ -1874,6 +1874,40 @@ def _discover_read_only_consumed_provider_bindings(
     provider_facts: dict[str, dict[str, Any]] = {}
     for provider in sorted(capabilities_by_provider):
         candidate = root / provider
+        observed_row = None
+        if not candidate.exists():
+            # Workspace discovery already provides bounded, unambiguous
+            # case-variant resolution. Reuse it for an exact provider ID
+            # instead of assuming directory casing matches the manifest.
+            variant_view = workspace_module.discover_workspace(
+                root, timeout_seconds=2.0, repositories=[provider],
+            )
+            variant_scan = variant_view.get("scan", {})
+            if variant_view.get("error"):
+                for capability in capabilities_by_provider[provider]:
+                    record_diagnostic(capability, "provider-checkout-unavailable")
+                continue
+            if variant_scan.get("status") != "complete":
+                for capability in capabilities_by_provider[provider]:
+                    record_diagnostic(capability, "provider-observation-incomplete")
+                continue
+            direct_matches = [
+                row for row in variant_view.get("repositories", [])
+                if isinstance(row, dict)
+                and row.get("manifest_repository") == provider
+                and isinstance(row.get("path"), str)
+                and Path(row["path"]).parent.resolve() == root
+            ]
+            if len(direct_matches) != 1:
+                diagnostic = (
+                    "provider-checkout-ambiguous" if len(direct_matches) > 1
+                    else "provider-checkout-unavailable"
+                )
+                for capability in capabilities_by_provider[provider]:
+                    record_diagnostic(capability, diagnostic)
+                continue
+            observed_row = direct_matches[0]
+            candidate = Path(observed_row["path"])
         try:
             if candidate.is_symlink():
                 for capability in capabilities_by_provider[provider]:
@@ -1889,37 +1923,41 @@ def _discover_read_only_consumed_provider_bindings(
             for capability in capabilities_by_provider[provider]:
                 record_diagnostic(capability, "provider-checkout-unavailable")
             continue
-        matches = [
-            row for row in workspace_repositories
-            if isinstance(row, dict)
-            and row.get("manifest_repository") == provider
-            and row.get("path") == str(resolved)
-        ]
-        if len(matches) > 1:
-            for capability in capabilities_by_provider[provider]:
-                record_diagnostic(capability, "provider-checkout-ambiguous")
-            continue
-        if matches:
-            row = matches[0]
+        if observed_row is not None:
+            row = observed_row
         else:
-            # A selected Environment session may intentionally observe only
-            # its selected repositories. Resolve the provider named by the
-            # consumer manifest directly at its exact workspace path rather
-            # than widening selection or inheriting mutation authority.
-            state = workspace_module.inspect_repo(resolved, _refresh=True)
-            if state is None:
+            matches = [
+                row for row in workspace_repositories
+                if isinstance(row, dict)
+                and row.get("manifest_repository") == provider
+                and row.get("path") == str(resolved)
+            ]
+            if len(matches) > 1:
                 for capability in capabilities_by_provider[provider]:
-                    record_diagnostic(capability, "provider-checkout-unavailable")
+                    record_diagnostic(capability, "provider-checkout-ambiguous")
                 continue
-            if state.manifest_repository != provider:
-                for capability in capabilities_by_provider[provider]:
-                    record_diagnostic(capability, "provider-identity-mismatch")
-                continue
-            if state.git_error or not state.head:
-                for capability in capabilities_by_provider[provider]:
-                    record_diagnostic(capability, "provider-checkout-state-unavailable")
-                continue
-            row = state.record()
+            if matches:
+                row = matches[0]
+            else:
+                # A selected Environment session may intentionally observe
+                # only its selected repositories. Resolve the provider named
+                # by the consumer manifest directly at its exact workspace
+                # path rather than widening selection or inheriting mutation
+                # authority.
+                state = workspace_module.inspect_repo(resolved, _refresh=True)
+                if state is None:
+                    for capability in capabilities_by_provider[provider]:
+                        record_diagnostic(capability, "provider-checkout-unavailable")
+                    continue
+                if state.manifest_repository != provider:
+                    for capability in capabilities_by_provider[provider]:
+                        record_diagnostic(capability, "provider-identity-mismatch")
+                    continue
+                if state.git_error or not state.head:
+                    for capability in capabilities_by_provider[provider]:
+                        record_diagnostic(capability, "provider-checkout-state-unavailable")
+                    continue
+                row = state.record()
         if row.get("git_error") or not row.get("head"):
             for capability in capabilities_by_provider[provider]:
                 record_diagnostic(capability, "provider-checkout-state-unavailable")
