@@ -334,6 +334,15 @@ class EpochTests(DoctorFixture):
             evidence["evidence"]["schema_version"],
             "mncs.environment.doctor-evidence/1",
         )
+        history_reference = evidence["history"][-1]["evidence_ref"]
+        self.assertEqual(
+            history_reference["schema"],
+            "mncs.environment.doctor-evidence/1",
+        )
+        self.assertEqual(
+            evidence["artifact"],
+            f"mncs-store:{history_reference['identity']}",
+        )
         sidecars = self.state / "sessions" / session_id
         self.assertFalse((sidecars / "doctor-epoch.json").exists())
         self.assertFalse((sidecars / "doctor-evidence.json").exists())

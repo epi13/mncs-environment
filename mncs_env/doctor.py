@@ -448,8 +448,8 @@ def record_epoch(session, *, repairs: list[dict[str, Any]],
     """Validate the current world, persist the epoch, and return the report.
 
     The epoch (inputs digest + terse summary + history) is stored in the
-    snapshot; full evidence goes to the session-side evidence file. Both
-    are derived state: deleting them only costs one full pass.
+    snapshot; full evidence goes to the immutable Store or file artifact.
+    Both are derived state: deleting them only costs one full pass.
     """
     terse = summarize(session.snapshot, repairs=repairs, reconciliations=reconciliations)
     now = utcnow()
@@ -475,8 +475,7 @@ def record_epoch(session, *, repairs: list[dict[str, Any]],
     history.append({"validated_at": now, "digest": digest, "summary": terse["summary"],
                     "remaining": terse["remaining"], "unavailable": terse["unavailable"],
                     "reused": reused})
-    doctor.update({"schema_version": DOCTOR_SCHEMA, "epoch": epoch,
-                   "history": history[-MAX_HISTORY:]})
+    history = history[-MAX_HISTORY:]
     fileside = {"schema_version": EPOCH_SCHEMA, "digest": digest,
                 "session_id": session.session_id,
                 "workspace_root": inputs.get("workspace_root"),
@@ -515,10 +514,14 @@ def record_epoch(session, *, repairs: list[dict[str, Any]],
                     raise
         elif existing != evidence:
             raise ValueError("Doctor evidence identity resolved to different Store content")
-        doctor["evidence_ref"] = {
+        evidence_reference = {
             "schema": STORE_EVIDENCE_SCHEMA.decode("ascii"),
             "identity": identity.decode("utf-8"),
         }
+        history[-1]["evidence_ref"] = evidence_reference
+        doctor["evidence_ref"] = evidence_reference
+    doctor.update({"schema_version": DOCTOR_SCHEMA, "epoch": epoch,
+                   "history": history})
     session.snapshot["doctor"] = doctor
     session._save()
     if not (callable(put_record) and callable(get_record)):

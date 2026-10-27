@@ -5987,6 +5987,144 @@ def test_doctor_gap_projection_verifies_and_groups_immutable_evidence(
     assert store.reads == 3
 
 
+def test_doctor_gap_history_links_verified_same_session_recurrence(
+    tmp_path: Path,
+) -> None:
+    session, _ = _session(tmp_path, [])
+    summary = {"repaired": 0, "reconciled": 1, "degraded": 1, "blockers": 0}
+    unavailable = {"count": 1, "digest": "b" * 16}
+    epochs = [
+        {
+            "digest": f"{index:016x}",
+            "validated_at": f"2026-10-27T10:0{index}:00+00:00",
+            "gaps": [
+                {"code": "provider-invocation-undeclared",
+                 "capability": "mncs-store:persistent-object"},
+                *([{"code": "provider-invocation-undeclared",
+                    "capability": "mncs-language:cli-toolchain"}]
+                  if index == 1 else []),
+            ],
+        }
+        for index in range(1, 4)
+    ]
+    evidence_by_identity = {}
+    history = []
+    for epoch in epochs:
+        evidence = {
+            "schema_version": "mncs.environment.doctor-evidence/1",
+            "session_id": session.session_id,
+            "digest": epoch["digest"],
+            "validated_at": epoch["validated_at"],
+            "summary": summary,
+            "classification": {"gaps": epoch["gaps"]},
+        }
+        content_digest = capability_intelligence.digest_hex(evidence, length=64)
+        identity = f"{session.session_id}:doctor:{content_digest}"
+        evidence_by_identity[identity] = evidence
+        history.append({
+            "digest": epoch["digest"],
+            "validated_at": epoch["validated_at"],
+            "summary": summary,
+            "unavailable": unavailable,
+            "reused": False,
+            "evidence_ref": {
+                "schema": "mncs.environment.doctor-evidence/1",
+                "identity": identity,
+            },
+        })
+
+    class StrictStore:
+        def __init__(self) -> None:
+            self.reads = []
+
+        def get_record_strict(self, schema: bytes, identity: bytes):
+            assert schema == b"mncs.environment.doctor-evidence/1"
+            self.reads.append(identity.decode("utf-8"))
+            return evidence_by_identity.get(identity.decode("utf-8"))
+
+    store = StrictStore()
+    session.store = store
+    latest = epochs[-1]
+    latest_reference = history[-1]["evidence_ref"]
+    session.snapshot.update({
+        "snapshot_sequence": 50,
+        "environment_id": "renv_doctor_gap_history",
+        "campaign": {"identity": "cmp_doctor_gap_history"},
+        "intent": {
+            "identity": "int_doctor_gap_history",
+            "goal": "inspect repeated environmental service gaps",
+        },
+        "doctor": {
+            "schema_version": "mncs.environment.doctor/2",
+            "epoch": {
+                "schema_version": "mncs.environment.doctor-epoch/2",
+                "digest": latest["digest"],
+                "validated_at": latest["validated_at"],
+                "snapshot_sequence": 47,
+                "readiness": "degraded",
+                "summary": summary,
+                "unavailable": unavailable,
+            },
+            "history": history,
+            "evidence_ref": latest_reference,
+        },
+    })
+
+    projection = capability_intelligence.project(session, doctor_gap_limit=2)
+    doctor_history = projection["session_activity"]["doctor_health_history"]
+    detail = doctor_history[
+        "diagnostic_pressure"
+    ]
+    assert all(
+        item["evidence_reference_status"] == "reference-identified"
+        and item["evidence_reference"]["identity"].startswith(
+            f"{session.session_id}:doctor:"
+        )
+        for item in doctor_history["history"]
+    )
+    recurrence = detail["historical_recurrence"]
+    assert detail["summary"]["history_record_count"] == 3
+    assert detail["summary"]["history_evidence_reference_count"] == 3
+    assert detail["summary"]["history_verified_record_count"] == 3
+    assert detail["summary"]["same_session_recurrence_status"] == (
+        "observed-in-same-session-history"
+    )
+    assert recurrence["status"] == "observed"
+    assert recurrence["source"]["coverage_status"] == "complete"
+    assert recurrence["source"]["verified_record_count"] == 3
+    assert len(recurrence["source"]["verified_evidence_references"]) == 3
+    group = recurrence["candidate_groups"][0]
+    assert group["code"] == "provider-invocation-undeclared"
+    assert group["verified_pass_count"] == 3
+    assert group["distinct_capability_count"] == 2
+    assert group["recurring_capability_count"] == 1
+    persistent = next(
+        item for item in group["capability_examples"]
+        if item["capability"] == "mncs-store:persistent-object"
+    )
+    assert persistent["verified_pass_count"] == 3
+    assert persistent["gap_record_count"] == 3
+    current_group = detail["candidate_groups"][0]
+    assert current_group["same_session_history"]["verified_pass_count"] == 3
+    assert len(store.reads) == 3
+
+    compact = capability_intelligence.project(
+        session, max_result_bytes=8_000, doctor_gap_limit=2,
+    )
+    compact_detail = compact["session_activity"]["doctor_health_history"][
+        "diagnostic_pressure"
+    ]
+    assert compact["source"]["response_truncated"] is True
+    assert compact_detail["summary"]["history_verified_record_count"] == 3
+    assert compact_detail["summary"]["same_session_recurrence_status"] == (
+        "observed-in-same-session-history"
+    )
+    assert compact_detail["historical_recurrence"]["candidate_groups"][0][
+        "verified_pass_count"
+    ] == 3
+    assert capability_intelligence._projection_response_size(compact) <= 8_000
+
+
 def test_session_projection_coherence_history_is_bounded_and_linked(
     tmp_path: Path,
 ) -> None:

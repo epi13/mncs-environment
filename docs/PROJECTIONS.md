@@ -1076,8 +1076,10 @@ When service readiness is also recorded in that exact session snapshot, the
 projection exposes the shared snapshot relationship, readiness status, and
 candidate count alongside the Doctor epoch revision relation; it explicitly
 leaves causality unestablished.
-History rows do not contain per-entry evidence references, so the projection
-does not invent them. It omits Doctor inputs, blocker identifiers, and
+Store-backed history rows retain their exact per-pass immutable evidence
+references. Older Store records and file-backed debug sessions may have only
+summary rows; the projection marks those references as not recorded rather
+than reconstructing them. It omits Doctor inputs, blocker identifiers, and
 workspace paths. Summaries are broader health evidence: they do not establish
 a service-specific cause or improvement, and an epoch recorded at an earlier
 snapshot revision does not prove that health remains unchanged.
@@ -1100,27 +1102,36 @@ does not add a telemetry store. The field is omitted when neither a diagnostic
 history nor epoch is present; absence does not imply that diagnostics were
 unneeded, passed, or automatically fulfilled.
 
-Detailed Doctor classification can be requested with
+Detailed Doctor classification and bounded same-session recurrence can be
+requested with
 `mncs-env projections SESSION --interpret environmental-capability
 --doctor-gap-limit N`. The default is zero and performs no additional Doctor
 evidence read. A nonzero limit reads the epoch's exact immutable Doctor record
 through the strict Store reader, verifies its content-derived identity and
 binding to the session epoch, then returns bounded groups of classified
-provider gaps with a limited number of capability-id examples. The
-projection preserves the Doctor epoch's snapshot revision and links matching
-unavailable-set digests in the same session's bounded history. These are
-diagnostic clusters from one authenticated record, not independent-session
-recurrence or proof of a defect. Missing or unverifiable evidence is surfaced
-with an explicit status and no gap details; the immutable evidence reference
-remains available for inspecting the original reason text. Each gap record
-also retains the provider identity, declared capability kind, and
-workspace-relative manifest source when Doctor recorded them. The projection
-groups those owner-declared fields by provider and kind, so an executable CLI
-gap can be distinguished from a storage, source, or coordination contract
-without claiming that either is functional or callable. Older Doctor records
-that did not retain this context remain `not-recorded`; it is not reconstructed
-from today's manifests. Provider kind and source are diagnostic context, not
-proof of a defect or an improvement.
+provider gaps with a limited number of capability-id examples. It also reads
+at most the newest eight per-pass history references, reusing the already
+verified current record when it matches the latest row. Each historical
+artifact must pass content-identity and epoch-binding checks before its
+classifications contribute to same-session recurrence; the scan examines at
+most 512 classified gap rows in any one artifact and reports omitted rows.
+The result includes
+the exact verified evidence references and separates missing, duplicate,
+unavailable, invalid, and mismatched records. The projection preserves the
+Doctor epoch's snapshot revision and links matching unavailable-set digests
+in the same session's bounded history. Recurrence is limited to distinct
+verified passes in one session; it is not cross-session prevalence, causality,
+current provider state, or proof of a defect. Missing or unverifiable evidence
+is surfaced with an explicit status and no historical gap details; the
+immutable evidence reference remains available for inspecting the original
+reason text. Each gap record also retains the provider identity, declared
+capability kind, and workspace-relative manifest source when Doctor recorded
+them. The projection groups those owner-declared fields by provider and kind,
+so an executable CLI gap can be distinguished from a storage, source, or
+coordination contract without claiming that either is functional or callable.
+Older Doctor records that did not retain this context remain `not-recorded`;
+it is not reconstructed from today's manifests. Provider kind and source are
+diagnostic context, not proof of a defect or an improvement.
 
 The compact view also relates the current session binding snapshot to observed
 capability calls. `capability_delivery.bindings` reports each bounded binding's

@@ -212,6 +212,7 @@ MAX_SESSION_DOCTOR_HISTORY = 8
 MAX_DOCTOR_GAP_EXAMPLES = 16
 MAX_DOCTOR_GAP_CODE_GROUPS = 8
 MAX_DOCTOR_GAP_PROVIDER_KIND_GROUPS = 8
+MAX_DOCTOR_GAP_HISTORY_GAPS = 512
 MAX_SESSION_PROJECTION_HISTORY = 8
 MAX_SESSION_RESOURCE_ARTIFACT_WINDOW = 256
 MAX_SESSION_RESOURCE_SAMPLES = 4
@@ -3001,7 +3002,8 @@ def _compact_session_activity_budget_overview(
             compact_doctor["source"] = {
                 key: doctor_source[key]
                 for key in (
-                    "history_record_count", "history_records_omitted",
+                    "history_record_count", "history_records_projected",
+                    "history_records_omitted", "history_limit",
                     "evidence_reference_status",
                 )
                 if (isinstance(doctor_source.get(key), str)
@@ -3018,6 +3020,7 @@ def _compact_session_activity_budget_overview(
                 key: item[key]
                 for key in (
                     "digest", "ordinal_from_newest", "evidence_reference_status",
+                    "evidence_reference",
                 )
                 if key in item
             }
@@ -3057,8 +3060,12 @@ def _compact_session_activity_budget_overview(
                     key: diagnostic_summary[key]
                     for key in (
                         "classified_gap_record_count", "valid_gap_record_count",
+                        "gap_records_examined", "gap_records_omitted_count",
                         "invalid_gap_record_count", "code_group_count",
                         "candidate_group_count", "provider_kind_group_count",
+                        "history_record_count", "history_evidence_reference_count",
+                        "history_verified_record_count",
+                        "same_session_recurrence_status",
                         "cross_session_recurrence_status",
                     )
                     if (isinstance(diagnostic_summary.get(key), str)
@@ -3079,6 +3086,7 @@ def _compact_session_activity_budget_overview(
                             "capability_examples_omitted",
                             "provider_kind_groups_omitted",
                             "cross_session_recurrence_status", "action_hint",
+                            "same_session_history",
                         )
                         if key in candidate
                     }
@@ -3104,6 +3112,59 @@ def _compact_session_activity_budget_overview(
                         )
                     compact_candidates.append(compact_candidate)
                 compact_diagnostic["candidate_groups"] = compact_candidates
+            recurrence = diagnostic.get("historical_recurrence")
+            if isinstance(recurrence, dict):
+                compact_recurrence = {
+                    key: recurrence[key]
+                    for key in ("status",)
+                    if isinstance(recurrence.get(key), str)
+                }
+                recurrence_source = recurrence.get("source")
+                if isinstance(recurrence_source, dict):
+                    compact_recurrence["source"] = {
+                        key: recurrence_source[key]
+                        for key in (
+                            "history_record_count", "evidence_reference_count",
+                            "verified_record_count", "missing_reference_count",
+                            "integrity_failure_count", "epoch_mismatch_count",
+                            "coverage_status",
+                        )
+                        if isinstance(recurrence_source.get(key), str)
+                        or (type(recurrence_source.get(key)) is int
+                            and recurrence_source[key] >= 0)
+                    }
+                recurrence_summary = recurrence.get("summary")
+                if isinstance(recurrence_summary, dict):
+                    compact_recurrence["summary"] = {
+                        key: recurrence_summary[key]
+                        for key in (
+                            "code_group_count", "recurring_code_group_count",
+                            "recurring_capability_count",
+                            "gap_records_omitted_count",
+                            "same_session_recurrence_status",
+                            "cross_session_recurrence_status",
+                        )
+                        if isinstance(recurrence_summary.get(key), str)
+                        or (type(recurrence_summary.get(key)) is int
+                            and recurrence_summary[key] >= 0)
+                    }
+                recurrence_groups = recurrence.get("candidate_groups")
+                if isinstance(recurrence_groups, list):
+                    compact_recurrence["candidate_groups"] = [
+                        {
+                            key: group[key]
+                            for key in (
+                                "code", "verified_pass_count", "gap_record_count",
+                                "distinct_capability_count",
+                                "recurring_capability_count",
+                                "capability_examples_omitted", "recurrence_status",
+                            )
+                            if key in group
+                        }
+                        for group in recurrence_groups[:2]
+                        if isinstance(group, dict)
+                    ]
+                compact_diagnostic["historical_recurrence"] = compact_recurrence
             if compact_diagnostic:
                 compact_doctor["diagnostic_pressure"] = compact_diagnostic
         readiness_relation = doctor_history.get(
@@ -18566,7 +18627,9 @@ def _session_doctor_gap_projection(
     raw_gaps = raw_gaps if isinstance(raw_gaps, list) else []
     grouped: dict[str, dict[str, Any]] = {}
     invalid_gap_record_count = 0
-    for item in raw_gaps:
+    examined_gaps = raw_gaps[:MAX_DOCTOR_GAP_HISTORY_GAPS]
+    gap_records_omitted_count = max(0, len(raw_gaps) - len(examined_gaps))
+    for item in examined_gaps:
         if not isinstance(item, dict):
             invalid_gap_record_count += 1
             continue
@@ -18672,9 +18735,37 @@ def _session_doctor_gap_projection(
         )
         if isinstance(unavailable_digest, str) else 0
     )
+    historical_recurrence = _session_doctor_gap_history_projection(
+        session,
+        history,
+        current_epoch=current_epoch,
+        current_evidence=evidence,
+        current_reference_identity=reference_identity,
+        example_limit=example_limit,
+    )
+    historical_groups = {
+        item["code"]: item
+        for item in historical_recurrence.get("candidate_groups", [])
+        if isinstance(item, dict) and isinstance(item.get("code"), str)
+    }
+    for candidate in candidate_groups:
+        prior = historical_groups.get(candidate["code"])
+        if prior is not None:
+            candidate["same_session_history"] = {
+                "status": prior["recurrence_status"],
+                "verified_pass_count": prior["verified_pass_count"],
+                "history_record_count": historical_recurrence[
+                    "source"]["history_record_count"],
+                "verified_history_record_count": historical_recurrence[
+                    "source"]["verified_record_count"],
+                "distinct_capability_count": prior[
+                    "distinct_capability_count"],
+                "recurring_capability_count": prior[
+                    "recurring_capability_count"],
+            }
     return {
         "status": (
-            "partial" if invalid_gap_record_count
+            "partial" if invalid_gap_record_count or gap_records_omitted_count
             else "observed" if raw_gaps and candidate_groups
             else "no-classified-gaps"
         ),
@@ -18694,6 +18785,8 @@ def _session_doctor_gap_projection(
         "summary": {
             "doctor_gap_example_limit": example_limit,
             "classified_gap_record_count": len(raw_gaps),
+            "gap_records_examined": len(examined_gaps),
+            "gap_records_omitted_count": gap_records_omitted_count,
             "valid_gap_record_count": sum(
                 group["record_count"] for group in grouped.values()
             ),
@@ -18714,15 +18807,271 @@ def _session_doctor_gap_projection(
                 len(group["capability_examples"]) for group in candidate_groups
             ),
             "same_unavailable_digest_history_record_count": matching_history_count,
+            "history_record_count": historical_recurrence[
+                "source"]["history_record_count"],
+            "history_evidence_reference_count": historical_recurrence[
+                "source"]["evidence_reference_count"],
+            "history_verified_record_count": historical_recurrence[
+                "source"]["verified_record_count"],
+            "same_session_recurrence_status": historical_recurrence[
+                "summary"]["same_session_recurrence_status"],
+            "cross_session_recurrence_status": "not-established",
+        },
+        "candidate_groups": candidate_groups,
+        "historical_recurrence": historical_recurrence,
+        "measurement_limits": [
+            "Current classified gaps are grouped from one verified Doctor evidence record; same-session recurrence is counted only across distinct, verified per-pass artifacts.",
+            "Historical recurrence is limited to this session's newest bounded Doctor history; it does not establish cross-session prevalence or causality.",
+            "The Doctor epoch snapshot relation is preserved; an earlier epoch does not establish current provider state.",
+            "A diagnostic classification is an investigation candidate, not independent proof of a defect or of a later improvement.",
+            "Provider kind and source are declarations from the same Doctor record; they do not independently prove functionality, callability, or cause.",
+        ],
+    }
+
+
+def _session_doctor_gap_history_projection(
+    session: Any, history: list[dict[str, Any]], *,
+    current_epoch: dict[str, Any], current_evidence: dict[str, Any],
+    current_reference_identity: str, example_limit: int,
+) -> dict[str, Any]:
+    """Correlate bounded same-session Doctor classifications by verified pass."""
+    selected = history[:MAX_SESSION_DOCTOR_HISTORY]
+    session_id = getattr(session, "session_id", None)
+    prefix = f"{session_id}:doctor:" if isinstance(session_id, str) else None
+    store = getattr(session, "store", None)
+    get_record_strict = getattr(store, "get_record_strict", None)
+    groups: dict[str, dict[str, Any]] = {}
+    seen_references: set[str] = set()
+    evidence_reference_count = 0
+    duplicate_reference_count = 0
+    missing_reference_count = 0
+    invalid_reference_count = 0
+    unavailable_record_count = 0
+    integrity_failure_count = 0
+    epoch_mismatch_count = 0
+    verified_record_count = 0
+    invalid_gap_record_count = 0
+    gap_records_omitted_count = 0
+    verified_evidence_references = []
+
+    for row in selected:
+        reference = row.get("evidence_reference")
+        identity = reference.get("identity") if isinstance(reference, dict) else None
+        if (not isinstance(identity, str) or prefix is None
+                or reference.get("schema") != "mncs.environment.doctor-evidence/1"
+                or not identity.startswith(prefix)
+                or not re.fullmatch(r"[0-9a-f]{64}", identity[len(prefix):])):
+            if row.get("evidence_reference_status") == "not-recorded-per-history-entry":
+                missing_reference_count += 1
+            else:
+                invalid_reference_count += 1
+            continue
+        evidence_reference_count += 1
+        if identity in seen_references:
+            duplicate_reference_count += 1
+            continue
+        seen_references.add(identity)
+
+        if (identity == current_reference_identity
+                and row.get("digest") == current_epoch.get("digest")):
+            evidence = current_evidence
+        elif not callable(get_record_strict):
+            unavailable_record_count += 1
+            continue
+        else:
+            try:
+                evidence = get_record_strict(
+                    b"mncs.environment.doctor-evidence/1",
+                    identity.encode("utf-8"),
+                )
+            except StoreIntegrityFailure:
+                integrity_failure_count += 1
+                continue
+            except StoreUnavailable:
+                unavailable_record_count += 1
+                continue
+
+        if not isinstance(evidence, dict):
+            unavailable_record_count += 1
+            continue
+        if digest_hex(evidence, length=64) != identity[len(prefix):]:
+            integrity_failure_count += 1
+            continue
+        if (
+            evidence.get("schema_version") != "mncs.environment.doctor-evidence/1"
+            or evidence.get("session_id") != session_id
+            or evidence.get("digest") != row.get("digest")
+            or evidence.get("validated_at") != row.get("validated_at")
+            or evidence.get("summary") != row.get("summary")
+        ):
+            epoch_mismatch_count += 1
+            continue
+
+        verified_record_count += 1
+        verified_evidence_references.append({
+            "identity": identity,
+            "doctor_epoch_digest": row.get("digest"),
+            "validated_at": row.get("validated_at"),
+            "ordinal_from_newest": row.get("ordinal_from_newest"),
+            "content_integrity_status": "verified",
+            "epoch_binding_status": "matched",
+        })
+        classification = evidence.get("classification")
+        if not isinstance(classification, dict) or not isinstance(
+            classification.get("gaps"), list,
+        ):
+            invalid_gap_record_count += 1
+            continue
+        raw_gaps = classification["gaps"]
+        examined_gaps = raw_gaps[:MAX_DOCTOR_GAP_HISTORY_GAPS]
+        gap_records_omitted_count += max(0, len(raw_gaps) - len(examined_gaps))
+        ordinal = row.get("ordinal_from_newest")
+        seen_codes: set[str] = set()
+        seen_capabilities: dict[str, set[str]] = {}
+        for gap in examined_gaps:
+            if not isinstance(gap, dict):
+                invalid_gap_record_count += 1
+                continue
+            code = gap.get("code")
+            capability = gap.get("capability")
+            if (
+                not isinstance(code, str)
+                or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,95}", code)
+                or not isinstance(capability, str)
+                or not re.fullmatch(
+                    r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}", capability,
+                )
+            ):
+                invalid_gap_record_count += 1
+                continue
+            group = groups.setdefault(code, {
+                "pass_ordinals": set(),
+                "gap_record_count": 0,
+                "capabilities": {},
+            })
+            group["gap_record_count"] += 1
+            seen_codes.add(code)
+            seen_capabilities.setdefault(code, set()).add(capability)
+            capability_group = group["capabilities"].setdefault(
+                capability,
+                {"pass_ordinals": set(), "gap_record_count": 0},
+            )
+            capability_group["gap_record_count"] += 1
+        for code in seen_codes:
+            groups[code]["pass_ordinals"].add(ordinal)
+        for code, capabilities in seen_capabilities.items():
+            for capability in capabilities:
+                groups[code]["capabilities"][capability][
+                    "pass_ordinals"
+                ].add(ordinal)
+
+    ordered_groups = sorted(
+        groups.items(),
+        key=lambda item: (
+            -len(item[1]["pass_ordinals"]), -item[1]["gap_record_count"],
+            item[0],
+        ),
+    )[:MAX_DOCTOR_GAP_CODE_GROUPS]
+    candidate_groups = []
+    for code, group in ordered_groups:
+        capabilities = sorted(
+            group["capabilities"].items(),
+            key=lambda item: (
+                -len(item[1]["pass_ordinals"]), -item[1]["gap_record_count"],
+                item[0],
+            ),
+        )
+        capability_examples = [
+            {
+                "capability": capability,
+                "verified_pass_count": len(detail["pass_ordinals"]),
+                "gap_record_count": detail["gap_record_count"],
+            }
+            for capability, detail in capabilities[:example_limit]
+        ]
+        pass_count = len(group["pass_ordinals"])
+        recurring_capability_count = sum(
+            1 for _, detail in capabilities
+            if len(detail["pass_ordinals"]) > 1
+        )
+        candidate_groups.append({
+            "interpretation": "same-session-doctor-classification-recurrence",
+            "code": code,
+            "verified_pass_count": pass_count,
+            "gap_record_count": group["gap_record_count"],
+            "distinct_capability_count": len(capabilities),
+            "recurring_capability_count": recurring_capability_count,
+            "capability_examples": capability_examples,
+            "capability_examples_omitted": max(
+                0, len(capabilities) - len(capability_examples),
+            ),
+            "recurrence_status": (
+                "repeated-in-session-history" if pass_count > 1
+                else "single-observation-in-session-history"
+            ),
+        })
+
+    if not selected:
+        coverage_status = "no-history-records"
+    elif verified_record_count == len(selected) and not any((
+        duplicate_reference_count, invalid_gap_record_count,
+        gap_records_omitted_count,
+    )):
+        coverage_status = "complete"
+    elif (verified_record_count == 0 and missing_reference_count == len(selected)):
+        coverage_status = "per-pass-evidence-not-recorded"
+    else:
+        coverage_status = "partial"
+    repeated_group_count = sum(
+        1 for item in candidate_groups if item["verified_pass_count"] > 1
+    )
+    recurring_capability_count = sum(
+        item["recurring_capability_count"] for item in candidate_groups
+    )
+    if repeated_group_count:
+        recurrence_status = "observed-in-same-session-history"
+    elif coverage_status == "complete":
+        recurrence_status = "no-recurrence-observed-in-bounded-history"
+    else:
+        recurrence_status = "not-established"
+    return {
+        "status": "observed" if coverage_status == "complete" else (
+            "not-recorded-per-history-entry"
+            if coverage_status == "per-pass-evidence-not-recorded" else "partial"
+        ),
+        "source": {
+            "kind": "bounded-same-session-doctor-history",
+            "history_record_count": len(selected),
+            "history_record_limit": MAX_SESSION_DOCTOR_HISTORY,
+            "evidence_reference_count": evidence_reference_count,
+            "verified_record_count": verified_record_count,
+            "missing_reference_count": missing_reference_count,
+            "invalid_reference_count": invalid_reference_count,
+            "duplicate_reference_count": duplicate_reference_count,
+            "unavailable_record_count": unavailable_record_count,
+            "integrity_failure_count": integrity_failure_count,
+            "epoch_mismatch_count": epoch_mismatch_count,
+            "coverage_status": coverage_status,
+            "verified_evidence_references": verified_evidence_references,
+        },
+        "summary": {
+            "classified_gap_record_count": sum(
+                item["gap_record_count"] for item in groups.values()
+            ),
+            "code_group_count": len(groups),
+            "candidate_group_count": len(candidate_groups),
+            "recurring_code_group_count": repeated_group_count,
+            "recurring_capability_count": recurring_capability_count,
+            "invalid_gap_record_count": invalid_gap_record_count,
+            "gap_records_omitted_count": gap_records_omitted_count,
+            "same_session_recurrence_status": recurrence_status,
             "cross_session_recurrence_status": "not-established",
         },
         "candidate_groups": candidate_groups,
         "measurement_limits": [
-            "Classified gaps are grouped from one verified Doctor evidence record; one group spanning capabilities is not independent-session recurrence.",
-            "Repeated unavailable-set digests count matching rows in this session's bounded Doctor history only.",
-            "The Doctor epoch snapshot relation is preserved; an earlier epoch does not establish current provider state.",
-            "A diagnostic classification is an investigation candidate, not independent proof of a defect or of a later improvement.",
-            "Provider kind and source are declarations from the same Doctor record; they do not independently prove functionality, callability, or cause.",
+            "A repeated classification is counted across distinct content-verified Doctor artifacts whose session, epoch digest, timestamp, and summary match the bounded history row.",
+            "This is same-session recurrence in a bounded history, not cross-session prevalence, causality, current service state, or proof that a classified gap is a defect.",
+            "History rows without per-pass references remain unavailable; no earlier detail is reconstructed from summary digests.",
         ],
     }
 
@@ -18765,6 +19114,27 @@ def _session_doctor_health_history(
 
     def timestamp(value: Any) -> str | None:
         return value if isinstance(value, str) and timestamp_pattern.fullmatch(value) else None
+
+    def bounded_evidence_reference(value: Any) -> dict[str, str] | None:
+        if not isinstance(value, dict):
+            return None
+        reference_schema = value.get("schema")
+        reference_identity = value.get("identity")
+        expected_prefix = f"{session_id}:doctor:" if session_id else None
+        if (reference_schema != "mncs.environment.doctor-evidence/1"
+                or not isinstance(reference_identity, str)
+                or len(reference_identity) > 256
+                or expected_prefix is None
+                or not reference_identity.startswith(expected_prefix)
+                or not evidence_digest_pattern.fullmatch(
+                    reference_identity[len(expected_prefix):],
+                )):
+            return None
+        return {
+            "kind": "doctor-immutable-evidence-record",
+            "schema": reference_schema,
+            "identity": reference_identity,
+        }
 
     session_id = identity(getattr(session, "session_id", None))
     environment_id = identity(snapshot.get("environment_id"))
@@ -18817,13 +19187,23 @@ def _session_doctor_health_history(
             or ("reused" in item and type(item.get("reused")) is not bool)
         ):
             invalid_history_count += 1
+        history_reference = bounded_evidence_reference(item.get("evidence_ref"))
+        if "evidence_ref" in item and history_reference is None:
+            invalid_history_count += 1
         record = {
             "ordinal_from_newest": offset,
             "digest": digest,
             "validated_at": validated_at,
             "summary": counts,
-            "evidence_reference_status": "not-recorded-per-history-entry",
+            "evidence_reference_status": (
+                "reference-identified" if history_reference is not None
+                else "reference-invalid-or-unmatched"
+                if "evidence_ref" in item
+                else "not-recorded-per-history-entry"
+            ),
         }
+        if history_reference is not None:
+            record["evidence_reference"] = history_reference
         if unavailable_counts is not None:
             record["unavailable"] = unavailable_counts
         if type(item.get("reused")) is bool:
@@ -18880,22 +19260,8 @@ def _session_doctor_health_history(
     evidence_reference = None
     evidence_reference_status = "not-recorded"
     if isinstance(raw_evidence_reference, dict):
-        reference_schema = raw_evidence_reference.get("schema")
-        reference_identity = raw_evidence_reference.get("identity")
-        expected_prefix = f"{session_id}:doctor:" if session_id else None
-        if (reference_schema == "mncs.environment.doctor-evidence/1"
-                and isinstance(reference_identity, str)
-                and len(reference_identity) <= 256
-                and expected_prefix is not None
-                and reference_identity.startswith(expected_prefix)
-                and evidence_digest_pattern.fullmatch(
-                    reference_identity[len(expected_prefix):],
-                )):
-            evidence_reference = {
-                "kind": "doctor-immutable-evidence-record",
-                "schema": reference_schema,
-                "identity": reference_identity,
-            }
+        evidence_reference = bounded_evidence_reference(raw_evidence_reference)
+        if evidence_reference is not None:
             evidence_reference_status = "reference-identified"
         else:
             evidence_reference_status = "reference-invalid-or-unmatched"

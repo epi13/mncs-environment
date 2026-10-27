@@ -78,7 +78,18 @@ reports, service operations, the unavailable-capability classification,
 and the readiness summary — lives in the session evidence artifact
 (`sessions/<id>/doctor-evidence.json`) and is retrievable with
 `mncs-env doctor <session> --evidence`. The last ten passes are kept in
-the snapshot history.
+snapshot history. With the canonical Store backend, each history row now
+retains the exact immutable evidence reference for that Doctor pass; the
+existing top-level reference continues to identify the current artifact.
+File-backed debug sessions retain summary history and the current detailed
+artifact, without claiming per-pass immutable references.
+
+Capability intelligence can inspect these references on demand with
+`--doctor-gap-limit`. It verifies each artifact against its content identity
+and history epoch before counting repeated classifications in this session's
+bounded history. Older rows without references remain unavailable. A repeated
+classification is an investigation signal, not proof of cause, a functional
+failure, or resolution.
 
 Related surfaces:
 
