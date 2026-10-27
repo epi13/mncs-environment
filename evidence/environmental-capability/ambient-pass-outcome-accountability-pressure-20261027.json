@@ -1,0 +1,68 @@
+{
+  "captured_at": "2026-10-27T23:13:00Z",
+  "identity": "ev_environment_quiet_owner_pass_reason_pressure_20261027",
+  "measurement_basis": "read-only ECI projection and source-linked owner-pass result trace",
+  "not_measured": [
+    "eligible service opportunities or agent need",
+    "agent receipt, service fulfillment, or intervention reduction",
+    "whether a quiet pass was useful to a particular development objective",
+    "cross-session recurrence after the implementation is used by other consumers"
+  ],
+  "observation": {
+    "kind": "ambient-owner-pass-quiet-reason-pressure",
+    "outcome": {
+      "interpretation": "Five scheduled passes returned no result record while two returned recorded results. The projection did not establish why quiet passes emitted no block.",
+      "interpretation_limit": "A runner-returned-none result is not an owner failure and does not establish agent need, service failure, or missing capability.",
+      "owner_failure_count": 0,
+      "result_record_count": 7,
+      "result_status_counts": {
+        "result-recorded": 2,
+        "runner-returned-none": 5
+      },
+      "scheduled_owner_count": 7
+    },
+    "request": {
+      "operation": "inspect owner-pass result classifications and their execution links",
+      "projection_identity": "eci_36be38559d751b43",
+      "source_observation_identity": "ev_environment_ambient_owner_pass_result_trace_20261027"
+    },
+    "source_interface": "MNCS Environment incremental coherence trace and capability-intelligence projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Preserve bounded reason-coded quiet outcomes through the existing exact execution/result trace and ECI projection while keeping the agent-facing response quiet.",
+    "category": "environmental-service-accountability",
+    "identity": "ph_environment_quiet_owner_pass_reason_coverage_20261027",
+    "owner": "mncs-environment",
+    "subsystem": "mncs-environment coherence adapters and capability intelligence",
+    "title": "Quiet ambient owner-pass results do not explain why the entry response omitted a block"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "f359ab0fb8d72cf364f9d357fc18d26e44cc0e53",
+      "identity": "ev_environment_ambient_owner_pass_result_trace_20261027",
+      "kind": "direct-session-and-projection-readback",
+      "path": "evidence/environmental-capability/ambient-owner-pass-result-trace-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "73f638e25e5cb940b006856dc6c3e23425c375d337844a2ace71e635d697bd2b"
+    }
+  ]
+}

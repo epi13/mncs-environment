@@ -1,0 +1,95 @@
+{
+  "captured_at": "2026-10-27T23:13:00Z",
+  "identity": "ev_environment_quiet_owner_pass_reason_improvement_20261027",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_quiet_owner_pass_reason_coverage_20261027",
+    "basis": "The change extends the existing exact execution/result join and ECI view; it does not create a second service ledger. Trace and projection tests validate reason-code constraints, identity correlation, compact summaries, and the unchanged agent-facing quiet response.",
+    "effectiveness_assessment": "implementation verified; live post-change service outcome and longitudinal effectiveness not assessed",
+    "identity": "im_environment_quiet_owner_pass_reason_accountability_20261027",
+    "implementation_reference": {
+      "commit": "7fa19acaea0e36550cd8b9416fc61036aa92cbde",
+      "identity": "mncs_environment_quiet_owner_pass_reasons_7fa19ac",
+      "kind": "implementation-source",
+      "path": "mncs_env/coherence.py",
+      "repository": "mncs-environment",
+      "sha256": "b11e59e5bad58daf65d1b43ebf50382ccdab01f777e941f61fe6c119748ae095"
+    },
+    "not_measured": [
+      "agent need, receipt, ambient fulfillment, or intervention burden",
+      "frequency of the quiet reasons across subsequent sessions",
+      "whether the new projection changes service use or agent behavior",
+      "live resident execution with the current environment definition"
+    ],
+    "subsequent_observation_identity": null,
+    "verification_observation_identity": "ev_environment_quiet_owner_pass_reason_verification_20261027"
+  },
+  "measurement_basis": "implementation and independently exercised adapter, scheduler, projection, and entry response boundaries",
+  "not_measured": [
+    "longitudinal change in avoidable agent work",
+    "service opportunity denominator and ambient fulfillment ratio",
+    "whether future agent sessions make different or more effective use of the projection"
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "effectiveness_assessment": "Immediate recording, correlation, projection, and response preservation are verified; ambient fulfillment and reduced agent intervention remain unmeasured.",
+      "implemented_behavior": "Quiet ambient adapters return a strict, bounded internal outcome with completed-quietly or disabled disposition and a reason code. The coherence trace stores the outcome against the exact execution identity, and ECI projects reason/disposition counts and per-pass fields. Entry unwraps the internal record so normal quiet responses remain block-free.",
+      "live_readback_status": "not-observed-after-change; the existing session resident route stopped before execution because its bound environment definition was stale and requires re-entry.",
+      "verification_basis": "Targeted adapter, recovery-scan, native-router, ECI correlation/compaction, and real-provider entry continuity checks passed. The repository-wide run exposed two old direct-adapter assertions, which were updated to exercise the response boundary and then passed in the action-module run."
+    },
+    "request": {
+      "implementation_commit": "7fa19acaea0e36550cd8b9416fc61036aa92cbde",
+      "operation": "link quiet-result ambiguity pressure to its implementation and verification",
+      "pressure_hypothesis_identity": "ph_environment_quiet_owner_pass_reason_coverage_20261027",
+      "verification_observation_identity": "ev_environment_quiet_owner_pass_reason_verification_20261027"
+    },
+    "source_interface": "MNCS Environment owner-pass result trace and capability-intelligence projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Preserve bounded reason-coded quiet outcomes through the existing exact execution/result trace and ECI projection while keeping the agent-facing response quiet.",
+    "category": "environmental-service-accountability",
+    "identity": "ph_environment_quiet_owner_pass_reason_coverage_20261027",
+    "owner": "mncs-environment",
+    "subsystem": "mncs-environment coherence adapters and capability intelligence",
+    "title": "Quiet ambient owner-pass results do not explain why the entry response omitted a block"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "identity": "ph_environment_quiet_owner_pass_reason_coverage_20261027",
+      "kind": "pressure-observation",
+      "path": "evidence/environmental-capability/ambient-pass-outcome-accountability-pressure-20261027.json",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_quiet_owner_pass_reason_verification_20261027",
+      "kind": "verification-observation",
+      "path": "evidence/environmental-capability/ambient-pass-outcome-accountability-verification-20261027.json",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_ambient_owner_pass_result_trace_20261027",
+      "kind": "historical-operational-evidence",
+      "path": "evidence/environmental-capability/ambient-owner-pass-result-trace-20261027.json",
+      "repository": "mncs-environment"
+    }
+  ]
+}

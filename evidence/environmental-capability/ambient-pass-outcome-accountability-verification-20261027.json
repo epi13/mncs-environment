@@ -1,0 +1,113 @@
+{
+  "captured_at": "2026-10-27T23:13:00Z",
+  "identity": "ev_environment_quiet_owner_pass_reason_verification_20261027",
+  "measurement_basis": "targeted owner-pass and ECI regression tests, repository regression run, scoped static checks, and the existing real-provider vertical proof",
+  "observation": {
+    "kind": "ambient-owner-pass-quiet-reason-verification",
+    "outcome": {
+      "repository_run_before_test_expectation_update": {
+        "duration_seconds": 931.86,
+        "failed": 2,
+        "failure_cause": "Two legacy adapter tests expected the internal quiet result to be None; their helper now checks the agent-facing response unwrapper. The affected action module and targeted tests passed after that test-only adjustment; the full suite was not rerun.",
+        "passed": 1175,
+        "skipped": 46
+      },
+      "static_checks": {
+        "git_diff_check": "passed",
+        "python_compileall": "passed",
+        "ruff_select_F_on_touched_code_and_tests_except_capability_intelligence_test_file": "passed"
+      },
+      "targeted": {
+        "duration_seconds": 1.91,
+        "failed": 0,
+        "passed": 52,
+        "skipped": 21
+      },
+      "verification_limit": "Projection and adapter tests establish preservation and discoverability of reason codes, not actual agent need or ambient service usefulness.",
+      "vertical_proof": {
+        "bindings": 30,
+        "fresh_process_resume": true,
+        "handoff_and_completion": true,
+        "real_provider_invocation": "mncs-atlas:context-capsule",
+        "resolved_repositories": 2,
+        "status": "passed"
+      }
+    },
+    "request": {
+      "implementation_commit": "7fa19acaea0e36550cd8b9416fc61036aa92cbde",
+      "repository_command": "python3 -m pytest tests/ -q",
+      "targeted_command": "python3 -m pytest -q tests/test_actions.py tests/test_incremental.py tests/test_entry.py::test_quiet_ambient_adapters_record_reasons_without_agent_blocks tests/test_capability_intelligence.py::test_ambient_service_execution_is_projected_with_session_context_and_limits",
+      "vertical_proof_command": "python3 scripts/vertical_proof.py"
+    },
+    "source_interface": "MNCS Environment test suite and vertical proof"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "7fa19acaea0e36550cd8b9416fc61036aa92cbde",
+      "kind": "implementation",
+      "path": "mncs_env/coherence.py",
+      "repository": "mncs-environment",
+      "sha256": "b11e59e5bad58daf65d1b43ebf50382ccdab01f777e941f61fe6c119748ae095"
+    },
+    {
+      "commit": "7fa19acaea0e36550cd8b9416fc61036aa92cbde",
+      "kind": "adapter-integration",
+      "path": "mncs_env/entry.py",
+      "repository": "mncs-environment",
+      "sha256": "11b47990578d948991f270738e968a34459828d00a36646a093bf7439fb386e1"
+    },
+    {
+      "commit": "7fa19acaea0e36550cd8b9416fc61036aa92cbde",
+      "kind": "projection",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "58e591d60116312b92bed20e23ace56b7496e861be081c787a3973ce18705209"
+    },
+    {
+      "commit": "7fa19acaea0e36550cd8b9416fc61036aa92cbde",
+      "kind": "regression-test",
+      "path": "tests/test_incremental.py",
+      "repository": "mncs-environment",
+      "sha256": "66fff4046e3320961dc30db88ca12e02c394cb68fe181544cbb80627bfdbf98b"
+    },
+    {
+      "commit": "7fa19acaea0e36550cd8b9416fc61036aa92cbde",
+      "kind": "response-boundary-test",
+      "path": "tests/test_actions.py",
+      "repository": "mncs-environment",
+      "sha256": "84c57f2c345a0a8de9886f6a2c11da255c17035bb509eeaf288c984fe5bbc31e"
+    },
+    {
+      "commit": "7fa19acaea0e36550cd8b9416fc61036aa92cbde",
+      "kind": "projection-test",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "47f071bce36816e5d06b9acf006f62664d82fba2fa79e6a580412bc99f66e777"
+    },
+    {
+      "commit": "7fa19acaea0e36550cd8b9416fc61036aa92cbde",
+      "kind": "adapter-test",
+      "path": "tests/test_entry.py",
+      "repository": "mncs-environment",
+      "sha256": "fd875d783ab7f25054be303e1f569221f799b851b0eff79d332c59e2f9d65031"
+    }
+  ]
+}

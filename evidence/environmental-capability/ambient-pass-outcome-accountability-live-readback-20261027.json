@@ -1,0 +1,51 @@
+{
+  "captured_at": "2026-10-27T23:13:00Z",
+  "identity": "ev_environment_quiet_owner_pass_live_readback_attempt_20261027",
+  "measurement_basis": "resident route attempt stopped by Environment before owner passes ran",
+  "not_measured": [
+    "post-change resident outcome records",
+    "ambient service fulfillment, agent need, or reduced intervention"
+  ],
+  "observation": {
+    "kind": "ambient-owner-pass-post-change-readback-attempt",
+    "outcome": {
+      "interpretation_limit": "This records a safe refusal before execution. It is not evidence about the new quiet-outcome implementation or service quality.",
+      "owner_passes_run": false,
+      "reason": "resident definition changed; re-enter to select and bind the new environment",
+      "status": "not-executed"
+    },
+    "request": {
+      "bound_definition_id": "env_712fb160746dea51",
+      "current_definition_id": "env_cdd6c5cb5b860282",
+      "operation": "resident --max-ticks 1",
+      "session_id": "ses_a752e1c55fb4ca6f"
+    },
+    "source_interface": "mncs-env resident"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_owner_pass_result_trace_20261027",
+      "kind": "prior-session-context",
+      "path": "evidence/environmental-capability/ambient-owner-pass-result-trace-20261027.json",
+      "repository": "mncs-environment"
+    }
+  ]
+}
