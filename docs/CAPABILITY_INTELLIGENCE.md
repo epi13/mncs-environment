@@ -105,6 +105,15 @@ linked by that observation. It targets the original observation by its
 content-addressed reference and leaves its recorded behavior and verification
 unchanged.
 
+The related
+[`retirement-coordination-deferral-20261027.json`](../evidence/environmental-capability/retirement-coordination-deferral-20261027.json)
+records a second verified caller of the same distinction. Branch retirement
+still requires its exact scoped lease before deletion, while the CLI now reports
+that missing lease as `coordination-deferred` with a concrete next step instead
+of requesting owner authorization. The focused regression confirms no
+retirement adapter ran; live recovery and coordination overhead remain
+unmeasured.
+
 The selected campaign evidence now records an existing MNCS Debug consumer of
 `mncs.std.process.v1`, its duplicate-library-root compile pressure, the resolver
 change at Debug commit `a036a0042bd0529ef8401b952eb921146e01590d`, and the exact

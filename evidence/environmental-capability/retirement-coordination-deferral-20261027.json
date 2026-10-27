@@ -1,0 +1,111 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_retirement_coordination_deferral_20261027",
+  "captured_at": "2026-10-27T04:40:22Z",
+  "measurement_basis": "Environment retirement authority contract, focused CLI regression, and exact committed implementation pointers",
+  "observation": {
+    "kind": "retirement-coordination-deferral",
+    "source_interface": "MNCS Environment Session.check and mncs-env retire",
+    "request": {
+      "scenario": "A branch retirement preflight lacks the exact scoped mutation lease required by the authority evaluator.",
+      "evidence_basis": "A focused CLI regression supplies the coordination defer and verifies the structured result before any retirement adapter is called.",
+      "live_agent_conflict_observed": false
+    },
+    "outcome": {
+      "authority_decision": {
+        "verdict": "defer",
+        "decision_domain": "coordination",
+        "required_coordination": "scoped-mutation-lease",
+        "coordination_status": "exact-scope-lease-required",
+        "persistent_authority_required": false,
+        "next_step": "acquire-exact-scope-lease",
+        "operation_executed": false
+      },
+      "cli_result": {
+        "diagnostic_code": "coordination-deferred",
+        "owner_approval_reported": false,
+        "mutation_performed": false
+      },
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The regression verifies correct classification and that retirement does not run without its exact lease. It does not measure live agent recovery steps, wait time, or change in coordination overhead."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_f7b48e7b88a750b0",
+    "campaign_evidence_count_before_recording": 5
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_retirement_defer_misreported_as_authority_20261027",
+    "title": "Retirement CLI reported coordination deferral as owner authorization",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment authority and branch/worktree retirement",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Preserve the authority evaluator's decision domain and exact coordination next step in retirement diagnostics; keep policy denial, coordination deferral, and owner escalation distinct.",
+    "recurrence_status": "not-established"
+  },
+  "supporting_sources": [
+    {
+      "kind": "retirement-authority-disposition-implementation",
+      "identity": "mncs_environment_retirement_coordination_cli_94f358c",
+      "repository": "mncs-environment",
+      "commit": "94f358cea7dd26bea7ef8da1059932497a126f3a",
+      "path": "mncs_env/cli.py",
+      "sha256": "9cd61288983a0d734dea6362891810f95c2e5ece0e9b525590c1423586820133"
+    },
+    {
+      "kind": "retirement-coordination-regression",
+      "identity": "mncs_environment_retirement_coordination_test_94f358c",
+      "repository": "mncs-environment",
+      "commit": "94f358cea7dd26bea7ef8da1059932497a126f3a",
+      "path": "tests/test_retire.py",
+      "sha256": "1f0aa0835ec160b4c307e7b1e63d43def8cf39a6c76f45cce0e1f3b919cd7ac5"
+    },
+    {
+      "kind": "retirement-coordination-interface-documentation",
+      "identity": "mncs_environment_retirement_coordination_docs_94f358c",
+      "repository": "mncs-environment",
+      "commit": "94f358cea7dd26bea7ef8da1059932497a126f3a",
+      "path": "docs/ENTRY.md",
+      "sha256": "4d746bb9d33d2222644df01c026677cf7659bfbaa7aa189de88125a47a34634b"
+    }
+  ],
+  "improvement_relation": {
+    "identity": "im_environment_retirement_coordination_deferral_20261027",
+    "addresses_hypothesis_identity": "ph_environment_retirement_defer_misreported_as_authority_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_retirement_coordination_cli_94f358c",
+      "repository": "mncs-environment",
+      "commit": "94f358cea7dd26bea7ef8da1059932497a126f3a",
+      "path": "mncs_env/cli.py",
+      "sha256": "9cd61288983a0d734dea6362891810f95c2e5ece0e9b525590c1423586820133"
+    },
+    "verification_observation_identity": "ev_environment_retirement_coordination_deferral_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "The retirement CLI now preserves coordination deferral, required lease scope, next step, and the fact that no mutation ran. A regression verifies this result while the neighboring escalation regression continues to distinguish owner authorization.",
+    "not_measured": [
+      "live multi-agent branch retirement behavior",
+      "agent-visible recovery steps or waiting time",
+      "recurrence across sessions",
+      "whether the new diagnostic reduces coordination overhead in practice"
+    ]
+  },
+  "not_measured": [
+    "live retirement blocked by another agent",
+    "actual branch or worktree deletion after this change",
+    "cross-session recurrence and agent discovery"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "consumer_id": "codex-environment-capability-intelligence",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
