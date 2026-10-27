@@ -1,0 +1,144 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_coordination_aware_diagnostic_deferral_20261027",
+  "captured_at": "2026-10-27T04:27:43Z",
+  "measurement_basis": "Environment authority contract, Debug capture regression, bounded Environmental Capability projection test, and existing campaign proofs",
+  "observation": {
+    "kind": "coordination-aware-diagnostic-capture",
+    "source_interface": "MNCS Environment Session.check, MNCS Debug ambient diagnostics, and the environmental-capability session projection",
+    "request": {
+      "scenario": "A verification capture encounters an overlapping coordination claim.",
+      "evidence_basis": "A focused regression fixture supplies the coordination decision and source event reference; the authority evaluator test independently verifies the defer contract.",
+      "live_agent_conflict_observed": false
+    },
+    "outcome": {
+      "authority_decision": {
+        "verdict": "defer",
+        "decision_domain": "coordination",
+        "persistent_authority_required": false,
+        "operation_executed": false,
+        "next_step": "select-an-exact-non-overlapping-operation-scope"
+      },
+      "implementation": {
+        "diagnostic_capture": "deferred-before-provider-invocation",
+        "diagnostic_event": "diagnostic.deferred",
+        "causal_basis": "exact authority coordination event identity in the event causes list",
+        "projection": "session_activity.coordination_deferrals[].diagnostic_capture_relation",
+        "observation_cache": "incomplete pass remains uncached and preserves prior diagnostic evidence"
+      },
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "Regression fixtures establish the contract and projection relationship. No live agent capture conflict or post-change reduction in coordination work was observed."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_95d72675f5bf28e0",
+    "campaign_evidence_count_before_recording": 3
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_debug_capture_misclassifies_coordination_defer_20261027",
+    "title": "Debug capture treated coordination deferral as authority denial and failed capture",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment authority and Debug diagnostic capture",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Preserve the Environment decision domain, required coordination, next step, and source event when Debug capture is deferred; expose the exact causal relation through the existing Environmental Capability projection.",
+    "recurrence_status": "not-established"
+  },
+  "supporting_sources": [
+    {
+      "kind": "diagnostic-capture-implementation",
+      "repository": "mncs-environment",
+      "commit": "fc3295bec0a842261ea245639eb25405406b39a0",
+      "path": "mncs_env/diagnostics.py",
+      "sha256": "f7f687fd03b2b5a8ab8ac7657c61a018946c1eebd97eca9b5e66bada654b4205"
+    },
+    {
+      "kind": "coordination-projection-implementation",
+      "repository": "mncs-environment",
+      "commit": "2b5946822c59c02e99d979e72555b1f1d119488d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "412f8d73461e05fa41412877868a305effef91952a83420514aa0398339e39a6"
+    },
+    {
+      "kind": "diagnostic-and-authority-regressions",
+      "repository": "mncs-environment",
+      "commit": "fc3295bec0a842261ea245639eb25405406b39a0",
+      "tests": [
+        "tests/test_diagnostics.py::LifecycleTests::test_coordination_deferral_is_durable_and_not_a_capture_failure",
+        "tests/test_diagnostics.py::LifecycleTests::test_policy_denial_prevents_capture",
+        "tests/test_projection_verification.py::VerifyAuthorityTests::test_verify_defers_on_foreign_claim_overlap"
+      ],
+      "result": "30 passed"
+    },
+    {
+      "kind": "environmental-capability-projection-regression",
+      "repository": "mncs-environment",
+      "commit": "2b5946822c59c02e99d979e72555b1f1d119488d",
+      "test": "tests/test_capability_intelligence.py::test_coordination_deferrals_project_without_becoming_authority_escalations",
+      "result": "passed"
+    },
+    {
+      "kind": "campaign-proof-suite",
+      "repository": "mncs-environment",
+      "commit": "2b5946822c59c02e99d979e72555b1f1d119488d",
+      "path": "scripts/campaign_proofs.py",
+      "result": "17 passed, 0 skipped, 0 failed"
+    },
+    {
+      "kind": "environment-continuity-vertical-proof",
+      "repository": "mncs-environment",
+      "commit": "2b5946822c59c02e99d979e72555b1f1d119488d",
+      "path": "scripts/vertical_proof.py",
+      "result": "passed"
+    },
+    {
+      "kind": "base-revision-control-run",
+      "repository": "mncs-environment",
+      "commit": "c516ebbf30243acda233bc5f7577e3a1614a0f82",
+      "tests": [
+        "tests/test_projection_verification.py::AmbientVerificationTests::test_old_pass_does_not_authorize_new_generation",
+        "tests/test_projection_verification.py::WatchTests::test_watch_notices_canonical_change_without_reentry",
+        "tests/test_projection_verification.py::WatchTests::test_watch_reconsiders_after_claim_release"
+      ],
+      "result": "same three failures reproduced on unchanged main; unrelated to diagnostic and authority changes"
+    }
+  ],
+  "improvement_relation": {
+    "identity": "im_environment_debug_capture_coordination_deferral_20261027",
+    "addresses_hypothesis_identity": "ph_environment_debug_capture_misclassifies_coordination_defer_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_coordination_aware_diagnostic_projection_20261027",
+      "repository": "mncs-environment",
+      "commit": "2b5946822c59c02e99d979e72555b1f1d119488d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "412f8d73461e05fa41412877868a305effef91952a83420514aa0398339e39a6"
+    },
+    "verification_observation_identity": "ev_environment_coordination_aware_diagnostic_deferral_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "Debug now records coordination deferral separately from policy denial and capture failure, retains the authority event as a cause, preserves prior evidence, and leaves the incomplete pass uncached. The existing Environmental Capability coordination-deferral view exposes the exact event relationship and its bounded coverage status.",
+    "not_measured": [
+      "cross-session recurrence across real agent activity",
+      "whether agents discover or use the new relation",
+      "reduction in manual coordination or failed capture attempts",
+      "long-term effectiveness after actual diagnostic capture work resumes"
+    ]
+  },
+  "not_measured": [
+    "live concurrent agent behavior",
+    "actual diagnostic capture conflicts after the change",
+    "cross-session recurrence and agent discovery"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "consumer_id": "codex-environment-capability-intelligence",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

@@ -89,6 +89,15 @@ executed edit. A focused fixture covers the case where the earlier workspace
 projection omitted the worktree; a later independent agent's adoption and any
 reduction in coordination overhead remain unmeasured.
 
+The 2026-10-27
+[`coordination-aware-diagnostic-deferral-20261027.json`](../evidence/environmental-capability/coordination-aware-diagnostic-deferral-20261027.json)
+records a verified Debug and Environment integration: a verification capture
+that meets an overlapping coordination claim is deferred before provider
+invocation, retains the required next step and exact authority event cause, and
+appears through the existing coordination-deferral projection. Policy denial
+remains a separate outcome. This is regression and projection evidence; live
+agent recurrence and reduced coordination effort remain unmeasured.
+
 The selected campaign evidence now records an existing MNCS Debug consumer of
 `mncs.std.process.v1`, its duplicate-library-root compile pressure, the resolver
 change at Debug commit `a036a0042bd0529ef8401b952eb921146e01590d`, and the exact
