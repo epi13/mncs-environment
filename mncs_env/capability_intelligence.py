@@ -17,6 +17,7 @@ import re
 import selectors
 import subprocess
 import time
+from copy import deepcopy
 from datetime import timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -201,6 +202,8 @@ MAX_EVIDENCE_REFERENCE_CORRECTIONS = 8
 MAX_CAMPAIGN_CHARTER_CANDIDATES = 4
 MAX_CAMPAIGN_CHARTER_OBJECTIVE_CHARS = 4096
 MAX_RESULT_BYTES = 72 * 1024
+MIN_EVIDENCE_PRIORITY_RESULT_BYTES = 7 * 1024
+MAX_EVIDENCE_PRIORITY_RESULT_BYTES = 8 * 1024
 CAPTURED_OPERATION_RESULT_SOURCE_KINDS = frozenset({
     "direct-operation-result", "direct-cli-projection-result",
 })
@@ -2890,7 +2893,8 @@ def _compact_session_activity_budget_overview(
                             key: item[key]
                             for key in (
                                 "owner_pass", "result_status", "result_identity",
-                                "source_reference",
+                                "verification_status",
+                                "source_reference_status", "source_reference",
                             )
                             if key in item
                         })
@@ -2991,6 +2995,377 @@ def _compact_session_activity_budget_overview(
         "Activity detail was compacted; omitted owner-pass rows do not imply failure or fulfillment.",
     ]
     return result
+
+
+def _compact_session_activity_evidence_priority_overview(
+    activity: Any,
+) -> dict[str, Any] | None:
+    """Reduce secondary session context further while retaining source links.
+
+    Under a very small response budget, campaign observations and their
+    improvement relations are more useful than repeated session history.
+    Keep measured service totals and exact owner-result pointers, while
+    omitting detailed readiness and historical Doctor rows.
+    """
+    result = _compact_session_activity_budget_overview(activity)
+    if result is None:
+        return None
+
+    activity = result
+    result = {
+        key: activity[key]
+        for key in (
+            "status", "interaction_count", "completion_count",
+            "unmatched_invocation_count", "ambiguous_correlation_count",
+            "completion_without_invocation_count",
+            "repository_ref_transition_count",
+            "repository_ref_transitions_truncated",
+            "repository_ref_transitions_omitted_count",
+        )
+        if key in activity
+    }
+    source = activity.get("source")
+    if isinstance(source, dict):
+        result["source"] = {
+            key: source[key]
+            for key in ("event_count", "ambient_service_execution_digest")
+            if key in source
+        }
+
+    accountability = activity.get("service_accountability")
+    if isinstance(accountability, dict):
+        compact_accountability = {
+            key: accountability[key]
+            for key in ("status",)
+            if key in accountability
+        }
+        account_source = accountability.get("source")
+        if isinstance(account_source, dict):
+            compact_accountability["source"] = {
+                key: account_source[key]
+                for key in ("snapshot_sequence", "service_declaration_status")
+                if key in account_source
+            }
+        summary = accountability.get("summary")
+        if isinstance(summary, dict):
+            compact_summary = {
+                key: summary[key]
+                for key in (
+                    "declared_service_count", "projected_service_count",
+                    "eligible_service_opportunity_count",
+                    "ambient_fulfillment_status",
+                    "agent_intervention_burden_status",
+                )
+                if key in summary
+            }
+            execution = summary.get("environment_service_execution")
+            if isinstance(execution, dict):
+                compact_execution = {}
+                if isinstance(execution.get("status"), str):
+                    compact_execution["status"] = execution["status"]
+                execution_source = execution.get("source")
+                if isinstance(execution_source, dict):
+                    compact_execution["source"] = {
+                        key: execution_source[key]
+                        for key in ("projection_digest",)
+                        if key in execution_source
+                    }
+                execution_summary = execution.get("summary")
+                if isinstance(execution_summary, dict):
+                    compact_execution_summary = {
+                        key: execution_summary[key]
+                        for key in (
+                            "scheduler_mode", "owner_pass_observation_count",
+                            "owner_pass_decision_coverage",
+                            "scheduled_pass_count", "skipped_pass_count",
+                            "owner_failure_count",
+                        )
+                        if key in execution_summary
+                    }
+                    pass_observations = execution_summary.get(
+                        "owner_pass_observations",
+                    )
+                    if isinstance(pass_observations, dict):
+                        items = pass_observations.get("items")
+                        items = items if isinstance(items, list) else []
+                        retained_items = items[:1]
+                        compact_pass_observations = {
+                            "count": pass_observations.get("count", 0),
+                            "omitted_count": pass_observations.get(
+                                "omitted_count", 0,
+                            ) + max(0, len(items) - len(retained_items)),
+                            "items": retained_items,
+                        }
+                        if len(items) > len(retained_items):
+                            compact_pass_observations[
+                                "response_budget_truncated"
+                            ] = True
+                        compact_execution_summary[
+                            "owner_pass_observations"
+                        ] = compact_pass_observations
+                    compact_execution["summary"] = compact_execution_summary
+                compact_summary["environment_service_execution"] = (
+                    compact_execution
+                )
+            compact_accountability["summary"] = compact_summary
+        result["service_accountability"] = compact_accountability
+
+    result["detail_status"] = "evidence-priority-response-budget"
+    result["evidence_priority_summary_only"] = True
+    result["measurement_limits"] = [
+        "Session history and readiness details were reduced to preserve campaign evidence; inspect their source projections for full context.",
+    ]
+    return result
+
+
+def _compact_campaign_evidence_priority_rows(
+    result: dict[str, Any],
+) -> bool:
+    """Keep one inspectable observation-to-pressure-to-improvement path."""
+    observations = result.get("observations")
+    hypotheses = result.get("pressure_hypotheses")
+    relations = result.get("improvement_relations")
+    observations = observations if isinstance(observations, list) else []
+    hypotheses = hypotheses if isinstance(hypotheses, list) else []
+    relations = relations if isinstance(relations, list) else []
+    if not (observations or hypotheses or relations):
+        return False
+
+    relation = None
+    hypothesis_identity = None
+    for candidate in relations:
+        if not isinstance(candidate, dict):
+            continue
+        candidate_hypothesis = candidate.get("addresses_hypothesis_identity")
+        matching_observation = next(
+            (
+                item for item in observations
+                if isinstance(item, dict)
+                and item.get("pressure_hypothesis_role") == "occurrence"
+                and isinstance(item.get("pressure_hypothesis"), dict)
+                and item["pressure_hypothesis"].get("identity")
+                == candidate_hypothesis
+            ),
+            None,
+        )
+        if matching_observation is not None:
+            relation = candidate
+            hypothesis_identity = candidate_hypothesis
+            break
+    if hypothesis_identity is None:
+        occurrence = next(
+            (
+                item for item in observations
+                if isinstance(item, dict)
+                and item.get("pressure_hypothesis_role") == "occurrence"
+                and isinstance(item.get("pressure_hypothesis"), dict)
+                and isinstance(
+                    item["pressure_hypothesis"].get("identity"), str,
+                )
+            ),
+            None,
+        )
+        if occurrence is not None:
+            hypothesis_identity = occurrence["pressure_hypothesis"]["identity"]
+    if relation is None and relations:
+        relation = next(
+            (item for item in relations if isinstance(item, dict)), None,
+        )
+        if (hypothesis_identity is None and isinstance(relation, dict)
+                and isinstance(
+                    relation.get("addresses_hypothesis_identity"), str,
+                )):
+            hypothesis_identity = relation["addresses_hypothesis_identity"]
+
+    observation = next(
+        (
+            item for item in observations
+            if isinstance(item, dict)
+            and (hypothesis_identity is None
+                 or (isinstance(item.get("pressure_hypothesis"), dict)
+                     and item["pressure_hypothesis"].get("identity")
+                     == hypothesis_identity))
+        ),
+        next((item for item in observations if isinstance(item, dict)), None),
+    )
+    hypothesis = next(
+        (
+            item for item in hypotheses
+            if isinstance(item, dict)
+            and (hypothesis_identity is None
+                 or item.get("identity") == hypothesis_identity)
+        ),
+        None,
+    )
+
+    def retain_pointer(value: Any) -> dict[str, Any] | None:
+        if not isinstance(value, dict):
+            return None
+        return {
+            key: value[key]
+            for key in (
+                "identity", "repository", "commit", "path", "sha256",
+                "verification", "status", "content_integrity_status",
+            )
+            if isinstance(value.get(key), str)
+        }
+
+    compact_observation = None
+    if isinstance(observation, dict):
+        compact_observation = {
+            key: observation[key]
+            for key in (
+                "identity", "measurement_basis",
+                "pressure_hypothesis_role", "pressure_hypothesis_role_status",
+                "improvement_relation_status",
+            )
+            if isinstance(observation.get(key), str)
+        }
+        pointer = retain_pointer(observation.get("evidence_reference"))
+        if pointer is not None:
+            compact_observation["evidence_reference"] = pointer
+        work = observation.get("related_work")
+        if isinstance(work, dict):
+            compact_observation["related_work"] = {
+                key: work[key]
+                for key in (
+                    "campaign_id", "session_id", "work_intent_id",
+                    "work_intent_goal",
+                )
+                if isinstance(work.get(key), str)
+            }
+        details = observation.get("observation")
+        if isinstance(details, dict):
+            compact_details = {
+                key: details[key]
+                for key in (
+                    "kind", "source_interface",
+                )
+                if isinstance(details.get(key), str)
+            }
+            outcome = details.get("outcome_context")
+            if isinstance(outcome, dict):
+                compact_details["outcome_context"] = {
+                    key: outcome[key]
+                    for key in ("status",)
+                    if isinstance(outcome.get(key), str)
+                }
+            compact_observation["observation"] = compact_details
+        pressure = observation.get("pressure_hypothesis")
+        if isinstance(pressure, dict):
+            compact_observation["pressure_hypothesis"] = {
+                key: pressure[key]
+                for key in ("identity", "actionable_recommendation")
+                if isinstance(pressure.get(key), str)
+            }
+
+    compact_hypothesis = None
+    if isinstance(hypothesis, dict):
+        compact_hypothesis = {
+            key: hypothesis[key]
+            for key in (
+                "identity", "title", "category", "subsystem", "owner",
+                "recurrence_status", "recommendation",
+                "observation_count", "distinct_session_count",
+                "role_classification_status", "session_attribution_status",
+                "definition_status", "definition_conflict_fields",
+            )
+            if isinstance(hypothesis.get(key), str)
+            or (key == "definition_conflict_fields"
+                and isinstance(hypothesis.get(key), list))
+            or (type(hypothesis.get(key)) is int
+                and hypothesis[key] >= 0)
+        }
+        evidence_references = hypothesis.get("evidence_references")
+        if isinstance(evidence_references, list) and evidence_references:
+            compact_hypothesis["evidence_reference_count"] = (
+                hypothesis.get("evidence_reference_count", len(evidence_references))
+            )
+        related_observations = hypothesis.get(
+            "evidence_observation_identities",
+        )
+        if isinstance(related_observations, list) and related_observations:
+            compact_hypothesis["evidence_observation_identities"] = (
+                related_observations[:1]
+            )
+
+    compact_relation = None
+    if isinstance(relation, dict):
+        compact_relation = {
+            key: relation[key]
+            for key in (
+                "identity", "addresses_hypothesis_identity",
+                "effectiveness_assessment", "pressure_hypothesis_status",
+                "recorded_by_observation_identity",
+                "verification_observation_identity", "verification_record_status",
+                "subsequent_observation_identity", "subsequent_record_status",
+            )
+            if isinstance(relation.get(key), str)
+        }
+        for key in (
+            "evidence_reference", "implementation_reference",
+            "verification_evidence_reference",
+            "subsequent_evidence_reference",
+        ):
+            pointer = retain_pointer(relation.get(key))
+            if pointer is not None:
+                compact_relation[key] = pointer
+        if isinstance(relation.get("basis"), str):
+            compact_relation["basis"] = _short_text(relation["basis"], 160)
+
+    result["observations"] = (
+        [compact_observation] if compact_observation is not None else []
+    )
+    result["pressure_hypotheses"] = (
+        [compact_hypothesis] if compact_hypothesis is not None else []
+    )
+    result["improvement_relations"] = (
+        [compact_relation] if compact_relation is not None else []
+    )
+    result["campaign_evidence_summary_only"] = True
+    source = result.get("source")
+    if isinstance(source, dict):
+        retained_source_fields = {
+            "campaign_state_checkpoint_id", "recorded_at", "evidence_count",
+            "evidence_page_truncated", "evidence_page_offset",
+            "evidence_page_limit", "previous_evidence_offset",
+            "next_evidence_offset", "evidence_history_pages_requested",
+            "evidence_history_pages_read", "evidence_history_truncated",
+            "evidence_history_checkpoint_consistent", "response_truncated",
+            "response_byte_count", "observation_records_verified",
+            "observation_records_unavailable",
+            "observation_records_skipped_by_page_budget",
+            "source_pointer_content_integrity_verified_count",
+        }
+        for key in list(source):
+            if key not in retained_source_fields:
+                source.pop(key)
+        source["campaign_evidence_source_details_truncated"] = True
+    subject = result.get("subject")
+    if isinstance(subject, dict):
+        subject.pop("definition_id", None)
+        subject.pop("campaign_charter", None)
+    correlation = result.get("correlation")
+    if isinstance(correlation, dict):
+        result["correlation"] = {
+            "derived": correlation.get("derived") is True,
+            "kind": correlation.get("kind"),
+        }
+    result["measurement_limits"] = [
+        "Response budget retains one linked evidence path; inspect referenced records for omitted details.",
+    ]
+    for rows_key, total_key in (
+        ("observations", "observation_count"),
+        ("pressure_hypotheses", "pressure_hypothesis_count"),
+        ("improvement_relations", "improvement_relation_count"),
+    ):
+        total = result.get(total_key, 0)
+        if type(total) is int and total > len(result[rows_key]):
+            result[f"{rows_key}_truncated"] = True
+            result[f"{rows_key}_omitted_count"] = total - len(
+                result[rows_key],
+            )
+    return True
 
 
 def _compact_unclassified_owner_pass_activity(value: Any) -> list[dict[str, Any]]:
@@ -6724,6 +7099,52 @@ def _compact_projection(
             # generic pointer-availability note redundant at the byte limit.
             result["measurement_limits"].pop(1)
             continue
+        if (MIN_EVIDENCE_PRIORITY_RESULT_BYTES <= max_result_bytes
+                <= MAX_EVIDENCE_PRIORITY_RESULT_BYTES
+                and not result.get("campaign_evidence_summary_only")
+                and result["observations"]
+                and result["pressure_hypotheses"]
+                and result["improvement_relations"]):
+            candidate = deepcopy(result)
+            evidence_priority_activity = (
+                _compact_session_activity_evidence_priority_overview(
+                    candidate.get("session_activity"),
+                )
+            )
+            if evidence_priority_activity is not None:
+                candidate["session_activity"] = evidence_priority_activity
+                if _compact_campaign_evidence_priority_rows(candidate):
+                    compact_observation = next(
+                        iter(candidate.get("observations", [])), None,
+                    )
+                    compact_hypothesis = next(
+                        iter(candidate.get("pressure_hypotheses", [])), None,
+                    )
+                    compact_relation = next(
+                        iter(candidate.get("improvement_relations", [])), None,
+                    )
+                    observation_pressure = (
+                        compact_observation.get("pressure_hypothesis")
+                        if isinstance(compact_observation, dict) else None
+                    )
+                    path_identity = (
+                        observation_pressure.get("identity")
+                        if isinstance(observation_pressure, dict) else None
+                    )
+                    linked_path = (
+                        isinstance(path_identity, str)
+                        and isinstance(compact_hypothesis, dict)
+                        and compact_hypothesis.get("identity") == path_identity
+                        and isinstance(compact_relation, dict)
+                        and compact_relation.get(
+                            "addresses_hypothesis_identity",
+                        ) == path_identity
+                    )
+                    if (linked_path
+                            and _projection_response_size(candidate)
+                            <= max_result_bytes):
+                        result = candidate
+                        continue
         if result["observations"]:
             def observation_retention_priority(item: dict[str, Any]) -> int:
                 hypothesis = item.get("pressure_hypothesis")
@@ -6860,7 +7281,7 @@ def _compact_projection(
         elif result["session_activity"].get("capabilities"):
             result["session_activity"]["capabilities"].pop()
             result["session_activity"]["capabilities_truncated"] = True
-        elif result["session_activity"]["interactions"]:
+        elif result["session_activity"].get("interactions"):
             result["session_activity"]["interactions"].pop()
             result["session_activity"]["interactions_truncated"] = True
         elif result["session_activity"].get(
@@ -7242,7 +7663,11 @@ def _compact_projection(
                 compact_with_empty_resource_status,
             ) <= max_result_bytes:
                 result = compact_with_empty_resource_status
-    if compact_result_size() > max_result_bytes:
+    if (compact_result_size() > max_result_bytes
+            and result.get("session_activity", {}).get("detail_status") not in {
+                "summary-only-response-budget",
+                "evidence-priority-response-budget",
+            }):
         compact_activity = _compact_session_activity_budget_overview(
             result.get("session_activity"),
         )
