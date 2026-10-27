@@ -1,7 +1,7 @@
 {
   "schema_version": "mncs-family.repository-manifest/v0alpha1",
   "repository": "mncs-environment",
-  "revision": 10,
+  "revision": 11,
   "manifest_location": "in-repository",
   "authority": {
     "note": "mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration."
@@ -122,6 +122,18 @@
       }
     ],
     "consumes": [
+      {
+        "contract": "mncs-doc.documentation-projection",
+        "envelope": {
+          "op": "any"
+        },
+        "required": false,
+        "scope": "workspace-read-only semantic rendering for selected repository projections",
+        "evidence_refs": [
+          ".mncs/projections.json",
+          "mncs_env/projections.py"
+        ]
+      },
       {
         "contract": "mncs-doctor.projection-health",
         "envelope": {

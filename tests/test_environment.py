@@ -4611,6 +4611,7 @@ class CapabilityTests(unittest.TestCase):
                     "contracts": {"consumes": [
                         {"contract": "mncs-doctor.projection-health"},
                         {"contract": "mncs-doctor.mixed-effect"},
+                        {"contract": "mncs-doc.documentation-projection"},
                     ]},
                 },
             )
@@ -4660,6 +4661,29 @@ class CapabilityTests(unittest.TestCase):
                 "-c", "user.email=environment-test@example.invalid", "commit", "-qm",
                 "provider contracts",
             ], check=True)
+            doc_provider = self._git_checkout(
+                workspace_root / "mncs-doc", "mncs-doc", {
+                    "contracts": {"provides": [{
+                        "contract": "documentation-projection",
+                        "version": "1",
+                        "effects": ["read"],
+                        "invocation": {
+                            "kind": "executable",
+                            "path": "tools/documentation-projection.sh",
+                        },
+                    }]},
+                },
+            )
+            doc_script = doc_provider / "tools" / "documentation-projection.sh"
+            doc_script.parent.mkdir(parents=True, exist_ok=True)
+            doc_script.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            doc_script.chmod(0o755)
+            subprocess.run(["git", "-C", str(doc_provider), "add", "."], check=True)
+            subprocess.run([
+                "git", "-C", str(doc_provider), "-c", "user.name=Environment Test",
+                "-c", "user.email=environment-test@example.invalid", "commit", "-qm",
+                "documentation projection contract",
+            ], check=True)
             consumer_head = workspace.inspect_repo(consumer, _refresh=True).head
             selected_roots = {"mncs-environment": consumer}
             selected_facts = {"mncs-environment": {
@@ -4688,11 +4712,19 @@ class CapabilityTests(unittest.TestCase):
                 for item in read_only_bindings
             }
             self.assertIn("mncs-doctor:projection-health", bindings)
+            self.assertIn("mncs-doc:documentation-projection", bindings)
             self.assertEqual(
                 bindings["mncs-doctor:projection-health"]["effects"], ["read"],
             )
             self.assertEqual(
+                bindings["mncs-doc:documentation-projection"]["effects"], ["read"],
+            )
+            self.assertEqual(
                 bindings["mncs-doctor:projection-health"]["availability"]["status"],
+                "available",
+            )
+            self.assertEqual(
+                bindings["mncs-doc:documentation-projection"]["availability"]["status"],
                 "available",
             )
             self.assertEqual(
@@ -4720,7 +4752,10 @@ class CapabilityTests(unittest.TestCase):
                 selected_facts,
                 [],
             )
-            self.assertEqual(symlink_bindings, [])
+            self.assertEqual(
+                [item["capability"] for item in symlink_bindings],
+                ["mncs-doc:documentation-projection"],
+            )
 
     def test_unclaimed_dirty_external_toolchain_is_not_resolved(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
