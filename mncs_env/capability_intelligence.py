@@ -199,7 +199,7 @@ MAX_SOURCE_POINTER_VERIFICATIONS = 32
 MAX_EVIDENCE_REFERENCE_CORRECTIONS = 8
 MAX_CAMPAIGN_CHARTER_CANDIDATES = 4
 MAX_CAMPAIGN_CHARTER_OBJECTIVE_CHARS = 4096
-MAX_RESULT_BYTES = 48 * 1024
+MAX_RESULT_BYTES = 72 * 1024
 CAPTURED_OPERATION_RESULT_SOURCE_KINDS = frozenset({
     "direct-operation-result", "direct-cli-projection-result",
 })
@@ -2780,8 +2780,75 @@ def _compact_projection(
         ][-8:]
         compact_hypotheses.append(summary)
 
+    def pressure_identity_for_observation(item: dict[str, Any]) -> str | None:
+        if item.get("pressure_hypothesis_role") != "occurrence":
+            return None
+        hypothesis = item.get("pressure_hypothesis")
+        identity = hypothesis.get("identity") if isinstance(hypothesis, dict) else None
+        return identity if isinstance(identity, str) and identity else None
+
+    selected_observations = list(observations[-8:])
+    selected_observation_identities = {
+        item.get("identity") for item in selected_observations
+        if isinstance(item.get("identity"), str)
+    }
+    selected_pressure_identities = {
+        identity for item in selected_observations
+        if (identity := pressure_identity_for_observation(item)) is not None
+    }
+    for candidate in reversed(observations):
+        pressure_identity = pressure_identity_for_observation(candidate)
+        candidate_identity = candidate.get("identity")
+        if (not isinstance(pressure_identity, str)
+                or pressure_identity in selected_pressure_identities
+                or not isinstance(candidate_identity, str)
+                or candidate_identity in selected_observation_identities):
+            continue
+        replace_index = next(
+            (
+                index for index, selected in enumerate(selected_observations)
+                if not isinstance(selected.get("pressure_hypothesis"), dict)
+            ),
+            None,
+        )
+        if replace_index is None:
+            pressure_counts: dict[str, int] = {}
+            for selected in selected_observations:
+                selected_pressure = pressure_identity_for_observation(selected)
+                if isinstance(selected_pressure, str):
+                    pressure_counts[selected_pressure] = (
+                        pressure_counts.get(selected_pressure, 0) + 1
+                    )
+            replace_index = next(
+                (
+                    index for index, selected in enumerate(selected_observations)
+                    if (selected_pressure := pressure_identity_for_observation(
+                        selected,
+                    )) is not None and pressure_counts.get(
+                        selected_pressure, 0,
+                    ) > 1
+                ),
+                None,
+            )
+        if replace_index is None:
+            continue
+        removed_identity = selected_observations[replace_index].get("identity")
+        if isinstance(removed_identity, str):
+            selected_observation_identities.discard(removed_identity)
+        selected_observations[replace_index] = candidate
+        selected_observation_identities.add(candidate_identity)
+        selected_pressure_identities.add(pressure_identity)
+    selected_observation_identities = {
+        item.get("identity") for item in selected_observations
+        if isinstance(item.get("identity"), str)
+    }
+    selected_observations = [
+        item for item in observations
+        if item.get("identity") in selected_observation_identities
+    ]
+
     compact_observations = []
-    for item in observations[-8:]:
+    for item in selected_observations:
         observation = item.get("observation") or {}
         observation_bytes = json.dumps(
             observation, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
@@ -5641,9 +5708,58 @@ def _compact_projection(
                         and claim.get("claim_lifecycle_correlation_identity")
                         == correlation_identity):
                     claim.pop("claim_lifecycle_correlation_identity", None)
+
+    def compact_result_size() -> int:
+        return len(
+            json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        )
+
+    # Protect the evidence-to-pressure path by first reducing secondary session
+    # context and derived duplicates. Exact observation and improvement rows
+    # are the source records; service summaries and native-consumer joins can
+    # be reconstructed from them or queried separately.
+    while compact_result_size() > max_result_bytes:
+        if result.pop("pressure_evidence_summary", None) is not None:
+            result["measurement_limits"][0] = (
+                "Response limit compacted payload; pressure totals may be "
+                "omitted to retain source evidence."
+            )
+            continue
+        activity_result = result["session_activity"]
+        accountability = result.get("implementation_accountability")
+        native_consumer_groups = (
+            accountability.get("native_consumer_activities")
+            if isinstance(accountability, dict) else None
+        )
+        if isinstance(native_consumer_groups, list):
+            native_group_to_trim = next(
+                (
+                    group for group in reversed(native_consumer_groups)
+                    if isinstance(group, dict)
+                    and isinstance(group.get("activities"), list)
+                    and group["activities"]
+                ),
+                None,
+            )
+            if native_group_to_trim is not None:
+                native_group_to_trim["activities"].pop(0)
+                native_group_to_trim[
+                    "response_budget_omitted_activity_count"
+                ] = native_group_to_trim.get(
+                    "response_budget_omitted_activity_count", 0,
+                ) + 1
+                native_group_to_trim[
+                    "response_budget_activity_details_omitted"
+                ] = True
+                continue
+        if len(activity_result.get("repository_ref_transitions", [])) > 1:
+            activity_result["repository_ref_transitions"].pop()
+            activity_result["repository_ref_transitions_truncated"] = True
+            continue
+        break
     # The selected fields are individually bounded. This final reduction also
     # accounts for unusual but valid identifiers and reference paths.
-    while len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")) > max_result_bytes:
+    while compact_result_size() > max_result_bytes:
         if result.pop("pressure_evidence_summary", None) is not None:
             result["measurement_limits"][0] = (
                 "Response limit compacted payload; pressure totals may be "
@@ -5742,6 +5858,11 @@ def _compact_projection(
             continue
         if result["observations"]:
             def observation_retention_priority(item: dict[str, Any]) -> int:
+                hypothesis = item.get("pressure_hypothesis")
+                if (item.get("pressure_hypothesis_role") == "occurrence"
+                        and isinstance(hypothesis, dict)
+                        and isinstance(hypothesis.get("identity"), str)):
+                    return 3
                 relation = item.get("resource_sample_relation")
                 if (isinstance(relation, dict)
                         and relation.get("status")
@@ -5843,11 +5964,6 @@ def _compact_projection(
         elif result["session_activity"].get("integration_eligibility"):
             result["session_activity"]["integration_eligibility"].pop()
             result["session_activity"]["integration_eligibility_truncated"] = True
-        elif result["session_activity"].get("repository_ref_transitions"):
-            result["session_activity"]["repository_ref_transitions"].pop()
-            result["session_activity"][
-                "repository_ref_transitions_truncated"
-            ] = True
         elif result.get("context_pressure_candidates"):
             result["context_pressure_candidates"].pop(0)
         elif isinstance(

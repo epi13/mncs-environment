@@ -1326,7 +1326,7 @@ do not change an improvement relation or effectiveness assessment.
 
 The query considers at most 32 campaign evidence references, reads at most 16
 observation records of 64 KiB each within one 8 second Git-read budget, and
-caps its response at 48 KiB. If a response reaches that bound, operation
+caps its response at 72 KiB. If a response reaches that bound, operation
 payloads are summarized by digest and the exact evidence pointers remain
 available for inspection. Compacted observations retain bounded request
 identifiers and outcome context, including original contract diagnostics and
@@ -1337,6 +1337,14 @@ many verified observation summaries did not fit the compact view. The CLI
 keeps environmental-capability JSON within the same byte limit; it omits
 indentation when pretty formatting would exceed the bound and refuses a
 compact payload that still exceeds it.
+
+The bounded observation selection also retains the latest occurrence for
+distinct pressure identities represented in the selected evidence, alongside
+the newest observation tail. When response compaction is necessary, exact
+observation and improvement rows take priority over duplicated native-consumer
+activity details and expanded current-session histories. The native-consumer
+capability summary remains, and response-budget omission counts or markers
+identify details that were not returned.
 
 Before dropping environmental observation summaries to meet this bound, the
 compactor can omit nested owner-audit source-detail entries one at a time.

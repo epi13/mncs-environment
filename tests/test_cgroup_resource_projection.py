@@ -137,8 +137,13 @@ def test_resource_headroom_and_control_delivery_are_queryable_with_provenance(
         "ph_environment_resource_observation_not_exposed_by_control_20261025"
     )
     hypothesis = result["pressure_hypotheses"][0]
-    assert hypothesis["observation_count"] == 1
+    # This historical record predates role declarations; it remains
+    # inspectable evidence but must not be upgraded to an occurrence.
+    assert hypothesis["observation_count"] == 0
+    assert hypothesis["unclassified_observation_count"] == 1
     assert hypothesis["recurrence_status"] == "not-established"
-    assert [source["identity"] for source in hypothesis["evidence"]] == [
+    assert [source["observation_identity"] for source in hypothesis[
+        "unclassified_evidence"
+    ]] == [
         records[1]["identity"]
     ]

@@ -2333,6 +2333,39 @@ def test_compact_projection_retains_newest_observation_tail(tmp_path: Path) -> N
     )
 
 
+def test_compact_projection_keeps_pressure_observations_outside_newest_tail(
+    tmp_path: Path,
+) -> None:
+    identities = [f"ev_environment_pressure_tail_{index:02d}" for index in range(10)]
+    records = []
+    for index, identity in enumerate(identities):
+        record = _observation(
+            identity, f"ses_pressure_tail_{index}", "cmp_pressure_tail",
+        )
+        if index < 2:
+            record["pressure_hypothesis"]["identity"] = (
+                f"ph_pressure_tail_{index}"
+            )
+        else:
+            _drop_pressure_hypothesis(record)
+        records.append(record)
+    session, _state = _session(tmp_path, records)
+
+    full = capability_intelligence.project(session)
+    compact = capability_intelligence._compact_projection(
+        full, 100_000, 100_000,
+    )
+    returned_identities = [
+        item["identity"] for item in compact["observations"]
+    ]
+
+    assert len(returned_identities) == 8
+    assert identities[0] in returned_identities
+    assert identities[1] in returned_identities
+    assert returned_identities[-6:] == identities[-6:]
+    assert compact["source"]["observation_records_compacted_out_count"] == 2
+
+
 def test_project_exposes_verified_campaign_objective_separately_from_work_intent(
     tmp_path: Path,
 ) -> None:
@@ -8568,7 +8601,9 @@ def test_selected_source_digest_is_verified_and_compact_pointer_is_preserved(
         "sha256": hash_limited_source_digest,
     })
 
-    result = capability_intelligence.project(session)
+    result = capability_intelligence.project(
+        session, max_result_bytes=48 * 1024,
+    )
 
     assert result["status"] == "partial"
     source = next(
@@ -11064,6 +11099,75 @@ def test_compact_projection_preserves_improvement_path_before_owner_audit_detail
         "schema_version": capability_intelligence.IMPLEMENTATION_ACCOUNTABILITY_SCHEMA,
         "sample_count": 0,
         "samples": [],
+        "native_consumer_activities": [{
+            "status": "native-consumer-pressure-evidence-available",
+            "native_capability_identity": "mncs.std.process.v1",
+            "join_basis": "Exact observation and pressure identities.",
+            "source_coverage_scope": "bounded selected evidence",
+            "recurrence_status": "not-established",
+            "agent_usage_status": "not-established",
+            "causal_relation_status": "not-established",
+            "native_migration_readiness": "not-established",
+            "actionable_observation": "Inspect the exact pressure and verification.",
+            "interpretation_limit": "The relationship does not establish causality.",
+            "activities": [{
+                "source_observation_identity": pressure["identity"],
+                "source_observation_kind": (
+                    "native-capability-consumer-integration-pressure"
+                ),
+                "native_capability_identity": "mncs.std.process.v1",
+                "target_pressure_identity": "ph_compaction_priority",
+                "consumer_repository": "mncs-debug",
+                "integration_test_identity": "test_native_process_consumer",
+                "consumer_surface": "surface " + "s" * 240,
+                "observed_limitation": "limitation " + "l" * 360,
+                "environmental_pressure": "pressure " + "p" * 360,
+                "agent_impact": "impact " + "i" * 140,
+                "causal_scope": "scope " + "c" * 240,
+                "pressure_hypothesis": {
+                    "title": "Native consumer pressure",
+                    "category": "tooling",
+                    "subsystem": "mncs-debug",
+                    "owner": "mncs-debug",
+                    "recurrence": "not-established",
+                    "actionable_recommendation": "Investigate the source result.",
+                },
+                "source_work_context": {
+                    "campaign_id": "cmp_agent",
+                    "session_id": "ses_agent",
+                    "work_intent_id": "int_compiler",
+                    "work_intent_goal": "advance native self-consumption " + "g" * 120,
+                    "source_observation_identity": pressure["identity"],
+                },
+                "source_references": [implementation] * 4,
+                "improvement_links": [
+                    {
+                        "improvement_observation_identity": change["identity"],
+                        "improvement_relation_identity": "im_compaction_priority",
+                        "addresses_hypothesis_identity": "ph_compaction_priority",
+                        "implementation_commit": "a" * 40,
+                        "implementation_scope": "scope " + "q" * 180,
+                        "implementation_change": "change " + "m" * 360,
+                        "verified_change": "verified " + "v" * 360,
+                        "effectiveness_assessment": "not-assessed",
+                        "verification_observation_identity": verification["identity"],
+                        "verification_match_status": "exact-verification-observation-identity-match",
+                        "source_references": [implementation] * 4,
+                        "verification_observation": {
+                            "identity": verification["identity"],
+                            "kind": "native-process-consumer-verification",
+                            "integration_status": "verified " + "t" * 80,
+                            "compilation_status": "compiled " + "b" * 180,
+                            "assertion": "passed " + "a" * 180,
+                            "resolver_unit_tests": {"passed": 2, "failed": 0},
+                            "native_core_suite": {"passed": 6, "failed": 0},
+                            "source_references": [implementation] * 4,
+                        },
+                    }
+                    for _ in range(4)
+                ],
+            }],
+        }],
         "owner_audit_evidence": {
             "observed_audit_record_count": 1,
             "audits": [{
@@ -11114,6 +11218,16 @@ def test_compact_projection_preserves_improvement_path_before_owner_audit_detail
     ]["audits"][0]
     assert owner_audit["source_audit_details_truncated"] is True
     assert owner_audit["source_audit_details_omitted_count"] > 0
+    consumer_summary = compact["implementation_accountability"][
+        "native_consumer_activities"
+    ][0]
+    assert consumer_summary["native_capability_identity"] == "mncs.std.process.v1"
+    assert consumer_summary["actionable_observation"] == (
+        "Inspect the exact pressure and verification."
+    )
+    assert consumer_summary["activities"] == []
+    assert consumer_summary["response_budget_activity_details_omitted"] is True
+    assert consumer_summary["response_budget_omitted_activity_count"] == 1
 
 
 def test_improvement_relation_without_followup_preserves_unassessed_status(
@@ -12038,7 +12152,9 @@ def test_large_observation_uses_a_bounded_digest_summary(tmp_path: Path) -> None
     })
     session, _ = _session(tmp_path, [record])
 
-    result = capability_intelligence.project(session)
+    result = capability_intelligence.project(
+        session, max_result_bytes=48 * 1024,
+    )
     encoded = json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")
 
     assert result["status"] == "partial"
@@ -12227,6 +12343,11 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     session.campaign_state = campaign_state
     session.close = lambda: None
     monkeypatch.setattr(cli, "_open", lambda _args: session)
+    monkeypatch.setattr(
+        projections.capability_relationships,
+        "MAX_RESULT_RESERVE_BYTES",
+        24 * 1024,
+    )
     output = io.StringIO()
     with redirect_stdout(output):
         status = cli.main([
@@ -12810,7 +12931,9 @@ def test_compact_projection_preserves_classified_measurement_summary(tmp_path: P
     record["observation"]["outcome"]["large_diagnostic"] = "private " * 6_000
     session, _state = _session(tmp_path, [record])
 
-    result = capability_intelligence.project(session)
+    result = capability_intelligence.project(
+        session, max_result_bytes=48 * 1024,
+    )
 
     assert result["source"]["response_truncated"] is True
     observation = result["observations"][0]["observation"]
