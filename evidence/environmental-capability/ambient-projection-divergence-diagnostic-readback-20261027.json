@@ -1,0 +1,122 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_projection_divergence_diagnostic_readback_20261027",
+  "captured_at": "2026-10-27T20:08:09Z",
+  "measurement_basis": "Read-only inspection of the persisted Store evidence from one post-publication ambient projection pass",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_7c22239267a8bc58",
+    "campaign_evidence_count_before_recording": 86
+  },
+  "observation": {
+    "kind": "ambient-projection-divergence-diagnostic-live-readback",
+    "source_interface": "MNCS Environment mncs-env projections and --evidence",
+    "request": {
+      "projection_evidence": "mncs-store:ses_a752e1c55fb4ca6f:projections:535b73eeb5ead1c1d628e1920aa0848d302e755f979bc2f78cca3a8a78dd55ee",
+      "implementation_commit": "6cff6e530627415d6ce3a25718ee2dc241973868",
+      "projection_identity": "mncs-environment:overview"
+    },
+    "outcome": {
+      "summary": {
+        "current": 9,
+        "pending": 1,
+        "reconciled": 0,
+        "degraded": 0,
+        "blockers": 0,
+        "invalid": 0
+      },
+      "deferred_projection": {
+        "target": "README.md",
+        "outcome": "deferred",
+        "gate_reason": "manual-divergence",
+        "output_diagnostic": {
+          "target": "README.md",
+          "ownership_scope": "generated-region",
+          "classification": "manual-divergence",
+          "observed_owned_digest": "sha256:7fd0f71f82a9618f14c5b7c6c57eda27a6830a23fe4401064906050a01fe5edf",
+          "candidate_render_bytes_digest": "sha256:af1517913242c6fe13992549e61e6f3bd1cfd3eece6995608a8f2f3e99a475a7",
+          "previously_accepted_digest": "sha256:b530ae8133ae94e4d793f2f6dc4d7ec00b92d306f5c3219ba562535cfa3f7872",
+          "automatic_write": "withheld"
+        }
+      },
+      "preservation_check": {
+        "command": "git diff --exit-code -- README.md .mncs/project-view.json",
+        "result": "passed; generated outputs remained unchanged by the deferred pass"
+      },
+      "interpretation": "The real ambient record now relates the deferred README projection to its target and the observed, candidate, and previously accepted owned-content digests. It still defers and performs no write. These digests improve inspection context but do not explain who changed the bytes or why, and they do not establish that the projection should be reconciled.",
+      "effectiveness_assessment": "diagnostic-context-improved-for-this-session; divergence-resolution-and-agent-burden-not-assessed"
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_projection_divergence_context_20261027",
+    "addresses_hypothesis_identity": "ph_environment_projection_divergence_lacks_owned-state-context_20261027",
+    "implementation_reference": {
+      "repository": "mncs-environment",
+      "commit": "6cff6e530627415d6ce3a25718ee2dc241973868",
+      "path": "mncs_env/projections.py"
+    },
+    "verification_observation_identity": "ev_environment_ambient_projection_divergence_diagnostic_readback_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "The ambient projection evidence now includes the relative target, owned scope, divergence classification, observed and candidate digests, prior accepted digest, and withheld-write status. The persisted real session readback confirms this context on an actual manual-divergence defer; a regression test verifies the output remains unchanged.",
+    "not_measured": [
+      "what edit introduced the divergence or whether it was intentional",
+      "whether an agent can resolve the conflict with less investigation",
+      "whether divergence recurs across sessions or repositories",
+      "whether cross-agent or cross-model projection recovery improves",
+      "whether a later accepted projection removes this pressure"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_projection_divergence_lacks_owned-state-context_20261027",
+    "title": "A protected projection divergence is actionable but its target and owned-state comparison are not present in the defer record",
+    "category": "verification-and-recovery-pressure",
+    "subsystem": "MNCS Environment ambient projection evidence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Retain bounded digest-level ownership context with projection deferrals while continuing to withhold automatic writes on divergence."
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_projection_divergence_diagnostic_6cff6e5",
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "6cff6e530627415d6ce3a25718ee2dc241973868",
+      "path": "mncs_env/projections.py",
+      "sha256": "87c96fcdc6533a6b448f405906decda47f6e961e0b23c0388c65ed756b609a75"
+    },
+    {
+      "identity": "mncs_environment_projection_divergence_test_6cff6e5",
+      "kind": "verification-source",
+      "repository": "mncs-environment",
+      "commit": "6cff6e530627415d6ce3a25718ee2dc241973868",
+      "path": "tests/test_projections.py",
+      "sha256": "8415befa7c0e2895f091da48104a4bcdb42f67e70cd8dd970a1de94e32f029ad"
+    },
+    {
+      "identity": "mncs_environment_projection_divergence_contract_6cff6e5",
+      "kind": "documentation-source",
+      "repository": "mncs-environment",
+      "commit": "6cff6e530627415d6ce3a25718ee2dc241973868",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "c8636808f2374c561fc8ca3c24bfa0551e4bb2b9cfea276f95f4f4d7c7ceaf00"
+    }
+  ],
+  "not_measured": [
+    "agent-attributed time or tool calls saved",
+    "intent of the earlier README region change",
+    "long-term recurrence or successful divergence resolution",
+    "effectiveness for services other than projection coherence"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
