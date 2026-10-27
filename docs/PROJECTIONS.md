@@ -440,9 +440,14 @@ Repeated-deferral candidates summarize these joins and deduplicate the
 supporting preflight references. The relation establishes only that a matching
 preflight was observed in the selected, returned records: eligibility records
 `operation_executed: false`, so this does not establish execution, resolution,
-or causation. A missing match is not evidence of absence beyond those bounded
-records. Compact projections retain the aggregate candidate and its supporting
-preflight reference before dropping individual deferral detail.
+or causation. An exact preflight reference may also link to a later provider
+invocation and completion through the existing invocation interaction view.
+That link establishes the recorded provider outcome and its event references,
+not a repository change, verification, integration, or improvement. A missing
+match is not evidence of absence beyond those bounded records. Compact
+projections retain the aggregate candidate, supporting preflight references,
+and bounded provider-invocation references before dropping individual
+deferral detail.
 When a current `Session.check` observes a mutation or verification conflict,
 it attaches a separate `current_claim_state` with the claim version and
 bounded owner liveness, and whether safe recovery is eligible on a normal

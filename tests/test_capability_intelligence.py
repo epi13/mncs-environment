@@ -3582,6 +3582,50 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
             },
         },
     ])
+    matching_preflight_reference = {
+        "identity": "evt_same_objective_proposal_eligible",
+        "sequence": 44,
+        "type": "authority.proposal-eligible",
+    }
+    matching_effect_target = {
+        "repository": "mncs-environment",
+        "branch": "campaign/proposal",
+        "scope_kind": "worktree",
+        "checkout_identity": "checkout:proposal",
+        "preflight_event": matching_preflight_reference,
+    }
+    events.extend([
+        {
+            "identity": "evt_same_objective_provider_invocation",
+            "session_id": session.session_id,
+            "sequence": 45,
+            "type": "capability.invoked",
+            "payload": {
+                "capability": "mncs-environment:proposal-writer",
+                "provider": "mncs-environment",
+                "binding_id": "binding:proposal-writer",
+                "contract_revision": "1",
+                "provider_request_id": "req_coordination_proposal",
+                "effect_target": matching_effect_target,
+            },
+        },
+        {
+            "identity": "evt_same_objective_provider_completion",
+            "session_id": session.session_id,
+            "sequence": 46,
+            "type": "invocation.completed",
+            "payload": {
+                "capability": "mncs-environment:proposal-writer",
+                "provider": "mncs-environment",
+                "binding_id": "binding:proposal-writer",
+                "contract_revision": "1",
+                "provider_request_id": "req_coordination_proposal",
+                "effect_target": matching_effect_target,
+                "status": "ok",
+                "returncode": 0,
+            },
+        },
+    ])
     session.recent_events = lambda *, limit, before_sequence=None: {
         "event_count": len(events), "events": events[-limit:],
         "truncated": False, "next_before_sequence": None,
@@ -3610,6 +3654,20 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
     )
     assert follow_through["matches"][0]["operation_executed"] is False
     assert follow_through["causal_status"] == "not-established"
+    invocation_observation = follow_through["matches"][0][
+        "provider_invocation_observation"
+    ]
+    assert invocation_observation["status"] == "matched-provider-invocation"
+    assert invocation_observation["outcome_status"] == "ok"
+    assert invocation_observation["invocation_event"]["identity"] == (
+        "evt_same_objective_provider_invocation"
+    )
+    assert invocation_observation["completion_event"]["identity"] == (
+        "evt_same_objective_provider_completion"
+    )
+    assert invocation_observation["project_change_status"] == (
+        "not-measured-by-invocation-events"
+    )
     assert activity["authority_denial_count"] == 0
     candidate = activity["coordination_deferral_candidates"][0]
     assert candidate["status"] == "candidate-needs-investigation"
@@ -3632,11 +3690,17 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
     assert candidate["later_eligibility_summary"][
         "operation_execution_status"
     ] == "not-recorded-by-eligibility-events"
+    assert candidate["later_eligibility_summary"][
+        "preflight_linked_provider_invocation_count"
+    ] == 1
+    assert candidate["later_eligibility_summary"][
+        "provider_invocation_outcome_counts"
+    ] == {"ok": 1}
     assert private_checkout not in json.dumps(activity)
     assert "private-checkout-detail" not in json.dumps(activity)
 
     compact = capability_intelligence.project(
-        session, max_result_bytes=8_000,
+        session, max_result_bytes=12_000,
     )["session_activity"]
     assert any(
         item["event_reference"]["identity"] == "evt_coordination_deferred_42"
@@ -3654,6 +3718,11 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
     compact_summary = compact["coordination_deferral_candidates"][0][
         "later_eligibility_summary"
     ]
+    compact_provider_event = compact_summary["provider_invocation_events"][0]
+    assert compact_provider_event["outcome_status"] == "ok"
+    assert compact_provider_event["completion_event"]["identity"] == (
+        "evt_same_objective_provider_completion"
+    )
     assert compact_summary["supporting_preflight_events"][0][
         "event_reference"
     ]["identity"] == (
@@ -3662,6 +3731,9 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
     assert compact["coordination_deferral_candidates"][0][
         "later_eligibility_summary"
     ]["deferrals_with_later_preflight_count"] == 2
+    assert compact["coordination_deferral_candidates"][0][
+        "later_eligibility_summary"
+    ]["preflight_linked_provider_invocation_count"] == 1
     assert private_checkout not in json.dumps(compact)
 
 

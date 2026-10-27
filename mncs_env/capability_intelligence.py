@@ -3972,9 +3972,31 @@ def _compact_projection(
                 "deferrals_without_exact_objective_reference_count",
                 "matching_preflight_count",
                 "supporting_preflight_events_omitted_count",
+                "preflight_linked_provider_invocation_count",
             ):
                 if type(follow_through.get(key)) is int:
                     compact_follow_through[key] = follow_through[key]
+            project_change_status = follow_through.get(
+                "provider_invocation_project_change_status",
+            )
+            if isinstance(project_change_status, str):
+                compact_follow_through[
+                    "provider_invocation_project_change_status"
+                ] = _short_text(project_change_status, 80)
+            for key in (
+                "provider_invocation_observation_status_counts",
+                "provider_invocation_outcome_counts",
+            ):
+                raw_counts = follow_through.get(key)
+                if not isinstance(raw_counts, dict):
+                    continue
+                compact_counts = {
+                    _short_text(name, 80): count
+                    for name, count in sorted(raw_counts.items())[:8]
+                    if isinstance(name, str) and type(count) is int and count >= 0
+                }
+                if compact_counts:
+                    compact_follow_through[key] = compact_counts
             preflight_events = follow_through.get("supporting_preflight_events")
             if isinstance(preflight_events, list):
                 compact_follow_through["supporting_preflight_events"] = [
@@ -3990,6 +4012,41 @@ def _compact_projection(
                     if isinstance(event, dict)
                     and isinstance(event.get("event_reference"), dict)
                 ]
+            provider_events = follow_through.get("provider_invocation_events")
+            if isinstance(provider_events, list):
+                compact_provider_events = []
+                for event in provider_events[:2]:
+                    if not isinstance(event, dict):
+                        continue
+                    compact_event = {
+                        key: _short_text(event.get(key), 96)
+                        for key in (
+                            "status", "outcome_status", "causal_status",
+                            "project_change_status",
+                        )
+                        if isinstance(event.get(key), str)
+                    }
+                    if type(event.get("returncode")) is int:
+                        compact_event["returncode"] = event["returncode"]
+                    for key in (
+                        "preflight_event", "invocation_event", "completion_event",
+                    ):
+                        event_reference = event.get(key)
+                        if isinstance(event_reference, dict):
+                            compact_event[key] = {
+                                field: event_reference[field]
+                                for field in ("identity", "sequence", "type")
+                                if field in event_reference
+                            }
+                    compact_provider_events.append(compact_event)
+                if compact_provider_events:
+                    compact_follow_through["provider_invocation_events"] = (
+                        compact_provider_events
+                    )
+                if len(provider_events) > len(compact_provider_events):
+                    compact_follow_through[
+                        "provider_invocation_events_omitted_count"
+                    ] = len(provider_events) - len(compact_provider_events)
             compact_item["later_eligibility_summary"] = compact_follow_through
         compact_coordination_deferral_candidates.append(compact_item)
     compact_integration_eligibility = []
@@ -11095,7 +11152,7 @@ def _coordination_deferral_follow_through(
                     or record.get("work_intent_id") != work_intent_id
                 ):
                     continue
-                matches.append({
+                match = {
                     "kind": kind,
                     "action": record["action"],
                     "persistent_claim_required": False,
@@ -11104,7 +11161,13 @@ def _coordination_deferral_follow_through(
                         "later-event-same-repository-action-campaign-and-work-intent"
                     ),
                     "event_reference": reference,
-                })
+                }
+                invocation_observation = record.get("invocation_observation")
+                if isinstance(invocation_observation, dict):
+                    match["provider_invocation_observation"] = (
+                        invocation_observation
+                    )
+                matches.append(match)
         matches.sort(key=lambda item: (
             item["event_reference"]["sequence"], item["kind"],
         ))
@@ -14751,6 +14814,100 @@ def _session_activity(
             relation.get("status") == "unavailable-deferral-event-reference"
             for relation in relations
         )
+        provider_invocation_observations_by_preflight: dict[
+            tuple[str, int, str], tuple[dict[str, Any], dict[str, Any]],
+        ] = {}
+        for relation in relations:
+            matches = relation.get("matches")
+            if not isinstance(matches, list):
+                continue
+            for match in matches:
+                invocation_observation = (
+                    match.get("provider_invocation_observation")
+                    if isinstance(match, dict) else None
+                )
+                if isinstance(invocation_observation, dict):
+                    reference = (
+                        match.get("event_reference")
+                        if isinstance(match, dict) else None
+                    )
+                    reference_identity = (
+                        reference.get("identity")
+                        if isinstance(reference, dict) else None
+                    )
+                    reference_sequence = (
+                        reference.get("sequence")
+                        if isinstance(reference, dict) else None
+                    )
+                    reference_type = (
+                        reference.get("type")
+                        if isinstance(reference, dict) else None
+                    )
+                    if (
+                        isinstance(reference_identity, str)
+                        and type(reference_sequence) is int
+                        and isinstance(reference_type, str)
+                    ):
+                        provider_invocation_observations_by_preflight.setdefault(
+                            (
+                                reference_identity, reference_sequence,
+                                reference_type,
+                            ),
+                            (reference, invocation_observation),
+                        )
+        provider_invocation_observations = list(
+            observation
+            for _reference, observation
+            in provider_invocation_observations_by_preflight.values()
+        )
+        provider_invocation_status_counts: dict[str, int] = {}
+        provider_invocation_outcome_counts: dict[str, int] = {}
+        for invocation_observation in provider_invocation_observations:
+            invocation_status = invocation_observation.get("status")
+            if isinstance(invocation_status, str):
+                provider_invocation_status_counts[invocation_status] = (
+                    provider_invocation_status_counts.get(invocation_status, 0) + 1
+                )
+            outcome_status = invocation_observation.get("outcome_status")
+            if isinstance(outcome_status, str):
+                provider_invocation_outcome_counts[outcome_status] = (
+                    provider_invocation_outcome_counts.get(outcome_status, 0) + 1
+                )
+        matched_provider_invocation_count = provider_invocation_status_counts.get(
+            "matched-provider-invocation", 0,
+        )
+        provider_invocation_events = []
+        for preflight_reference, invocation_observation in sorted(
+            provider_invocation_observations_by_preflight.values(),
+            key=lambda item: item[0].get("sequence", 0),
+        ):
+            if invocation_observation.get("status") != (
+                "matched-provider-invocation"
+            ):
+                continue
+            event_record = {
+                key: invocation_observation[key]
+                for key in (
+                    "status", "outcome_status", "causal_status",
+                    "project_change_status", "returncode",
+                )
+                if isinstance(invocation_observation.get(key), str)
+                or type(invocation_observation.get(key)) is int
+            }
+            event_record["preflight_event"] = {
+                key: preflight_reference[key]
+                for key in ("identity", "sequence", "type")
+                if key in preflight_reference
+            }
+            for key in ("invocation_event", "completion_event"):
+                event_reference = invocation_observation.get(key)
+                if isinstance(event_reference, dict):
+                    event_record[key] = {
+                        field: event_reference[field]
+                        for field in ("identity", "sequence", "type")
+                        if field in event_reference
+                    }
+            provider_invocation_events.append(event_record)
         supporting_preflights: dict[str, dict[str, Any]] = {}
         for relation in relations:
             matches = relation.get("matches")
@@ -14807,13 +14964,31 @@ def _session_activity(
             "supporting_preflight_events_omitted_count": max(
                 0, len(supporting_preflight_events) - 4,
             ),
+            "preflight_linked_provider_invocation_count": (
+                matched_provider_invocation_count
+            ),
+            "provider_invocation_observation_status_counts": (
+                provider_invocation_status_counts
+            ),
+            "provider_invocation_outcome_counts": (
+                provider_invocation_outcome_counts
+            ),
+            "provider_invocation_events": provider_invocation_events[:4],
+            "provider_invocation_events_omitted_count": max(
+                0, len(provider_invocation_events) - 4,
+            ),
+            "provider_invocation_project_change_status": (
+                "not-measured-by-invocation-events"
+            ),
             "operation_execution_status": "not-recorded-by-eligibility-events",
             "causal_claim": "not-established",
             "interpretation": (
                 "Counts relate only exact same-objective, repository, action, "
                 "and later-sequence eligibility events in this session window. "
-                "They do not establish that an operation executed, a deferral "
-                "was resolved, or a coordination rule was unnecessary."
+                "Exact preflight references may also link to a later provider "
+                "invocation and completion, but do not establish a repository "
+                "change, deferral resolution, or that a coordination rule was "
+                "unnecessary."
             ),
         }
     repository_ref_transition_records: list[dict[str, Any]] = []
