@@ -61,6 +61,15 @@ use remain separate observations. When the selected event window has no
 context response, the projection labels that absence as window-scoped rather
 than concluding that the session received no context.
 
+For declared service probes, service accountability also exposes bounded
+same-capability calls without valid owner-pass context, including paired
+invocation/completion references, outcome status, and a current-binding match
+when available. This makes outside-pass activity inspectable without claiming
+that an agent initiated it or that it represents manual fallback, a missed
+opportunity, service failure, or reduced intervention. Its digest participates
+in the service-accountability projection identity, including when response-
+budget compaction retains only its summary.
+
 ## Entry and persistence observation
 
 The bounded readback

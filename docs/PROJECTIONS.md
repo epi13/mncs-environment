@@ -1134,6 +1134,18 @@ intervention burden. The current service readiness snapshot remains separate,
 so a returned probe call is not treated as proof that the service fulfilled its
 responsibility.
 
+For a declared probe, `ambient_owner_pass_activity.unclassified_probe_activity`
+also exposes bounded calls to the same capability that lack valid owner-pass
+context. It retains paired completion status and source event references, and
+reports an exact current-binding match where the event carries a complete
+binding identity. This makes activity outside the recorded scheduler context
+inspectable without attributing it to an agent or calling it manual fallback,
+a missed opportunity, or service failure. The event-window and omitted-group
+statuses remain part of the interpretation. When response compaction applies,
+the service-accountability digest keeps this relation in projection identity;
+bounded source references remain in the service row while response budget
+allows.
+
 `session_activity.ambient_service_execution` exposes the latest recorded
 incremental owner-pass scheduler trace from the same session snapshot. Entry
 also returns the current bounded trace directly, including scheduled and
@@ -1186,13 +1198,18 @@ context only while the pass is active. The projection validates both event
 contexts, counts outcomes only when the paired completion repeats the exact
 context, and preserves bounded event references for inspection. It also
 distinguishes calls without a context from malformed context; an unclassified
-call is not attributed to an agent or treated as manual work. An exact trace
-match establishes that the invocation was observed within the scheduled pass,
-not that the service fulfilled its responsibility, that an agent received the
-result, or that intervention burden fell. The event window and latest stored
-trace are bounded, so an absent match may mean the relevant trace was entry-only
-or has since been replaced. No opportunity denominator or fulfillment ratio is
-inferred from these records.
+call is not attributed to an agent or treated as manual work. Bounded
+unclassified groups retain exact binding identity when recorded, paired
+completion counts, outcome status, completion-context status, and source
+references for the invocation and completion. Under response pressure, the
+projection trims these details before
+discarding correlated RPC records and marks omitted groups when a compact
+summary fits. An exact trace match establishes that the invocation was observed
+within the scheduled pass, not that the service fulfilled its responsibility,
+that an agent received the result, or that intervention burden fell. The event
+window and latest stored trace are bounded, so an absent match may mean the
+relevant trace was entry-only or has since been replaced. No opportunity
+denominator or fulfillment ratio is inferred from these records.
 
 `session_activity.projection_coherence_history` exposes the selected session's
 recorded projection-pass summaries and their evidence references, together

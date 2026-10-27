@@ -2558,6 +2558,77 @@ def _compact_service_accountability_overview(
     }
 
 
+def _compact_unclassified_owner_pass_activity(value: Any) -> list[dict[str, Any]]:
+    """Keep a few inspectable, bounded capability calls outside owner passes."""
+    if not isinstance(value, list):
+        return []
+    compact_rows = []
+    for row in value[:4]:
+        if not isinstance(row, dict):
+            continue
+        capability = row.get("capability")
+        context_status = row.get("context_status")
+        if (not isinstance(capability, str)
+                or re.fullmatch(
+                    r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}", capability,
+                ) is None
+                or context_status not in {"not-recorded", "invalid"}):
+            continue
+        compact_row: dict[str, Any] = {
+            "capability": capability,
+            "context_status": context_status,
+        }
+        for key in (
+            "invocation_count", "completion_count", "nonzero_returncode_count",
+        ):
+            if type(row.get(key)) is int and row[key] >= 0:
+                compact_row[key] = row[key]
+        outcomes = row.get("outcome_status_counts")
+        if isinstance(outcomes, dict):
+            compact_row["outcome_status_counts"] = {
+                status: count
+                for status, count in list(outcomes.items())[:6]
+                if isinstance(status, str)
+                and re.fullmatch(r"[a-z][a-z0-9._-]{0,95}", status)
+                and type(count) is int and count >= 0
+            }
+        completion_context_statuses = row.get(
+            "completion_context_status_counts",
+        )
+        if isinstance(completion_context_statuses, dict):
+            compact_row["completion_context_status_counts"] = {
+                status: count
+                for status, count in list(completion_context_statuses.items())[:4]
+                if status in {"not-recorded", "invalid", "valid", "unknown"}
+                and type(count) is int and count >= 0
+            }
+        identity = row.get("binding_identity")
+        if isinstance(identity, dict):
+            compact_row["binding_identity"] = {
+                key: _short_text(identity[key], 160)
+                for key in (
+                    "status", "provider", "binding_id", "contract_revision",
+                )
+                if isinstance(identity.get(key), str)
+            }
+        references = row.get("supporting_events")
+        if isinstance(references, list):
+            compact_row["supporting_events"] = [
+                {key: reference[key] for key in ("identity", "sequence", "type")}
+                for reference in references[:2]
+                if isinstance(reference, dict)
+                and isinstance(reference.get("identity"), str)
+                and type(reference.get("sequence")) is int
+                and isinstance(reference.get("type"), str)
+            ]
+            compact_row["supporting_events_truncated"] = (
+                row.get("supporting_events_truncated") is True
+                or len(references) > 2
+            )
+        compact_rows.append(compact_row)
+    return compact_rows
+
+
 def _compact_projection(
     projection: dict[str, Any], original_size: int, max_result_bytes: int,
 ) -> dict[str, Any]:
@@ -5429,6 +5500,9 @@ def _compact_projection(
     if (isinstance(raw_ambient_owner_pass_activity, dict)
             and (raw_ambient_owner_pass_activity.get("scoped_invocation_count", 0)
                  or raw_ambient_owner_pass_activity.get(
+                     "unclassified_invocation_count", 0,
+                 )
+                 or raw_ambient_owner_pass_activity.get(
                      "invalid_context_event_count", 0,
                  ))):
         compact_owner_activity = {
@@ -5487,6 +5561,31 @@ def _compact_projection(
                 )
             compact_groups.append(compact_group)
         compact_owner_activity["execution_groups"] = compact_groups
+        raw_unclassified = raw_ambient_owner_pass_activity.get(
+            "unclassified_capability_activity",
+        )
+        compact_unclassified = _compact_unclassified_owner_pass_activity(
+            raw_unclassified,
+        )
+        if compact_unclassified:
+            compact_owner_activity[
+                "unclassified_capability_activity"
+            ] = compact_unclassified
+        raw_unclassified = raw_unclassified if isinstance(raw_unclassified, list) else []
+        omitted_unclassified = raw_ambient_owner_pass_activity.get(
+            "unclassified_capability_activity_omitted_count", 0,
+        )
+        if type(omitted_unclassified) is not int or omitted_unclassified < 0:
+            omitted_unclassified = 0
+        omitted_unclassified += max(0, len(raw_unclassified) - len(compact_unclassified))
+        if omitted_unclassified:
+            compact_owner_activity[
+                "unclassified_capability_activity_omitted_count"
+            ] = omitted_unclassified
+        if compact_unclassified and omitted_unclassified:
+            compact_owner_activity[
+                "unclassified_capability_activity_truncated"
+            ] = True
         compact_owner_activity["measurement_limits"] = [
             "A scoped call links to an owner pass; it does not establish fulfillment or reduced intervention burden.",
         ]
@@ -6277,6 +6376,63 @@ def _compact_projection(
         elif result["session_activity"]["interactions"]:
             result["session_activity"]["interactions"].pop()
             result["session_activity"]["interactions_truncated"] = True
+        elif result["session_activity"].get(
+            "ambient_owner_pass_activity", {},
+        ).get("unclassified_capability_activity"):
+            owner_activity = result["session_activity"][
+                "ambient_owner_pass_activity"
+            ]
+            owner_activity["unclassified_capability_activity"].pop()
+            owner_activity[
+                "unclassified_capability_activity_truncated"
+            ] = True
+            owner_activity[
+                "unclassified_capability_activity_omitted_count"
+            ] = owner_activity.get(
+                "unclassified_capability_activity_omitted_count", 0,
+            ) + 1
+        elif (isinstance(result["session_activity"].get(
+            "ambient_owner_pass_activity"), dict)
+                and result["session_activity"][
+                    "ambient_owner_pass_activity"
+                ].get("unclassified_invocation_count", 0) > 0
+                and result["session_activity"][
+                    "ambient_owner_pass_activity"
+                ].get("scoped_invocation_count", 0) == 0
+                and result["session_activity"][
+                    "ambient_owner_pass_activity"
+                ].get("response_budget_summary_only") is not True):
+            owner_activity = result["session_activity"][
+                "ambient_owner_pass_activity"
+            ]
+            overview = {
+                key: owner_activity[key]
+                for key in (
+                    "status", "scope", "invocation_event_count",
+                    "scoped_invocation_count", "unclassified_invocation_count",
+                    "invalid_context_event_count",
+                    "unclassified_capability_activity_omitted_count",
+                )
+                if key in owner_activity
+            }
+            overview["response_budget_summary_only"] = True
+            overview["unclassified_capability_activity_truncated"] = True
+            overview["measurement_limits"] = [
+                "Per-capability unclassified event details were omitted by the response budget; counts do not identify agent activity or establish manual fallback.",
+            ]
+            result["session_activity"]["ambient_owner_pass_activity"] = overview
+        elif (isinstance(result["session_activity"].get(
+            "ambient_owner_pass_activity"), dict)
+                and result["session_activity"][
+                    "ambient_owner_pass_activity"
+                ].get("unclassified_invocation_count", 0) > 0
+                and result["session_activity"][
+                    "ambient_owner_pass_activity"
+                ].get("scoped_invocation_count", 0) == 0
+                and result["session_activity"][
+                    "ambient_owner_pass_activity"
+                ].get("response_budget_summary_only") is True):
+            result["session_activity"].pop("ambient_owner_pass_activity")
         elif result["session_activity"].get("rpc_operations"):
             result["session_activity"]["rpc_operations"].pop()
             result["session_activity"]["rpc_operations_truncated"] = True
@@ -6422,6 +6578,33 @@ def _compact_projection(
             result["session_activity"]["ambient_owner_pass_activity"][
                 "measurement_limits"
             ].pop()
+        elif (isinstance(result["session_activity"].get(
+            "ambient_owner_pass_activity"), dict)
+                and result["session_activity"][
+                    "ambient_owner_pass_activity"
+                ].get("response_budget_summary_only") is not True):
+            owner_activity = result["session_activity"][
+                "ambient_owner_pass_activity"
+            ]
+            overview = {
+                key: owner_activity[key]
+                for key in (
+                    "status", "scope", "invocation_event_count",
+                    "scoped_invocation_count", "unclassified_invocation_count",
+                    "invalid_context_event_count",
+                    "context_bearing_completion_count",
+                    "completion_context_missing_count",
+                    "completion_context_mismatch_count", "execution_group_count",
+                    "execution_groups_truncated",
+                    "execution_groups_omitted_count",
+                )
+                if key in owner_activity
+            }
+            overview["response_budget_summary_only"] = True
+            overview["measurement_limits"] = [
+                "Unclassified capability calls lack valid owner-pass context; they do not establish agent activity, manual fallback, missed service opportunities, or service failure.",
+            ]
+            result["session_activity"]["ambient_owner_pass_activity"] = overview
         elif isinstance(
             result["session_activity"].get("ambient_owner_pass_activity"), dict,
         ):
@@ -15693,6 +15876,166 @@ def _service_ambient_owner_pass_observation(
         if type(row.get("invocation_count")) is int
         and row.get("context_status") == "invalid"
     )
+    unclassified_probe_calls = []
+    unclassified_completion_count = sum(
+        row.get("completion_count", 0) for row in unclassified_rows
+        if type(row.get("completion_count")) is int
+        and row.get("completion_count") >= 0
+    )
+    unclassified_nonzero_returncode_count = sum(
+        row.get("nonzero_returncode_count", 0) for row in unclassified_rows
+        if type(row.get("nonzero_returncode_count")) is int
+        and row.get("nonzero_returncode_count") >= 0
+    )
+    unclassified_outcome_status_counts: dict[str, int] = {}
+    unclassified_outcome_statuses_omitted = 0
+    for row in unclassified_rows:
+        raw_outcomes = row.get("outcome_status_counts")
+        if not isinstance(raw_outcomes, dict):
+            continue
+        for raw_status, count in raw_outcomes.items():
+            if (isinstance(raw_status, str)
+                    and re.fullmatch(r"[a-z][a-z0-9._-]{0,95}", raw_status)
+                    and type(count) is int and count >= 0):
+                if raw_status in unclassified_outcome_status_counts:
+                    unclassified_outcome_status_counts[raw_status] += count
+                elif len(unclassified_outcome_status_counts) < 8:
+                    unclassified_outcome_status_counts[raw_status] = count
+                else:
+                    unclassified_outcome_statuses_omitted += 1
+    for row in unclassified_rows[:4]:
+        raw_binding_identity = row.get("binding_identity")
+        raw_binding_identity = (
+            raw_binding_identity if isinstance(raw_binding_identity, dict) else {}
+        )
+        binding_identity = {
+            key: raw_binding_identity[key]
+            for key in (
+                "status", "provider", "binding_id", "contract_revision",
+            )
+            if isinstance(raw_binding_identity.get(key), str)
+        }
+        binding_identity_complete = (
+            binding_identity.get("status") == "complete"
+            and all(isinstance(binding_identity.get(key), str) for key in (
+                "provider", "binding_id", "contract_revision",
+            ))
+        )
+        matching_bindings = [
+            binding for binding in bindings
+            if binding_identity_complete and all(
+                binding.get(key) == binding_identity.get(key)
+                for key in ("provider", "binding_id", "contract_revision")
+            )
+        ]
+        if len(matching_bindings) == 1:
+            invocation_binding_status = "exact-current-session-binding"
+        elif len(matching_bindings) > 1:
+            invocation_binding_status = "ambiguous-current-session-bindings"
+        elif not bindings:
+            invocation_binding_status = "no-current-probe-binding"
+        elif binding_identity_complete:
+            invocation_binding_status = "not-matched-to-current-session-binding"
+        elif len(bindings) > 1:
+            invocation_binding_status = "current-probe-binding-ambiguous"
+        else:
+            invocation_binding_status = "invocation-binding-identity-incomplete"
+        raw_outcomes = row.get("outcome_status_counts")
+        raw_outcomes = raw_outcomes if isinstance(raw_outcomes, dict) else {}
+        outcomes = {}
+        for raw_status, count in list(raw_outcomes.items())[:8]:
+            if (isinstance(raw_status, str)
+                    and re.fullmatch(r"[a-z][a-z0-9._-]{0,95}", raw_status)
+                    and type(count) is int and count >= 0):
+                outcomes[raw_status] = count
+        raw_completion_context_statuses = row.get(
+            "completion_context_status_counts",
+        )
+        raw_completion_context_statuses = (
+            raw_completion_context_statuses
+            if isinstance(raw_completion_context_statuses, dict) else {}
+        )
+        completion_context_status_counts = {
+            context_status: count
+            for context_status, count in list(
+                raw_completion_context_statuses.items(),
+            )[:4]
+            if context_status in {"not-recorded", "invalid", "valid", "unknown"}
+            and type(count) is int and count >= 0
+        }
+        raw_references = row.get("supporting_events")
+        raw_references = raw_references if isinstance(raw_references, list) else []
+        references = [
+            {key: reference[key] for key in ("identity", "sequence", "type")}
+            for reference in raw_references[:MAX_CAPABILITY_SUPPORTING_EVENTS]
+            if isinstance(reference, dict)
+            and isinstance(reference.get("identity"), str)
+            and type(reference.get("sequence")) is int
+            and isinstance(reference.get("type"), str)
+        ]
+        invocation_count = row.get("invocation_count")
+        completion_count = row.get("completion_count")
+        nonzero_returncode_count = row.get("nonzero_returncode_count")
+        unclassified_probe_calls.append({
+            "context_status": row.get("context_status")
+            if row.get("context_status") in {"not-recorded", "invalid"}
+            else "unknown",
+            "binding_attribution_status": invocation_binding_status,
+            "binding_identity": binding_identity,
+            "invocation_count": (
+                invocation_count if type(invocation_count) is int
+                and invocation_count >= 0 else 0
+            ),
+            "completion_count": (
+                completion_count if type(completion_count) is int
+                and completion_count >= 0 else 0
+            ),
+            "completion_context_status_counts": (
+                completion_context_status_counts
+            ),
+            "outcome_status_counts": outcomes,
+            "nonzero_returncode_count": (
+                nonzero_returncode_count
+                if type(nonzero_returncode_count) is int
+                and nonzero_returncode_count >= 0 else 0
+            ),
+            "supporting_events": references,
+            "supporting_events_truncated": (
+                row.get("supporting_events_truncated") is True
+                or len(raw_references) > len(references)
+            ),
+        })
+    if unclassified_rows:
+        unclassified_probe_status = "observed-outside-tagged-owner-pass"
+    elif projected_activity_incomplete:
+        unclassified_probe_status = "partial-bounded-activity-projection"
+    elif event_window_status == "complete-session-history":
+        unclassified_probe_status = "not-observed-in-complete-session-history"
+    else:
+        unclassified_probe_status = "not-observed-in-selected-event-window"
+    unclassified_probe_activity = {
+        "status": unclassified_probe_status,
+        "scope": "selected-session-event-window-outside-tagged-owner-pass",
+        "event_window_status": event_window_status,
+        "unclassified_invocation_count": unclassified_invocation_count,
+        "invalid_context_invocation_count": invalid_context_invocation_count,
+        "completion_count": unclassified_completion_count,
+        "outcome_status_counts": dict(sorted(
+            unclassified_outcome_status_counts.items(),
+        )),
+        "outcome_status_count_entries_omitted": (
+            unclassified_outcome_statuses_omitted
+        ),
+        "nonzero_returncode_count": unclassified_nonzero_returncode_count,
+        "activity_groups": unclassified_probe_calls,
+        "activity_groups_omitted_count": max(
+            0, len(unclassified_rows) - len(unclassified_probe_calls),
+        ),
+        "causal_status": "not-established",
+        "interpretation_limit": (
+            "These capability calls have no valid owner-pass context. Exact request, completion, or binding matches do not establish that an agent initiated the call, that it was manual fallback, that a service opportunity was missed, or that the service failed."
+        ),
+    }
     if any(item["exact_binding"] for item in scoped_rows):
         status = "exact-current-probe-binding-invocation-observed"
         binding_attribution = "exact-current-session-binding"
@@ -15741,6 +16084,8 @@ def _service_ambient_owner_pass_observation(
         ),
         "probe_calls": probe_calls[:4],
         "probe_calls_omitted_count": max(0, len(probe_calls) - 4),
+        **({"unclassified_probe_activity": unclassified_probe_activity}
+           if unclassified_rows or projected_activity_incomplete else {}),
         "supporting_events": supporting_events[:MAX_CAPABILITY_SUPPORTING_EVENTS],
         "supporting_events_omitted_count": max(
             0, len(supporting_events) - MAX_CAPABILITY_SUPPORTING_EVENTS,
@@ -16764,6 +17109,10 @@ def _session_ambient_owner_pass_activity(
                     "context_status": context_status,
                     "binding_identity": binding_identity,
                     "invocation_count": 0,
+                    "completion_count": 0,
+                    "completion_context_status_counts": {},
+                    "outcome_status_counts": {},
+                    "nonzero_returncode_count": 0,
                     "supporting_events": [],
                     "_first_sequence": 0,
                 })
@@ -16776,6 +17125,37 @@ def _session_ambient_owner_pass_activity(
                     )
                 if isinstance(reference, dict):
                     call_group["supporting_events"].append(reference)
+                completion = record.get("completion_event")
+                if isinstance(completion, dict):
+                    call_group["completion_count"] += 1
+                    completion_context_status = record.get(
+                        "completion_context_status",
+                    )
+                    if completion_context_status not in {
+                        "not-recorded", "invalid", "valid",
+                    }:
+                        completion_context_status = "unknown"
+                    completion_context_status_counts = call_group[
+                        "completion_context_status_counts"
+                    ]
+                    completion_context_status_counts[
+                        completion_context_status
+                    ] = completion_context_status_counts.get(
+                        completion_context_status, 0,
+                    ) + 1
+                    completion_sequence = completion.get("sequence")
+                    if type(completion_sequence) is int:
+                        call_group["_first_sequence"] = max(
+                            call_group["_first_sequence"], completion_sequence,
+                        )
+                    call_group["supporting_events"].append(completion)
+                    outcome_status = record.get("outcome_status")
+                    if isinstance(outcome_status, str):
+                        counts = call_group["outcome_status_counts"]
+                        counts[outcome_status] = counts.get(outcome_status, 0) + 1
+                    returncode = record.get("returncode")
+                    if type(returncode) is int and returncode != 0:
+                        call_group["nonzero_returncode_count"] += 1
             continue
 
         execution_id = context["service_execution_id"]
@@ -16883,6 +17263,12 @@ def _session_ambient_owner_pass_activity(
             "capability": call_group["capability"],
             "context_status": call_group["context_status"],
             "invocation_count": call_group["invocation_count"],
+            "completion_count": call_group["completion_count"],
+            "completion_context_status_counts": call_group[
+                "completion_context_status_counts"
+            ],
+            "outcome_status_counts": call_group["outcome_status_counts"],
+            "nonzero_returncode_count": call_group["nonzero_returncode_count"],
             "binding_identity": binding_identity,
             "supporting_events": [
                 {key: reference[key] for key in ("identity", "sequence", "type")}

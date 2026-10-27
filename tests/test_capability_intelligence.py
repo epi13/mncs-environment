@@ -4293,6 +4293,64 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert unclassified_activity["binding_attribution_status"] == (
         "not-correlated-to-owner-pass"
     )
+    unclassified_probe = unclassified_activity["unclassified_probe_activity"]
+    assert unclassified_probe["status"] == (
+        "observed-outside-tagged-owner-pass"
+    )
+    assert unclassified_probe["unclassified_invocation_count"] == 1
+    assert unclassified_probe["completion_count"] == 1
+    assert unclassified_probe["outcome_status_counts"] == {"ok": 1}
+    assert unclassified_probe["nonzero_returncode_count"] == 0
+    assert unclassified_probe["activity_groups"][0][
+        "binding_attribution_status"
+    ] == "exact-current-session-binding"
+    assert unclassified_probe["activity_groups"][0][
+        "completion_context_status_counts"
+    ] == {"not-recorded": 1}
+    assert unclassified_probe["activity_groups"][0]["supporting_events"] == [
+        {
+            "identity": "evt_service_readiness_invoked",
+            "sequence": 1,
+            "type": "capability.invoked",
+        },
+        {
+            "identity": "evt_service_readiness_completed",
+            "sequence": 2,
+            "type": "invocation.completed",
+        },
+    ]
+    assert "do not establish that an agent initiated the call" in (
+        unclassified_probe["interpretation_limit"]
+    )
+    assert unclassified_result["source"][
+        "session_service_accountability_digest"
+    ]
+    assert unclassified_result["source"][
+        "session_service_accountability_digest"
+    ] != original_accountability_digest
+
+    full_unclassified_size = len(json.dumps(
+        unclassified_result, ensure_ascii=False, sort_keys=True,
+    ).encode("utf-8"))
+    compact_unclassified = capability_intelligence._compact_projection(
+        unclassified_result, full_unclassified_size, 32_000,
+    )
+    compact_probe_activity = compact_unclassified["session_activity"][
+        "service_accountability"
+    ]["services"][0]["ambient_owner_pass_activity"][
+        "unclassified_probe_activity"
+    ]
+    assert compact_unclassified["source"]["response_truncated"] is True
+    assert compact_unclassified["source"][
+        "session_service_accountability_digest"
+    ] == unclassified_result["source"][
+        "session_service_accountability_digest"
+    ]
+    assert compact_probe_activity["activity_groups"][0][
+        "supporting_events"
+    ][0]["identity"] == (
+        "evt_service_readiness_invoked"
+    )
     events[0]["payload"]["ambient_owner_pass_context"] = invocation_context
     events[1]["payload"]["ambient_owner_pass_context"] = completion_context
     assert accountable_services[forge_service]["capability_relation_status"] == (
@@ -8327,6 +8385,26 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert activity["context"]["work_intent_goal"] == "inspect current pressures"
     assert activity["status"] == "ready"
     assert activity["interaction_count"] == 1
+    unclassified_owner_activity = activity["ambient_owner_pass_activity"]
+    assert unclassified_owner_activity["unclassified_invocation_count"] == 1
+    assert unclassified_owner_activity[
+        "unclassified_capability_activity"
+    ][0]["capability"] == "mncs-test:run"
+    assert unclassified_owner_activity[
+        "unclassified_capability_activity"
+    ][0]["completion_count"] == 1
+    assert unclassified_owner_activity[
+        "unclassified_capability_activity"
+    ][0]["outcome_status_counts"] == {"succeeded": 1}
+    assert unclassified_owner_activity[
+        "unclassified_capability_activity"
+    ][0]["completion_context_status_counts"] == {"not-recorded": 1}
+    assert [event["identity"] for event in unclassified_owner_activity[
+        "unclassified_capability_activity"
+    ][0]["supporting_events"]] == [
+        "evt_rpc_capability_invoked_after_context",
+        "evt_rpc_capability_completed_after_context",
+    ]
     assert activity["source"]["rpc_operation_capture_count"] == 4
     assert activity["source"]["rpc_operation_capture_limit"] == 256
     assert activity["source"]["rpc_operation_records_invalid"] == 1
@@ -8484,6 +8562,15 @@ def test_session_activity_correlates_authenticated_control_read_operations(
     assert compact_summary["groups_omitted"] == 0
     assert compact_summary["groups"][2]["supporting_events"][0]["identity"] == (
         "evt_rpc_read_21"
+    )
+    bounded_activity = capability_intelligence.project(
+        session, max_result_bytes=16_000,
+    )["session_activity"]["ambient_owner_pass_activity"]
+    assert bounded_activity["unclassified_invocation_count"] == 1
+    assert bounded_activity[
+        "unclassified_capability_activity"
+    ][0]["supporting_events"][0]["identity"] == (
+        "evt_rpc_capability_invoked_after_context"
     )
     compact_delivery = capability_intelligence._compact_projection(
         result, 20_000, capability_intelligence.MAX_RESULT_BYTES,
