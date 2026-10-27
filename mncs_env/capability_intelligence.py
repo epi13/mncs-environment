@@ -3113,7 +3113,7 @@ def _compact_session_activity_evidence_priority_overview(
     result["detail_status"] = "evidence-priority-response-budget"
     result["evidence_priority_summary_only"] = True
     result["measurement_limits"] = [
-        "Session history and readiness details were reduced to preserve campaign evidence; inspect their source projections for full context.",
+        "Session detail reduced; inspect source projections for full context.",
     ]
     return result
 
@@ -3133,13 +3133,15 @@ def _compact_campaign_evidence_priority_rows(
 
     relation = None
     hypothesis_identity = None
-    for candidate in relations:
+    # Evidence rows preserve campaign append order, so prefer the newest
+    # complete path when several improvements address observed pressure.
+    for candidate in reversed(relations):
         if not isinstance(candidate, dict):
             continue
         candidate_hypothesis = candidate.get("addresses_hypothesis_identity")
         matching_observation = next(
             (
-                item for item in observations
+                item for item in reversed(observations)
                 if isinstance(item, dict)
                 and item.get("pressure_hypothesis_role") == "occurrence"
                 and isinstance(item.get("pressure_hypothesis"), dict)
@@ -3155,7 +3157,7 @@ def _compact_campaign_evidence_priority_rows(
     if hypothesis_identity is None:
         occurrence = next(
             (
-                item for item in observations
+                item for item in reversed(observations)
                 if isinstance(item, dict)
                 and item.get("pressure_hypothesis_role") == "occurrence"
                 and isinstance(item.get("pressure_hypothesis"), dict)
@@ -3169,7 +3171,8 @@ def _compact_campaign_evidence_priority_rows(
             hypothesis_identity = occurrence["pressure_hypothesis"]["identity"]
     if relation is None and relations:
         relation = next(
-            (item for item in relations if isinstance(item, dict)), None,
+            (item for item in reversed(relations) if isinstance(item, dict)),
+            None,
         )
         if (hypothesis_identity is None and isinstance(relation, dict)
                 and isinstance(
@@ -3179,14 +3182,17 @@ def _compact_campaign_evidence_priority_rows(
 
     observation = next(
         (
-            item for item in observations
+            item for item in reversed(observations)
             if isinstance(item, dict)
             and (hypothesis_identity is None
                  or (isinstance(item.get("pressure_hypothesis"), dict)
                      and item["pressure_hypothesis"].get("identity")
                      == hypothesis_identity))
         ),
-        next((item for item in observations if isinstance(item, dict)), None),
+        next(
+            (item for item in reversed(observations) if isinstance(item, dict)),
+            None,
+        ),
     )
     hypothesis = next(
         (
@@ -3212,15 +3218,19 @@ def _compact_campaign_evidence_priority_rows(
 
     compact_observation = None
     if isinstance(observation, dict):
-        compact_observation = {
-            key: observation[key]
-            for key in (
-                "identity", "measurement_basis",
-                "pressure_hypothesis_role", "pressure_hypothesis_role_status",
-                "improvement_relation_status",
-            )
-            if isinstance(observation.get(key), str)
+        compact_observation = {}
+        observation_text_limits = {
+            "measurement_basis": 96,
         }
+        for key in (
+            "identity", "measurement_basis", "pressure_hypothesis_role",
+        ):
+            value = observation.get(key)
+            if isinstance(value, str):
+                compact_observation[key] = (
+                    _short_text(value, observation_text_limits[key])
+                    if key in observation_text_limits else value
+                )
         pointer = retain_pointer(observation.get("evidence_reference"))
         if pointer is not None:
             compact_observation["evidence_reference"] = pointer
@@ -3230,7 +3240,6 @@ def _compact_campaign_evidence_priority_rows(
                 key: work[key]
                 for key in (
                     "campaign_id", "session_id", "work_intent_id",
-                    "work_intent_goal",
                 )
                 if isinstance(work.get(key), str)
             }
@@ -3252,41 +3261,45 @@ def _compact_campaign_evidence_priority_rows(
                 }
             compact_observation["observation"] = compact_details
         pressure = observation.get("pressure_hypothesis")
-        if isinstance(pressure, dict):
+        if (isinstance(pressure, dict)
+                and isinstance(pressure.get("identity"), str)):
             compact_observation["pressure_hypothesis"] = {
-                key: pressure[key]
-                for key in ("identity", "actionable_recommendation")
-                if isinstance(pressure.get(key), str)
+                "identity": pressure["identity"],
             }
 
     compact_hypothesis = None
     if isinstance(hypothesis, dict):
-        compact_hypothesis = {
-            key: hypothesis[key]
-            for key in (
-                "identity", "title", "category", "subsystem", "owner",
-                "recurrence_status", "recommendation",
-                "observation_count", "distinct_session_count",
-                "role_classification_status", "session_attribution_status",
-                "definition_status", "definition_conflict_fields",
-            )
-            if isinstance(hypothesis.get(key), str)
-            or (key == "definition_conflict_fields"
-                and isinstance(hypothesis.get(key), list))
-            or (type(hypothesis.get(key)) is int
-                and hypothesis[key] >= 0)
+        compact_hypothesis = {}
+        hypothesis_text_limits = {
+            "title": 128,
+            "category": 80,
+            "subsystem": 128,
+            "owner": 80,
+            "recurrence_status": 48,
+            "recommendation": 160,
+            "definition_status": 48,
         }
+        if isinstance(hypothesis.get("identity"), str):
+            compact_hypothesis["identity"] = hypothesis["identity"]
+        for key, limit in hypothesis_text_limits.items():
+            value = hypothesis.get(key)
+            if isinstance(value, str):
+                compact_hypothesis[key] = _short_text(value, limit)
+        for key in ("observation_count", "distinct_session_count"):
+            value = hypothesis.get(key)
+            if type(value) is int and value >= 0:
+                compact_hypothesis[key] = value
+        conflict_fields = hypothesis.get("definition_conflict_fields")
+        if isinstance(conflict_fields, list) and conflict_fields:
+            compact_hypothesis["definition_conflict_fields"] = [
+                _short_text(value, 64)
+                for value in conflict_fields[:4]
+                if isinstance(value, str)
+            ]
         evidence_references = hypothesis.get("evidence_references")
         if isinstance(evidence_references, list) and evidence_references:
             compact_hypothesis["evidence_reference_count"] = (
                 hypothesis.get("evidence_reference_count", len(evidence_references))
-            )
-        related_observations = hypothesis.get(
-            "evidence_observation_identities",
-        )
-        if isinstance(related_observations, list) and related_observations:
-            compact_hypothesis["evidence_observation_identities"] = (
-                related_observations[:1]
             )
 
     compact_relation = None
@@ -3295,8 +3308,7 @@ def _compact_campaign_evidence_priority_rows(
             key: relation[key]
             for key in (
                 "identity", "addresses_hypothesis_identity",
-                "effectiveness_assessment", "pressure_hypothesis_status",
-                "recorded_by_observation_identity",
+                "effectiveness_assessment",
                 "verification_observation_identity", "verification_record_status",
                 "subsequent_observation_identity", "subsequent_record_status",
             )
@@ -3311,7 +3323,7 @@ def _compact_campaign_evidence_priority_rows(
             if pointer is not None:
                 compact_relation[key] = pointer
         if isinstance(relation.get("basis"), str):
-            compact_relation["basis"] = _short_text(relation["basis"], 160)
+            compact_relation["basis"] = _short_text(relation["basis"], 96)
 
     result["observations"] = (
         [compact_observation] if compact_observation is not None else []
@@ -3329,13 +3341,13 @@ def _compact_campaign_evidence_priority_rows(
             "campaign_state_checkpoint_id", "recorded_at", "evidence_count",
             "evidence_page_truncated", "evidence_page_offset",
             "evidence_page_limit", "previous_evidence_offset",
-            "next_evidence_offset", "evidence_history_pages_requested",
-            "evidence_history_pages_read", "evidence_history_truncated",
+            "next_evidence_offset", "evidence_history_truncated",
             "evidence_history_checkpoint_consistent", "response_truncated",
             "response_byte_count", "observation_records_verified",
             "observation_records_unavailable",
             "observation_records_skipped_by_page_budget",
             "source_pointer_content_integrity_verified_count",
+            "source_pointer_content_integrity_not_verified_count",
         }
         for key in list(source):
             if key not in retained_source_fields:

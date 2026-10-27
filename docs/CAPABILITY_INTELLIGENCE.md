@@ -97,13 +97,13 @@ bounded detail.
 For an unusually small 7–8 KiB response, if a verified observation, its
 pressure hypothesis, and an improvement relation share the same identity and
 one reduced path fits within the budget, the projection retains that single
-observation-to-improvement path. It keeps the observation's exact evidence
-pointer, the implementation pointer, available verification and follow-up
-pointers, and the relation's effectiveness status; omitted array rows are
-reported through the existing counts and truncation fields. The compact session
-activity keeps measured service totals, the ambient scheduler digest and one
-recorded result link, while dropping repeated Doctor history and detailed
-readiness fields.
+observation-to-improvement path, preferring the newest complete path in
+campaign append order. It keeps the observation's exact evidence pointer, the
+implementation pointer, available verification and follow-up pointers, and the
+relation's effectiveness status; omitted array rows are reported through the
+existing counts and truncation fields. The compact session activity keeps
+measured service totals, the ambient scheduler digest and one recorded result
+link, while dropping repeated Doctor history and detailed readiness fields.
 This path is used only when the complete linked summary fits. Otherwise normal
 budget compaction applies, and the selected evidence records remain the source
 of truth for details. Retaining an improvement relation does not establish

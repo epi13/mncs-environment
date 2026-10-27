@@ -4746,9 +4746,44 @@ def test_projection_enforces_tight_budget_for_session_service_history(
         "basis": "Targeted verification and a later source observation are linked.",
         "not_measured": ["whether the pressure recurs less often"],
     }
+    latest_pressure = _observation(
+        "ev_environment_budget_pressure_latest",
+        "ses_environment_budget_latest", "cmp_environment_budget",
+    )
+    latest_pressure["pressure_hypothesis"]["identity"] = (
+        "ph_budget_pressure_latest"
+    )
+    latest_change = _observation(
+        "ev_environment_budget_change_latest",
+        "ses_environment_budget_latest", "cmp_environment_budget",
+    )
+    _drop_pressure_hypothesis(latest_change)
+    latest_verification = _observation(
+        "ev_environment_budget_verification_latest",
+        "ses_environment_budget_latest", "cmp_environment_budget",
+    )
+    _drop_pressure_hypothesis(latest_verification)
+    latest_followup = _observation(
+        "ev_environment_budget_followup_latest",
+        "ses_environment_budget_latest", "cmp_environment_budget",
+    )
+    _drop_pressure_hypothesis(latest_followup)
+    latest_change["improvement_relation"] = {
+        "identity": "im_budget_pressure_latest",
+        "addresses_hypothesis_identity": "ph_budget_pressure_latest",
+        "implementation_reference": implementation,
+        "verification_observation_identity": latest_verification["identity"],
+        "subsequent_observation_identity": latest_followup["identity"],
+        "basis": "A more recent source observation belongs to this linked path.",
+        "not_measured": ["whether the pressure recurs less often"],
+    }
     session, _ = _session(
         tmp_path,
-        [pressure, change, verification, followup],
+        [
+            pressure, change, verification, followup,
+            latest_pressure, latest_change,
+            latest_verification, latest_followup,
+        ],
         extra_refs=[implementation],
     )
     projection = capability_intelligence.project(session)
@@ -4933,34 +4968,43 @@ def test_projection_enforces_tight_budget_for_session_service_history(
                for item in compact_observations["items"])
     observation = next(
         item for item in compact["observations"]
-        if item["identity"] == pressure["identity"]
+        if item["identity"] == latest_pressure["identity"]
     )
     hypothesis = next(
         item for item in compact["pressure_hypotheses"]
-        if item["identity"] == "ph_budget_pressure"
+        if item["identity"] == "ph_budget_pressure_latest"
     )
     relation = next(
         item for item in compact["improvement_relations"]
-        if item["identity"] == "im_budget_pressure"
+        if item["identity"] == "im_budget_pressure_latest"
     )
     assert observation["evidence_reference"]["commit"]
     assert observation["evidence_reference"]["sha256"]
     assert observation["pressure_hypothesis"]["identity"] == (
         hypothesis["identity"]
-    ) == relation["addresses_hypothesis_identity"] == "ph_budget_pressure"
-    assert relation["identity"] == "im_budget_pressure"
+    ) == relation["addresses_hypothesis_identity"] == "ph_budget_pressure_latest"
+    assert relation["identity"] == "im_budget_pressure_latest"
     assert relation["effectiveness_assessment"] == "not-assessed"
     assert relation["implementation_reference"]["path"] == (
         "mncs_env/capability_intelligence.py"
     )
     assert relation["verification_evidence_reference"]["identity"] == (
-        verification["identity"]
+        latest_verification["identity"]
     )
     assert relation["subsequent_evidence_reference"]["identity"] == (
-        followup["identity"]
+        latest_followup["identity"]
     )
-    assert relation["verification_observation_identity"] == verification["identity"]
-    assert relation["subsequent_observation_identity"] == followup["identity"]
+    assert relation["verification_observation_identity"] == latest_verification["identity"]
+    assert relation["subsequent_observation_identity"] == latest_followup["identity"]
+    assert compact["observations_omitted_count"] == (
+        compact["observation_count"] - 1
+    )
+    assert compact["pressure_hypotheses_omitted_count"] == (
+        compact["pressure_hypothesis_count"] - 1
+    )
+    assert compact["improvement_relations_omitted_count"] == (
+        compact["improvement_relation_count"] - 1
+    )
     assert compact["source"]["response_truncated"] is True
 
 
