@@ -3794,6 +3794,94 @@ def test_compact_projection_preserves_missing_resource_sample_status(
     assert compact_samples.get("observations", []) == []
 
 
+def test_session_diagnostic_history_is_projected_and_budgeted(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_diagnostic_activity",
+        "ses_diagnostic_activity",
+        "cmp_diagnostic_activity",
+    )
+    session, _state = _session(tmp_path, [record])
+    unrecorded = capability_intelligence.project(session)
+    assert "diagnostic_activity" not in unrecorded["session_activity"]
+    evidence_reference = (
+        f"mncs-store:{session.session_id}:diagnostics:{'a' * 64}"
+    )
+    summary = {
+        "failures": 1,
+        "current": 1,
+        "captured": 1,
+        "deferred": 0,
+        "coordination_deferred": 0,
+        "unsupported": 0,
+        "escalated": 0,
+        "blockers": 0,
+        "observed": 1,
+        "depth": "standard",
+        "epoch_reused": False,
+        "elapsed_seconds": 0.125,
+    }
+    session.snapshot["diagnostic_history"] = [{
+        "at": "2026-10-27T20:00:00Z",
+        "mode": "ambient",
+        "depth": "standard",
+        "summary": summary,
+        "evidence_ref": evidence_reference,
+        "private_witness": "diagnostic-witness-private",
+    }]
+    session.snapshot["diagnostic_epoch"] = {
+        "summary": summary,
+        "evidence_ref": evidence_reference,
+    }
+
+    result = capability_intelligence.project(session)
+    activity = result["session_activity"]
+    diagnostics = activity["diagnostic_activity"]
+    assert diagnostics["status"] == "recorded"
+    assert diagnostics["source"]["session_id"] == session.session_id
+    assert diagnostics["source"]["current_epoch_relation"] == (
+        "matches-latest-history-record"
+    )
+    assert diagnostics["summary"]["latest_failure_count"] == 1
+    assert diagnostics["history"][0]["evidence_reference"] == {
+        "kind": "session-store",
+        "reference": evidence_reference,
+    }
+    assert "diagnostic-witness-private" not in json.dumps(result)
+
+    overview = capability_intelligence._compact_session_activity_budget_overview(
+        activity,
+    )
+    assert overview is not None
+    assert overview["diagnostic_activity"]["history"][0][
+        "evidence_reference"
+    ]["reference"] == evidence_reference
+
+    compact = capability_intelligence.project(
+        session, max_result_bytes=8_000,
+    )
+    compact_diagnostics = compact["session_activity"]["diagnostic_activity"]
+    assert compact["source"]["response_truncated"] is True
+    assert compact_diagnostics["history"][0]["evidence_reference"][
+        "reference"
+    ] == evidence_reference
+
+    session.snapshot["diagnostic_history"].append({
+        "at": "2026-10-27T20:01:00Z",
+        "mode": "ambient",
+        "depth": "minimal",
+        "summary": {"failures": 0},
+        "evidence_ref": "mncs-store:ses_other:diagnostics:" + "b" * 64,
+    })
+    cross_session = capability_intelligence._session_diagnostic_activity(
+        session.snapshot, session.session_id,
+    )
+    assert cross_session["status"] == "partial"
+    assert cross_session["summary"]["invalid_reference_count"] == 1
+    assert "ses_other" not in json.dumps(cross_session)
+
+
 def test_session_resource_sample_is_correlated_sanitized_and_compactable(
     tmp_path: Path,
 ) -> None:

@@ -1082,6 +1082,24 @@ workspace paths. Summaries are broader health evidence: they do not establish
 a service-specific cause or improvement, and an epoch recorded at an earlier
 snapshot revision does not prove that health remains unchanged.
 
+`session_activity.diagnostic_activity` projects the Environment diagnostic
+service's newest four session history summaries, separately from Doctor's
+health history. Each row retains bounded outcome counts, execution mode and
+depth, and a validated session-bound immutable evidence reference when one was
+recorded. The current diagnostic epoch is compared with the newest history
+reference. A same-session file reference is retained only for the diagnostic
+artifact path and filename shape produced by the existing writer. The
+projection does not read or integrity-check diagnostic artifacts; inspect the
+exact reference for witness details. Campaign, WorkIntent, Environment, and
+definition identities are explicitly based on the current session snapshot,
+not asserted as the context at the time of each historical diagnosis. Counts
+and elapsed diagnostic time describe the diagnostic service's records; they
+do not establish root cause, repair, agent effort, or burden reduction. The
+projection is bounded and demand-driven with the other session activity, and
+does not add a telemetry store. The field is omitted when neither a diagnostic
+history nor epoch is present; absence does not imply that diagnostics were
+unneeded, passed, or automatically fulfilled.
+
 Detailed Doctor classification can be requested with
 `mncs-env projections SESSION --interpret environmental-capability
 --doctor-gap-limit N`. The default is zero and performs no additional Doctor

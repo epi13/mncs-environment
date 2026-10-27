@@ -105,13 +105,14 @@ references from its source projection digest.
 
 If the whole ECI response still exceeds its requested byte budget, a final
 summary-only view keeps service totals, exact source references for recorded
-owner results, the current Doctor epoch, and bounded Doctor history identifiers.
-Rows without recorded results and detailed event history are counted as
-omitted. Page-level reference identities and read-budget details can also be
-omitted while aggregate offsets and the campaign ledger remain available. This
-fallback preserves evidence links without claiming that omitted work failed or
-was fulfilled; agents can query the session activity projection for the full
-bounded detail.
+owner results, the current Doctor epoch and bounded Doctor history
+identifiers, and the bounded diagnostic activity summary with up to two
+validated session evidence references. Rows without recorded results and
+detailed event history are counted as omitted. Page-level reference identities
+and read-budget details can also be omitted while aggregate offsets and the
+campaign ledger remain available. This fallback preserves evidence links
+without claiming that omitted work failed or was fulfilled; agents can query
+the session activity projection for the full bounded detail.
 
 For an unusually small 7–8 KiB response, if a verified occurrence, its
 pressure hypothesis, and an improvement relation share the same identity and

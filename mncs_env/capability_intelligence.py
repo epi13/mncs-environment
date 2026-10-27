@@ -215,6 +215,7 @@ MAX_DOCTOR_GAP_PROVIDER_KIND_GROUPS = 8
 MAX_SESSION_PROJECTION_HISTORY = 8
 MAX_SESSION_RESOURCE_ARTIFACT_WINDOW = 256
 MAX_SESSION_RESOURCE_SAMPLES = 4
+MAX_SESSION_DIAGNOSTIC_HISTORY = 4
 MAX_RESOURCE_SAMPLE_BYTES = 64 * 1024
 SYSTEM_RESOURCE_SAMPLE_CAPABILITY = "mncs-system-monitor:system-resource-sample"
 SYSTEM_RESOURCE_SAMPLE_SCHEMA = "mncs.system-monitor.resource-sample.v1"
@@ -2763,6 +2764,12 @@ def _compact_session_activity_budget_overview(
                 or type(source.get(key)) in (int, bool))
         }
 
+    diagnostic_activity = _compact_session_diagnostic_activity(
+        activity.get("diagnostic_activity"),
+    )
+    if diagnostic_activity is not None:
+        result["diagnostic_activity"] = diagnostic_activity
+
     readiness = activity.get("service_readiness")
     if isinstance(readiness, dict):
         compact_readiness: dict[str, Any] = {
@@ -3631,6 +3638,118 @@ def _compact_service_observed_capability_activity(
     group_detail_reference = value.get("group_detail_reference")
     if isinstance(group_detail_reference, str):
         result["group_detail_reference"] = group_detail_reference
+    return result
+
+
+def _compact_session_diagnostic_activity(value: Any) -> dict[str, Any] | None:
+    """Retain diagnostic totals and exact bounded evidence references."""
+    if not isinstance(value, dict):
+        return None
+    source = value.get("source")
+    source = source if isinstance(source, dict) else {}
+    compact_source = {
+        key: source[key]
+        for key in (
+            "session_id", "campaign_id", "work_intent_id", "environment_id",
+            "definition_id", "history_identity_digest", "selection_policy",
+            "current_epoch_relation",
+        )
+        if isinstance(source.get(key), str)
+    }
+    for key in (
+        "history_record_count", "history_records_returned",
+        "history_records_omitted",
+    ):
+        if type(source.get(key)) is int and source[key] >= 0:
+            compact_source[key] = source[key]
+    current_epoch_reference = source.get("current_epoch_evidence_reference")
+    if isinstance(current_epoch_reference, dict):
+        compact_source["current_epoch_evidence_reference"] = {
+            key: current_epoch_reference[key]
+            for key in ("kind", "reference")
+            if isinstance(current_epoch_reference.get(key), str)
+        }
+    current_epoch_summary = source.get("current_epoch_summary")
+    if isinstance(current_epoch_summary, dict):
+        compact_source["current_epoch_summary"] = dict(current_epoch_summary)
+
+    summary = value.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    compact_summary = {
+        key: summary[key]
+        for key in (
+            "history_record_count", "history_records_returned",
+            "history_records_omitted", "invalid_record_count",
+            "invalid_reference_count", "latest_failure_count",
+            "latest_captured_count",
+        )
+        if type(summary.get(key)) is int and summary[key] >= 0
+    }
+    history = value.get("history")
+    history = history if isinstance(history, list) else []
+    rows = []
+    session_id = source.get("session_id")
+    for row in history[:2]:
+        if not isinstance(row, dict):
+            continue
+        compact_row = {
+            key: _short_text(row[key], 96)
+            for key in (
+                "identity", "recorded_at", "mode", "depth",
+                "evidence_reference_status",
+            )
+            if isinstance(row.get(key), str)
+        }
+        row_summary = row.get("summary")
+        if isinstance(row_summary, dict):
+            compact_row_summary = {
+                key: row_summary[key]
+                for key in (
+                    "failures", "current", "captured", "deferred",
+                    "coordination_deferred", "unsupported", "escalated",
+                    "blockers", "observed",
+                )
+                if type(row_summary.get(key)) is int
+                and 0 <= row_summary[key] <= 2**53
+            }
+            depth = row_summary.get("depth")
+            if isinstance(depth, str) and depth in {
+                "minimal", "standard", "deep",
+            }:
+                compact_row_summary["depth"] = depth
+            epoch_reused = row_summary.get("epoch_reused")
+            if type(epoch_reused) is bool:
+                compact_row_summary["epoch_reused"] = epoch_reused
+            elapsed = row_summary.get("elapsed_seconds")
+            if (type(elapsed) is int and 0 <= elapsed <= 2**53
+                    or type(elapsed) is float and math.isfinite(elapsed)
+                    and 0 <= elapsed <= 2**53):
+                compact_row_summary["elapsed_seconds"] = elapsed
+            compact_row["summary"] = compact_row_summary
+        reference = row.get("evidence_reference")
+        if (isinstance(session_id, str) and isinstance(reference, dict)
+                and _diagnostic_evidence_reference(
+                    reference.get("reference"), session_id,
+                ) == reference):
+            compact_row["evidence_reference"] = {
+                "kind": reference["kind"],
+                "reference": reference["reference"],
+            }
+        rows.append(compact_row)
+    result = {
+        "status": _short_text(value.get("status"), 96),
+        "source": compact_source,
+        "summary": compact_summary,
+        "history": rows,
+    }
+    if len(history) > len(rows):
+        result["history_truncated"] = True
+    limits = value.get("measurement_limits")
+    if isinstance(limits, list) and limits:
+        result["measurement_limits"] = [
+            _short_text(item, 256)
+            for item in limits[:2] if isinstance(item, str)
+        ]
     return result
 
 
@@ -6481,6 +6600,15 @@ def _compact_projection(
         # _session_service_readiness already returns a bounded, sanitized
         # projection, so retain that reusable record without rebuilding it.
         compact_activity["service_readiness"] = raw_service_readiness
+    raw_diagnostic_activity = activity.get("diagnostic_activity")
+    if isinstance(raw_diagnostic_activity, dict):
+        compact_diagnostic_activity = _compact_session_diagnostic_activity(
+            raw_diagnostic_activity,
+        )
+        if compact_diagnostic_activity is not None:
+            compact_activity["diagnostic_activity"] = (
+                compact_diagnostic_activity
+            )
     raw_service_accountability = activity.get("service_accountability")
     if isinstance(raw_service_accountability, dict):
         # The session projection already bounds and sanitizes this join.
@@ -16206,6 +16334,199 @@ def _session_resource_samples(
     }
 
 
+def _diagnostic_evidence_reference(
+    value: Any, session_id: str,
+) -> dict[str, str] | None:
+    """Retain only diagnostic evidence references owned by this session."""
+    if not isinstance(value, str) or not value or len(value) > 512:
+        return None
+    escaped_session_id = re.escape(session_id)
+    if re.fullmatch(
+        rf"mncs-store:{escaped_session_id}:diagnostics:[0-9a-f]{{64}}",
+        value,
+    ):
+        return {"kind": "session-store", "reference": value}
+    if re.fullmatch(
+        rf"sessions/{escaped_session_id}/diagnostic-artifacts/evidence/"
+        r"diagnostic-(?:ambient|explicit|full)-[0-9a-f]{12}\.json",
+        value,
+    ):
+        return {"kind": "session-file", "reference": value}
+    return None
+
+
+def _session_diagnostic_activity(
+    snapshot: dict[str, Any], session_id: str,
+) -> dict[str, Any] | None:
+    """Project bounded diagnostic summaries and exact same-session evidence refs."""
+    snapshot = snapshot if isinstance(snapshot, dict) else {}
+    raw_history = snapshot.get("diagnostic_history")
+    raw_epoch = snapshot.get("diagnostic_epoch")
+    if raw_history is None and raw_epoch is None:
+        return None
+    history = raw_history if isinstance(raw_history, list) else []
+    selected = history[-MAX_SESSION_DIAGNOSTIC_HISTORY:]
+    omitted = max(0, len(history) - len(selected))
+    campaign = snapshot.get("campaign")
+    campaign = campaign if isinstance(campaign, dict) else {}
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+    provenance = snapshot.get("provenance")
+    provenance = provenance if isinstance(provenance, dict) else {}
+
+    summary_fields = (
+        "failures", "current", "captured", "deferred",
+        "coordination_deferred", "unsupported", "escalated", "blockers",
+        "observed",
+    )
+
+    def compact_summary(value: Any) -> dict[str, Any]:
+        value = value if isinstance(value, dict) else {}
+        result = {
+            key: value[key]
+            for key in summary_fields
+            if type(value.get(key)) is int and 0 <= value[key] <= 2**53
+        }
+        depth = value.get("depth")
+        if isinstance(depth, str) and depth in {"minimal", "standard", "deep"}:
+            result["depth"] = depth
+        if type(value.get("epoch_reused")) is bool:
+            result["epoch_reused"] = value["epoch_reused"]
+        elapsed = value.get("elapsed_seconds")
+        if (type(elapsed) is int and 0 <= elapsed <= 2**53
+                or type(elapsed) is float and math.isfinite(elapsed)
+                and 0 <= elapsed <= 2**53):
+            result["elapsed_seconds"] = elapsed
+        return result
+
+    rows: list[dict[str, Any]] = []
+    invalid_record_count = 0
+    invalid_reference_count = 0
+    for item in reversed(selected):
+        if not isinstance(item, dict):
+            invalid_record_count += 1
+            continue
+        evidence_reference = _diagnostic_evidence_reference(
+            item.get("evidence_ref"), session_id,
+        )
+        raw_reference = item.get("evidence_ref")
+        if raw_reference and evidence_reference is None:
+            invalid_reference_count += 1
+        raw_summary = item.get("summary")
+        compact_item = {
+            "identity": "dgh_" + digest_hex({
+                "session_id": session_id,
+                "at": _short_text(item.get("at"), 64)
+                if isinstance(item.get("at"), str) else None,
+                "mode": _short_text(item.get("mode"), 32)
+                if isinstance(item.get("mode"), str) else None,
+                "depth": item.get("depth")
+                if isinstance(item.get("depth"), str)
+                and item.get("depth") in {"minimal", "standard", "deep"}
+                else None,
+                "evidence_reference": evidence_reference,
+            }, length=16),
+            "summary": compact_summary(raw_summary),
+            "evidence_reference_status": (
+                "recorded" if evidence_reference is not None else
+                "invalid-or-cross-session" if raw_reference else
+                "not-recorded"
+            ),
+        }
+        if isinstance(item.get("at"), str):
+            compact_item["recorded_at"] = _short_text(item["at"], 64)
+        if isinstance(item.get("mode"), str):
+            compact_item["mode"] = _short_text(item["mode"], 32)
+        depth = item.get("depth")
+        if isinstance(depth, str) and depth in {"minimal", "standard", "deep"}:
+            compact_item["depth"] = depth
+        if evidence_reference is not None:
+            compact_item["evidence_reference"] = evidence_reference
+        rows.append(compact_item)
+
+    epoch = raw_epoch if isinstance(raw_epoch, dict) else {}
+    epoch_reference = _diagnostic_evidence_reference(
+        epoch.get("evidence_ref"), session_id,
+    )
+    latest_reference = (
+        rows[0].get("evidence_reference") if rows else None
+    )
+    if epoch_reference is None:
+        epoch_relation = (
+            "not-recorded" if not epoch.get("evidence_ref") else
+            "invalid-or-cross-session-reference"
+        )
+    elif isinstance(latest_reference, dict):
+        epoch_relation = (
+            "matches-latest-history-record"
+            if epoch_reference == latest_reference else
+            "differs-from-latest-history-record"
+        )
+    else:
+        epoch_relation = "history-record-unavailable"
+
+    if rows:
+        status = (
+            "partial" if omitted or invalid_record_count or invalid_reference_count
+            else "recorded"
+        )
+    elif epoch:
+        status = "epoch-recorded-history-unavailable"
+    elif history or raw_history is not None:
+        status = "invalid-history"
+    elif raw_epoch is not None:
+        status = "invalid-epoch"
+    else:
+        status = "not-recorded-in-session"
+
+    source = {
+        "session_id": _short_text(session_id, 160),
+        "history_record_count": len(history),
+        "history_records_returned": len(rows),
+        "history_records_omitted": omitted,
+        "history_identity_digest": digest_hex(
+            [row["identity"] for row in rows], length=16,
+        ),
+        "selection_policy": "newest-session-diagnostic-history-first",
+        "current_epoch_relation": epoch_relation,
+        "context_basis": "current-session-snapshot",
+    }
+    for key, value in (
+        ("campaign_id", campaign.get("identity")),
+        ("work_intent_id", intent.get("identity")),
+        ("environment_id", snapshot.get("environment_id")),
+        ("definition_id", provenance.get("definition_id")),
+    ):
+        if isinstance(value, str) and value:
+            source[key] = _short_text(value, 160)
+    if epoch_reference is not None:
+        source["current_epoch_evidence_reference"] = epoch_reference
+    epoch_summary = compact_summary(epoch.get("summary"))
+    if epoch_summary:
+        source["current_epoch_summary"] = epoch_summary
+
+    latest_summary = rows[0].get("summary") if rows else {}
+    return {
+        "status": status,
+        "source": source,
+        "summary": {
+            "history_record_count": len(history),
+            "history_records_returned": len(rows),
+            "history_records_omitted": omitted,
+            "invalid_record_count": invalid_record_count,
+            "invalid_reference_count": invalid_reference_count,
+            "latest_failure_count": latest_summary.get("failures"),
+            "latest_captured_count": latest_summary.get("captured"),
+        },
+        "history": rows,
+        "measurement_limits": [
+            "Only bounded diagnostic summaries and same-session evidence references are projected; inspect the diagnostic evidence artifact for witness details.",
+            "Campaign, WorkIntent, Environment, and definition identities are current session snapshot context, not context captured when each diagnosis ran.",
+            "Diagnostic counts and elapsed time do not establish event-window causality, root cause, resolution, agent effort, or burden reduction.",
+        ],
+    }
+
+
 def _observation_resource_sample_relation(
     record: dict[str, Any], activity: dict[str, Any], *,
     selected_session_id: str,
@@ -19383,6 +19704,9 @@ def _session_activity(
         "The Store page reader verifies only selected event payloads; finding their bindings still scans the generation's metadata index.",
         "Resource samples are bounded aggregate host snapshots linked to Environment invocations; they do not measure agent-attributed consumption or establish pressure by themselves.",
     ]
+    diagnostic_activity = _session_diagnostic_activity(
+        snapshot, session.session_id,
+    )
     ambient_service_execution = _session_ambient_service_execution(
         session, snapshot,
     )
@@ -19481,6 +19805,8 @@ def _session_activity(
             "rpc_failure_candidates": [],
             "capabilities": [],
             "resource_samples": resource_samples,
+            **({"diagnostic_activity": diagnostic_activity}
+               if diagnostic_activity is not None else {}),
             **({"service_readiness": service_readiness}
                if has_service_readiness else {}),
             **({"service_accountability": service_accountability}
@@ -19535,6 +19861,8 @@ def _session_activity(
             "interactions": [],
             "capabilities": [],
             "resource_samples": resource_samples,
+            **({"diagnostic_activity": diagnostic_activity}
+               if diagnostic_activity is not None else {}),
             **({"service_readiness": service_readiness}
                if has_service_readiness else {}),
             **({"service_accountability": service_accountability}
@@ -21802,6 +22130,8 @@ def _session_activity(
         "status": status,
         "context": context,
         "resource_samples": resource_samples,
+        **({"diagnostic_activity": diagnostic_activity}
+           if diagnostic_activity is not None else {}),
         **({"service_readiness": service_readiness}
            if has_service_readiness else {}),
         **({"service_accountability": service_accountability}
