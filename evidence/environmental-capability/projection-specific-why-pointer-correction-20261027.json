@@ -1,0 +1,59 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_projection_specific_why_pointer_correction_20261027",
+  "captured_at": "2026-10-27T20:22:27Z",
+  "measurement_basis": "Append-only ECI evidence-reference correction based on current Git object availability and exact blob SHA-256 readback",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "campaign-evidence-pointer-correction",
+    "source_interface": "MNCS Environment campaign-state ledger and selected checkout Git object verification",
+    "request": {
+      "target_identity": "ev_environment_projection_specific_why_readback_20261027",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/projection-specific-why-readback-20261027.json",
+      "recorded_commit": "8d46b1562d4d6da282c66a3adad1f9dc01a9be76",
+      "verified_commit": "8d46b15a555ef6bd1158b88d9dbf3032b5b3af18",
+      "sha256": "c9f2b7302de2f2ccfe84228da89d00db7837769bc1c2e05cbcbb69bdd61a6490"
+    },
+    "outcome": {
+      "recorded_commit_path_status": "unavailable",
+      "replacement_commit_path_status": "verified",
+      "replacement_blob_sha256_status": "matches-recorded-content-digest",
+      "original_observation_bytes_changed": false,
+      "correction_scope": "campaign evidence reference commit only"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-operation-result",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "session_id": "ses_a752e1c55fb4ca6f"
+    }
+  ],
+  "evidence_reference_correction": {
+    "schema_version": "mncs.environment.evidence-reference-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_projection_specific_why_readback_20261027",
+      "repository": "mncs-environment",
+      "commit": "8d46b1562d4d6da282c66a3adad1f9dc01a9be76",
+      "path": "evidence/environmental-capability/projection-specific-why-readback-20261027.json",
+      "sha256": "c9f2b7302de2f2ccfe84228da89d00db7837769bc1c2e05cbcbb69bdd61a6490"
+    },
+    "replacement_reference": {
+      "identity": "ev_environment_projection_specific_why_readback_20261027",
+      "repository": "mncs-environment",
+      "commit": "8d46b15a555ef6bd1158b88d9dbf3032b5b3af18",
+      "path": "evidence/environmental-capability/projection-specific-why-readback-20261027.json",
+      "sha256": "c9f2b7302de2f2ccfe84228da89d00db7837769bc1c2e05cbcbb69bdd61a6490"
+    },
+    "reason": "The campaign ledger stored an incorrect full commit hash. Git verifies the replacement commit contains the same target blob with the exact recorded SHA-256; preserve the original observation and correct only its commit pointer."
+  }
+}
