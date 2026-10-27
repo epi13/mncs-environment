@@ -98,6 +98,13 @@ appears through the existing coordination-deferral projection. Policy denial
 remains a separate outcome. This is regression and projection evidence; live
 agent recurrence and reduced coordination effort remain unmeasured.
 
+The append-only
+[`coordination-aware-diagnostic-deferral-source-correction-20261027.json`](../evidence/environmental-capability/coordination-aware-diagnostic-deferral-source-correction-20261027.json)
+supplies exact commit, path, and digest references for the test and proof files
+linked by that observation. It targets the original observation by its
+content-addressed reference and leaves its recorded behavior and verification
+unchanged.
+
 The selected campaign evidence now records an existing MNCS Debug consumer of
 `mncs.std.process.v1`, its duplicate-library-root compile pressure, the resolver
 change at Debug commit `a036a0042bd0529ef8401b952eb921146e01590d`, and the exact

@@ -1,0 +1,131 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_coordination_aware_diagnostic_deferral_source_correction_20261027",
+  "captured_at": "2026-10-27T04:32:28Z",
+  "measurement_basis": "append-only observation correction prepared from a bounded Environmental Capability projection readback",
+  "observation": {
+    "kind": "observation-source-reference-correction",
+    "source_interface": "MNCS Environment observation-correction contract and environmental-capability projection",
+    "request": {
+      "target_observation_identity": "ev_environment_coordination_aware_diagnostic_deferral_20261027",
+      "target_commit": "693ec6626d0bdfc02dbde6cfd01119c59692b072",
+      "target_path": "evidence/environmental-capability/coordination-aware-diagnostic-deferral-20261027.json",
+      "corrected_field_paths": ["supporting_sources"]
+    },
+    "outcome": {
+      "correction": "Replace grouped test-result entries that lacked source-file pointers with individual content-addressed references to the exact implementation, regression, campaign-proof, and baseline-control files.",
+      "reason": "The original observation and its improvement relation were valid, but the projection correctly rejected two grouped test-source entries that omitted commit, path, and SHA-256.",
+      "preserved": [
+        "The original observation bytes and identity remain unchanged.",
+        "The implementation and verification results remain unchanged.",
+        "The correction does not establish live-agent recurrence or effectiveness."
+      ],
+      "analysis_limit": "The projection readback will determine whether the exact target pointer and replacement source references validate in the selected campaign evidence window."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_fecacc324bafeba2",
+    "campaign_evidence_count_before_recording": 4
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_coordination_aware_diagnostic_deferral_20261027",
+      "repository": "mncs-environment",
+      "commit": "693ec6626d0bdfc02dbde6cfd01119c59692b072",
+      "path": "evidence/environmental-capability/coordination-aware-diagnostic-deferral-20261027.json",
+      "sha256": "edd531a961afab07fcd9358a730834fce8059942a1ca0ad04b157ffa41752ba3"
+    },
+    "corrected_field_paths": ["supporting_sources"],
+    "replacement_values": {
+      "supporting_sources": [
+        {
+          "identity": "mncs_environment_debug_capture_implementation_fc3295b",
+          "repository": "mncs-environment",
+          "commit": "fc3295bec0a842261ea245639eb25405406b39a0",
+          "path": "mncs_env/diagnostics.py",
+          "sha256": "f7f687fd03b2b5a8ab8ac7657c61a018946c1eebd97eca9b5e66bada654b4205"
+        },
+        {
+          "identity": "mncs_environment_eci_coordination_projection_2b59468",
+          "repository": "mncs-environment",
+          "commit": "2b5946822c59c02e99d979e72555b1f1d119488d",
+          "path": "mncs_env/capability_intelligence.py",
+          "sha256": "412f8d73461e05fa41412877868a305effef91952a83420514aa0398339e39a6"
+        },
+        {
+          "identity": "mncs_environment_diagnostic_regression_fc3295b",
+          "repository": "mncs-environment",
+          "commit": "fc3295bec0a842261ea245639eb25405406b39a0",
+          "path": "tests/test_diagnostics.py",
+          "sha256": "c8a6aac3ea87add92aab5b39f3c7d3fde274d97e09c3781a0050018106a1adcc"
+        },
+        {
+          "identity": "mncs_environment_authority_regression_fc3295b",
+          "repository": "mncs-environment",
+          "commit": "fc3295bec0a842261ea245639eb25405406b39a0",
+          "path": "tests/test_projection_verification.py",
+          "sha256": "3d64bf1049c18d4989a04190cdf97d751ae19edc62dd8f7d4cddf7358ce373fd"
+        },
+        {
+          "identity": "mncs_environment_eci_regression_2b59468",
+          "repository": "mncs-environment",
+          "commit": "2b5946822c59c02e99d979e72555b1f1d119488d",
+          "path": "tests/test_capability_intelligence.py",
+          "sha256": "96ac5e606dcdd55919aabbdded76ddcb95229b3faafbaceacdc5e9046f97a204"
+        },
+        {
+          "identity": "mncs_environment_campaign_proofs_2b59468",
+          "repository": "mncs-environment",
+          "commit": "2b5946822c59c02e99d979e72555b1f1d119488d",
+          "path": "scripts/campaign_proofs.py",
+          "sha256": "6dbb537b873c6bff3ad465e0172996aaba1b8b42ec740d1899129680c54b9fac"
+        },
+        {
+          "identity": "mncs_environment_vertical_proof_2b59468",
+          "repository": "mncs-environment",
+          "commit": "2b5946822c59c02e99d979e72555b1f1d119488d",
+          "path": "scripts/vertical_proof.py",
+          "sha256": "b6036ffe94d02694043f8c2bdc21e7c50b16513752245d42df7e1607928b9fb7"
+        },
+        {
+          "identity": "mncs_environment_projection_baseline_control_c516ebb",
+          "repository": "mncs-environment",
+          "commit": "c516ebbf30243acda233bc5f7577e3a1614a0f82",
+          "path": "tests/test_projection_verification.py",
+          "sha256": "784af152216a30b9afc632329629782a287fdfcab4f37a046148a85848c6deb3"
+        }
+      ]
+    },
+    "reason": "The original record grouped test names without content-addressed file pointers. These replacements supply the exact committed file bytes so the projection can verify each implementation and regression source while preserving the original record."
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_observation_correction_contract_693ec66",
+      "kind": "existing-append-only-correction-implementation",
+      "repository": "mncs-environment",
+      "commit": "693ec6626d0bdfc02dbde6cfd01119c59692b072",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "412f8d73461e05fa41412877868a305effef91952a83420514aa0398339e39a6"
+    }
+  ],
+  "not_measured": [
+    "live-agent occurrence of the coordination-deferral pressure",
+    "whether corrected source links reduce agent inspection work",
+    "long-term effectiveness of the underlying diagnostic improvement"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "consumer_id": "codex-environment-capability-intelligence",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
