@@ -217,6 +217,8 @@ SYSTEM_RESOURCE_SAMPLE_STATUSES = frozenset({
     "invalid_interval",
 })
 MAX_SESSION_ACTIVITY_INTERACTIONS = 32
+MAX_AMBIENT_OWNER_PASS_EXECUTIONS = 16
+MAX_AMBIENT_OWNER_PASS_EVENT_REFERENCES = 4
 MAX_SESSION_ACTIVITY_CAPABILITIES = 16
 MAX_SESSION_ACTIVITY_BINDINGS = 32
 MAX_SESSION_ACTIVITY_BINDING_SCAN = 512
@@ -2249,6 +2251,7 @@ def _compact_projection(
                     "session_service_accountability_digest",
                     "session_projection_coherence_digest",
                     "session_ambient_service_execution_digest",
+                    "session_ambient_owner_pass_activity_digest",
                     "observation_records_considered",
                     "observation_records_verified",
                     "observation_records_unavailable",
@@ -3117,6 +3120,7 @@ def _compact_projection(
             "invocation_events_considered", "invocation_records_omitted",
             "resource_sample_identity_digest",
             "ambient_service_execution_digest",
+            "ambient_owner_pass_activity_digest",
             "claim_coordination_events_considered",
             "claim_coordination_records_returned",
             "claim_coordination_records_omitted",
@@ -3300,6 +3304,8 @@ def _compact_projection(
             for key in (
                 "identity", "capability", "correlation_status",
                 "outcome_status", "completion_producer",
+                "ambient_owner_pass_context_status",
+                "ambient_owner_pass_completion_context_status",
             )
             if isinstance(item.get(key), str)
         }
@@ -3310,6 +3316,19 @@ def _compact_projection(
                 for key in ("status", "provider", "binding_id", "contract_revision")
                 if isinstance(binding_identity.get(key), str)
             }
+        for key in (
+            "ambient_owner_pass_context",
+            "ambient_owner_pass_completion_context",
+        ):
+            context = item.get(key)
+            if isinstance(context, dict):
+                compact_item[key] = {
+                    field: _short_text(context[field], 160)
+                    for field in (
+                        "schema_version", "owner_pass", "service_execution_id",
+                    )
+                    if isinstance(context.get(field), str)
+                }
         if type(item.get("returncode")) is int:
             compact_item["returncode"] = item["returncode"]
         effect_target = _invocation_effect_target(item.get("effect_target"))
@@ -4862,6 +4881,70 @@ def _compact_projection(
     if isinstance(raw_ambient_service_execution, dict):
         # Scheduler decisions are bounded and sanitized from the session snapshot.
         compact_activity["ambient_service_execution"] = raw_ambient_service_execution
+    raw_ambient_owner_pass_activity = activity.get(
+        "ambient_owner_pass_activity",
+    )
+    if (isinstance(raw_ambient_owner_pass_activity, dict)
+            and (raw_ambient_owner_pass_activity.get("scoped_invocation_count", 0)
+                 or raw_ambient_owner_pass_activity.get(
+                     "invalid_context_event_count", 0,
+                 ))):
+        compact_owner_activity = {
+            key: raw_ambient_owner_pass_activity[key]
+            for key in (
+                "status", "invocation_event_count", "scoped_invocation_count",
+                "unclassified_invocation_count", "invalid_context_event_count",
+            )
+            if key in raw_ambient_owner_pass_activity
+        }
+        for key in (
+            "context_bearing_completion_count",
+            "completion_context_missing_count",
+            "completion_context_mismatch_count", "execution_group_count",
+            "execution_groups_truncated", "execution_groups_omitted_count",
+        ):
+            if key in raw_ambient_owner_pass_activity:
+                compact_owner_activity[key] = raw_ambient_owner_pass_activity[key]
+        compact_groups = []
+        raw_groups = raw_ambient_owner_pass_activity.get("execution_groups")
+        raw_groups = raw_groups if isinstance(raw_groups, list) else []
+        for group in raw_groups[:8]:
+            if not isinstance(group, dict):
+                continue
+            compact_group = {
+                key: group[key]
+                for key in (
+                    "service_execution_id", "owner_pass",
+                    "invocation_count", "completion_count",
+                    "nonzero_returncode_count", "latest_trace_relation",
+                    "completion_context_missing_count",
+                    "completion_context_mismatch_count",
+                )
+                if key in group
+            }
+            status_counts = group.get("outcome_status_counts")
+            if isinstance(status_counts, dict):
+                compact_group["outcome_status_counts"] = {
+                    _short_text(key, 96): value
+                    for key, value in list(status_counts.items())[:6]
+                    if isinstance(key, str) and type(value) is int and value >= 0
+                }
+            refs = group.get("supporting_events")
+            if isinstance(refs, list):
+                compact_group["supporting_events"] = [
+                    {key: ref[key] for key in ("identity", "sequence", "type")}
+                    for ref in refs[:2] if isinstance(ref, dict)
+                ]
+                compact_group["supporting_events_truncated"] = (
+                    group.get("supporting_events_truncated") is True
+                    or len(refs) > 2
+                )
+            compact_groups.append(compact_group)
+        compact_owner_activity["execution_groups"] = compact_groups
+        compact_owner_activity["measurement_limits"] = [
+            "A scoped call links to an owner pass; it does not establish fulfillment or reduced intervention burden.",
+        ]
+        compact_activity["ambient_owner_pass_activity"] = compact_owner_activity
     if activity_source.get("operation_deferral_events_considered", 0):
         compact_activity["operation_deferral_count"] = activity.get(
             "operation_deferral_count", 0,
@@ -5705,6 +5788,27 @@ def _compact_projection(
             result["session_activity"].get("ambient_service_execution"), dict,
         ):
             result["session_activity"].pop("ambient_service_execution")
+        elif result["session_activity"].get(
+            "ambient_owner_pass_activity", {},
+        ).get("execution_groups"):
+            owner_activity = result["session_activity"][
+                "ambient_owner_pass_activity"
+            ]
+            owner_activity["execution_groups"].pop()
+            owner_activity["execution_groups_truncated"] = True
+            owner_activity["execution_groups_omitted_count"] = (
+                owner_activity.get("execution_groups_omitted_count", 0) + 1
+            )
+        elif result["session_activity"].get(
+            "ambient_owner_pass_activity", {},
+        ).get("measurement_limits"):
+            result["session_activity"]["ambient_owner_pass_activity"][
+                "measurement_limits"
+            ].pop()
+        elif isinstance(
+            result["session_activity"].get("ambient_owner_pass_activity"), dict,
+        ):
+            result["session_activity"].pop("ambient_owner_pass_activity")
         elif result["session_activity"].get(
             "service_accountability", {},
         ).get("services"):
@@ -15193,6 +15297,186 @@ def _session_ambient_service_execution(
     }
 
 
+def _ambient_owner_pass_event_context(
+    payload: Any,
+) -> tuple[dict[str, str] | None, str]:
+    """Validate the small execution label added by Environment owner passes."""
+    if not isinstance(payload, dict) or "ambient_owner_pass_context" not in payload:
+        return None, "not-recorded"
+    raw = payload.get("ambient_owner_pass_context")
+    if (not isinstance(raw, dict)
+            or set(raw) != {
+                "schema_version", "owner_pass", "service_execution_id",
+            }
+            or raw.get("schema_version")
+            != "mncs.environment.ambient-owner-pass-context/1"
+            or not isinstance(raw.get("owner_pass"), str)
+            or re.fullmatch(
+                r"[A-Za-z][A-Za-z0-9_.-]{0,63}", raw["owner_pass"],
+            ) is None
+            or not isinstance(raw.get("service_execution_id"), str)
+            or re.fullmatch(
+                r"ase_[0-9a-f]{32}", raw["service_execution_id"],
+            ) is None):
+        return None, "invalid"
+    return {
+        "schema_version": raw["schema_version"],
+        "owner_pass": raw["owner_pass"],
+        "service_execution_id": raw["service_execution_id"],
+    }, "valid"
+
+
+def _session_ambient_owner_pass_activity(
+    records: list[dict[str, Any]], invocation_count: int,
+    trace_view: dict[str, Any],
+) -> dict[str, Any]:
+    """Join explicitly scoped invocations to the latest stored scheduler trace."""
+    execution = trace_view.get("execution")
+    execution = execution if isinstance(execution, dict) else None
+    scheduled = execution.get("scheduled_passes", []) if execution else []
+    scheduled = scheduled if isinstance(scheduled, list) else []
+    trace_rows: dict[str, list[dict[str, Any]]] = {}
+    for row in scheduled:
+        if (isinstance(row, dict)
+                and isinstance(row.get("service_execution_id"), str)):
+            trace_rows.setdefault(row["service_execution_id"], []).append(row)
+
+    groups: dict[tuple[str, str], dict[str, Any]] = {}
+    unclassified_invocation_count = 0
+    invalid_context_event_count = 0
+    completion_context_mismatch_count = 0
+    completion_context_missing_count = 0
+    context_bearing_completion_count = 0
+    for record in records:
+        context = record.get("context")
+        if not isinstance(context, dict):
+            if record.get("context_status") == "invalid":
+                invalid_context_event_count += 1
+            else:
+                unclassified_invocation_count += 1
+            if record.get("completion_context_status") == "invalid":
+                invalid_context_event_count += 1
+            continue
+
+        execution_id = context["service_execution_id"]
+        owner_pass = context["owner_pass"]
+        key = (execution_id, owner_pass)
+        group = groups.setdefault(key, {
+            "service_execution_id": execution_id,
+            "owner_pass": owner_pass,
+            "invocation_count": 0,
+            "completion_count": 0,
+            "outcome_status_counts": {},
+            "nonzero_returncode_count": 0,
+            "completion_context_missing_count": 0,
+            "completion_context_mismatch_count": 0,
+            "invalid_context_event_count": 0,
+            "supporting_events": [],
+            "_first_sequence": 0,
+        })
+        group["invocation_count"] += 1
+        invocation_reference = record.get("invocation_event")
+        sequence = (
+            invocation_reference.get("sequence")
+            if isinstance(invocation_reference, dict) else None
+        )
+        if type(sequence) is int:
+            group["_first_sequence"] = max(group["_first_sequence"], sequence)
+        if isinstance(invocation_reference, dict):
+            group["supporting_events"].append(invocation_reference)
+
+        completion = record.get("completion_event")
+        if not isinstance(completion, dict):
+            continue
+        completion_context = record.get("completion_context")
+        completion_context_status = record.get("completion_context_status")
+        if completion_context_status == "invalid":
+            invalid_context_event_count += 1
+            group["invalid_context_event_count"] += 1
+        elif completion_context_status != "valid":
+            completion_context_missing_count += 1
+            group["completion_context_missing_count"] += 1
+        elif completion_context != context:
+            completion_context_mismatch_count += 1
+            group["completion_context_mismatch_count"] += 1
+        else:
+            context_bearing_completion_count += 1
+            group["completion_count"] += 1
+            outcome_status = record.get("outcome_status")
+            if isinstance(outcome_status, str):
+                counts = group["outcome_status_counts"]
+                counts[outcome_status] = counts.get(outcome_status, 0) + 1
+            returncode = record.get("returncode")
+            if type(returncode) is int and returncode != 0:
+                group["nonzero_returncode_count"] += 1
+            group["supporting_events"].append(completion)
+
+    ordered_groups = sorted(
+        groups.values(), key=lambda item: item["_first_sequence"], reverse=True,
+    )
+    projected_groups = []
+    for group in ordered_groups[:MAX_AMBIENT_OWNER_PASS_EXECUTIONS]:
+        execution_id = group["service_execution_id"]
+        matches = trace_rows.get(execution_id, [])
+        if execution is None:
+            trace_relation = "latest-trace-unavailable"
+        elif len(matches) > 1:
+            trace_relation = "ambiguous-latest-trace-match"
+        elif not matches:
+            trace_relation = "not-in-latest-trace"
+        elif matches[0].get("owner") != group["owner_pass"]:
+            trace_relation = "execution-owner-mismatch"
+        else:
+            trace_relation = "exact-latest-trace-match"
+        item = {
+            key: value for key, value in group.items() if not key.startswith("_")
+        }
+        item["latest_trace_relation"] = trace_relation
+        item["supporting_events"] = [
+            {key: reference[key] for key in ("identity", "sequence", "type")}
+            for reference in group["supporting_events"][
+                :MAX_AMBIENT_OWNER_PASS_EVENT_REFERENCES
+            ]
+            if isinstance(reference, dict)
+        ]
+        item["supporting_events_truncated"] = (
+            len(group["supporting_events"])
+            > MAX_AMBIENT_OWNER_PASS_EVENT_REFERENCES
+        )
+        projected_groups.append(item)
+
+    return {
+        "status": (
+            "observed" if groups and not invalid_context_event_count
+            and not completion_context_mismatch_count else (
+                "partial" if groups or invalid_context_event_count
+                or invocation_count else "not-recorded-on-invocations"
+            )
+        ),
+        "scope": "selected-session-event-window-ambient-owner-pass-invocations",
+        "invocation_event_count": invocation_count,
+        "scoped_invocation_count": sum(
+            group["invocation_count"] for group in groups.values()
+        ),
+        "unclassified_invocation_count": unclassified_invocation_count,
+        "invalid_context_event_count": invalid_context_event_count,
+        "context_bearing_completion_count": context_bearing_completion_count,
+        "completion_context_missing_count": completion_context_missing_count,
+        "completion_context_mismatch_count": completion_context_mismatch_count,
+        "execution_group_count": len(groups),
+        "execution_groups": projected_groups,
+        "execution_groups_truncated": len(groups) > len(projected_groups),
+        "execution_groups_omitted_count": max(
+            0, len(groups) - len(projected_groups),
+        ),
+        "measurement_limits": [
+            "A scoped invocation links Session.invoke to an owner pass; it does not establish fulfillment, agent receipt, or reduced intervention burden.",
+            "Unclassified calls are not attributed to an agent or manual work. The event window and latest stored trace are bounded; an absent match can reflect an entry-only or replaced trace.",
+            "Provider status and return code are not independent verification of downstream state; unobserved opportunities and external calls remain unknown.",
+        ],
+    }
+
+
 def _session_activity(
     session: Any, snapshot: dict[str, Any], *,
     event_before_sequence: int | None = None,
@@ -15280,6 +15564,10 @@ def _session_activity(
             }
     if not callable(reader):
         resource_samples = _session_resource_samples(session, snapshot, [])
+        ambient_owner_pass_activity = _session_ambient_owner_pass_activity(
+            [], 0, ambient_service_execution,
+        )
+        ambient_owner_pass_activity["status"] = "unavailable"
         return {
             "status": "unavailable",
             "context": {},
@@ -15289,6 +15577,9 @@ def _session_activity(
                 "resource_sample_identity_digest": resource_samples["source"][
                     "observation_identity_digest"
                 ],
+                "ambient_owner_pass_activity_digest": digest_hex(
+                    ambient_owner_pass_activity,
+                ),
                 **({"ambient_service_execution_digest": ambient_service_execution_digest}
                    if ambient_service_execution_digest is not None else {}),
             },
@@ -15309,6 +15600,7 @@ def _session_activity(
                if has_projection_coherence_history else {}),
             **({"ambient_service_execution": ambient_service_execution}
                if has_ambient_service_execution else {}),
+            "ambient_owner_pass_activity": ambient_owner_pass_activity,
             "measurement_limits": [
                 *limits,
                 "The session event page interface is unavailable.",
@@ -15329,6 +15621,10 @@ def _session_activity(
             or not isinstance(page.get("events"), list)
             or type(page.get("truncated")) is not bool):
         resource_samples = _session_resource_samples(session, snapshot, [])
+        ambient_owner_pass_activity = _session_ambient_owner_pass_activity(
+            [], 0, ambient_service_execution,
+        )
+        ambient_owner_pass_activity["status"] = "unavailable"
         return {
             "status": "unavailable",
             "context": {},
@@ -15338,6 +15634,9 @@ def _session_activity(
                 "resource_sample_identity_digest": resource_samples["source"][
                     "observation_identity_digest"
                 ],
+                "ambient_owner_pass_activity_digest": digest_hex(
+                    ambient_owner_pass_activity,
+                ),
                 **({"ambient_service_execution_digest": ambient_service_execution_digest}
                    if ambient_service_execution_digest is not None else {}),
             },
@@ -15355,6 +15654,7 @@ def _session_activity(
                if has_projection_coherence_history else {}),
             **({"ambient_service_execution": ambient_service_execution}
                if has_ambient_service_execution else {}),
+            "ambient_owner_pass_activity": ambient_owner_pass_activity,
             "measurement_limits": [
                 *limits,
                 "The session event tail could not be read or did not match its declared shape.",
@@ -15581,6 +15881,7 @@ def _session_activity(
             paired_by_start[id(starts[0])] = (None, correlation)
 
     interactions: list[dict[str, Any]] = []
+    ambient_owner_pass_records: list[dict[str, Any]] = []
     for event in reversed(invocation_events):
         payload = event.get("payload")
         payload = payload if isinstance(payload, dict) else {}
@@ -15593,7 +15894,30 @@ def _session_activity(
         completion_reference = _event_reference(completion) if completion else None
         completion_payload = completion.get("payload") if isinstance(completion, dict) else None
         completion_payload = completion_payload if isinstance(completion_payload, dict) else {}
+        owner_pass_context, owner_pass_context_status = (
+            _ambient_owner_pass_event_context(payload)
+        )
+        completion_owner_pass_context, completion_owner_pass_context_status = (
+            _ambient_owner_pass_event_context(completion_payload)
+            if completion is not None else (None, "not-recorded")
+        )
         capability = payload.get("capability")
+        ambient_owner_pass_records.append({
+            "context": owner_pass_context,
+            "context_status": owner_pass_context_status,
+            "completion_context": completion_owner_pass_context,
+            "completion_context_status": completion_owner_pass_context_status,
+            "completion_event": completion_reference,
+            "invocation_event": invocation_reference,
+            "outcome_status": (
+                completion_payload.get("status")
+                if isinstance(completion_payload.get("status"), str) else None
+            ),
+            "returncode": (
+                completion_payload.get("returncode")
+                if type(completion_payload.get("returncode")) is int else None
+            ),
+        })
         interaction = {
             "identity": "act_" + digest_hex({
                 "session_id": session.session_id,
@@ -15622,15 +15946,31 @@ def _session_activity(
             "completion_event": completion_reference,
             "binding_identity": _invocation_binding_identity(payload),
         }
+        if owner_pass_context is not None:
+            interaction["ambient_owner_pass_context_status"] = "valid"
+            interaction["ambient_owner_pass_context"] = owner_pass_context
+        elif owner_pass_context_status == "invalid":
+            interaction["ambient_owner_pass_context_status"] = "invalid"
+        if completion is not None:
+            if completion_owner_pass_context is not None:
+                interaction[
+                    "ambient_owner_pass_completion_context_status"
+                ] = "valid"
+                interaction["ambient_owner_pass_completion_context"] = (
+                    completion_owner_pass_context
+                )
+            elif completion_owner_pass_context_status == "invalid":
+                interaction[
+                    "ambient_owner_pass_completion_context_status"
+                ] = "invalid"
         effect_target = _invocation_effect_target(
             payload.get("effect_target"),
             completion_payload.get("effect_target") if completion is not None else None,
         )
         if effect_target is not None:
             interaction["effect_target"] = effect_target
-        interactions.append(interaction)
-        if len(interactions) >= MAX_SESSION_ACTIVITY_INTERACTIONS:
-            break
+        if len(interactions) < MAX_SESSION_ACTIVITY_INTERACTIONS:
+            interactions.append(interaction)
 
     capability_groups: dict[str, list[dict[str, Any]]] = {}
     for interaction in interactions:
@@ -17470,6 +17810,16 @@ def _session_activity(
         if isinstance(value, str) and value
     }
     resource_samples = _session_resource_samples(session, snapshot, events)
+    ambient_owner_pass_activity = _session_ambient_owner_pass_activity(
+        ambient_owner_pass_records, len(invocation_events),
+        ambient_service_execution,
+    )
+    ambient_owner_pass_activity_digest = (
+        digest_hex(ambient_owner_pass_activity)
+        if (ambient_owner_pass_activity.get("scoped_invocation_count", 0)
+            or ambient_owner_pass_activity.get("invalid_context_event_count", 0))
+        else None
+    )
     return {
         "status": status,
         "context": context,
@@ -17484,6 +17834,8 @@ def _session_activity(
            if has_projection_coherence_history else {}),
         **({"ambient_service_execution": ambient_service_execution}
            if has_ambient_service_execution else {}),
+        **({"ambient_owner_pass_activity": ambient_owner_pass_activity}
+           if invocation_events else {}),
         "source": {
             "event_count": event_count,
             "event_window_limit": event_limit,
@@ -17499,6 +17851,9 @@ def _session_activity(
             ],
             **({"ambient_service_execution_digest": ambient_service_execution_digest}
                if ambient_service_execution_digest is not None else {}),
+            **({"ambient_owner_pass_activity_digest": (
+                ambient_owner_pass_activity_digest
+            )} if ambient_owner_pass_activity_digest is not None else {}),
             "event_window_sequence_start": (
                 window_references[0]["sequence"] if window_references else None
             ),
@@ -19030,6 +19385,18 @@ def project(
         digest_hex(activity["ambient_service_execution"])
         if isinstance(activity.get("ambient_service_execution"), dict) else None
     )
+    session_ambient_owner_pass_activity_digest = (
+        digest_hex(activity["ambient_owner_pass_activity"])
+        if (isinstance(activity.get("ambient_owner_pass_activity"), dict)
+            and (
+                activity["ambient_owner_pass_activity"].get(
+                    "scoped_invocation_count", 0,
+                )
+                or activity["ambient_owner_pass_activity"].get(
+                    "invalid_context_event_count", 0,
+                )
+            )) else None
+    )
     pressure_evidence_summary = _pressure_evidence_summary(
         observations,
         hypotheses,
@@ -19099,6 +19466,11 @@ def project(
                     session_ambient_service_execution_digest
                 ),
             } if session_ambient_service_execution_digest is not None else {}),
+            **({
+                "session_ambient_owner_pass_activity_digest": (
+                    session_ambient_owner_pass_activity_digest
+                ),
+            } if session_ambient_owner_pass_activity_digest is not None else {}),
             "session_resource_sample_digest": (
                 activity.get("source", {}).get("resource_sample_identity_digest")
                 if isinstance(activity.get("source"), dict) else None
@@ -19172,6 +19544,11 @@ def project(
                     session_ambient_service_execution_digest
                 ),
             } if session_ambient_service_execution_digest is not None else {}),
+            **({
+                "session_ambient_owner_pass_activity_digest": (
+                    session_ambient_owner_pass_activity_digest
+                ),
+            } if session_ambient_owner_pass_activity_digest is not None else {}),
             "observation_records_considered": len(references),
             "observation_records_verified": len(observations),
             "observation_records_unavailable": unavailable,

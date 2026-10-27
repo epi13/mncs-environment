@@ -1,6 +1,7 @@
 """Real Git/Store transport and native routing; domain runners are fixtures."""
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -71,6 +72,11 @@ def test_warm_tick_has_zero_processes_and_writes(participant):
     counts, owned = runners()
     _, initial_trace = coherence.tick(participant, {}, owned)
     assert initial_trace["trace_persistence_status"] == "session-snapshot"
+    execution_ids = [
+        row["service_execution_id"] for row in initial_trace["scheduled"]
+    ]
+    assert all(re.fullmatch(r"ase_[0-9a-f]{32}", item) for item in execution_ids)
+    assert len(set(execution_ids)) == len(execution_ids)
     assert participant.snapshot["coherence"]["last_trace"][
         "trace_persistence_status"
     ] == "session-snapshot"
@@ -99,6 +105,7 @@ def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillm
             "wave": 0,
             "owner_reused": False,
             "timer_or_lifecycle_due": False,
+            "service_execution_id": "ase_" + "a" * 32,
             "run_elapsed_seconds": 0.125,
             "inputs": ["source.changed", "private/source.mncs"],
             "checkout": private_path,
@@ -115,6 +122,9 @@ def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillm
     assert projected["declared_owner_pass_count"] == 7
     assert projected["owner_pass_decision_coverage"] == "partial"
     assert projected["scheduled_passes"][0]["run_elapsed_seconds"] == 0.125
+    assert projected["scheduled_passes"][0]["service_execution_id"] == (
+        "ase_" + "a" * 32
+    )
     assert projected["scheduled_passes"][0]["trigger_kinds"] == ["source.changed"]
     assert projected["skipped_passes"] == [{
         "owner": "doctor", "reason": "current inputs",

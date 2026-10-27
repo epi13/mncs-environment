@@ -32,6 +32,7 @@ from . import capabilities as capabilities_module
 from . import claims as claims_module
 from . import events as events_module
 from . import invocation_artifacts as invocation_artifacts_module
+from . import invocation_context as invocation_context_module
 from . import readiness as readiness_module
 from . import rights as rights_module
 from . import workspace as workspace_module
@@ -6212,13 +6213,26 @@ class Session:
                         child_request["nonce"] = secrets.token_hex(20)
                     provider_request_id = "req_" + digest_hex(child_request, length=48)
                     invocation_env["MNCS_ENV_RPC_REQUEST_ID"] = provider_request_id
+                    ambient_owner_pass_context = (
+                        invocation_context_module.current_ambient_owner_pass_context(
+                            self.session_id,
+                        )
+                    )
+                    invocation_payload = {
+                        "capability": capability, "argv": argv,
+                        "executor": executor,
+                        **binding_identity,
+                        "effect_target": admitted_effect_target,
+                        "input_artifacts": input_provenance,
+                        "parent_request_id": parent_request_id,
+                        "provider_request_id": provider_request_id,
+                    }
+                    if ambient_owner_pass_context is not None:
+                        invocation_payload["ambient_owner_pass_context"] = (
+                            ambient_owner_pass_context
+                        )
                     self._emit("capability.invoked", self.snapshot.get("consumer_id", "unknown"),
-                               {"capability": capability, "argv": argv, "executor": executor,
-                                **binding_identity,
-                                "effect_target": admitted_effect_target,
-                                "input_artifacts": input_provenance,
-                                "parent_request_id": parent_request_id,
-                                "provider_request_id": provider_request_id})
+                               invocation_payload)
                     self._save()
                     result = capabilities_module.invoke(
                         binding, argv, cwd=cwd, timeout_seconds=timeout_seconds,
@@ -6252,15 +6266,22 @@ class Session:
              "provider_request_id": provider_request_id,
              **artifact_fields, "at": utcnow()}
         )
+        completion_payload = {
+            "capability": capability, "status": result["status"],
+            **binding_identity,
+            "effect_target": admitted_effect_target,
+            "returncode": result["returncode"],
+            "input_artifacts": input_provenance,
+            "parent_request_id": parent_request_id,
+            "provider_request_id": provider_request_id,
+            "artifact_store_ref": artifact_fields.get("artifact_store_ref"),
+        }
+        if ambient_owner_pass_context is not None:
+            completion_payload["ambient_owner_pass_context"] = (
+                ambient_owner_pass_context
+            )
         self._emit("invocation.completed", binding.get("provider", "unknown"),
-                   {"capability": capability, "status": result["status"],
-                    **binding_identity,
-                    "effect_target": admitted_effect_target,
-                    "returncode": result["returncode"],
-                    "input_artifacts": input_provenance,
-                    "parent_request_id": parent_request_id,
-                    "provider_request_id": provider_request_id,
-                    "artifact_store_ref": artifact_fields.get("artifact_store_ref")})
+                   completion_payload)
         self._save()
         return result
 

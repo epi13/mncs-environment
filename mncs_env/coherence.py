@@ -11,6 +11,7 @@ import importlib.util
 import json
 import os
 import re
+import secrets
 import subprocess
 import sys
 import time
@@ -19,6 +20,7 @@ from pathlib import Path
 
 from . import evidence_store, observations, sources
 from .identity import digest_hex
+from .invocation_context import ambient_owner_pass_context
 from .persist import write_json
 
 SCHEMA = "mncs.environment.incremental-coherence/1"
@@ -95,6 +97,13 @@ def project_trace(value: dict) -> dict | None:
             row["wave"] = wave
         if type(item.get("owner_reused")) is bool:
             row["result_reused"] = item["owner_reused"]
+        execution_id = item.get("service_execution_id")
+        if execution_id is not None:
+            if (isinstance(execution_id, str)
+                    and re.fullmatch(r"ase_[0-9a-f]{32}", execution_id)):
+                row["service_execution_id"] = execution_id
+            else:
+                invalid_scheduled_count += 1
         if type(item.get("timer_or_lifecycle_due")) is bool:
             row["timer_or_lifecycle_due"] = item["timer_or_lifecycle_due"]
         elapsed = duration(item.get("run_elapsed_seconds"))
@@ -232,6 +241,14 @@ def _roots(session) -> dict[str, Path]:
                 if isinstance(record, dict) and record.get("path")}
     return {record["name"]: Path(record["path"]).resolve()
             for record in session.snapshot["workspace"].get("repositories", [])}
+
+
+def _service_execution_id(session, owner_pass: str) -> str:
+    return "ase_" + digest_hex({
+        "session_id": session.session_id,
+        "owner_pass": owner_pass,
+        "nonce": secrets.token_hex(16),
+    }, length=32)
 
 
 _resident_adapters = {}
@@ -741,10 +758,15 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         scheduled = []
         for name, run in runners.items():
             owner_started = time.monotonic()
-            results[name] = run()
+            service_execution_id = _service_execution_id(session, name)
+            with ambient_owner_pass_context(
+                session.session_id, name, service_execution_id,
+            ):
+                results[name] = run()
             scheduled.append({
                 "pass": name,
                 "owner": name,
+                "service_execution_id": service_execution_id,
                 "run_elapsed_seconds": round(
                     time.monotonic() - owner_started, 3,
                 ),
@@ -842,7 +864,11 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
             key, kind = derived.get(name, (None, None))
             before = _domain_signature(session.snapshot.get(key)) if key else None
             owner_started = time.monotonic()
-            results[name] = runners[name]()
+            service_execution_id = _service_execution_id(session, name)
+            with ambient_owner_pass_context(
+                session.session_id, name, service_execution_id,
+            ):
+                results[name] = runners[name]()
             owner_elapsed_seconds = round(time.monotonic() - owner_started, 3)
             scheduled.add(name)
             deadlines.pop(name, None)
@@ -861,6 +887,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                 if values:
                     deadlines[name] = min(int(datetime.fromisoformat(value).timestamp() * 1000) for value in values)
             report["scheduled"].append({"pass": name, "owner": name, "disposition": code, "wave": wave,
+                "service_execution_id": service_execution_id,
                 "owner_reused": bool((results[name] or {}).get("reused", False)),
                 "run_elapsed_seconds": owner_elapsed_seconds,
                 "invalidated_input_mask": rows[names.index(name)][3] if rows else None,

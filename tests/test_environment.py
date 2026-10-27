@@ -56,6 +56,7 @@ from mncs_env import (  # noqa: E402
     sources,
     workspace,
 )
+from mncs_env.invocation_context import ambient_owner_pass_context  # noqa: E402
 from mncs_env.session_store import (  # noqa: E402
     SnapshotConflict,
     open_store,
@@ -6834,6 +6835,13 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(
                 provider.call_args.kwargs["output_limit_bytes"], 131072
             )
+            invoked_event = next(
+                event for event in reversed(session._log())
+                if event.get("type") == "capability.invoked"
+            )
+            self.assertNotIn(
+                "ambient_owner_pass_context", invoked_event["payload"],
+            )
 
     def test_session_invoke_scopes_parent_rpc_identity_to_provider_child(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -6864,6 +6872,8 @@ class SessionTests(unittest.TestCase):
                 os.environ, {"MNCS_ENV_RPC_REQUEST_ID": "req_outer_invoke_test"}
             ), mock.patch.object(
                 sessions.capabilities_module, "invoke", side_effect=invoke,
+            ), ambient_owner_pass_context(
+                session.session_id, "verification", "ase_" + "c" * 32,
             ):
                 result = session.invoke("echoer", ["hi"])
 
@@ -6894,6 +6904,15 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(
                 invoked_event["payload"]["provider"], binding["provider"],
             )
+            expected_owner_context = {
+                "schema_version": "mncs.environment.ambient-owner-pass-context/1",
+                "owner_pass": "verification",
+                "service_execution_id": "ase_" + "c" * 32,
+            }
+            self.assertEqual(
+                invoked_event["payload"]["ambient_owner_pass_context"],
+                expected_owner_context,
+            )
             self.assertEqual(
                 invoked_event["payload"]["binding_id"], binding["binding_id"],
             )
@@ -6910,6 +6929,10 @@ class SessionTests(unittest.TestCase):
                     completed_event["payload"][identity_field],
                     binding[identity_field],
                 )
+            self.assertEqual(
+                completed_event["payload"]["ambient_owner_pass_context"],
+                expected_owner_context,
+            )
 
     def test_session_invoke_restores_store_artifacts_after_process_reopen(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

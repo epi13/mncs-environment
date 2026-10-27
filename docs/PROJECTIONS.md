@@ -1083,6 +1083,22 @@ whose scheduler state was not otherwise saved may be visible in the entry
 response but absent from a later session projection. Recovery-scan traces are
 also returned at entry and are not retained as incremental scheduler state.
 
+`session_activity.ambient_owner_pass_activity` joins Environment capability
+invocations that were explicitly tagged while running inside a synchronous
+incremental owner pass to the latest stored scheduler trace using an opaque
+execution ID and pass name. Invocation and completion events carry that same
+context only while the pass is active. The projection validates both event
+contexts, counts outcomes only when the paired completion repeats the exact
+context, and preserves bounded event references for inspection. It also
+distinguishes calls without a context from malformed context; an unclassified
+call is not attributed to an agent or treated as manual work. An exact trace
+match establishes that the invocation was observed within the scheduled pass,
+not that the service fulfilled its responsibility, that an agent received the
+result, or that intervention burden fell. The event window and latest stored
+trace are bounded, so an absent match may mean the relevant trace was entry-only
+or has since been replaced. No opportunity denominator or fulfillment ratio is
+inferred from these records.
+
 `session_activity.projection_coherence_history` exposes the selected session's
 recorded projection-pass summaries and their evidence references, together
 with the latest stored epoch summary and campaign context. It reuses the existing

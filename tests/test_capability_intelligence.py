@@ -4265,6 +4265,155 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     assert compact_view["execution"]["scheduled_pass_count"] == 1
 
 
+def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path) -> None:
+    session, _ = _session(tmp_path, [])
+    execution_id = "ase_" + "d" * 32
+    owner_context = {
+        "schema_version": "mncs.environment.ambient-owner-pass-context/1",
+        "owner_pass": "verification",
+        "service_execution_id": execution_id,
+    }
+    session.snapshot["coherence"] = {"last_trace": {
+        "mode": "targeted_update",
+        "trace_persistence_status": "session-snapshot",
+        "event_count": 1,
+        "elapsed_seconds": 0.1,
+        "scheduled": [{
+            "pass": "verification",
+            "owner": "verification",
+            "disposition": 1,
+            "wave": 0,
+            "service_execution_id": execution_id,
+            "owner_reused": False,
+            "timer_or_lifecycle_due": False,
+            "run_elapsed_seconds": 0.1,
+            "inputs": ["source.changed"],
+        }],
+        "skipped": [],
+        "owner_failures": [],
+    }}
+    events = [
+        {
+            "identity": "evt_ambient_start",
+            "sequence": 1,
+            "type": "capability.invoked",
+            "producer": "environment",
+            "payload": {
+                "provider_request_id": "req_ambient_1",
+                "capability": "mncs-verification:run",
+                "ambient_owner_pass_context": owner_context,
+            },
+        },
+        {
+            "identity": "evt_ambient_complete",
+            "sequence": 2,
+            "type": "invocation.completed",
+            "producer": "verification",
+            "payload": {
+                "provider_request_id": "req_ambient_1",
+                "capability": "mncs-verification:run",
+                "status": "ok",
+                "returncode": 0,
+                "ambient_owner_pass_context": owner_context,
+            },
+        },
+        {
+            "identity": "evt_unclassified_start",
+            "sequence": 3,
+            "type": "capability.invoked",
+            "producer": "environment",
+            "payload": {
+                "provider_request_id": "req_ambient_2",
+                "capability": "mncs-projections:read",
+            },
+        },
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events),
+        "events": [event for event in events if (
+            before_sequence is None or event["sequence"] < before_sequence
+        )][-limit:],
+        "truncated": False,
+        "next_before_sequence": None,
+    }
+
+    projection = capability_intelligence.project(session)
+    activity = projection["session_activity"]["ambient_owner_pass_activity"]
+    assert activity["status"] == "observed"
+    assert activity["invocation_event_count"] == 2
+    assert activity["scoped_invocation_count"] == 1
+    assert activity["unclassified_invocation_count"] == 1
+    assert "manual_invocation_count" not in activity
+    assert activity["execution_group_count"] == 1
+    group = activity["execution_groups"][0]
+    assert group["service_execution_id"] == execution_id
+    assert group["owner_pass"] == "verification"
+    assert group["latest_trace_relation"] == "exact-latest-trace-match"
+    assert group["invocation_count"] == 1
+    assert group["completion_count"] == 1
+    assert group["outcome_status_counts"] == {"ok": 1}
+    assert len(group["supporting_events"]) == 2
+    assert "reduced intervention burden" in " ".join(
+        activity["measurement_limits"],
+    )
+
+    compact = capability_intelligence.project(session, max_result_bytes=8_000)
+    assert compact["source"]["response_truncated"] is True
+    compact_activity = compact["session_activity"]["ambient_owner_pass_activity"]
+    assert compact_activity["execution_groups"][0]["latest_trace_relation"] == (
+        "exact-latest-trace-match"
+    )
+    assert compact["source"]["session_ambient_owner_pass_activity_digest"]
+
+
+def test_ambient_owner_pass_mismatched_completion_context_is_not_joined(
+    tmp_path: Path,
+) -> None:
+    session, _ = _session(tmp_path, [])
+    context = {
+        "schema_version": "mncs.environment.ambient-owner-pass-context/1",
+        "owner_pass": "verification",
+        "service_execution_id": "ase_" + "e" * 32,
+    }
+    completion_context = {
+        **context,
+        "service_execution_id": "ase_" + "f" * 32,
+    }
+    events = [
+        {
+            "identity": "evt_mismatch_start", "sequence": 1,
+            "type": "capability.invoked", "producer": "environment",
+            "payload": {
+                "provider_request_id": "req_mismatch",
+                "ambient_owner_pass_context": context,
+            },
+        },
+        {
+            "identity": "evt_mismatch_complete", "sequence": 2,
+            "type": "invocation.completed", "producer": "verification",
+            "payload": {
+                "provider_request_id": "req_mismatch", "status": "ok",
+                "returncode": 0,
+                "ambient_owner_pass_context": completion_context,
+            },
+        },
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events), "events": events[-limit:],
+        "truncated": False, "next_before_sequence": None,
+    }
+
+    projection = capability_intelligence.project(session)
+    activity = projection["session_activity"]["ambient_owner_pass_activity"]
+    assert activity["status"] == "partial"
+    assert activity["completion_context_mismatch_count"] == 1
+    assert activity["context_bearing_completion_count"] == 0
+    assert activity["execution_groups"][0]["completion_count"] == 0
+    assert activity["execution_groups"][0][
+        "completion_context_mismatch_count"
+    ] == 1
+
+
 def test_live_entry_trace_gap_evidence_projects_without_claiming_causality(
     tmp_path: Path,
 ) -> None:
