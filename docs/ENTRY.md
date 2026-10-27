@@ -234,6 +234,12 @@ recorded Environment, or choose a distinct campaign identity for independent
 work. Another principal's live campaign remains protected unless its owner
 issues a handoff.
 
+For routine agent continuation, `resume <session> --context` returns the
+existing agent-facing context plus the bounded catchup capsule. It avoids
+including the full binding inventory in that response. Plain `resume` remains
+the detailed inspection path, including bindings and selected checkout facts;
+`inspect` and `capabilities` remain available when that detail is needed.
+
 ## Durable task selectors
 
 An authenticated caller may supply a stable `task_identity` to `enter` (CLI:

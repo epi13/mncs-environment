@@ -661,6 +661,30 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(recovered["entry"]["operations"][0]["status"], "not-attempted")
         self.assertFalse((self.project / "service-state.json").exists())
 
+    def test_resume_context_reuses_agent_view_and_preserves_full_inspection(self):
+        self.ready()
+        code, first = self.enter()
+        self.assertEqual(code, 0, first)
+
+        code, context = self.run_cli(
+            "resume", first["session_id"], "--context",
+        )
+        self.assertEqual(code, 0, context)
+        self.assertEqual(context["schema_version"], "mncs.environment.entry-context/1")
+        self.assertEqual(context["session_id"], first["session_id"])
+        self.assertIn("capabilities", context)
+        self.assertIn("work_intent", context)
+        self.assertIn("continuation", context)
+        self.assertIn("revalidation", context)
+        self.assertIn("catchup", context)
+        self.assertNotIn("bindings", context)
+        self.assertNotIn("binding_toolchains", context)
+
+        code, inspection = self.run_cli("resume", first["session_id"])
+        self.assertEqual(code, 0, inspection)
+        self.assertIn("bindings", inspection)
+        self.assertIn("selected_checkouts", inspection)
+
     def test_authorized_entry_reconciles_missing_service_once(self):
         self.authorize_fixture_writes()
         code, first = self.enter()

@@ -773,7 +773,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
             )
     else:
         revalidation = {"reprobed": 0, "changed": []}
-    result = session.inspect()
+    result = session.context() if args.context else session.inspect()
     result["revalidation"] = revalidation
     result["catchup"] = session.catchup()
     if args.consumer and args.consumer != session.snapshot.get("consumer_id"):
@@ -2561,6 +2561,10 @@ def build_parser() -> argparse.ArgumentParser:
     resume = session_parser("resume", "resume a session in this process")
     resume.add_argument("--workspace", default=None)
     resume.add_argument("--revalidate", action="store_true")
+    resume.add_argument(
+        "--context", action="store_true",
+        help="return the agent-facing context and catchup instead of the full inspection",
+    )
     resume.set_defaults(func=cmd_resume)
 
     capabilities = session_parser("capabilities", "list bound capabilities")
