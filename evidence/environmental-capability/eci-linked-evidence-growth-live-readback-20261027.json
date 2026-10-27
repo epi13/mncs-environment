@@ -1,0 +1,95 @@
+{
+  "captured_at": "2026-10-27T18:59:03Z",
+  "identity": "ev_environment_eci_campaign_growth_compaction_live_readback_20261027",
+  "measurement_basis": "Post-push, read-only ECI projection over the same campaign session and 8 KiB request used to observe the 80-record failure; the current ledger has 81 evidence records, so the changed evidence set limits causal comparison.",
+  "not_measured": [
+    "agent receipt or intervention avoided",
+    "same-ledger controlled before/after response-size comparison",
+    "whether the pressure recurs less often",
+    "behavior at all possible evidence shapes and byte limits"
+  ],
+  "observation": {
+    "kind": "environmental-capability-projection-budget-growth-live-readback",
+    "outcome": {
+      "activity_detail_status": "evidence-priority-response-budget",
+      "campaign_evidence_count": 81,
+      "counts": {
+        "improvement_relations": 3,
+        "observations": 16,
+        "pressure_hypotheses": 6
+      },
+      "encoded_response_bytes": 7876,
+      "interpretation_limit": "The new compact path remains inspectable after ledger growth for this request. The 80-record baseline and 81-record readback differ in campaign evidence; the comparison does not isolate code change or establish lower agent burden.",
+      "linked_path": {
+        "effectiveness_assessment": "not-assessed",
+        "hypothesis_identity": "ph_environment_eci_campaign_evidence_not_preserved_at_small_response_budgets_20261027",
+        "identities_match": true,
+        "observation_identity": "ev_environment_eci_campaign_evidence_retention_growth_pressure_20261027",
+        "relation_identity": "im_environment_eci_campaign_linked_evidence_priority_response_20261027",
+        "source_pointer_integrity_not_verified_count": 0,
+        "source_pointer_integrity_verified_count": 16,
+        "subsequent_record_status": "record-integrity-verified-in-projection",
+        "verification_record_status": "record-integrity-verified-in-projection"
+      },
+      "max_result_bytes": 8000,
+      "omitted": {
+        "improvement_relations": 2,
+        "observations": 15,
+        "pressure_hypotheses": 5
+      },
+      "returned": {
+        "improvement_relations": 1,
+        "observations": 1,
+        "pressure_hypotheses": 1
+      }
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_a46a78dbc74d4cb9",
+      "content_digest": "db00076303007321ef1dd7461f5f5eca",
+      "evidence_limit": 8,
+      "history_pages": 4,
+      "max_result_bytes": 8000,
+      "projection_identity": "eci_e5ca0c41cab2db5f",
+      "repository_head": "27886e2836559f51e5db17ebc8424fef596eccb7",
+      "session_event_limit": 80,
+      "session_id": "ses_a752e1c55fb4ca6f"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection on pushed main"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 81,
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id": "chk_a46a78dbc74d4cb9",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS capability intelligence from real development evidence.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "27886e2836559f51e5db17ebc8424fef596eccb7",
+      "identity": "mncs_environment_recent_path_budget_compaction_27886e2",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "0eedf402f9d738bf77ad10fc731d0e7adb97dcc9f9378126946b756626d934e6"
+    },
+    {
+      "commit": "5577ed2f281cb9116147d24982c30db6d70df560",
+      "identity": "ev_environment_eci_campaign_evidence_retention_growth_pressure_20261027",
+      "kind": "pressure-observation",
+      "path": "evidence/environmental-capability/eci-linked-evidence-growth-pressure-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "cb5b496cc4abf97b642225ea396b2105dec93b7dab52a1775486a04616ee97e6"
+    }
+  ]
+}
