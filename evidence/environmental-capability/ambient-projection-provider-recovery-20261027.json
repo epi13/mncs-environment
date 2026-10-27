@@ -1,0 +1,193 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_projection_provider_recovery_20261027",
+  "captured_at": "2026-10-27T20:00:49Z",
+  "measurement_basis": "Store-backed live ambient projection evidence before and after generated provider projections were integrated and the existing campaign session was revalidated",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_14569fe85f3492c9",
+    "campaign_evidence_count_before_recording": 85
+  },
+  "observation": {
+    "kind": "ambient-projection-provider-recovery",
+    "source_interface": "MNCS Environment mncs-env projections, resume --revalidate, and read-only projection evidence inspection",
+    "request": {
+      "before_projection_evidence": "mncs-store:ses_a752e1c55fb4ca6f:projections:4cb1fa99ed2cdc6eed374e10d12212c8dd045bb677d80f233606b507866fb203",
+      "after_projection_evidence": "mncs-store:ses_a752e1c55fb4ca6f:projections:eb735490a4af304371c2358ca5c07e9df88786ff006c4da7700ac9a4f9393e03",
+      "environment_implementation_commit": "cd9e99d146510038837a6c250d9337e7090cd20c",
+      "automation_projection_commit": "c31d78eddb72aa296dc7b97d62303bb88984eea8"
+    },
+    "outcome": {
+      "before": {
+        "finished_at": "2026-10-27T19:56:01+00:00",
+        "summary": {
+          "current": 0,
+          "degraded": 9,
+          "pending": 10,
+          "reconciled": 0,
+          "blockers": 0,
+          "invalid": 0
+        },
+        "planner_binding_context": {
+          "capability": "mncs-automation:automation-reconciliation",
+          "binding_status": "not-bound",
+          "request_status": "not-attempted",
+          "provider_diagnostic_status": "matched",
+          "provider_diagnostic": {
+            "code": "provider-checkout-dirty",
+            "authority_scope": "workspace-read-only",
+            "provider_checkout_selected": false,
+            "consumers": ["mncs-environment"]
+          }
+        }
+      },
+      "provider_projection_integration": {
+        "repository": "mncs-automation",
+        "commit": "c31d78eddb72aa296dc7b97d62303bb88984eea8",
+        "generated_paths": [".mncs/project-view.json", "README.md"],
+        "validation": "project view matches .mncs/project.json and .mncs/project-state.json; shared project-view schema passed",
+        "commons_schema_test": {
+          "command": "python3 -m pytest tests/test_semantic_projection_contract.py -q",
+          "passed": 8,
+          "failed": 0
+        }
+      },
+      "session_revalidation": {
+        "command": "mncs-env resume ses_a752e1c55fb4ca6f --consumer mncs-environment-capability-campaign --revalidate --context",
+        "consumed_provider_diagnostic_count": 0,
+        "changed_bindings": [
+          "mncs-automation:automation-reconciliation",
+          "mncs-automation:coherence-routing"
+        ]
+      },
+      "after": {
+        "finished_at": "2026-10-27T20:00:49+00:00",
+        "summary": {
+          "current": 9,
+          "degraded": 0,
+          "pending": 1,
+          "reconciled": 1,
+          "blockers": 0,
+          "invalid": 0
+        },
+        "environment_project_view": {
+          "projection": "mncs-environment:project-view",
+          "target": ".mncs/project-view.json",
+          "outcome": "reconciled",
+          "planner_gate": "ok",
+          "output_state": "matches-last-render",
+          "source_identity": "sha256:239a63e86875fbff9aa6df44de7cef5e65df876e55201bda8387c1bb3b28f694",
+          "generated_file_sha256": "739d17934e32820230cbf982a6e2d46ec1b51b0f0e361eacf89bb1b44c9e6192"
+        },
+        "preserved_deferral": {
+          "projection": "mncs-environment:overview",
+          "target": "README.md",
+          "gate_reason": "manual-divergence",
+          "effect": "no overwrite"
+        }
+      },
+      "interpretation": "The exact dirty-provider diagnosis recorded before publication disappeared after the generated Automation outputs were integrated and the same campaign session was revalidated. The native Automation planner then admitted the ambient pass; one Environment project-view was reconciled and nine projections were current. A README projection with manual divergence remained deferred and was not overwritten. This establishes a successful single-session service recovery and projection outcome, not a general reduction in agent burden or proof that all services are ambiently fulfilled.",
+      "effectiveness_assessment": "demonstrated-for-this-session; broader burden reduction not-assessed"
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_ambient_projection_provider_recovery_20261027",
+    "addresses_hypothesis_identity": "ph_environment_projection_planner_provider_checkout_unavailable_20261027",
+    "implementation_reference": {
+      "repository": "mncs-environment",
+      "commit": "cd9e99d146510038837a6c250d9337e7090cd20c",
+      "paths": [
+        "mncs_env/doctor.py",
+        "mncs_env/capability_intelligence.py",
+        "mncs_env/projections.py"
+      ]
+    },
+    "verification_observation_identity": "ev_environment_ambient_projection_provider_recovery_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "Doctor now retains bounded provider contract context, capability intelligence projects it by provider and kind, and deferred projection evidence links the exact recorded provider diagnostic. After the uncommitted generated Automation projections were validated and integrated, explicit session revalidation observed the provider as bindable and the existing ambient planner successfully admitted and reconciled the Environment machine project view.",
+    "not_measured": [
+      "whether other agents now require fewer manual operations across future sessions",
+      "recurrence of dirty provider checkouts or the durability of the generated-output workflow",
+      "whether the remaining README manual divergence is appropriate or should later be reconciled",
+      "projection service performance across other repositories and workload sizes",
+      "cross-model discoverability or usability"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_projection_planner_provider_checkout_unavailable_20261027",
+    "title": "A dirty provider checkout can make the ambient projection planner unavailable without exposing its cause in the deferred result",
+    "category": "tooling-and-environmental-service-integration",
+    "subsystem": "MNCS Environment projection planner binding and evidence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Preserve the exact provider binding diagnostic in deferred projection evidence and keep generated provider projections current so provider checkout validation does not block planning."
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_provider_gap_context_1",
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "cd9e99d146510038837a6c250d9337e7090cd20c",
+      "path": "mncs_env/doctor.py",
+      "sha256": "c293ed192eee953ca3165b0b3375a484a4527f817ff38722da21b715fba4ff88"
+    },
+    {
+      "identity": "mncs_environment_provider_gap_projection_1",
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "cd9e99d146510038837a6c250d9337e7090cd20c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "7538f48c60cf67ce1bc3fbd7fdea9cdcde1f8e8943d4c374ba863b3ca214a04c"
+    },
+    {
+      "identity": "mncs_environment_planner_deferral_context_1",
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "cd9e99d146510038837a6c250d9337e7090cd20c",
+      "path": "mncs_env/projections.py",
+      "sha256": "9cee6cd9a08dfe1410b3bd6af98dddbc6969090544b82c058043c5fbe568e85a"
+    },
+    {
+      "identity": "mncs_environment_provider_gap_tests_1",
+      "kind": "verification-source",
+      "repository": "mncs-environment",
+      "commit": "cd9e99d146510038837a6c250d9337e7090cd20c",
+      "path": "tests/test_projections.py",
+      "sha256": "e604b9b6eb6e85e81a9a9d647154c30ac87d54e33a179fab7c3d9d5317588b3c"
+    },
+    {
+      "identity": "mncs_automation_projection_outputs_1",
+      "kind": "provider-projection-input-integration",
+      "repository": "mncs-automation",
+      "commit": "c31d78eddb72aa296dc7b97d62303bb88984eea8",
+      "path": ".mncs/project-view.json",
+      "sha256": "9315bb090b35092f8898ad1442121c14e4c573934aa1cdcf5921a9a9e6389b8a"
+    },
+    {
+      "identity": "mncs_automation_readme_projection_1",
+      "kind": "provider-projection-input-integration",
+      "repository": "mncs-automation",
+      "commit": "c31d78eddb72aa296dc7b97d62303bb88984eea8",
+      "path": "README.md",
+      "sha256": "a32e1ffc93f63cae2107e34ee095d6b6a6b53d76a92718a81d1e5c94e5ec45c4"
+    }
+  ],
+  "not_measured": [
+    "long-term agent intervention reduction",
+    "multiple-session pressure recurrence",
+    "agent-attributed compute or token costs",
+    "whether provider generated files will become ambiently current without an explicit repository integration"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

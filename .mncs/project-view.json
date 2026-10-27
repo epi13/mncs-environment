@@ -115,6 +115,30 @@
   ],
   "dependencies": [
     {
+      "contract": "mncs-doc.documentation-projection",
+      "envelope": {
+        "op": "any"
+      },
+      "evidence_refs": [
+        ".mncs/projections.json",
+        "mncs_env/projections.py"
+      ],
+      "required": false,
+      "scope": "workspace-read-only semantic rendering for selected repository projections"
+    },
+    {
+      "contract": "mncs-doctor.projection-health",
+      "envelope": {
+        "op": "any"
+      },
+      "evidence_refs": [
+        "mncs_env/structure.py",
+        "mncs_env/projections.py"
+      ],
+      "required": false,
+      "scope": "workspace-read-only structure diagnostics for projection coherence"
+    },
+    {
       "contract": "mncs-store.persistent-object",
       "envelope": {
         "op": "any"
@@ -181,6 +205,17 @@
       "required": false
     },
     {
+      "contract": "mncs-automation.automation-reconciliation",
+      "envelope": {
+        "op": "any"
+      },
+      "evidence_refs": [
+        "mncs_env/projections.py"
+      ],
+      "required": false,
+      "scope": "workspace-read-only native planning for projection reconciliation"
+    },
+    {
       "contract": "mncs-store.binding-observation",
       "envelope": {
         "op": "any"
@@ -199,7 +234,7 @@
   "purpose": "mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration.",
   "repository": "mncs-environment",
   "schema_version": "mncs.project-view/1",
-  "source_identity": "sha256:4cc340f6c28d3c1a5341ce0a91e91403e9992560887599a81c5352678893a027",
+  "source_identity": "sha256:239a63e86875fbff9aa6df44de7cef5e65df876e55201bda8387c1bb3b28f694",
   "structure": {
     "layout": "mncs.repository-layout/1",
     "surfaces": [
