@@ -5303,6 +5303,140 @@ def test_compact_ambient_service_evidence_uses_allowlisted_values() -> None:
     assert "private_path" not in json.dumps(compact)
 
 
+def test_compact_ambient_owner_pass_results_preserve_bounded_source_links() -> None:
+    session_id = "ses_ambient_result_trace"
+    doctor_reference = (
+        f"mncs-store:{session_id}:incremental-coherence:doctor:{'a' * 64}"
+    )
+    observation = {
+        "kind": "ambient-owner-pass-result-trace",
+        "outcome": {
+            "session_id": session_id,
+            "incremental_scheduler_trace": {
+                "mode": "bounded_reconciliation",
+                "trace_persistence_status": "session-snapshot",
+                "elapsed_seconds": 5.274,
+                "scheduled_owner_count": 2,
+                "skipped_owner_count": 0,
+                "owner_failure_count": 0,
+                "automation_provider": {
+                    "profile_selects_repository": False,
+                    "invocation_override_used": True,
+                    "private_path": "/private/project",
+                },
+                "owner_pass_results": {
+                    "status": "recorded",
+                    "scheduled_owner_count": 2,
+                    "result_record_count": 2,
+                    "results": [
+                        {
+                            "owner": "doctor",
+                            "service_execution_id": "ase_" + "1" * 32,
+                            "result_status": "result-recorded",
+                            "result_identity": "b" * 64,
+                            "source_reference_status": "store-record",
+                            "source_reference": doctor_reference,
+                            "summary": {
+                                "blockers": 0,
+                                "degraded": 18,
+                                "repaired": 0,
+                                "private_path": "/private/project",
+                            },
+                        },
+                        {
+                            "owner": "projections",
+                            "service_execution_id": "ase_" + "2" * 32,
+                            "result_status": "result-recorded",
+                            "result_identity": "c" * 64,
+                            "source_reference_status": "store-record",
+                            "source_reference": (
+                                "mncs-store:ses_someone_else:"
+                                f"incremental-coherence:projections:{'d' * 64}"
+                            ),
+                            "summary": {"pending": 10},
+                        },
+                    ],
+                },
+            },
+        },
+    }
+
+    compact = capability_intelligence._compact_ambient_service_evidence(
+        observation,
+    )
+
+    assert compact is not None
+    trace = compact["incremental_scheduler_trace"]
+    assert trace["mode"] == "bounded_reconciliation"
+    assert trace["trace_persistence_status"] == "session-snapshot"
+    assert trace["automation_provider"] == {
+        "profile_selects_repository": False,
+        "invocation_override_used": True,
+    }
+    results = trace["owner_pass_results"]["results"]
+    assert results[0]["service_execution_id"] == "ase_" + "1" * 32
+    assert results[0]["source_reference"] == doctor_reference
+    assert results[0]["summary"] == {
+        "blockers": 0, "degraded": 18, "repaired": 0,
+    }
+    assert results[1]["source_reference_status"] == "invalid-reference"
+    assert "source_reference" not in results[1]
+    assert compact["ambient_fulfillment"] == "not-established"
+    assert compact["agent_need_opportunity_denominator"] == "not-recorded"
+    assert "/private/project" not in json.dumps(compact)
+    assert len(json.dumps(compact)) < 4_096
+
+
+def test_ambient_owner_pass_campaign_evidence_remains_inspectable_when_compacted(
+    tmp_path: Path,
+) -> None:
+    path = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability/"
+        "ambient-owner-pass-result-trace-20261027.json"
+    )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    session, _ = _session(tmp_path, [record])
+    related = record["related_work"]
+    session.session_id = related["session_id"]
+    session.snapshot.update({
+        "environment_id": related["environment_id"],
+        "campaign": {"identity": related["campaign_id"]},
+        "intent": {
+            "identity": related["work_intent_id"],
+            "goal": related["work_intent_goal"],
+        },
+        "coherence": {},
+    })
+
+    projection = capability_intelligence.project(session)
+    assert projection["status"] == "ready"
+    projected_observation = projection["observations"][0]
+    assert projected_observation["identity"] == record["identity"]
+    compact = capability_intelligence._compact_projection(
+        projection,
+        capability_intelligence.MAX_RESULT_BYTES + 1,
+        capability_intelligence.MAX_RESULT_BYTES,
+    )
+
+    compact_observation = compact["observations"][0]
+    evidence = compact_observation["observation"]["ambient_service_evidence"]
+    trace = evidence["incremental_scheduler_trace"]
+    assert trace["owner_pass_results"]["status"] == "recorded"
+    assert trace["owner_pass_results"]["result_record_count"] == 7
+    assert trace["owner_pass_results"]["results"][0][
+        "service_execution_id"
+    ] == "ase_7a61b784cfde0744805e6543fba37979"
+    assert trace["owner_pass_results"]["results"][0][
+        "source_reference_status"
+    ] == "store-record"
+    assert "agent_need_opportunity_denominator" in evidence
+    assert evidence["ambient_fulfillment"] == "not-established"
+    assert compact_observation["evidence_reference"] == projected_observation[
+        "evidence_reference"
+    ]
+    assert len(json.dumps(evidence)) < 4_096
+
+
 def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Path) -> None:
     record = _observation(
         "ev_environment_authority_denial_activity",

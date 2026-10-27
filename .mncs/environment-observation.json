@@ -8,7 +8,8 @@
       "mncs-environment",
       "mncs-store",
       "mncs-rights-provenance",
-      "mncs-system-monitor"
+      "mncs-system-monitor",
+      "mncs-automation"
     ]
   },
   "required_capabilities": [],

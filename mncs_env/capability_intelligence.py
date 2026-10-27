@@ -845,9 +845,14 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
 
 
 def _compact_ambient_service_evidence(observation: Any) -> dict[str, Any] | None:
-    """Preserve bounded, inspectable facts from the entry-trace gap record."""
-    if (not isinstance(observation, dict)
-            or observation.get("kind") != "ambient-service-decision-trace-gap"):
+    """Preserve bounded, inspectable facts from ambient service observations."""
+    if not isinstance(observation, dict):
+        return None
+    kind = observation.get("kind")
+    if kind not in {
+        "ambient-service-decision-trace-gap",
+        "ambient-owner-pass-result-trace",
+    }:
         return None
     outcome = observation.get("outcome")
     if not isinstance(outcome, dict):
@@ -858,6 +863,173 @@ def _compact_ambient_service_evidence(observation: Any) -> dict[str, Any] | None
         "agent_need_opportunity_denominator": "not-recorded",
         "causal_attribution": "not-established",
     }
+
+    if kind == "ambient-owner-pass-result-trace":
+        trace = outcome.get("incremental_scheduler_trace")
+        if isinstance(trace, dict):
+            trace_result = {}
+            mode = trace.get("mode")
+            if mode in {
+                "recovery_scan", "bootstrap_scan", "targeted_update",
+                "bounded_reconciliation",
+            }:
+                trace_result["mode"] = mode
+            persistence = trace.get("trace_persistence_status")
+            if persistence in {"session-snapshot", "entry-response-only"}:
+                trace_result["trace_persistence_status"] = persistence
+            for source_key, output_key in (
+                ("elapsed_seconds", "elapsed_seconds"),
+                ("scheduled_owner_count", "scheduled_owner_count"),
+                ("skipped_owner_count", "skipped_owner_count"),
+                ("owner_failure_count", "owner_failure_count"),
+            ):
+                value = trace.get(source_key)
+                if (type(value) is int and 0 <= value <= 10**9
+                        or source_key == "elapsed_seconds"
+                        and type(value) is float and math.isfinite(value)
+                        and 0 <= value <= 86400):
+                    trace_result[output_key] = value
+
+            provider = trace.get("automation_provider")
+            if isinstance(provider, dict):
+                provider_result = {}
+                for key in (
+                    "profile_selects_repository", "invocation_override_used",
+                ):
+                    value = provider.get(key)
+                    if type(value) is bool:
+                        provider_result[key] = value
+                if provider_result:
+                    trace_result["automation_provider"] = provider_result
+
+            results = trace.get("owner_pass_results")
+            if isinstance(results, dict):
+                compact_results = {}
+                status = results.get("status")
+                if status in {"recorded", "partial", "unavailable"}:
+                    compact_results["status"] = status
+                for source_key, output_key in (
+                    ("scheduled_owner_count", "scheduled_owner_count"),
+                    ("result_record_count", "result_record_count"),
+                ):
+                    value = results.get(source_key)
+                    if type(value) is int and 0 <= value <= 64:
+                        compact_results[output_key] = value
+                session_id = outcome.get("session_id")
+                safe_session_id = (
+                    session_id if isinstance(session_id, str)
+                    and re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", session_id)
+                    else None
+                )
+                raw_rows = results.get("results")
+                compact_rows = []
+                invalid_rows = 0
+                if isinstance(raw_rows, list):
+                    for raw in raw_rows[:8]:
+                        if not isinstance(raw, dict):
+                            invalid_rows += 1
+                            continue
+                        owner = raw.get("owner")
+                        execution_id = raw.get("service_execution_id")
+                        result_status = raw.get("result_status")
+                        if (not isinstance(owner, str)
+                                or re.fullmatch(
+                                    r"[A-Za-z][A-Za-z0-9_.-]{0,63}", owner,
+                                ) is None
+                                or not isinstance(execution_id, str)
+                                or re.fullmatch(
+                                    r"ase_[0-9a-f]{32}", execution_id,
+                                ) is None
+                                or result_status not in {
+                                    "result-recorded", "runner-returned-none",
+                                    "result-missing", "invalid-result-shape",
+                                }):
+                            invalid_rows += 1
+                            continue
+                        row = {
+                            "owner": owner,
+                            "service_execution_id": execution_id,
+                            "result_status": result_status,
+                            "verification_status": "not-established",
+                        }
+                        identity = raw.get("result_identity")
+                        if (result_status == "result-recorded"
+                                and isinstance(identity, str)
+                                and _SHA256.fullmatch(identity)):
+                            row["result_identity"] = identity
+                        reference_status = raw.get("source_reference_status")
+                        if reference_status in {
+                            "store-record", "session-artifact",
+                            "trace-not-persisted", "not-recorded",
+                            "identity-mismatch", "invalid-reference",
+                        }:
+                            row["source_reference_status"] = reference_status
+                        reference = raw.get("source_reference")
+                        if (result_status == "result-recorded"
+                                and safe_session_id is not None
+                                and reference_status == "store-record"
+                                and isinstance(reference, str)
+                                and re.fullmatch(
+                                    rf"mncs-store:{re.escape(safe_session_id)}:"
+                                    rf"incremental-coherence:{re.escape(owner)}:"
+                                    r"[0-9a-f]{64}", reference,
+                                )):
+                            row["source_reference"] = reference
+                        elif (result_status == "result-recorded"
+                              and safe_session_id is not None
+                              and reference_status == "session-artifact"
+                              and isinstance(reference, str)
+                              and re.fullmatch(
+                                  rf"sessions/{re.escape(safe_session_id)}/"
+                                  r"coherence-results/[0-9a-f]{64}\.json",
+                                  reference,
+                              )):
+                            row["source_reference"] = reference
+                        if (reference_status in {"store-record", "session-artifact"}
+                                and "source_reference" not in row):
+                            row["source_reference_status"] = "invalid-reference"
+                        operation_status = raw.get("operation_status")
+                        if (isinstance(operation_status, str)
+                                and re.fullmatch(
+                                    r"[a-z][a-z0-9-]{0,63}", operation_status,
+                                )):
+                            row["operation_status"] = operation_status
+                        raw_summary = raw.get("summary")
+                        if (result_status == "result-recorded"
+                                and isinstance(raw_summary, dict)):
+                            summary = {}
+                            allowed_summary_fields = {
+                                "blockers", "current", "degraded", "elapsed_seconds",
+                                "epoch_reused", "invalid", "pending", "persisted",
+                                "reconciled", "repaired",
+                            }
+                            for key, value in raw_summary.items():
+                                if key not in allowed_summary_fields:
+                                    continue
+                                if (type(value) is int and 0 <= value <= 10**18
+                                        or type(value) is bool
+                                        or key == "elapsed_seconds"
+                                        and type(value) is float
+                                        and math.isfinite(value)
+                                        and 0 <= value <= 86400):
+                                    summary[key] = value
+                            if summary:
+                                row["summary"] = summary
+                        compact_rows.append(row)
+                    if len(raw_rows) > len(compact_rows) + invalid_rows:
+                        compact_results["result_rows_truncated"] = True
+                        compact_results["status"] = "partial"
+                if compact_rows:
+                    compact_results["results"] = compact_rows
+                if invalid_rows:
+                    compact_results["invalid_result_rows"] = invalid_rows
+                    compact_results["status"] = "partial"
+                if compact_results:
+                    compact_results["ambient_fulfillment"] = "not-established"
+                    trace_result["owner_pass_results"] = compact_results
+            if trace_result:
+                result["incremental_scheduler_trace"] = trace_result
+        return result
 
     entry = {}
     if type(outcome.get("entry_response_returned")) is bool:

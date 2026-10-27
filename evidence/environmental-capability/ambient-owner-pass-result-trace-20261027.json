@@ -1,0 +1,140 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_pass_result_trace_20261027",
+  "captured_at": "2026-10-27T14:02:00+00:00",
+  "measurement_basis": "direct-session-snapshot-and-ECI-projection-readback",
+  "observation": {
+    "kind": "ambient-owner-pass-result-trace",
+    "source_interface": "mncs-env resident route and environmental-capability projection",
+    "request": {
+      "operation": "read the resident owner-pass trace and correlate persisted results",
+      "projection_identity": "eci_36be38559d751b43",
+      "projection_interface": "session_activity.ambient_service_execution.execution"
+    },
+    "outcome": {
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "projection_status": "partial",
+      "projection_response_truncated": true,
+      "incremental_scheduler_trace": {
+        "mode": "bounded_reconciliation",
+        "trace_persistence_status": "session-snapshot",
+        "elapsed_seconds": 5.274,
+        "scheduled_owner_count": 7,
+        "skipped_owner_count": 0,
+        "owner_failure_count": 0,
+        "automation_provider": {
+          "profile_selects_repository": false,
+          "invocation_override_used": true
+        },
+        "owner_pass_results": {
+          "status": "recorded",
+          "scheduled_owner_count": 7,
+          "result_record_count": 7,
+          "results": [
+            {
+              "owner": "doctor",
+              "service_execution_id": "ase_7a61b784cfde0744805e6543fba37979",
+              "result_status": "result-recorded",
+              "result_identity": "bf76800f6dbc3c872b432079e818f3401a9538a3ff0ac8c739137c06edd8891b",
+              "source_reference_status": "store-record",
+              "source_reference": "mncs-store:ses_a752e1c55fb4ca6f:incremental-coherence:doctor:6d0386d95eaff5d9ff89a2a57d551e6fbd2e83fbdd6ad90fdf8a8c6f08c49611",
+              "summary": {"blockers": 0, "degraded": 18, "reconciled": 1, "repaired": 0}
+            },
+            {
+              "owner": "semantics",
+              "service_execution_id": "ase_45e340fdcb11b9e50908b72733b03c27",
+              "result_status": "runner-returned-none",
+              "source_reference_status": "not-recorded"
+            },
+            {
+              "owner": "actions",
+              "service_execution_id": "ase_4cb40647da35530d4aa99263be7f3d83",
+              "result_status": "runner-returned-none",
+              "source_reference_status": "not-recorded"
+            },
+            {
+              "owner": "verification",
+              "service_execution_id": "ase_df480c164c24e8157fa014298375ea12",
+              "result_status": "runner-returned-none",
+              "source_reference_status": "not-recorded"
+            },
+            {
+              "owner": "diagnostics",
+              "service_execution_id": "ase_e78fc2e39f67c336ed53d5f7e45d4666",
+              "result_status": "runner-returned-none",
+              "source_reference_status": "not-recorded"
+            },
+            {
+              "owner": "family",
+              "service_execution_id": "ase_ba55d1e93fffed7d15a1bb0bb9e9589d",
+              "result_status": "runner-returned-none",
+              "source_reference_status": "not-recorded"
+            },
+            {
+              "owner": "projections",
+              "service_execution_id": "ase_02f0fd0c633fc9293ebe14ffe519d5ba",
+              "result_status": "result-recorded",
+              "result_identity": "211dc660b27e3e1434d80c65277c13f22d828bda3e99f06661baaa64c5178892",
+              "source_reference_status": "store-record",
+              "source_reference": "mncs-store:ses_a752e1c55fb4ca6f:incremental-coherence:projections:69a4f5f934d34f139f91cea128b8fd9e1488a23575b249387b73412a968bed7d",
+              "summary": {"blockers": 0, "current": 0, "degraded": 0, "invalid": 0, "pending": 10, "reconciled": 0}
+            }
+          ]
+        }
+      }
+    }
+  },
+  "related_work": {
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "repository_head_at_observation": "4bd4fb6fc7f92f9f791026b4fe8578aab5807374"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_native_router_discovery_20261027",
+    "title": "The observation profile omits the native Automation provider needed by resident coherence routing",
+    "category": "environmental-service-discoverability",
+    "subsystem": "mncs-environment observation profile and incremental coherence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Select the existing mncs-automation checkout in the capability-observation profile, then verify a standard resident entry uses that selected provider without an invocation-specific root override."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "supporting_sources": [
+    {
+      "kind": "direct-session-snapshot-readback",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "trace_persistence_status": "session-snapshot",
+      "scheduled_owner_count": 7,
+      "owner_failure_count": 0
+    },
+    {
+      "kind": "environmental-capability-projection-readback",
+      "projection_identity": "eci_36be38559d751b43",
+      "response_truncated": true,
+      "owner_pass_result_status": "recorded",
+      "owner_pass_result_count": 7
+    },
+    {
+      "kind": "selected-checkout-readback",
+      "configuration_source": ".mncs/environment-observation.json",
+      "automation_repository_selected": false,
+      "invocation_override_used": true
+    }
+  ],
+  "not_measured": [
+    "Service opportunities the scheduler did not recognize and agent need.",
+    "Independent correctness of the owner-pass results or whether agents received them.",
+    "Reduction in agent intervention, cognitive burden, or resource cost.",
+    "Whether the profile change removes the override requirement until a standard entry is observed with the updated profile."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246"
+  }
+}

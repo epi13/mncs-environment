@@ -1166,6 +1166,18 @@ prove service fulfillment, or measure agent receipt or intervention burden.
 Entry-only traces can show a result summary but do not claim a durable result
 reference.
 
+Committed campaign evidence with kind
+`ambient-owner-pass-result-trace` retains a compact view of the same
+relationship for historical investigation: scheduler persistence and duration,
+bounded owner results, their exact execution and content identities, and
+recorded Store or session-artifact pointers with bounded session and owner
+checks. The projection keeps the boundary between scheduler activity and
+service fulfillment explicit. The Environment capability-observation profile
+selects `mncs-automation` because the resident native coherence router is an
+implementation dependency; omitting that checkout forces the router to
+require an invocation-specific root override or fall back to recovery-scan
+behavior.
+
 `session_activity.ambient_owner_pass_activity` joins Environment capability
 invocations that were explicitly tagged while running inside a synchronous
 incremental owner pass to the latest stored scheduler trace using an opaque

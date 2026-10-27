@@ -59,7 +59,7 @@ def test_capability_observation_definition_has_bounded_scope_and_no_services():
     assert definition["working_checkout"] == "current"
     assert definition["workspace_scope"]["repositories"] == [
         "mncs-environment", "mncs-store", "mncs-rights-provenance",
-        "mncs-system-monitor",
+        "mncs-system-monitor", "mncs-automation",
     ]
     assert definition["services"] == []
     assert definition["intent"]["repositories"] == ["mncs-environment"]
