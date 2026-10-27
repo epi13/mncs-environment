@@ -1,0 +1,285 @@
+{
+  "captured_at": "2026-10-27T10:10:05Z",
+  "identity": "ev_environment_eci_pressure_projection_retention_20261027",
+  "measurement_basis": "same-campaign-ledger-before-and-after-live-projection-readback-and-targeted-verification",
+  "observation": {
+    "kind": "environmental-capability-pressure-evidence-retention",
+    "outcome": {
+      "after": {
+        "classified_occurrence_hypotheses": 3,
+        "implementation_commit": "ccff4410f0304da0eef96512f477702b0a80c0ab",
+        "improvement_relations_returned": 3,
+        "logged_session_completion_count": 0,
+        "logged_session_interaction_count": 0,
+        "measurement_limits": [
+          "Response limit compacted payload; pressure totals may be omitted to retain source evidence.",
+          "Exact observation records remain addressable through their evidence references.",
+          "The bounded read selects the newest observation references in each page; older skipped references may contain additional evidence."
+        ],
+        "native_consumer_activity_details_omitted": [
+          {
+            "native_capability_identity": "mncs.std.process.v1",
+            "omitted_count": 1
+          }
+        ],
+        "observation_records_compacted_out": 7,
+        "observation_records_considered": 13,
+        "observation_records_returned": 6,
+        "observation_records_verified": 13,
+        "pressure_hypotheses_returned": 5,
+        "projection_max_result_bytes": 73728,
+        "projection_status": "partial",
+        "response_compaction_occurred": true,
+        "serialized_response_file_bytes": 66208,
+        "source_pointer_content_integrity_not_verified_count": 0,
+        "source_pointer_content_integrity_verified_count": 22,
+        "source_pointer_count": 22,
+        "source_response_byte_count": 219213,
+        "unclassified_hypotheses_preserved_as_unclassified": 2
+      },
+      "before": {
+        "improvement_relations_returned": 0,
+        "observation_records_compacted_out": 13,
+        "observation_records_considered": 13,
+        "observation_records_returned": 0,
+        "observation_records_verified": 13,
+        "pressure_hypotheses_returned": 0,
+        "projection_status": "partial",
+        "serialized_response_file_bytes": 41382,
+        "source_pointer_content_integrity_not_verified_count": 0,
+        "source_pointer_content_integrity_verified_count": 22,
+        "source_pointer_count": 22,
+        "source_response_byte_count": 213710
+      },
+      "improvement_relations": [
+        {
+          "addresses_hypothesis_identity": "ph_environment_eci_debug_process_duplicate_stdlib_root",
+          "effectiveness_assessment": "not-assessed",
+          "evidence_reference": {
+            "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+            "identity": "ev_environment_native_process_debug_consumer_improvement_20261026",
+            "path": "evidence/environmental-capability/native-process-debug-consumer-improvement-20261026.json",
+            "repository": "mncs-environment",
+            "sha256": "bd8191005fc4e83b2f0e0009116d03e4a5c956d0e8fc3d6594a17a22e2a3c852"
+          },
+          "identity": "im_environment_eci_debug_process_duplicate_stdlib_root",
+          "verification_evidence_reference": {
+            "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+            "identity": "ev_environment_native_process_debug_consumer_verification_20261026",
+            "path": "evidence/environmental-capability/native-process-debug-consumer-verification-20261026.json",
+            "repository": "mncs-environment",
+            "sha256": "9633f5b03d716362322841873226235addf97e3c5f43eb753ea9e0cb51c0916d"
+          },
+          "verification_observation_identity": "ev_environment_native_process_debug_consumer_verification_20261026"
+        },
+        {
+          "addresses_hypothesis_identity": "ph_environment_monitor_resource_samples_not_exposed_20261024",
+          "effectiveness_assessment": "not-assessed",
+          "evidence_reference": {
+            "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+            "identity": "ev_environment_resource_sample_live_readback_20261024",
+            "path": "evidence/environmental-capability/resource-sample-live-readback-20261024.json",
+            "repository": "mncs-environment",
+            "sha256": "b2152e96a01b448da5668f06481237c48bb39261a17259f6e230d673f5086222"
+          },
+          "identity": "im_environment_monitor_resource_samples_projection_20261024",
+          "verification_evidence_reference": {
+            "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+            "identity": "ev_environment_resource_sample_live_readback_20261024",
+            "path": "evidence/environmental-capability/resource-sample-live-readback-20261024.json",
+            "repository": "mncs-environment",
+            "sha256": "b2152e96a01b448da5668f06481237c48bb39261a17259f6e230d673f5086222"
+          },
+          "verification_observation_identity": "ev_environment_resource_sample_live_readback_20261024"
+        },
+        {
+          "addresses_hypothesis_identity": "ph_environment_monitor_resource_samples_not_exposed_20261024",
+          "effectiveness_assessment": "not-assessed",
+          "evidence_reference": {
+            "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+            "identity": "ev_environment_resource_sample_followup_relation_20261024",
+            "path": "evidence/environmental-capability/resource-sample-followup-relation-20261024.json",
+            "repository": "mncs-environment",
+            "sha256": "ca65a13325cfddb120505740045696f131a4f051c7497eaad72d63d9f13bc09f"
+          },
+          "identity": "im_environment_monitor_resource_samples_followup_20261024",
+          "verification_evidence_reference": {
+            "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+            "identity": "ev_environment_resource_sample_live_readback_20261024",
+            "path": "evidence/environmental-capability/resource-sample-live-readback-20261024.json",
+            "repository": "mncs-environment",
+            "sha256": "b2152e96a01b448da5668f06481237c48bb39261a17259f6e230d673f5086222"
+          },
+          "verification_observation_identity": "ev_environment_resource_sample_live_readback_20261024"
+        }
+      ],
+      "interpretation": [
+        "The same 13 authentic campaign evidence references were considered and verified in both reads; no historical telemetry was added for this comparison.",
+        "The 72 KiB response retains six exact observation rows, five pressure hypotheses, and three improvement relations where the prior 48 KiB response retained zero detail rows despite reporting the same source counts.",
+        "Two returned hypotheses remain unclassified because their source observations do not declare occurrence roles; the projection does not upgrade them to occurrences.",
+        "The output remains partial and budget-compacted. Source pointers remain addressable and all 22 selected pointers passed content-integrity verification.",
+        "The projection reports zero logged session interactions for this CLI activity. That does not establish zero agent activity or measure intervention burden; no eligible-opportunity denominator is available.",
+        "The projection's systemwide native-adoption ratio remains not measured because a complete ownership-verified implementation inventory is unavailable.",
+        "Three improvement relations are traceable to their source and verification references. Their effectiveness remains not assessed."
+      ],
+      "pressure_hypotheses": [
+        {
+          "evidence_references": [
+            {
+              "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+              "identity": "ev_environment_ambient_service_decision_trace_gap_20261027",
+              "path": "evidence/environmental-capability/ambient-service-decision-trace-gap-20261027.json",
+              "repository": "mncs-environment",
+              "sha256": "99e2561c18873b8e8aed984462f7bd6ff90d8511c76b4e77d4ca835b7d2f6c27"
+            }
+          ],
+          "identity": "ph_environment_ambient_service_trace_visibility",
+          "observation_count": 1,
+          "role_classification_status": "classified-occurrence",
+          "unclassified_observation_count": 0
+        },
+        {
+          "evidence_references": [],
+          "identity": "ph_environment_compiler_campaign_evidence_outside_selection_20261024",
+          "observation_count": 0,
+          "role_classification_status": "incomplete",
+          "unclassified_observation_count": 1
+        },
+        {
+          "evidence_references": [
+            {
+              "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+              "identity": "ev_environment_native_process_debug_consumer_pressure_20261026",
+              "path": "evidence/environmental-capability/native-process-debug-consumer-pressure-20261026.json",
+              "repository": "mncs-environment",
+              "sha256": "60024fad830eeb8cbf85d345c13bbb7d9ba7069120aff939fe499f340675ea74"
+            }
+          ],
+          "identity": "ph_environment_eci_debug_process_duplicate_stdlib_root",
+          "observation_count": 1,
+          "role_classification_status": "classified-occurrence",
+          "unclassified_observation_count": 0
+        },
+        {
+          "evidence_references": [
+            {
+              "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+              "identity": "ev_environment_native_process_debug_consumer_verification_20261026",
+              "path": "evidence/environmental-capability/native-process-debug-consumer-verification-20261026.json",
+              "repository": "mncs-environment",
+              "sha256": "9633f5b03d716362322841873226235addf97e3c5f43eb753ea9e0cb51c0916d"
+            }
+          ],
+          "identity": "ph_environment_eci_process_result_success_cause_not_exposed",
+          "observation_count": 1,
+          "role_classification_status": "classified-occurrence",
+          "unclassified_observation_count": 0
+        },
+        {
+          "evidence_references": [],
+          "identity": "ph_environment_monitor_resource_samples_not_exposed_20261024",
+          "observation_count": 0,
+          "role_classification_status": "incomplete",
+          "unclassified_observation_count": 1
+        }
+      ],
+      "returned_observation_references": [
+        {
+          "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+          "identity": "ev_environment_ambient_service_decision_trace_gap_20261027",
+          "path": "evidence/environmental-capability/ambient-service-decision-trace-gap-20261027.json",
+          "repository": "mncs-environment",
+          "sha256": "99e2561c18873b8e8aed984462f7bd6ff90d8511c76b4e77d4ca835b7d2f6c27"
+        },
+        {
+          "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+          "identity": "ev_environment_native_process_debug_consumer_pressure_20261026",
+          "path": "evidence/environmental-capability/native-process-debug-consumer-pressure-20261026.json",
+          "repository": "mncs-environment",
+          "sha256": "60024fad830eeb8cbf85d345c13bbb7d9ba7069120aff939fe499f340675ea74"
+        },
+        {
+          "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+          "identity": "ev_environment_native_process_debug_consumer_verification_20261026",
+          "path": "evidence/environmental-capability/native-process-debug-consumer-verification-20261026.json",
+          "repository": "mncs-environment",
+          "sha256": "9633f5b03d716362322841873226235addf97e3c5f43eb753ea9e0cb51c0916d"
+        },
+        {
+          "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+          "identity": "ev_environment_resource_sample_live_readback_20261024",
+          "path": "evidence/environmental-capability/resource-sample-live-readback-20261024.json",
+          "repository": "mncs-environment",
+          "sha256": "b2152e96a01b448da5668f06481237c48bb39261a17259f6e230d673f5086222"
+        },
+        {
+          "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+          "identity": "ev_environment_resource_sample_session_linked_followup_20261024",
+          "path": "evidence/environmental-capability/resource-sample-session-linked-followup-20261024.json",
+          "repository": "mncs-environment",
+          "sha256": "0cb1741955f975192a3ec286b1bc20c3b0ee9b1af9b5cd97add3cee2f1e2fd7c"
+        },
+        {
+          "commit": "4b84321e564553b58173953f0c3d2eb51e3ed2fc",
+          "identity": "ev_environment_resource_sample_followup_relation_20261024",
+          "path": "evidence/environmental-capability/resource-sample-followup-relation-20261024.json",
+          "repository": "mncs-environment",
+          "sha256": "ca65a13325cfddb120505740045696f131a4f051c7497eaad72d63d9f13bc09f"
+        }
+      ]
+    },
+    "request": {
+      "before_projection_max_result_bytes": 49152,
+      "campaign_evidence_count": 13,
+      "evidence_limit": 13,
+      "history_pages": 4,
+      "implementation_commit": "ccff4410f0304da0eef96512f477702b0a80c0ab",
+      "projection_max_result_bytes": 73728,
+      "session_event_limit": 256,
+      "session_id": "ses_a752e1c55fb4ca6f"
+    },
+    "source_interface": "mncs-env projections --interpret environmental-capability"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_state_checkpoint_id": "chk_ec84f95395de0581",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "verification": {
+    "targeted_suites": [
+      {
+        "command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "result": "153 passed"
+      },
+      {
+        "command": "python3 -m pytest tests/test_capability_projection_cli.py tests/test_native_capability_relationships.py -q",
+        "result": "29 passed"
+      },
+      {
+        "command": "python3 -m pytest tests/test_cgroup_resource_projection.py -q",
+        "result": "1 passed"
+      },
+      {
+        "command": "python3 -m py_compile mncs_env/capability_intelligence.py",
+        "result": "passed"
+      },
+      {
+        "command": "git diff --check",
+        "result": "passed"
+      }
+    ],
+    "total_targeted_tests_passed": 183
+  }
+}
