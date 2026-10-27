@@ -74,15 +74,25 @@ opportunity, service failure, or reduced intervention. Its digest participates
 in the service-accountability projection identity, including when response-
 budget compaction retains only its summary.
 
-When the response budget compacts `session_activity.service_accountability`,
-the Environment owner-pass summary retains bounded per-pass observations from
-the linked `ambient_service_execution` trace. Each scheduled row can relate its
+In the first response-compaction pass,
+`session_activity.service_accountability` retains bounded per-pass observations
+from the linked `ambient_service_execution` trace. Each scheduled row can relate its
 trigger kinds, raw scheduler disposition and wave, execution identity, elapsed
 time, recorded outcome, and safe result reference; skipped rows preserve the
 scheduler's bounded reason. The disposition remains a code from the router's
 contract, not an interpreted service verdict. These are Environment scheduling
 records, not an agent-opportunity denominator or proof of fulfillment,
 correctness, or reduced intervention.
+
+If the whole ECI response still exceeds its requested byte budget, a final
+summary-only view keeps service totals, exact source references for recorded
+owner results, the current Doctor epoch, and bounded Doctor history identifiers.
+Rows without recorded results and detailed event history are counted as
+omitted. Page-level reference identities and read-budget details can also be
+omitted while aggregate offsets and the campaign ledger remain available. This
+fallback preserves evidence links without claiming that omitted work failed or
+was fulfilled; agents can query the session activity projection for the full
+bounded detail.
 
 ## Entry and persistence observation
 

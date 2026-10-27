@@ -2707,6 +2707,292 @@ def _compact_ambient_service_execution_overview(
     }
 
 
+def _compact_session_activity_budget_overview(
+    activity: Any,
+) -> dict[str, Any] | None:
+    """Summarize secondary session context when detail exceeds the budget.
+
+    Campaign evidence and pressure relationships are the primary ECI result.
+    This last-resort view retains service totals, links to recorded owner
+    results, and source digests while omitting repeated history and per-event
+    detail that remains available through the session activity projection.
+    """
+    if not isinstance(activity, dict):
+        return None
+    result: dict[str, Any] = {}
+    for key in (
+        "status", "interaction_count", "completion_count",
+        "unmatched_invocation_count", "ambiguous_correlation_count",
+        "completion_without_invocation_count",
+    ):
+        value = activity.get(key)
+        if isinstance(value, str) or (type(value) is int and value >= 0):
+            result[key] = value
+
+    source = activity.get("source")
+    if isinstance(source, dict):
+        result["source"] = {
+            key: source[key]
+            for key in (
+                "event_count", "ambient_service_execution_digest",
+            )
+            if (isinstance(source.get(key), str)
+                or type(source.get(key)) in (int, bool))
+        }
+
+    readiness = activity.get("service_readiness")
+    if isinstance(readiness, dict):
+        compact_readiness: dict[str, Any] = {
+            key: readiness[key]
+            for key in ("status", "readiness_status")
+            if isinstance(readiness.get(key), str)
+        }
+        readiness_source = readiness.get("source")
+        if isinstance(readiness_source, dict):
+            compact_readiness["source"] = {
+                key: readiness_source[key]
+                for key in (
+                    "snapshot_sequence", "service_declaration_status",
+                )
+                if (isinstance(readiness_source.get(key), str)
+                    or (type(readiness_source.get(key)) is int
+                        and readiness_source[key] >= 0))
+            }
+        readiness_summary = readiness.get("summary")
+        if isinstance(readiness_summary, dict):
+            empty_declared_scope = (
+                readiness_source.get("service_declaration_status")
+                == "explicit-empty"
+                and readiness_summary.get("investigation_candidate_count") == 0
+            ) if isinstance(readiness_source, dict) else False
+            summary_fields = (
+                ("probe_opportunity_count", "probe_observation_coverage_status")
+                if empty_declared_scope else (
+                    "projected_service_count", "investigation_candidate_count",
+                    "probe_opportunity_count", "probe_observation_coverage_status",
+                )
+            )
+            compact_readiness["summary"] = {
+                key: readiness_summary[key]
+                for key in summary_fields
+                if key in readiness_summary
+            }
+        raw_candidates = readiness.get("candidates")
+        if isinstance(raw_candidates, list) and raw_candidates:
+            candidates = []
+            for candidate in raw_candidates[:2]:
+                if not isinstance(candidate, dict):
+                    continue
+                compact_candidate = {
+                    key: _short_text(
+                        candidate[key], 256 if key == "recommendation" else 160,
+                    )
+                    for key in (
+                        "identity", "kind", "status", "title",
+                        "service_identity", "recommendation",
+                    )
+                    if isinstance(candidate.get(key), str)
+                }
+                if compact_candidate:
+                    candidates.append(compact_candidate)
+            compact_readiness["candidates"] = candidates
+            if len(raw_candidates) > len(candidates):
+                compact_readiness["candidates_truncated"] = True
+        result["service_readiness"] = compact_readiness
+
+    accountability = activity.get("service_accountability")
+    if isinstance(accountability, dict):
+        compact_accountability = _compact_service_accountability_overview(
+            accountability, activity.get("ambient_service_execution"),
+        )
+        if compact_accountability is not None:
+            accountability_source = compact_accountability.get("source")
+            if isinstance(accountability_source, dict):
+                compact_accountability["source"] = {
+                    key: accountability_source[key]
+                    for key in (
+                        "snapshot_sequence", "service_declaration_status",
+                    )
+                    if key in accountability_source
+                }
+            original_summary = accountability.get("summary")
+            compact_summary = compact_accountability.get("summary")
+            if (isinstance(original_summary, dict)
+                    and isinstance(compact_summary, dict)
+                    and "environment_service_execution" not in compact_summary
+                    and isinstance(
+                        original_summary.get("environment_service_execution"),
+                        dict,
+                    )):
+                compact_summary["environment_service_execution"] = dict(
+                    original_summary["environment_service_execution"],
+                )
+                compact_execution = compact_summary[
+                    "environment_service_execution"
+                ]
+                execution_source = compact_execution.get("source")
+                if isinstance(execution_source, dict):
+                    compact_execution["source"] = {
+                        key: execution_source[key]
+                        for key in ("projection_digest",)
+                        if key in execution_source
+                    }
+                execution_summary = compact_execution.get("summary")
+                if isinstance(execution_summary, dict):
+                    compact_execution["summary"] = dict(execution_summary)
+                    execution_summary = compact_execution["summary"]
+                    pass_observations = execution_summary.get(
+                        "owner_pass_observations",
+                    )
+                    if isinstance(pass_observations, dict):
+                        pass_observations = dict(pass_observations)
+                        raw_items = pass_observations.get("items")
+                        pass_observations["items"] = (
+                            list(raw_items) if isinstance(raw_items, list) else []
+                        )
+                        execution_summary["owner_pass_observations"] = (
+                            pass_observations
+                        )
+            summary = compact_accountability.get("summary")
+            if isinstance(summary, dict):
+                for key in list(summary):
+                    if key.startswith("readiness_probe_"):
+                        summary.pop(key)
+            execution = (
+                summary.get("environment_service_execution")
+                if isinstance(summary, dict) else None
+            )
+            execution_summary = (
+                execution.get("summary") if isinstance(execution, dict) else None
+            )
+            if isinstance(execution_summary, dict):
+                for key in (
+                    "owner_pass_observation_status",
+                    "owner_pass_observation_count",
+                    "declared_owner_pass_count",
+                    "owner_pass_result_record_count",
+                ):
+                    execution_summary.pop(key, None)
+                pass_observations = execution_summary.get(
+                    "owner_pass_observations",
+                )
+                if isinstance(pass_observations, dict):
+                    raw_items = pass_observations.get("items")
+                    raw_items = raw_items if isinstance(raw_items, list) else []
+                    recorded_items = [
+                        item for item in raw_items
+                        if isinstance(item, dict)
+                        and item.get("result_status") == "result-recorded"
+                    ]
+                    compact_items = []
+                    for item in recorded_items[:4]:
+                        compact_items.append({
+                            key: item[key]
+                            for key in (
+                                "owner_pass", "result_status", "result_identity",
+                                "source_reference",
+                            )
+                            if key in item
+                        })
+                    omitted = pass_observations.get("omitted_count", 0)
+                    omitted = omitted if type(omitted) is int and omitted >= 0 else 0
+                    omitted += len(raw_items) - len(compact_items)
+                    pass_observations["items"] = compact_items
+                    pass_observations["omitted_count"] = omitted
+                    pass_observations.pop("status", None)
+                    pass_observations.pop("decision_coverage", None)
+                    if omitted:
+                        pass_observations["response_budget_truncated"] = True
+            result["service_accountability"] = compact_accountability
+
+    doctor_history = activity.get("doctor_health_history")
+    if isinstance(doctor_history, dict):
+        compact_doctor: dict[str, Any] = {
+            key: doctor_history[key]
+            for key in ("status",)
+            if key in doctor_history
+        }
+        current_epoch = doctor_history.get("current_epoch")
+        if isinstance(current_epoch, dict):
+            compact_doctor["current_epoch"] = {
+                key: current_epoch[key]
+                for key in (
+                    "digest", "evidence_reference", "readiness",
+                    "snapshot_relation", "snapshot_sequence", "summary",
+                    "validated_at",
+                )
+                if key in current_epoch
+            }
+        doctor_source = doctor_history.get("source")
+        if isinstance(doctor_source, dict):
+            compact_doctor["source"] = {
+                key: doctor_source[key]
+                for key in (
+                    "history_record_count", "history_records_omitted",
+                    "evidence_reference_status",
+                )
+                if (isinstance(doctor_source.get(key), str)
+                    or (type(doctor_source.get(key)) is int
+                        and doctor_source[key] >= 0))
+            }
+        raw_history = doctor_history.get("history")
+        raw_history = raw_history if isinstance(raw_history, list) else []
+        compact_history = []
+        for item in raw_history[:8]:
+            if not isinstance(item, dict):
+                continue
+            compact_item = {
+                key: item[key]
+                for key in (
+                    "digest", "ordinal_from_newest", "evidence_reference_status",
+                )
+                if key in item
+            }
+            if compact_item:
+                compact_history.append(compact_item)
+        if compact_history:
+            compact_doctor["history"] = compact_history
+        if (len(raw_history) > len(compact_history)
+                or compact_doctor.get("source", {}).get(
+                    "history_records_omitted", 0,
+                )):
+            compact_doctor["history_truncated"] = True
+            compact_doctor[
+                "history_records_not_returned_by_response_budget"
+            ] = len(raw_history) - len(compact_history)
+        readiness_relation = doctor_history.get(
+            "service_readiness_co_observation",
+        )
+        if isinstance(readiness_relation, dict):
+            compact_doctor["service_readiness_co_observation"] = {
+                key: readiness_relation[key]
+                for key in (
+                    "status", "relationship", "service_readiness_status",
+                    "investigation_candidate_count",
+                    "doctor_epoch_snapshot_relation", "causal_status",
+                )
+                if key in readiness_relation
+            }
+        result["doctor_health_history"] = compact_doctor
+
+    for key in (
+        "repository_ref_transition_count", "repository_ref_transitions_truncated",
+    ):
+        value = activity.get(key)
+        if type(value) in (int, bool):
+            result[key] = value
+    transition_rows = activity.get("repository_ref_transitions")
+    if isinstance(transition_rows, list) and transition_rows:
+        result["repository_ref_transitions_truncated"] = True
+        result["repository_ref_transitions_omitted_count"] = len(transition_rows)
+
+    result["detail_status"] = "summary-only-response-budget"
+    result["measurement_limits"] = [
+        "Activity detail was compacted; omitted owner-pass rows do not imply failure or fulfillment.",
+    ]
+    return result
+
+
 def _compact_unclassified_owner_pass_activity(value: Any) -> list[dict[str, Any]]:
     """Keep a few inspectable, bounded capability calls outside owner passes."""
     if not isinstance(value, list):
@@ -6956,6 +7242,65 @@ def _compact_projection(
                 compact_with_empty_resource_status,
             ) <= max_result_bytes:
                 result = compact_with_empty_resource_status
+    if compact_result_size() > max_result_bytes:
+        compact_activity = _compact_session_activity_budget_overview(
+            result.get("session_activity"),
+        )
+        if compact_activity is not None:
+            result["session_activity"] = compact_activity
+            result["measurement_limits"].append(
+                "Session activity was reduced to service totals, recorded result links, and source digests because detailed context exceeded the requested response budget."
+            )
+
+    if compact_result_size() > max_result_bytes:
+        page_budgets = result.get("source", {}).get(
+            "evidence_history_observation_budgets_by_page",
+        )
+        if isinstance(page_budgets, list):
+            has_page_identities = any(
+                isinstance(page, dict)
+                and isinstance(
+                    page.get("selected_observation_reference_identities"),
+                    list,
+                )
+                for page in page_budgets
+            )
+            if has_page_identities:
+                result["source"][
+                    "evidence_history_reference_identities_truncated"
+                ] = True
+                result["measurement_limits"].append(
+                    "Selected evidence identities omitted from page metadata are counted by page; exact returned observations and ledger pages remain authoritative."
+                )
+            for page in reversed(page_budgets):
+                if not isinstance(page, dict):
+                    continue
+                identities = page.pop(
+                    "selected_observation_reference_identities", None,
+                )
+                if not isinstance(identities, list):
+                    continue
+                page["selected_observation_reference_identity_count"] = len(
+                    identities,
+                )
+                page["selected_observation_reference_identities_truncated"] = (
+                    True
+                )
+                if compact_result_size() <= max_result_bytes:
+                    break
+        if compact_result_size() > max_result_bytes:
+            result["source"].pop(
+                "evidence_history_observation_budgets_by_page", None,
+            )
+            result["source"][
+                "evidence_history_observation_budget_details_truncated"
+            ] = True
+    if result.get("session_activity", {}).get("detail_status") == (
+        "summary-only-response-budget"
+    ):
+        result["measurement_limits"] = [
+            "Session and page detail was omitted by the response budget; source counts, offsets, and ledger links remain authoritative.",
+        ]
     return result
 
 

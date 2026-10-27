@@ -4711,6 +4711,193 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     assert "service_accountability" not in absent
 
 
+def test_projection_enforces_tight_budget_for_session_service_history(
+    tmp_path: Path,
+) -> None:
+    session, _ = _session(tmp_path, [])
+    projection = capability_intelligence.project(session)
+    owners = (
+        "doctor", "semantics", "actions", "verification", "diagnostics",
+        "family", "projections",
+    )
+    owner_rows = []
+    for index, owner in enumerate(owners):
+        recorded = owner in {"doctor", "projections"}
+        row = {
+            "owner_pass": owner,
+            "result_status": "result-recorded" if recorded else "runner-returned-none",
+            "decision": "scheduled",
+            "scheduler_disposition_code": 2,
+            "wave": 0,
+            "trigger_kinds": [],
+            "timer_or_lifecycle_due": False,
+            "verification_status": "not-established",
+            "result_summary": {"degraded": 18, "reconciled": 1},
+        }
+        if recorded:
+            row.update({
+                "result_identity": f"{index:064x}",
+                "source_reference": (
+                    f"mncs-store:ses_projection_reader:owner:{owner}:{index:064x}"
+                ),
+                "source_reference_status": "store-record",
+            })
+        owner_rows.append(row)
+    projection["session_activity"] = {
+        "status": "partial",
+        "source": {
+            "event_count": 800,
+            "event_window_sequence_end": 800,
+            "event_window_truncated": True,
+            "ambient_service_execution_digest": "a" * 16,
+        },
+        "interaction_count": 2,
+        "completion_count": 2,
+        "unmatched_invocation_count": 0,
+        "ambiguous_correlation_count": 0,
+        "completion_without_invocation_count": 0,
+        "service_readiness": {
+            "status": "not-captured-in-session",
+            "readiness_status": "degraded",
+            "source": {
+                "environment_id": "renv_projection_reader",
+                "snapshot_sequence": 37,
+                "declared_service_count": 0,
+                "service_declaration_status": "explicit-empty",
+                "provenance_status": "identified",
+            },
+            "summary": {
+                "projected_service_count": 0,
+                "investigation_candidate_count": 0,
+                "probe_opportunity_count": 0,
+                "probe_observation_coverage_status": (
+                    "no-declared-probe-opportunities"
+                ),
+                "status_counts": {"degraded": 0, "ready": 0},
+            },
+            "services": [],
+            "candidates": [],
+        },
+        "service_accountability": {
+            "schema_version": "mncs.environment.service-accountability/1",
+            "status": "empty-declared-scope",
+            "scope": "selected-session-declared-readiness-services",
+            "source": {
+                "service_session_id": session.session_id,
+                "snapshot_sequence": 37,
+                "service_declaration_status": "explicit-empty",
+            },
+            "summary": {
+                "declared_service_count": 0,
+                "projected_service_count": 0,
+                "eligible_service_opportunity_count": None,
+                "ambient_fulfillment_status": "not-measured",
+                "agent_intervention_burden_status": "not-measured",
+                "environment_service_execution": {
+                    "status": "observed",
+                    "scope": "selected-session-environment-owner-pass-contract",
+                    "source": {"projection_digest": "a" * 16},
+                    "summary": {
+                        "scheduler_mode": "bounded_reconciliation",
+                        "owner_pass_observation_status": "recorded",
+                        "owner_pass_observation_count": 7,
+                        "owner_pass_decision_count": 7,
+                        "owner_pass_decision_coverage": "complete",
+                        "scheduled_pass_count": 7,
+                        "skipped_pass_count": 0,
+                        "owner_failure_count": 0,
+                        "owner_pass_result_record_count": 7,
+                        "verification_status": "not-established",
+                        "owner_pass_result_status_counts": {
+                            "result-recorded": 2,
+                            "runner-returned-none": 5,
+                        },
+                        "owner_pass_observations": {
+                            "status": "recorded",
+                            "count": 7,
+                            "limit": 16,
+                            "omitted_count": 0,
+                            "decision_coverage": "complete",
+                            "items": owner_rows,
+                        },
+                    },
+                },
+            },
+            "services": [],
+            "response_budget_summary_only": True,
+        },
+        "doctor_health_history": {
+            "status": "observed",
+            "source": {
+                "session_id": session.session_id,
+                "snapshot_sequence": 37,
+                "history_record_count": 12,
+                "history_records_projected": 12,
+                "history_records_omitted": 0,
+                "evidence_reference_status": "recorded",
+                "provenance_status": "identified",
+            },
+            "current_epoch": {
+                "digest": "b" * 16,
+                "readiness": "degraded",
+                "snapshot_sequence": 36,
+                "summary": {"degraded": 18, "reconciled": 1},
+                "validated_at": "2026-10-27T00:00:00Z",
+            },
+            "history": [{
+                "digest": f"{index:064x}",
+                "measurement_detail": "history detail " * 80,
+            } for index in range(12)],
+        },
+        "repository_ref_transition_count": 0,
+        "repository_ref_transitions": [],
+    }
+    projection["source"]["evidence_history_observation_budgets_by_page"] = [
+        {
+            "offset": index * 8,
+            "page_limit": 8,
+            "read_budget": 2,
+            "observation_reference_capacity": 2,
+            "selected_observation_reference_identities": [
+                f"ev_environment_budget_{index}_{item}" for item in range(2)
+            ],
+        }
+        for index in range(4)
+    ]
+    projection["source"]["evidence_history_pages_requested"] = 4
+    projection["source"]["evidence_history_pages_read"] = 4
+    original_size = len(json.dumps(
+        projection, ensure_ascii=False, sort_keys=True,
+    ).encode())
+
+    compact = capability_intelligence._compact_projection(
+        projection, original_size, max_result_bytes=8_000,
+    )
+    compact["content_digest"] = capability_intelligence._projection_content_digest(
+        compact,
+    )
+
+    assert len(json.dumps(
+        compact, ensure_ascii=False, sort_keys=True,
+    ).encode()) <= 8_000
+    assert compact["session_activity"]["detail_status"] == (
+        "summary-only-response-budget"
+    )
+    compact_observations = compact["session_activity"][
+        "service_accountability"
+    ]["summary"]["environment_service_execution"]["summary"][
+        "owner_pass_observations"
+    ]
+    assert compact_observations["count"] == 7
+    assert compact_observations["omitted_count"] == 5
+    assert [item["owner_pass"] for item in compact_observations["items"]] == [
+        "doctor", "projections",
+    ]
+    assert all(item["source_reference"].startswith("mncs-store:")
+               for item in compact_observations["items"])
+    assert compact["source"]["response_truncated"] is True
+
+
 def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
     probe_capability = "mncs-doctor:compiler-vm-health"
     irrelevant_bindings = [{
