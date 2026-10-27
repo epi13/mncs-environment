@@ -13586,6 +13586,24 @@ def test_authentic_compiler_selection_records_surface_recommendation_conflict(
     ]
 
 
+def test_page_observation_budget_favors_newest_page_without_extra_reads() -> None:
+    allocate = capability_intelligence._allocate_page_observation_budgets
+
+    assert allocate([8, 8, 8, 8], 16) == [5, 4, 4, 3]
+    assert allocate([8, 8, 8, 8], 17) == [5, 4, 4, 4]
+    assert allocate([9, 9], 16) == [9, 7]
+    for capacities, total_budget in (
+        ([8, 8, 8, 8], 16),
+        ([8, 8, 8, 8], 17),
+        ([9, 9], 16),
+        ([1, 8, 8, 8], 16),
+    ):
+        budgets = allocate(capacities, total_budget)
+        assert sum(budgets) == min(total_budget, sum(capacities))
+        assert all(0 <= budget <= capacity
+                   for budget, capacity in zip(budgets, capacities))
+
+
 def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     tmp_path: Path, monkeypatch,
 ) -> None:
@@ -13667,23 +13685,23 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
             "offset": 9,
             "page_limit": 9,
             "observation_reference_capacity": 9,
-            "read_budget": 8,
+            "read_budget": 9,
             "selected_observation_reference_identities": [
                 f"ev_environment_pressure_history_{index:02d}"
-                for index in range(10, 18)
+                for index in range(9, 18)
             ],
-            "observation_records_skipped_by_page_budget": 1,
+            "observation_records_skipped_by_page_budget": 0,
         },
         {
             "offset": 0,
             "page_limit": 9,
             "observation_reference_capacity": 9,
-            "read_budget": 8,
+            "read_budget": 7,
             "selected_observation_reference_identities": [
                 f"ev_environment_pressure_history_{index:02d}"
-                for index in range(1, 9)
+                for index in range(2, 9)
             ],
-            "observation_records_skipped_by_page_budget": 1,
+            "observation_records_skipped_by_page_budget": 2,
         },
     ]
     assert projection["source"]["observation_reference_selection_policy"] == (

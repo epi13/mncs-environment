@@ -352,7 +352,7 @@ def _evidence_history_pages(
 def _allocate_page_observation_budgets(
     capacities: list[int], total_budget: int,
 ) -> list[int]:
-    """Share the observation ceiling without wasting slots on sparse pages."""
+    """Share the ceiling while favoring the newest page at an even split."""
     budgets = [0 for _ in capacities]
     target = min(total_budget, sum(capacities))
     while sum(budgets) < target:
@@ -365,6 +365,19 @@ def _allocate_page_observation_budgets(
             key=lambda index: (budgets[index], -capacities[index], index),
         )
         budgets[selected] += 1
+    # History pages are ordered newest-first. An evenly split budget can omit
+    # the observation that explains a recent improvement when the latest page
+    # has one more record than its bounded share. Reassign one slot from the
+    # oldest page with an equal share, and only when the newest page still has
+    # unread capacity.
+    if budgets and capacities[0] > budgets[0]:
+        donors = [
+            index for index in range(len(budgets) - 1, 0, -1)
+            if budgets[index] == budgets[0] and budgets[index] > 0
+        ]
+        if donors:
+            budgets[donors[0]] -= 1
+            budgets[0] += 1
     return budgets
 
 

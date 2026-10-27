@@ -110,6 +110,15 @@ of truth for details. Retaining an improvement relation does not establish
 that a pressure was resolved; `not-assessed` remains unchanged until later
 evidence supports an assessment.
 
+Campaign history observation reads share the existing total read ceiling
+across fetched pages. When an even allocation leaves capacity on the newest
+page, one slot can move from the oldest page with an equal share to the newest
+page. The total number of observation reads stays bounded; each page still
+selects its newest references, and the projection reports per-page budgets and
+omissions. This helps retain recent pressure
+and improvement context without claiming that skipped older records contain
+no relevant evidence.
+
 ## Entry and persistence observation
 
 The bounded readback
