@@ -1,0 +1,122 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_unowned_scope_integration_observation_20261027",
+  "captured_at": "2026-10-27T03:06:54Z",
+  "measurement_basis": "direct Environment authority events and the environmental-capability session projection",
+  "observation": {
+    "kind": "unowned-explicit-scope-integration-eligibility",
+    "outcome": {
+      "action": "publish",
+      "authorization_basis": "writable-repository-rights",
+      "eligibility_basis": "exact-observed-scope-and-repository-native-concurrency",
+      "repository": "mncs-environment",
+      "verdict": "allow",
+      "persistent_claim_required": false,
+      "operation_executed": false,
+      "scope": {
+        "kind": "worktree",
+        "branch": "improve/unowned-scope-preflight-20261027",
+        "checkout_identity": "checkout:6d9581db142d06e1",
+        "git_common_directory_identity": "git-common:8bf6635617971eae",
+        "manifest_identity": "955c3febf3d79c9c",
+        "exclusive": false
+      },
+      "preflight_state": {
+        "head": "e1760e346fda6df569dca4b0cc993b36f7c5e3d2",
+        "head_status": "measured",
+        "working_tree_status": "dirty",
+        "observation_basis": "fresh-registered-checkout-inspection"
+      },
+      "coordination": {
+        "overlap_count": 8,
+        "overlap_records_returned": 4,
+        "current_claim_lookups_omitted": 4,
+        "current_claim_lookup_status": "partial-lookup-limit",
+        "interpretation": "Overlapping persisted claims were retained as coordination evidence and did not block this integration eligibility decision. The bounded projection does not establish current liveness for every overlap."
+      },
+      "event_reference": {
+        "identity": "evt_0bea59eea1d1c8a7",
+        "sequence": 7,
+        "type": "authority.integration-eligible"
+      }
+    },
+    "related_resource_sample": {
+      "identity": "rsm_254530d2d63a5219",
+      "schema": "mncs.system-monitor.resource-sample.v1",
+      "measurement_basis": "system-monitor-reported-resource-sample",
+      "host": {
+        "cpu_count": 8,
+        "cpu_utilization": null,
+        "cpu_utilization_status": "unavailable",
+        "load_average": [
+          0.85,
+          0.99,
+          1.09
+        ],
+        "memory_available_bytes": 23930986496,
+        "memory_total_bytes": 33411571712
+      },
+      "artifact_reference": {
+        "store_reference": "mncs-store:ses_8d2eedabac6a6feb:capability-invocation-artifacts:7ed6768f884942ccffa0c1c8e27ecdbae0807fddea29f36dcd499a80611c24b9",
+        "path": "system-resource-sample.json",
+        "sha256": "9ee8f39d526a38d0f38db04e9dd122d093afb07b6d5ee0db164a7746ceb67921",
+        "byte_count": 461
+      },
+      "invocation_event": {
+        "identity": "evt_42d6d3270180172a",
+        "sequence": 4,
+        "type": "capability.invoked"
+      },
+      "completion_event": {
+        "identity": "evt_53821ce9df85fe7a",
+        "sequence": 5,
+        "type": "invocation.completed"
+      },
+      "interpretation_limit": "One host sample is not agent-attributed resource consumption and does not establish resource pressure."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "not_measured": [
+    "actual Git merge or remote push execution",
+    "source branch and remote ref state",
+    "integration outcome or subsequent verification",
+    "liveness of all eight overlapping claim records",
+    "agent-attributed CPU or memory consumption",
+    "token and cache usage",
+    "filesystem Btrfs data and metadata allocation"
+  ],
+  "supporting_sources": [
+    {
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "a28124688e7b1360e4e6f77a8ee61ad2ee9520ef",
+      "path": "mncs_env/cli.py"
+    },
+    {
+      "kind": "verification-source",
+      "repository": "mncs-environment",
+      "commit": "a28124688e7b1360e4e6f77a8ee61ad2ee9520ef",
+      "path": "tests/test_authority_policy_guidance.py",
+      "test_identity": "test_authority_cli_accepts_explicit_unowned_scope_as_an_operation_proposal"
+    },
+    {
+      "kind": "projection-readback",
+      "interface": "mncs-env projections --interpret environmental-capability",
+      "session_id": "ses_8d2eedabac6a6feb",
+      "event_sequence_end": 7,
+      "status": "partial"
+    }
+  ],
+  "recorder": {
+    "consumer_id": "codex-environment-capability-intelligence",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "campaign_id": "cmp_7f550d193225b7be"
+  }
+}
