@@ -211,6 +211,7 @@ MAX_SESSION_EVENT_WINDOW = 256
 MAX_SESSION_DOCTOR_HISTORY = 8
 MAX_DOCTOR_GAP_EXAMPLES = 16
 MAX_DOCTOR_GAP_CODE_GROUPS = 8
+MAX_DOCTOR_GAP_PROVIDER_KIND_GROUPS = 8
 MAX_SESSION_PROJECTION_HISTORY = 8
 MAX_SESSION_RESOURCE_ARTIFACT_WINDOW = 256
 MAX_SESSION_RESOURCE_SAMPLES = 4
@@ -2977,6 +2978,79 @@ def _compact_session_activity_budget_overview(
             compact_doctor[
                 "history_records_not_returned_by_response_budget"
             ] = len(raw_history) - len(compact_history)
+        diagnostic = doctor_history.get("diagnostic_pressure")
+        if isinstance(diagnostic, dict):
+            compact_diagnostic = {
+                key: diagnostic[key]
+                for key in ("status",)
+                if isinstance(diagnostic.get(key), str)
+            }
+            diagnostic_source = diagnostic.get("source")
+            if isinstance(diagnostic_source, dict):
+                compact_diagnostic["source"] = {
+                    key: diagnostic_source[key]
+                    for key in (
+                        "kind", "schema", "identity", "content_digest",
+                        "content_integrity_status", "epoch_binding_status",
+                        "doctor_epoch_snapshot_relation",
+                    )
+                    if isinstance(diagnostic_source.get(key), str)
+                }
+            diagnostic_summary = diagnostic.get("summary")
+            if isinstance(diagnostic_summary, dict):
+                compact_diagnostic["summary"] = {
+                    key: diagnostic_summary[key]
+                    for key in (
+                        "classified_gap_record_count", "valid_gap_record_count",
+                        "invalid_gap_record_count", "code_group_count",
+                        "candidate_group_count", "provider_kind_group_count",
+                        "cross_session_recurrence_status",
+                    )
+                    if (isinstance(diagnostic_summary.get(key), str)
+                        or (type(diagnostic_summary.get(key)) is int
+                            and diagnostic_summary[key] >= 0))
+                }
+            raw_candidate_groups = diagnostic.get("candidate_groups")
+            if isinstance(raw_candidate_groups, list):
+                compact_candidates = []
+                for candidate in raw_candidate_groups[:2]:
+                    if not isinstance(candidate, dict):
+                        continue
+                    compact_candidate = {
+                        key: candidate[key]
+                        for key in (
+                            "code", "gap_record_count",
+                            "distinct_capability_count",
+                            "capability_examples_omitted",
+                            "provider_kind_groups_omitted",
+                            "cross_session_recurrence_status", "action_hint",
+                        )
+                        if key in candidate
+                    }
+                    raw_provider_groups = candidate.get("provider_kind_groups")
+                    if isinstance(raw_provider_groups, list):
+                        compact_candidate["provider_kind_groups"] = [
+                            {
+                                key: provider_group[key]
+                                for key in (
+                                    "provider", "provider_kind",
+                                    "gap_record_count", "provider_source",
+                                )
+                                if key in provider_group
+                            }
+                            for provider_group in raw_provider_groups[:4]
+                            if isinstance(provider_group, dict)
+                        ]
+                        compact_candidate[
+                            "provider_kind_groups_omitted_by_response_budget"
+                        ] = max(
+                            0, len(raw_provider_groups)
+                            - len(compact_candidate["provider_kind_groups"]),
+                        )
+                    compact_candidates.append(compact_candidate)
+                compact_diagnostic["candidate_groups"] = compact_candidates
+            if compact_diagnostic:
+                compact_doctor["diagnostic_pressure"] = compact_diagnostic
         readiness_relation = doctor_history.get(
             "service_readiness_co_observation",
         )
@@ -17875,6 +17949,34 @@ def _session_doctor_gap_projection(
         group = grouped.setdefault(code, {"record_count": 0, "capabilities": set()})
         group["record_count"] += 1
         group["capabilities"].add(capability)
+        provider = item.get("provider")
+        provider = (
+            provider if isinstance(provider, str)
+            and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", provider)
+            else "not-recorded"
+        )
+        provider_kind = item.get("provider_kind")
+        provider_kind = (
+            provider_kind if isinstance(provider_kind, str)
+            and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}", provider_kind)
+            else "not-recorded"
+        )
+        provider_source = item.get("provider_source")
+        provider_source = (
+            provider_source if isinstance(provider_source, str)
+            and 0 < len(provider_source) <= 256
+            and not provider_source.startswith("/")
+            and "\\" not in provider_source
+            and "\x00" not in provider_source
+            and ".." not in provider_source.split("/")
+            else ""
+        )
+        provider_groups = group.setdefault("provider_kind_groups", {})
+        provider_group = provider_groups.setdefault(
+            (provider, provider_kind, provider_source),
+            {"gap_record_count": 0},
+        )
+        provider_group["gap_record_count"] += 1
 
     ordered_groups = sorted(
         grouped.items(), key=lambda item: (-item[1]["record_count"], item[0]),
@@ -17895,10 +17997,33 @@ def _session_doctor_gap_projection(
             "capability_examples_omitted": max(0, len(capabilities) - len(examples)),
             "cross_session_recurrence_status": "not-established",
         }
+        provider_kind_groups = [
+            {
+                "provider": provider,
+                "provider_kind": provider_kind,
+                "gap_record_count": provider_group["gap_record_count"],
+                **({"provider_source": provider_source}
+                   if provider_source else {}),
+            }
+            for (provider, provider_kind, provider_source), provider_group
+            in sorted(
+                group.get("provider_kind_groups", {}).items(),
+                key=lambda item: (
+                    -item[1]["gap_record_count"], item[0][0],
+                    item[0][1], item[0][2],
+                ),
+            )[:MAX_DOCTOR_GAP_PROVIDER_KIND_GROUPS]
+        ]
+        candidate["provider_kind_groups"] = provider_kind_groups
+        candidate["provider_kind_groups_omitted"] = max(
+            0, len(group.get("provider_kind_groups", {}))
+            - len(provider_kind_groups),
+        )
         if code == "provider-invocation-undeclared":
             candidate["action_hint"] = (
-                "Inspect the provider-owned invocation contract for these capability ids; "
-                "Doctor classified them as lacking a published invocation descriptor."
+                "Inspect the provider-owned declaration and its kind/source. "
+                "Decide whether an executable adapter is missing or the item is "
+                "a non-invocable library or data contract before proposing a change."
             )
         candidate_groups.append(candidate)
 
@@ -17947,6 +18072,10 @@ def _session_doctor_gap_projection(
             "distinct_capability_count": sum(
                 len(group["capabilities"]) for group in grouped.values()
             ),
+            "provider_kind_group_count": sum(
+                len(group.get("provider_kind_groups", {}))
+                for group in grouped.values()
+            ),
             "gap_examples_projected": sum(
                 len(group["capability_examples"]) for group in candidate_groups
             ),
@@ -17959,6 +18088,7 @@ def _session_doctor_gap_projection(
             "Repeated unavailable-set digests count matching rows in this session's bounded Doctor history only.",
             "The Doctor epoch snapshot relation is preserved; an earlier epoch does not establish current provider state.",
             "A diagnostic classification is an investigation candidate, not independent proof of a defect or of a later improvement.",
+            "Provider kind and source are declarations from the same Doctor record; they do not independently prove functionality, callability, or cause.",
         ],
     }
 

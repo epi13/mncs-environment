@@ -18,6 +18,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "scripts" / "mncs-env"
@@ -415,6 +416,74 @@ class ProjectionFixture(unittest.TestCase):
 
 @NEED_MNCS
 class AmbientWholeFileTests(ProjectionFixture):
+    def test_planner_deferral_exposes_read_only_provider_diagnostic(self):
+        from mncs_env import projections, sessions
+
+        code, entered = self.enter("planner-diagnostic")
+        self.assertEqual(code, 0, entered)
+        output = self.target_doc / "docs/out.generated.md"
+        before = output.read_bytes()
+        (self.target_doc / "docs/rfcs/0002.md").write_text(
+            "# RFC 0002: planner diagnostic\n")
+        self.commit_all(
+            self.target_doc, "advance source for planner diagnostic",
+        )
+        session = sessions.Session.open(
+            state_dir=self.state, session_id=entered["session_id"],
+            backend="file",
+        )
+        try:
+            session.snapshot["bindings"] = [
+                binding for binding in session.snapshot.get("bindings", [])
+                if binding.get("capability") != projections.PLANNER_CAPABILITY
+            ]
+            workspace = dict(session.snapshot.get("workspace") or {})
+            workspace["consumed_provider_diagnostics"] = {
+                "schema_version": (
+                    "mncs.environment.consumed-provider-diagnostics/1"
+                ),
+                "status": "complete",
+                "count": 1,
+                "limit": 32,
+                "omitted_count": 0,
+                "items": [{
+                    "capability": projections.PLANNER_CAPABILITY,
+                    "code": "provider-checkout-dirty",
+                    "consumers": ["mncs-environment"],
+                    "provider_checkout_selected": False,
+                    "authority_scope": "workspace-read-only",
+                }],
+            }
+            session.snapshot["workspace"] = workspace
+            with mock.patch.dict(os.environ, self.env):
+                report = projections.ambient_pass(
+                    session, only="target-doc:index",
+                )
+            evidence = projections.read_evidence(session)["evidence"]
+        finally:
+            session.close()
+
+        self.assertEqual(report["summary"]["pending"], 1)
+        result = evidence["results"][0]
+        self.assertEqual(result["outcome"], "deferred")
+        self.assertEqual(result["gate_reason"], "planner-unavailable")
+        self.assertEqual(
+            result["planner_binding_context"],
+            {
+                "capability": "mncs-automation:automation-reconciliation",
+                "binding_status": "not-bound",
+                "request_status": "not-attempted",
+                "provider_diagnostic": {
+                    "code": "provider-checkout-dirty",
+                    "authority_scope": "workspace-read-only",
+                    "provider_checkout_selected": False,
+                    "consumers": ["mncs-environment"],
+                },
+                "provider_diagnostic_status": "matched",
+            },
+        )
+        self.assertEqual(output.read_bytes(), before)
+
     def test_applied_outputs_carry_deterministic_permissions(self):
         import stat
         self.enter('permissions')

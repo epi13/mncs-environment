@@ -11,7 +11,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from mncs_env import capability_intelligence, claims, cli, projections
+from mncs_env import capability_intelligence, claims, cli, doctor, projections
 from mncs_env.sessions import LifecycleError
 
 
@@ -5377,13 +5377,30 @@ def test_doctor_gap_projection_verifies_and_groups_immutable_evidence(
     unavailable_digest = "b" * 16
     epoch_digest = "a" * 16
     validated_at = "2026-10-27T14:10:24+00:00"
-    gaps = [{
-        "capability": f"mncs-store:capability-{index:02d}",
-        "code": "provider-invocation-undeclared",
-        "reason": (
-            "mncs-store must publish an invocation descriptor for this capability"
-        ),
-    } for index in range(18)]
+    bindings = []
+    for index in range(18):
+        provider = "mncs-store" if index < 9 else "mncs-language"
+        kind = "storage-contract" if index < 9 else "compiler-cli"
+        source = (
+            "mncs-store/.mncs/project.json"
+            if index < 9 else "mncs-language/.mncs/project.json"
+        )
+        bindings.append({
+            "provider": provider,
+            "capability": f"{provider}:capability-{index:02d}",
+            "provenance": {
+                "kind": kind,
+                "source": source,
+                "declared_invocation": False,
+            },
+            "availability": {
+                "status": "unknown",
+                "code": "provider-invocation-undeclared",
+                "reason": f"{provider} has no invocation descriptor for this capability",
+            },
+        })
+    classification = doctor.classify_unavailable(bindings)
+    gaps = classification["gaps"]
     evidence = {
         "schema_version": "mncs.environment.doctor-evidence/1",
         "session_id": session.session_id,
@@ -5394,7 +5411,7 @@ def test_doctor_gap_projection_verifies_and_groups_immutable_evidence(
         "remaining": [],
         "repairs": [],
         "reconciliations": [],
-        "classification": {"gaps": gaps, "transient": []},
+        "classification": classification,
         "operations": [],
         "revalidation": {},
         "readiness": {},
@@ -5481,6 +5498,22 @@ def test_doctor_gap_projection_verifies_and_groups_immutable_evidence(
     assert group["distinct_capability_count"] == 18
     assert len(group["capability_examples"]) == 5
     assert group["capability_examples_omitted"] == 13
+    assert group["provider_kind_groups"] == [
+        {
+            "provider": "mncs-language",
+            "provider_kind": "compiler-cli",
+            "gap_record_count": 9,
+            "provider_source": "mncs-language/.mncs/project.json",
+        },
+        {
+            "provider": "mncs-store",
+            "provider_kind": "storage-contract",
+            "gap_record_count": 9,
+            "provider_source": "mncs-store/.mncs/project.json",
+        },
+    ]
+    assert detail["summary"]["provider_kind_group_count"] == 2
+    assert "executable adapter" in group["action_hint"]
     assert "workspace_root" not in json.dumps(detail)
 
     compact = capability_intelligence.project(
@@ -5492,13 +5525,10 @@ def test_doctor_gap_projection_verifies_and_groups_immutable_evidence(
     ]
     assert compact_detail["source"]["content_integrity_status"] == "verified"
     compact_group = compact_detail["candidate_groups"][0]
-    assert (
-        len(compact_group["capability_examples"])
-        + compact_group["capability_examples_omitted"] == 18
-    )
-    assert compact_detail["summary"]["gap_examples_projected"] == len(
-        compact_group["capability_examples"]
-    )
+    assert compact_group["capability_examples_omitted"] == 18
+    assert compact_group["provider_kind_groups"] == group["provider_kind_groups"]
+    assert "capability_examples" not in compact_group
+    assert "gap_examples_projected" not in compact_detail["summary"]
     assert capability_intelligence._projection_response_size(compact) <= 8_000
 
     session.snapshot["doctor"]["evidence_ref"]["identity"] = (

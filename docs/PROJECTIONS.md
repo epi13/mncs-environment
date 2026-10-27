@@ -75,6 +75,15 @@ retrievable with:
 ./scripts/mncs-env projections <session> --evidence
 ```
 
+When the planner cannot be called, a deferred projection record includes the
+planner binding state and, when present, the exact matching
+`consumed_provider_diagnostics` entry from the session workspace snapshot.
+This can distinguish an unbound planner caused by a dirty read-only provider
+checkout from an unavailable bound executable. The projection still defers;
+the diagnostic adds no authority and does not invoke or modify the provider.
+If no matching provider diagnostic was recorded, the record says so instead
+of inferring a cause.
+
 Each result retains up to eight compact verification observations with the
 obligation, evidence identity, verdict, method, and bounded reason. An omitted
 count preserves awareness when a declaration has more observations. This lets
@@ -1056,7 +1065,15 @@ unavailable-set digests in the same session's bounded history. These are
 diagnostic clusters from one authenticated record, not independent-session
 recurrence or proof of a defect. Missing or unverifiable evidence is surfaced
 with an explicit status and no gap details; the immutable evidence reference
-remains available for inspecting the original reason text.
+remains available for inspecting the original reason text. Each gap record
+also retains the provider identity, declared capability kind, and
+workspace-relative manifest source when Doctor recorded them. The projection
+groups those owner-declared fields by provider and kind, so an executable CLI
+gap can be distinguished from a storage, source, or coordination contract
+without claiming that either is functional or callable. Older Doctor records
+that did not retain this context remain `not-recorded`; it is not reconstructed
+from today's manifests. Provider kind and source are diagnostic context, not
+proof of a defect or an improvement.
 
 The compact view also relates the current session binding snapshot to observed
 capability calls. `capability_delivery.bindings` reports each bounded binding's

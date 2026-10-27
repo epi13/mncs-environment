@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import tempfile
 import time
 from datetime import datetime, timezone
@@ -654,6 +655,78 @@ def planner_available(session) -> bool:
     if binding is None:
         return False
     return binding.get("availability", {}).get("status") == "available"
+
+
+def _planner_binding_context(session) -> dict[str, Any]:
+    """Explain bounded planner binding state without widening its authority."""
+    result: dict[str, Any] = {"capability": PLANNER_CAPABILITY}
+    binding = _session_binding(session, PLANNER_CAPABILITY)
+    if binding is not None:
+        availability = binding.get("availability")
+        availability = availability if isinstance(availability, dict) else {}
+        status = availability.get("status")
+        result["binding_status"] = (
+            status if isinstance(status, str)
+            and status in {"available", "unavailable", "unknown"}
+            else "invalid"
+        )
+        if isinstance(availability.get("code"), str):
+            result["availability_code"] = availability["code"][:96]
+        result["request_status"] = (
+            "invoked-but-no-valid-plan"
+            if result["binding_status"] == "available"
+            else "not-attempted"
+        )
+        return result
+
+    result["binding_status"] = "not-bound"
+    result["request_status"] = "not-attempted"
+    workspace = session.snapshot.get("workspace")
+    workspace = workspace if isinstance(workspace, dict) else {}
+    diagnostics = workspace.get("consumed_provider_diagnostics")
+    diagnostics = diagnostics if isinstance(diagnostics, dict) else {}
+    diagnostic_status = diagnostics.get("status")
+    if (diagnostics.get("schema_version")
+            != "mncs.environment.consumed-provider-diagnostics/1"
+            or not isinstance(diagnostic_status, str)
+            or diagnostic_status not in {"complete", "partial"}):
+        result["provider_diagnostic_status"] = "not-recorded"
+        return result
+    items = diagnostics.get("items")
+    items = items if isinstance(items, list) else []
+    matching = [
+        item for item in items[:32]
+        if isinstance(item, dict)
+        and item.get("capability") == PLANNER_CAPABILITY
+    ]
+    if len(matching) != 1:
+        result["provider_diagnostic_status"] = (
+            "ambiguous" if matching else "not-recorded"
+        )
+        return result
+    diagnostic = matching[0]
+    code = diagnostic.get("code")
+    if isinstance(code, str) and re.fullmatch(r"[a-z][a-z0-9-]{0,95}", code):
+        detail: dict[str, Any] = {"code": code}
+        authority_scope = diagnostic.get("authority_scope")
+        if authority_scope == "workspace-read-only":
+            detail["authority_scope"] = authority_scope
+        selected = diagnostic.get("provider_checkout_selected")
+        if type(selected) is bool:
+            detail["provider_checkout_selected"] = selected
+        consumers = diagnostic.get("consumers")
+        if isinstance(consumers, list):
+            detail["consumers"] = [
+                item[:128]
+                for item in consumers[:4]
+                if isinstance(item, str)
+                and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", item)
+            ]
+        result["provider_diagnostic"] = detail
+        result["provider_diagnostic_status"] = "matched"
+    else:
+        result["provider_diagnostic_status"] = "invalid"
+    return result
 
 
 def request_plan(session, request: dict[str, Any]) -> dict[str, Any] | None:
@@ -1551,7 +1624,10 @@ def _reconcile_one(session, declaration: dict[str, Any],
     if plan is None:
         record.update({"gate": GATE_DEFER,
                        "gate_reason": "planner-unavailable",
-                       "outcome": "deferred"})
+                       "outcome": "deferred",
+                       "planner_binding_context": (
+                           _planner_binding_context(session)
+                       )})
         kept = _retain_shared(
             session, rows, projection_id, shared, canonical, observed,
             digest, STATUS_UNKNOWN, defer_count + 1, verdict,

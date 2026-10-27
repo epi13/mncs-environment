@@ -25,6 +25,7 @@ the working context.
 from __future__ import annotations
 
 import json
+import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -354,6 +355,27 @@ def classify_unavailable(bindings: list[dict[str, Any]]) -> dict[str, Any]:
             continue
         entry = {"capability": binding.get("capability"),
                  "code": availability.get("code"), "reason": availability.get("reason")}
+        provider = binding.get("provider")
+        if (isinstance(provider, str)
+                and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", provider)):
+            entry["provider"] = provider
+        provenance = binding.get("provenance")
+        provenance = provenance if isinstance(provenance, dict) else {}
+        provider_kind = provenance.get("kind")
+        if (isinstance(provider_kind, str)
+                and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}", provider_kind)):
+            entry["provider_kind"] = provider_kind
+        provider_source = provenance.get("source")
+        if (isinstance(provider_source, str) and provider_source
+                and len(provider_source) <= 256
+                and not provider_source.startswith("/")
+                and "\\" not in provider_source
+                and "\x00" not in provider_source
+                and ".." not in provider_source.split("/")):
+            entry["provider_source"] = provider_source
+        declared_invocation = provenance.get("declared_invocation")
+        if type(declared_invocation) is bool:
+            entry["declared_invocation"] = declared_invocation
         if availability.get("code") in ("executable-unavailable", "toolchain-missing"):
             transient.append(entry)
         else:

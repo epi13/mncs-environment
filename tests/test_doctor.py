@@ -355,6 +355,33 @@ class ValidationReasonTests(DoctorFixture):
     def open_session(self, session_id):
         return sessions.Session.resume(state_dir=self.state, session_id=session_id, backend="file")
 
+    def test_gap_classification_retains_provider_contract_context(self):
+        classified = doctor.classify_unavailable([{
+            "provider": "mncs-store",
+            "capability": "mncs-store:persistent-object",
+            "provenance": {
+                "kind": "storage-contract",
+                "source": "mncs-store/.mncs/project.json",
+                "declared_invocation": False,
+            },
+            "availability": {
+                "status": "unknown",
+                "code": "provider-invocation-undeclared",
+                "reason": "no invocation descriptor",
+            },
+        }])
+
+        self.assertEqual(len(classified["gaps"]), 1)
+        self.assertEqual(classified["gaps"][0]["provider"], "mncs-store")
+        self.assertEqual(
+            classified["gaps"][0]["provider_kind"], "storage-contract",
+        )
+        self.assertEqual(
+            classified["gaps"][0]["provider_source"],
+            "mncs-store/.mncs/project.json",
+        )
+        self.assertFalse(classified["gaps"][0]["declared_invocation"])
+
     def test_precise_single_reasons_per_dimension(self):
         self.ready()
         _, first = self.enter()
