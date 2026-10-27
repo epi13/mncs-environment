@@ -1,0 +1,111 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_pass_outcome_accountability_20261027",
+  "captured_at": "2026-10-27T12:43:28Z",
+  "observation": {
+    "kind": "ambient-owner-pass-outcome-accountability",
+    "source_interface": "MNCS Environment incremental coherence trace and capability-intelligence projection",
+    "request": {
+      "campaign_id": "cmp_7f550d193225b7be",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "work_intent_id": "int_e9a2959ffe2e952c",
+      "implementation_commit": "e9e0f094e44858166e0835b0780e5bb5b391a4b0",
+      "verification_command": "python3 -m pytest tests/test_incremental.py tests/test_capability_intelligence.py -q"
+    },
+    "outcome": {
+      "trace_projection": {
+        "explicit_empty_owner_failure_list": "complete; scheduled rows report no-failure-reported",
+        "explicit_owner_failure": "complete; exact scheduled row reports failure-reported",
+        "missing_legacy_owner_failure_field": "not-recorded; count is null and scheduled outcome is unknown",
+        "malformed_owner_failure_field": "partial; invalid records are counted and unmatched scheduled outcomes remain unknown",
+        "verification_status": "not-established"
+      },
+      "service_projection": {
+        "correlation_basis": "exact service execution identity in the latest owner-pass trace",
+        "fields_exposed": [
+          "owner outcome classification",
+          "owner-failure observation coverage",
+          "measured owner-pass duration",
+          "independent verification status"
+        ],
+        "unmatched_trace_relation": "remains unlinked"
+      },
+      "verification": {
+        "tests_passed": 169,
+        "tests_skipped": 21,
+        "tests_failed": 0,
+        "duration_seconds": 6.35,
+        "modules": [
+          "tests/test_incremental.py",
+          "tests/test_capability_intelligence.py"
+        ]
+      }
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_pass_outcome_coverage",
+    "title": "The ambient trace projection obscured missing owner outcome evidence and required separate trace lookup to inspect service results",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment incremental coherence and capability intelligence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Record explicit empty owner-failure coverage and expose outcome evidence through exact execution-ID joins in the existing service-accountability projection."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment"
+  },
+  "not_measured": [
+    "Eligible agent-need opportunities, agent receipt, intervention burden, or ambient fulfillment ratio.",
+    "Independent correctness of owner-pass results or downstream service quality.",
+    "Whether subsequent live development produces fewer service failures or less agent orchestration.",
+    "How often consumers use the new per-service outcome fields."
+  ],
+  "supporting_sources": [
+    {
+      "commit": "e9e0f094e44858166e0835b0780e5bb5b391a4b0",
+      "kind": "committed-implementation",
+      "path": "mncs_env/coherence.py",
+      "repository": "mncs-environment",
+      "sha256": "69aa30d0b0a469e8f5d05258058746f792069848dc6b06c475939f86bc16f791"
+    },
+    {
+      "commit": "e9e0f094e44858166e0835b0780e5bb5b391a4b0",
+      "kind": "committed-service-projection",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "0e9217e0195bc993aff7f73a956fd405c7b1912f98e99a3c0d7344c53906c86f"
+    },
+    {
+      "commit": "e9e0f094e44858166e0835b0780e5bb5b391a4b0",
+      "kind": "committed-regression-test",
+      "path": "tests/test_incremental.py",
+      "repository": "mncs-environment",
+      "sha256": "f1381d43ffb1601e95509d95090ac9f62de961b2e92c01d83731c0d999a53b9c"
+    },
+    {
+      "commit": "e9e0f094e44858166e0835b0780e5bb5b391a4b0",
+      "kind": "committed-projection-test",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "7e5ac2922acab931322a429e69f7a40de6413faf34b232520620eda2a92135db"
+    },
+    {
+      "commit": "e9e0f094e44858166e0835b0780e5bb5b391a4b0",
+      "kind": "committed-contract-documentation",
+      "path": "docs/INCREMENTAL_COHERENCE.md",
+      "repository": "mncs-environment",
+      "sha256": "1e5d7990716fee07818b11025c7ba29e6481c5a0c54a9768603a03f84160a080"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246"
+  }
+}
