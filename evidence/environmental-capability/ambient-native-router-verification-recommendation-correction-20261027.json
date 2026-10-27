@@ -1,0 +1,68 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_native_router_verification_recommendation_correction_20261027",
+  "captured_at": "2026-10-27T13:44:09Z",
+  "measurement_basis": "append-only-correction-from-the-integrity-verified-campaign-observation-reference",
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "source_interface": "MNCS Environment observation-correction contract",
+    "request": {
+      "operation": "correct_campaign_observation_contract",
+      "target_observation_identity": "ev_environment_ambient_native_router_profile_verification_20261027",
+      "corrected_field_paths": [
+        "pressure_hypothesis.actionable_recommendation"
+      ]
+    },
+    "outcome": {
+      "status": "correction-recorded",
+      "replacement_values": {
+        "pressure_hypothesis.actionable_recommendation": "Select the existing mncs-automation checkout in the capability-observation profile, then verify a standard resident entry uses that selected provider without an invocation-specific root override."
+      },
+      "reason": "The verification record supports the same provider-discovery pressure as the occurrence record. Normalize its recommendation to the original wording so ECI does not report a wording-only definition conflict."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246"
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_ambient_native_router_profile_verification_20261027",
+      "repository": "mncs-environment",
+      "commit": "f359ab0fb8d72cf364f9d357fc18d26e44cc0e53",
+      "path": "evidence/environmental-capability/ambient-native-router-profile-verification-20261027.json",
+      "sha256": "6505c3c5ecbe0bdf4020e59fb2bb360dc8e537ed16f3f5b22969702927078a55"
+    },
+    "corrected_field_paths": [
+      "pressure_hypothesis.actionable_recommendation"
+    ],
+    "replacement_values": {
+      "pressure_hypothesis.actionable_recommendation": "Select the existing mncs-automation checkout in the capability-observation profile, then verify a standard resident entry uses that selected provider without an invocation-specific root override."
+    },
+    "reason": "The verification record supports the same provider-discovery pressure as the occurrence record. Normalize its recommendation to the original wording so ECI does not report a wording-only definition conflict."
+  },
+  "supporting_sources": [
+    {
+      "kind": "corrected-observation-target",
+      "identity": "ev_environment_ambient_native_router_profile_verification_20261027",
+      "repository": "mncs-environment",
+      "commit": "f359ab0fb8d72cf364f9d357fc18d26e44cc0e53",
+      "path": "evidence/environmental-capability/ambient-native-router-profile-verification-20261027.json",
+      "sha256": "6505c3c5ecbe0bdf4020e59fb2bb360dc8e537ed16f3f5b22969702927078a55"
+    }
+  ],
+  "not_measured": [
+    "Whether later sessions show reduced agent intervention or recurrence.",
+    "Whether the profile-driven provider change affects readiness outside the isolated verification run."
+  ]
+}
