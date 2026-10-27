@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_native_router_profile_improvement_20261027",
+  "captured_at": "2026-10-27T13:42:00Z",
+  "measurement_basis": "committed-provider-discovery-change-linked-to-independent-regression-and-entry-verification",
+  "related_work": {
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability evidence projection and profile-driven resident entry",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_ambient_native_router_discovery_20261027",
+      "implementation_commit": "7c20dd4c2e80210bceaed5ea8a59625f03af913a",
+      "verification_observation_identity": "ev_environment_ambient_native_router_profile_verification_20261027",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "The capability-observation profile now selects the existing mncs-automation checkout required by resident native coherence routing. Campaign evidence compaction preserves bounded owner-pass outcomes with exact execution identities and recorded source references.",
+      "immediate_behavior_verified": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "An isolated entry used the profile-selected provider without an invocation-specific root override and produced a persisted seven-owner trace. This verifies provider discovery and evidence routing; it does not measure reduced agent burden or long-term service fulfillment."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_native_router_discovery_20261027",
+    "title": "The observation profile omits the native Automation provider needed by resident coherence routing",
+    "category": "environmental-service-discoverability",
+    "subsystem": "mncs-environment observation profile and incremental coherence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Select the existing mncs-automation checkout in the capability-observation profile so resident routing can use the native provider without an invocation-specific root override."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_ambient_native_router_profile_20261027",
+    "addresses_hypothesis_identity": "ph_environment_ambient_native_router_discovery_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_ambient_owner_result_projection_7c20dd4",
+      "repository": "mncs-environment",
+      "commit": "7c20dd4c2e80210bceaed5ea8a59625f03af913a",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "6fbf689ed111b3a19e8d623564259eb706d5e9b0a959ea6f9152c3a312542b2e",
+      "kind": "committed-implementation"
+    },
+    "verification_observation_identity": "ev_environment_ambient_native_router_profile_verification_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "The Environment profile selects the declared native Automation provider; the resident entry regression confirms that the checkout is selected and the scheduler runs in bounded_reconciliation mode without an invocation-specific root override. The exact ECI path preserves per-owner result identities and source pointers while retaining unknown service fulfillment and agent-need denominators.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "whether future agents need fewer manual provider setup operations",
+      "ambient fulfillment, agent receipt, or eligible service opportunities",
+      "whether provider discovery generalizes across other profiles and workspaces",
+      "the cause of the isolated entry's degraded readiness status"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_owner_result_projection_7c20dd4",
+      "repository": "mncs-environment",
+      "commit": "7c20dd4c2e80210bceaed5ea8a59625f03af913a",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "6fbf689ed111b3a19e8d623564259eb706d5e9b0a959ea6f9152c3a312542b2e",
+      "kind": "committed-implementation"
+    },
+    {
+      "identity": "mncs_environment_observation_profile_7c20dd4",
+      "repository": "mncs-environment",
+      "commit": "7c20dd4c2e80210bceaed5ea8a59625f03af913a",
+      "path": ".mncs/environment-observation.json",
+      "sha256": "e4cab7aef49e4bf2f8bd1acfddf68bd5cc7d8c34108c9d4daac51a7d1deca58a",
+      "kind": "committed-profile"
+    },
+    {
+      "identity": "ev_environment_ambient_native_router_profile_verification_20261027",
+      "kind": "verification-observation"
+    }
+  ],
+  "not_measured": [
+    "long-term service success and recurrence after independent agent use",
+    "agent orchestration, tool-call, cognitive, or resource burden reduction",
+    "effect on MNCS-language implementation share"
+  ]
+}

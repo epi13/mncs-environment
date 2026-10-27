@@ -1,0 +1,115 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_native_router_profile_verification_20261027",
+  "captured_at": "2026-10-27T13:42:00Z",
+  "measurement_basis": "committed-regression-suite-and-bounded-isolated-entry-response",
+  "related_work": {
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246"
+  },
+  "observation": {
+    "kind": "ambient-native-router-profile-verification",
+    "source_interface": "MNCS Environment profile-driven entry, resident coherence trace, and targeted regression tests",
+    "request": {
+      "implementation_commit": "7c20dd4c2e80210bceaed5ea8a59625f03af913a",
+      "entry_operation": "create an isolated temporary-state session from .mncs/environment-observation.json",
+      "verification_command": "python3 -m pytest tests/test_capability_intelligence.py tests/test_entry.py -q"
+    },
+    "outcome": {
+      "regression_verification": {
+        "tests_passed": 224,
+        "tests_failed": 0,
+        "modules": [
+          "tests/test_capability_intelligence.py",
+          "tests/test_entry.py"
+        ],
+        "duration_seconds": 80.52
+      },
+      "profile_entry": {
+        "session_id": "ses_f2d1861fad78fc23",
+        "state_retention": "temporary-state-removed-after-readback",
+        "environment_override_supplied": false,
+        "selected_repositories": [
+          "mncs-automation",
+          "mncs-environment",
+          "mncs-rights-provenance",
+          "mncs-store",
+          "mncs-system-monitor"
+        ],
+        "native_automation_provider_selected": true,
+        "scheduler_mode": "bounded_reconciliation",
+        "trace_persistence_status": "session-snapshot",
+        "scheduled_owner_count": 7,
+        "owner_result_status": "recorded",
+        "owner_result_count": 7,
+        "owner_failure_count": 0,
+        "readiness_status": "degraded"
+      },
+      "interpretation_limit": "The isolated entry verifies provider discovery and trace routing. Its temporary state was removed after readback. Degraded readiness is recorded without attributing its cause to this profile change."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_native_router_discovery_20261027",
+    "title": "The observation profile omits the native Automation provider needed by resident coherence routing",
+    "category": "environmental-service-discoverability",
+    "subsystem": "mncs-environment observation profile and incremental coherence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Select the existing mncs-automation checkout in the capability-observation profile so resident routing can use the native provider without an invocation-specific root override."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "7c20dd4c2e80210bceaed5ea8a59625f03af913a",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "6fbf689ed111b3a19e8d623564259eb706d5e9b0a959ea6f9152c3a312542b2e"
+    },
+    {
+      "kind": "committed-observation-profile",
+      "repository": "mncs-environment",
+      "commit": "7c20dd4c2e80210bceaed5ea8a59625f03af913a",
+      "path": ".mncs/environment-observation.json",
+      "sha256": "e4cab7aef49e4bf2f8bd1acfddf68bd5cc7d8c34108c9d4daac51a7d1deca58a"
+    },
+    {
+      "kind": "committed-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "7c20dd4c2e80210bceaed5ea8a59625f03af913a",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "b2d33b3e544086daaf842457b2cd91df547d8c1b69f3a75450e9ba5dbea95e20"
+    },
+    {
+      "kind": "committed-profile-test",
+      "repository": "mncs-environment",
+      "commit": "7c20dd4c2e80210bceaed5ea8a59625f03af913a",
+      "path": "tests/test_entry.py",
+      "sha256": "b06981918cf2aec8ba8ec9f625be9cd7f821202b73ae3168afa6147c6e964c1c"
+    },
+    {
+      "kind": "direct-isolated-entry-readback",
+      "session_id": "ses_f2d1861fad78fc23",
+      "environment_override_supplied": false,
+      "native_automation_provider_selected": true,
+      "scheduler_mode": "bounded_reconciliation",
+      "owner_result_count": 7
+    }
+  ],
+  "not_measured": [
+    "Agent time, tool-call overhead, or intervention burden avoided by profile-driven provider discovery.",
+    "Longitudinal ambient fulfillment or recurrence across later independent sessions.",
+    "Independent correctness or agent receipt for all seven owner-pass results.",
+    "Cause of the isolated entry's degraded readiness status."
+  ]
+}
