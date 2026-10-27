@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_exact_claim_release_improvement_20261027",
+  "captured_at": "2026-10-27T22:09:41Z",
+  "measurement_basis": "implemented-and-verified-event-context-correction-with-live-followup",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment exact-claim release command and ECI claim coordination projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_exact_claim_release_event_context_20261027",
+      "initial_release_projection_identity": "eci_594f668d698a3f50",
+      "corrected_release_projection_identity": "eci_e78af351a1730829",
+      "implementation_commit": "b7100a39ea099a7ce603475974182226b28870a4",
+      "verification_observation_identity": "ev_environment_exact_claim_release_verification_20261027",
+      "subsequent_observation_identity": "ev_environment_exact_claim_release_live_readback_20261027"
+    },
+    "outcome": {
+      "change": "The exact-claim CLI now resolves the repository from the caller's current held claim before releasing, so the release event preserves repository provenance while the Store release still filters by claim ID and caller session.",
+      "post_change_evidence": "The focused regression verifies the release event repository, caller ownership, foreign-claim preservation, conflicting-option rejection, and compatibility with repository-based release. The subsequent ECI view recorded the corrected release event with repository_status recorded-on-event.",
+      "effectiveness_assessment": "not-assessed"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_8781dcffad8a02ed",
+    "campaign_evidence_count_before_recording": 100
+  },
+  "improvement_relation": {
+    "identity": "im_environment_exact_claim_release_event_context_20261027",
+    "addresses_hypothesis_identity": "ph_environment_exact_claim_release_event_context_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_exact_claim_release_b7100a3",
+      "repository": "mncs-environment",
+      "commit": "b7100a39ea099a7ce603475974182226b28870a4",
+      "path": "mncs_env/cli.py",
+      "sha256": "e4802a9c791aa1d47d9fdd7ad063b38153949253a174ad91cc82a0c4fe64ebaf"
+    },
+    "verification_observation_identity": "ev_environment_exact_claim_release_verification_20261027",
+    "subsequent_observation_identity": "ev_environment_exact_claim_release_live_readback_20261027",
+    "basis": "A bounded live ECI view identified an exact-claim release event whose repository field was invalid, while the same claim's acquisition event exposed the authoritative repository. The implementation now obtains that repository from the caller's held claim and persists it with the release transition. Tests preserve the caller-session boundary, and a later live ECI view records the corrected repository value.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "cross-session recurrence or other agent use",
+      "agent intervention time or tool calls saved",
+      "long-term effects on claim coordination burden",
+      "whether the prior interface ambiguity had caused similar work in other campaigns"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_exact_claim_release_pressure_20261027"
+    },
+    {
+      "kind": "verification-observation",
+      "identity": "ev_environment_exact_claim_release_verification_20261027"
+    },
+    {
+      "kind": "subsequent-live-observation",
+      "identity": "ev_environment_exact_claim_release_live_readback_20261027"
+    }
+  ],
+  "measurement_limits": [
+    "The invalid historical release event remains immutable; the implementation corrects future exact-claim release events.",
+    "The live follow-up is from the implementing campaign session; it does not establish independent agent receipt or long-term effectiveness.",
+    "No claims are made that this interface change resolves other authority, acquisition, integration, or push-policy concerns."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

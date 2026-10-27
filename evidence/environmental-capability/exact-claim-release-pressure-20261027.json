@@ -1,0 +1,72 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_exact_claim_release_pressure_20261027",
+  "captured_at": "2026-10-27T22:09:41Z",
+  "measurement_basis": "authentic-session-ECI-claim-transition-readback",
+  "observation": {
+    "kind": "environmental-coordination-pressure",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_identity": "eci_594f668d698a3f50",
+      "projection_content_digest": "cbff4c2efcbea64396011463fff16461",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "event_identity": "evt_8b4b9f74479b851d",
+      "event_sequence": 1281,
+      "claim_id": "claim:mncs-environment:worktree:b89e69e1aa58"
+    },
+    "outcome": {
+      "limitation": "The first live use of exact-claim release recorded the release event with an invalid empty repository value. In the same ECI view, the earlier acquisition event for this claim had recorded repository mncs-environment, so the authoritative repository was available from the held claim but was lost in the release event.",
+      "pressure_hypothesis": "An exact claim release should preserve the claim's repository in its transition provenance while remaining scoped to the caller's held claim.",
+      "recurrence": "One release event in one campaign session; recurrence is not established.",
+      "interpretation_limit": "The ECI result records a coordination transition and invalid event field. It does not establish development failure, reduced intervention, or broader authority-policy failure."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_exact_claim_release_event_context_20261027",
+    "title": "Exact claim release omitted repository context from its event",
+    "category": "coordination-and-accountability",
+    "subsystem": "MNCS Environment claim release and provenance",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Resolve the repository from the caller's exact held claim before release and preserve it on the release event; retain session ownership and exact-claim checks."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_8781dcffad8a02ed",
+    "campaign_evidence_count_before_recording": 100
+  },
+  "supporting_sources": [
+    {
+      "kind": "live-claim-coordination-projection",
+      "identity": "eci_594f668d698a3f50",
+      "content_digest": "cbff4c2efcbea64396011463fff16461",
+      "event_identity": "evt_8b4b9f74479b851d",
+      "event_sequence": 1281
+    },
+    {
+      "kind": "claim-acquisition-transition-in-same-projection",
+      "identity": "clmcoord_9e0fe277d2b3a245",
+      "claim_id": "claim:mncs-environment:worktree:b89e69e1aa58",
+      "repository": "mncs-environment"
+    }
+  ],
+  "measurement_limits": [
+    "The pressure is supported by one selected session event window and is not a recurrence estimate.",
+    "The projection result is partial and the event window is bounded; unreturned events are not inferred absent.",
+    "Agent time, tool calls saved, independent agent discovery, and downstream burden reduction were not measured.",
+    "The historical invalid event is immutable and is not rewritten by the subsequent implementation."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

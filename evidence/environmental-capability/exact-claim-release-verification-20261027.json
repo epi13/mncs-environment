@@ -1,0 +1,75 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_exact_claim_release_verification_20261027",
+  "captured_at": "2026-10-27T22:09:41Z",
+  "measurement_basis": "targeted-claim-release-contract-and-authority-regression-tests",
+  "observation": {
+    "kind": "environmental-interface-verification",
+    "source_interface": "MNCS Environment claims CLI and claim coordination event stream",
+    "request": {
+      "implementation_commit": "b7100a39ea099a7ce603475974182226b28870a4",
+      "implementation_path": "mncs_env/cli.py",
+      "implementation_sha256": "e4802a9c791aa1d47d9fdd7ad063b38153949253a174ad91cc82a0c4fe64ebaf",
+      "focused_command": "python3 -m pytest tests/test_environment.py -k cli_releases_one_own_claim_by_exact_id -q",
+      "focused_passed": 1,
+      "focused_failed": 0,
+      "claim_regression_command": "python3 -m pytest tests/test_claim_recovery.py tests/test_claim_generation_cas.py -q",
+      "claim_regression_passed": 53,
+      "claim_regression_failed": 0,
+      "lint_command": "ruff check mncs_env/cli.py --ignore SIM114,C400,F841",
+      "lint_status": "passed",
+      "diff_check_status": "passed"
+    },
+    "outcome": {
+      "verified_properties": [
+        "Exact release by claim ID releases the caller's held claim without a repository argument.",
+        "The release transition retains the repository from the authoritative held claim record.",
+        "A foreign session's claim remains held when its ID is supplied to the caller's release operation.",
+        "The existing repository-based release form remains supported.",
+        "Conflicting exact-claim and repository release options fail without mutating claim state."
+      ],
+      "result": "passed",
+      "interpretation_limit": "These tests verify exact-claim selection, ownership boundaries, compatibility, and event context. They do not establish cross-session usability or reduced agent intervention."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_8781dcffad8a02ed",
+    "campaign_evidence_count_before_recording": 100
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_exact_claim_release_b7100a3",
+      "repository": "mncs-environment",
+      "commit": "b7100a39ea099a7ce603475974182226b28870a4",
+      "path": "mncs_env/cli.py",
+      "sha256": "e4802a9c791aa1d47d9fdd7ad063b38153949253a174ad91cc82a0c4fe64ebaf"
+    },
+    {
+      "kind": "test-source",
+      "identity": "mncs_environment_exact_claim_release_tests_b7100a3",
+      "repository": "mncs-environment",
+      "commit": "b7100a39ea099a7ce603475974182226b28870a4",
+      "path": "tests/test_environment.py",
+      "sha256": "8509f0fa0170b8c8a576a6691b34e7bb4d8d4c84843a6166236da612450c4a27"
+    }
+  ],
+  "measurement_limits": [
+    "The focused Environment test and claim-recovery/generation suites were run; the full repository suite was not rerun for this interface change.",
+    "Passing tests do not establish independent agent receipt, repeated-use success, or intervention burden reduction."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

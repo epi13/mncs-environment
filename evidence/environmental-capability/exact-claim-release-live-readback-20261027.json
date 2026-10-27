@@ -1,0 +1,79 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_exact_claim_release_live_readback_20261027",
+  "captured_at": "2026-10-27T22:09:41Z",
+  "measurement_basis": "post-fix-live-ECI-and-claim-state-readback",
+  "observation": {
+    "kind": "environmental-capability-live-readback",
+    "source_interface": "MNCS Environment claims CLI, claim state projection, and environmental-capability ECI",
+    "request": {
+      "implementation_commit": "b7100a39ea099a7ce603475974182226b28870a4",
+      "projection_identity": "eci_e78af351a1730829",
+      "projection_content_digest": "196f09114062acbc8193c76bfffdc462",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "claim_id": "claim:mncs-environment:worktree:57804f9c4517",
+      "release_event_identity": "evt_aecebf3ffd89292c",
+      "release_event_sequence": 1300
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "event_window_start_sequence": 1297,
+      "event_window_end_sequence": 1300,
+      "event_window_truncated": true,
+      "claim_coordination_records_considered": 2,
+      "release_transition_status": "claim-release-recorded",
+      "release_repository": "mncs-environment",
+      "release_repository_status": "recorded-on-event",
+      "acquisition_scope_status": "validated-from-event",
+      "claim_state_status": "released",
+      "claim_state_version": 2,
+      "claim_state_identity": "clm_83f9da346a670ca0",
+      "claim_state_released_by": "ses_a752e1c55fb4ca6f",
+      "result": "The exact claim ID released the caller's claim; ECI correlated the acquired and released transitions and retained the repository value on the release event."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_8781dcffad8a02ed",
+    "campaign_evidence_count_before_recording": 100
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-ECI-projection",
+      "identity": "eci_e78af351a1730829",
+      "content_digest": "196f09114062acbc8193c76bfffdc462"
+    },
+    {
+      "kind": "released-claim-record",
+      "identity": "clm_83f9da346a670ca0",
+      "claim_id": "claim:mncs-environment:worktree:57804f9c4517",
+      "repository": "mncs-environment",
+      "version": 2,
+      "status": "released"
+    },
+    {
+      "kind": "release-event",
+      "identity": "evt_aecebf3ffd89292c",
+      "sequence": 1300,
+      "type": "lease.released"
+    }
+  ],
+  "measurement_limits": [
+    "The ECI response is partial and the event window is truncated; only the two returned claim transitions are described.",
+    "The earlier invalid release event at sequence 1281 remains historical evidence and was not rewritten; this readback covers the corrected event at sequence 1300.",
+    "This is one campaign session and does not establish cross-session recurrence, independent discovery, or reduced agent time or tool-call burden."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
