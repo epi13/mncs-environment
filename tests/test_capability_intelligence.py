@@ -4045,6 +4045,111 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     )
 
 
+def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
+    probe_capability = "mncs-doctor:compiler-vm-health"
+    irrelevant_bindings = [{
+        "binding_id": f"cap_unrelated_{index:02d}",
+        "provider": "mncs-test-provider",
+        "capability": f"aaa:unrelated-{index:02d}",
+        "contract_revision": "1",
+        "availability": {
+            "status": "available", "verification": "substrate",
+            "observed_at": "2026-10-27T00:00:00Z",
+        },
+    } for index in range(capability_intelligence.MAX_SESSION_ACTIVITY_BINDINGS + 8)]
+    probe_binding = {
+        "binding_id": "cap_compiler_vm_health",
+        "provider": "mncs-doctor",
+        "capability": probe_capability,
+        "contract_revision": "2",
+        "availability": {
+            "status": "available", "verification": "substrate",
+            "observed_at": "2026-10-27T00:00:00Z",
+        },
+    }
+    snapshot = {
+        "environment_id": "renv_service_probe_inventory",
+        "bindings": [*irrelevant_bindings, probe_binding],
+    }
+
+    delivery = capability_intelligence._capability_delivery_view(
+        snapshot, [], [], [],
+        event_window_truncated=False,
+        event_page_scoped=False,
+        invocation_summaries_omitted=0,
+        service_probe_capabilities=[probe_capability],
+    )
+
+    assert delivery["binding_count"] == (
+        capability_intelligence.MAX_SESSION_ACTIVITY_BINDINGS + 9
+    )
+    assert delivery["bindings_omitted"] == 9
+    assert delivery["binding_details_selection_basis"].startswith(
+        "declared-service-probes-then-exact-invocation-bindings"
+    )
+    assert delivery["service_probe_binding_counts"] == {probe_capability: 1}
+    assert delivery["service_probe_binding_count_scan_complete"] is True
+    assert delivery["bindings"][0]["capability"] == probe_capability
+
+    readiness = {
+        "status": "observed",
+        "services": [{
+            "identity": "mncs-doctor:compiler-vm-coherence",
+            "required": True,
+            "status": "unavailable",
+            "capability": probe_capability,
+            "probe_observation_record_status": "unique-record",
+            "operation_status": "failed",
+        }],
+        "candidates": [],
+        "source": {
+            "session_id": "ses_service_probe_inventory",
+            "environment_id": "renv_service_probe_inventory",
+            "snapshot_sequence": 9,
+        },
+        "summary": {"declared_service_count": 1},
+    }
+    accountability = capability_intelligence._session_service_accountability(
+        readiness, delivery, snapshot,
+        capability_intelligence._session_ambient_owner_pass_activity(
+            [], 0, {},
+        ),
+    )
+
+    service = accountability["services"][0]
+    assert service["capability_relation_status"] == (
+        "exact-capability-identity-match"
+    )
+    assert service["binding_match_count"] == 1
+    assert service["bindings"][0]["capability"] == probe_capability
+
+    invalid_snapshot = {"bindings": [{
+        "binding_id": "cap_probe_identity_incomplete",
+        "capability": probe_capability,
+        "contract_revision": "2",
+        "availability": {"status": "available"},
+    }]}
+    incomplete_delivery = capability_intelligence._capability_delivery_view(
+        invalid_snapshot, [], [], [],
+        event_window_truncated=False,
+        event_page_scoped=False,
+        invocation_summaries_omitted=0,
+        service_probe_capabilities=[probe_capability],
+    )
+    assert incomplete_delivery["service_probe_binding_counts"] == {
+        probe_capability: 0,
+    }
+    assert incomplete_delivery["service_probe_binding_count_scan_complete"] is False
+    incomplete_accountability = (
+        capability_intelligence._session_service_accountability(
+            readiness, incomplete_delivery, invalid_snapshot,
+        )
+    )
+    assert incomplete_accountability["services"][0][
+        "capability_relation_status"
+    ] == "capability-not-observed-in-incomplete-binding-snapshot"
+
+
 def test_session_doctor_health_history_is_bounded_and_revision_linked(
     tmp_path: Path,
 ) -> None:

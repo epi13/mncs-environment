@@ -1054,6 +1054,13 @@ snapshot remains distinct from binding availability and observed use, so a
 ready binding does not imply a ready service. Source references retain the
 session, Environment, and snapshot revision. The summary repeats readiness
 probe coverage counts to relate this view to its declarations and records.
+Within the bounded binding-detail list, declared service probes are selected
+before other bindings, followed by exact invocation bindings and observed
+capabilities. A per-probe binding count derived from the scanned inventory
+distinguishes a genuinely absent binding from one omitted by the detail limit;
+the count is marked incomplete if the inventory scan encountered invalid or
+unexamined records. Per-service `binding_match_count` reports inventory
+cardinality even when some matching details are omitted.
 Those counts cover probe observations only. Ambient fulfillment, an agent-need
 opportunity denominator, agent receipt, intervention burden, and outcome
 quality remain explicitly unmeasured unless the environment records the

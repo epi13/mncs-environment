@@ -3404,6 +3404,7 @@ def _compact_projection(
     compact_capability_delivery: dict[str, Any] = {}
     for key in (
         "status", "inventory_source", "discoverability_status",
+        "binding_details_selection_basis",
     ):
         if isinstance(raw_capability_delivery.get(key), str):
             compact_capability_delivery[key] = _short_text(
@@ -3425,6 +3426,23 @@ def _compact_projection(
             for key, value in sorted(availability_counts.items())[:8]
             if isinstance(key, str) and type(value) is int and value >= 0
         }
+    probe_binding_counts = raw_capability_delivery.get(
+        "service_probe_binding_counts",
+    )
+    if isinstance(probe_binding_counts, dict):
+        compact_capability_delivery["service_probe_binding_counts"] = {
+            _short_text(capability, 256): count
+            for capability, count in sorted(probe_binding_counts.items())[:16]
+            if isinstance(capability, str) and type(count) is int and count >= 0
+        }
+    if type(raw_capability_delivery.get(
+        "service_probe_binding_count_scan_complete",
+    )) is bool:
+        compact_capability_delivery[
+            "service_probe_binding_count_scan_complete"
+        ] = raw_capability_delivery[
+            "service_probe_binding_count_scan_complete"
+        ]
     use_event_window = raw_capability_delivery.get("use_event_window")
     if isinstance(use_event_window, dict):
         compact_capability_delivery["use_event_window"] = {
@@ -11081,6 +11099,7 @@ def _capability_delivery_view(
     interactions: list[dict[str, Any]], events: list[dict[str, Any]],
     *, event_window_truncated: bool, event_page_scoped: bool,
     invocation_summaries_omitted: int,
+    service_probe_capabilities: list[str] | None = None,
 ) -> dict[str, Any]:
     """Relate this session's binding snapshot to bounded, observed capability use."""
     complete_history = not event_window_truncated and not event_page_scoped
@@ -11567,11 +11586,115 @@ def _capability_delivery_view(
                 item["event_reference"] for item in matching_events[:3]
             ]
 
-    binding_records.sort(key=lambda item: (item["capability"], item["provider"]))
-    binding_count = len(binding_records)
-    omitted_bindings = max(0, binding_count - MAX_SESSION_ACTIVITY_BINDINGS)
     binding_records_not_examined = max(
         0, len(raw_bindings) - len(examined_bindings),
+    )
+    probe_capabilities = list(dict.fromkeys(
+        capability for capability in (service_probe_capabilities or [])
+        if isinstance(capability, str) and capability
+    ))
+    bindings_by_capability_records: dict[str, list[dict[str, Any]]] = {}
+    for binding in binding_records:
+        bindings_by_capability_records.setdefault(
+            binding["capability"], [],
+        ).append(binding)
+    for records in bindings_by_capability_records.values():
+        records.sort(key=lambda item: (
+            item["provider"], item.get("binding_id", ""),
+            item.get("contract_revision", ""),
+        ))
+
+    exact_use_binding_keys: list[tuple[str, str, str, str]] = []
+    seen_exact_use_binding_keys: set[tuple[str, str, str, str]] = set()
+    for interaction in interactions:
+        identity = interaction.get("binding_identity")
+        if (not isinstance(identity, dict)
+                or identity.get("status") != "complete"):
+            continue
+        key_values = (
+            identity.get("provider"), interaction.get("capability"),
+            identity.get("binding_id"), identity.get("contract_revision"),
+        )
+        if not all(isinstance(value, str) and value for value in key_values):
+            continue
+        binding_key = key_values
+        if binding_key not in seen_exact_use_binding_keys:
+            exact_use_binding_keys.append(binding_key)
+            seen_exact_use_binding_keys.add(binding_key)
+
+    selected_binding_records: list[dict[str, Any]] = []
+    selected_binding_keys: set[tuple[str, str, str, str]] = set()
+
+    def select_binding(binding: dict[str, Any]) -> None:
+        key = (
+            binding.get("provider", ""), binding.get("capability", ""),
+            binding.get("binding_id", ""), binding.get("contract_revision", ""),
+        )
+        if key in selected_binding_keys:
+            return
+        selected_binding_keys.add(key)
+        selected_binding_records.append(binding)
+
+    # Reserve one detail for each declared probe first, preferring the exact
+    # binding that was invoked in this event window when that evidence exists.
+    for capability in probe_capabilities:
+        capability_bindings = bindings_by_capability_records.get(capability, [])
+        observed_binding = next((
+            binding for binding in capability_bindings
+            if (
+                binding.get("provider"), binding.get("capability"),
+                binding.get("binding_id", ""),
+                binding.get("contract_revision", ""),
+            ) in exact_use_binding_keys
+        ), None)
+        if observed_binding is not None:
+            select_binding(observed_binding)
+        elif capability_bindings:
+            select_binding(capability_bindings[0])
+
+    # Then preserve exact binding use; capability-name-only events follow.
+    records_by_exact_identity = {
+        (
+            binding.get("provider", ""), binding.get("capability", ""),
+            binding.get("binding_id", ""), binding.get("contract_revision", ""),
+        ): binding
+        for binding in binding_records
+    }
+    for binding_key in exact_use_binding_keys:
+        if len(selected_binding_records) >= MAX_SESSION_ACTIVITY_BINDINGS:
+            break
+        binding = records_by_exact_identity.get(binding_key)
+        if binding is not None:
+            select_binding(binding)
+    observed_capabilities = sorted(
+        (item for item in capability_summaries
+         if isinstance(item.get("capability"), str)
+         and type(item.get("invocation_count")) is int
+         and item["invocation_count"] > 0),
+        key=lambda item: (
+            -item["invocation_count"], item["capability"],
+        ),
+    )
+    for item in observed_capabilities:
+        for binding in bindings_by_capability_records.get(item["capability"], []):
+            select_binding(binding)
+            if len(selected_binding_records) >= MAX_SESSION_ACTIVITY_BINDINGS:
+                break
+        if len(selected_binding_records) >= MAX_SESSION_ACTIVITY_BINDINGS:
+            break
+    for binding in binding_records:
+        if len(selected_binding_records) >= MAX_SESSION_ACTIVITY_BINDINGS:
+            break
+        select_binding(binding)
+
+    binding_count = len(binding_records)
+    omitted_bindings = max(0, binding_count - MAX_SESSION_ACTIVITY_BINDINGS)
+    probe_binding_counts = {
+        capability: bindings_by_capability.get(capability, 0)
+        for capability in probe_capabilities
+    }
+    probe_binding_count_scan_complete = (
+        binding_records_not_examined == 0 and invalid_binding_count == 0
     )
     binding_evidence_summary = _capability_binding_evidence_summary(
         binding_records, availability_counts=availability_counts,
@@ -11594,7 +11717,14 @@ def _capability_delivery_view(
         "binding_records_invalid": invalid_binding_count,
         "availability_counts": dict(sorted(availability_counts.items())),
         "bindings_omitted": omitted_bindings,
-        "bindings": binding_records[:MAX_SESSION_ACTIVITY_BINDINGS],
+        "bindings": selected_binding_records,
+        "binding_details_selection_basis": (
+            "declared-service-probes-then-exact-invocation-bindings-then-observed-capabilities-then-capability-provider-order"
+        ),
+        "service_probe_binding_counts": probe_binding_counts,
+        "service_probe_binding_count_scan_complete": (
+            probe_binding_count_scan_complete
+        ),
         "binding_evidence_summary": binding_evidence_summary,
         "availability_transition_event_count": transition_count,
         "availability_transition_events_omitted": max(
@@ -14708,6 +14838,14 @@ def _session_service_accountability(
     raw_bindings = raw_bindings if isinstance(raw_bindings, list) else []
     delivery_source = delivery.get("use_event_window")
     delivery_source = delivery_source if isinstance(delivery_source, dict) else {}
+    service_probe_binding_counts = delivery.get("service_probe_binding_counts")
+    service_probe_binding_counts = (
+        service_probe_binding_counts
+        if isinstance(service_probe_binding_counts, dict) else {}
+    )
+    service_probe_binding_count_scan_complete = (
+        delivery.get("service_probe_binding_count_scan_complete") is True
+    )
     binding_snapshot_complete = (
         delivery.get("status") == "ready"
         and delivery.get("binding_records_not_examined", 0) == 0
@@ -14754,10 +14892,27 @@ def _session_service_accountability(
             and isinstance(capability, str)
             and binding.get("capability") == capability
         ]
+        probe_binding_count = (
+            service_probe_binding_counts.get(capability)
+            if isinstance(capability, str) else None
+        )
+        probe_binding_count_known = (
+            service_probe_binding_count_scan_complete
+            and type(probe_binding_count) is int
+            and probe_binding_count >= 0
+        )
         if not isinstance(capability, str) or not capability:
             relation_status = "service-probe-capability-not-recorded"
         elif delivery.get("status") == "unavailable" or not delivery:
             relation_status = "capability-delivery-unavailable"
+        elif probe_binding_count_known and probe_binding_count > 1:
+            relation_status = "ambiguous-multiple-capability-bindings"
+        elif probe_binding_count_known and probe_binding_count == 1 and matches:
+            relation_status = "exact-capability-identity-match"
+        elif probe_binding_count_known and probe_binding_count == 1:
+            relation_status = "capability-binding-detail-not-returned-in-bounded-view"
+        elif probe_binding_count_known:
+            relation_status = "capability-not-present-in-current-binding-snapshot"
         elif len(matches) > 1:
             relation_status = "ambiguous-multiple-capability-bindings"
         elif matches:
@@ -14814,6 +14969,9 @@ def _session_service_accountability(
 
         source_reference = service.get("source_reference")
         source_reference = source_reference if isinstance(source_reference, dict) else {}
+        binding_match_count = (
+            probe_binding_count if probe_binding_count_known else len(matches)
+        )
         projected: dict[str, Any] = {
             "service_identity": identity,
             "required": service.get("required") is True,
@@ -14825,7 +14983,10 @@ def _session_service_accountability(
             "operation_status": operation_status
             if isinstance(operation_status, str) else "not-recorded",
             "capability_relation_status": relation_status,
-            "binding_match_count": len(matches),
+            "binding_match_count": binding_match_count,
+            "binding_details_omitted_count": max(
+                0, binding_match_count - len(matches),
+            ),
             "bindings": projected_bindings,
             "ambient_fulfillment_status": (
                 "not-established-no-eligible-opportunity-recorded"
@@ -16562,11 +16723,22 @@ def _session_activity(
         event_type = event.get("type")
         if isinstance(event_type, str) and event_type and len(event_type) <= 96:
             event_type_counts[event_type] = event_type_counts.get(event_type, 0) + 1
+    readiness_services = service_readiness.get("services", [])
+    readiness_services = (
+        readiness_services if isinstance(readiness_services, list) else []
+    )
+    declared_service_probe_capabilities = list(dict.fromkeys(
+        item["capability"] for item in readiness_services
+        if isinstance(item, dict)
+        and isinstance(item.get("capability"), str)
+        and item["capability"]
+    ))
     capability_delivery = _capability_delivery_view(
         snapshot, all_capability_summaries, interactions, events,
         event_window_truncated=event_window_truncated,
         event_page_scoped=event_before_sequence is not None,
         invocation_summaries_omitted=capabilities_omitted,
+        service_probe_capabilities=declared_service_probe_capabilities,
     )
     ambient_owner_pass_activity = _session_ambient_owner_pass_activity(
         ambient_owner_pass_records, len(invocation_events),
