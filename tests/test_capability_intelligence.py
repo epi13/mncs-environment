@@ -4211,6 +4211,7 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
         "intent": {"identity": "int_ambient_service_trace"},
         "coherence": {"last_trace": {
             "mode": "targeted_update",
+            "trace_persistence_status": "session-snapshot",
             "event_count": 2,
             "elapsed_seconds": 0.4,
             "scheduled": [{
@@ -4239,6 +4240,7 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     assert view["source"]["campaign_id"] == "cmp_ambient_service_trace"
     assert view["source"]["work_intent_id"] == "int_ambient_service_trace"
     assert view["source"]["owner_pass_decision_coverage"] == "partial"
+    assert view["execution"]["trace_persistence_status"] == "session-snapshot"
     assert view["execution"]["scheduled_pass_count"] == 1
     assert view["execution"]["skipped_pass_count"] == 1
     assert view["execution"]["scheduled_passes"][0]["run_elapsed_seconds"] == 0.2
@@ -4309,6 +4311,70 @@ def test_live_entry_trace_gap_evidence_projects_without_claiming_causality(
         for item in observation["measurement_limits"]
     )
     assert "ambient_service_execution" not in projection["session_activity"]
+
+    compact = capability_intelligence._compact_projection(
+        projection,
+        capability_intelligence.MAX_RESULT_BYTES + 1,
+        capability_intelligence.MAX_RESULT_BYTES,
+    )
+    compact_observation = compact["observations"][0]
+    compact_evidence = compact_observation["observation"][
+        "ambient_service_evidence"
+    ]
+    assert compact["source"]["response_truncated"] is True
+    assert compact_observation["observation"]["details_omitted"] is True
+    assert compact_observation["evidence_reference"] == observation[
+        "evidence_reference"
+    ]
+    assert compact_evidence["entry"] == {
+        "response_returned": False,
+        "termination": "interrupted after bounded process-resource observation",
+    }
+    assert compact_evidence["readiness"] == {
+        "status": "blocked",
+        "blocker_count": 2,
+        "unavailable_capability_count": 66,
+    }
+    assert compact_evidence["incremental_scheduler_trace"]["status"] == (
+        "not-recorded-in-session-snapshot"
+    )
+    assert compact_evidence["session_activity"]["event_count"] == 57
+    assert compact_evidence["session_activity"]["capability_invocations"] == 26
+    assert compact_evidence["session_activity"]["invocations_by_capability"] == {
+        "mncs-automation:automation-reconciliation": 2,
+        "mncs-doctor:projection-health": 18,
+        "mncs-doc:documentation-projection": 5,
+        "mncs.test-verification-coherence/1": 1,
+    }
+    assert compact_evidence["entry_process_sample"]["block_write_bytes_at_sample"] == (
+        834_867_200
+    )
+    assert compact_evidence["ambient_fulfillment"] == "not-established"
+    assert compact_evidence["agent_need_opportunity_denominator"] == "not-recorded"
+    assert compact_evidence["causal_attribution"] == "not-established"
+    assert len(json.dumps(compact_evidence)) < 4_096
+
+
+def test_compact_ambient_service_evidence_uses_allowlisted_values() -> None:
+    path = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability/"
+        "ambient-service-decision-trace-gap-20261027.json"
+    )
+    observation = json.loads(path.read_text(encoding="utf-8"))["observation"]
+    observation["outcome"]["entry_process_sample"]["private_path"] = (
+        "/private/project/source.mncs"
+    )
+    observation["outcome"]["session_activity"]["invocations_by_capability"][
+        "/private/project"
+    ] = 99
+
+    compact = capability_intelligence._compact_ambient_service_evidence(
+        observation,
+    )
+
+    assert compact is not None
+    assert "/private/project" not in json.dumps(compact)
+    assert "private_path" not in json.dumps(compact)
 
 
 def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Path) -> None:

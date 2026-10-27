@@ -186,8 +186,12 @@ def project_trace(value: dict) -> dict | None:
             "The trace records only owner-pass decisions visible to the incremental scheduler; it does not count unrecognized service opportunities or agent need.",
             "A returned pass and its wall-clock duration do not establish correctness, agent receipt, or reduced intervention burden.",
             "A skipped pass means the scheduler judged its selected inputs current; it is not a universal freshness guarantee.",
+            "Trace persistence distinguishes the current entry response from the session snapshot; snapshot retention does not establish service fulfillment or independent verification.",
         ],
     }
+    persistence_status = value.get("trace_persistence_status")
+    if persistence_status in {"session-snapshot", "entry-response-only"}:
+        result["trace_persistence_status"] = persistence_status
     reason = safe_text(value.get("reason"))
     if reason is not None:
         result["reason"] = reason
@@ -750,6 +754,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         )
         return results, {
             "mode": "recovery_scan",
+            "trace_persistence_status": "entry-response-only",
             "reason": "native coherence provider unavailable",
             "scheduled": scheduled,
             "skipped": [],
@@ -939,10 +944,16 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         report["pending_events"] = intervening[:32]
     effects = any(not (results.get(name) or {}).get('reused', False) for name in scheduled)
     report["elapsed_seconds"] = round(time.monotonic() - scheduler_started, 3)
-    if (effects or events or store_reset is not None or not store_known or owner_failures
-            or previous.get("repositories") != observed["repositories"]
-            or semantic_cursors != previous.get("semantic_cursors", {})
-            or previous.get('policy_identity') != policy):
+    persist_trace = (
+        effects or events or store_reset is not None or not store_known or owner_failures
+        or previous.get("repositories") != observed["repositories"]
+        or semantic_cursors != previous.get("semantic_cursors", {})
+        or previous.get('policy_identity') != policy
+    )
+    report["trace_persistence_status"] = (
+        "session-snapshot" if persist_trace else "entry-response-only"
+    )
+    if persist_trace:
         state = {"schema_version": SCHEMA, **observed, "result_refs": _result_refs(session, results),
                  "policy_identity": policy, "policy_artifacts": policy_artifacts,
                  "policy_receipt": receipt, "last_trace": report, "deadlines": deadlines,

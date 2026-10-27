@@ -53,6 +53,15 @@ serialization of a canonical Store snapshot during the ambient pass. The
 session identity and persistence outcome were not returned, and the snapshot
 size and cause of the serialization cost remain unmeasured.
 
+[`ambient-service-decision-trace-gap-20261027.json`](../evidence/environmental-capability/ambient-service-decision-trace-gap-20261027.json)
+records a later entry that persisted a session but was interrupted before its
+response returned. The ECI compact view preserves bounded readiness, session
+activity, and `/proc` process-sample facts from this record under
+`observation.ambient_service_evidence`, alongside the exact evidence pointer.
+It marks ambient fulfillment and causal attribution as unestablished; the
+record does not connect the observed process I/O to its capability calls or
+identify the cause of the earlier Btrfs incident.
+
 ## Current evidence path
 
 The verified live readback in

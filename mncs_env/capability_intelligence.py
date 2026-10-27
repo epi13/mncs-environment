@@ -757,6 +757,124 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
     return result or None
 
 
+def _compact_ambient_service_evidence(observation: Any) -> dict[str, Any] | None:
+    """Preserve bounded, inspectable facts from the entry-trace gap record."""
+    if (not isinstance(observation, dict)
+            or observation.get("kind") != "ambient-service-decision-trace-gap"):
+        return None
+    outcome = observation.get("outcome")
+    if not isinstance(outcome, dict):
+        return None
+    result: dict[str, Any] = {
+        "basis": "allowlisted-values-from-recorded-observation-outcome",
+        "ambient_fulfillment": "not-established",
+        "agent_need_opportunity_denominator": "not-recorded",
+        "causal_attribution": "not-established",
+    }
+
+    entry = {}
+    if type(outcome.get("entry_response_returned")) is bool:
+        entry["response_returned"] = outcome["entry_response_returned"]
+    termination = outcome.get("termination")
+    if (isinstance(termination, str)
+            and termination == "interrupted after bounded process-resource observation"):
+        entry["termination"] = termination
+    if entry:
+        result["entry"] = entry
+
+    for source_key, output_key in (
+        ("snapshot_sequence", "snapshot_sequence"),
+        ("session_snapshot_json_encoded_bytes", "snapshot_json_encoded_bytes"),
+    ):
+        value = outcome.get(source_key)
+        if type(value) is int and value >= 0:
+            result[output_key] = value
+
+    readiness = outcome.get("readiness")
+    if isinstance(readiness, dict):
+        readiness_result = {}
+        status = readiness.get("status")
+        if status in {"ready", "blocked", "partial", "unavailable", "unknown"}:
+            readiness_result["status"] = status
+        for key in ("blocker_count", "unavailable_capability_count"):
+            value = readiness.get(key)
+            if type(value) is int and value >= 0:
+                readiness_result[key] = value
+        if readiness_result:
+            result["readiness"] = readiness_result
+
+    trace = outcome.get("incremental_scheduler_trace")
+    if isinstance(trace, dict):
+        trace_result = {}
+        if trace.get("status") in {
+            "not-recorded-in-session-snapshot", "recorded", "partial",
+            "unavailable",
+        }:
+            trace_result["status"] = trace["status"]
+        if trace.get("projection_interface") == (
+            "session_activity.ambient_service_execution"
+        ):
+            trace_result["projection_interface"] = trace["projection_interface"]
+        if trace_result:
+            result["incremental_scheduler_trace"] = trace_result
+
+    activity = outcome.get("session_activity")
+    if isinstance(activity, dict):
+        activity_result = {}
+        for key in (
+            "event_count", "capability_invocations",
+            "capability_invocations_completed_ok", "projection_deferred_events",
+            "doctor_remediation_events", "authority_denial_events",
+        ):
+            value = activity.get(key)
+            if type(value) is int and value >= 0:
+                activity_result[key] = value
+        raw_capabilities = activity.get("invocations_by_capability")
+        if isinstance(raw_capabilities, dict):
+            capabilities = {}
+            for name, count in sorted(raw_capabilities.items()):
+                if (isinstance(name, str)
+                        and re.fullmatch(
+                            r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}", name,
+                        ) is not None
+                        and type(count) is int and count >= 0):
+                    capabilities[name] = count
+                if len(capabilities) == 8:
+                    break
+            if capabilities:
+                activity_result["invocations_by_capability"] = capabilities
+            if len(raw_capabilities) > len(capabilities):
+                activity_result["invocations_by_capability_truncated"] = True
+        if activity_result:
+            result["session_activity"] = activity_result
+
+    process_sample = outcome.get("entry_process_sample")
+    if isinstance(process_sample, dict):
+        sample = {}
+        if process_sample.get("basis") == (
+            "Linux /proc process counters and ps sample"
+        ):
+            sample["measurement_basis"] = process_sample["basis"]
+        for key in (
+            "elapsed_seconds", "resident_memory_kib_at_sample",
+            "rchar_bytes_at_sample", "wchar_bytes_at_sample",
+            "block_read_bytes_at_sample", "block_write_bytes_at_sample",
+            "threads_at_sample",
+        ):
+            value = process_sample.get(key)
+            if type(value) is int and 0 <= value <= 10**18:
+                sample[key] = value
+        for key in ("cpu_percent_at_sample",):
+            value = process_sample.get(key)
+            if (type(value) in {int, float} and math.isfinite(value)
+                    and 0 <= value <= 10_000):
+                sample[key] = value
+        if sample:
+            result["entry_process_sample"] = sample
+
+    return result
+
+
 def _compact_native_capability_correspondences(value: Any) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
@@ -2642,6 +2760,11 @@ def _compact_projection(
         if outcome_context is not None:
             compact_observation["observation"]["outcome_context"] = (
                 outcome_context
+            )
+        ambient_service_evidence = _compact_ambient_service_evidence(observation)
+        if ambient_service_evidence is not None:
+            compact_observation["observation"]["ambient_service_evidence"] = (
+                ambient_service_evidence
             )
         if isinstance(observation.get("source_session_context"), dict):
             source_context = observation["source_session_context"]

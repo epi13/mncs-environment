@@ -69,13 +69,18 @@ def runners():
 
 def test_warm_tick_has_zero_processes_and_writes(participant):
     counts, owned = runners()
-    coherence.tick(participant, {}, owned)
+    _, initial_trace = coherence.tick(participant, {}, owned)
+    assert initial_trace["trace_persistence_status"] == "session-snapshot"
+    assert participant.snapshot["coherence"]["last_trace"][
+        "trace_persistence_status"
+    ] == "session-snapshot"
     saves = participant.saves
     with patch.object(subprocess, 'Popen', side_effect=AssertionError('quiet tick spawned process')):
         _, trace = coherence.tick(participant, {}, owned)
     assert trace['scheduled'] == []
     assert len(trace['skipped']) == 7
     assert trace['elapsed_seconds'] >= 0
+    assert trace["trace_persistence_status"] == "entry-response-only"
     assert set(counts.values()) == {1}
     assert participant.saves == saves
 
@@ -84,6 +89,7 @@ def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillm
     private_path = "/home/private/project/source.mncs"
     projected = coherence.project_trace({
         "mode": "targeted_update",
+        "trace_persistence_status": "entry-response-only",
         "event_count": 2,
         "elapsed_seconds": 0.25,
         "scheduled": [{
@@ -103,6 +109,7 @@ def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillm
     })
 
     assert projected["decision_record_status"] == "recorded"
+    assert projected["trace_persistence_status"] == "entry-response-only"
     assert projected["scheduled_pass_count"] == 1
     assert projected["skipped_pass_count"] == 1
     assert projected["declared_owner_pass_count"] == 7

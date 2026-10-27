@@ -1068,7 +1068,9 @@ identify derived input state; they do not verify service correctness.
 incremental owner-pass scheduler trace from the same session snapshot. Entry
 also returns the current bounded trace directly, including scheduled and
 skipped owner passes, coverage of declared pass decisions, and wall-clock
-duration for completed passes. This makes
+duration for completed passes. `trace_persistence_status` distinguishes
+`session-snapshot` from `entry-response-only`: a quiet entry can return a
+current trace without writing the snapshot. This makes
 the environment's own service routing visible alongside capability use and
 service readiness. It counts only decisions made by the scheduler; unrecognized
 service opportunities and agent need are not recorded. A returned pass, a
@@ -1188,6 +1190,13 @@ visible without copying its full diagnostic payload. `measurement_summary` separ
 classified measurements, unavailable attribution, interpretations, and
 qualifications. Both are summaries of recorded evidence, not independent
 attestations; the evidence pointer remains the route to the source record.
+For the `ambient-service-decision-trace-gap` observation kind, compaction also
+retains a bounded `ambient_service_evidence` view of allowlisted entry,
+readiness, session-event, and process-sample values. This keeps real service
+activity inspectable when the whole response exceeds its byte limit while
+preserving the exact source pointer. The view explicitly leaves ambient
+fulfillment, the agent-need denominator, and causal attribution unestablished;
+it does not attribute process I/O to listed capability invocations.
 For compiler outcomes with a `representative_stages` array, the compact context
 keeps at most four rows with stage name, cache status, reference-output result,
 CPU and wall time, RSS, cgroup memory, and open-file-descriptor values when
