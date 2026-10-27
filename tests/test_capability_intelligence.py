@@ -2293,6 +2293,166 @@ def test_observation_correction_accepts_verified_source_outside_campaign_page(
     assert _git(checkout, "status", "--porcelain") == ""
 
 
+def test_append_only_correction_repairs_invalid_improvement_relation(
+    tmp_path: Path,
+) -> None:
+    def project_correction(root: Path, *, invalid_original: bool):
+        session, state = _session(root, [])
+        checkout = Path(session.snapshot["selected_checkouts"][
+            "mncs-environment"
+        ]["path"])
+        implementation_path = checkout / "mncs_env/projections.py"
+        implementation_path.parent.mkdir(parents=True, exist_ok=True)
+        implementation_bytes = b"verified projection implementation\n"
+        implementation_path.write_bytes(implementation_bytes)
+        _git(checkout, "add", "mncs_env/projections.py")
+        _git(checkout, "commit", "--quiet", "-m", "implementation source")
+        implementation_commit = _git(checkout, "rev-parse", "HEAD")
+        implementation_pointer = {
+            "identity": "src_environment_projection_implementation",
+            "repository": "mncs-environment",
+            "commit": implementation_commit,
+            "sha256": hashlib.sha256(implementation_bytes).hexdigest(),
+        }
+
+        target = _observation(
+            "ev_environment_relation_repair_target",
+            "ses_environment_relation_repair",
+            "cmp_environment_relation_repair",
+        )
+        target["pressure_hypothesis"]["identity"] = (
+            "ph_environment_relation_repair"
+        )
+        target["supporting_sources"].append({
+            **implementation_pointer,
+            "path": "mncs_env/projections.py",
+            "kind": "implementation-source",
+        })
+        relation = {
+            "identity": "im_environment_relation_repair",
+            "addresses_hypothesis_identity": "ph_environment_relation_repair",
+            "implementation_reference": {
+                **implementation_pointer,
+                **({"paths": ["mncs_env/projections.py"]}
+                   if invalid_original
+                   else {"path": "mncs_env/projections.py"}),
+            },
+            "verification_observation_identity": target["identity"],
+            "subsequent_observation_identity": None,
+            "basis": "The projection implementation passed focused verification.",
+            "not_measured": ["long-term recurrence after this repair"],
+        }
+        target["improvement_relation"] = relation
+        target_relative = (
+            "evidence/environmental-capability/relation-repair-target.json"
+        )
+        target_bytes = json.dumps(
+            target, sort_keys=True, separators=(",", ":"),
+        ).encode()
+        (checkout / target_relative).parent.mkdir(parents=True, exist_ok=True)
+        (checkout / target_relative).write_bytes(target_bytes)
+        _git(checkout, "add", target_relative)
+        _git(checkout, "commit", "--quiet", "-m", "relation repair target")
+        target_reference = {
+            "identity": target["identity"],
+            "repository": "mncs-environment",
+            "commit": _git(checkout, "rev-parse", "HEAD"),
+            "path": target_relative,
+            "sha256": hashlib.sha256(target_bytes).hexdigest(),
+        }
+        state["evidence"].append(target_reference)
+        state["evidence_count"] = len(state["evidence"])
+
+        replacement_relation = {
+            **relation,
+            "implementation_reference": {
+                **implementation_pointer,
+                "path": "mncs_env/projections.py",
+            },
+        }
+        if not invalid_original:
+            replacement_relation["basis"] = (
+                "Rewrite a relation that was already valid."
+            )
+        correction = _observation(
+            "ev_environment_relation_repair_correction",
+            "ses_environment_relation_repair",
+            "cmp_environment_relation_repair",
+        )
+        _drop_pressure_hypothesis(correction)
+        correction["observation"]["kind"] = "environmental-observation-correction"
+        correction["record_correction"] = {
+            "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+            "target_reference": target_reference,
+            "corrected_field_paths": ["improvement_relation"],
+            "replacement_values": {
+                "improvement_relation": replacement_relation,
+            },
+            "reason": "Repair the relation pointer using verified source content.",
+        }
+        correction_relative = (
+            "evidence/environmental-capability/relation-repair-correction.json"
+        )
+        correction_bytes = json.dumps(
+            correction, sort_keys=True, separators=(",", ":"),
+        ).encode()
+        (checkout / correction_relative).write_bytes(correction_bytes)
+        _git(checkout, "add", correction_relative)
+        _git(checkout, "commit", "--quiet", "-m", "append relation correction")
+        state["evidence"].append({
+            "identity": correction["identity"],
+            "repository": "mncs-environment",
+            "commit": _git(checkout, "rev-parse", "HEAD"),
+            "path": correction_relative,
+            "sha256": hashlib.sha256(correction_bytes).hexdigest(),
+        })
+        state["evidence_count"] = len(state["evidence"])
+        return capability_intelligence.project(session)
+
+    repaired = project_correction(tmp_path / "repaired", invalid_original=True)
+    assert repaired["status"] == "ready"
+    assert repaired["source"]["record_corrections_applied_count"] == 1
+    assert repaired["source"]["record_corrections_unverified_count"] == 0
+    assert repaired["source"]["improvement_relations_unverified_count"] == 0
+    target = next(
+        item for item in repaired["observations"]
+        if item["identity"] == "ev_environment_relation_repair_target"
+    )
+    assert target["improvement_relation_status"] == "validated"
+    assert target["record_correction"]["status"] == (
+        "corrected-by-verified-record"
+    )
+    relation_projection = repaired["improvement_relations"][0]
+    assert relation_projection["identity"] == "im_environment_relation_repair"
+    assert relation_projection["implementation_reference"][
+        "content_integrity_status"
+    ] in capability_intelligence.SOURCE_INTEGRITY_VERIFIED
+    correction_view = next(
+        item for item in repaired["observations"]
+        if item["identity"] == "ev_environment_relation_repair_correction"
+    )
+    assert correction_view["record_correction"]["status"] == (
+        "applied-to-verified-target"
+    )
+    assert correction_view["record_correction"]["basis"] == (
+        "verified-improvement-relation-repair"
+    )
+
+    rejected = project_correction(
+        tmp_path / "rejected", invalid_original=False,
+    )
+    assert rejected["status"] == "partial"
+    assert rejected["source"]["record_corrections_applied_count"] == 0
+    assert rejected["source"]["record_corrections_unverified_count"] == 1
+    rejected_correction = next(
+        item for item in rejected["observations"]
+        if item["identity"] == "ev_environment_relation_repair_correction"
+    )
+    assert rejected_correction["record_correction"]["status"] == (
+        "replacement-values-unverified-or-unchanged"
+    )
+
+
 def test_append_only_evidence_reference_correction_recovers_exact_record(
     tmp_path: Path,
 ) -> None:

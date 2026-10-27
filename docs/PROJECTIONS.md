@@ -1485,8 +1485,17 @@ replacement fields must make the complete observation contract valid. It keeps
 the original record inspectable through
 its evidence reference and exposes the effective values with a link to the
 correction record. A target outside the selected pages remains explicitly
-unresolved; an invalid or conflicting correction is not applied. Corrections
-do not change an improvement relation or effectiveness assessment.
+unresolved; an invalid or conflicting correction is not applied. An
+`improvement_relation` correction may repair only an existing invalid relation.
+It must preserve the relation identity, hypothesis, verification and follow-up
+identities, basis, measurement limits, and implementation repository, commit,
+and source identity. The replacement path must be present in the original
+pointer's recorded path or paths, and its content digest must verify in the
+bounded source read and match an exact source pointer already recorded on the
+target observation. A valid or absent relation cannot be rewritten through
+this correction path. This restores inspectability without asserting that the
+linked change was effective; effectiveness remains `not-assessed` until
+independent later evidence supports an assessment.
 
 The query considers at most 32 campaign evidence references, reads at most 16
 observation records of 64 KiB each within one 8 second Git-read budget, and

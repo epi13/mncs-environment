@@ -11600,6 +11600,7 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
                     "supporting_sources", "not_measured",
                     "pressure_hypothesis_role",
                     "related_work",
+                    "improvement_relation",
                     "observation.source_interface", "observation.request",
                     "observation.outcome",
                     "pressure_hypothesis.actionable_recommendation",
@@ -11653,6 +11654,12 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
                     if field not in {"campaign_id", "session_id"}
                 )):
             return None
+    if "improvement_relation" in fields and (
+            not isinstance(replacements["improvement_relation"], dict)
+            or _validate_improvement_relation(
+                replacements["improvement_relation"],
+            ) is None):
+        return None
     if ("pressure_hypothesis.actionable_recommendation" in fields
             and (not isinstance(
                     replacements["pressure_hypothesis.actionable_recommendation"],
@@ -11718,7 +11725,7 @@ def _apply_observation_correction_values(
         }
     for field in (
         "supporting_sources", "not_measured", "pressure_hypothesis_role",
-        "related_work",
+        "related_work", "improvement_relation",
     ):
         if field in fields:
             corrected[field] = replacements[field]
@@ -22388,6 +22395,94 @@ def project(
                         )):
                     replacements_verified = False
                     break
+            elif field == "improvement_relation":
+                original_relation = target_record.get(field)
+                current = original_relation
+                replacement_relation = replacement
+                original_implementation = (
+                    original_relation.get("implementation_reference")
+                    if isinstance(original_relation, dict) else None
+                )
+                replacement_implementation = (
+                    replacement_relation.get("implementation_reference")
+                    if isinstance(replacement_relation, dict) else None
+                )
+                original_paths = []
+                if isinstance(original_implementation, dict):
+                    original_path = original_implementation.get("path")
+                    if isinstance(original_path, str) and original_path:
+                        original_paths.append(original_path)
+                    paths = original_implementation.get("paths")
+                    if isinstance(paths, list):
+                        original_paths.extend(
+                            path for path in paths
+                            if isinstance(path, str) and path
+                        )
+                target_hypothesis = target_record.get("pressure_hypothesis")
+                target_hypothesis = (
+                    target_hypothesis
+                    if isinstance(target_hypothesis, dict) else {}
+                )
+                original_sources = target_record.get("supporting_sources")
+                original_sources = (
+                    original_sources if isinstance(original_sources, list) else []
+                )
+                relation_fields = (
+                    "identity", "addresses_hypothesis_identity",
+                    "verification_observation_identity",
+                    "subsequent_observation_identity", "basis", "not_measured",
+                )
+                relation_claim_preserved = (
+                    isinstance(original_relation, dict)
+                    and _validate_improvement_relation(original_relation) is None
+                    and all(
+                        original_relation.get(key)
+                        == replacement_relation.get(key)
+                        for key in relation_fields
+                    )
+                    and target_hypothesis.get("identity")
+                    == replacement_relation.get("addresses_hypothesis_identity")
+                    and isinstance(original_implementation, dict)
+                    and isinstance(replacement_implementation, dict)
+                    and original_implementation.get("repository")
+                    == replacement_implementation.get("repository")
+                    and original_implementation.get("commit")
+                    == replacement_implementation.get("commit")
+                    and (original_implementation.get("identity") is None
+                         or original_implementation.get("identity")
+                         == replacement_implementation.get("identity"))
+                    and (original_implementation.get("sha256") is None
+                         or original_implementation.get("sha256")
+                         == replacement_implementation.get("sha256"))
+                    and replacement_implementation.get("path") in original_paths
+                    and any(
+                        (source_pointer := _validate_source_pointer(source)) is not None
+                        and all(
+                            source_pointer.get(key)
+                            == replacement_implementation.get(key)
+                            for key in (
+                                "identity", "repository", "commit", "path", "sha256",
+                            )
+                        )
+                        for source in original_sources
+                    )
+                )
+                if not relation_claim_preserved:
+                    replacements_verified = False
+                    break
+                _verify_source_pointer(
+                    session, replacement_implementation, references, root,
+                    deadline=read_deadline, cache=source_integrity,
+                    attempted=attempted_sources,
+                    workspace_checkouts=workspace_checkouts,
+                    source_payloads=source_payloads,
+                )
+                if _source_integrity_status(
+                        replacement_implementation, source_integrity,
+                ) not in SOURCE_INTEGRITY_VERIFIED:
+                    replacements_verified = False
+                    break
+                correction_basis = "verified-improvement-relation-repair"
             else:
                 current = target_record.get(field)
             if current == replacement:
@@ -22510,11 +22605,22 @@ def project(
                 )
         unavailable = max(0, unavailable - 1)
 
-    unverified_improvement_relation_count = sum(
-        record.get("improvement_relation") is not None
-        and _validate_improvement_relation(record.get("improvement_relation")) is None
-        for record, _ in projected_records
-    )
+    unverified_improvement_relation_count = 0
+    for record, _ in projected_records:
+        effective_relation = record.get("improvement_relation")
+        correction_for_relation = correction_by_target.get(record["identity"])
+        if correction_for_relation is not None:
+            _correction_record, relation_correction, _correction_reference = (
+                correction_for_relation
+            )
+            if "improvement_relation" in relation_correction[
+                    "corrected_field_paths"]:
+                effective_relation = relation_correction["replacement_values"][
+                    "improvement_relation"
+                ]
+        if (effective_relation is not None
+                and _validate_improvement_relation(effective_relation) is None):
+            unverified_improvement_relation_count += 1
     source_context_candidates: dict[
         tuple[str, str, str, str, str], set[tuple[tuple[str, str], ...]],
     ] = {}
@@ -22613,6 +22719,17 @@ def project(
             record.get("improvement_relation"),
         )
         correction_for_target = correction_by_target.get(record["identity"])
+        if correction_for_target is not None:
+            _correction_record, relation_correction, _correction_reference = (
+                correction_for_target
+            )
+            if "improvement_relation" in relation_correction[
+                    "corrected_field_paths"]:
+                raw_improvement = _validate_improvement_relation(
+                    relation_correction["replacement_values"][
+                        "improvement_relation"
+                    ],
+                )
         record_correction_summary = correction_status_by_record.get(
             record["identity"],
         )
