@@ -30,7 +30,10 @@ def repository(tmp_path):
     (root / 'source.mncs').write_text('source one')
     (root / 'notes.md').write_text('prose one')
     (root / '.mncs').mkdir()
-    (root / '.mncs/project.json').write_text('{}')
+    (root / '.mncs/project.json').write_text(json.dumps({
+        'schema_version': 'mncs.project/1',
+        'repository': 'app',
+    }))
     git(root, 'add', '.')
     git(root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'bootstrap')
     return root
@@ -599,7 +602,11 @@ def mutation_session(tmp_path, root, claims):
         'selected_checkouts': {'app': {'path': str(root)}},
         'claim_holders': {}, 'repo_facts': {'app': {'clean': True, 'main_branch': True}},
         'authority': {'readable': ['app'], 'writable': ['app'], 'invocable': []}}
-    session._emit = lambda *args, **kwargs: None
+    session._emit = lambda event_type, _producer, _payload: {
+        'identity': 'evt_mutation_fixture',
+        'sequence': 1,
+        'type': event_type,
+    }
     return session
 
 
@@ -627,7 +634,7 @@ def test_mutation_boundary_observes_new_dirty_target(tmp_path):
 def test_missing_mutation_target_cannot_use_cached_clean_facts(tmp_path):
     from mncs_env.sessions import LifecycleError
     session = mutation_session(tmp_path, tmp_path / 'missing-checkout', {})
-    with pytest.raises(LifecycleError, match='observation unavailable'):
+    with pytest.raises(LifecycleError, match='not currently registered'):
         session.check(action='write', target='app')
 
 

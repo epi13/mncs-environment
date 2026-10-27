@@ -494,6 +494,7 @@ class RepositoryRemediationTests(DoctorFixture):
         return sessions.Session.resume(state_dir=self.state, session_id=session_id, backend="file")
 
     def inject_stub_binding(self, session, script=None):
+        """Bind a test-only provider after any session capability revalidation."""
         from mncs_env import capabilities
         stub = self.stub
         if script is not None:
@@ -544,8 +545,8 @@ class RepositoryRemediationTests(DoctorFixture):
         _, first = self.enter()
         session = self.open_session(first["session_id"])
         try:
-            self.inject_stub_binding(session)
             session.acquire_claim("fixture", reason="claimed work")
+            self.inject_stub_binding(session)
             (self.project / "uncommitted.txt").write_text("another agent's draft")
             with self.assertRaises(claims.ClaimAdoptionRequired):
                 doctor.remediate_repository(session, "fixture")
@@ -557,8 +558,8 @@ class RepositoryRemediationTests(DoctorFixture):
         _, first = self.enter()
         session = self.open_session(first["session_id"])
         try:
-            self.inject_stub_binding(session)
             session.acquire_claim("fixture", reason="claimed work")
+            self.inject_stub_binding(session)
             result = doctor.remediate_repository(session, "fixture")
             self.assertEqual(result["summary"]["repaired"], 1)
             self.assertEqual(result["remaining"], [])
@@ -574,11 +575,11 @@ class RepositoryRemediationTests(DoctorFixture):
         _, first = self.enter()
         session = self.open_session(first["session_id"])
         try:
-            self.inject_stub_binding(session)
             (self.project / "uncommitted.txt").write_text("adopted draft")
             session.acquire_claim("fixture", basis=claims.BASIS_ADOPTION, reason="adopting draft",
                                   checkout_facts={"dirty": True, "foreign_signals": ["dirty-tree"],
                                                   "head": "test", "branch": "main"})
+            self.inject_stub_binding(session)
             result = doctor.remediate_repository(session, "fixture", dry_run=True)
             self.assertTrue(result["dry_run"])
         finally:
@@ -590,8 +591,8 @@ class RepositoryRemediationTests(DoctorFixture):
         session = self.open_session(first["session_id"])
         try:
             script = STUB_REMEDIATION + "\nimport sys\nsys.exit(1)\n"
-            self.inject_stub_binding(session, script=script)
             session.acquire_claim("fixture", reason="claimed work")
+            self.inject_stub_binding(session, script=script)
             result = doctor.remediate_repository(session, "fixture")
             self.assertEqual(result["summary"]["repaired"], 1)
             self.assertEqual(result["provider_status"], "failed")
@@ -603,8 +604,8 @@ class RepositoryRemediationTests(DoctorFixture):
         _, first = self.enter()
         session = self.open_session(first["session_id"])
         try:
-            self.inject_stub_binding(session, script="print('not json')\n")
             session.acquire_claim("fixture", reason="claimed work")
+            self.inject_stub_binding(session, script="print('not json')\n")
             with self.assertRaises(doctor.RemediationRefused) as raised:
                 doctor.remediate_repository(session, "fixture")
             self.assertEqual(raised.exception.diagnostics["code"], "remediation-envelope-invalid")
@@ -617,8 +618,8 @@ class RepositoryRemediationTests(DoctorFixture):
         session = self.open_session(first["session_id"])
         try:
             script = STUB_REMEDIATION.replace("mncs.remediation/1", "mncs.remediation/2")
-            self.inject_stub_binding(session, script=script)
             session.acquire_claim("fixture", reason="claimed work")
+            self.inject_stub_binding(session, script=script)
             with self.assertRaises(doctor.RemediationRefused) as raised:
                 doctor.remediate_repository(session, "fixture")
             self.assertEqual(raised.exception.diagnostics["code"], "remediation-envelope-incompatible")
@@ -632,8 +633,8 @@ class RepositoryRemediationTests(DoctorFixture):
         session = self.open_session(first["session_id"])
         try:
             script = STUB_REMEDIATION.replace('"domain": "repository"', '"domain": "registry"')
-            self.inject_stub_binding(session, script=script)
             session.acquire_claim("fixture", reason="claimed work")
+            self.inject_stub_binding(session, script=script)
             with self.assertRaises(doctor.RemediationRefused) as raised:
                 doctor.remediate_repository(session, "fixture")
             self.assertEqual(raised.exception.diagnostics["code"], "remediation-scope-unsupported")
@@ -646,8 +647,8 @@ class RepositoryRemediationTests(DoctorFixture):
         session = self.open_session(first["session_id"])
         try:
             script = STUB_REMEDIATION.replace('"target": target', '"target": "/elsewhere"')
-            self.inject_stub_binding(session, script=script)
             session.acquire_claim("fixture", reason="claimed work")
+            self.inject_stub_binding(session, script=script)
             with self.assertRaises(doctor.RemediationRefused) as raised:
                 doctor.remediate_repository(session, "fixture")
             self.assertEqual(raised.exception.diagnostics["code"], "remediation-envelope-invalid")
@@ -681,6 +682,7 @@ class RemediationEffectScopeTests(DoctorFixture):
         return target
 
     def inject_provider_binding(self, session):
+        """Install the test provider after claim-time revalidation."""
         from mncs_env import capabilities
         binding = capabilities.bind(provider="fixture", capability="fixture:repository-remediation",
                                     contract_revision="test", entrypoint="stub-remediate",
@@ -698,10 +700,10 @@ class RemediationEffectScopeTests(DoctorFixture):
         _, first = self.enter()
         session = self.open_session(first["session_id"])
         try:
-            self.inject_provider_binding(session)
             # Provider checkout (fixture) is deliberately unclaimed and not
             # writable; only the actual target checkout is claimed.
             session.acquire_claim("target", reason="remediation target")
+            self.inject_provider_binding(session)
             result = doctor.remediate_repository(session, "target")
             self.assertEqual(result["summary"]["repaired"], 1)
             self.assertEqual(result["remaining"], [])
@@ -713,8 +715,13 @@ class RemediationEffectScopeTests(DoctorFixture):
             self.assertEqual(len(invoked), 1)
             payload = invoked[0]["payload"]
             self.assertEqual(Path(payload["executor"]["checkout"]).resolve(), self.project.resolve())
-            self.assertEqual(Path(payload["effect_target"]["checkout"]).resolve(), target.resolve())
-            self.assertEqual(payload["effect_target"]["repository"], "target")
+            self.assertEqual(
+                Path(result["effect_target"]["checkout"]).resolve(),
+                target.resolve(),
+            )
+            event_target = payload["effect_target"]
+            self.assertEqual(event_target["repository"], "target")
+            self.assertNotIn("checkout", event_target)
             history = session.snapshot["doctor"]["history"]
             self.assertEqual(history[-1]["effect_target"]["repository"], "target")
         finally:
@@ -726,8 +733,8 @@ class RemediationEffectScopeTests(DoctorFixture):
         _, first = self.enter()
         session = self.open_session(first["session_id"])
         try:
-            self.inject_provider_binding(session)
             session.acquire_claim("fixture", reason="provider checkout only")
+            self.inject_provider_binding(session)
             with self.assertRaises(doctor.RemediationRefused) as raised:
                 doctor.remediate_repository(session, "target")
             self.assertEqual(raised.exception.diagnostics["code"], "remediation-claim-required")
@@ -740,8 +747,8 @@ class RemediationEffectScopeTests(DoctorFixture):
         _, first = self.enter()
         session = self.open_session(first["session_id"])
         try:
-            self.inject_provider_binding(session)
             session.acquire_claim("target", reason="remediation target")
+            self.inject_provider_binding(session)
             outside = self.base / "outside"
             outside.mkdir()
             with self.assertRaises(sessions.AuthorityDenied):
@@ -756,8 +763,8 @@ class RemediationEffectScopeTests(DoctorFixture):
         _, first = self.enter()
         session = self.open_session(first["session_id"])
         try:
-            self.inject_provider_binding(session)
             session.acquire_claim("target", reason="remediation target")
+            self.inject_provider_binding(session)
             with self.assertRaises(sessions.AuthorityDenied):
                 session.invoke("fixture:repository-remediation", ["--target", "/tmp"],
                                effect_target={"repository": "target", "checkout": "/tmp"})
