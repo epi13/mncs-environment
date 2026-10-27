@@ -9535,16 +9535,19 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
         identity = hypothesis.get("identity") if isinstance(hypothesis, dict) else None
         if not isinstance(identity, str) or not identity:
             continue
-        if observation.get("improvement_relation_identity") is not None:
+        role = observation.get("pressure_hypothesis_role")
+        if role == "supporting-context":
+            classification = "supporting-context"
+        elif role == "occurrence":
             # A verified improvement link makes the repeated hypothesis
             # supporting context for that change, not another occurrence.
-            classification = "supporting-context"
-        else:
-            role = observation.get("pressure_hypothesis_role")
             classification = (
-                role if isinstance(role, str)
-                and role in PRESSURE_HYPOTHESIS_ROLES else "unclassified"
+                "supporting-context"
+                if observation.get("improvement_relation_identity") is not None
+                else "occurrence"
             )
+        else:
+            classification = "unclassified"
         grouped.setdefault(identity, []).append((observation, classification))
     result = []
     for identity, classified_group in sorted(grouped.items()):
@@ -18255,7 +18258,11 @@ def project(
         session_activity_relation = _observation_session_activity_relation(
             record, activity, selected_session_id=session.session_id,
         )
-        if raw_improvement is not None:
+        if (not isinstance(effective_pressure_hypothesis_role, str)
+                or effective_pressure_hypothesis_role
+                not in PRESSURE_HYPOTHESIS_ROLES):
+            pressure_hypothesis_recurrence_classification = "unclassified"
+        elif raw_improvement is not None:
             pressure_hypothesis_recurrence_classification = "supporting-context"
         elif effective_pressure_hypothesis_role == "occurrence":
             pressure_hypothesis_recurrence_classification = "occurrence"

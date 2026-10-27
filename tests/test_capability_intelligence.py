@@ -1811,6 +1811,14 @@ def test_unclassified_pressure_evidence_does_not_establish_recurrence(
         "pressure_hypothesis_recurrence_classification"
     ] == "unclassified"
 
+    linked_legacy = dict(legacy_projection)
+    linked_legacy["improvement_relation_identity"] = "im_role_coverage"
+    linked_summary = capability_intelligence._recurrence([linked_legacy])[0]
+    assert linked_summary["observation_count"] == 0
+    assert linked_summary["unclassified_observation_count"] == 1
+    assert linked_summary["supporting_context_observation_count"] == 0
+    assert linked_summary["role_classification_status"] == "incomplete"
+
 
 def test_recurrence_requires_complete_session_attribution_within_one_session() -> None:
     def occurrence(identity: str, session_id: str | None) -> dict:
